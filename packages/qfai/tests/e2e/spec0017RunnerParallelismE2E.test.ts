@@ -41,6 +41,37 @@
  * and this suite runs on `ubuntu-latest` as well as here. Counting overlap needs neither: with one worker
  * the intervals cannot overlap whatever the machine does, and with four they do unless the machine has
  * one core, which no runner this project targets has.
+ *
+ * ## The fixture's SHAPE is load-bearing, and the first version got it wrong
+ *
+ * The fixture mirrors the real repository: root config carries `rootKnobs`, the workspace's project carries
+ * `projectKnobs`. The first version spread both into one flat `test:` block, and round 12 measured what
+ * that cost — it honoured the worker axis whichever object carried it, so it could not be put into the one
+ * inert state this module exists to record. With the axes declared per project, four files run at once with
+ * the override pinned to one; the flat fixture would have passed.
+ *
+ * That made mutation 1 below — "the axis declared at a scope the runner ignores" — the mutation this test
+ * was structurally unable to observe, while listing it as one it caught. It reddened for a different
+ * reason.
+ *
+ * ## Falsifications, five, all reddening
+ *
+ *   1. the axis declared at a scope the runner ignores (`maxWorkers` set to `undefined`)
+ *   2. the override read and discarded (a fixed literal)
+ *   3. file parallelism switched off, so no axis can matter
+ *   4. the override variable renamed — which found a self-referential oracle in the first version: it read
+ *      the name from the module it tests, so a rename carried the test along and everything stayed green.
+ *      The name is pinned as a literal now, the one value here that must not come from the subject.
+ *   5. **`maxWorkers` MOVED from `rootKnobs` to `projectKnobs`** — the real inertness mode, added after
+ *      round 12 showed the flat fixture blind to it. Now: `expected 4 to be 1` at one worker.
+ *
+ * ## What this test does NOT establish, since a sibling already does
+ *
+ * `tests/scripts/vitestWorkspaceKnobs.test.ts` asserts the split directly — `maxWorkers`, `minWorkers` and
+ * `fileParallelism` must be shaped at root, and a root-only option declared on a project is "a declaration
+ * nothing reads". So mutation 5 reddens there too, and this test is not the only instrument that catches
+ * it. What it adds is the direction that one cannot: that the axis, correctly declared, has an EFFECT. The
+ * two are complementary and the honest claim is that pair, not this file alone.
  */
 
 // QFAI:SPEC-0017:US-0017-0007
@@ -110,19 +141,39 @@ async function fixture(): Promise<{ dir: string; log: string }> {
   await mkdir(path.join(dir, "tests"), { recursive: true });
 
   const knobs = path.join(PACKAGE_ROOT, "vitest.knobs.ts").split(path.sep).join("/");
+
+  // The REAL shape, not a flattened one. Spreading both halves into a single `test:` block honoured the
+  // worker axis whichever object carried it — so the fixture could not be put into the one inert state
+  // this module exists to record, where the axis is declared at project scope and the runner ignores it.
+  // Round 12 measured that: with the axes per project, four files run at once with the override pinned to
+  // one. Root config carries `rootKnobs`; the workspace's project carries `projectKnobs`.
   await writeFile(
     path.join(dir, "vitest.config.ts"),
     [
       `import { defineConfig } from "vitest/config";`,
-      `import { rootKnobs, projectKnobs } from "${knobs}";`,
+      `import { rootKnobs } from "${knobs}";`,
       ``,
       `export default defineConfig({`,
-      `  test: {`,
-      `    ...rootKnobs,`,
-      `    ...projectKnobs,`,
-      `    include: ["tests/**/*.test.ts"],`,
-      `  },`,
+      `  test: { ...rootKnobs },`,
       `});`,
+      ``,
+    ].join("\n"),
+    "utf8",
+  );
+  await writeFile(
+    path.join(dir, "vitest.workspace.ts"),
+    [
+      `import { projectKnobs } from "${knobs}";`,
+      ``,
+      `export default [`,
+      `  {`,
+      `    test: {`,
+      `      ...projectKnobs,`,
+      `      name: "slots",`,
+      `      include: ["tests/**/*.test.ts"],`,
+      `    },`,
+      `  },`,
+      `];`,
       ``,
     ].join("\n"),
     "utf8",
