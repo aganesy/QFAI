@@ -208,3 +208,51 @@ describe("resolveDiscussionRoot honors absolute discussionDir verbatim", () => {
     }
   });
 });
+
+// `discussion use <id>` used to mutate `.qfai/state.json` while writing
+// nothing to stdout or stderr, so a mistyped id was byte-for-byte
+// indistinguishable from a correct one until a later `list --active`
+// failed about `state.json` rather than about the command that wrote
+// it. These tests pin the two pieces of feedback: an unconditional
+// stdout confirmation naming file + key + value, and a stderr note when
+// the (deliberately permissive) write records an id that matches no
+// existing `discussion-*` dir.
+describe("discussion use confirms the write and flags an unmatched id", () => {
+  it("prints the file and key it wrote on stdout", async () => {
+    await makePack("discussion-20260527075558258");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "use",
+      id: "discussion-20260527075558258",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    const out = cap.out.join("\n");
+    expect(out).toMatch(/discussion\.currentId=discussion-20260527075558258/);
+    expect(out).toMatch(/state\.json/);
+    // A matching pack exists, so the unmatched-id note must stay silent.
+    expect(cap.err.join("\n")).toBe("");
+  });
+
+  it("notes on stderr when the id matches no discussion-* dir, without failing the write", async () => {
+    await makePack("discussion-20260527075558258");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "use",
+      id: "not-even-a-discussion-id",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    // Permissive by design: the pointer is still recorded and the exit
+    // code stays 0 — only the evidence changes.
+    expect(code).toBe(0);
+    expect(await readDiscussionCurrentId(root)).toBe("not-even-a-discussion-id");
+    expect(cap.out.join("\n")).toMatch(/discussion\.currentId=not-even-a-discussion-id/);
+    const err = cap.err.join("\n");
+    expect(err).toMatch(/not-even-a-discussion-id/);
+    expect(err).toMatch(/does not match an existing discussion-\* dir/);
+  });
+});

@@ -38,18 +38,53 @@ async function listCandidateDirs(discussionRoot: string): Promise<string[]> {
 }
 
 /**
+ * Stderr note when `<id>` names no existing `discussion-*` dir. Best
+ * effort by design: the pointer has already been written by the time
+ * this runs, so an unreadable config / discussion root must cost the
+ * note only — never turn a successful write into a failure.
+ */
+async function noteUnmatchedId(
+  root: string,
+  id: string,
+  writeErr: (m: string) => void,
+): Promise<void> {
+  let discussionRoot: string;
+  let candidates: string[];
+  try {
+    discussionRoot = await resolveDiscussionRoot(root);
+    candidates = await listCandidateDirs(discussionRoot);
+  } catch {
+    return;
+  }
+  if (candidates.includes(id)) return;
+  writeErr(
+    `qfai discussion use: note: "${id}" does not match an existing discussion-* dir ` +
+      `under ${discussionRoot}`,
+  );
+}
+
+/**
  * `qfai discussion use <id>` — persist the active-session pointer.
  * Permissive: it records the operator's explicit choice even when the
  * named pack dir does not (yet) exist; the missing/duplicate condition
- * is surfaced at read time by `list --active`.
+ * is surfaced at read time by `list --active`. The write is always
+ * confirmed on stdout naming the file and the key it moved, and an
+ * unmatched `<id>` additionally draws a stderr note, so a typo leaves
+ * evidence where it is made instead of only at the next read.
  */
-async function runUse(options: DiscussionOptions, writeErr: (m: string) => void): Promise<number> {
+async function runUse(
+  options: DiscussionOptions,
+  write: (m: string) => void,
+  writeErr: (m: string) => void,
+): Promise<number> {
   const id = options.id?.trim();
   if (!id) {
     writeErr("qfai discussion use: <id> is required (e.g. qfai discussion use discussion-<ts>).");
     return 1;
   }
   await writeDiscussionCurrentId(options.root, id);
+  write(`qfai discussion use: set discussion.currentId=${id} in .qfai/state.json`);
+  await noteUnmatchedId(options.root, id, writeErr);
   return 0;
 }
 
@@ -148,7 +183,7 @@ export async function runDiscussion(options: DiscussionOptions): Promise<number>
   const writeErr = options.writeErr ?? error;
 
   if (options.action === "use") {
-    return runUse(options, writeErr);
+    return runUse(options, write, writeErr);
   }
 
   // action === "list"
