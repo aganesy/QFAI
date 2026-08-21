@@ -393,42 +393,137 @@ function buildDeprecationIssue(args: {
  * Validator groups the `full` profile runs, with the finding-code families
  * each one produces.
  *
- * The keys mirror the composition in `core/validate.ts#runFullValidators`
- * one-for-one, so "what a partial profile did not evaluate" can be derived as
+ * The keys mirror the composition in `core/validate.ts#runFullValidators`,
+ * so "what a partial profile did not evaluate" can be derived as
  * `full groups - profile groups` instead of being restated per profile. The
  * earlier hand-written per-profile lists named only the three headline
  * families and therefore claimed, for example, that `--profile tdd` had
  * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
  * calls it.
+ *
+ * A group is a **set of validators**, not a code prefix, because a prefix is
+ * not a partition of the validator set. Three shapes broke the earlier
+ * prefix table:
+ *
+ *   - `validateContracts` and `validateTraceability` are called by both
+ *     `runSddValidators` and `runTddValidators`, so `QFAI-CONTRACT-*` /
+ *     `QFAI-TRACE-*` cannot sit in either profile's own group — a `tdd` run
+ *     listed as unevaluated a family it had just emitted.
+ *   - `QFAI-DCON-*` has one emitter per profile
+ *     (`validateSddDesignContractReadiness` /
+ *     `validatePrototypingDesignContractReadiness`), and `QFAI-RESEARCH-*` /
+ *     `UIX-VAL-*` are reached from both the discussion and the prototyping
+ *     compositions.
+ *   - The reviewer-gate `R-*` codes split by detector, not by prefix:
+ *     `detectMockHrefDrift` and `validateDesignMdPatchZone` run only in
+ *     prototyping, the rest only in sdd. The wildcard made `--profile sdd`
+ *     claim coverage of two detectors it never ran.
+ *
+ * Shared work therefore gets its own group, listed by every profile that runs
+ * it, and code-level entries are used wherever a family spans profiles.
  */
 const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
-  discussion: ["QFAI-DPACK-*", "QFAI-VIS-*", "QFAI-RESEARCH-*", "UIX-VAL-*"],
+  discussion: ["QFAI-DPACK-*", "QFAI-VIS-*"],
+  // `validateResearchSummary` and `runCanonicalUixValidators` are called from
+  // both `runDiscussionValidators` and `runUiuxValidators`.
+  "research-summary": ["QFAI-RESEARCH-*"],
+  "canonical-uix": ["UIX-VAL-*"],
   sdd: [
     "QFAI-SPACK-*",
     "QFAI-COV-*",
+    "QFAI-PLAN-*",
     "QFAI-ID-*",
     "QFAI-LAYER-*",
     "QFAI-ORPHAN-*",
-    "QFAI-CONTRACT-*",
     "QFAI-NAV-*",
     "QFAI-MMD-*",
+    "QFAI-BFLOW-*",
+    // Spec-pack structural gates: table arity, density hints, capability
+    // split, status leakage, triage approval, status enums, AC / EX / TC
+    // verification and the Traceability Ledger.
+    "QFAI-TABLE-*",
+    "QFAI-DENSITY-*",
+    "QFAI-SPLIT-*",
+    "QFAI-STATUSLEAK-*",
+    "QFAI-TRIAGE-*",
+    "QFAI-STATUS-*",
+    "QFAI-AC-*",
+    "QFAI-EX-*",
+    "QFAI-TC-*",
+    "QFAI-LEDGER-*",
     "E_*",
-    "R-*",
+    // Worklog surface, assistant tree migration, skill doc references and
+    // stale references — all sdd-only compositions.
+    "W-WORKLOG-*",
+    "W-PENDING-PROMOTION",
+    "W-ASSISTANT-LAYOUT",
+    "W-SKILL-DOC-BROKEN-REF",
+    "W-SKILL-PROJECT-MEMORY",
+    "W-STALE-REFERENCE",
+    "I-ASSISTANT-LAYER-UNSEEDED",
+    "D-SURFACE-TYPE-MISSING",
   ],
+  // Reviewer-gate detectors wired into `runSddValidators`.
+  "reviewer-gate-sdd": [
+    "R-CERTIFY-VERIFY-CIRCULAR",
+    "R-PROMPT-SCANNER-DRIFT",
+    "R-AUTOPILOT-POLICY-*",
+    "R-HANDOFF-SCHEMA-DRIFT",
+    "R-HANDOFF-INCOMPLETE",
+    "R-SKILL-MANIFEST-DRIFT",
+    "R-WORKLOG-DRIFT",
+    "R-REJECTED-READOPT",
+  ],
+  // `validateContracts` — `runSddValidators` and `runTddValidators`.
+  contracts: ["QFAI-CONTRACT-*", "QFAI-DB-*"],
+  // `validateTraceability` — `runSddValidators` and `runTddValidators`.
+  traceability: ["QFAI-TRACE-*"],
+  // One design-contract-readiness emitter per profile, same family.
+  "design-contract-readiness": ["QFAI-DCON-*"],
   "review-artifacts": ["QFAI-REVIEW-*"],
-  prototyping: ["QFAI-PROT-*", "QFAI-CRIT-*", "QFAI-FID-*", "QFAI-UIE-*", "QFAI-DCON-*"],
+  prototyping: [
+    "QFAI-PROT-*",
+    "QFAI-CRIT-*",
+    "QFAI-FID-*",
+    "QFAI-UIE-*",
+    "QFAI-DT-*",
+    "QFAI-MOCK-*",
+    "QFAI-FLOW-*",
+    "QFAI-BPAP-*",
+    "QFAI-CONSISTENCY-*",
+    "QFAI-AGENT-*",
+    "QFAI-AUD-*",
+    "QFAI-PLATFORM-*",
+    "QFAI-CFG-LINK-*",
+    "QFAI-UIUX-PERF",
+  ],
+  // Reviewer-gate detectors wired into `runPrototypingValidators`.
+  "reviewer-gate-prototyping": [
+    "R-MOCK-HREF-DRIFT",
+    "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
+    "R-EVIDENCE-MUTATION-UNLOGGED",
+  ],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
-  "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER", "D-SCAFFOLD-FOREIGN-HOME"],
+  tdd: ["TDDLIST_*", "TDDLIST-*", "QFAI-TEST-001", "QFAI-DRIFT-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
+
+/** `runPrototypingValidators`, shared by the `prototyping` and `saas-package` profiles. */
+const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
+  "prototyping",
+  "reviewer-gate-prototyping",
+  "design-contract-readiness",
+  "research-summary",
+  "canonical-uix",
+];
 
 /**
  * Groups each profile actually runs, mirroring
@@ -438,14 +533,17 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: ALL_GATE_GROUPS,
   verify: ALL_GATE_GROUPS,
-  discussion: ["discussion"],
-  sdd: ["sdd"],
-  prototyping: ["prototyping"],
+  discussion: ["discussion", "research-summary", "canonical-uix"],
+  sdd: ["sdd", "reviewer-gate-sdd", "contracts", "traceability", "design-contract-readiness"],
+  prototyping: PROTOTYPING_GATE_GROUPS,
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
-  // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
-  "saas-package": ["prototyping"],
+  // scaffold-placeholder gate that completes the atdd group. It also calls
+  // `validateContracts` and `validateTraceability`, which sdd shares.
+  tdd: ["tdd", "atdd-traceability", "contracts", "traceability"],
+  // `runSaasPackage` runs the prototyping composition, then narrows it via
+  // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below).
+  "saas-package": PROTOTYPING_GATE_GROUPS,
 };
 
 function isKnownProfile(profile: string): profile is ValidationProfile {
