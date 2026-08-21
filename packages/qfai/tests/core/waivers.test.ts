@@ -565,6 +565,76 @@ describe("applyWaivers", () => {
     }
   });
 
+  // The normal end state of a waiver: the rule fired, the waiver was written,
+  // the defect was fixed. From then on the rule is quiet, and the waiver must
+  // not be reported as naming a rule that does not exist.
+  it.each([
+    ["QFAI-ATDD-112", "the code the CLI prints"],
+    ["ATDD-112", "the back-compat stripped alias"],
+    ["E_TC_ORPHAN", "an underscore-shaped code"],
+    ["W-STALE-REFERENCE", "a single-segment prefixed code"],
+  ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-12",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "root cause fixed; kept on file until expiry"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      // None of the rules above appear in this run's findings.
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-12"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Severity is not part of the generated registry, so a quiet error-severity
+  // rule is no longer refused up front. It must still be refused on the run
+  // that produces the finding — that is the only run where it could suppress.
+  it("still blocks a waiver for an error finding the run produced", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-13",
+          "    rule: QFAI-ATDD-112",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "error target"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [
+        buildIssue({ code: "QFAI-ATDD-112", rule: "atdd.codeTraceability", severity: "error" }),
+      ]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // The code spelling is the one operators are told to write, so it must carry
   // the same `match.dl_ids` requirement as the rule-id spelling.
   it("requires match.dl_ids for a row-scoped rule named by its code", async () => {

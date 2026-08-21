@@ -38,6 +38,7 @@
     "lint": "eslint src",
     "lint:branch-version": "bash scripts/check-branch-version-pin.sh",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
+    "generate:rule-codes": "node scripts/generate-emitted-rule-codes.mjs",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",
