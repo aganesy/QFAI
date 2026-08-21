@@ -30,7 +30,10 @@ must be written to a review pack, not left in conversation. There is exactly **o
   A `REVISE` verdict during iteration is written as `status: "FAIL"` here — see
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
-  ad-hoc per-round filenames inside an existing pack.
+  ad-hoc per-round filenames inside an existing pack. Once the round's last reviewer response has
+  landed, that directory is sealed and the seal is recorded outside it, per round and naming the
+  pack it seals — `evidence-revision.md#review-pack-seal`. A pack nobody sealed is a pack any
+  later edit reaches unnoticed.
 - Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor
   `--profile sdd` reports `QFAI-REVIEW-*`, so a malformed or missing `summary.json` passes both.
   Run `npx qfai validate --profile verify --fail-on error` (or the default full scan,

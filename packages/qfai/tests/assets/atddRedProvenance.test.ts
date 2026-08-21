@@ -34,6 +34,7 @@ const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
+const PACK_SEAL = "assistant/skills/qfai-atdd/references/pack-seal.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -1423,9 +1424,14 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // The stage hash covers the evidence but not the verdict, so a REVISE
     // edited to PASS across the response, the summary and the status left
     // every recomputation unchanged.
+    // SKILL.md keeps the obligation as a DoD bullet; the procedure lives in
+    // the reference it points at, under the 500-line ceiling.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("**Seal the P8 pack too**");
-    expect(atdd).toContain("check that `## Final status` says what that pack says");
+    expect(atdd).toContain("references/pack-seal.md#seal-the-p8-pack");
+
+    const seal = flat(await read(tree, PACK_SEAL));
+    expect(seal).toContain("## Seal the P8 pack");
+    expect(seal).toContain("check that `## Final status` says what that pack says");
   });
 
   it("leaves the RED address cardinality to the round contract alone", async () => {
@@ -1475,13 +1481,14 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
   });
 
   it("names the procedure the pack seal actually uses", async () => {
-    // "The procedure below" was ambiguous between the audit hash and the
-    // working-tree revision, and the two produce different values.
+    // An unqualified "the procedure" was ambiguous between the audit hash and
+    // the working-tree revision, and the two produce different values. The
+    // seal now has its own section, placed after the recipe it is not.
     const revision = flat(
       await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
     );
     expect(revision).toContain("by the **audit-hash** procedure in");
-    expect(revision).toContain("not the working-tree one below");
+    expect(revision).toContain("not the working-tree one above");
   });
 
   it("splits a multi-id obligation column before matching the matrix", async () => {
@@ -1538,7 +1545,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(revision).toContain("**gate item 10 recomputes it from the pack**");
     expect(revision).toContain("**not** in any reviewer's audit subject");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("`Review pack seal` is recomputed here");
+    expect(implement).toContain(
+      "`Review pack seal` (`references/evidence-revision.md#review-pack-seal`) is recomputed here",
+    );
   });
 
   it("leaves the final status out of the stage subject", async () => {
@@ -2149,13 +2158,15 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // no ATDD-owned rows there is no item evidence entry to hold it, and a
     // value computed from the pack at completion always matches itself — so
     // editing the response, the summary and the status together still passed.
-    const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("record it **outside the pack** in the stage evidence file's");
-    expect(atdd).toContain("`Review pack seal:`");
-    expect(atdd).toContain("compare it with the **recorded** value");
+    const seal = flat(await read(tree, PACK_SEAL));
+    expect(seal).toContain("**outside the pack** in the stage evidence file's");
+    expect(seal).toContain("Review pack seal:");
+    expect(seal).toContain("compare it with the **recorded** value");
     // And the reference has to resolve from where it is written.
-    expect(atdd).toContain("`../qfai-implement/references/evidence-revision.md`");
-    expect(atdd).toContain("The recording and the recomputation must be two moments");
+    expect(seal).toContain(
+      "`../../qfai-implement/references/evidence-revision.md#review-pack-seal`",
+    );
+    expect(seal).toContain("The recording and the recomputation must be two moments");
   });
 
   it("leaves the RED addresses out of the row-level field list", async () => {

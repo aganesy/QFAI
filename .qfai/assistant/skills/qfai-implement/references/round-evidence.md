@@ -28,6 +28,12 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
   `REVISE` plus the finding, and which rework path it took). Absent on round 1
   when no review has run yet.
+- `Round N: Review pack` — the `review-<timestamp>/` directory this round's
+  verdicts were written to, and `Round N: Review pack seal` with the hash that
+  seals it. Written once the round's last reviewer response has landed, and
+  recomputed at gate item 10. The procedure, the subject and why the seal lives
+  outside the pack are stated once in
+  `evidence-revision.md#review-pack-seal` — do not restate them here
 
 ## What opens a round
 
