@@ -69,6 +69,33 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       expect(reference).toContain("## Single-round items");
     });
 
+    it(`${relativePath}: the closed round list enumerates every per-round producer`, async () => {
+      // The list declares itself whole, so a field absent from it is row-level
+      // by construction — one slot for however many rounds the row has. These
+      // four have a producer that runs once per round, so a second round either
+      // overwrote round 1's record or reused it for a tree that no longer
+      // exists.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      for (const field of [
+        "`Round N: Falsifiability revision`",
+        "`Round N: Oracle proof`",
+        "`Round N: Review pack`",
+        "`Round N: Review pack seal`",
+      ]) {
+        expect(reference).toContain(field);
+      }
+      // ...and the paragraph that closes the list names them, so the summary
+      // and the enumeration cannot drift apart again.
+      expect(flat(reference)).toContain(
+        "the GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer verdict",
+      );
+      // The rule that decides where a newly added field lands, so the next
+      // omission is answerable without re-deriving it in SKILL.md.
+      expect(flat(reference)).toContain(
+        "a field its producer writes once per round takes the prefix",
+      );
+    });
+
     it(`${relativePath}: review is requested from refactor, so REVISE has a legal edge`, async () => {
       const skill = await read(relativePath, "SKILL.md");
       // "After GREEN" left a REVISE landing on `green`, which has no

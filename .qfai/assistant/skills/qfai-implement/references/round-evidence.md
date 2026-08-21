@@ -23,8 +23,26 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   RED observation, so it sits where the RED pair sits and takes the same prefix;
   writing it unprefixed left the completion gate unable to find the round it
   belongs to
+- `Round N: Falsifiability revision` — the mutated tree that round's
+  falsifiability run was observed against, taken before the revert destroys it
+  (`evidence-revision.md`). It is that observation's address, so it takes the
+  prefix for the same reason the trio does
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
+- `Round N: Oracle proof` — the production mutation that made this round's test
+  fail again, taken in Phase: Green step 2a against the code this round wrote
+  (`equivalent-mutant` in its place, per `oracle-strength.md`). A later round
+  rewrites that code, so round 1's proof no longer shows that the pass depends
+  on this item's behaviour; one slot for the row either overwrote it or left the
+  row reusing a stale one, with nothing in the record saying which. A
+  `falsifiability` row's mutation run **is** that round's proof and is not
+  repeated — the trio above stands in its place
+- `Round N: Review pack` — the `review-<timestamp>/` directory this round's
+  verdicts were written to, and `Round N: Review pack seal` beside it (hashing
+  procedure: `evidence-revision.md`). Each review round creates a new pack, so a
+  bare row-level hash left the completion gate unable to say which directory to
+  recompute over — it either checked another round's pack or stopped a correct
+  item
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
   `REVISE` plus the finding, and which rework path it took). Absent on round 1
   when no review has run yet.
@@ -38,12 +56,20 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
-is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
-its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
-fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
-`Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
-`RED test hash` and `Falsifiability revision` were on that list until a
-second round showed they describe a round's RED, not the row's.
+is the whole of it** — `Revision`, the RED pair (or the falsifiability trio and
+its revision in its place), the GREEN pair, the `Oracle proof`, the review pack
+and its seal, the reviewer verdict. Row-level fields are not round fields and
+take no prefix: `TDD-ID`, the obligation reference, `Test file`, `Selector`,
+`Layer`, and the refactor-verify pair. `RED revision`, `RED test hash` and
+`Falsifiability revision` were on that list until a second round showed they
+describe a round's RED, not the row's.
+
+The row-level half is not enumerated exhaustively, so **which half a field
+belongs to is decided by its producer, not by its absence from a list**: a field
+its producer writes once per round takes the prefix and belongs in the block
+above; a field written once for the row does not. A per-round field missing from
+the enumeration is an omission to be fixed here — it is not row-level by
+default, and no other file may decide it (`../SKILL.md`).
 
 ## Single-round items
 
