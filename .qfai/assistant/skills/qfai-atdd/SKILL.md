@@ -3,7 +3,7 @@ name: qfai-atdd
 title: QFAI ATDD (Executable acceptance tests)
 description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API obligations from specs and contracts."
 argument-hint: "<spec-id> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+allowed-tools: [Read, Glob, Write, Edit, TodoWrite, Task, Bash]
 roles:
   - orchestrator
   - delivery-planner
