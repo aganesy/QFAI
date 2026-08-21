@@ -52,9 +52,14 @@ tokens (e.g. `bg-primary`, `text-text`, `rounded-md`, `shadow-lg`,
 
 The compliance gate scans rendered HTML — `<style>` blocks, inline
 `style="..."` attributes, AND Tailwind `class="..."` attributes — for
-four categories of forbidden literals. Findings are **advisory-failing**:
-the gate blocks convergence by default, but a Reviewer can override
-when a finding is a known false positive.
+four categories of forbidden literals. The gate is **hard and
+non-waivable**: any finding blocks convergence, and there is no
+Reviewer override. `designMdViolations` is injected by the static
+scanner, and the accepted iteration's HTML is re-scanned before a stop
+is honoured, so a hand-written `[]` in the Reviewer report is
+discarded. The only ways past a finding are to remove the literal from
+the HTML, or to widen `DESIGN.md` so the value becomes an allowed
+token.
 
 ### 1. color literal ban
 

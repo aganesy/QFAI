@@ -412,6 +412,63 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("documents the DESIGN.md compliance gate as non-waivable in both prompts", async () => {
+    // The prompts once advertised the findings as "advisory-failing" with
+    // "a Reviewer can override when a finding is a known false positive".
+    // No override input exists: `prototypingCertify` exits 2 on any
+    // violation, `isConverged` requires `designMdViolations.length === 0`,
+    // and `recomputeFinalIterDesignMdViolations` re-scans the accepted
+    // iteration's HTML, discarding whatever the Reviewer recorded. An
+    // operator who believed the promise had no legal way forward.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const referencesDir = path.join(
+        tree,
+        "assistant",
+        "skills",
+        "qfai-prototyping",
+        "references",
+      );
+      const [generatorRef, reviewerRef] = await Promise.all([
+        readFile(path.join(referencesDir, "generator-prompt.md"), "utf-8"),
+        readFile(path.join(referencesDir, "reviewer-prompt.md"), "utf-8"),
+      ]);
+
+      // The retracted promise must not come back on either side.
+      expect(generatorRef).not.toContain("advisory-failing");
+      expect(generatorRef).not.toMatch(/Reviewer can override/i);
+      expect(reviewerRef).not.toMatch(/Reviewer can override/i);
+
+      // Whitespace-tolerant: the statements wrap mid-phrase today and a
+      // reflow must not fail this test without the meaning changing.
+      expect(generatorRef).toMatch(/hard and\s+non-waivable/);
+      expect(generatorRef).toMatch(/there is no\s+Reviewer override/);
+      // The reader must also learn why a hand-written `[]` does not work.
+      expect(generatorRef).toMatch(/re-scanned before a stop\s+is honoured/);
+      expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
+      expect(reviewerRef).toMatch(/gate is non-waivable/);
+    }
+  });
+
+  it("keeps the DESIGN.md scanner doc in sync with the non-waivable prompt wording", async () => {
+    // `designMdViolations.ts` and `generator-prompt.md` are an SSOT-sync
+    // pair (scripts/check-prompt-scanner-pair.mjs). The gate's posture is
+    // stated on both halves so a future edit to one is visibly unpaired.
+    const scanner = await readFile(
+      path.join(
+        repoRoot,
+        "packages",
+        "qfai",
+        "src",
+        "core",
+        "prototyping",
+        "designMdViolations.ts",
+      ),
+      "utf-8",
+    );
+    expect(scanner).toMatch(/hard and non-waivable/);
+    expect(scanner).toMatch(/no\s+\*?\s*Reviewer override/);
+  });
+
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
     const skillPath = path.join(
       templateQfaiDir,

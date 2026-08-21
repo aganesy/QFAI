@@ -10,6 +10,14 @@
  * convergence when a generated prototype drifts from the SSOT design
  * tokens.
  *
+ * The gate this scanner feeds is hard and non-waivable — there is no
+ * Reviewer override for a finding. `prototypingCertify` exits 2 on any
+ * violation, and `prototypingIterate` re-scans the accepted iteration's
+ * HTML before honouring a stop, so a Reviewer-recorded empty
+ * `designMdViolations` is discarded rather than trusted. The shipped
+ * `generator-prompt.md` states the same posture on the authoring side;
+ * the two must not drift apart.
+ *
  * Input tree: both production call sites feed this scanner the CAPTURE
  * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`
  * via `findIterationHtmlFiles(evidenceRoot, …)`, and
