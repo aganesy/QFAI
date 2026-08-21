@@ -41,8 +41,53 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("T1 — standard");
       expect(section).toContain("T2 — elevated");
       expect(section).toContain("T3 — surface");
-      // An unrecorded tier must not silently become the cheapest one.
-      expect(section).toContain("A row with no recorded tier is treated as **T2**");
+    });
+
+    it(`${tree}: the tier is a ledger column, not prose in the Evidence cell`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      const ledger = unwrap(await read(tree, LEDGER));
+
+      // The tier used to be recorded in `Evidence` — a pointer cell, written
+      // last, by the agent whose ceremony the tier decides. It could not be
+      // read before the work it sizes, so T1 was unreachable from the schema.
+      expect(section).not.toContain("Record the tier in the row's `Evidence` cell");
+      expect(section).toContain("The tier lives in the row's own `Tier` column");
+      expect(section).toContain("It is **not** recorded in `Evidence`");
+      expect(section).toContain(
+        "`/qfai-sdd` Phase 2b derives it once per row, while it is seeding the row, and writes it to that row's `Tier` column",
+      );
+
+      // The schema has to carry the column the policy points at. Padding is
+      // prettier's, so the cell is compared with runs of spaces collapsed.
+      expect(ledger.replace(/ {2,}/g, " ")).toContain(
+        "| Tier | Review tier `/qfai-implement` owes this row. Legal values: `T1`, `T2`, `T3`; `-` when undeclared |",
+      );
+      expect(ledger).toContain(
+        "## Declared tier column (optional, seeded at ledger-authoring time)",
+      );
+      expect(ledger).toContain("Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b)");
+
+      // The skill body sends the reader to the column, not to `Evidence`.
+      const skill = unwrap(await read(tree, SKILL));
+      expect(skill).toContain("take each row's **risk tier** from its `Tier` column (blank is T1)");
+    });
+
+    it(`${tree}: an unescalated row defaults to T1, an absent column does not`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      const ledger = unwrap(await read(tree, LEDGER));
+
+      // Absence used to mean T2, so the tier that exists to make cheap rows
+      // cheap was the only one costing a deliberate act to claim.
+      expect(section).not.toContain("A row with no recorded tier is treated as **T2**");
+      expect(section).toContain("A row whose `Tier` cell is blank or `-` is **T1**");
+      expect(ledger).toContain("**Blank or `-` means `T1`.**");
+      // A legacy ledger predating the column is not silently downgraded.
+      expect(section).toContain("An absent column is not a claim of T1");
+      expect(ledger).toContain(
+        "A ledger carrying **no** `Tier` column predates the column and is not covered by that default",
+      );
+      // The criticality tie-break moved upstream; it did not soften.
+      expect(section).toContain("apply the criticality tie-break below");
     });
 
     it(`${tree}: permits batched review with a bounded unit`, async () => {

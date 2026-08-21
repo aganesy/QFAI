@@ -10,6 +10,12 @@ Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**.
 `/qfai-sdd` seeds them at Phase 2b. An empty table below is valid — it means
 the spec has no coverage-target TC yet, not that the ledger is missing.
 
+`Tier` is seeded with the row, from its `Layer` and the criticality list in
+`.qfai/assistant/skills/qfai-implement/references/volume-policy.md`. The stage
+that fixes `Layer` already holds every input the derivation takes, and
+`/qfai-implement` needs the answer before it starts the row — so it is declared
+here and never written into `Evidence`.
+
 `US-*` and `CON-API-*` are **not** rows here. They are ATDD obligations,
 traced by `QFAI:` annotations in the test tree per
 `.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
@@ -34,23 +40,24 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | Layer | Tier | Test file | Selector | Status | DR-ID | Evidence |
+| ------ | ------- | ----- | ---- | --------- | -------- | ------ | ----- | -------- |
 
 ## Schema
 
-Required columns, in the order used above:
+Columns, in the order used above. Every one but `Tier` is required:
 
-| Column    | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| TDD-ID    | `TDD-NNNN`, unique within this spec                          |
-| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
-| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
-| Test file | Project-root-relative path to the test module                |
-| Selector  | Test selector/description for targeted execution             |
-| Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
-| DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+| Column    | Description                                                        |
+| --------- | ------------------------------------------------------------------ |
+| TDD-ID    | `TDD-NNNN`, unique within this spec                                |
+| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements             |
+| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`                 |
+| Tier      | Review tier `T1` / `T2` / `T3` (`-` when undeclared, read as `T1`) |
+| Test file | Project-root-relative path to the test module                      |
+| Selector  | Test selector/description for targeted execution                   |
+| Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception`       |
+| DR-ID     | Decision Record ID for exception rows (`-` otherwise)              |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle               |
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

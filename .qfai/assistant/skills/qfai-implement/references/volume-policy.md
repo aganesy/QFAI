@@ -16,7 +16,8 @@ RED/GREEN evidence and drift discipline with it. Scale the ceremony instead.
 ## Risk tier (derive per row)
 
 Derive the tier from the ledger row's `Layer`, what the item touches, and what
-it would cost to get wrong:
+it would cost to get wrong. `/qfai-sdd` Phase 2b derives it once per row, while
+it is seeding the row, and writes it to that row's `Tier` column:
 
 | Tier              | Row shape                                                                                                              | Ceremony                                                                                                                          |
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
@@ -24,8 +25,18 @@ it would cost to get wrong:
 | **T2 — elevated** | Touches infrastructure, a public API surface, a contract (`CON-*`), or persisted schema — **or** is critical (below)   | Full per-item ceremony: per-row `qa-gatekeeper` RED and GREEN turns, per-row `completion-reviewer` and `implementation-reviewer`. |
 | **T3 — surface**  | Changes UI behavior or rendered output                                                                                 | T2 plus `product-surface-reviewer`.                                                                                               |
 
-Record the tier in the row's `Evidence` cell alongside the RED/GREEN commands.
-A row with no recorded tier is treated as **T2**.
+The tier lives in the row's own `Tier` column
+(`execution-ledger.md#declared-tier-column-optional-seeded-at-ledger-authoring-time`).
+It is **not** recorded in `Evidence`: that cell is a pointer rather than a
+payload, and it is written last, by the agent whose ceremony the tier decides —
+a tier kept there cannot be read before the work it sizes, which is what left
+T1 unreachable.
+
+A row whose `Tier` cell is blank or `-` is **T1**: the tier is seeded upstream
+now, so an unescalated row is one the seeder found no reason to escalate. A
+ledger carrying **no** `Tier` column predates the column — derive each row's
+tier from the table above before processing it and apply the criticality
+tie-break below. An absent column is not a claim of T1.
 
 ### Criticality outranks connectedness
 

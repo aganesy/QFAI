@@ -16,6 +16,33 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 | DR-ID     | Decision Record / Change Request IDs, comma-separated: a `DR-*` is required for `exception` rows, a `CR-*` for a row reset by an approved Change Request and is retained through that row's later statuses. A row swept out of `exception` by `exception -> todo` **keeps** the anomaly's `DR-*` — that is the only record of why it was parked. **A row that enters `exception` again records a new `DR-*` for the new anomaly**, appended, not substituted: the retained one documents an anomaly already resolved, and `TDDLIST_EXCEPTION_MISSING_DR` only asks that the cell be non-empty and its tokens resolvable, so the stale id alone would pass the gate while the current anomaly has no Decision Record at all. Blank otherwise |
 | Evidence  | The RED/GREEN outcome in one word each, plus an anchor into the evidence file this row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row (see "ATDD-owned rows"). **Not** the commands and output themselves — see "Evidence cell contract" below                                                                                                                                                                                                                                                                                                                                                                                                    |
 
+## Declared tier column (optional, seeded at ledger-authoring time)
+
+| Column | Description                                                                                      |
+| ------ | ------------------------------------------------------------------------------------------------ |
+| Tier   | Review tier `/qfai-implement` owes this row. Legal values: `T1`, `T2`, `T3`; `-` when undeclared |
+
+`Tier` sizes the ceremony a row is processed with
+(`volume-policy.md#risk-tier-derive-per-row`). Like `Owning module` it is a
+**declaration made upstream**, and for the same reason: the stage that fixes a
+row's `Layer` already holds every input the tier derivation takes, and the
+consumer needs the answer _before_ it starts the row.
+
+- Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b), from the row's
+  `Layer`, what the item touches, and the criticality list in
+  `volume-policy.md#criticality-outranks-connectedness`.
+- **Blank or `-` means `T1`.** The default runs this way round only because the
+  tier is seeded rather than claimed: a row nobody escalated is a row nobody
+  found a reason to escalate. A ledger carrying **no** `Tier` column predates
+  the column and is not covered by that default — derive each row's tier before
+  processing it.
+- **Never record it in `Evidence`.** That cell is a pointer, not the payload
+  ("Evidence cell contract" below), and it is written last, by the agent whose
+  ceremony the tier was supposed to size. A tier kept there cannot be read
+  before the work it governs, which is what made `T1` unreachable.
+- A value outside `T1` / `T2` / `T3` raises `TDDLIST_UNKNOWN_TIER` (error).
+  Blank buys the cheapest tier, so a mistyped one must not quietly buy it too.
+
 ## Declared seam column (optional, required for parallel dispatch)
 
 | Column        | Description                                                                                |

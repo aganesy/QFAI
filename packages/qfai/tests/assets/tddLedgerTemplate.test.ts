@@ -36,6 +36,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "TDD-ID",
         "TC-Refs",
         "Layer",
+        // Seeded with `Layer`, which is where the tier derivation's inputs
+        // already are. Shipping it in the header is what makes T1 reachable:
+        // a tier nobody can write is a tier nobody claims.
+        "Tier",
         "Test file",
         "Selector",
         "Status",
@@ -43,6 +47,22 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Evidence",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
+    });
+
+    it(`${tree}: the template says who seeds Tier and what a blank cell means`, async () => {
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`Tier` is seeded with the row");
+      expect(template).toContain("never written into `Evidence`");
+      expect(template).toContain("Every one but `Tier` is required");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Seed each row's `Tier` alongside its `Layer`");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("**Seed `Tier` with the\n   row**");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

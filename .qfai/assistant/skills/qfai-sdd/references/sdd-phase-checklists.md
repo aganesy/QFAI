@@ -44,6 +44,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 - Copy `templates/specs/spec/tdd/test-list.md` when `<spec-id>/tdd/test-list.md` does not exist.
 - Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
+- Seed each row's `Tier` alongside its `Layer`, from the tier table and the criticality list in `../../qfai-implement/references/volume-policy.md`. Blank or `-` is read downstream as `T1`, so escalate here or not at all — `/qfai-implement` never writes the tier into `Evidence`.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
 - Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
 - Keep the ledger table the first markdown table in the file.
