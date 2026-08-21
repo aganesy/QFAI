@@ -1946,7 +1946,7 @@ differ.
 | 11    | `implementation-reviewer` | REVISE  |       16 | B1-B4, M1-M5, m1-m7    |      16 |
 | 11    | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M7, m1-m4    |      17 |
 | 11    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B8, A1-A7           |      15 |
-| 12    | `implementation-reviewer` | REVISE  |       15 | B1-B2, M1-M6, m1-m7    |      15 |
+| 12    | `implementation-reviewer` | REVISE  |       16 | B1-B2, M1-M6, m1-m7, A1 |     16 |
 | 12    | `completion-reviewer`     | REVISE  |       26 | B1-B6, M1-M9, m1-m8, A1-A3 |  26 |
 | 12    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B6, A1-A8           |      14 |
 
@@ -2154,7 +2154,7 @@ Review pack seal:  ec61ff8e51639781a5426ae68d5a29591c31bfa010d1c3bcbaaa95a48a6f8
 Review pack:       .qfai/review/review-20260821160000000/            (round 11 — stage gates only)
 Review pack seal:  85c0d27221c6d887035a6e9bef3ff17eec6c6ade37e9442996ba6dfea2b4f043
 Review pack:       .qfai/review/review-20260821180000000/            (round 12 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  44d99dce97dbf4ae1a2e96b4b08eba2154edeff5536aab3035d77cdec9e390f6
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
