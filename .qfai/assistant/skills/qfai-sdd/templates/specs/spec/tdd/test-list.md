@@ -6,9 +6,18 @@ Red/Green/Refactor cycle one row at a time.
 
 ## Producer
 
-Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**.
-`/qfai-sdd` seeds them at Phase 2b. An empty table below is valid — it means
-the spec has no coverage-target TC yet, not that the ledger is missing.
+Rows are derived from `06_Test-Cases.md`:
+**one row per independently observable boundary of a coverage-target TC**.
+A TC that names a single boundary owes exactly one row; a matrix-shaped TC
+(several rejection reasons, a status-code matrix, several independent state
+transitions) owes one row per boundary, and each of those rows carries that
+`TC-*` in `TC-Refs`. `TC-Refs` is many-to-many, so several rows naming one
+`TC-*` is the seeded shape, not a TC-coverage violation.
+
+`/qfai-sdd` seeds them at Phase 2b — before RED begins, which is where
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
+requires the split. An empty table below is valid — it means the spec has no
+coverage-target TC yet, not that the ledger is missing.
 
 `US-*` and `CON-API-*` are **not** rows here. They are ATDD obligations,
 traced by `QFAI:` annotations in the test tree per

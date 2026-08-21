@@ -7,8 +7,10 @@ one.
 
 ## Producer
 
-`/qfai-sdd` Phase 2b seeds one row per coverage-target TC from
-`06_Test-Cases.md`. `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
+`/qfai-sdd` Phase 2b seeds one row per independently observable boundary of a
+coverage-target TC from `06_Test-Cases.md` — a matrix-shaped TC arrives already
+split into N rows, each repeating that `TC-*` in `TC-Refs`.
+`US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
 annotations, not ledger rows — they never appear as rows here.
 
 ## Recovery when it is missing

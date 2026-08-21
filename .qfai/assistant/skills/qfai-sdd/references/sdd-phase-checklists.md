@@ -43,7 +43,8 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 ## Phase 2b: Seed `tdd/test-list.md`
 
 - Copy `templates/specs/spec/tdd/test-list.md` when `<spec-id>/tdd/test-list.md` does not exist.
-- Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
+- Add rows for every coverage-target TC in `06_Test-Cases.md`, `Status = todo`: one row when the TC names a single observable boundary, N rows when it names several (next bullet).
+- Split matrix-shaped TCs here, at seed time: a TC whose expected outcome enumerates more than one independently observable boundary (several rejection reasons, a status-code matrix, several independent state transitions) is seeded as N rows — one row per boundary, one falsifying oracle each — and every one of those rows carries that `TC-*` in `TC-Refs`. `TC-Refs` is many-to-many, so N rows naming one `TC-*` is the required shape, not a TC-coverage violation. Rule: `spec-traceability-rules.md` ("A matrix-shaped `TC-*` ... MUST be split across multiple TDD rows before RED begins"). Phase 2b is the only phase that writes rows before RED, so a TC left whole here is never split.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
 - Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
 - Keep the ledger table the first markdown table in the file.

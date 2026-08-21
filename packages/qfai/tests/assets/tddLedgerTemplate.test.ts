@@ -48,8 +48,42 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
     it(`${tree}: the template states who produces the rows`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("## Producer");
-      expect(template).toContain("one row per coverage-target TC");
+      expect(template).toContain("one row per independently observable boundary");
+      expect(template).toContain("coverage-target TC");
       expect(template).toContain("An empty table below is valid");
+    });
+
+    it(`${tree}: the seeding phase splits a matrix-shaped TC before RED`, async () => {
+      // `spec-traceability-rules.md` requires the split "before RED begins",
+      // and Phase 2b is the only phase that writes rows before RED. A
+      // checklist that says only "one row per TC" makes the rule unenforceable
+      // by construction: every matrix TC reaches `/qfai-implement` unsplit.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      const phase2b = checklists.slice(
+        checklists.indexOf("## Phase 2b"),
+        checklists.indexOf("## Phase 2c"),
+      );
+      expect(phase2b).toContain("more than one independently observable boundary");
+      expect(phase2b).toContain("one row per boundary");
+      // Without this the seeded shape reads as a TC-coverage violation.
+      expect(phase2b).toContain("`TC-Refs` is many-to-many");
+      expect(phase2b).toContain("spec-traceability-rules.md");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("MUST be split across multiple TDD rows before RED begins");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("one row per independently observable boundary");
+      expect(template).toContain("`TC-Refs` is many-to-many");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("one row per independently observable boundary");
     });
 
     it(`${tree}: the template claims no producer the shipped skills do not implement`, async () => {
