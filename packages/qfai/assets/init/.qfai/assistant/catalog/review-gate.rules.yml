@@ -6,6 +6,7 @@ required:
     - Initiative
     - Capabilities
     - BusinessFlow
+    - SlicePolicy
   spec:
     - Spec
     - UserStories
@@ -13,6 +14,7 @@ required:
     - BusinessRules
     - Examples
     - TestCases
+    - Plan
 
 optional:
   shared:
