@@ -277,12 +277,19 @@ is a defect.
 - Every reviewer finding declares a `Traces to:` value. See
   `shared-skill-delegation-baseline.md#finding-provenance-must` for the response schema. Legal
   values:
-  - an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`) or a named constitution/catalog rule;
+  - an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`) or a named constitution/catalog rule
+    **that governs the product's behaviour**;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — the deliverable-defect
     classes above, each of which MUST carry the concrete evidence in the changed artifacts that
     demonstrates it;
+  - `record:<CODE>` — a defect in the run's own record rather than in the product;
   - `none` — reviewer-originated scope.
-- The first two are **blocking** and gate `done`.
+- The first two are **blocking** and gate `done`. `record:*` and `none` are not.
+- `Traces to: record:<CODE>` is a record defect: the ledger, a round block, an evidence anchor or
+  the provenance prose is wrong while the product is not. It MUST be recorded as `advisory`, MUST
+  NOT be `blocking`, and settles in one queue at the spec boundary rather than by re-running the
+  row. `record:unchecked` is a bug report against `validateTddList`, not against the item — a
+  record rule worth a round is worth a validator code.
 - `Traces to: none` is reviewer-originated scope. It is **drift**, and it is **not satisfiable
   downstream**: encoding it as production code plus a hard test assertion is the same violation as
   patching upstream SSOT, inverted. It MUST be recorded as `advisory`, MUST NOT be `blocking`, and

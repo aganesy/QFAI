@@ -118,6 +118,57 @@ describe("reviewer finding provenance", () => {
     }
   });
 
+  it("keeps a record defect out of the blocking class in the constitution", async () => {
+    // Before `record:*` existed, "the Evidence cell omits the tier" cited a named
+    // constitution rule, so it was a legal *blocking* finding — indistinguishable in
+    // authority from "the revoked grant still authorises the request" — and it forced
+    // another full review round on a row whose code nobody disputed.
+    const [baseline, drift] = await Promise.all([
+      readFile(DELEGATION_BASELINE, "utf-8"),
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+    ]);
+    for (const doc of [baseline, drift]) {
+      // The rule-name clause admits only rules about what the product does.
+      expect(doc).toMatch(
+        /named constitution\/catalog\s+rule\s+\*\*that governs the\s+product's behaviour\*\*/,
+      );
+      expect(doc).toContain("`record:<CODE>`");
+      // The ratchet: a record rule worth a round is worth a validator code.
+      expect(doc).toMatch(/`record:unchecked` is a bug report against\s+`validateTddList`/);
+      expect(doc).toMatch(/settles in\s+one queue at the spec boundary/);
+    }
+    expect(baseline).toMatch(
+      /`record:\*` and `none` MUST be recorded as `advisory`;\s+neither can be `blocking` or gate `DONE`/,
+    );
+    expect(baseline).toMatch(
+      /Only `blocking` findings — those citing a behaviour-governing obligation or a defect class/,
+    );
+    // The reviewer response schema has to offer the value it now requires.
+    expect(baseline).toContain("defect:code-quality|record:<CODE>|none>");
+    expect(drift).toMatch(/`record:\*` and `none` are not\./);
+  });
+
+  it("restates the record class as advisory downstream of the constitution", async () => {
+    const classification = await readFile(FINDING_CLASSIFICATION, "utf-8");
+    expect(classification).toMatch(
+      /named constitution\/catalog rule \*\*that governs the\s+product's behaviour\*\*/,
+    );
+    // Placement is the assertion: `record:*` sits under Advisory, never under Blocking.
+    const advisoryIndex = classification.indexOf("## Advisory");
+    expect(classification.indexOf("## Blocking")).toBeGreaterThanOrEqual(0);
+    expect(advisoryIndex).toBeGreaterThan(0);
+    expect(classification.indexOf("`record:<CODE>`")).toBeGreaterThan(advisoryIndex);
+    expect(classification).toMatch(/settles in\s+one queue at the spec boundary/);
+    expect(classification).toMatch(
+      /`record:unchecked` is a bug report against\s+`validateTddList`/,
+    );
+    // The sign-off checkbox is where a reviewer actually catches itself.
+    for (const file of REVIEWER_AGENTS) {
+      const card = await readFile(file, "utf-8");
+      expect(card).toMatch(/no blocking finding traces to `none` or `record:\*`/);
+    }
+  });
+
   it("links only to anchors that exist in the target document", async () => {
     const [drift, baseline, skill, classification] = await Promise.all([
       readFile(DRIFT_PROTOCOL, "utf-8"),

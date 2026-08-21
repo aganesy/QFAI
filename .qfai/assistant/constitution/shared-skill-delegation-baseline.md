@@ -229,19 +229,19 @@ in/out split is not re-derived per run.
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
 - `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named
-    constitution/catalog rule;
-  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from
-    the changed artifacts themselves, cited together with the evidence that demonstrates it. See
-    `drift-protocol.md#defect-or-new-scope-decide-this-first`. A reviewer who can show the
-    deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named constitution/catalog
+    rule **that governs the product's behaviour**;
+  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts
+    themselves, cited together with the evidence that demonstrates it (see `drift-protocol.md#defect-or-new-scope-decide-this-first`).
+    A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a
+    round block, an evidence anchor, the provenance prose itself. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
-- A finding whose `Traces to:` is `none` MUST be recorded as `advisory`. It cannot be `blocking`,
-  and it cannot gate `DONE`.
-- An advisory finding is routed to the Change Request / Open Question path defined in
-  `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
-- Only `blocking` findings — those citing an upstream obligation or a defect class — force
-  `REVISE`.
+- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding
+  settles in one queue at the spec boundary, never by re-running the row, and `record:unchecked` is a bug report against
+  `validateTddList`, not against the item: a record rule worth a round is worth a validator code.
+- An advisory finding is routed to the Change Request / Open Question path defined in `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
+- Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
 
 ### Reviewer budget exhausted
 
@@ -287,7 +287,7 @@ Reviewed revision: <git rev> | working-tree+<content hash>
 Audited evidence hash: <content hash of the evidence read>   # one line per TDD-ID on a T1 group
 Authored/edited under review: none | <artifact refs this reviewer authored or edited in this run>
 Findings:
-- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|none>
+- <issue> | Severity: blocking|advisory | Traces to: <AC-*/BR-*/TC-*/CON-*/rule-name|defect:correctness|defect:security|defect:code-quality|record:<CODE>|none>
 Required fixes:
 - <action>   # blocking findings only
 Advisory / Change Request proposals:

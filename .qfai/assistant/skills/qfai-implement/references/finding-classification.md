@@ -5,9 +5,9 @@ Provenance rules: `shared-skill-delegation-baseline.md#finding-provenance-must`.
 ## Blocking
 
 A **blocking** finding cites either an upstream obligation (`AC-*`, `BR-*`,
-`TC-*`, `CON-*`, or a named constitution/catalog rule) or a defect class
-(`defect:correctness`, `defect:security`, `defect:code-quality`) in its
-`Traces to:` field.
+`TC-*`, `CON-*`, or a named constitution/catalog rule **that governs the
+product's behaviour**) or a defect class (`defect:correctness`,
+`defect:security`, `defect:code-quality`) in its `Traces to:` field.
 
 A defect demonstrable from the changed code — an unhandled rejection, a missing
 validation on trusted input, a leak, a broken contract the code itself declares
@@ -21,6 +21,13 @@ out of `done`.
 An **advisory** finding is one whose `Traces to:` is `none` — a new product
 obligation upstream never asked for. It MUST NOT be implemented as production
 code or pinned as a test assertion.
+
+`record:<CODE>` is advisory too. It marks a defect in the run's own record —
+a ledger cell, a round block, an evidence anchor, the provenance prose — while
+the product itself is not in dispute. It MUST NOT be `blocking`: it settles in
+one queue at the spec boundary rather than by re-running the row. And
+`record:unchecked` is a bug report against `validateTddList`, not against the
+item: a record rule worth a round is worth a validator code.
 
 Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in
 the reviewer response under `Advisory / Change Request proposals`.
