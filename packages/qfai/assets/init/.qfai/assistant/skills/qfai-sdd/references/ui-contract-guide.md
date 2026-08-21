@@ -32,8 +32,12 @@ slot entry may be authored in one of two shapes:
 A structured entry missing any of `id` / `label` / `acceptance`, or
 carrying any extra key (e.g. `priority`, `owner`), is rejected at
 validate time. The schema is intentionally closed (no
-`additionalProperties: true`) — see the related design decision in
-`_policies/08_Decisions.md` for rationale.
+`additionalProperties: true`) for two reasons: the `{id, label,
+acceptance}` triple matches the shape US and TC entries already use, so
+downstream coverage and ATDD tooling consumes a structured task without
+per-project shape negotiation; and an open shape invites per-project
+field sprawl (`priority`, `owner`, …) that breaks exactly that
+cross-project tooling.
 
 ## Recommended count band: 3..7
 
