@@ -334,6 +334,17 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
     owes a `tdd/test-list.md` row, and `TDDLIST_TC_NOT_COVERED` (`error`)
     reports a missing one. L1/L2 belong to `/qfai-implement`, which is the
     stage that writes unit and component tests.
+
+- **An annotation carrier is not an executable test.** The scan reads `.feature`
+  and `.md` too, because both are legitimate carriers. A `.feature` is run by a
+  runner and counts as code; a bare `.md` is prose, so an obligation whose
+  **only** carrier is markdown clears `QFAI-ATDD-111` / `-112` / `-113` / `-115`
+  with nothing behind it that can run. `QFAI-ATDD-118` (`info`) names those,
+  giving the state a name instead of leaving it indistinguishable from done —
+  `info`, not `error`, because an ID ledger is a legitimate way to record a
+  deliberate placeholder. What it must not do is read as coverage:
+  `summary.json` carries the same partition as `coveredByCarrierOnly`, and a
+  gate must read `missing.<kind>` **and** that field, never `missing` alone.
 - API obligations:
   - Every declared `CON-API-*` must be referenced at least once from `tests/api/**`.
   - Use `QFAI:CON-API-XXXX` annotations.

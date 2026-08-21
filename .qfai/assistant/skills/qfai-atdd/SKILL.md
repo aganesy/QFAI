@@ -171,7 +171,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
     not duplicate an L1/L2 annotation into `tests/integration/**` to quiet a
     gate: that is the all-integration collapse `catalog/test-layers.md` lists as
     an anti-pattern.
-  - `tests/api/**` must cover all required `CON-API-*`.
+  - `tests/api/**` must cover all required `CON-API-*`. **An ID listed only in a `.md` is not coverage**: the scan reads markdown too, so a bullet list closes any of these obligations without a test. `QFAI-ATDD-118` (`info`) names them, and coverage is `missing` **and** `coveredByCarrierOnly` in `summary.json`, never `missing` alone.
 - Forbidden references (a TC annotation outside its declared home):
   `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
   unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.

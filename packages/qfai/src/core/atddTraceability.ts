@@ -83,12 +83,21 @@ export type AtddTraceabilityScan = {
   limit: number;
 };
 
-export type AtddTraceabilityMissing = {
+/**
+ * Obligation refs bucketed by ID kind.
+ *
+ * Shared by the two partitions the coverage result reports: `missing` (owed and
+ * referenced nowhere) and `coveredByCarrierOnly` (owed, referenced, but only
+ * from a prose annotation carrier).
+ */
+export type AtddObligationRefs = {
   us: string[];
   tc: string[];
   conApi: string[];
   conDb: string[];
 };
+
+export type AtddTraceabilityMissing = AtddObligationRefs;
 
 export type AtddCodeTraceabilityResult = {
   specsRoot: string;
@@ -158,6 +167,22 @@ export type AtddCodeTraceabilityResult = {
     tcInIntegration: AtddForbiddenRef[];
   };
   missing: AtddTraceabilityMissing;
+  /**
+   * Owed obligations whose every carrier is a prose file (`.md` / `.markdown`).
+   *
+   * Satisfaction is a text match, and the scan deliberately reads past test
+   * code so a Gherkin feature or a markdown ledger can carry annotations. The
+   * consequence is that a bullet list of IDs discharges `QFAI-ATDD-111` /
+   * `-112` / `-113` / `-115` exactly as an executable acceptance test does, and
+   * `missing: []` cannot tell the two apart. Reported at `info`
+   * (`QFAI-ATDD-118`) and persisted into the summary artifact for the same
+   * reason `unitComponentTcIds` is: a coverage scan must never leave "covered
+   * by a test" and "covered by an ID written in prose" indistinguishable.
+   *
+   * A `.feature` counts as code — a runner executes it — so only markdown lands
+   * here.
+   */
+  coveredByCarrierOnly: AtddObligationRefs;
   /**
    * Formatted missing TC ref -> the test kind its declared `Level` routes to.
    * Lets the CLI phrase `QFAI-ATDD-112` (message, `suggested_action`, report)
@@ -399,6 +424,15 @@ export async function evaluateAtddCodeTraceability(
   );
   missing.tc = owedTc;
   const missingTcHomes = buildMissingTcHomes(missing.tc, tcLevels);
+  const coveredByCarrierOnly = buildCarrierOnlyRefs({
+    usRefs,
+    usObligationScope: uiBearingSpecs,
+    tcRefs,
+    apiRefs,
+    apiContractIds: activeApiContractIds,
+    dbRefs,
+    dbContractIds: activeDbContractIds,
+  });
 
   return {
     declaredSpecDirs: specRefs.declaredSpecDirs,
@@ -428,6 +462,7 @@ export async function evaluateAtddCodeTraceability(
       tcInIntegration: toForbiddenList(forbiddenTcInIntegration),
     },
     missing,
+    coveredByCarrierOnly,
     missingTcHomes,
     skippedTestFiles: skippedTestFiles.sort(),
     scan: {
@@ -1145,6 +1180,29 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
 const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
 
 /**
+ * The subset of {@link STRUCTURAL_ANNOTATION_EXTENSIONS} that no runner runs.
+ *
+ * A `.feature` is Gherkin and a runner executes it, so it counts as test code.
+ * A bare `.md` is prose: an obligation whose only carrier is markdown has its
+ * ID written down, not an acceptance test standing behind it. Both stay
+ * scannable — the distinction is reported, not enforced.
+ */
+const PROSE_CARRIER_EXTENSIONS: ReadonlySet<string> = new Set(["md", "markdown"]);
+
+/** True when every recorded carrier for an obligation is prose. */
+function isProseCarrierOnly(files: ReadonlySet<string>): boolean {
+  if (files.size === 0) {
+    return false;
+  }
+  for (const file of files) {
+    if (!PROSE_CARRIER_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase())) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
  * Derives the per-layer file pattern from the project's configured
  * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
  *
@@ -1371,6 +1429,59 @@ function buildMissingRefs(input: {
     conApi: missingConApi.sort((left, right) => left.localeCompare(right)),
     conDb: missingConDb.sort((left, right) => left.localeCompare(right)),
   };
+}
+
+/**
+ * The refs whose only recorded carrier is prose, bucketed like `missing`.
+ *
+ * Read off the same `*Refs` maps `buildMissingRefs` reads, so the two
+ * partitions cannot drift: an owed obligation is in exactly one of `missing`
+ * (no carrier), `coveredByCarrierOnly` (prose carriers only), or neither (at
+ * least one executable carrier). Only owed obligations are considered —
+ * `tcRefs` already holds none for a Unit/Component TC, and the US and contract
+ * sets are narrowed to their obligation scope here.
+ */
+function buildCarrierOnlyRefs(input: {
+  usRefs: AtddSpecRefs;
+  usObligationScope: ReadonlySet<string> | null;
+  tcRefs: AtddSpecRefs;
+  apiRefs: Map<string, Set<string>>;
+  apiContractIds: Set<string>;
+  dbRefs: Map<string, Set<string>>;
+  dbContractIds: Set<string>;
+}): AtddObligationRefs {
+  return {
+    us: carrierOnlySpecRefs(input.usRefs, input.usObligationScope, formatUsRef),
+    tc: carrierOnlySpecRefs(input.tcRefs, null, formatTcRef),
+    conApi: carrierOnlyContractRefs(input.apiRefs, input.apiContractIds),
+    conDb: carrierOnlyContractRefs(input.dbRefs, input.dbContractIds),
+  };
+}
+
+function carrierOnlySpecRefs(
+  refs: AtddSpecRefs,
+  obligationScope: ReadonlySet<string> | null,
+  format: (spec: string, id: string) => string,
+): string[] {
+  const carrierOnly: string[] = [];
+  for (const [spec, byId] of refs.entries()) {
+    if (obligationScope !== null && !obligationScope.has(spec)) {
+      continue;
+    }
+    for (const [id, files] of byId.entries()) {
+      if (isProseCarrierOnly(files)) {
+        carrierOnly.push(format(spec, id.replace(/^(?:US|TC)-/, "")));
+      }
+    }
+  }
+  return carrierOnly.sort((left, right) => left.localeCompare(right));
+}
+
+function carrierOnlyContractRefs(refs: Map<string, Set<string>>, owed: Set<string>): string[] {
+  return sortStrings(owed).filter((id) => {
+    const files = refs.get(id);
+    return files !== undefined && isProseCarrierOnly(files);
+  });
 }
 
 function hasSpecId(target: Map<string, Set<string>>, specNumber: string, id: string): boolean {
