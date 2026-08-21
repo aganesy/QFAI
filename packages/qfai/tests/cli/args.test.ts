@@ -150,6 +150,32 @@ describe("parseArgs", () => {
     expect(parsed.options.invalidExitCode).toBe(2);
   });
 
+  // usage エラーは全コマンドで exit 2（gate 失敗の exit 1 と分離する）。
+  // `prototyping iterate` の canonical exit-code matrix に合わせる。
+  it("assigns usage exit code 2 to every parse-time rejection", () => {
+    const cwd = process.cwd();
+    const rejections: string[][] = [
+      ["validate", "--format"],
+      ["validate", "--profile", "unknown"],
+      ["prototyping", "iterate", "--cycle", "notanumber"],
+      ["prototyping", "bogusaction"],
+      ["guardrails", "bogusaction"],
+      ["audit", "bogusaction"],
+    ];
+    for (const argv of rejections) {
+      const parsed = parseArgs(argv, cwd);
+      expect(parsed.invalid, argv.join(" ")).toBe(true);
+      expect(parsed.options.invalidExitCode, argv.join(" ")).toBe(2);
+    }
+  });
+
+  it("keeps invalidExitCode at 2 for valid invocations that never reject", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.invalidExitCode).toBe(2);
+  });
+
   // CHG-006 second-wave flag parsing (spec-0012):
   //   --emit-skeletons / --skeleton-mode / --mode under `prototyping iterate`.
 

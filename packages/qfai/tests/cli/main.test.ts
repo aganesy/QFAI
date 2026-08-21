@@ -30,14 +30,27 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
-  it("sets exitCode=1 when help is shown due to invalid args", async () => {
+  it("sets exitCode=2 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
       await run(["validate", "--format"], cwd);
-      expect(process.exitCode).toBe(1);
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it("sets exitCode=2 when a prototyping iterate flag is rejected by the parser", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["prototyping", "iterate", "--cycle", "notanumber"], cwd);
+      expect(process.exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
     }

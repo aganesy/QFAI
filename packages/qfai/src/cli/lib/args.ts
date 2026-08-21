@@ -171,7 +171,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     guardrailsPaths: [],
     validateSpecIds: [],
     help: false,
-    invalidExitCode: 1,
+    // usage / 入力エラーは全コマンド共通で 2。gate 失敗 (validate など) が
+    // 返す 1 と区別できるようにするため。`prototyping iterate` の canonical
+    // exit-code matrix もこの規約に一致する。
+    invalidExitCode: 2,
   };
 
   const args = [...argv];
@@ -186,9 +189,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const markInvalid = (): void => {
     invalid = true;
     options.help = true;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
   };
 
   if (command === "guardrails") {

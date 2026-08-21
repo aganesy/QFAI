@@ -341,6 +341,11 @@ Options:
   --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
   -h, --help      ヘルプ表示
+
+Exit codes:
+  0  成功
+  1  gate 失敗（validate/report/guardrails などの検査が不合格）
+  2  usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
 `;
 }
 
