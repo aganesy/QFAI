@@ -28,7 +28,7 @@
 
 ## Decision Log
 
-> This is the only section `qfai report` reads for Change Type metrics.
+> This is the only section `npx qfai report` reads for Change Type metrics.
 > One `### DL-NNNN` entry per decision, each carrying a `#### Meta` YAML block
 > with all seven keys. A delta recorded anywhere else is invisible to the
 > tooling and reports as zero decision entries.
