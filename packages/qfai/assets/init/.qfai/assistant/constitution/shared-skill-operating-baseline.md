@@ -28,10 +28,10 @@ It is not where the detail lives.
 
 A hard line ceiling backs this up: **500 lines per assistant asset file**, for
 every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
-`content.split(/\r?\n/).length` — blank lines included. `qfai doctor` measures
-it and reports every file over the ceiling as `assets.lineBudget`. The ceiling
-is a backstop, not the rule: a file approaching it is a signal to move a section
-out, not to raise the number.
+`content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor`
+measures it and reports every file over the ceiling as `assets.lineBudget`. The
+ceiling is a backstop, not the rule: a file approaching it is a signal to move a
+section out, not to raise the number.
 
 ## User Questions (AskUserQuestion Protocol)
 
