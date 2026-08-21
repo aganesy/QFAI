@@ -162,7 +162,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // These run AFTER copyTemplateTree so they can detect when the
   // asset templates already populated a layer (they fill in only
   // missing .gitkeep / README placeholders).
-  const assistantTreeResult = await seedAssistantLayers(destRoot, options.dryRun);
+  const assistantTreeResult = await seedAssistantLayers(destRoot, assistantAssets, options.dryRun);
   const projectSteeringResult = await seedProjectSteering(destRoot, options.dryRun);
 
   // Activation guidance for newly created instructions files
@@ -229,6 +229,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
 async function seedAssistantLayers(
   destRoot: string,
+  assistantAssets: string,
   dryRun: boolean,
 ): Promise<{ copied: string[]; skipped: string[] }> {
   const copied: string[] = [];
@@ -237,37 +238,37 @@ async function seedAssistantLayers(
   for (const layer of ASSISTANT_LAYERS) {
     const layerDir = joinAssistantLayer(destRoot, layer);
     const gitkeep = path.join(layerDir, ".gitkeep");
-    if (await pathExists(gitkeep)) {
+    // `.gitkeep` exists to keep an *empty* directory tracked. A layer the
+    // asset templates already filled needs none, so seeding one there only
+    // adds a file every reader is told to ignore. The asset side is checked
+    // as well so `--dry-run` reports what a real run would do: on a fresh
+    // directory copyTemplateTree has not written anything yet.
+    if ((await hasEntries(layerDir)) || (await hasEntries(path.join(assistantAssets, layer)))) {
       skipped.push(gitkeep);
       continue;
     }
     copied.push(gitkeep);
     if (!dryRun) {
       await mkdir(layerDir, { recursive: true });
-      await writeFile(gitkeep, assistantLayerGitkeepBody(layer), "utf-8");
+      // Genuinely empty: the file is a git placeholder, not a directory index.
+      await writeFile(gitkeep, "", "utf-8");
     }
   }
 
   return { copied, skipped };
 }
 
-function assistantLayerGitkeepBody(layer: AssistantLayer): string {
-  const purposes: Record<AssistantLayer, string> = {
-    constitution:
-      "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
-    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
-    catalog:
-      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
-    process: "Workflow / process docs and migration memos (process/migrations/*).",
-  };
-  return [
-    `# .qfai/assistant/${layer}/`,
-    "",
-    purposes[layer],
-    "",
-    "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
-    "",
-  ].join("\n");
+/** True when `dir` exists and holds at least one entry. */
+async function hasEntries(dir: string): Promise<boolean> {
+  try {
+    const entries = await readdir(dir);
+    return entries.length > 0;
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return false;
+    }
+    throw err;
+  }
 }
 
 function buildProjectSteeringReadmeBody(): string {

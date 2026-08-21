@@ -3,6 +3,7 @@ import {
   lstat,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   readlink,
   rm,
@@ -1327,16 +1328,18 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
-  it("TC-0003-0021 (TDD-0021): seeds .qfai/assistant/{constitution,manifest,catalog,process}/.gitkeep on fresh init", async () => {
+  it("TC-0003-0021 (TDD-0021): seeds the 4 assistant layers and leaves no .gitkeep in a populated layer", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       for (const layer of ["constitution", "manifest", "catalog", "process"]) {
-        const gitkeep = path.join(root, ".qfai", "assistant", layer, ".gitkeep");
-        const stat = await lstat(gitkeep);
-        expect(stat.isFile()).toBe(true);
-        const body = await readFile(gitkeep, "utf-8");
-        expect(body).toContain(`.qfai/assistant/${layer}/`);
+        const layerDir = path.join(root, ".qfai", "assistant", layer);
+        const entries = await readdir(layerDir);
+        // The shipped assets populate every layer, so a .gitkeep would keep
+        // nothing alive: init must not write one (and must never write a
+        // prose directory index under that filename).
+        expect(entries.length).toBeGreaterThan(0);
+        expect(entries).not.toContain(".gitkeep");
       }
     } finally {
       await rm(root, { recursive: true, force: true });
