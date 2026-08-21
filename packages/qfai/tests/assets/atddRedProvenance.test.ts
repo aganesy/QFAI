@@ -771,13 +771,19 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
   });
 
   it("hands a review-fix acceptance test back to the skill that owns it", async () => {
-    // `/qfai-implement` does not author those tests and its `red` phase has no
-    // `acceptance-test-engineer`, so a REVISE asking for a test change left
-    // the row at `review-fix` or had a production agent edit a test it does
-    // not own.
+    // A REVISE asking for a test change left the row at `review-fix` or had a
+    // production agent edit a test it does not own. The handback is justified
+    // by **ownership**, not by which agent this skill happens to route: the
+    // availability phrasing it used to carry ("its `red` phase has no
+    // `acceptance-test-engineer`") was scoped to one phase and stopped holding
+    // as soon as another phase routed that role.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("hand the acceptance test back to `/qfai-atdd` first");
-    expect(implement).toContain("has nobody here to do it");
+    expect(implement).toContain(
+      "an acceptance test is `/qfai-atdd`'s owned artifact and is **never edited in this skill**",
+    );
+    expect(implement).toContain("the rule is ownership, not who happens to be available");
+    expect(implement).not.toContain("has nobody here to do it");
   });
 
   it("keeps cross-spec obligations in the row's own evidence file", async () => {
