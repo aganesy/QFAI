@@ -147,7 +147,8 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `blocked` row is waiting on and is required on those rows.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
-  Phase Red.
+  Phase Red. There is no `retired` value: retiring a row is **deleting it from the
+  table** under the ownership split below, not parking it at a status.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
   covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
   This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,

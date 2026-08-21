@@ -27,6 +27,21 @@ coverage target, has its row retired the same way. Leaving a stale `done` row
 hides re-implementation work, and leaving a `todo` row for a deleted TC feeds
 `/qfai-implement` an obligation that no longer exists.
 
+**Retiring a row means deleting it from the table.** There is no `retired`
+status: the legal values are the ones the `Status` row of the schema table
+below lists, and any other one is a `TDDLIST_INVALID_STATUS` **error** — so
+writing `Status = retired`
+fails the run that followed the instruction. Nor is there a parking spot lower
+down: `validateTddList` scores **every** schema-complete table in this file, so
+a row moved under a `## Retired` heading is still read as a ledger row, and a
+trimmed-down copy of it raises `TDDLIST_REQUIRED_COLUMN_MISSING` instead.
+Deleting the row destroys no evidence — `Evidence` is a pointer, and the
+RED/GREEN record it names stays in `.qfai/evidence/implement-<spec-id>.md`.
+Record the removal by `TDD-ID` in the driving `CR-*`, which is where the
+deletion is authorised: removing a row is an upstream change and takes the
+Change Request path
+(`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`).
+
 ## Ledger
 
 The **first** markdown table in this file is the ledger — `validateTddList`

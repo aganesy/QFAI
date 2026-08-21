@@ -23,6 +23,62 @@ const cells = (row: string): string[] =>
     .slice(1, -1)
     .map((cell) => cell.trim());
 
+/** Inserts a ledger row directly under the template's header separator. */
+const withLedgerRow = (template: string, row: string): string => {
+  const lines = template.split(/\r?\n/);
+  const headerIndex = lines.findIndex((line) => line.trim().startsWith("| TDD-ID"));
+  if (headerIndex < 0) {
+    throw new Error("the shipped template no longer carries a ledger header row");
+  }
+  lines.splice(headerIndex + 2, 0, row);
+  return lines.join("\n");
+};
+
+/** A ledger row for a TC that `06_Test-Cases.md` does not declare. */
+const deletedTcRow = (tddId: string, status: string): string =>
+  `| ${tddId} | TC-0009 | Unit | tests/deleted.test.ts | deleted | ${status} | - | - |`;
+
+/**
+ * A resolvable Test Case Table declaring one non-coverage TC.
+ *
+ * `TC-0009` is deliberately absent: it stands for the TC deleted upstream whose
+ * ledger row Phase 2b has to retire. `L3` keeps the declared TC off the
+ * coverage-target list so the only findings are the ones under test.
+ */
+const TEST_CASES = [
+  "# 06 Test Cases",
+  "",
+  "## Test Case Table",
+  "",
+  "| TC-ID | Level | Description |",
+  "| ------- | ----- | ----------- |",
+  "| TC-0001 | L3 | still declared |",
+  "",
+].join("\n");
+
+/** Seeds a throwaway project holding one spec whose ledger is `ledger`. */
+const seedSpec = async (ledger: string): Promise<string> => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-retire-"));
+  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  await mkdir(path.join(specDir, "tdd"), { recursive: true });
+  await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
+  await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASES, "utf-8");
+  await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
+  return root;
+};
+
+/** Runs `validateTddList` over a throwaway project and cleans it up. */
+const codesFor = async (ledger: string): Promise<Array<{ code: string; severity: string }>> => {
+  const root = await seedSpec(ledger);
+  try {
+    const issues = await validateTddList(root, defaultConfig);
+    return issues.map((entry) => ({ code: entry.code, severity: entry.severity }));
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+};
+
 describe("tdd/test-list.md has a shipped template and a named producer", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: the ledger is the first table so validateTddList parses it`, async () => {
@@ -87,6 +143,79 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain("Reconcile changed and removed TCs");
+    });
+
+    it(`${tree}: "retire" names an encoding the ledger schema can express`, async () => {
+      // "retire the row" named no state. `retired` is not a legal `Status`, and
+      // the two states the row could hold are the two the same sentence
+      // forbids — so the instruction was unperformable and the literal reading
+      // failed `qfai validate`. Every surface that says "retire" must now say
+      // what it means: delete the row, under the driving `CR-*`.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Retiring a row means deleting it from the table.**");
+      // Deleting it is not losing the cycle: `Evidence` is a pointer.
+      expect(template).toContain("`.qfai/evidence/implement-<spec-id>.md`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Retiring a row means **deleting it from the ledger table**");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("There is no `retired` value");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("since there is no `retired` status");
+    });
+
+    it(`${tree}: the encodings the guidance rules out are the ones validateTddList rejects`, async () => {
+      const template = await read(tree, TEMPLATE);
+
+      // The literal reading of "retire": a hard error, which is why the
+      // guidance may not leave it as the obvious move.
+      const retired = await codesFor(withLedgerRow(template, deletedTcRow("TDD-0001", "retired")));
+      expect(
+        retired.filter(
+          (entry) => entry.code === "TDDLIST_INVALID_STATUS" && entry.severity === "error",
+        ),
+      ).toHaveLength(1);
+
+      // Parking the row below the ledger is not retiring it either:
+      // `collectLedgerTables` scores every schema-complete table in the file,
+      // so the row for the deleted TC is still read and still reported.
+      const parked = [
+        template.trimEnd(),
+        "",
+        "## Retired",
+        "",
+        "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+        "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |",
+        deletedTcRow("TDD-0002", "done"),
+        "",
+      ].join("\n");
+      expect((await codesFor(parked)).map((entry) => entry.code)).toContain("TDDLIST_UNKNOWN_REF");
+
+      // …and trimming that parked table down to hide it is worse: a table
+      // carrying both markers is a ledger table, and an incomplete one is a gap.
+      const trimmed = [
+        template.trimEnd(),
+        "",
+        "## Retired",
+        "",
+        "| TDD-ID | TC-Refs | Status |",
+        "| ------ | ------- | ------ |",
+        "| TDD-0002 | TC-0009 | done |",
+        "",
+      ].join("\n");
+      expect(
+        (await codesFor(trimmed)).filter(
+          (entry) => entry.code === "TDDLIST_REQUIRED_COLUMN_MISSING" && entry.severity === "error",
+        ).length,
+      ).toBeGreaterThan(0);
     });
 
     it(`${tree}: an empty ledger is only "nothing to do" when 06_Test-Cases.md agrees`, async () => {

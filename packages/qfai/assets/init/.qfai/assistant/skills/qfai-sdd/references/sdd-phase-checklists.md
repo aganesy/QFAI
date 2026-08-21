@@ -46,6 +46,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
 - Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
+- Retiring a row means **deleting it from the ledger table**, with the removal recorded by `TDD-ID` in the driving `CR-*` — removing a row is an upstream change and takes the Change Request path. There is no `retired` status (`Status = retired` is a `TDDLIST_INVALID_STATUS` error), and moving the row below the ledger does not retire it either: `validateTddList` scores every schema-complete table in the file. The RED/GREEN record survives the deletion in `.qfai/evidence/implement-<spec-id>.md`, which is what the `Evidence` cell pointed at.
 - Keep the ledger table the first markdown table in the file.
 - An empty table is a valid outcome when the spec declares no coverage-target TC.
 
