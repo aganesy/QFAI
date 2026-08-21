@@ -143,7 +143,7 @@ a `TC` obligation is routed by the `Level` its spec declares for it.
   | none declared, or unreadable  | `tests/integration/**` |
 
 - Unit and Component test cases carry **no** ATDD annotation obligation. They are gated by the
-  `tdd/test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
+  per-spec `test-list.md` ledger instead, so do not copy them into `tests/integration/**` to satisfy this gate.
 - A `TC` annotation outside the directory its declared `Level` names is rejected. The rule is `Level`-relative,
   not a blanket ban: a `TC` in `tests/api/**` is accepted only for a test case that declares `L4`/`API`, and in
   `tests/e2e/**` only for `L5`/`E2E`.
@@ -498,7 +498,7 @@ README files. Those files are created later by QFAI skills when real work exists
 ### AI work-log surface (`.qfai/steering/`)
 
 `qfai init` also creates `.qfai/steering/`, the per-project work-log surface for
-AI coding agents, with a `README.md` and `_templates/entry.md`. Each entry is a
+AI coding agents, with a `README.md` and an `entry.md` template under `_templates/`. Each entry is a
 markdown file with YAML frontmatter, and `npx qfai validate` polices the surface in
 the `sdd` and full profiles via `W-WORKLOG-SCHEMA`, `W-WORKLOG-BROKEN-LINK`,
 `W-WORKLOG-STALE`, `W-PENDING-PROMOTION` and `R-HANDOFF-INCOMPLETE`.
