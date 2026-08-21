@@ -129,9 +129,17 @@ The two that need their reasoning stated rather than asserted:
 - **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
   the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
   the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
-  a `Blocked-By`, no gate was narrowed, no waiver was requested, and nothing was merged. Option 2's
-  second stated reason was withdrawn during that CR's own review and the option remains rejected on
-  its first.
+  a `Blocked-By`, no gate was narrowed, no waiver was requested, and nothing was merged.
+
+  **Option 2's ground has moved twice and this sentence followed it once.** Its second stated reason was
+  withdrawn during that CR's own review, leaving it rejected on its first — that `QFAI-ATDD-111` has no
+  ledger rows to exempt. Round 15 then corrected the bullet that first reason cites, because
+  `US-0017-0007` is covered and `QFAI-ATDD-111` no longer fires for this spec at all; round 16 found this
+  sentence still pointing at it, so a reader following the citation landed on a bullet that supports the
+  option rather than rejecting it. **The ground that survives both corrections is the unscoped one**:
+  `build` runs the profile unscoped, where `QFAI-ATDD-112` names fifteen TCs across four specs and an
+  exemption for one spec's in-flight rows clears none of the other three specs' — so the gate the option
+  exists to clear stays red. Option 2 is not reintroduced; what changed is which sentence rejects it.
 
 **No RE-OPEN is required.**
 
@@ -1045,12 +1053,12 @@ digest was `payloadDigest` — the whitespace-collapsing hash the `node -e` payl
 collapsing erases the difference between a space and a **newline**. A newline inside `$( … )` is the
 difference between one command and two, and `qfai-tests.yml#detection` ships
 `$(git rev-parse --is-shallow-repository)`: mutating that one space to a newline produced a body with two
-commands and **the same digest**, verified. An identity gate with a collision is not an identity gate. It
-is `bodyDigest` now — line endings and trailing whitespace normalized, nothing else — and the tolerance
-that collapsing was bought for turns out to cost nothing, because YAML strips a block scalar's
-indentation when it parses it, so re-indenting a step never moved the digest in the first place. Pinned
-in both directions by `tests/unit/shippedLaneCommands.test.ts`: the collapsing digest must collide on
-that pair and `bodyDigest` must not.
+commands and **the same digest**, verified. An identity gate with a collision is not an identity gate.
+It became `bodyDigest`, which then normalized line endings and trailing whitespace — the second and third
+answers this function gave, both of them wrong, and the section below records how each was found. Pinned
+in `tests/unit/shippedLaneCommands.test.ts`, which now holds all four pairs against a local copy of the
+rule that was dropped, because a test asserting that `payloadDigest` still collides would have had to be
+deleted along with the collapse, taking the lesson with it.
 
 **And `bodyDigest` had a SECOND collision, which two of round 14's three reviewers found
 independently.** Its first version also stripped trailing whitespace per line, on an assumption the next
@@ -1060,11 +1068,23 @@ two — and they had one digest. Both sides pass `refusals()`, so the instrument
 the boundary let through, which is the property that makes a collision in this gate worth more than an
 escape past the scanner.
 
-Line endings are the only normalization left, and the tolerance the stripping was bought for did not
-exist: YAML removes a block scalar's indentation when it parses it, so re-indenting a step never moved a
-digest. The remaining `\r\n` rule is unreachable from the gate for the same reason — the parser hands it a
-CR-free string — and is kept for a caller that reads raw text, commented as unreachable and exercised by
-a test, so it is a branch someone can break rather than one nobody can observe.
+**And then a THIRD, which retired normalizing altogether.** Round 14 kept the `\r\n` fold on the ground
+that it was unreachable — measured on BLOCK scalars, where the parser folds line breaks itself. A quoted
+FLOW scalar hands the digest a live CR, and a CR before a newline ends a line continuation exactly as a
+space does. Round 15 produced the pair: one digest, `refusals()` returning `[]` for one body and refusing
+a bundler in the other.
+
+**Neither digest normalizes anything now.** Three attempts to be helpful, three collisions, each erasing
+a difference bash acts on — and the tolerance every one of them was bought for did not exist, because
+YAML removes a block scalar's indentation before either function sees it. The bytes are the identity. It
+costs a review when someone edits whitespace inside a shipped body, which is the direction this stage
+would rather pay in.
+
+This paragraph asserted the deleted rule for a round, in three sentences. It said the digest had "line
+endings and trailing whitespace normalized", called the surviving fold "unreachable from the gate", and
+described it as "exercised by a test" that had been rewritten out from under the sentence. Round 16 found
+all three, and no needle in the retracted-claims guard reached any of them — the third round running that
+a refuted claim stood in a wording nothing matched, which is why all three are needles now.
 
 **`defaults.run.shell`** was the round's other repair and belongs to a different story: a `shell:` is a
 command template, GitHub documents `defaults.run.shell` for applying one across steps, and the guard read
@@ -2058,7 +2078,7 @@ pnpm verify:pack                                exit 0
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 error=50 (see § "The full profile")
+node ... validate --profile full                 error=49 (see § "The full profile")
 ```
 
 **`--project assets` does not exist**, and an earlier version of this block named it. The workspace
@@ -2096,36 +2116,23 @@ commit. Caught by re-measuring both totals rather than by a reviewer, which is t
 spec that this class of defect was found here rather than reported to us. The e2e sequence exists because
 five rounds faulted that number; the other total is derivable the same way and is not yet derived.
 
-**Method, because three derivations of this sequence were wrong with correct endpoints.** The right
-column is `it` / `test` callsites in the project's files at each revision, counted from `git show` —
-which is checkable at any later date, unlike a suite total, and is why it is printed. The left column is
-the total those deltas imply from the measured 1422. The two are tied at both ends: the run above
-measures **1433** at `eb5d59af`, and 1422 + (869 - 858) = 1433. Callsites are not tests — `.each` makes
-one callsite many — so the columns only move together while the tests added are plain ones, and every
-step here is.
+**The invariant the sequence existed to carry, stated so it does not need restating each round:** any
+commit that changes an `it` / `test` callsite under the project's two globs owes a re-measurement of the
+totals, and any that does not leaves them valid. That is checkable with one `git show` per commit, it is
+what `stageEvidenceCounts.test.ts` enforces by comparing the recorded callsite count with the measured
+one, and it needs no table. A record naming HEAD is stale at the next commit; a record naming a rule is
+not.
 
-**The invariant, stated so it does not need restating each round:** any later commit that changes an
-`it` / `test` callsite under the project's two globs owes a row here, and any that does not leaves the
-total valid. That is checkable with one `git show` per commit and it is why the right column exists.
-A record naming HEAD is stale at the next commit; a record naming a revision plus a rule is not.
+**Four sentences describing that table outlived it by four rounds**, which round 16 found: they named
+its "right column" and its "left column", reported where "the sequence stopped", and said the totals
+"name the revision they were measured at and why the sequence above reaches it" — a claim about this
+record's own structure, inside the block whose subject is claims of that kind, pointing at a table
+deleted at `f829b95e`. What the sequence taught is kept above; the descriptions of its shape are gone
+with it. Three of its derivations had been wrong with correct endpoints, which is the reason the
+invariant is stated as a rule rather than as a table someone re-derives each round.
 
-The sequence stopped at `ac4700d1 1431` for one round while the block beside it certified **1432**, so
-it asserted a total its own derivation could not reach. The missing `+1` is `9882a1d4`, round 7's own
-apply commit: a step that was invisible because it was the step being taken.
-
-Round 7 measured that sequence and it is the one to trust. Two derivations before it were wrong with
-correct endpoints — the first credited round 5 with six tests where `git show` says **four**, and
-claimed three loop-guard tests were added at a revision whose diff for that file is **empty**, which
-`1186 + 2 = 1188` already refuted; the second started round 6's row at round **5**'s revision and
-absorbed round 5's repair step into it, making a `+3` delta read as `+9`. The endpoints were right both
-times, which is exactly why neither was caught by looking at the totals.
-
-`retractedClaims.test.ts` held **3** tests at `cb91e089` and 5 at `ac4700d1`, not the 5 the second
-version credited to the earlier revision. Re-derived with `git show` at each commit rather than
-reconstructed.
-
-**Those two totals are the numbers this record cannot derive**, which is why they name the revision
-they were measured at and why the sequence above reaches it. Round 7 required the paragraph that used
+**Those two totals are the numbers this record cannot derive**, which is why they name the revision they
+were measured at. Round 7 required the paragraph that used
 to sit here deleted; the round that answered it **duplicated** the paragraph instead, welding the
 sentence marked for deletion onto the end of the copy — an insertion where a deletion was required, in
 the block being rewritten to answer a finding about this block. It is gone now, and that was verified
@@ -2367,16 +2374,21 @@ kept.
 
 ### The full profile
 
-`validate --profile full` reports **`error=50`** at this stage's HEAD, and `build` runs that profile.
+`validate --profile full` reports **`error=49`** at this stage's HEAD, and `build` runs that profile.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
-and never re-run, in the block whose own first sentence says it is re-measured rather than carried. The
-round-14 commit that re-measured the two suite totals did not touch this one, so "re-measured" was true
-of the sentence beside it and false of this.
+and never re-run, in the block whose own first sentence says it is re-measured rather than carried.
 
-The fifty, by rule:
+**Round 15 then recorded 50, and round 16 found that wrong for a reason worth stating: the same commit
+measured the number and removed one of the items that made it up.** I ran the profile, saw 45
+`QFAI-REVIEW-007`, fixed the one of the forty-five this stage had written, and wrote the pre-fix figure
+down as current — "error=50", at five sites. Measuring before repairing and recording after is a sequence that
+produces a true measurement of a tree that no longer exists, and nothing in this record's derived-count
+machinery reaches the unscoped profile.
+
+The forty-nine, by rule:
 
 ```text
-QFAI-REVIEW-007   45   summary.json missing or misusing `revision_form`
+QFAI-REVIEW-007   44   summary.json missing or misusing `revision_form`
 QFAI-REVIEW-004    2   review pack layout
 QFAI-REVIEW-005    1   review pack layout
 QFAI-ATDD-111      1   unscoped: 11 US across four specs, of which this spec owns NONE
@@ -2386,11 +2398,21 @@ QFAI-ATDD-112      1   unscoped: 15 TCs across four specs, of which it owns 8
 `QFAI-ATDD-111` and `-112` are one finding each, not one per item — which is why four was ever a
 plausible total, and why the two numbers in the table above are the ones `build` actually needs cleared.
 
-**`QFAI-REVIEW-007` is a rule this record had never named**, and exactly one of its forty-five belongs to
-this stage: round 14's `summary.json` carried `revision_form: "commit"`, a value the contract does not
-admit. It is corrected and the pack re-sealed. The other forty-four are packs other stages wrote, and
-they are a cross-spec obligation rather than this stage's work — recorded here with their number, per
-this skill's CRITICAL CONSTRAINTS, rather than waived.
+**`QFAI-REVIEW-007` is a rule this record had never named.** One of the original forty-five belonged to
+this stage — round 14's `summary.json` carried `revision_form: "commit"`, a value the contract does not
+admit — and it is corrected and the pack re-sealed, which is what took the count to forty-four. The other
+forty-four are packs other stages wrote: a cross-spec obligation rather than this stage's work, recorded
+with its number per this skill's CRITICAL CONSTRAINTS rather than waived.
+
+**What that correction did not do is make the field true.** `revision_form` admits `content-hash` or
+`legacy`, and what this stage's packs record under it is a short git commit sha, unchanged by the edit —
+so the repair moved the pack from a value the schema rejects to a value the schema accepts and the
+content does not support. Round 16 measured that every one of this stage's packs is in that state, and
+so is every other pack in the repository that passes the rule. Either the field's `content-hash` is
+meant to cover a commit sha, in which case the label is right and nothing more is owed, or the whole
+repository mislabels it — and this stage cannot settle which, because the contract is not this spec's.
+Recorded as an open question rather than reported as a fix, which is what the first version of this
+paragraph did.
 
 `QFAI-REVIEW-004` / `-005` are against **this stage's own in-flight review pack** — a pack cannot satisfy
 the layout contract until its last reviewer has landed and it has been sealed. Round 4's gatekeeper found
@@ -2474,9 +2496,12 @@ reports and inventing a marker now would pin only the reports written after it.
 **The per-round table that used to sit here is deleted.** It carried the reviewers, the revision and
 the verdict for rounds 1 to 12 and stopped there, three rounds behind the derived numeral three
 paragraphs above it — a hand-maintained table beside a derived one, going stale on the schedule this
-record has faulted itself for eleven times. § "Findings per round" holds the same information with one
-more column and its rule is stated; nothing was lost by deleting it, and the second place to update every
-round was the whole of what it cost. That is the argument the per-commit e2e sequence was deleted on, and
+record has faulted itself for eleven times. § "Findings per round" holds the reviewers, the verdict and one
+more column, and its rule is stated. **It does not hold the revision**, which round 16 pointed out and
+the first version of this paragraph denied by claiming nothing was lost. What the revisions are for is
+saying which tree a verdict was measured against, and each round's `summary.json` records that inside the
+sealed pack — a better home than a copy of it, since the copy is what went three rounds stale. The second
+place to update every round was the whole of what the table cost. That is the argument the per-commit e2e sequence was deleted on, and
 the reason to make it again rather than add three rows.
 
 The revisions the deleted table carried are the ones each round's `summary.json` records, which is where

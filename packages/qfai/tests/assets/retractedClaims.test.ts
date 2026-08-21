@@ -107,6 +107,18 @@ interface Retracted {
  */
 const RETRACTED: readonly Retracted[] = [
   {
+    claim: "line endings and trailing whitespace normalized",
+    why: "the trailing-whitespace strip was the second collision and the line-ending fold the third; neither digest normalizes anything now (round 16 completion B3)",
+  },
+  {
+    claim: "unreachable from the gate",
+    why: "measured on block scalars only; a quoted flow scalar hands the digest a live CR (round 15 implementation B2)",
+  },
+  {
+    claim: "error=50",
+    why: "the commit that recorded it also removed the one item that made it 50; the profile is error=49 with 44 QFAI-REVIEW-007 (round 16 completion B2, gate M1)",
+  },
+  {
     claim: "12 US across five specs",
     why: "eleven across four; the same double-count as `15 TC across five specs`, written as two counts in one sentence so no needle reached it (round 15 B1)",
   },

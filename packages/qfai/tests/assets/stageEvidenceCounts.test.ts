@@ -556,9 +556,20 @@ describe("the stage evidence's counts are derived, not typed", () => {
       project,
       "the workspace must declare an `e2e` project with an include list",
     ).not.toBeNull();
-    const globs = [...(project?.[1] ?? "").matchAll(/"(tests\/[^"*]+)\/\*/g)].map(
+    // EVERY include is read, and one this pattern cannot parse is reported rather than dropped.
+    // Silently skipping one would take the walk back to measuring less than the project runs, which
+    // is the failure the derivation replaced — a guard that narrows itself is worse than one that
+    // hardcodes, because the hardcoding is visible.
+    const declared = [...(project?.[1] ?? "").matchAll(/"([^"]+)"/g)].map(
       (match) => match[1] ?? "",
     );
+    const globs = declared
+      .map((include) => /^(tests\/[^"*]+)\/\*/.exec(include)?.[1])
+      .filter((root): root is string => root !== undefined);
+    expect(
+      declared.length - globs.length,
+      `an include this walk cannot turn into a root: ${JSON.stringify(declared)}`,
+    ).toBe(0);
     expect(globs.length, "the e2e project must declare its includes").toBeGreaterThan(0);
     const roots = [...new Set(globs)].map((glob) => `packages/qfai/${glob}`).sort();
 

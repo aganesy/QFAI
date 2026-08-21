@@ -179,9 +179,15 @@ successively more of it:
   **It does not, however, give option 2 a second independent failure, and an earlier version of this
   paragraph claimed it did.** P1d's fourth pass checked: all seven non-`spec-0017` TCs are themselves
   `todo`, so option 2 as worded — an exemption for _a spec's_ own in-flight rows, not this spec's —
-  is general and would clear `QFAI-ATDD-112` outright. Option 2 still fails, by the **first** reason
-  given above: `QFAI-ATDD-111` has no ledger rows to exempt, so nothing about in-flight rows reaches
-  it.
+  is general and would clear `QFAI-ATDD-112` outright. Option 2 still fails, by the **third** reason
+  given above: `build` runs the profile UNSCOPED, where `QFAI-ATDD-112` names fifteen TCs across four
+  specs, so an exemption for one spec's in-flight rows clears none of the other three specs' and the gate
+  this option exists to clear stays red.
+
+  **Corrected 2026-08-22, after round 16.** This cited the FIRST reason — that `QFAI-ATDD-111` has no
+  ledger rows to exempt — and the round-15 correction two bullets up withdrew that reason's premise, so
+  the sentence keeping option 2 rejected pointed at a bullet that now supports it. The option is not
+  reintroduced and the decision does not change; the ground does.
 
 Recorded so that no option here is read as sufficient by itself.
 

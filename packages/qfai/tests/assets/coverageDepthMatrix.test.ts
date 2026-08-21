@@ -540,15 +540,23 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // carries a bullet for all seven, so the check was vacuous for the one row it guards. A test that
     // cannot fail for its own subject is the defect it was written to fix, one level in.
     const depthColumns = COLUMNS.filter((column) => column !== "Status");
-    const rowSection =
-      /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{3} |$)/.exec(text)?.[1]?.replace(/\s+/g, " ") ?? "";
+    // NOT whitespace-collapsed. The bullets are anchored at `^- ` now, so the newlines are what makes
+    // the anchor mean anything — and collapsing them is what let the previous pattern match a mention
+    // anywhere in the section. The two defects were one edit apart: an anchor with nothing to anchor
+    // to. This pin covers the one row whose section states a score per column as a bullet; the other
+    // rows argue their scores in prose, which no pattern can pair with a cell.
+    const rowSection = /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{3} |$)/.exec(text)?.[1] ?? "";
     expect(rowSection.length, "the row's justification section must be findable").toBeGreaterThan(
       0,
     );
 
     const disagreeing: string[] = [];
     for (const column of depthColumns) {
-      const stated = new RegExp(`\\\\*\\\\*${column} \`([^\`]+)\`\\\\*\\\\*`).exec(rowSection)?.[1];
+      // `\\*` is an escaped BACKSLASH followed by a quantifier — zero or more backslashes — not two
+      // asterisks. The bold markers were optional by accident, so an unbolded mention of the column
+      // earlier in the section matched first and masked a bullet that contradicts the table. One
+      // doubled escape, in the pin the round-6 and round-7 findings exist to enforce.
+      const stated = new RegExp(`^- \\*\\*${column} \`([^\`]+)\`\\*\\*`, "m").exec(rowSection)?.[1];
       const scored = row?.cells[column] ?? "";
       if (stated === undefined) {
         disagreeing.push(`${column}: the section states no score for it`);
