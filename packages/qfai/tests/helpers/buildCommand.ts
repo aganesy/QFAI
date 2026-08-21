@@ -85,6 +85,14 @@ interface Context {
   readonly cwd: string;
   readonly seen: Set<string>;
   readonly noScripts?: boolean;
+  /**
+   * The head is a binary a manager launched, not a command this grammar declares.
+   *
+   * Its arguments are read the way a tool's are — an exact build verb counts, a split-only match is a
+   * guess — because that is what they are. Without it the manager path stopped at the first bare token
+   * and `npx next build` was `none`.
+   */
+  readonly unknownBinary?: boolean;
 }
 
 const MANAGERS = new Set([
@@ -134,7 +142,7 @@ const MAKE: ToolGrammar = {
   dirs: ["-C", "--directory"],
   values: ["-f", "--file", "-o", "--old-file", "-W", "--what-if"],
   optional: ["-j", "--jobs", "-l", "--load-average"],
-  builds: ["all"],
+  builds: ["all", "dist", "release", "compile", "install"],
   bareIsBuild: true,
 };
 
@@ -174,6 +182,9 @@ const DOCKER: ToolGrammar = {
   builds: ["bake"],
   stops: ["run", "exec"],
 };
+
+/** Nothing declared: an unknown binary's arguments are a tool's, with no flags known to take a value. */
+const UNKNOWN_BINARY: ToolGrammar = { dirs: [], values: [] };
 
 const TOOLS: Record<string, ToolGrammar> = {
   turbo: { dirs: ["--cwd"], values: ["--concurrency", "--filter"] },
@@ -276,9 +287,14 @@ const BUNDLERS = new Set([
 ]);
 
 /** A package manager's own passthrough verbs, before the script name. */
-// No `--`: the rule that a manager flag consumes only when a later bare token exists already
-// leaves the script readable, so listing it changed no verdict.
-const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "foreach"]);
+/**
+ * A package manager's own passthrough verbs, before the script name.
+ *
+ * `--` is here again. v12 removed it claiming no verdict changed; round 10 restored the one member and
+ * `npm exec -- tsup --config tsup.config.ts` went from `none` to `build`, because the consume rule ate
+ * the bundler name. No corpus contained a bare `--`, which is exactly why the measurement said nothing.
+ */
+const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "foreach", "--"]);
 /**
  * A bare verb that consumes the following token without it being the script.
  *
@@ -287,6 +303,57 @@ const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "foreach"]);
  * exists, and each was measured to change no verdict.
  */
 const MANAGER_CONSUMING = new Set(["workspace"]);
+
+/**
+ * Manager flags that take NO value, so the token after them can still be the script.
+ *
+ * **Deleted in v12 and restored here.** v12 replaced this list with one rule — a manager flag consumes
+ * its value only when a later bare token exists to be the script — on the strength of a sweep showing
+ * no verdict changed. Round 10 refuted that: recovering the set and testing each member, **all twenty-two
+ * change a verdict**, and `yarn --silent workspace pkg build` went from `heuristic` to `none` because
+ * the rule ate the `workspace` verb. Nine of ten planted builds shipped unnoticed through a manager the
+ * grammar declares. That was a regression introduced by the deletion, not a missing tool.
+ *
+ * The sweep could not see it, and the reason is the finding worth keeping: **its report is identical
+ * whether a member is dead or whether the corpus merely lacks its shape**, and every deletion this
+ * stage made inferred the first from the second. A member is now only removable with a probe that
+ * exercises its shape and still does not move.
+ */
+const MANAGER_BOOLEAN = new Set([
+  "-w",
+  "--workspace-root",
+  "-r",
+  "--recursive",
+  "--silent",
+  "--quiet",
+  "--yes",
+  "-y",
+  "--frozen-lockfile",
+  "--ignore-scripts",
+  "--no-scripts",
+  "--if-present",
+  "--prod",
+  "--dev",
+  "--no-bail",
+  "--offline",
+  "--force",
+  "--verbose",
+  "--stream",
+  "--aggregate-output",
+  "--no-color",
+  "--parallel",
+]);
+
+/**
+ * Flags that take a value for THIS manager, checked before the shared boolean list.
+ *
+ * `-w` is the case: boolean for pnpm (`--workspace-root`) and a package name for npm (`--workspace`).
+ * One spelling, two managers, two meanings — and no shared list can hold both.
+ */
+const MANAGER_VALUES: Record<string, readonly string[]> = {
+  npm: ["-w", "--workspace"],
+};
+
 /** Manager flags naming the directory whose manifest a script resolves in. */
 const MANAGER_DIRS = new Set(["-C", "--dir", "--cwd", "--prefix"]);
 /**
@@ -354,13 +421,17 @@ const POWERSHELL: InterpreterGrammar = {
 };
 
 const INTERPRETERS: Record<string, InterpreterGrammar> = {
-  bash: { values: ["-o", "--rcfile", "--init-file"], inline: [] },
-  sh: { values: ["-o"], inline: [] },
-  zsh: { values: ["-o", "--rcs"], inline: [] },
+  // No `-o`: the cluster walk owns single letters, and listing it here left the walk deciding the
+  // same verdict twice. The long forms are not clusters, so they stay.
+  bash: { values: ["--rcfile", "--init-file"], inline: [] },
+  sh: { values: [], inline: [] },
+  zsh: { values: ["--rcs"], inline: [] },
   pwsh: POWERSHELL,
   powershell: POWERSHELL,
 };
 const SH_FAMILY = new Set(["bash", "sh", "zsh"]);
+/** Cluster letters that take the next token: `-eo pipefail` is `-e` plus `-o pipefail`. */
+const SH_CLUSTER_VALUES = new Set(["o", "O"]);
 
 const LIFECYCLE: Record<string, readonly string[]> = {
   pack: ["prepack"],
@@ -381,14 +452,20 @@ const SCRIPT_EXTENSIONS = ["sh", "ps1", "bat", "cmd", "mjs", "cjs", "js", "ts"];
  * which platform wrote the lane.
  */
 const EXECUTABLE_EXTENSIONS = ["cmd", "exe", "bat", "ps1"];
-const NAME_SEPARATORS = [":", "-", "_", ".", "/"];
+const NAME_SEPARATORS = [":", "-", "_", ".", "/", "\\"];
 
+// `\\` is in the path class because `scripts\\build.ps1` is how a Windows lane spells it, and no
+// Windows-separator path could match before.
 const scriptFileRe = (): RegExp =>
-  new RegExp(`^[\\w./-]*[\\w-]+\\.(?:${SCRIPT_EXTENSIONS.join("|")})$`);
-const separatorRe = (): RegExp =>
-  new RegExp(
-    `[${NAME_SEPARATORS.map((s) => (s === "-" ? "\\-" : s === "/" ? "\\/" : s)).join("")}]+`,
-  );
+  new RegExp(`^[\\w.\\\\/-]*[\\w-]+\\.(?:${SCRIPT_EXTENSIONS.join("|")})$`);
+/**
+ * Every separator escaped by one rule rather than by a per-character ternary.
+ *
+ * The ternary listed `-` and `/` and nothing else, so adding `\\` to the list built
+ * `[:\\-_.\\/\\]+` — an unterminated character class that threw at the first call. A list whose
+ * members need escaping should not depend on someone remembering to extend the escaper.
+ */
+const separatorRe = (): RegExp => new RegExp(`[${NAME_SEPARATORS.map((s) => `\\${s}`).join("")}]+`);
 
 /**
  * Predicates behind a mutable indirection, so a sweep can neutralise a rule as easily as it deletes a
@@ -430,7 +507,11 @@ export function classifyBuildCommand(
 
 function shell(line: string, ctx: Context): BuildVerdict {
   const parts = line
-    .split(/&&|\|\||;|(?<!\|)\|(?!\|)/)
+    // `&` backgrounds a command, so it separates one as surely as `;` does, and a subshell's
+    // parentheses are punctuation rather than part of the command — `(cd x && pnpm build)` left the
+    // closing paren attached to `build`, which `namesABuild` then could not see.
+    .replace(/[()]/g, " ")
+    .split(/&&|\|\||;|&|(?<!\|)\|(?!\|)/)
     .map((p) => p.trim())
     .filter(Boolean);
   const out: BuildVerdict[] = [];
@@ -479,15 +560,34 @@ function stripPrefix(input: readonly string[]): string[] {
     }
     const bare = head.split("/").pop() ?? "";
     if (!WRAPPERS.has(bare)) break;
-    if (tokens.slice(1).some((token) => EXISTENCE_PROBE.has(token))) return [];
+    // Scoped to `command`, and to the position the probe occupies. It used to be tested against EVERY
+    // wrapper at EVERY position, so appending ` -v` to any wrapped build returned `none` — a one-token
+    // route past the guard this predicate serves. `-v` is *verbose* for time, sudo, ionice, stdbuf and
+    // most of the rest, and `/usr/bin/time -v make` is a standard CI idiom.
+    if (bare === "command" && EXISTENCE_PROBE.has(tokens[1] ?? "")) return [];
 
+    // The first candidate that is not a BUNDLER, else the first candidate.
+    //
+    // `env -u vite pnpm test` was `build`: the scan stopped at `vite`, and a bundler answers `build`
+    // from its name alone with no further reading, so a flag value that happens to name one became the
+    // command. Skipping any candidate preceded by a flag was the first attempt and it was worse — it
+    // lost `xvfb-run -a pnpm build` and `sudo -E make build`, where the flag is boolean and the token
+    // after it IS the command. A bundler is the one head that cannot be corrected downstream, so it is
+    // the one that yields to a later candidate.
     let next = -1;
+    let firstBundler = -1;
     for (let i = 1; i < tokens.length; i += 1) {
-      if (namesACommand(tokens[i] ?? "")) {
-        next = i;
-        break;
+      const candidate = tokens[i] ?? "";
+      if (!namesACommand(candidate)) continue;
+      const bare = unquote(candidate).split(/[/\\]/).pop() ?? "";
+      if (BUNDLERS.has(stripExecutableExtension(bare))) {
+        if (firstBundler === -1) firstBundler = i;
+        continue;
       }
+      next = i;
+      break;
     }
+    if (next === -1) next = firstBundler;
     if (next === -1) return [];
     tokens = tokens.slice(next);
   }
@@ -509,9 +609,22 @@ function interpreterTail(
   for (let i = 1; i < tokens.length; i += 1) {
     const token = tokens[i] ?? "";
     if (!token.startsWith("-")) return { kind: "tokens", tokens: tokens.slice(i) };
-    // `-lc`, `-ec`, `-euxc`: for the sh family the inline flag is a letter in a cluster, not a token.
-    if (inline.has(token) || (SH_FAMILY.has(head) && /^-[a-z]*c[a-z]*$/.test(token))) {
-      return { kind: "shell", line: unquote(tokens.slice(i + 1).join(" ")) };
+    if (inline.has(token)) return { kind: "shell", line: unquote(tokens.slice(i + 1).join(" ")) };
+    // For the sh family the inline flag is a LETTER IN A CLUSTER, so the cluster is walked rather than
+    // matched. Matching the whole token could not see `-eo pipefail -c` — which is GitHub Actions' own
+    // documented default for `shell: bash` — because the cluster carries a value-taking letter, so it
+    // was neither inline nor consumed and the loop broke on `pipefail`. `bash -eo pipefail -c X` and
+    // `bash -e -o pipefail -c X` were the same command with two verdicts.
+    if (SH_FAMILY.has(head) && /^-[a-z]+$/.test(token)) {
+      let consumed = 0;
+      for (const letter of token.slice(1)) {
+        if (letter === "c") {
+          return { kind: "shell", line: unquote(tokens.slice(i + 1 + consumed).join(" ")) };
+        }
+        if (SH_CLUSTER_VALUES.has(letter)) consumed += 1;
+      }
+      i += consumed;
+      continue;
     }
     if (values.has(token)) i += 1;
   }
@@ -523,12 +636,24 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   if (!tokens.length) return "none";
   if (tokens.some((t) => NEVER_FLAGS.has(t))) return "none";
 
-  const head = (tokens[0] ?? "").split("/").pop() ?? "";
-  if (head === "node") {
+  // Unquoted once, here, because `namesACommand` unquotes and this did not — so `stripPrefix` could
+  // choose a tail beginning at a token this stage then failed to recognise. `sudo "pnpm" build` was
+  // `none`, a one-character evasion, and `concurrently` / `script` are only ever written with quoted
+  // commands because that is how they take a multi-word one.
+  const head =
+    unquote(tokens[0] ?? "")
+      .split("/")
+      .pop() ?? "";
+  // Gated on MEMBERSHIP, not on the literal name. `node --run` is node acting as a package
+  // manager, so the shortcut belongs to node's entry in MANAGERS — and while it was a bare
+  // string check, deleting `node` from that set changed no verdict and the member was unpinnable.
+  if (head === "node" && MANAGERS.has(head)) {
     if (tokens[1] === "--run") return script(tokens[2] ?? "", ctx);
     tokens = tokens.slice(1);
   } else {
-    const interpreter = INTERPRETERS[head];
+    // The extension is stripped here too: `bash.exe -c "pnpm build"` and `pwsh.exe -Command ...` were
+    // `none`, because the lookup ran before `stripExecutableExtension`.
+    const interpreter = INTERPRETERS[stripExecutableExtension(head)];
     if (interpreter !== undefined) {
       const tail = interpreterTail(tokens, interpreter, head);
       if (tail.kind === "shell") return shell(tail.line, ctx);
@@ -537,10 +662,10 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   }
   if (!tokens.length) return "none";
 
-  const first = tokens[0] ?? "";
+  const first = unquote(tokens[0] ?? "");
   // The executable extension is stripped BEFORE the script-file test, because `pnpm.cmd` is a manager
   // and `build.cmd` is a script, and only the head's own name can tell them apart.
-  const stripped = stripExecutableExtension(first.split("/").pop() ?? "");
+  const stripped = stripExecutableExtension(first.split(/[/\\]/).pop() ?? "");
   const known = MANAGERS.has(stripped) || TOOLS[stripped] !== undefined || BUNDLERS.has(stripped);
   if (!known && scriptFileRe().test(first)) {
     return namesABuild(first.split("/").pop() ?? "") ? "heuristic" : "none";
@@ -548,8 +673,8 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
 
   const verb = stripped;
   if (BUNDLERS.has(verb)) return "build";
-  const tool = TOOLS[verb];
-  const isManager = MANAGERS.has(verb);
+  const tool = ctx.unknownBinary === true ? UNKNOWN_BINARY : TOOLS[verb];
+  const isManager = ctx.unknownBinary !== true && MANAGERS.has(verb);
   if (tool === undefined && !isManager) return "none";
 
   const pass = isManager ? MANAGER_PASS : new Set<string>();
@@ -606,13 +731,28 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
         continue;
       }
       if (buildFlags.has(token)) return "build";
-      // For a MANAGER, consume only when a later bare token exists to be the script. That one rule
-      // replaced a nineteen-member boolean list: `pnpm --no-frozen-lockfile build` keeps its script,
-      // and `pnpm --reporter build-log install` still loses the reporter name.
+      // Three reasons not to consume, and each has a case that fails without it:
+      //
+      //   1. the flag is known to take no value (`--silent`), or takes one for THIS manager (`npm -w`);
+      //   2. the next token NAMES a command — `npx --yes esbuild src/index.ts --bundle` had the
+      //      bundler eaten, because a later bare token made the flag look value-taking;
+      //   3. nothing further could be the script, so consuming would leave the line empty
+      //      (`pnpm --no-frozen-lockfile build`, where the flag is in no list anyone wrote).
+      //
+      // v12 had only (3) and called it a replacement for the boolean list. Round 10 measured all
+      // twenty-two members changing a verdict without it.
       if (isManager) {
         const value = tokens[i + 1];
+        const managerValues = new Set(MANAGER_VALUES[verb] ?? []);
         const laterBare = tokens.slice(i + 2).some((t) => !t.startsWith("-"));
-        if (value !== undefined && !value.startsWith("-") && laterBare) i += 1;
+        const consumes =
+          managerValues.has(token) ||
+          (!MANAGER_BOOLEAN.has(token) &&
+            value !== undefined &&
+            !value.startsWith("-") &&
+            !namesACommand(value) &&
+            laterBare);
+        if (consumes && value !== undefined) i += 1;
       }
       continue;
     }
@@ -628,9 +768,12 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
     // what `script()` resolves. Reading it here returned `build` for `pnpm run build` with no
     // manifest at all, defeating the whole three-verdict design.
     if (tool !== undefined) {
-      if (builds.has(whole)) return "build";
-      if (buildPrefixes.some((prefix) => whole.startsWith(prefix))) return "build";
-      if (whole === "build") return "build";
+      // A gradle task may be project-qualified — `:app:build`, `:core:jar` — so the build verb is
+      // the LAST segment, not the whole token. Matched on both, since `docker buildx bake` has none.
+      const verbTail = whole.includes(":") ? (whole.split(":").pop() ?? whole) : whole;
+      if (builds.has(whole) || builds.has(verbTail)) return "build";
+      if ([whole, verbTail].some((v) => buildPrefixes.some((p) => v.startsWith(p)))) return "build";
+      if (whole === "build" || verbTail === "build") return "build";
       if (stops.has(whole)) return "none";
     }
     // `isPathLike` belongs to the TOOL path only: a MANAGER's first bare token is a script NAME, and
@@ -655,7 +798,25 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
       if (namesABuild(whole)) guessed = true;
       continue;
     }
-    return script(whole, { ...ctx, cwd, noScripts });
+
+    // A manager's first bare token is the SCRIPT — and if it resolves, that is the whole answer.
+    const resolved = script(whole, { ...ctx, cwd, noScripts });
+    if (resolved !== "none") return resolved;
+
+    // It did not resolve, so the token is a BINARY the manager is launching and the rest of the line is
+    // that binary's own argument list. Reading it as a tool's is what `npx next build` needs — the token
+    // loop used to return here and never look at the word after it, so plausibly the commonest build
+    // command in the ecosystem was `none`. Sixteen of round 10's forty-four missed builds are this
+    // shape: `pnpm exec ng build`, `npx nuxt build`, `npx astro build`, `npx gatsby build`.
+    //
+    // `UNKNOWN_BINARY` gives it a tool's grammar with nothing declared, so only an exact build verb or a
+    // split-only guess can fire, and a path-like or setting token is skipped as it would be for a tool.
+    return command([whole, ...tokens.slice(i + 1)], {
+      ...ctx,
+      cwd,
+      noScripts,
+      unknownBinary: true,
+    });
   }
 
   if (guessed) return "heuristic";
@@ -704,6 +865,8 @@ export const GRAMMAR = {
   tools: TOOLS,
   bundlers: BUNDLERS,
   managerPass: MANAGER_PASS,
+  managerBoolean: MANAGER_BOOLEAN,
+  managerValues: MANAGER_VALUES,
   managerConsuming: MANAGER_CONSUMING,
   managerDirs: MANAGER_DIRS,
   targetFlags: TARGET_FLAGS,

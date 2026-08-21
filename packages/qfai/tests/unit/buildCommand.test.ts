@@ -96,6 +96,13 @@ const SYNTHETIC: ScriptSources = {
       workspaces: "echo ws",
     },
     sub: { hello: "tsup" },
+    // `build` here is a script that does NOT build. That is the only place the passthrough path and
+    // the unknown-binary path disagree: through a verb, `build` is a script whose body says `echo`;
+    // without one, the unknown-binary scan reads `build` as a build VERB. Both answer `build` against
+    // the repository's own manifests, so every `MANAGER_PASS` case was unpinned the moment the
+    // unknown-binary rule landed — same answer, different reasoning, and only a manifest where the
+    // answers differ can tell them apart.
+    noop: { build: "echo nothing" },
     onlypre: { publish: "echo p", prepublishOnly: "tsup" },
     onlyprepack: { publish: "echo p", prepack: "tsup" },
   },
@@ -183,7 +190,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["MANAGERS.pnpx", "build", "pnpx build"],
   ["MANAGERS.bunx", "build", "bunx build"],
   ["MANAGERS.bun", "build", "bun build"],
-  ["MANAGERS.node", "build", "pnpm exec node --run build"],
+  ["MANAGERS.node", "none", "pnpm -C noop exec node --run build"],
   ["BUNDLERS.tsup", "build", "npx tsup"],
   ["BUNDLERS.rollup", "build", "npx rollup"],
   ["BUNDLERS.esbuild", "build", "npx esbuild"],
@@ -195,11 +202,12 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["BUNDLERS.rolldown", "build", "npx rolldown"],
   ["BUNDLERS.msbuild", "build", "npx msbuild"],
   ["BUNDLERS.xcodebuild", "build", "npx xcodebuild"],
-  ["MANAGER_PASS.run", "build", "pnpm run build"],
-  ["MANAGER_PASS.exec", "build", "pnpm exec build"],
-  ["MANAGER_PASS.dlx", "build", "pnpm dlx build"],
-  ["MANAGER_PASS.workspaces", "build", "pnpm workspaces build"],
-  ["MANAGER_CONSUMING.workspace", "build", "yarn workspace qfai build"],
+  ["MANAGER_PASS.run", "none", "pnpm -C noop run build"],
+  ["MANAGER_PASS.exec", "none", "pnpm -C noop exec build"],
+  ["MANAGER_PASS.dlx", "none", "pnpm -C noop dlx build"],
+  ["MANAGER_PASS.workspaces", "none", "pnpm -C noop workspaces build"],
+  ["MANAGER_PASS.--", "build", "pnpm -C noop exec -- next build"],
+  ["MANAGER_CONSUMING.workspace", "none", "yarn -C noop workspace qfai build"],
   ["MANAGER_DIRS.-C", "build", "pnpm -C sub hello"],
   ["MANAGER_DIRS.--dir", "build", "pnpm --dir sub hello"],
   ["MANAGER_DIRS.--cwd", "build", "pnpm --cwd sub hello"],
@@ -349,6 +357,11 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.rake.dirs.-C", "none", "rake -C build clean"],
   ["TOOLS.rake.values.-f", "none", "rake -f build clean"],
   ["TOOLS.gmake", "build", "gmake"],
+  ["TOOLS.make.builds.dist", "build", "make dist"],
+  ["TOOLS.make.builds.release", "build", "make release"],
+  ["TOOLS.make.builds.compile", "build", "make compile"],
+  ["TOOLS.make.builds.install", "build", "make install"],
+  ["NAME_SEPARATORS.\\", "heuristic", "pnpm run ci\\build"],
   ["TOOLS.py", "build", "py -m build"],
   ["EXECUTABLE_EXTENSIONS.cmd", "build", "pnpm.cmd build"],
   ["EXECUTABLE_EXTENSIONS.exe", "build", "pnpm.exe build"],
@@ -357,7 +370,7 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["MANAGERS.npm-run-all", "build", "npm-run-all build"],
   ["MANAGERS.run-s", "build", "run-s build"],
   ["MANAGERS.run-p", "build", "run-p build"],
-  ["MANAGER_PASS.foreach", "build", "yarn workspaces foreach --all run build"],
+  ["MANAGER_PASS.foreach", "none", "yarn -C noop workspaces foreach --all run build"],
   ["NEVER_FLAGS.--help", "none", "pnpm build --help"],
   ["NEVER_FLAGS.-h", "none", "pnpm build -h"],
   ["NEVER_FLAGS.--version", "none", "pnpm build --version"],
@@ -462,11 +475,8 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.sbt.builds.assembly", "build", "sbt assembly"],
   ["TOOLS.sbt.builds.stage", "build", "sbt stage"],
   ["TOOLS.rake.bareIsBuild", "build", "rake"],
-  ["INTERPRETERS.bash.values.-o", "heuristic", "bash -o pipefail scripts/build.sh"],
   ["INTERPRETERS.bash.values.--rcfile", "heuristic", "bash --rcfile rc scripts/build.sh"],
   ["INTERPRETERS.bash.values.--init-file", "heuristic", "bash --init-file rc scripts/build.sh"],
-  ["INTERPRETERS.sh.values.-o", "heuristic", "sh -o pipefail scripts/build.sh"],
-  ["INTERPRETERS.zsh.values.-o", "heuristic", "zsh -o pipefail scripts/build.sh"],
   ["INTERPRETERS.zsh.values.--rcs", "heuristic", "zsh --rcs rc scripts/build.sh"],
   [
     "INTERPRETERS.pwsh.values.-ExecutionPolicy",
@@ -543,12 +553,13 @@ function deleteMember(member: string): () => void {
       GRAMMAR.tools[name] = { ...original, bareIsBuild: false };
       return restore;
     }
-    const field = parts[2] ?? "";
+    const raw = parts[2] ?? "";
     const flag = parts.slice(3).join(".");
-    if (!TOOL_LISTS.some((known) => known === field)) {
-      throw new Error(`no such tool field: ${field}`);
-    }
-    const list = original[field as (typeof TOOL_LISTS)[number]] ?? [];
+    // `.find` narrows the union for free; the previous version asserted the type with a bare `as`,
+    // which the project rules bar and which nothing here needs.
+    const field = TOOL_LISTS.find((known) => known === raw);
+    if (field === undefined) throw new Error(`no such tool field: ${raw}`);
+    const list = original[field] ?? [];
     GRAMMAR.tools[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
     return restore;
   }
@@ -564,12 +575,11 @@ function deleteMember(member: string): () => void {
       Reflect.deleteProperty(GRAMMAR.interpreters, name);
       return restore;
     }
-    const field = parts[2] ?? "";
+    const raw = parts[2] ?? "";
     const flag = parts.slice(3).join(".");
-    if (!INTERPRETER_LISTS.some((known) => known === field)) {
-      throw new Error(`no such interpreter field: ${field}`);
-    }
-    const list = original[field as (typeof INTERPRETER_LISTS)[number]];
+    const field = INTERPRETER_LISTS.find((known) => known === raw);
+    if (field === undefined) throw new Error(`no such interpreter field: ${raw}`);
+    const list = original[field];
     GRAMMAR.interpreters[name] = { ...original, [field]: list.filter((entry) => entry !== flag) };
     return restore;
   }
@@ -1021,9 +1031,37 @@ describe("classifyBuildCommand", () => {
         restore();
       }
     }
-    expect(undetected, "a grammar member whose deletion no case in this corpus notices").toEqual(
-      [],
-    );
+
+    // Members no command can currently distinguish, each with the rule that subsumes it. This list is
+    // asserted to be EXACTLY what the sweep reports, so a member that becomes pinnable fails here just
+    // as one that goes unpinned does — the alternative is deleting them, and round 10 measured what
+    // that costs: `MANAGER_BOOLEAN`'s twenty-two members were deleted on this same evidence and nine of
+    // ten planted builds shipped through the hole.
+    const UNPINNABLE: ReadonlyArray<readonly [string, string]> = [
+      [
+        "INTERPRETERS.pwsh.inline.-Command",
+        "the fallback reaches the same verdict: the scan stops at the first non-flag token, which is " +
+          "the quoted command, and `command()` unquotes its head",
+      ],
+      [
+        "INTERPRETERS.pwsh.inline.-c",
+        "as `-Command`: the fallback stops at the quoted command and `command()` unquotes its head",
+      ],
+      [
+        "INTERPRETERS.pwsh.inline.-EncodedCommand",
+        "as `-Command`. The value is base64 in real use, which no scan can read either way",
+      ],
+    ];
+    const exempt = new Set(UNPINNABLE.map(([member]) => member));
+    expect(
+      undetected.filter((member) => !exempt.has(member)),
+      "a grammar member whose deletion no case notices and which is not declared unpinnable",
+    ).toEqual([]);
+    expect(
+      [...exempt].filter((member) => !undetected.includes(member)),
+      "a member declared unpinnable that a case now distinguishes: delete the exemption",
+    ).toEqual([]);
+
     expect(
       mislabelled,
       "a member whose deletion is noticed only by SOME OTHER member's case: the label is then " +
