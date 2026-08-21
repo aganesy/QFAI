@@ -94,6 +94,40 @@ function addCheck(checks: DoctorCheck[], check: DoctorCheck): void {
   checks.push(check);
 }
 
+/** `qfai validate` allocates one of these per run and never reuses one. */
+const RUN_LOG_DIR_RE = /^run-\d{17}$/u;
+
+/**
+ * Count of run-log directories at which the accumulation is worth
+ * mentioning. `outDir` is covered by the managed gitignore block, so
+ * `git status` never shows the growth and nothing else prompts a
+ * cleanup — this check is the only place the condition becomes visible
+ * before the directory is measured in tens of megabytes.
+ */
+const RUN_LOG_ADVISORY_COUNT = 50;
+
+async function buildRunLogVolumeCheck(root: string, outDirAbs: string): Promise<DoctorCheck> {
+  let count = 0;
+  try {
+    const names = await readdir(outDirAbs);
+    count = names.filter((name) => RUN_LOG_DIR_RE.test(name)).length;
+  } catch {
+    // Unreadable outDir is already reported by the `paths.outDir`
+    // check above; do not duplicate the finding here.
+    count = 0;
+  }
+  const crowded = count > RUN_LOG_ADVISORY_COUNT;
+  return {
+    id: "report.runLogs",
+    severity: crowded ? "info" : "ok",
+    title: "Validate run logs (outDir/run-*)",
+    message: crowded
+      ? `${count} run-* directories accumulated (> ${RUN_LOG_ADVISORY_COUNT}); run 'qfai doctor --clean' to prune the TTL-expired ones`
+      : `${count} run-* directories`,
+    details: { outDir: toRelativePath(root, outDirAbs), runLogCount: count },
+  };
+}
+
 function summarize(checks: DoctorCheck[]): DoctorData["summary"] {
   const summary = { ok: 0, info: 0, warning: 0, error: 0 };
   for (const check of checks) {
@@ -198,6 +232,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           : `${key} is missing (configure this path or create the directory)`,
       details: { path: toRelativePath(root, resolved) },
     });
+
+    if (key === "outDir" && ok) {
+      addCheck(checks, await buildRunLogVolumeCheck(root, resolved));
+    }
 
     if (key === "skillsDir") {
       const diff = await diffProjectSkillsAgainstInitAssets(root, config);

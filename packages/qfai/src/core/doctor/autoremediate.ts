@@ -3,7 +3,8 @@
  *
  * Coordinates three remediations on demand:
  *   1. install unmet runtimeDependencies (via `npm install <name>`).
- *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`).
+ *   2. archive stale review packs (delegates to `cleanStaleReviewPacks`)
+ *      and prune stale validate run logs (via `cleanStaleRunLogs`).
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
@@ -26,6 +27,7 @@ import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
+import { cleanStaleRunLogs } from "./cleanRunLogs.js";
 import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
@@ -49,6 +51,8 @@ export type AutoremediateSummary = {
   readonly installed: readonly string[];
   readonly archived: readonly string[];
   readonly configFieldsWritten: readonly string[];
+  /** Validate run-log directories pruned by this run. */
+  readonly prunedRunLogs: readonly string[];
   /** Review packs recorded as predating `revision_form` by this run. */
   readonly legacyPacksRecorded: readonly string[];
 };
@@ -133,6 +137,7 @@ export async function runAutoremediate(
       installed: [],
       archived: [],
       configFieldsWritten: [],
+      prunedRunLogs: [],
       legacyPacksRecorded: [],
     };
   }
@@ -180,6 +185,23 @@ export async function runAutoremediate(
     `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
   );
 
+  // (2b) Prune stale validate run logs (--clean behavior, second target).
+  // Kept in lockstep with the `--clean` branch in `cli/commands/doctor.ts`
+  // so `--autoremediate` is not a narrower clean than `--clean`.
+  const runLogTtlDays = config.report?.staleTtlDays;
+  const keepLatestRuns = config.report?.keepLatestRuns;
+  const runLogResult = await cleanStaleRunLogs(options.root, config, {
+    ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
+    ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
+    ...(options.dryRun ? { dryRun: true } : {}),
+  });
+  const prunedRunLogs = runLogResult.removed.map((entry) => entry.runId);
+  lines.push(
+    options.dryRun
+      ? `autoremediate: would prune run logs=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length} (dry-run)`
+      : `autoremediate: run logs pruned=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length}`,
+  );
+
   // (3) Write missing default-keyed config fields (user-authored values
   // are NOT touched because we only append the key when absent).
   let configFieldsWritten: string[] = [];
@@ -217,6 +239,7 @@ export async function runAutoremediate(
     lines,
     installed,
     archived: archivedNames,
+    prunedRunLogs,
     configFieldsWritten,
     legacyPacksRecorded: migration.added,
   };

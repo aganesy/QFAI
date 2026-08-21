@@ -1,0 +1,120 @@
+// Unit: `cleanStaleRunLogs` bounds the `<outDir>/run-*` growth that
+// `qfai validate` produces (one directory per invocation, removed by
+// nothing) while keeping the newest runs — which `validate.log`'s
+// `run_log:` pointer names — unreachable by the pruner.
+
+import { access, mkdir, mkdtemp, readdir, rm, utimes, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { defaultConfig } from "../../../../src/core/config.js";
+import { cleanStaleRunLogs } from "../../../../src/core/doctor/cleanRunLogs.js";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+const tempDirs: string[] = [];
+
+async function newTempDir(label: string): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), `qfai-clean-runlogs-${label}-`));
+  tempDirs.push(dir);
+  return dir;
+}
+
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) {
+      await rm(dir, { recursive: true, force: true });
+    }
+  }
+});
+
+async function seedRunLog(root: string, runId: string, ageDays: number): Promise<string> {
+  const dir = path.join(root, ".qfai", "report", runId);
+  await mkdir(dir, { recursive: true });
+  await writeFile(path.join(dir, "run.json"), "{}\n", "utf-8");
+  const mtime = new Date(Date.now() - ageDays * DAY_MS);
+  await utimes(dir, mtime, mtime);
+  return dir;
+}
+
+async function exists(target: string): Promise<boolean> {
+  try {
+    await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs", () => {
+  it("removes a TTL-expired run beyond the keep-latest floor", async () => {
+    const root = await newTempDir("prune");
+    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+    const fresh = await seedRunLog(root, "run-20260811120000002", 0);
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 1 });
+
+    expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
+    expect(result.retainedLatest.map((entry) => entry.runId)).toEqual(["run-20260811120000002"]);
+    expect(await exists(stale)).toBe(false);
+    expect(await exists(fresh)).toBe(true);
+  });
+
+  it("keeps the newest N runs regardless of age so run_log: can never dangle", async () => {
+    const root = await newTempDir("keep-latest");
+    const older = await seedRunLog(root, "run-20260401120000001", 90);
+    const newer = await seedRunLog(root, "run-20260402120000002", 89);
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 5 });
+
+    expect(result.removed).toEqual([]);
+    expect(result.retainedLatest).toHaveLength(2);
+    expect(await exists(older)).toBe(true);
+    expect(await exists(newer)).toBe(true);
+  });
+
+  it("dry-run reports the plan without removing anything", async () => {
+    const root = await newTempDir("dry-run");
+    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 0, dryRun: true });
+
+    expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
+    expect(await exists(stale)).toBe(true);
+  });
+
+  it("ttlDays: 0 opts out entirely (audit-evidence projects keep every run)", async () => {
+    const root = await newTempDir("opt-out");
+    const stale = await seedRunLog(root, "run-20260401120000001", 365);
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 0, ttlDays: 0 });
+
+    expect(result.removed).toEqual([]);
+    expect(result.skippedInTtl).toHaveLength(1);
+    expect(await exists(stale)).toBe(true);
+  });
+
+  it("never touches the sibling artifacts an operator greps", async () => {
+    const root = await newTempDir("siblings");
+    await seedRunLog(root, "run-20260401120000001", 30);
+    const reportRoot = path.join(root, ".qfai", "report");
+    await writeFile(path.join(reportRoot, "validate.log"), "run_log:\n", "utf-8");
+    await writeFile(path.join(reportRoot, "validate.json"), "{}\n", "utf-8");
+    await mkdir(path.join(reportRoot, "specs-coverage"), { recursive: true });
+
+    await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 0 });
+
+    const remaining = await readdir(reportRoot);
+    expect(remaining.sort()).toEqual(["specs-coverage", "validate.json", "validate.log"]);
+  });
+
+  it("returns an empty plan when outDir does not exist yet", async () => {
+    const root = await newTempDir("missing");
+    const result = await cleanStaleRunLogs(root, defaultConfig, {});
+    expect(result.removed).toEqual([]);
+    expect(result.retainedLatest).toEqual([]);
+    expect(result.skippedInTtl).toEqual([]);
+  });
+});

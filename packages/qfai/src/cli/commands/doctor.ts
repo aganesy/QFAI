@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
+import { cleanStaleRunLogs } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
@@ -18,7 +19,11 @@ export type DoctorCommandOptions = {
   /** Skill name when `--profile <skill>` is passed (vs the legacy `prototyping`). */
   skillProfile?: string;
   targetUrl?: string;
-  /** `--clean`: archive TTL-expired review packs into `.qfai/review/_archive/`. */
+  /**
+   * `--clean`: archive TTL-expired review packs into
+   * `.qfai/review/_archive/` and prune TTL-expired `<outDir>/run-*`
+   * validate run logs.
+   */
   clean?: boolean;
   /** `--autoremediate`: orchestrate install + clean + config-fill. */
   autoremediate?: boolean;
@@ -85,6 +90,55 @@ function formatDoctorText(data: Awaited<ReturnType<typeof createDoctorData>>): s
 
 function formatDoctorJson(data: unknown): string {
   return JSON.stringify(data, null, 2);
+}
+
+/**
+ * Archive TTL-expired review packs and prune TTL-expired validate run
+ * logs, returning the side-effect summary lines.
+ *
+ * Phrase the summary in the future tense when `--dry-run` is in effect.
+ * Both cleaners still populate their result arrays under dry-run (they
+ * list what the live command WOULD do), so reusing the past-tense
+ * wording from the live path would falsely read as "it happened".
+ * Mirror the `autoremediate` dry-run vocabulary (`would run ...` /
+ * `would fill ...`).
+ */
+async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<string[]> {
+  const lines: string[] = [];
+  const { config } = await loadConfig(resolvedRoot);
+  const reviewTtlDays = config.review?.staleTtlDays;
+  const packs = await cleanStaleReviewPacks(resolvedRoot, {
+    ...(typeof reviewTtlDays === "number" ? { ttlDays: reviewTtlDays } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
+  });
+  lines.push(
+    dryRun
+      ? `doctor --clean (dry-run): would archive=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length} (ttlDays=${packs.ttlDays})`
+      : `doctor --clean: archived=${packs.archived.length}, in-ttl=${packs.skippedInTtl.length} (ttlDays=${packs.ttlDays})`,
+  );
+  for (const entry of packs.archived) {
+    lines.push(
+      dryRun ? `  would move -> _archive/${entry.packName}` : `  -> _archive/${entry.packName}`,
+    );
+  }
+
+  const runLogTtlDays = config.report?.staleTtlDays;
+  const keepLatestRuns = config.report?.keepLatestRuns;
+  const runLogs = await cleanStaleRunLogs(resolvedRoot, config, {
+    ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
+    ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
+    ...(dryRun ? { dryRun: true } : {}),
+  });
+  const runLogCounts = `in-ttl=${runLogs.skippedInTtl.length}, kept-latest=${runLogs.retainedLatest.length} (ttlDays=${runLogs.ttlDays}, keepLatestRuns=${runLogs.keepLatest})`;
+  lines.push(
+    dryRun
+      ? `doctor --clean (dry-run): would prune run logs=${runLogs.removed.length}, ${runLogCounts}`
+      : `doctor --clean: pruned run logs=${runLogs.removed.length}, ${runLogCounts}`,
+  );
+  for (const entry of runLogs.removed) {
+    lines.push(dryRun ? `  would remove -> ${entry.runId}` : `  removed -> ${entry.runId}`);
+  }
+  return lines;
 }
 
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
@@ -160,34 +214,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    const { config } = await loadConfig(resolvedRoot);
-    const ttlDays = config.review?.staleTtlDays;
-    const result = await cleanStaleReviewPacks(resolvedRoot, {
-      ...(typeof ttlDays === "number" ? { ttlDays } : {}),
-      ...(options.dryRun ? { dryRun: true } : {}),
-    });
-    // Phrase the side-effect summary in the future tense when `--dry-run`
-    // is in effect. `cleanStaleReviewPacks` still populates
-    // `result.archived` under dry-run (it lists the packs the live
-    // command WOULD move), so reusing the past-tense
-    // `archived=N` wording from the live path would falsely read as
-    // "rename happened". Mirror the `autoremediate` dry-run vocabulary
-    // (`would run ...` / `would fill ...`).
-    if (options.dryRun) {
-      sideEffectLines.push(
-        `doctor --clean (dry-run): would archive=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
-      );
-      for (const entry of result.archived) {
-        sideEffectLines.push(`  would move -> _archive/${entry.packName}`);
-      }
-    } else {
-      sideEffectLines.push(
-        `doctor --clean: archived=${result.archived.length}, in-ttl=${result.skippedInTtl.length} (ttlDays=${result.ttlDays})`,
-      );
-      for (const entry of result.archived) {
-        sideEffectLines.push(`  -> _archive/${entry.packName}`);
-      }
-    }
+    sideEffectLines.push(...(await runCleanPhase(resolvedRoot, Boolean(options.dryRun))));
   }
 
   const data = await createDoctorData({
