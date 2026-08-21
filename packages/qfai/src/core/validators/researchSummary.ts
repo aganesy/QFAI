@@ -4,6 +4,8 @@ import path from "node:path";
 import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -16,6 +18,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const issues: Issue[] = [];
   const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
   const files = await fg(pattern, { absolute: true });
+  const filesWithHeading = new Set<string>();
 
   for (const filePath of files) {
     let content: string;
@@ -26,6 +29,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
 
     if (!RESEARCH_SUMMARY_HEADING_RE.test(content)) continue;
+    filesWithHeading.add(normalize(filePath));
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const section = extractResearchSummarySection(content);
@@ -183,7 +187,59 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
   }
 
+  const missing = await buildMissingSectionIssue(root, config, files, filesWithHeading);
+  if (missing) {
+    issues.push(missing);
+  }
+
   return issues;
+}
+
+function normalize(filePath: string): string {
+  return filePath.replace(/\\/g, "/");
+}
+
+/**
+ * Every rule above is skipped when a file carries no heading, so omitting the
+ * section entirely used to score zero findings while half-writing it scored
+ * several errors. Make the omission visible with a single warning on the pack
+ * directory when the latest pack has markdown but none of it carries the section.
+ */
+async function buildMissingSectionIssue(
+  root: string,
+  config: QfaiConfig,
+  files: readonly string[],
+  filesWithHeading: ReadonlySet<string>,
+): Promise<Issue | null> {
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
+  if (!latestPackDir) {
+    return null;
+  }
+
+  const packPrefix = `${normalize(latestPackDir)}/`;
+  const packFiles = files.filter((filePath) => normalize(filePath).startsWith(packPrefix));
+  if (packFiles.length === 0) {
+    return null;
+  }
+  if (packFiles.some((filePath) => filesWithHeading.has(normalize(filePath)))) {
+    return null;
+  }
+
+  const rel = path.relative(root, latestPackDir).replace(/\\/g, "/");
+  return issue(
+    "QFAI-RESEARCH-012",
+    'Discussion pack has no "Research Summary" section, so the research-first protocol is never checked',
+    "warning",
+    rel,
+    "researchSummary.sectionMissing",
+    undefined,
+    "canonical",
+    [
+      'Add a "## Research Summary" section to a file in the pack (04_Sources.md by default).',
+      "Follow the Output Schema in .qfai/assistant/constitution/research-first-protocol.md.",
+    ].join("\n"),
+  );
 }
 
 function extractResearchSummarySection(content: string): string | null {

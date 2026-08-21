@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -242,6 +242,89 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-004");
     expect(codes).not.toContain("QFAI-RESEARCH-005");
     expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
+  it("reports the latest discussion pack when no file carries a Research Summary", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const missing = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
+
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.severity).toBe("warning");
+    expect(missing[0]?.file).toContain("discussion-20260101000000000");
+  });
+
+  it("does not report a missing Research Summary once the latest pack carries one", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-012");
+  });
+
+  it("ships a 04_Sources.md template that already satisfies the Research Summary presence rule", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    const template = await readFile(
+      path.resolve(
+        process.cwd(),
+        "assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+      ),
+      "utf-8",
+    );
+    await writeFile(path.join(packDir, "04_Sources.md"), template, "utf-8");
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).not.toContain("QFAI-RESEARCH-001");
+    expect(codes).not.toContain("QFAI-RESEARCH-007");
+    expect(codes).not.toContain("QFAI-RESEARCH-008");
+    expect(codes).not.toContain("QFAI-RESEARCH-011");
+  });
+
+  it("does not report a missing Research Summary when there is no discussion pack", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+    await writeFile(path.join(discussionDir, "notes.md"), "# Notes\n\n- loose file\n", "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-012");
   });
 
   it("normalizes CLI platform input before validation", async () => {

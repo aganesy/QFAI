@@ -12,6 +12,37 @@
 - `secondary`: Derived information (summaries, analyses).
 - `external`: Third-party references (specs, RFCs, vendor docs).
 
+## Research Summary
+
+Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Replace every placeholder — `published` must be a real `YYYY-MM-DD` date.
+
+```yaml
+research_summary:
+  sources:
+    - id: SRC-0001
+      title: [Source title]
+      url: [https://example.com/reference]
+      published: [YYYY-MM-DD]
+  best_practices:
+    - id: BP-0001
+      category: [Category]
+      title: [Best practice title]
+      description: [What to do and why]
+      source_id: SRC-0001
+  anti_patterns:
+    - id: AP-0001
+      category: [Category]
+      title: [Anti-pattern title]
+      description: [What to avoid and why]
+      source_id: SRC-0001
+  reflection:
+    - source_id: SRC-0001
+      finding: [What the source implies for this project]
+      action: apply
+      reason: [Why this action was chosen]
+```
+
 ## Trend Scan
 
 ### user expectation / market norm
