@@ -85,6 +85,12 @@ export {
 export type { AutopilotPolicyParseResult } from "./autopilotPolicy.js";
 export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  PACKAGE_SOURCE_ROOT_REL,
+  packageSelfGovernanceApplies,
+  runPackageSelfGovernanceValidators,
+} from "./packageSelfGovernance.js";
+export {
   CATALOG_ADVISORY_FAILING_CODES,
   JUSTIFICATION_CATALOG,
   isAdvisoryFailingCatalogCode,
