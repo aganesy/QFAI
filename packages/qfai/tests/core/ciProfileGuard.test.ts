@@ -25,6 +25,23 @@ describe("isCiEnvironment", () => {
     expect(isCiEnvironment({ GITHUB_ACTIONS: "true" } as NodeJS.ProcessEnv)).toBe(true);
     expect(isCiEnvironment(LOCAL_ENV)).toBe(false);
   });
+
+  // `CI` is truthy-by-presence by convention (Vercel exports `CI=1`,
+  // `ci-info` treats any non-empty non-"false" value as CI), so an exact
+  // `=== "true"` comparison reads a real CI shell as local.
+  it("treats any truthy CI value as CI", () => {
+    for (const value of ["1", "yes", "TRUE", "on"]) {
+      expect(isCiEnvironment({ CI: value } as NodeJS.ProcessEnv), value).toBe(true);
+    }
+  });
+
+  it("keeps the explicit opt-out spellings local", () => {
+    for (const value of ["", "false", "FALSE", "0", "  false  "]) {
+      expect(isCiEnvironment({ CI: value } as NodeJS.ProcessEnv), JSON.stringify(value)).toBe(
+        false,
+      );
+    }
+  });
 });
 
 describe("buildCiProfileIssue", () => {
