@@ -414,8 +414,7 @@ parts with different write points; the fields are the same, the sequencing is no
 - `Refactor verify result` — the output confirming GREEN is maintained (likewise once per item)
 - `Oracle proof` — the smallest production change that makes this item's test fail again, its command and its failing output, reverted immediately; or `equivalent-mutant` naming the contract clause weaker than the obligation. A row on the _RED not observable_ path satisfies this with its falsifiability fields (`references/oracle-strength.md`)
 
-These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
-review is requested.
+These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a review is requested.
 
 **Gate-completed (appended after items 7-8 return PASS):**
 
