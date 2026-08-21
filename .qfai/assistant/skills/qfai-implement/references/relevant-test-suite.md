@@ -41,6 +41,10 @@ and is quadratic in ledger size. That cost is paid at boundaries instead.
 
 ### Checkpoint boundaries
 
+**This list is the single definition of the boundary cadence.**
+`checkpoint-verification.md` and `SKILL.md` cite this anchor and do not
+restate it — a second copy of the cadence is what let them contradict it.
+
 The full suite runs at, and only at:
 
 - the **last incomplete row this run completes** — while finishing a row, if no

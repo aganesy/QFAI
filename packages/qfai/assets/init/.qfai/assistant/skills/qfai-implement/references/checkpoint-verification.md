@@ -7,12 +7,17 @@ is what item 12 of the 12-point gate refers to and the only thing it refers to.
 
 A checkpoint boundary is reached in exactly two places:
 
-- **Per item** — after all routed blocking reviewers have returned PASS for the item and before it
-  transitions `refactor` -> `done`. Every item has exactly one.
+- **Per item** — on a row that is _on_ a boundary: after all routed blocking reviewers have returned
+  PASS for the item and before it transitions `refactor` -> `done`. **Not every row is one.** Which
+  rows are is defined in `relevant-test-suite.md#checkpoint-boundaries`, and a row between
+  boundaries is already satisfied by the narrow relevant suite of Phase: Refactor step 2 — nothing
+  is re-run there.
 - **Per spec** — after the last item in `test-list.md` reaches `done` or a valid `exception`, before
   declaring spec-level completion.
 
-No other point is a checkpoint boundary. There is no "every N items" rule.
+No other point is a checkpoint boundary. This file does not restate the per-item frequency: the
+anchor above is its single definition, and a second copy here is exactly what let the two drift into
+contradicting each other.
 
 ## Verification command set (per item)
 

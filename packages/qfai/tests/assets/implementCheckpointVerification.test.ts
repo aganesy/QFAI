@@ -149,6 +149,48 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // The boundary cadence was stated three times: this file denied the counted
+  // rule that `relevant-test-suite.md` and gate item 12 both assume, so an agent
+  // ran either ~1 full suite per row or ~1 per 10 depending on which document it
+  // opened. The cadence now lives in one file; the other two cite its anchor.
+  it("defers the boundary cadence to relevant-test-suite.md instead of restating it", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      const cadence = await readFile(
+        path.join(dir, "references", "relevant-test-suite.md"),
+        "utf-8",
+      );
+
+      // Neither the reference nor the skill may deny the counted rule again.
+      for (const [name, document] of [
+        ["checkpoint-verification.md", reference],
+        ["SKILL.md", skill],
+      ] as const) {
+        expect(document, `${name} must not deny the counted cadence`).not.toContain(
+          'There is no "every N items" rule',
+        );
+        expect(document, `${name} must not claim a boundary per row`).not.toContain(
+          "Every item has exactly one",
+        );
+      }
+
+      expect(reference).toContain("**Not every row is one.**");
+      expect(reference).toContain("`relevant-test-suite.md#checkpoint-boundaries`");
+      expect(skill).toContain("**Not every row is one**");
+      expect(skill).toContain("`references/relevant-test-suite.md#checkpoint-boundaries`");
+
+      // The cited anchor has to resolve, and the cadence has to stay in the one
+      // file that owns it.
+      expect(headingSlugs(cadence)).toContain("checkpoint-boundaries");
+      expect(cadence).toContain("**This list is the single definition of the boundary cadence.**");
+      expect(cadence).toContain("every **N-th** completed row, with `N = 10` by default");
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");

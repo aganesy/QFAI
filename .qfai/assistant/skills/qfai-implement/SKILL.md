@@ -439,9 +439,8 @@ the completion gate (see `Completion prohibition conditions`).
 ## Checkpoint Verification
 
 "Checkpoint verification" is the whole-repository regression check run at a checkpoint boundary. It
-is what item 12 of the 12-point gate refers to and the only thing it refers to. A boundary is
-reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
-and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
+is what item 12 of the 12-point gate refers to and the only thing it refers to. A boundary is reached
+**per item** (routed blocking reviewers PASS, before `refactor` -> `done`) and **per spec** (last ledger row terminal). **Not every row is one** — which rows are is defined only in `references/relevant-test-suite.md#checkpoint-boundaries`, and no other file restates that cadence.
 
 It PASSES only when **every** command in the verification command set exits 0; a partial run is not
 a pass. The boundary definition, command set, pass criteria and evidence fields are in
