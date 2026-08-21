@@ -434,7 +434,7 @@ async function specDirExists(root: string, specsDir: string, specId: string): Pr
  * the project carries:
  *
  *   1. strict frontmatter marker `surface_type: ui-bearing` in
- *      `01_Spec.md` (the canonical CHG-002 signal) OR a matching
+ *      `01_Spec.md` (the canonical multi-spec signal) OR a matching
  *      `.qfai/contracts/ui/<spec-id>*.yaml` contract — both via
  *      {@link resolveAllUiBearingSpecs}.
  *   2. legacy `# … prototyping …` heading in `01_Spec.md` — via

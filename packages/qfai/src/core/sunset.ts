@@ -26,7 +26,7 @@ export const SUNSETS = {
   playwrightCli: "1.10.0",
   /** UI contracts authored before the `primary_tasks` slot (`QFAI-AUD-001`). */
   legacyPrimaryTasksSlot: "1.10.0",
-  /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the CHG-003 layer recut). */
+  /** Pre-recut `.qfai/assistant/{steering,instructions}/` (the four-layer recut). */
   legacyAssistantSteering: "1.10.0",
   /** Specs with a UI contract companion but no `surface_type` (`D-SURFACE-TYPE-MISSING`). */
   surfaceTypeMissing: "1.10.0",
