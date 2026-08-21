@@ -568,9 +568,7 @@ describe("renderTriageMarkdown", () => {
     expect(md).toContain(
       "| REQ-0043 | obsolete CLI flag | spec-0005 | UPDATE | REMOVE | user@host | Flag dropped in v1.9 |",
     );
-    expect(md).toContain(
-      "| REQ-0044 | new packaging command | (none) | CREATE | - | user@host | - |",
-    );
+    expect(md).toContain("| REQ-0044 | new packaging command | - | CREATE | - | user@host | - |");
   });
 
   it("escapes literal pipes and newlines so the table round-trips through parseAllMarkdownTables", async () => {

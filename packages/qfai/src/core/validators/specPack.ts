@@ -38,6 +38,8 @@ import {
 } from "../specPackParsers.js";
 import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
 import {
+  TRIAGE_NO_EXISTING_SPEC,
+  TRIAGE_NO_EXISTING_SPEC_LEGACY,
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
   TRIAGE_UPDATE_SUBOPS,
@@ -131,7 +133,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // layout-independent, so factor it out of the per-branch tail to
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
-    issues.push(...(await validateTriageSectionForEntry(entry)));
+    issues.push(...(await validateTriageSectionForEntry(entry, knownSpecIds)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -141,12 +143,15 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
   // (PR #206 review LW-F). Without this branch, CREATE rows in the
   // policy delta would silently bypass QFAI-TRIAGE-006 and SPLIT/MERGE
   // rows would skip the approval gate.
-  issues.push(...(await validatePoliciesDeltaTriage(specsRoot)));
+  issues.push(...(await validatePoliciesDeltaTriage(specsRoot, knownSpecIds)));
 
   return issues;
 }
 
-async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> {
+async function validatePoliciesDeltaTriage(
+  specsRoot: string,
+  knownSpecIds: ReadonlySet<string>,
+): Promise<Issue[]> {
   const deltaPath = path.join(specsRoot, "_policies", "10_delta.md");
   let text: string;
   try {
@@ -157,7 +162,7 @@ async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> 
     return [];
   }
   const capabilitiesPath = path.join(specsRoot, "_policies", "03_Capabilities.md");
-  const issues = validateTriageSection(text, deltaPath);
+  const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, capabilitiesPath)));
   return issues;
 }
@@ -320,6 +325,28 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  */
 const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
 
+/** Every `spec-NNNN` a single `Existing Spec` cell names. */
+const EXISTING_SPEC_ID_RE = /spec-\d{4}/g;
+
+/**
+ * Range notation in an `Existing Spec` cell. A range names no spec
+ * directory — it is a prose shorthand that no reader can resolve back to a
+ * concrete set — so it is not a form of the grammar. Multiple specs are
+ * enumerated with `+` instead.
+ */
+const EXISTING_SPEC_RANGE_RE = /spec-\d{4}\s*(?:[〜～~…–—ー]|\.\.\.?)\s*(?:spec-)?\d{4}/;
+
+/**
+ * A policy-only row acts on `_policies/**` rather than on a spec
+ * directory, so `_policies` (bare, backticked, or as a path to one of its
+ * files) is an accepted target. The literal may arrive markdown-escaped
+ * (`\_policies`), hence the substring test rather than an anchored match.
+ */
+const EXISTING_SPEC_POLICY_RE = /_policies/;
+
+const EXISTING_SPEC_GRAMMAR_HINT =
+  "Existing Spec は `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies`、対象 spec がまだ無い CREATE 行は `-` を記載してください。";
+
 /** Bracket pairs that mark a parenthetical citation in a `Subject` cell. */
 const CITATION_BRACKETS: ReadonlyArray<readonly [string, string]> = [
   ["(", ")"],
@@ -419,7 +446,10 @@ function isTriageUpdateSubOp(value: string): value is TriageUpdateSubOp {
   return TRIAGE_SUB_OPS.has(value);
 }
 
-async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]> {
+async function validateTriageSectionForEntry(
+  entry: SpecEntry,
+  knownSpecIds: ReadonlySet<string>,
+): Promise<Issue[]> {
   const deltaPath = entry.deltaPath;
   if (!deltaPath) {
     return [];
@@ -430,7 +460,7 @@ async function validateTriageSectionForEntry(entry: SpecEntry): Promise<Issue[]>
   } catch {
     return [];
   }
-  const issues = validateTriageSection(text, deltaPath);
+  const issues = validateTriageSection(text, deltaPath, knownSpecIds);
   issues.push(...(await validateCreateRowCapabilityRefs(text, deltaPath, entry.capabilityPath)));
   return issues;
 }
@@ -542,7 +572,75 @@ export async function validateCreateRowCapabilityRefs(
   return issues;
 }
 
-export function validateTriageSection(text: string, deltaPath: string): Issue[] {
+/**
+ * Enforce QFAI-TRIAGE-008: the `Existing Spec` cell binds the row to the
+ * spec it acts on, so its value must be readable — and readable the same
+ * way by every author. The grammar is declared in
+ * `references/sdd-triage.md`: one or more `spec-NNNN` joined by `+`,
+ * `_policies` for a policy-only row, or `-` when the row has no existing
+ * spec (CREATE). `knownSpecIds` is the set of spec directories actually on
+ * disk; when it is absent (callers that validate a delta.md in isolation)
+ * only the grammar is checked, not existence.
+ */
+function validateExistingSpecCell(
+  cell: string,
+  opUpper: "UPDATE" | TriageTopLevelOp,
+  rowLabel: string,
+  deltaPath: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
+): Issue[] {
+  const report = (message: string, refs: string[]): Issue[] => [
+    issue(
+      "QFAI-TRIAGE-008",
+      `${message} (${rowLabel})`,
+      "error",
+      deltaPath,
+      "triage.existingSpec",
+      refs,
+      "canonical",
+      EXISTING_SPEC_GRAMMAR_HINT,
+    ),
+  ];
+
+  const isNoneLiteral =
+    cell === TRIAGE_NO_EXISTING_SPEC ||
+    cell.toLowerCase() === TRIAGE_NO_EXISTING_SPEC_LEGACY.toLowerCase();
+
+  if (opUpper === "CREATE") {
+    return isNoneLiteral
+      ? []
+      : report(
+          `CREATE 行の Existing Spec は \`${TRIAGE_NO_EXISTING_SPEC}\` です: ${cell || "(empty)"}`,
+          [cell],
+        );
+  }
+  if (cell.length === 0 || isNoneLiteral) {
+    return report(`Triage ${opUpper} の Existing Spec が空です`, [cell]);
+  }
+  if (EXISTING_SPEC_RANGE_RE.test(cell)) {
+    return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
+  }
+
+  const namedIds = cell.match(EXISTING_SPEC_ID_RE) ?? [];
+  if (namedIds.length === 0) {
+    return EXISTING_SPEC_POLICY_RE.test(cell)
+      ? []
+      : report(`Existing Spec が対象を名指ししていません: ${cell}`, [cell]);
+  }
+  if (!knownSpecIds) {
+    return [];
+  }
+  const missing = namedIds.filter((specId) => !knownSpecIds.has(specId));
+  return missing.length === 0
+    ? []
+    : report(`Existing Spec が存在しない spec を指しています: ${missing.join(", ")}`, missing);
+}
+
+export function validateTriageSection(
+  text: string,
+  deltaPath: string,
+  knownSpecIds?: ReadonlySet<string>,
+): Issue[] {
   const issues: Issue[] = [];
   const headings = extractH2Headings(text);
   const hasChangeSummary = headings.has(normalizeHeading("Change Summary"));
@@ -627,7 +725,7 @@ export function validateTriageSection(text: string, deltaPath: string): Issue[] 
       continue;
     }
 
-    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel));
+    issues.push(...validateTriageRows(table, headerMap, deltaPath, tableLabel, knownSpecIds));
   }
 
   return issues;
@@ -638,6 +736,7 @@ function validateTriageRows(
   headerMap: Map<string, number>,
   deltaPath: string,
   tableLabel: string,
+  knownSpecIds: ReadonlySet<string> | undefined,
 ): Issue[] {
   const issues: Issue[] = [];
   for (const [rowIndex, row] of table.rows.entries()) {
@@ -646,6 +745,7 @@ function validateTriageRows(
     const approvedCell = (row[headerMap.get("approved by") ?? -1] ?? "").trim();
     const sourceCell = (row[headerMap.get("source") ?? -1] ?? "").trim();
     const subjectCell = (row[headerMap.get("subject") ?? -1] ?? "").trim();
+    const existingSpecCell = (row[headerMap.get("existing spec") ?? -1] ?? "").trim();
     const baseLabel = sourceCell || `row ${rowIndex + 1}`;
     const rowLabel = tableLabel ? `${tableLabel.trim()} ${baseLabel}` : baseLabel;
 
@@ -668,6 +768,13 @@ function validateTriageRows(
     // `opUpper` is now narrowed to `"UPDATE" | TriageTopLevelOp` without
     // a bare type assertion (PR #206 review #34).
     const opUpper = opUpperRaw;
+
+    // QFAI-TRIAGE-008 is orthogonal to the Sub-op / approval gates below,
+    // so it is evaluated for every row whose Operation parsed, and the
+    // row keeps flowing through the remaining checks.
+    issues.push(
+      ...validateExistingSpecCell(existingSpecCell, opUpper, rowLabel, deltaPath, knownSpecIds),
+    );
 
     if (opUpper === "UPDATE") {
       const subUpper = subCell.toUpperCase();

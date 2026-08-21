@@ -517,6 +517,21 @@ export const TRIAGE_TABLE_HEADER = [
 ] as const;
 
 /**
+ * The `Existing Spec` literal for a row that has no spec to act on — in
+ * practice a CREATE row. `-` is the spelling the field already uses and it
+ * matches the "not applicable" cells of the neighbouring `Sub-op` /
+ * `Approved By` columns, so it is the canonical one.
+ */
+export const TRIAGE_NO_EXISTING_SPEC = "-";
+
+/**
+ * Legacy spelling of `TRIAGE_NO_EXISTING_SPEC` that this renderer emitted
+ * before the grammar was fixed. Still accepted by the validator so an
+ * upgrade does not invalidate delta.md files written by an older version.
+ */
+export const TRIAGE_NO_EXISTING_SPEC_LEGACY = "(none)";
+
+/**
  * Escape a single Triage table cell so the resulting markdown row keeps
  * the column structure intact even when the source REQ subject /
  * rationale / spec name contains literal `|` (e.g. CLI flags
@@ -570,7 +585,7 @@ export function renderTriageMarkdown(rows: TriageRow[]): string {
     const cells = [
       row.source,
       row.subject,
-      row.existingSpec ?? "(none)",
+      row.existingSpec ?? TRIAGE_NO_EXISTING_SPEC,
       top,
       sub,
       row.approvedBy ?? "-",

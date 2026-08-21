@@ -158,6 +158,25 @@ Required columns: `Source`, `Subject`, `Existing Spec`, `Operation`.
 Conditional: `Sub-op` (UPDATE only), `Approved By` (approval-required
 ops), `Rationale` (recommended for every row).
 
+### `Existing Spec` grammar
+
+`Existing Spec` is the cell that binds the row to the spec it acts on, so
+it has exactly one grammar (enforced by `QFAI-TRIAGE-008`):
+
+- **One spec** — `spec-NNNN`, e.g. `spec-0003`.
+- **Several specs** — join them with `+`, e.g. `spec-0003+spec-0004`.
+  This is what the classifier emits for a MERGE row.
+- **Policy-only row** — `_policies` (a path such as
+  `_policies/05_Contracts.md` is also accepted).
+- **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
+  NOT name the spec it is about to create; the new spec ID belongs in
+  `Subject`. (`(none)` is the legacy spelling of this literal and is still
+  accepted, but new rows should use `-`.)
+
+A **range is not a form**: `spec-0003〜spec-0008` names no spec directory
+and is rejected. Enumerate the specs with `+` instead. Every `spec-NNNN`
+named here must resolve to a directory under `.qfai/specs/`.
+
 ## Validators
 
 - `QFAI-TRIAGE-001` (warning): delta.md has `## Change Summary` but no
@@ -175,6 +194,10 @@ ops), `Rationale` (recommended for every row).
   `UPDATE:APPEND`, and deleting one item is `UPDATE:REMOVE`.
   `QFAI-TRIAGE-003` is a membership check on the Operation label and provably
   cannot catch this.
+- `QFAI-TRIAGE-008` (error): `Existing Spec` does not follow the grammar
+  above — the cell is empty, uses range notation, names a `spec-NNNN`
+  that has no directory under `.qfai/specs/`, names nothing resolvable,
+  or is a CREATE row carrying a spec ID instead of `-`.
 - `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
   in the Rationale column, or referencing a CAP that is not registered
   in `_policies/03_Capabilities.md`. This is the structural gate that

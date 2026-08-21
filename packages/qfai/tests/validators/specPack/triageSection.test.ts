@@ -139,6 +139,98 @@ describe("validateTriageSection", () => {
   });
 });
 
+describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-008)", () => {
+  const KNOWN = new Set(["spec-0001", "spec-0003", "spec-0004"]);
+
+  const codesFor = (rows: string[][], known?: ReadonlySet<string>): string[] =>
+    validateTriageSection(buildDelta(rows), DELTA_PATH, known).map((entry) => entry.code);
+
+  it("accepts a single spec, a `+` enumeration and a `_policies` target", () => {
+    expect(
+      codesFor(
+        [
+          ["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "why"],
+          ["REQ-2", "merge two specs", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"],
+          ["REQ-3", "policy only", "\\_policies", "UPDATE", "APPEND", "-", "why"],
+          ["REQ-4", "policy file", "`_policies/05_Contracts.md`", "UPDATE", "MODIFY", "-", "why"],
+        ],
+        KNOWN,
+      ),
+    ).toEqual([]);
+  });
+
+  it("emits QFAI-TRIAGE-008 when a named spec has no directory on disk", () => {
+    const issues = validateTriageSection(
+      buildDelta([["REQ-1", "extend", "spec-0009", "UPDATE", "APPEND", "-", "why"]]),
+      DELTA_PATH,
+      KNOWN,
+    );
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-008"]);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.refs).toEqual(["spec-0009"]);
+  });
+
+  it("emits QFAI-TRIAGE-008 for range notation even when both ends exist", () => {
+    // `spec-0001〜spec-0004` resolves to no directory; `+` is the only
+    // multi-spec form.
+    expect(
+      codesFor([["REQ-1", "sweep", "spec-0001〜spec-0004", "UPDATE", "MODIFY", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+    expect(
+      codesFor([["REQ-1", "sweep", "spec-0001..0004", "UPDATE", "MODIFY", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+  });
+
+  it("emits QFAI-TRIAGE-008 when a non-CREATE row leaves Existing Spec unfilled", () => {
+    expect(codesFor([["REQ-1", "extend", "", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+    expect(codesFor([["REQ-1", "extend", "-", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+  });
+
+  it("emits QFAI-TRIAGE-008 when the cell names nothing resolvable", () => {
+    expect(codesFor([["REQ-1", "extend", "TBD", "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+  });
+
+  it("requires the `-` literal on a CREATE row and rejects a spec ID there", () => {
+    expect(
+      codesFor([["REQ-1", "new scope", "-", "CREATE", "-", "user@host", "CAP-0001"]], KNOWN),
+    ).toEqual([]);
+    // `(none)` stays accepted so deltas written by an older renderer keep
+    // validating after an upgrade.
+    expect(
+      codesFor([["REQ-1", "new scope", "(none)", "CREATE", "-", "user@host", "CAP-0001"]], KNOWN),
+    ).toEqual([]);
+    expect(
+      codesFor(
+        [["REQ-1", "new scope", "spec-0004", "CREATE", "-", "user@host", "CAP-0001"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+  });
+
+  it("checks the grammar but not existence when the known-spec set is absent", () => {
+    // Callers that validate one delta.md in isolation cannot resolve spec
+    // directories, so only the shape is enforced.
+    expect(codesFor([["REQ-1", "extend", "spec-0099", "UPDATE", "APPEND", "-", "why"]])).toEqual(
+      [],
+    );
+    expect(codesFor([["REQ-1", "extend", "", "UPDATE", "APPEND", "-", "why"]])).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+  });
+
+  it("reports the Existing Spec defect alongside the approval gate on the same row", () => {
+    expect(
+      codesFor([["REQ-1", "drop spec-0003", "spec-0009", "DELETE", "-", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-008", "QFAI-TRIAGE-005"]);
+  });
+});
+
 function buildDelta(rows: string[][]): string {
   const header =
     "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |";
