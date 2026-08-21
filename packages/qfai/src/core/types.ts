@@ -16,6 +16,14 @@ export type Issue = {
   category: IssueCategory;
   message: string;
   suppressed?: boolean;
+  /**
+   * Severity this finding was declared with before a mode relaxation
+   * rewrote it (`relaxedFrom: "error"` on a gate exploration mode
+   * downgraded to `warning`). Mirrors `suppressed` on the waiver path
+   * so a consumer of `issues[]` can tell a weakened gate from one the
+   * validator authored at the lower severity.
+   */
+  relaxedFrom?: IssueSeverity;
   suggested_action?: string;
   file?: string;
   /**
