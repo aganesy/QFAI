@@ -35,6 +35,7 @@ import {
   validateAgentDefinition,
   validateBpApDb,
   validateContractReferences,
+  validateContractSsotModules,
   validateDesignToken,
   validateDiscussionPackReadiness,
   validateDiscussionVisuals,
@@ -378,6 +379,10 @@ async function runSddValidators(
     ...(await validateOrphanProhibition(root, config)),
     ...(await validateLayerCoverage(root, config, { specScope })),
     ...(await validateContractReferences(root, config)),
+    // Contract → implementation routing: every `- SSOT modules:` entry under
+    // `.qfai/contracts/**` must resolve on disk, so a renamed or never-written
+    // module cannot keep being asserted by the contract that documents it.
+    ...(await validateContractSsotModules(root, config)),
     ...(await validateSddDesignContractReadiness(root, config, {
       enforceNoPrematurePrototypingContracts,
     })),
