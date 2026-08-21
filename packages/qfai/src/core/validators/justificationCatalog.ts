@@ -19,9 +19,14 @@
  * be done in lockstep with the owning spec and reviewer SSOTs.
  *
  * Notes:
- *   - `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is documented warning per the
- *     active spec governance; it stays in the catalog so the
- *     justification contract still applies.
+ *   - The catalog governs MEMBERSHIP only, never severity. Each code's
+ *     own severity belongs to the detector that emits it (e.g.
+ *     `designMdPatchZone.ts` emits `R-DESIGN-MD-PATCH-OUT-OF-ZONE` at
+ *     `warning`). The empty-`justification:` ingestion rejection in
+ *     `reviewerJustification.ts` is ALWAYS `error` for every catalog
+ *     code, because what it reports is the missing justification, not
+ *     the underlying finding. Entries therefore carry no severity
+ *     column: one would be unread by every production path.
  *   - The catalog is exported as both an array (for iteration / docs)
  *     and a `Set<string>` (for O(1) membership checks).
  *
@@ -32,56 +37,47 @@
  */
 export type JustificationCatalogEntry = {
   readonly code: string;
-  readonly severity: "error" | "warning";
   readonly description: string;
 };
 
 export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
   {
     code: "R-AUTOPILOT-POLICY-MISSING",
-    severity: "error",
     description:
       "SKILL.md is missing the `## Default Autopilot Policy` section required by the skill governance contract (3 named buckets: auto-decide / ask-user / hard-required).",
   },
   {
     code: "R-HANDOFF-SCHEMA-DRIFT",
-    severity: "error",
     description:
       "Handoff writer is asymmetric with the canonical CLI-HANDOFF schema (Pair IV). Schema-side adds the canonical field set but a registered writer does not reference it (or vice versa).",
   },
   {
     code: "R-EVIDENCE-MUTATION-UNLOGGED",
-    severity: "error",
     description:
       "An iter-NN evidence mutation call-site (rename / unlink / overwrite) is not paired with a mutation-log writer call (logEvidenceMove / logEvidenceDelete / logEvidenceOverwrite).",
   },
   {
     code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
-    severity: "warning",
     description:
-      "A DESIGN.md patch was applied outside the declared patch zone. Severity is documented warning per the active spec contract; still requires a non-empty justification.",
+      "A DESIGN.md patch was applied outside the declared patch zone. The detector emits this finding at warning severity; it still requires a non-empty justification, and an empty one is rejected at error like every other catalog code.",
   },
   {
     code: "R-PACK-LOCATION-DRIFT",
-    severity: "error",
     description:
       "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged.",
   },
   {
     code: "R-SKILL-MANIFEST-DRIFT",
-    severity: "error",
     description:
       "A skill's per-skill `manifest.json#runtimeDependencies` declaration is out of sync with the canonical `qfai doctor` runtime-dependency probe SSOT. Asymmetric edit across the probe-implementation ↔ manifest-schema pair (one side references the canonical token, the other does not).",
   },
   {
     code: "R-EXPLORATION-CERTIFY-ATTEMPT",
-    severity: "error",
     description:
       "An exploration-mode loop attempted certify. Exploration loops are documentation-only — certify is only valid for convergence loops.",
   },
   {
     code: "R-MOCK-HREF-DRIFT",
-    severity: "error",
     description:
       "Mock template ↔ QFAI-MOCK-010 validator SSOT-sync pair (Pair V) is asymmetric. One side adopted the same-origin absolute `/path/` form without the matching change on the other side.",
   },
