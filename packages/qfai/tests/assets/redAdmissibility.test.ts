@@ -24,6 +24,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const ADMISSIBILITY = "assistant/skills/qfai-implement/references/red-admissibility.md";
+const ROUND_EVIDENCE = "assistant/skills/qfai-implement/references/round-evidence.md";
+const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
+const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const WORKFLOW = "assistant/constitution/workflow.md";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -54,6 +58,61 @@ describe.each(TREES)("%s", (tree) => {
     // observation carries no information about the assertions.
     expect(await read(tree, ADMISSIBILITY)).toContain(
       "Deleting every assertion in the test would make the run **pass**",
+    );
+  });
+
+  it("gives criterion 4 an evidence field, so it is not a conjunct nothing can evaluate", async () => {
+    // Criteria 1-3 are readable off the recorded RED pair. Criterion 4 is a
+    // counterfactual: `RED failure mode: assertion` is written with the same
+    // three characters whether the assertion-stripped run happened or not, so
+    // with no field of its own no gate could ever fail a row on it.
+    const doc = await read(tree, ADMISSIBILITY);
+    expect(doc).toContain("`RED assertion-stripped result` — criterion 4's evidence");
+    expect(doc).toContain("Re-run the `RED command` unchanged");
+    expect(doc).toContain("**Restore immediately.**");
+    // A falsifiability row has no RED pair to strip; its mutation answers it.
+    expect(doc).toContain("A `falsifiability` row has no RED pair to strip");
+    // Criterion 4 itself must point at where the obligation is discharged.
+    expect(doc).toContain(
+      "discharged by a second run and recorded as `RED assertion-stripped result`",
+    );
+  });
+
+  it("carries the field in the per-item contract and in Phase Red", async () => {
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "`RED assertion-stripped result` — **required wherever a RED pair is present**",
+    );
+    // The obligation must also be reachable at the point of action, not only
+    // in the field list the reviewers audit.
+    expect(skill).toContain("record that run as `RED assertion-stripped result`");
+  });
+
+  it("makes the field per round, since each round strips its own RED", async () => {
+    // round-evidence.md claims its list is the whole of the round block, so a
+    // RED field missing from it is a field with two contradictory homes.
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).toContain("`Round N: RED assertion-stripped result`");
+    expect(doc).toContain("the RED pair and its assertion-stripped run");
+  });
+
+  it("makes it adjudicable — the gatekeeper can fail a row on it", async () => {
+    // Without a clause here the field would be recorded and never judged,
+    // which is the same unenforceability in a new place.
+    const doc = await read(tree, GATEKEEPER);
+    expect(doc).toContain("`RED assertion-stripped result` records the `RED command` re-run");
+    expect(doc).toContain("REVISE when it is absent, when the stripped run still fails");
+  });
+
+  it("keeps the producer and the audit subject in step with the new field", async () => {
+    // A handed-over row's RED is taken by /qfai-atdd, so requiring the field
+    // only on the consumer side would hand over an incomplete row; and a field
+    // outside the audit subject can be back-filled after the PASS.
+    expect(await read(tree, PROVENANCE)).toContain(
+      "`RED failure mode`, `RED assertion-stripped result`",
+    );
+    expect(await read(tree, DELEGATION)).toContain(
+      "RED pair with its `RED assertion-stripped result`",
     );
   });
 

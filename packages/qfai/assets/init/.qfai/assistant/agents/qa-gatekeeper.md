@@ -72,7 +72,15 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   raised it, and the message names the predicate the row owns;
 - the recorded output retains that assertion message and its location;
 - when the `Selector` holds several entries, each entry's failure was observed
-  separately. One aggregate run is not a RED for several entries.
+  separately. One aggregate run is not a RED for several entries;
+- `RED assertion-stripped result` records the `RED command` re-run with the
+  row's assertions deleted and shows it **passing**. The criteria above are
+  readable off the recorded failure; this one is a counterfactual, so
+  `RED failure mode: assertion` reads identically whether it was checked or
+  skipped and nothing else on the row distinguishes the two. REVISE when it is
+  absent, when the stripped run still fails, or when its command differs from
+  the `RED command`. A `falsifiability` row has no RED pair to strip — its
+  mutation run answers this.
 
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite

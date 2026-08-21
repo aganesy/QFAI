@@ -21,7 +21,10 @@ A failure is an **admissible RED** when all four hold:
    "cannot find module" does not.
 4. Deleting every assertion in the test would make the run **pass**. If the run
    would fail identically with no assertions at all, the observation carries no
-   information about the assertions.
+   information about the assertions. Criteria 1-3 are properties of the failure
+   the row already recorded; this one is a counterfactual about a run that has
+   not happened, so it is discharged by a second run and recorded as
+   `RED assertion-stripped result` (see **Recording it**).
 
 ## What is not a RED
 
@@ -79,6 +82,34 @@ and re-run.
 does **not** extend to the part of the output that demonstrates admissibility.
 The recorded result must retain the assertion message and its location. Truncate
 the stack tail, never the assertion line.
+
+### `RED assertion-stripped result` — criterion 4's evidence
+
+Criteria 1-3 are readable off the recorded `RED command` / `RED result` pair: a
+load error shows in the output, the failing assertion's location shows whether
+it is inside the row's `Selector`, and the message shows whether it names the
+row's predicate. Criterion 4 leaves no such trace — `RED failure mode: assertion`
+is written with the same three characters whether the assertion-deletion run
+happened or not, so with no field of its own the criterion is unenforceable by
+construction and silently degrades to advisory while reading as mandatory. It
+gets one, on the same footing as `Oracle proof` on the GREEN side:
+
+1. Delete **every assertion** the row's `Selector` executes — the whole
+   assertion expression, including the call an expected-exception check wraps.
+2. Re-run the `RED command` unchanged, and record it together with its
+   **passing** output.
+3. **Restore immediately.** The stripped test is evidence, not a deliverable; it
+   must never appear in the commit.
+
+One stripped run per RED, so a round that takes a fresh RED takes a fresh one
+(`round-evidence.md`). A `falsifiability` row has no RED pair to strip: its
+mutation run already answers the same question, and satisfies this field exactly
+as it satisfies `Oracle proof`.
+
+Reject it when the stripped run still **fails** — the failure the row recorded
+was then not its assertions, which is the case criterion 4 exists to catch — or
+when the recorded command differs from the `RED command`, since a different
+command says nothing about this observation.
 
 ## When an assertion-level RED is genuinely unobservable
 

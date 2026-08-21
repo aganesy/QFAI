@@ -18,6 +18,10 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: RED command` — the exact command executed to observe failure
 - `Round N: RED result` — the failure output (result completeness is
   best-effort; truncated output is acceptable)
+- `Round N: RED assertion-stripped result` — the same command re-run with the
+  row's assertions deleted and its **passing** output, the test restored
+  immediately. Per round because each round's RED is taken on its own tree and
+  is stripped there (`red-admissibility.md`)
 - `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
   — **in place of the RED pair** on a `falsifiability` row. It is that row's
   RED observation, so it sits where the RED pair sits and takes the same prefix;
@@ -38,8 +42,9 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
-is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
-its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
+is the whole of it** — `Revision`, the RED pair and its assertion-stripped run
+(or the falsifiability trio in place of both), the GREEN pair, the reviewer
+verdict. Row-level fields are not round
 fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
 `Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a

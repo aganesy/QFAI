@@ -167,7 +167,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "RED command+result, `RED failure mode`, `RED assertion-stripped result`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
