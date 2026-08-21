@@ -179,7 +179,10 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues).toEqual([]);
   });
 
-  it("returns no issues when testFileGlobs is empty", async () => {
+  // `qfai init` ships `testFileGlobs: []`, so this is the state every fresh
+  // project starts in: no file is scanned and QFAI-TEST-001 cannot fire. The
+  // run must say so rather than read as a clean stub scan.
+  it("emits QFAI-TEST-002 instead of a clean result when testFileGlobs is empty", async () => {
     const root = await newTempDir();
     await writeTestFile(
       root,
@@ -188,6 +191,22 @@ describe("spec-0004 validateTestTodoStubs", () => {
     );
 
     const issues = await validateTestTodoStubs(root, configWith({}, { testFileGlobs: [] }));
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    const finding = issues[0];
+    expect(finding?.severity).toBe("info");
+    expect(finding?.rule).toBe("validation.traceability.testFileGlobs");
+    expect(finding?.message).toContain("validation.traceability.testFileGlobs");
+    expect(finding?.suggested_action).toContain("qfai-configure");
+  });
+
+  it("stays silent about empty testFileGlobs when the stub gate is off", async () => {
+    const root = await newTempDir();
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({ forbidTestTodoStubs: false }, { testFileGlobs: [] }),
+    );
     expect(issues).toEqual([]);
   });
 

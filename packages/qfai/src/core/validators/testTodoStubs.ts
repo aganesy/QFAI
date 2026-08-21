@@ -7,8 +7,10 @@
  * in Ruby, `[Ignore]` in .NET. They neither pass nor fail, so they do not block
  * CI by default and rot as stale work-not-done markers.
  *
- * `QFAI-TEST-002` (info) names extensions with no dialect, so a clean run on an
- * unsupported stack is not mistaken for evidence of no stubs.
+ * `QFAI-TEST-002` (info) names the states in which the scan produced no
+ * evidence: extensions with no dialect, and an empty
+ * `validation.traceability.testFileGlobs` (the value `qfai init` ships), where
+ * no file is selected at all. Neither may be mistaken for "no stubs".
  *
  * This validator closes the gap by emitting an `error` for each stub
  * found, making qfai validate / CI reject them. Projects that need to
@@ -82,6 +84,29 @@ function resolveStubDialect(relFile: string): StubDialect | null {
   return STUB_DIALECTS.find((dialect) => dialect.extensions.includes(ext)) ?? null;
 }
 
+/**
+ * The empty-glob form of `QFAI-TEST-002`: the gate is enabled, but file
+ * selection is empty so nothing at all was scanned.
+ *
+ * `qfai init` ships `validation.traceability.testFileGlobs: []` on purpose, and
+ * the config comment only accounts for the SC traceability gate the same key
+ * governs. Returning no issues here made a never-executed stub scan
+ * indistinguishable from a clean one — the exact non-result-read-as-result this
+ * finding exists to prevent.
+ */
+function reportEmptyTestFileGlobs(root: string): Issue {
+  return issue(
+    "QFAI-TEST-002",
+    "テストスタブ検出は有効ですが、`validation.traceability.testFileGlobs` が空のため 0 ファイルしか scan していません。クリーンな結果はスタブ不在の証拠になりません",
+    "info",
+    root,
+    "validation.traceability.testFileGlobs",
+    ["validation.traceability.testFileGlobs"],
+    "canonical",
+    "`/qfai-configure` を実行するか、qfai.config.yaml の `validation.traceability.testFileGlobs` にリポジトリのテスト配置を設定してください。設定するまで QFAI-TEST-001 は 1 件も検出できません。",
+  );
+}
+
 export async function validateTestTodoStubs(root: string, config: QfaiConfig): Promise<Issue[]> {
   if (!config.validation.testStrategy.forbidTestTodoStubs) {
     return [];
@@ -89,7 +114,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
 
   const globs = config.validation.traceability.testFileGlobs;
   if (globs.length === 0) {
-    return [];
+    return [reportEmptyTestFileGlobs(root)];
   }
 
   const excludeGlobs = Array.from(
