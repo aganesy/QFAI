@@ -9,9 +9,9 @@ version: 2.0.0
 
 <!-- markdownlint-disable MD041 -->
 
-> **言語指示（厳守）**
->
-> - 報告・出力: 日本語（Plan も含む）
+> **出力言語**: `constitution.md` の Absolute Rule — Output Language に従う。
+> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、
+> エージェントの出力に対する指示ではない）。
 
 # エージェント選択ガイド（QFAI Toolkit）
 
