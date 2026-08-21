@@ -241,6 +241,7 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 
 - Shared `_policies/01..11` files
 - Target `spec-*/01..10` files (with valid `Status:` bullet)
+- Target `spec-*/tdd/test-list.md`, seeded at Phase 2b (empty table only when the spec declares no coverage-target TC)
 - `spec-*/16_Traceability-ledger.md` when the spec's `BR-*` / `AC-*` are linked to implementation
   files (optional artifact; create or refresh it in the same change as the BR/AC it links, from
   `templates/specs/spec/16_Traceability-ledger.md`). Without it `QFAI-TRACE-002` is emitted and the
