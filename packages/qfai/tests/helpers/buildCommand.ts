@@ -28,8 +28,10 @@
  *
  * 1. A **package manager** takes a script, after its own passthrough verbs, resolved in the manifest
  *    its directory flags select. Its flag set is open-ended, so a flag consumes its value **only when a
- *    later bare token exists to be the script** — which is what replaced a nineteen-member boolean list
- *    and fixed `pnpm --no-frozen-lockfile build` along with every flag nobody has met yet.
+ *    later bare token exists to be the script**, together with the boolean list and the per-manager
+ *    value list. v12 tried that one rule ALONE, deleting both lists, and round 10 recovered the set and
+ *    measured every member of it changing a verdict — `yarn --silent workspace pkg build` went from
+ *    `heuristic` to `none` because the rule ate the `workspace` verb. Three reasons, not one.
  * 2. A **build tool** takes subcommands, and its flag set is closed and declared here. It may build
  *    without the word (`builds`, `buildPrefixes`), with no subcommand at all (`bareIsBuild`), or not at
  *    all past a subcommand that ends the window (`stops`).
@@ -298,9 +300,10 @@ const MANAGER_PASS = new Set(["run", "exec", "dlx", "workspaces", "foreach", "--
 /**
  * A bare verb that consumes the following token without it being the script.
  *
- * Only `workspace`. Everything else that was here — four filter flags, then a nineteen-member boolean
- * list — is subsumed by the rule that a manager flag consumes its value only when a later bare token
- * exists, and each was measured to change no verdict.
+ * Only `workspace`. Four filter flags were also here once and are subsumed by the consume rule; the
+ * boolean list was too, and that deletion was **wrong** — see `MANAGER_BOOLEAN`, restored after round 10
+ * measured every member of it changing a verdict. No count is stated here, because a count in prose is
+ * the figure this stage has got wrong in every round that wrote one.
  */
 const MANAGER_CONSUMING = new Set(["workspace"]);
 

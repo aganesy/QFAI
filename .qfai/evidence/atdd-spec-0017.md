@@ -250,8 +250,11 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   form rounds 8, 9 and 10 planted, all refused, and the shipped tree's own shapes accepted
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, v12, extracted from the
   E2E so its corpora can be tested on their own
-- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 24 tests over the ten corpora
-  enumerated at § "Execution logs" (`E4b`), none of them chosen
+- **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 24 tests over the corpora enumerated
+  at § "Execution logs" (`E4b`), none of them chosen. **No count of them is stated anywhere in
+  this record.** Rounds 9 and 10 each found that number wrong in a different place — ten here,
+  nine there, eleven items in the list, and the two evidence files enumerating different sets —
+  and nothing derives it, which is the property those two rounds established as the predictor
   by this stage. Round 8's two findings are the last four: one hardcoded case per grammar member, a check
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
   requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
@@ -779,12 +782,18 @@ accumulated across every round, one case per grammar member, and every `run:` li
 trees:
 
 ```text
-this repository reaches a build in FOUR places, not the two previously asserted
+the own tree's builds, as `tests/unit/buildCommand.test.ts` pins them
   build      ci.yml       pnpm -C packages/qfai build                    direct
+  build      ci.yml       pnpm check-types                               tsc -b emits into dist
   build      release.yml  pnpm -C packages/qfai pack --pack-destination  via prepack -> build -> tsup
+  build      release.yml  pnpm ci:gate                                   runs check-types
   heuristic  ci.yml       pnpm ci:build-verify                           spawn inside a .mjs
-  heuristic  release.yml  pnpm ci:gate                                   spawn inside the same .mjs
 ```
+
+This block said **FOUR** for three rounds and the pinned set is five: `check-types` runs `tsc -b`, which
+emits into `dist`, so the type-check lane builds — and `ci:gate` runs it. Round 10 found the block still
+describing the pre-v12 state against the assertion in the same repository that contradicts it. The set is
+pinned in the test; the count is not restated here, for the reason § "Work performed" gives.
 
 The last two are **opaque to any command-line scan**. Three helpers reach the build this way —
 `scripts/check-build-warnings.mjs`, `scripts/verify-pack.mjs` and `scripts/check-publish-dry-run.mjs`,
@@ -889,7 +898,7 @@ confirmed from this side: the symlink test passed the link as the walk's *root*,
 root whatever kind of node it is, so `entry.isSymbolicLink()` — the branch under test — was never
 reached. The test now places the link inside the scanned directory.
 
-### Q1-Q4 — the matrix record's prose
+### Q1-Q7 — the matrix record's prose
 
 Round 5 broke the matrix pinning test twice more, both times without touching the table:
 
@@ -1128,21 +1137,26 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 9. The e2e figure is 1434 and the integration+unit figure 1200; the sequence below reaches
-`30a0ae5a` and the two commits after it add one e2e callsite between them.
+round 10: the e2e figure is 1437 and the integration+unit figure 1206.
 
-The previous version said `eb5d59af` and added that "the commits after it change records only and add no
-test callsite". That was false when written: `f544daad` — round 8's own `B4` repair — changed five
-helper and test files and moved the integration+unit total from 1196 to 1197, while the e2e total did
-not move at all. Round 9 caught it, and the shape is worth naming: the e2e figure has a per-commit
-sequence below because five rounds faulted it, and the integration+unit figure has none, so it went
-stale first. Both are re-measured here; only one of them is derivable. Three rounds asked for the revision beside the totals and got a round name
+**No sentence here claims how many commits follow the last row of the sequence.** Five rounds running,
+that sentence was wrong — "the two commits after it" against five, and before that "records only" against
+a commit that changed five test files. It is the same defect as every other count nothing derives, and it
+kept recurring because it is the one figure in this block that goes stale on every push rather than on
+every test change. The rule replaces it, and the rule is checkable at any revision:
+
+> any commit that changes an `it` / `test` callsite under the e2e project's two include globs owes a row
+> in the sequence below; any commit that does not leaves the e2e total valid.
+
+The integration+unit figure has no such sequence, and that asymmetry is why it went stale first: round 9
+found it recorded at 1196 against a measured 1197, moved by round 8's own repair commit. It is derivable
+the same way and is still not derived. Three rounds asked for the revision beside the totals and got a round name
 instead; a round name cannot be checked, which is the whole reason those rounds asked.
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1434 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1200 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1437 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1206 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0
@@ -1183,6 +1197,15 @@ per commit, e2e project (tests/e2e/** + tests/assets/**, the project's two inclu
   f544daad  1433  (+0)            869  (+0)   v11 — its new test is in `unit`, not `e2e`
   05a97202  1433  (+0)            869  (+0)   round 9's request
   30a0ae5a  1434  (+1)            870  (+1)   v12, and the retracted-claims guard's eighth test
+  d4ea336c  1434  (+0)            870  (+0)   spellings; its new test is in `unit`
+  70c50a9c  1434  (+0)            870  (+0)   records only
+  3a466b27  1434  (+0)            870  (+0)   records, and the version constant
+  a163b52a  1434  (+0)            870  (+0)   round 9's pack, and the extracted parser
+  a66be5c6  1434  (+0)            870  (+0)   round 10's request
+  febbd881  1434  (+0)            870  (+0)   the manager regression; its tests are in `unit`
+  81326cc0  1435  (+1)            871  (+1)   the shipped-lane allowlist assertion
+  88760814  1435  (+0)            871  (+0)   the declaration check, in `unit`
+  7af579c3  1437  (+2)            873  (+2)   the guard's two new coordinate tests
 ```
 
 **The integration+unit total has no sequence like this, and it went stale first.** `f544daad` added the
@@ -1331,6 +1354,12 @@ differ.
 | 7     | `qa-gatekeeper` (P1d 6)   | **PASS** |       8 | M1, A1-A7 (inline)     |       8 |
 | 8     | `completion-reviewer`     | REVISE  |       29 | B1-B6, M1-M7, m1-m16   |      29 |
 | 8     | `qa-gatekeeper` (stage)   | REVISE  |       22 | B1-B11, A1-A11         |      22 |
+| 9     | `implementation-reviewer` | REVISE  |       25 | B1-B4, M1-M9, m1-m12   |      25 |
+| 9     | `completion-reviewer`     | REVISE  |       22 | B1-B6, M1-M6, m1-m10   |      22 |
+| 9     | `qa-gatekeeper` (stage)   | REVISE  |       17 | B1-B8, A1-A9           |      17 |
+| 10    | `implementation-reviewer` | REVISE  |       26 | B1-B6, M1-M9, m1-m11   |      26 |
+| 10    | `completion-reviewer`     | REVISE  |       20 | B1-B5, M1-M7, m1-m8    |      20 |
+| 10    | `qa-gatekeeper` (stage)   | REVISE  |       16 | B1-B9, A1-A7           |      16 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -1347,6 +1376,12 @@ forward instead of catching it. That pack is re-sealed, with the old value kept 
 other five disagreements are left as written and recorded here rather than edited, because re-sealing
 five packs to move a bookkeeping figure rewrites more history than it repairs; the rule they follow is
 stated instead, which is the alternative round 8 offered.
+
+Rounds 9 and 10 were absent from this table while the paragraph above it said the counts are "derived
+from the packs on disk" — round 10 found it, and the omission is the same class as every other count in
+this record that nothing computes: the derivation was performed once, by hand, and then described as a
+property. Both rounds' slots agree with their `summary.json` because both were written from the same
+mechanical count.
 
 Round 8's pack is now closed: both reports had landed, so its `summary.json` was written from the same
 derivation as the table above and the pack sealed. It is the first pack whose recorded counts and derived
@@ -1413,7 +1448,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**nine** rounds, **26** reviewer responses, **25 REVISE and one PASS** — the PASS being P1d's sixth
+**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
@@ -1434,6 +1469,7 @@ unreproducible.
 | 7     | `completion-reviewer`, `qa-gatekeeper`, P1d                           | `9a37421c` | REVISE, **P1d PASS** |
 | 8     | `completion-reviewer`, `qa-gatekeeper` — stage gates only             | `dbe00247` | REVISE           |
 | 9     | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `05a97202` | REVISE           |
+| 10    | `implementation-reviewer`, `completion-reviewer`, `qa-gatekeeper`     | `a66be5c6` | REVISE           |
 
 Round 9 routed the `implementation-reviewer` as well, because the helper and the four guards changed
 substantially; `agent-routing.yml` has it **conditional** rather than blocking, and its report says so.
@@ -1525,8 +1561,9 @@ output, it is invisible. What would have caught it is `git status --porcelain --
 directory, which is now part of sealing a pack.
 
 **When each pack was actually sealed, traced with `git log --diff-filter=A` rather than described.**
-`SKILL.md` fixes the seal at the moment the last reviewer response lands. Measured, four of the seven
-closed packs missed it:
+`SKILL.md` fixes the seal at the moment the last reviewer response lands. The table is the claim; the
+sentence that used to summarise it said "four of the seven closed packs" and went stale as packs closed,
+which is the third count in this record to fail that way. Read the rows:
 
 ```text
 round  last report at   summary.json at   gap
@@ -1571,7 +1608,7 @@ Serialization, stated because it is load-bearing: each manifest line is
 carries `* text=auto eol=lf`, so a file written with CRLF is stored LF-only and every checkout sees LF
 — while `git status` stays clean, because the filter runs on the way in. Exactly one of the 36 files
 across these packs is in that state: round 7's `qa-gatekeeper` report, 423 CRLF in this working tree and
-0 in its blob. The first six packs were LF-only throughout, which is why eight rounds of agreement
+0 in its blob. The first six packs were LF-only throughout, which is why every round of agreement
 between a filtered hash and a raw-byte hash was luck.
 
 Round 8 recorded the **raw-byte** value on the reasoning that an unfiltered hash is the honest one. It

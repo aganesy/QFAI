@@ -1,9 +1,11 @@
 /**
  * `tests/helpers/buildCommand.ts` — the predicate `US-0017-0004` rests on.
  *
- * Eight review rounds measured ten versions of it and each version was reported as clean by the party
- * that wrote it. Every corpus this stage chose flattered its own predicate; every corpus a reviewer
- * chose broke it. So the corpora below are, deliberately, **not** this stage's:
+ * Every version of it was reported as clean by the party that wrote it and then broken by a corpus
+ * someone else chose — the version count lives in the helper's own `VERSION` constant, and the round
+ * count is derivable from the packs on disk, because both were wrong here in every round that wrote
+ * them down. Every corpus this stage chose flattered its own predicate; every corpus a reviewer chose
+ * broke it. So the corpora below are, deliberately, **not** this stage's:
  *
  * - the twenty forms round 4's `qa-gatekeeper` measured as v4 regressions against v3;
  * - the forms v4 already handled, kept so a fix for the above cannot silently undo them;

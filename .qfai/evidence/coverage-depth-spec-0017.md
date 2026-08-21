@@ -281,8 +281,11 @@ own assertion: 0 of 17 member mutations reddened it, and a full sweep put member
 Replacing it with one hardcoded case per member forced the question "what command changes verdict if
 this member goes?" once per member — and for forty-five the answer was none. Those are deleted, one of
 them (`NOT_A_BUNDLER`) because the single command whose verdict it changed it decided **wrong**. The
-sweep is now a test rather than a measurement: it deletes each of the 208 remaining members in turn and
-requires a case to notice, and it fails on any member that cannot be pinned.
+sweep is now a test rather than a measurement: it deletes each remaining member in turn and requires a
+case to notice, and it fails on any member that cannot be pinned. **No count of the members appears
+here.** It read 208 for three rounds while the tree held 250 and then 296, and each correction went
+stale inside a commit; the number is `grammarMembers().length` at run time and the assertions are the
+measurement, so restating it in prose only creates something to be wrong about.
 
 No accuracy figure is quoted here on purpose. What the corpora are is recorded instead: round 4's 20
 measured regressions, round 5's 10 measured defects, round 6's 7, round 8's 6 missed builds and 4
