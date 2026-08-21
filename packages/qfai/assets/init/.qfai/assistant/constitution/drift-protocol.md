@@ -14,6 +14,15 @@ Upstream artifacts include, at minimum:
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
+- **the toolkit's own vendored rules** — `.qfai/assistant/constitution/**` and
+  `.qfai/assistant/catalog/**`. `npx qfai init` copies these into the project
+  and QFAI owns them; no phase of this project does. Editing one in place forks
+  the rules the validators enforce, and the fork is indistinguishable from
+  shipped policy at the point of use — a downstream argument then cites it by
+  line number as though it were the release. Extending them is legal through
+  the overlay in `#allowed-exceptions-minimal-whitelist`; rewriting them is
+  not. `.qfai/assistant/manifest/**` is **not** on this list: `/qfai-configure`
+  is the supported way to edit those declarative files.
 - **test or production artifacts another spec's completed implement run
   certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
   on a `done` row. Changing one is not forbidden (the codebase is not
@@ -48,6 +57,14 @@ case required reading the agent roster and reasoning backwards from it.
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
   Decision Record ID scheme in the spec's `07_Decisions.md`)
+- **a `*.local.md` overlay beside a vendored toolkit rule** —
+  `.qfai/assistant/constitution/<name>.local.md` or
+  `.qfai/assistant/catalog/<name>.local.md`. `npx qfai init` never writes these
+  and the provenance check never reports them, so a project can add what it
+  needs without editing a file QFAI owns and without the addition being lost on
+  the next upgrade. An overlay **adds**; it does not repeal. A project need
+  that contradicts a shipped rule is drift and takes the
+  `#when-drift-is-detected` path.
 
 Any exception beyond this list requires explicit user approval.
 
@@ -328,6 +345,17 @@ is a defect.
 approved` that **names the changed path** silences it; an `open` CR does not,
   because an open CR authorises nothing. The check does not run in the `sdd`
   profile: `/qfai-sdd` owns these files.
+- Vendored toolkit rules must not be edited in place. **This is detected.**
+  `npx qfai validate` hashes `.qfai/assistant/constitution/**` and
+  `.qfai/assistant/catalog/**` and compares them with the installed release and
+  with the provenance record `.qfai/assistant/.assets.lock.json` that
+  `npx qfai init` writes. A file still holding what QFAI wrote, from an older
+  release, is `QFAI-ASSETS-003` and is refreshed by `npx qfai init --force`. A
+  file matching neither the release nor the record is `QFAI-ASSETS-004` — a
+  local fork, left untouched by `--force` and reported for a human merge. An
+  added file that is not a `*.local.md` overlay is `QFAI-ASSETS-005`. All three
+  are `warning`, not `error`: a project may have a standing reason to diverge,
+  and what this replaces is not the reason but its invisibility.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**
   and report blockers. Work outside every open CR's blocked set proceeds; an

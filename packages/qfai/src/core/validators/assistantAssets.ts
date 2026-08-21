@@ -1,9 +1,18 @@
 import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 
+import {
+  ASSISTANT_ASSETS_LOCK_BASENAME,
+  buildShippedAssistantHashes,
+  classifyAssistantAsset,
+  collectGovernedAssistantFiles,
+  hashAssistantAssetFile,
+  readAssistantAssetsLock,
+} from "../assistantAssetProvenance.js";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
+import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -62,6 +71,8 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
+  issues.push(...(await validateAssistantAssetProvenance(assistantDir)));
+
   const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
     const content = await readFile(skillFile, "utf-8");
@@ -107,6 +118,104 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
   }
 
   return issues;
+}
+
+/**
+ * Compares the vendored `constitution/` and `catalog/` layers against the
+ * release that is actually installed.
+ *
+ * Before this check the only coverage of qfai's own normative tree was two
+ * existence probes, so a project could rewrite the file qfai calls its layer
+ * SSOT and nothing anywhere would say so — downstream reasoning then cites the
+ * fork by line number as though it were shipped policy. The three findings are
+ * separate because the remedies are: a stale copy is refreshed by
+ * `qfai init --force`, a fork needs a human merge decision, and an unshipped
+ * file belongs in a `*.local.md` overlay.
+ *
+ * A project with no recorded provenance is not penalised for that alone: only
+ * files that also differ from the installed release are reported, and they are
+ * reported at `warning`, never `error`.
+ */
+async function validateAssistantAssetProvenance(assistantDir: string): Promise<Issue[]> {
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(
+      path.join(getInitAssetsDir(), ".qfai", "assistant"),
+    );
+  } catch {
+    // No readable template tree (an unusual installation, or a library
+    // consumer without the package assets). Provenance is unknowable rather
+    // than violated, so report nothing.
+    return [];
+  }
+
+  const lock = await readAssistantAssetsLock(assistantDir);
+  const issues: Issue[] = [];
+  let vendored: string[];
+  try {
+    vendored = await collectGovernedAssistantFiles(assistantDir);
+  } catch {
+    return [];
+  }
+
+  for (const relative of vendored) {
+    const filePath = path.join(assistantDir, ...relative.split("/"));
+    const status = classifyAssistantAsset(
+      await hashAssistantAssetFile(filePath),
+      shipped[relative],
+      lock?.files[relative],
+    );
+    const finding = provenanceIssue(status, relative, filePath);
+    if (finding !== null) {
+      issues.push(finding);
+    }
+  }
+
+  return issues;
+}
+
+function provenanceIssue(
+  status: ReturnType<typeof classifyAssistantAsset>,
+  relative: string,
+  filePath: string,
+): Issue | null {
+  switch (status) {
+    case "shipped":
+      return null;
+    case "stale":
+      return issue(
+        "QFAI-ASSETS-003",
+        `.qfai/assistant/${relative} は導入時に qfai が書いた内容のままですが、インストール済みリリースの内容と異なります（stale copy）。`,
+        "warning",
+        filePath,
+        "assistantAssets.staleVendoredAsset",
+        undefined,
+        "canonical",
+        "`npx qfai init --force` を実行すると、qfai が書いた内容のままのファイルだけを最新リリースへ更新します。",
+      );
+    case "forked":
+      return issue(
+        "QFAI-ASSETS-004",
+        `.qfai/assistant/${relative} はインストール済みリリースの内容とも ${ASSISTANT_ASSETS_LOCK_BASENAME} の記録とも一致しません（local fork）。`,
+        "warning",
+        filePath,
+        "assistantAssets.forkedVendoredAsset",
+        undefined,
+        "canonical",
+        "プロジェクト固有のルールは同じ層の `*.local.md` overlay に移し、qfai 所有ファイルは出荷内容へ戻してください。恒久的な差分が必要な場合は Change Request を残してください。",
+      );
+    case "unshipped":
+      return issue(
+        "QFAI-ASSETS-005",
+        `.qfai/assistant/${relative} はインストール済みリリースに存在しないファイルです（overlay 以外の追加）。`,
+        "warning",
+        filePath,
+        "assistantAssets.unshippedVendoredAsset",
+        undefined,
+        "canonical",
+        "`*.local.md` overlay として置き直してください。overlay は qfai init が書かず、provenance 検査も対象外です。",
+      );
+  }
 }
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {

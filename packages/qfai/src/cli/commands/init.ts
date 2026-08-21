@@ -4,6 +4,7 @@ import type { Dirent, Stats } from "node:fs";
 import {
   access,
   chmod,
+  copyFile,
   lstat,
   mkdir,
   link,
@@ -21,6 +22,12 @@ import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
+import {
+  buildShippedAssistantHashes,
+  hashAssistantAssetFile,
+  readAssistantAssetsLock,
+  writeAssistantAssetsLock,
+} from "../../core/assistantAssetProvenance.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
@@ -106,7 +113,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。assistant/constitution/** と assistant/catalog/** は .assets.lock.json の記録と一致するファイル（= qfai が書いた内容のまま）だけを最新リリースへ更新し、乖離しているファイルは手動マージとして報告します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
@@ -138,6 +145,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     force: options.force,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
+  });
+  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destQfai, {
+    force: options.force,
+    dryRun: options.dryRun,
   });
 
   // git config core.symlinks true（symlink 生成の前提条件）
@@ -190,6 +201,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.copied,
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
+      ...governedResult.copied,
     ],
     [
       ...rootResult.skipped,
@@ -201,6 +213,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
+      ...governedResult.skipped,
     ],
     [...removed, ...upgradeResult.removed],
     options.dryRun,
@@ -209,6 +222,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
 
   for (const note of upgradeResult.preservedNotes) {
+    info(note);
+  }
+
+  for (const note of governedResult.manualMergeNotes) {
     info(note);
   }
 
@@ -221,6 +238,87 @@ export async function runInit(options: InitOptions): Promise<void> {
   if (!options.upgradeAssistantTree && !options.dryRun) {
     await emitLegacyAssistantSteeringSunset(destRoot, toolVersion);
   }
+}
+
+// ---------------------------------------------------------------------------
+// Governed assistant assets: provenance record + upgrade path
+// ---------------------------------------------------------------------------
+
+type GovernedAssetsResult = {
+  copied: string[];
+  skipped: string[];
+  manualMergeNotes: string[];
+};
+
+/**
+ * Records what qfai wrote under `constitution/` and `catalog/`, and — under
+ * `--force` — refreshes the files that are still exactly that.
+ *
+ * Those two layers were create-only in every mode, so a correction to qfai's
+ * own normative rules reached new projects and nobody else, and a project that
+ * edited one had no way to say so. The record makes both states nameable:
+ * `qfai validate` can now separate a stale copy from a local fork, and this
+ * function refreshes only the former. A fork is never overwritten — it is
+ * reported for a human merge, because the content it holds is the project's,
+ * not the template's.
+ */
+async function syncGovernedAssistantAssets(
+  assistantAssets: string,
+  destQfai: string,
+  options: { force: boolean; dryRun: boolean },
+): Promise<GovernedAssetsResult> {
+  const destAssistant = path.join(destQfai, "assistant");
+  const copied: string[] = [];
+  const skipped: string[] = [];
+  const manualMergeNotes: string[] = [];
+
+  let shipped: Record<string, string>;
+  try {
+    shipped = await buildShippedAssistantHashes(assistantAssets);
+  } catch {
+    return { copied, skipped, manualMergeNotes };
+  }
+
+  const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
+  const recorded: Record<string, string> = {};
+
+  for (const [relative, shippedHash] of Object.entries(shipped)) {
+    const source = path.join(assistantAssets, ...relative.split("/"));
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    const currentHash = await hashAssistantAssetFile(dest);
+    const previousHash = previous[relative];
+
+    if (currentHash === shippedHash || currentHash === null) {
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
+    if (refreshable) {
+      if (!options.dryRun) {
+        await mkdir(path.dirname(dest), { recursive: true });
+        await copyFile(source, dest);
+      }
+      copied.push(dest);
+      recorded[relative] = shippedHash;
+      continue;
+    }
+
+    skipped.push(dest);
+    recorded[relative] = previousHash ?? shippedHash;
+    if (options.force) {
+      manualMergeNotes.push(
+        `NOTE: ${dest} は出荷内容から乖離しているため更新しませんでした（手動マージが必要です）。`,
+      );
+    }
+  }
+
+  if (!options.dryRun) {
+    await mkdir(destAssistant, { recursive: true });
+    await writeAssistantAssetsLock(destAssistant, { files: recorded });
+  }
+
+  return { copied, skipped, manualMergeNotes };
 }
 
 // ---------------------------------------------------------------------------
