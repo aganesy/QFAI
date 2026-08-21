@@ -86,14 +86,37 @@ Non-discussion commands MUST minimize questions.
 
 Default policy:
 
-- Ask **at most 5** clarifying questions total.
+- Ask **at most 5 clarifying questions per stage invocation**. The unit is the
+  stage listed in `workflow.md` → “Stages (canonical)”: one `/qfai-*` run spends
+  its own budget and the next stage starts with a full one. It is not per
+  session and not per conversation.
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
+
+### What spends the budget (MUST)
+
+- A **clarification** — a question asked to resolve ambiguity in the request,
+  the specs, or the repository — spends budget.
+- An **approval** — a question asked because a document requires a recorded
+  human decision before the work may proceed — does **not** spend budget.
+  Approvals are unbounded by construction: SDD triage requires an `Approved By`
+  on every approval-required row and puts no cap on rows, and the reviewer-gate
+  escalation exit requires a user decision per escalation
+  (`shared-skill-delegation-baseline.md#round-budget-must`). Counting them would
+  make this article impossible to satisfy in the stage that asks the most.
+- A prompt that carries both is an approval, and does not spend budget.
 
 Stop conditions:
 
 - User says “stop / proceed / done”.
 - Question budget is exhausted.
+
+### On exhaustion (MUST)
+
+Do not ask a sixth clarification. Continue exactly as `--auto` does: proceed with
+explicit assumptions, label them, and record them in the stage output — as Open
+Questions when the assumption is still unresolved. Silently stopping the stage is
+not a sanctioned move, and neither is asking anyway.
 
 ---
 
