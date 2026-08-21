@@ -147,25 +147,13 @@ passes**:
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 
-## Coordinated parallel mode (ledger ownership)
-
-When parallel dispatch is authorized, the ledger has one writer:
-
-- The **orchestrator** owns every `test-list.md` write. Workers never edit it.
-- Workers return a per-item evidence block carrying **every** field of the
-  `SKILL.md` "Per-item evidence contract": `TDD-ID`, `TC-ref`, RED command and
-  result, GREEN command and result, Refactor verify command and result,
-  `Spec review`, `Code quality review`, and `Prototype parity` for UI-affecting
-  items — plus the resulting status and `DR-ID`.
-- Item 10 of the 11-point gate is satisfied by the orchestrator applying a
-  **complete** evidence block to the row, not by the worker writing it. A block
-  missing any contract field does not satisfy item 10: the orchestrator obtains
-  the missing fields first, and the row stays out of `done` until it has them.
-
 ## Ledger ownership
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` has exactly one writer: the
-**orchestrator**, in the **trunk**.
+**orchestrator**, in the **trunk**. Both `SKILL.md` citation sites reach this
+section by the `#ledger-ownership` anchor, so the whole rule — serial and
+parallel — lives under this one heading. A second top-level section restating it
+is what let the two halves drift apart.
 
 This is not a style preference. Delegation is mandatory and the orchestrator may
 not write code, so the only role that ever observes RED/GREEN is the
@@ -177,9 +165,17 @@ the artifact the gate reads.
 So:
 
 - Parallel workers **MUST NOT** edit `.qfai/specs/<spec-id>/tdd/**`. Their
-  worktree copy is read-only for the duration of the slice.
-- Each worker returns, per item it processed: `TDD-ID`, final `Status`, and the
-  `Evidence` payload in the per-item evidence contract's form.
+  worktree copy is read-only for the duration of the slice. This is the scope of
+  the prohibition: it is the whole `tdd/` subtree, not `test-list.md` alone.
+- Each worker returns, per item it processed: `TDD-ID`, final `Status`, its
+  `DR-ID` where the item's status requires one, and the `Evidence` payload
+  carrying **every** field of
+  `SKILL.md#per-item-evidence-contract-fresh-evidence-required`. That contract is
+  the only statement of the field list — `Status` and `DR-ID` are ledger cells
+  rather than contract fields, which is why they are named here and the fields
+  are not. Do not restate the list in this file: an enumeration maintained in two
+  places is what went stale, and a worker returning the short copy returns a
+  block the next bullet rejects.
 - The orchestrator writes those rows into the trunk ledger during
   `#post-parallel-integration-verify`, before the verify runs.
 - A merged item whose row is still `todo` fails that verify. Silence there is
@@ -187,6 +183,24 @@ So:
 
 In serial mode the same rule holds with no merge step: the implementation agent
 returns Status + Evidence, the orchestrator writes them.
+
+### Coordinated parallel mode
+
+When parallel dispatch is authorized the single-writer rule above applies
+unchanged. Two consequences are specific to dispatch:
+
+- Item 10 of the 12-point gate is satisfied by the orchestrator applying a
+  **complete** evidence block to the row, not by the worker writing it. A block
+  missing any contract field does not satisfy item 10: the orchestrator obtains
+  the missing fields first, and the row stays out of `done` until it has them.
+- Two contract fields are **not** obtainable that way, so the worker takes them
+  before the revert, in its own worktree, and returns them with the block.
+  `Falsifiability revision` addresses the mutated tree that Phase Red step 3c
+  destroys when it reverts, and `Oracle proof` is a production mutation run —
+  the orchestrator may not write code, and the slice's worktree is gone once it
+  has merged, so neither is reachable from the trunk afterwards. A block missing
+  either one sends the row back to the worker that produced it, not to the
+  orchestrator's recovery path.
 
 ## Failed integration verify
 

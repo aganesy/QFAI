@@ -58,10 +58,13 @@ describe("qfai-implement states one parallelization policy", () => {
     });
 
     it(`${tree}: defines coordinated parallel ledger ownership`, async () => {
+      // One `## Ledger ownership` section, with the dispatch-specific rules as
+      // a subsection under it, so the `#ledger-ownership` anchor reaches both.
       const section = await policy(tree);
-      expect(section).toContain("## Coordinated parallel mode (ledger ownership)");
-      expect(section).toContain("owns every `test-list.md` write");
-      expect(section).toContain("Item 10 of the 11-point gate is satisfied by the orchestrator");
+      expect(section).not.toContain("## Coordinated parallel mode (ledger ownership)");
+      expect(section).toContain("### Coordinated parallel mode");
+      expect(section).toContain("has exactly one writer: the\n**orchestrator**, in the **trunk**");
+      expect(section).toContain("Item 10 of the 12-point gate is satisfied by the orchestrator");
     });
 
     it(`${tree}: agent-routing.yml documents what parallel_groups means`, async () => {
@@ -125,22 +128,25 @@ describe("qfai-implement states one parallelization policy", () => {
       );
     });
 
-    it(`${tree}: worker evidence blocks carry the whole per-item contract`, async () => {
+    it(`${tree}: worker evidence blocks cite the per-item contract, not a copy of it`, async () => {
+      // The inline copy named 11 of the contract's 23 fields while claiming to
+      // carry **every** one. The ledger cells (`TDD-ID`, `Status`, `DR-ID`) are
+      // named here because they are not contract fields; the fields themselves
+      // must be reached by pointer so a second list cannot drift again.
       const section = unwrap(await policy(tree));
-      for (const field of [
-        "`TDD-ID`",
-        "`TC-ref`",
-        "RED command and result",
-        "GREEN command and result",
-        "Refactor verify command and result",
-        "`Spec review`",
-        "`Code quality review`",
-        "`Prototype parity`",
-        "`DR-ID`",
-      ]) {
-        expect(section).toContain(field);
+      for (const cell of ["`TDD-ID`", "final `Status`", "`DR-ID`"]) {
+        expect(section).toContain(cell);
       }
+      expect(section).toContain("`SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
+      expect(section).not.toContain("RED command and result");
+      expect(section).not.toContain("Refactor verify command and result");
       expect(section).toContain("A block missing any contract field does not satisfy item 10");
+    });
+
+    it(`${tree}: the cited contract anchor resolves in SKILL.md`, async () => {
+      // A pointer is only better than a copy while it lands somewhere.
+      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(skill).toContain("### Per-item evidence contract (fresh evidence required)");
     });
   }
 });

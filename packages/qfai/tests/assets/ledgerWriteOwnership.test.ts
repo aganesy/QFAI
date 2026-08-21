@@ -65,7 +65,41 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // Without this the ban is a prohibition with no replacement, and the
     // evidence simply stops existing.
     const policy = await read(tree, POLICY);
-    expect(policy).toContain("final `Status`, and the `Evidence` payload");
+    expect(policy).toContain("final `Status`, its `DR-ID`");
+    expect(policy).toContain("and the `Evidence` payload");
+  });
+
+  it("states ledger ownership once, so the `#ledger-ownership` anchor reaches all of it", async () => {
+    // Two top-level sections fifteen lines apart both claimed the topic, and
+    // only the second was reachable by the anchor both `SKILL.md` citation
+    // sites use — so the reader landed on the half that never mentions gate
+    // item 10 or `DR-ID`.
+    const policy = await read(tree, POLICY);
+    expect(policy).not.toContain("## Coordinated parallel mode (ledger ownership)");
+    expect(policy).toContain("### Coordinated parallel mode");
+    expect(policy.match(/## Ledger ownership/g)).toHaveLength(1);
+  });
+
+  it("points at the evidence contract instead of re-listing its fields", async () => {
+    // The inline list named 11 of the contract's 23 fields while claiming to
+    // carry **every** one, so a conforming worker returned a block the very
+    // next bullet rejects at gate item 10.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("`SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
+    expect(policy).not.toContain("RED command and result, GREEN command and result");
+    expect(policy).toContain("Item 10 of the 12-point gate");
+    expect(policy).not.toContain("11-point gate");
+  });
+
+  it("makes the worker take the fields the orchestrator cannot recover", async () => {
+    // `Falsifiability revision` addresses a tree Phase Red step 3c reverts and
+    // `Oracle proof` is a production mutation run — neither is reachable from
+    // the trunk after the slice merged, so "obtains the missing fields first"
+    // is not a remedy for them.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("`Falsifiability revision`");
+    expect(policy).toContain("`Oracle proof`");
+    expect(policy).toContain("before the revert, in its own worktree");
   });
 
   it("reconciles the merged ledger before integration verify, and fails on a stale row", async () => {
