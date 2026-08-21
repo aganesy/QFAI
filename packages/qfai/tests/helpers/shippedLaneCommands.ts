@@ -381,6 +381,16 @@ const TERMINATORS = new Set([
  * caller decides what that means. Shared so `invocationOf` and `bareArgumentsOf` cannot disagree about
  * which token is the program.
  */
+/**
+ * Where a command's program token is, after every prefix has been stepped over.
+ *
+ * **One walk, and the reason it is one is a measured escape.** This used to answer `undefined` for a
+ * `case` head while `invocationOf` skipped past the `in` and read the arm — so
+ * `case x in *) npm install ./evil --no-audit --no-fund ;; esac` had a PROGRAM by one function and no
+ * ARGUMENTS by the other, and `TAKES_NO_PACKAGE` saw an install carrying nothing. The bare form of the
+ * same line is refused. That is the two-coordinate-systems defect this file's own docstring claims to
+ * have removed: it was removed at one call site and left at the other.
+ */
 function headIndexOf(tokens: readonly string[]): number | undefined {
   let i = 0;
   for (;;) {
@@ -394,7 +404,22 @@ function headIndexOf(tokens: readonly string[]): number | undefined {
       i += 1;
       continue;
     }
-    if (token === "for" || token === "case" || token === "select") return undefined;
+    // `for` introduces a word list and its body arrives in a later segment, so it has no head here.
+    if (token === "for") return undefined;
+    // `case` and `select` keep the arm in the SAME segment. Skip past `in`, exactly as `invocationOf`
+    // does, or the command after the pattern is read by one function and not by the other.
+    if (token === "case" || token === "select") {
+      const at = tokens.indexOf("in", i + 1);
+      if (at === -1) return undefined;
+      i = at + 1;
+      continue;
+    }
+    // A `case` pattern ARM and a function-definition HEADER are prefixes too, and `invocationOf`
+    // recurses past both. Stepping over them keeps the two answers on one set of coordinates.
+    if (token.endsWith("()") || (token.endsWith(")") && !token.startsWith("("))) {
+      i += 1;
+      continue;
+    }
     return i;
   }
 }
@@ -604,6 +629,64 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
   "actions/setup-node",
   "pnpm/action-setup",
 ]);
+
+/**
+ * Each shipped action at the exact commit it is pinned to.
+ *
+ * `ALLOWED_ACTIONS` holds NAMES, and a separate assertion required every `uses:` to carry a 40-hex SHA
+ * rather than a tag. Neither reads the SHA's value, so round 14 replaced one with forty zeros and the
+ * whole suite stayed green — a pin whose value nothing checks is a shape, and the shape was never the
+ * point. Bumping an action is now a two-line edit in two files, which is the visible-in-review property
+ * `ALLOWED_STEP_BODIES` is built on.
+ */
+export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
+  ["actions/checkout", "11d5960a326750d5838078e36cf38b85af677262"],
+  ["actions/setup-node", "49933ea5288caeca8642d1e84afbd3f7d6820020"],
+  ["pnpm/action-setup", "fc06bc1257f339d1d5d8b3a19a8cae5388b55320"],
+]);
+
+/**
+ * The keys a shipped workflow, job and step may carry.
+ *
+ * **Enumerated because the dangerous ones cannot be.** Four rounds closed four execution channels one
+ * at a time — a job-level `uses:`, a step `shell:`, `defaults.run.shell`, an `env:` — and round 14
+ * closed the fifth by planting `defaults.run.working-directory: ./ci-primer`, which runs a
+ * digest-approved install inside a tree of the planter's choosing and executes that tree's lifecycle
+ * scripts. It is the sibling key of the one the previous repair opened, and naming it would have left
+ * `strategy`, `container`, `services`, `defaults.run.env` and whatever GitHub adds next.
+ *
+ * So the question is inverted here exactly as it is for programs and for bodies: these are the keys our
+ * own surface uses, and anything else is refused for not being one of them. A key GitHub introduces
+ * costs a spurious refusal in review rather than an open channel.
+ */
+export const ALLOWED_WORKFLOW_KEYS: ReadonlySet<string> = new Set([
+  "concurrency",
+  "jobs",
+  "name",
+  "on",
+]);
+
+export const ALLOWED_JOB_KEYS: ReadonlySet<string> = new Set([
+  "if",
+  "name",
+  "needs",
+  "outputs",
+  "permissions",
+  "runs-on",
+  "steps",
+  "timeout-minutes",
+]);
+
+export const ALLOWED_STEP_KEYS: ReadonlySet<string> = new Set([
+  "env",
+  "id",
+  "if",
+  "name",
+  "run",
+  "shell",
+  "uses",
+  "with",
+]);
 export const ALLOWED_ACTION_INPUTS: ReadonlySet<string> = new Set([
   "cache",
   "fetch-depth",
@@ -650,17 +733,23 @@ export function payloadDigest(payload: string): string {
  * --is-shallow-repository)` collapse to the same string, and the shipped tree contains that exact
  * substitution. Two bodies that behave differently must not share a digest.
  *
- * So only line endings and trailing whitespace are normalized. The block indentation needs no handling
- * here: YAML strips it when it parses the scalar, so re-indenting a step in the file does not move its
- * digest, and nothing is given up to buy that tolerance.
+ * So ONLY line endings are normalized, and the reason the list is that short is measured rather than
+ * chosen: the first version also stripped trailing whitespace per line, and a trailing space after a
+ * line continuation is the difference between a continued line and two commands. Block indentation
+ * needs no handling here at all — YAML strips it when it parses the scalar, so re-indenting a step in
+ * the file never moved the digest, and the tolerance the normalizing was bought for did not exist.
+ *
+ * The `\r\n` rule survives because `.gitattributes` stores these files LF and a Windows checkout can
+ * still hand the parser CRLF; a digest that depends on which machine ran the suite is the defect the
+ * pack seal above already learned once.
  */
 export function bodyDigest(body: string): string {
-  const normalized = body
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.replace(/[ \t]+$/, ""))
-    .join("\n")
-    .replace(/\n+$/, "");
+  // Line endings only. Nothing else may be normalized here, and the second collision in this gate
+  // is why: stripping trailing whitespace per line made `echo a \\` and `echo a \\ `
+  // one digest, and a trailing space after a line continuation is the difference between a
+  // continued line and two commands — both sides of that pair pass `refusals()`, so the scanner
+  // could not have caught what the digest let through.
+  const normalized = body.replace(/\r\n/g, "\n");
   return createHash("sha256").update(normalized).digest("hex");
 }
 
@@ -681,9 +770,9 @@ export function bodyDigest(body: string): string {
  */
 export const ALLOWED_STEP_BODIES: ReadonlySet<string> = new Set([
   // qfai-tests.yml#detection [Select lanes from the name-only diff] — 40 lines
-  "4eda0748ff16d9a3ec6175977d93dea522d594f3436eeb766de8a4181799edc1",
+  "1c69b8c2bf4a16c4a82e8f737b0bfd6e6122a76cc96bc2426e8b6583a474e5a7",
   // qfai-tests.yml#detection [Probe layer-named test scripts] — 35 lines
-  "6b535f19d37e0ea25770aa474c106ef05dcf661dd5ecd82f04253e24ba1ca21d",
+  "678c2db6a736f883ce9a17182e0e8d8d5a9de25dd9e16c56dfcf8e6e5062c79e",
   // qfai-tests.yml#unit [unit lane placeholder] — 1 line
   "09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523",
   // qfai-tests.yml#component [component lane placeholder] — 1 line
@@ -695,13 +784,13 @@ export const ALLOWED_STEP_BODIES: ReadonlySet<string> = new Set([
   // qfai-tests.yml#e2e [e2e lane placeholder] — 1 line
   "b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93",
   // qfai-tests.yml#verdict [Aggregate lane results (green on skip)] — 8 lines
-  "d02b954b0a4f3ca643fcf23f8808d64d04bcb0324382cef9d853840712cfae0d",
+  "8122e6678fcbb6ab8f6e4002e484b41249958de894690ded4cc8258f36692d20",
   // qfai-validate.yml#validate [Resolve the package manager (pnpm route fails closed)] — 52 lines
-  "fc2b494c32d4d0f0ee00bdd8c1926a1efa5f1133521cbcc7ea7b951ce77511d3",
+  "0978110b439e141fb9fcf5b90c35de8ebbcfdf50da6181c2f74c1435702f4bbf",
   // qfai-validate.yml#validate [Resolve the Node version (adopter file wins, else fall open)] — 22 lines
-  "913a0456677c6a9452e552b2c25bccfac67c9533d4198922f755ee1c929afcdc",
+  "49e44c24d0bd88a0bc5a9a720970ff59b5f775a14f36b53a0f45585714c67ece",
   // qfai-validate.yml#validate [Install dependencies (lockfile-aware)] — 22 lines
-  "7c473537569404e66d1cd27831a8a14db1831f4e38d4fab8eda666279e087fa5",
+  "d7f6e8d3b5456c962a0062859324f37b2ffc1c3c2b136b180b3ed8b54bee3ea1",
   // qfai-validate.yml#validate [qfai validate] — 1 line
   "cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9",
 ]);
@@ -764,6 +853,71 @@ export const ALLOWED_STEP_ENV: ReadonlySet<string> = new Set(["QFAI_BASE_REF", "
 /** Where a shipped command may write. A redirect creates a file, and a created file can be code. */
 const ALLOWED_REDIRECT_TARGETS: ReadonlySet<string> = new Set(["$GITHUB_OUTPUT", "/dev/null"]);
 
+/**
+ * Every redirection this command performs, found by CHARACTER rather than by token shape.
+ *
+ * The two scans this replaces each asked whether a TOKEN BEGAN with `>` or `<`, and a redirection
+ * does not have to begin one. `echo '{…}'>package.json` writes the manifest a permitted install
+ * then executes, `echo NODE_OPTIONS=--require=./evil.cjs>>$GITHUB_ENV` puts a loader into every later
+ * `node`, and `printf x<payload` reads one — all three reported nothing. Removing a single space was
+ * enough, which is the SIXTH time this file has been defeated by one command written two ways:
+ * `--eval` and `--eval=`, `>file` and `> file`, `x >f` and `x>f`.
+ *
+ * So this stops reading token shapes. It walks the command with the same quote state `tokensOf`
+ * uses, which is also what keeps a `>` inside a quoted string from being read as a redirection —
+ * `tokensOf` strips quotes, so a token-based scan could not have told those apart even in principle.
+ */
+function redirectionsOf(command: string): { writes: boolean; target: string }[] {
+  const found: { writes: boolean; target: string }[] = [];
+  let quote = "";
+  for (let i = 0; i < command.length; i += 1) {
+    const ch = command[i] ?? "";
+    if (ch === "\\" && quote !== "'") {
+      i += 1;
+      continue;
+    }
+    if (quote !== "") {
+      if (ch === quote) quote = "";
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      quote = ch;
+      continue;
+    }
+    if (ch !== ">" && ch !== "<") continue;
+    const writes = ch === ">";
+    // Consume the operator: `>`, `>>`, `<`, `<<`, `<<<`, and the `&` of `>&` / `&>`.
+    let j = i;
+    while (j < command.length && (command[j] === ch || command[j] === "&")) j += 1;
+    while (j < command.length && /\s/.test(command[j] ?? "")) j += 1;
+    // Then the word it names, read with the same quote state so `> 'a b'` is one target.
+    let target = "";
+    let inner = "";
+    for (; j < command.length; j += 1) {
+      const next = command[j] ?? "";
+      if (next === "\\" && inner !== "'") {
+        target += command[j + 1] ?? "";
+        j += 1;
+        continue;
+      }
+      if (inner !== "") {
+        if (next === inner) inner = "";
+        else target += next;
+        continue;
+      }
+      if (next === '"' || next === "'") {
+        inner = next;
+        continue;
+      }
+      if (/\s/.test(next) || next === ";") break;
+      target += next;
+    }
+    found.push({ writes, target });
+    i = j - 1;
+  }
+  return found;
+}
+
 /** The non-flag arguments a command carries after its program. */
 function bareArgumentsOf(command: string): string[] {
   const tokens = tokensOf(command);
@@ -793,6 +947,23 @@ function bareArgumentsOf(command: string): string[] {
  */
 export function refusals(body: string): string[] {
   const out: string[] = [];
+  // **A write is scanned over EVERY command the splitter produces**, including the ones that resolve
+  // to "invokes nothing". This ran over the RESOLVED commands until round 14, and `echo x&>evil.cjs`
+  // splits into `echo x` and `>evil.cjs`: the second invokes nothing, so it was dropped and took its
+  // write with it, while the neighbouring `echo x>evil.cjs` was caught. One command, two spellings,
+  // one level up — the SPLIT disagreed with itself rather than the scan.
+  //
+  // Per command rather than over the raw body, because `commandsOf` is the only thing here that
+  // enters a substitution on its own terms. A flat walk desynchronises on the shipped tree's own
+  // `declared="$(node -e '…')"` and reads the `>` of a JavaScript arrow as a redirection.
+  for (const command of commandsOf(body)) {
+    for (const redirection of redirectionsOf(command)) {
+      if (!redirection.writes) continue;
+      if (!ALLOWED_REDIRECT_TARGETS.has(redirection.target)) {
+        out.push(`<writes> ${redirection.target} :: ${command.slice(0, 40)}`);
+      }
+    }
+  }
   for (const { invocation, command } of resolvedCommands(body)) {
     if (invocation.startsWith("<unreadable>")) {
       out.push(invocation);
@@ -815,27 +986,17 @@ export function refusals(body: string): string[] {
       continue;
     }
     const tokens = tokensOf(command);
+    const redirections = redirectionsOf(command);
     // A command's INPUT is part of what it runs. `node` reads a program from its stdin, so
     // `echo "<javascript>" | node`, `<payload node` and `<<<'<javascript>' node` all run code that no
     // argument carries. Only a program whose arguments cannot reach a build may be fed.
-    if (tokens.some((token) => /^\d*<{1,3}/.test(token)) && !HARMLESS_PROGRAMS.has(program)) {
+    if (
+      redirections.some((redirection) => !redirection.writes) &&
+      !HARMLESS_PROGRAMS.has(program)
+    ) {
       out.push(`<reads stdin> ${invocation}`);
       continue;
     }
-    // A write is an effect this scanner used to have no model of at all: `echo '{…}' > package.json`
-    // is an allowed `echo`, and the file it creates is executed by the allowed install that follows.
-    let wrote = false;
-    for (let k = 0; k < tokens.length; k += 1) {
-      const token = tokens[k] ?? "";
-      if (!/^\d*>{1,2}&?$|^\d*>{1,2}&?[^>]/.test(token)) continue;
-      const glued = token.replace(/^\d*>{1,2}&?/, "");
-      const target = glued !== "" ? glued : (tokens[k + 1] ?? "");
-      if (!ALLOWED_REDIRECT_TARGETS.has(target)) {
-        out.push(`<writes> ${target} :: ${command.slice(0, 40)}`);
-        wrote = true;
-      }
-    }
-    if (wrote) continue;
     // Flags, for a program that could otherwise build.
     if (ALLOWED_INVOCATIONS.has(invocation)) {
       const allowed = ALLOWED_FLAGS.get(invocation) ?? new Set<string>();

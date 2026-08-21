@@ -51,11 +51,15 @@ import { parse as parseYaml } from "yaml";
 import { runInit } from "../../src/cli/commands/init.js";
 import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
+  ALLOWED_ACTION_COMMITS,
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
+  ALLOWED_JOB_KEYS,
   ALLOWED_SHELLS,
   ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
+  ALLOWED_STEP_KEYS,
+  ALLOWED_WORKFLOW_KEYS,
   bodyDigest,
   invocationsOf,
   refusals,
@@ -188,24 +192,6 @@ async function jobs(): Promise<Record<string, unknown>> {
  * The set is derived from the shipped directory rather than listed, so a third workflow is in scope the
  * moment it ships instead of the round after someone remembers to add it.
  */
-/**
- * Every shell this holder declares: its own `shell:`, and its `defaults.run.shell`.
- *
- * Both spellings set the same thing. A step uses `shell:`; a job or a workflow uses `defaults.run.shell`,
- * which is what GitHub documents for applying one across steps — and reading only the first left the other
- * two levels unscanned.
- */
-function shellsDeclaredBy(holder: Record<string, unknown>): unknown[] {
-  const out: unknown[] = [];
-  if (holder["shell"] !== undefined) out.push(holder["shell"]);
-  const defaults = holder["defaults"];
-  if (isRecord(defaults)) {
-    const run = defaults["run"];
-    if (isRecord(run) && run["shell"] !== undefined) out.push(run["shell"]);
-  }
-  return out;
-}
-
 async function shippedWorkflowFiles(): Promise<string[]> {
   const dir = path.join(await project(), ".github", "workflows");
   const files = (await readdir(dir)).filter((name) => /\.ya?ml$/.test(name)).sort();
@@ -594,7 +580,11 @@ describe(
       // the way fails open. So the gate is IDENTITY: the twelve bodies this tree ships were reviewed,
       // and their digests are written down. A body that is not one of them has not been reviewed,
       // whatever it is written in, and a digest with no body left is an entry nobody deleted.
-      const bodies = new Map<string, string>();
+      // A MULTISET, not a set. The first version keyed a `Map` by digest, so a reviewed body replicated
+      // into thirteen steps still showed twelve entries and both halves of the bijection stayed green —
+      // planted and confirmed in round 14. One reviewed body run twice is two executions, and the count
+      // is part of what was reviewed.
+      const bodies: { digest: string; at: string }[] = [];
       for (const [id, job] of Object.entries(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
         for (const step of steps) {
@@ -602,32 +592,56 @@ describe(
           const run = step["run"];
           if (typeof run !== "string") continue;
           const name = typeof step["name"] === "string" ? step["name"] : "(unnamed)";
-          bodies.set(bodyDigest(run), `${id} [${name}]`);
+          bodies.push({ digest: bodyDigest(run), at: `${id} [${name}]` });
         }
       }
       expect
         .soft(
-          [...bodies].filter(([digest]) => !ALLOWED_STEP_BODIES.has(digest)).map(([, at]) => at),
+          bodies.filter((body) => !ALLOWED_STEP_BODIES.has(body.digest)).map((body) => body.at),
           "a shipped step body nobody reviewed; run `refusals()` over it, then write its digest down",
         )
         .toEqual([]);
       expect
         .soft(
-          [...ALLOWED_STEP_BODIES].filter((digest) => !bodies.has(digest)),
-          "a reviewed digest with no body left, which is an entry nobody deleted",
+          bodies.map((body) => body.digest).sort(),
+          "the shipped bodies and the reviewed digests must correspond one for one, so a reviewed " +
+            "body replicated into a second step is a second thing to review",
         )
-        .toEqual([]);
+        .toEqual([...ALLOWED_STEP_BODIES].sort());
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a
       // `run:` line existing, and the assertion above greps `run:` bodies. So the action and every input
       // key it is given are enumerated too — `arguments`, `args` and `run` are refused by not appearing.
       const refusedUses: string[] = [];
-      const readUses = (label: string, holder: Record<string, unknown>): void => {
+      const readUses = (
+        label: string,
+        holder: Record<string, unknown>,
+        allowedKeys: ReadonlySet<string>,
+      ): void => {
+        // **The KEYS first, because the dangerous ones cannot be enumerated.** Four rounds closed four
+        // execution channels one at a time, and round 14 planted the fifth: `defaults.run.working-
+        // directory: ./ci-primer` runs the digest-approved install inside a tree of the planter's
+        // choosing and executes that tree's lifecycle scripts, with every assertion in this file green.
+        // It is the sibling key of the one the previous repair opened. Naming it would leave `strategy`,
+        // `container`, `services`, `defaults.run.env` and whatever GitHub ships next — so the question is
+        // inverted here as it is for programs and for bodies, and a key nobody wrote down is refused.
+        for (const key of Object.keys(holder)) {
+          if (!allowedKeys.has(key)) refusedUses.push(`${label}: declares ${key}`);
+        }
         const uses = holder["uses"];
         if (typeof uses === "string") {
           const action = uses.split("@")[0] ?? uses;
           if (!ALLOWED_ACTIONS.has(action)) refusedUses.push(`${label}: uses ${action}`);
+          // And the SHA's VALUE. `ALLOWED_ACTIONS` reads the name, a sibling assertion reads the shape,
+          // and round 14 replaced a pin with forty zeros and watched the suite stay green. A pin whose
+          // value nothing checks is a shape, and the shape was never the point.
+          const commit = ALLOWED_ACTION_COMMITS.get(action);
+          if (commit !== undefined && uses !== `${action}@${commit}`) {
+            refusedUses.push(
+              `${label}: ${action} is pinned elsewhere to ${commit}, here to ${uses}`,
+            );
+          }
           const inputs = holder["with"];
           if (isRecord(inputs)) {
             for (const key of Object.keys(inputs)) {
@@ -636,11 +650,9 @@ describe(
             }
           }
         }
-        // An image is a program with an entrypoint, so it is the same channel by another name and
-        // nothing in the shipped set uses one. Refused by not being enumerated at all.
-        for (const key of ["container", "services"]) {
-          if (holder[key] !== undefined) refusedUses.push(`${label}: declares ${key}`);
-        }
+        // `container` and `services` used to be named here explicitly. They are refused by the key rule
+        // above now, together with every other key nobody wrote down — which is the repair the plant
+        // that named `working-directory` argued for.
         // A `shell:` is a COMMAND TEMPLATE — `shell: npx tsup {0}` runs the bundler and the `run:` body
         // can be `echo noop`. Round 12 planted that at step level and it shipped, because the scan read
         // `run:` bodies and `uses:` and never this.
@@ -652,10 +664,11 @@ describe(
         // step `uses:`, job `uses:`, step `shell:` — each time one level from where the last repair
         // looked, so this reads the `defaults.run` shape wherever it can appear rather than adding a
         // fourth site later.
-        for (const shell of shellsDeclaredBy(holder)) {
-          if (typeof shell !== "string" || !ALLOWED_SHELLS.has(shell)) {
-            refusedUses.push(`${label}: declares shell ${JSON.stringify(shell)}`);
-          }
+        // A `defaults:` block is refused by the key rule now, at every level — so what is left to read
+        // is the step's own `shell:`, which IS an enumerated key and whose VALUE still decides what runs.
+        const shell = holder["shell"];
+        if (shell !== undefined && (typeof shell !== "string" || !ALLOWED_SHELLS.has(shell))) {
+          refusedUses.push(`${label}: declares shell ${JSON.stringify(shell)}`);
         }
         // And `env:`, which is a channel with no `run:` body at all: `NODE_OPTIONS=--require=./x.cjs`
         // runs a file in every later `node`, and every scan in this suite reads commands. The names are
@@ -675,7 +688,7 @@ describe(
       for (const file of await shippedWorkflowFiles()) {
         const parsed: unknown = parseYaml(await workflowText(file));
         if (!isRecord(parsed)) continue;
-        readUses(`${file} (workflow level)`, parsed);
+        readUses(`${file} (workflow level)`, parsed, ALLOWED_WORKFLOW_KEYS);
       }
       for (const [id, job] of Object.entries(map)) {
         if (!isRecord(job)) continue;
@@ -685,11 +698,11 @@ describe(
         // planted one carried `with: arguments: build`, which is the exact key this guard's own comment
         // names as the channel a `uses:` build arrives by, and it shipped because the key was read at
         // the wrong level of the document.
-        readUses(id, job);
+        readUses(id, job, ALLOWED_JOB_KEYS);
         const steps = Array.isArray(job["steps"]) ? job["steps"] : [];
         for (const step of steps) {
           if (!isRecord(step)) continue;
-          readUses(id, step);
+          readUses(id, step, ALLOWED_STEP_KEYS);
         }
       }
       expect

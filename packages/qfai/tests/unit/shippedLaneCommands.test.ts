@@ -251,6 +251,14 @@ const MECHANISMS = [
   'echo \'{"scripts":{"postinstall":"node wm.cjs c1_post"}}\' > package.json\nnpm install',
   'echo \'{"scripts":{"prepare":"node wm.cjs c3_prep"}}\' > package.json\nnpm install',
   'echo \'{"scripts":{"preinstall":"node build.mjs"}}\' > package.json\nnpm install',
+  // round 14, three reviewers: a redirection does not have to BEGIN a token, and removing one space
+  // was enough. The write rule, the stdin rule and the splitter each read a token shape.
+  'echo \'{"scripts":{"postinstall":"node evil.js"}}\'>package.json\nnpm install',
+  "echo NODE_OPTIONS=--require=./evil.cjs>>$GITHUB_ENV",
+  "echo x&>evil.cjs",
+  // and a `case` arm, where `headIndexOf` answered `undefined` while `invocationOf` read the arm, so
+  // the install carrying a package had no arguments by one of the two functions
+  "case x in *) npm install ./evil --no-audit --no-fund ;; esac",
   // a `node` with no flag at all, which reads its program from stdin: the absence of an argument
   // is not the absence of a program, and the inverted rule refuses it by the missing `-e`
   "node",
@@ -317,11 +325,17 @@ describe("the shipped-lane allowlist", () => {
       payloadDigest(two),
     );
     expect(bodyDigest(one), "and the body digest must").not.toBe(bodyDigest(two));
-    // The tolerance it is bought with still holds. Re-indenting a step does not move its digest
-    // because YAML strips the block indentation when it parses the scalar, so what is left to
-    // absorb here is trailing whitespace — which is not a behaviour.
-    expect(bodyDigest(one), "trailing whitespace is not a behaviour").toBe(
-      bodyDigest(one + "  \n"),
+    // **"Trailing whitespace is not a behaviour" was the next line of this test, and it was wrong.**
+    // Round 14 found the second collision there: a trailing space after a line continuation ends the
+    // continuation, so `echo a \\` and `echo a \\ ` are one command and two, and stripping
+    // trailing whitespace gave them one digest. Both sides pass `refusals()`, so the scanner could
+    // not have caught what the digest let through. `bodyDigest` normalizes line endings and nothing
+    // else now, and the tolerance the stripping was bought for did not exist: YAML removes a block
+    // scalar's indentation when it parses it, so re-indenting a step never moved the digest.
+    const continued = "echo a \\\n  && echo b";
+    const broken = "echo a \\ \n  && echo b";
+    expect(bodyDigest(continued), "a trailing space after a continuation IS a behaviour").not.toBe(
+      bodyDigest(broken),
     );
   });
 
