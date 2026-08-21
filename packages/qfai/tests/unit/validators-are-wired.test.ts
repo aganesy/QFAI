@@ -220,3 +220,89 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     expect(PENDING_WIRING.size).toBe(0);
   });
 });
+
+// ---------------------------------------------------------------------------
+// ATDD family: the same dead-code failure mode outside validators/prototyping/
+// ---------------------------------------------------------------------------
+
+const VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators");
+
+const ATDD_CODE_RE = /"QFAI-ATDD-\d+"/;
+const RELATIVE_IMPORT_RE = /from\s+["'](\.\.?\/[\w./-]+)["']/g;
+
+/**
+ * Map every non-test module under src/ to the modules that import it. Relative
+ * specifiers are written as `./x.js` (NodeNext) and are resolved back to their
+ * `.ts` origin so the index is keyed by real source paths.
+ */
+async function buildSrcImporterIndex(): Promise<Map<string, string[]>> {
+  const files = await listTsFiles(SRC_ROOT);
+  const index = new Map<string, string[]>();
+  for (const file of files) {
+    const body = await readFile(file, "utf-8");
+    RELATIVE_IMPORT_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = RELATIVE_IMPORT_RE.exec(body)) !== null) {
+      const rel = match[1];
+      if (!rel) continue;
+      const resolved = path.resolve(path.dirname(file), rel.replace(/\.js$/, ".ts"));
+      if (!resolved.startsWith(SRC_ROOT)) continue;
+      const importers = index.get(resolved) ?? [];
+      if (!importers.includes(file)) importers.push(file);
+      index.set(resolved, importers);
+    }
+  }
+  return index;
+}
+
+/** Validator modules that emit at least one `QFAI-ATDD-NNN` issue code. */
+async function collectAtddEmittingModules(): Promise<string[]> {
+  const files = await listTsFiles(VALIDATORS_DIR);
+  const out: string[] = [];
+  for (const file of files) {
+    if (path.basename(file) === "index.ts") continue;
+    const body = await readFile(file, "utf-8");
+    if (ATDD_CODE_RE.test(body)) {
+      out.push(file);
+    }
+  }
+  return out;
+}
+
+describe("meta-test: ATDD validators are reachable from the production graph", () => {
+  it("every validators/ module emitting a QFAI-ATDD-* code has a non-test importer under src/", async () => {
+    const modules = await collectAtddEmittingModules();
+    const importerIndex = await buildSrcImporterIndex();
+
+    expect(modules.length, "expected at least one ATDD-emitting validator").toBeGreaterThan(0);
+
+    const orphans = modules
+      .filter((file) => (importerIndex.get(file) ?? []).filter((i) => i !== file).length === 0)
+      .map((file) => path.relative(SRC_ROOT, file));
+
+    expect(
+      orphans,
+      "ATDD validator modules must be wired into runAtddValidators (src/core/validate.ts) and " +
+        "re-exported from validators/index.ts. An unreachable module ships an issue code that " +
+        "can never appear in validate.json.",
+    ).toEqual([]);
+  });
+
+  it("QFAI-ATDD-001 stays retired", async () => {
+    const files = await listTsFiles(VALIDATORS_DIR);
+    const emitters: string[] = [];
+    for (const file of files) {
+      const body = await readFile(file, "utf-8");
+      if (body.includes('"QFAI-ATDD-001"')) {
+        emitters.push(path.relative(SRC_ROOT, file));
+      }
+    }
+
+    expect(
+      emitters,
+      "QFAI-ATDD-001 fired on the *absence* of <spec-dir>/atdd/coverage-ledger.md, a file " +
+        "`qfai init` never ships and that qfai-atdd/SKILL.md and catalog/test-layers.md both " +
+        "classify as optional legacy. The code is retired; do not reintroduce it.",
+    ).toEqual([]);
+  });
+});
