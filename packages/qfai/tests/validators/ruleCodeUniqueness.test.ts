@@ -36,10 +36,12 @@ const SCAN_ROOTS = ["config.ts", "saasPackage", "validators", "waivers.ts"] as c
  * re-using the code, or a partial split that drops one owner, both change the
  * set and fail here. Waiving by code alone would let the collision keep
  * growing unnoticed.
+ *
+ * Now empty: the last entry, `QFAI-BFLOW-003`, was shared by the unwired
+ * `validators/businessFlow.ts` and `validators/mermaidEnforcement.ts`, and the
+ * dead module has been deleted. A new entry here needs its own justification.
  */
-const KNOWN_COLLISIONS = new Map<string, readonly string[]>([
-  ["QFAI-BFLOW-003", ["validators/businessFlow.ts", "validators/mermaidEnforcement.ts"]],
-]);
+const KNOWN_COLLISIONS = new Map<string, readonly string[]>([]);
 
 /**
  * `issue()` call sites whose first argument is computed at runtime (a
