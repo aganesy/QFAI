@@ -11,9 +11,14 @@
  *
  * Empty / absent runtimeDependencies yields an empty array — no false
  * positives. The probe is intentionally additive: it never throws on
- * missing manifest / parse error; instead it returns no findings so
- * the caller can decide whether to surface a separate "manifest
- * missing" diagnostic.
+ * missing manifest / parse error; instead it reports the manifest
+ * state alongside the findings so the caller can surface a separate
+ * "manifest missing" diagnostic.
+ *
+ * `probeSkillManifest` is the full-fidelity entry point: it keeps
+ * "manifest found, zero deps declared" distinct from "no manifest at
+ * all" and from "manifest unreadable". `probeSkillManifestRuntimeDeps`
+ * stays as the findings-only convenience wrapper.
  */
 
 import { access, readFile } from "node:fs/promises";
@@ -28,6 +33,28 @@ export type SkillManifestProbeFinding = {
   readonly status: "found" | "missing";
   readonly installCommand: string;
   readonly probedPaths: readonly string[];
+};
+
+/**
+ * Whether the skill's manifest was located and understood.
+ *
+ * - `found` — manifest read and parsed (it may still declare no deps).
+ * - `absent` — no manifest file at the resolved path.
+ * - `unparseable` — manifest exists but is not JSON, is not an object,
+ *   or declares a non-array `runtimeDependencies`.
+ */
+export type SkillManifestState = "found" | "absent" | "unparseable";
+
+export type SkillManifestProbeResult = {
+  readonly manifest: SkillManifestState;
+  /** Absolute path the probe resolved and read (or tried to read). */
+  readonly manifestPath: string;
+  /**
+   * Whether the skill's own directory exists. `false` means the skill
+   * itself is unresolvable — a typo'd or renamed `--profile <skill>`.
+   */
+  readonly skillDirExists: boolean;
+  readonly findings: readonly SkillManifestProbeFinding[];
 };
 
 export type SkillManifestProbeOptions = {
@@ -101,25 +128,24 @@ async function resolveManifestPath(
   return path.resolve(root, skillsDirRel, skill, "manifest.json");
 }
 
-async function readManifestRuntimeDeps(manifestPath: string): Promise<string[] | null> {
-  let raw: string;
-  try {
-    raw = await readFile(manifestPath, "utf-8");
-  } catch {
-    return null;
+type ManifestRead =
+  | { readonly state: "absent" }
+  | { readonly state: "unparseable" }
+  | { readonly state: "found"; readonly deps: readonly string[] };
+
+function extractRuntimeDeps(parsed: unknown): ManifestRead {
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return { state: "unparseable" };
   }
-  let parsed: unknown;
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    return null;
+  const record: Record<string, unknown> = { ...parsed };
+  const value = record[SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD];
+  if (value === undefined) {
+    // A manifest that simply omits the field genuinely declares zero
+    // runtime dependencies — that is a `found` manifest, not a defect.
+    return { state: "found", deps: [] };
   }
-  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return null;
-  }
-  const value = (parsed as Record<string, unknown>)[SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD];
   if (!Array.isArray(value)) {
-    return null;
+    return { state: "unparseable" };
   }
   const deps: string[] = [];
   for (const item of value) {
@@ -127,21 +153,46 @@ async function readManifestRuntimeDeps(manifestPath: string): Promise<string[] |
       deps.push(item.trim());
     }
   }
-  return deps;
+  return { state: "found", deps };
 }
 
-export async function probeSkillManifestRuntimeDeps(
+async function readManifest(manifestPath: string): Promise<ManifestRead> {
+  let raw: string;
+  try {
+    raw = await readFile(manifestPath, "utf-8");
+  } catch {
+    return { state: "absent" };
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch {
+    return { state: "unparseable" };
+  }
+  return extractRuntimeDeps(parsed);
+}
+
+/**
+ * Probe a skill's manifest and report BOTH the manifest state and the
+ * per-dependency findings. Callers need the state to tell "manifest
+ * declares zero dependencies" apart from "this skill has no manifest
+ * at all" (a typo'd `--profile <skill>`, a renamed skill, a manifest
+ * nobody authored yet) — collapsing the two lets an unresolvable skill
+ * report healthy.
+ */
+export async function probeSkillManifest(
   root: string,
   skill: string,
   options?: SkillManifestProbeOptions,
-): Promise<readonly SkillManifestProbeFinding[]> {
+): Promise<SkillManifestProbeResult> {
   const manifestPath = await resolveManifestPath(root, skill, options);
-  const deps = await readManifestRuntimeDeps(manifestPath);
-  if (!deps || deps.length === 0) {
-    return [];
+  const skillDirExists = await exists(path.dirname(manifestPath));
+  const read = await readManifest(manifestPath);
+  if (read.state !== "found") {
+    return { manifest: read.state, manifestPath, skillDirExists, findings: [] };
   }
   const findings: SkillManifestProbeFinding[] = [];
-  for (const name of deps) {
+  for (const name of read.deps) {
     const probe = await probeNodeModulesFor(root, name);
     findings.push({
       name,
@@ -150,7 +201,21 @@ export async function probeSkillManifestRuntimeDeps(
       probedPaths: probe.probedPaths,
     });
   }
-  return findings;
+  return { manifest: "found", manifestPath, skillDirExists, findings };
+}
+
+/**
+ * Findings-only convenience wrapper over {@link probeSkillManifest}.
+ * Prefer the full result whenever the caller reports on whether the
+ * manifest exists.
+ */
+export async function probeSkillManifestRuntimeDeps(
+  root: string,
+  skill: string,
+  options?: SkillManifestProbeOptions,
+): Promise<readonly SkillManifestProbeFinding[]> {
+  const result = await probeSkillManifest(root, skill, options);
+  return result.findings;
 }
 
 /**

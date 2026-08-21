@@ -113,4 +113,48 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(updated).toContain("staleTtlDays: 30");
     expect(summary.configFieldsWritten).not.toContain("review");
   });
+
+  // Regression: "runtimeDependencies — all installed" is an affirmative
+  // claim. It must not be printed for a skill whose manifest was never
+  // located (a typo'd `--profile`, a renamed skill).
+  it("says the manifest was not found instead of 'all installed' for an unresolvable skill", async () => {
+    const root = await newTempDir("absent-manifest");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: true,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+      skill: "no-such-skill",
+    });
+
+    expect(summary.lines.join("\n")).not.toContain("runtimeDependencies — all installed");
+    const line = summary.lines.find((entry) => entry.includes("runtimeDependencies"));
+    expect(line).toBeDefined();
+    expect(line).toMatch(/manifest not found/u);
+    expect(line).toMatch(/no-such-skill/u);
+  });
+
+  it("still says 'all installed' when a real manifest declares zero deps", async () => {
+    const root = await newTempDir("zero-deps");
+    const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    await mkdir(manifestDir, { recursive: true });
+    await writeFile(
+      path.join(manifestDir, "manifest.json"),
+      JSON.stringify({ runtimeDependencies: [] }, null, 2),
+      "utf-8",
+    );
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: true,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+      skill: "qfai-prototyping",
+    });
+
+    expect(summary.lines).toContain("autoremediate: runtimeDependencies — all installed");
+  });
 });

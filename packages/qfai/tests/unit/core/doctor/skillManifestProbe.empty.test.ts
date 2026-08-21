@@ -10,7 +10,10 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
-import { probeSkillManifestRuntimeDeps } from "../../../../src/core/doctor/skillManifestProbe.js";
+import {
+  probeSkillManifest,
+  probeSkillManifestRuntimeDeps,
+} from "../../../../src/core/doctor/skillManifestProbe.js";
 
 const tempDirs: string[] = [];
 
@@ -73,5 +76,66 @@ describe("probeSkillManifestRuntimeDeps — empty runtimeDependencies", () => {
     const findings = await probeSkillManifestRuntimeDeps(root, "qfai-prototyping");
     expect(findings).toHaveLength(1);
     expect(findings[0]?.status).toBe("found");
+  });
+});
+
+// Regression: "manifest declares zero deps" and "this skill has no
+// manifest at all" MUST stay distinguishable at the probe boundary —
+// collapsing them let a typo'd `--profile <skill>` report healthy.
+describe("probeSkillManifest — manifest state is reported separately from findings", () => {
+  it("reports manifest=found with zero findings when runtimeDependencies is []", async () => {
+    const root = await newTempDir("state-empty");
+    await seedManifest(root, "qfai-atdd", []);
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("found");
+    expect(result.skillDirExists).toBe(true);
+    expect(result.findings).toEqual([]);
+  });
+
+  it("reports manifest=found when the manifest omits the field entirely", async () => {
+    const root = await newTempDir("state-nofield");
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+    await mkdir(dir, { recursive: true });
+    await writeFile(
+      path.join(dir, "manifest.json"),
+      JSON.stringify({ name: "qfai-atdd" }),
+      "utf-8",
+    );
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("found");
+    expect(result.findings).toEqual([]);
+  });
+
+  it("reports manifest=absent (not found) when the skill directory does not exist", async () => {
+    const root = await newTempDir("state-typo");
+    await seedManifest(root, "qfai-atdd", []);
+    const result = await probeSkillManifest(root, "qfai-atdd-typo");
+    expect(result.manifest).toBe("absent");
+    expect(result.skillDirExists).toBe(false);
+    expect(result.manifestPath).toContain("qfai-atdd-typo");
+    expect(result.findings).toEqual([]);
+  });
+
+  it("reports manifest=absent with skillDirExists=true when only the manifest is missing", async () => {
+    const root = await newTempDir("state-nomanifest");
+    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd"), { recursive: true });
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("absent");
+    expect(result.skillDirExists).toBe(true);
+  });
+
+  it("reports manifest=unparseable for invalid JSON and for a non-array field", async () => {
+    const root = await newTempDir("state-bad");
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "manifest.json"), "{ not json", "utf-8");
+    expect((await probeSkillManifest(root, "qfai-atdd")).manifest).toBe("unparseable");
+
+    await writeFile(
+      path.join(dir, "manifest.json"),
+      JSON.stringify({ runtimeDependencies: "playwright" }),
+      "utf-8",
+    );
+    expect((await probeSkillManifest(root, "qfai-atdd")).manifest).toBe("unparseable");
   });
 });

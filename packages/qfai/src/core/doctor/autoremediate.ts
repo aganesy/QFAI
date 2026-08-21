@@ -26,7 +26,7 @@ import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
-import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
+import { probeSkillManifest } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
 
@@ -144,9 +144,17 @@ export async function runAutoremediate(
   // (1) Probe runtimeDependencies and (optionally) install missing ones.
   const installed: string[] = [];
   if (options.skill) {
-    const findings = await probeSkillManifestRuntimeDeps(options.root, options.skill);
-    const missing = findings.filter((finding) => finding.status === "missing");
-    if (missing.length === 0) {
+    const probe = await probeSkillManifest(options.root, options.skill);
+    const missing = probe.findings.filter((finding) => finding.status === "missing");
+    if (probe.manifest !== "found") {
+      // Claiming "all installed" for a skill whose manifest was never
+      // located reads as a positive result; say what actually happened
+      // so a typo'd `--profile` is visible in the remediation log.
+      const reason = probe.manifest === "absent" ? "not found" : "unreadable";
+      lines.push(
+        `autoremediate: runtimeDependencies — manifest ${reason} at ${path.relative(options.root, probe.manifestPath)}; nothing installed`,
+      );
+    } else if (missing.length === 0) {
       lines.push("autoremediate: runtimeDependencies — all installed");
     } else {
       for (const finding of missing) {

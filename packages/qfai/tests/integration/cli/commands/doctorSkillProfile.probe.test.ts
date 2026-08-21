@@ -121,6 +121,60 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
   });
 });
 
+// Regression: `[ok]` must mean "a manifest was located and it declares
+// zero runtimeDependencies" — never "nothing was probed". A typo'd or
+// renamed `--profile <skill>` previously produced the same green line
+// as a real skill.
+describe("doctor --profile <skill> does not report [ok] when nothing was probed", () => {
+  async function runAndFind(root: string, skill: string): Promise<DoctorJson["checks"][number]> {
+    const outPath = path.join(root, ".qfai", "report", "doctor.json");
+    await runDoctor({ root, rootExplicit: true, format: "json", outPath, skillProfile: skill });
+    const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
+    const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");
+    if (!finding) throw new Error("expected a skill.runtimeDependencies check");
+    return finding;
+  }
+
+  it("errors on a skill name with no skill directory (typo'd --profile)", async () => {
+    const root = await newTempDir("typo");
+    await seedManifest(root, "qfai-prototyping", []);
+    const finding = await runAndFind(root, "qfai-prototypingg");
+    expect(finding.severity).toBe("error");
+    expect(finding.message).toMatch(/unknown skill 'qfai-prototypingg'/u);
+    expect(finding.details?.skillDirExists).toBe(false);
+  });
+
+  it("warns when the skill exists but has authored no manifest", async () => {
+    const root = await newTempDir("nomanifest");
+    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping"), {
+      recursive: true,
+    });
+    const finding = await runAndFind(root, "qfai-prototyping");
+    expect(finding.severity).toBe("warning");
+    expect(finding.message).toMatch(/no manifest for skill 'qfai-prototyping'/u);
+    expect(finding.message).toMatch(/manifest\.json/u);
+  });
+
+  it("stays [ok] — and names the manifest — when a manifest declares zero deps", async () => {
+    const root = await newTempDir("zero-deps");
+    await seedManifest(root, "qfai-prototyping", []);
+    const finding = await runAndFind(root, "qfai-prototyping");
+    expect(finding.severity).toBe("ok");
+    expect(finding.message).toMatch(/declares no runtimeDependencies/u);
+    expect(finding.details?.manifestPath).toMatch(/manifest\.json/u);
+  });
+
+  it("errors when the manifest exists but cannot be parsed", async () => {
+    const root = await newTempDir("unparseable");
+    const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
+    await mkdir(dir, { recursive: true });
+    await writeFile(path.join(dir, "manifest.json"), "{ not json", "utf-8");
+    const finding = await runAndFind(root, "qfai-prototyping");
+    expect(finding.severity).toBe("error");
+    expect(finding.message).toMatch(/not JSON/u);
+  });
+});
+
 async function _existsHelperFootnote(target: string): Promise<boolean> {
   try {
     await access(target);
