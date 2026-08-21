@@ -14,6 +14,10 @@ A checkpoint boundary is reached in exactly two places:
 
 No other point is a checkpoint boundary. There is no "every N items" rule.
 
+The two do **not** run the same commands. The per-item set is confined to what the item's own
+change can reach; the spec-wide commands belong to the per-spec set. Both are below, and each one
+is the whole of the applicable set at its own boundary.
+
 ## Verification command set (per item)
 
 Run all of the following from the repository root, in order. Substitute the project's own runner for
@@ -50,6 +54,26 @@ the placeholders; record the literal commands actually executed in evidence.
    else again, derive that unit from `Test file` in the same manner and say so in the evidence.
 
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
+
+That is the whole per-item set. Both commands are properties of **this item's own change** — step 1
+is the row's own `Selector`, step 2 is what that change could have broken — and a per-item gate can
+only be discharged by properties of the row it gates. The static gates and `npx qfai validate` are
+properties of the **spec**, so they sit in the per-spec set below and are **not** run here. Carried
+per item, they conditioned `refactor` -> `done` on every _other_ row's Evidence cell and on
+`.qfai/contracts/**`, which the Drift Protocol puts upstream and outside this skill's write scope —
+findings the gated row neither caused nor may fix. One unrelated defect anywhere in the spec then
+holds every row at `refactor`, and no row can clear it. When such a finding is already known,
+record it for the per-spec boundary with its owning spec; do not fix it from here, and do not
+weaken the profile to clear it.
+
+## Verification command set (per spec)
+
+The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
+under parallel slices the ledger order does not identify one either. So step 1 is dropped, and the
+two spec-wide commands are added: the spec-level set is step 2 above plus steps 3 and 4 below.
+Everything step 1 would have proved is already covered by the full suite. Steps 3 and 4 run at this
+boundary and only at it — it is the boundary whose owner can act on what they report.
+
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
    check.
 4. `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` — qfai is a project
@@ -74,19 +98,13 @@ the placeholders; record the literal commands actually executed in evidence.
    is not this checkpoint's work; do **not** drop `--fail-on error`, weaken the profile, or
    report the checkpoint as passed.
 
-## Verification command set (per spec)
-
-The spec-level boundary has no "item just completed" — a re-run in a later session has none, and
-under parallel slices the ledger order does not identify one either. So step 1 is dropped: the
-spec-level set is steps 2, 3 and 4 only. Everything step 1 would have proved is already covered by
-the full suite.
-
 ## Pass criteria
 
-Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
-item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
-pass.
+Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and — for
+the per-spec set, the only one that includes it — step 4 reports zero `QFAI-TEST-001` findings.
+A step outside the applicable set is not owed, and its absence is not a partial run. Any non-zero
+exit is a FAIL: for a per-item checkpoint the item stays at `refactor`, the failure is fixed, and
+the whole set is re-run. A partial run of the applicable set is not a pass.
 
 **A fix invalidates the reviewer PASS that preceded it.** The per-item boundary sits after
 `completion-reviewer` and `implementation-reviewer` returned PASS (Phase: Refactor, steps 4-5), so

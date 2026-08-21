@@ -33,6 +33,21 @@ function headingSlugs(markdown: string): Set<string> {
   return slugs;
 }
 
+/** The body between an H2 heading and the next heading of the same level. */
+function section(markdown: string, heading: string): string {
+  const start = markdown.indexOf(heading);
+  expect(
+    start,
+    `${heading} must be a heading in checkpoint-verification.md`,
+  ).toBeGreaterThanOrEqual(0);
+  const rest = markdown.slice(start + heading.length);
+  const next = rest.search(/^## /m);
+  return next === -1 ? rest : rest.slice(0, next);
+}
+
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s+/g, " ");
+
 describe("qfai-implement checkpoint verification contract", () => {
   it("reaches the spec-level boundary before the all-done early exit", async () => {
     for (const dir of SKILL_DIRS) {
@@ -131,6 +146,58 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(reference).toContain("## Verification command set (per item)");
       expect(reference).toContain("## Verification command set (per spec)");
       expect(reference).toContain("step 1 is dropped");
+    }
+  });
+
+  // A per-item gate can only be discharged by properties of the row it gates.
+  // `npx qfai validate` and the static gates report the *spec's* defects — another
+  // row's empty Evidence cell, a `.qfai/contracts/**` file no spec owns, an ATDD
+  // finding this skill declares out of scope — none of which the gated row caused
+  // or may fix. Carried per item, one unrelated defect anywhere in the spec holds
+  // every row at `refactor` for good, and `refactor -> done` never fires again.
+  it("keeps the spec-wide commands out of the per-item command set", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const perItem = section(reference, "## Verification command set (per item)");
+      const perSpec = section(reference, "## Verification command set (per spec)");
+
+      // Per item: the row's own selector and the suite its change could break.
+      expect(perItem).toMatch(/^1\. The item's own test/m);
+      expect(perItem).toMatch(/^2\. The full test suite/m);
+      // The prose names the command to say it is *not* run here; the invocation
+      // itself, and any step past 2, must be absent.
+      expect(perItem).not.toContain("qfai validate --profile");
+      expect(perItem).not.toContain("--fail-on error");
+      expect(perItem).not.toMatch(/^3\.\s/m);
+      expect(perItem).not.toMatch(/^4\.\s/m);
+      expect(flat(perItem)).toContain(
+        "they sit in the per-spec set below and are **not** run here",
+      );
+
+      // Per spec: the two commands whose findings that boundary's owner can act on.
+      expect(perSpec).toMatch(/^3\. The project's static gates/m);
+      expect(perSpec).toContain("npx qfai validate --profile tdd --fail-on error --spec");
+      expect(flat(perSpec)).toContain(
+        "the spec-level set is step 2 above plus steps 3 and 4 below",
+      );
+    }
+  });
+
+  // "A partial run is not a pass" must not read as "the per-item set owes step 4".
+  it("scopes the zero-`QFAI-TEST-001` criterion to the set that runs step 4", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+      expect(criteria).toContain("the per-spec set, the only one that includes it");
+      expect(criteria).toContain("A step outside the applicable set is not owed");
+      expect(criteria).toContain("A partial run of the applicable set is not a pass.");
     }
   });
 
