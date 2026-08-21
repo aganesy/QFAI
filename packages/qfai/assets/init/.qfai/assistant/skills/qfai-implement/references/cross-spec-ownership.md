@@ -25,11 +25,24 @@ route never fired for them.
 
 ## The rule
 
-**A file another spec's ledger names in `Test file` is that spec's to certify.**
-Editing it does not require permission — it requires a record and a re-review.
+**A production module another spec's ledger names in `Owning module` is that
+spec's to certify.** So is a test file another spec's ledger names in
+`Test file`, for the narrower case where the file being edited is itself that
+spec's test. Editing it does not require permission — it requires a record and
+a re-review.
 
-1. **Detect.** Before editing a production file in Refactor, search every
-   `tdd/test-list.md` for it. A hit means the edit is cross-spec.
+1. **Detect.** Before editing a production file in Refactor, look the file up in
+   every other spec's `tdd/test-list.md` under `Owning module` — that is the
+   only column that holds a production path (`execution-ledger.md`). When the
+   file being edited is a test file, look it up under `Test file` as well. A hit
+   in either column means the edit is cross-spec.
+   - **Undeclared seam.** `Owning module` is optional and `-` is legal, so a
+     ledger may name no production path at all. An undeclared seam is a
+     restriction, not a clearance — the same reading `execution-ledger.md` gives
+     it for parallel dispatch. For such a ledger, fall back to a repo-wide
+     search: find the test files that exercise the file about to be edited, then
+     look those paths up in that ledger's `Test file` column. Detection never
+     passes silently just because the column is absent.
 2. **Record.** Add a `## Cross-spec obligations` entry to this spec's evidence
    file (fields below).
 3. **Re-review.** Run `completion-reviewer` against the affected specs'

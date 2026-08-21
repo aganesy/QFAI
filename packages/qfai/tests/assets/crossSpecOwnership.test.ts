@@ -36,7 +36,38 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("detects the collision where it happens — before the edit, in Refactor", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain("**Before editing a production file**");
-    expect(skill).toContain("another spec's `tdd/test-list.md` names it in `Test file`");
+    expect(skill).toContain("another spec's `tdd/test-list.md` names it in `Owning module`");
+  });
+
+  it("keys detection on the only column that holds a production path", async () => {
+    // The trigger is editing a production file, so keying the lookup on
+    // `Test file` compared a production path against a column of test paths and
+    // never hit. `Owning module` is the column that holds production paths.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "**A production module another spec's ledger names in `Owning module` is that spec's to certify.**",
+    );
+    expect(reference).toContain(
+      "under `Owning module` — that is the only column that holds a production path",
+    );
+    // `Test file` survives only for the narrower case it can actually cover.
+    expect(reference).toContain("where the file being edited is itself that spec's test");
+  });
+
+  it("does not let an undeclared `Owning module` pass detection silently", async () => {
+    // The column is optional and `-` is legal, and no real ledger declares it
+    // today — so its absence must restrict, the way it does for parallel
+    // dispatch, rather than clear the edit.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("An undeclared seam is a restriction, not a clearance");
+    expect(reference).toContain("fall back to a repo-wide search");
+    expect(reference).toContain(
+      "Detection never passes silently just because the column is absent",
+    );
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "a ledger that declares no `Owning module` falls back to the repo-wide search",
+    );
   });
 
   it("gives the evidence file a place to record it", async () => {
