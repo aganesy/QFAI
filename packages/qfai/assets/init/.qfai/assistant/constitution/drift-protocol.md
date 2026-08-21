@@ -275,7 +275,7 @@ is a defect.
 ### Provenance and routing
 
 - Every reviewer finding declares a `Traces to:` value. See
-  `shared-skill-delegation-baseline.md#finding-provenance-must` for the response schema. Legal
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#finding-provenance-must` for the response schema. Legal
   values:
   - an upstream obligation (`AC-*`, `BR-*`, `TC-*`, `CON-*`) or a named constitution/catalog rule;
   - `defect:correctness`, `defect:security`, or `defect:code-quality` — the deliverable-defect

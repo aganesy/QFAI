@@ -198,7 +198,7 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   available from every status a row can hold, `blocked` and `review-fix`
   included. This list is the complete one and an unlisted edge is prohibited,
   so enumerating five sources here forbade the sweep
-  `constitution/drift-protocol.md` step 5 requires of exactly those two.
+  `.qfai/assistant/constitution/drift-protocol.md` step 5 requires of exactly those two.
   Permitted **only** when an approved upstream change (Drift Protocol step 4
   rerun) invalidated the row's obligation. The invalidating CR/DR ID MUST be
   recorded in the `DR-ID` column, and the reset MUST cite it in `Evidence`.
@@ -254,7 +254,7 @@ so a run that performs an approved reset can still tick it. Preconditions and
 the reset procedure: `references/change-request-reset.md`.
 
 **The reset admits every source status**, not the five a run is most likely to
-be in. `constitution/drift-protocol.md` step 5 sweeps the ledger with
+be in. `.qfai/assistant/constitution/drift-protocol.md` step 5 sweeps the ledger with
 `any status -> todo`, and a row sitting at `blocked` or `review-fix` when the
 upstream obligation moved is exactly a row that has to be swept. Enumerating
 the sources here let this table forbid a transition the Protocol requires, so
@@ -359,18 +359,18 @@ Write it to `.qfai/decisions/DR-<id>-<slug>.md`, beside the Change
 Requests, using the same `DR-*` ID scheme those files declare. Do **not** write
 `07_Decisions.md` or `09_delta.md`.
 
-Those two are upstream SSOT (`constitution/drift-protocol.md#core-rule`) and
+Those two are upstream SSOT (`.qfai/assistant/constitution/drift-protocol.md#core-rule`) and
 this skill carries `[DRIFT-PROTOCOL:MANDATORY]`, so a downstream write to either
 is a protocol violation — while the `exception` transition itself is an ordinary
 inline step of Phase Red that `TDDLIST_EXCEPTION_MISSING_DR` blocks at `error`
 without a `DR-*`. `.qfai/decisions/` is the one home that satisfies both: the
 protocol whitelists **creating** a record there
-(`drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
+(`.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`), and the managed `.gitignore` block
 already tracks it as a governance record.
 
 The upstream cross-reference is a separate, later write. If the anomaly turns
 out to change an approved obligation, that is drift: raise a Change Request per
-`drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
+`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`, and the owner skill's rerun is what
 records the reference in `07_Decisions.md` / `09_delta.md`. Parking the row does
 not require that to have happened.
 

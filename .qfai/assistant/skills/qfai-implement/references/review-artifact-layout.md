@@ -28,7 +28,7 @@ must be written to a review pack, not left in conversation. There is exactly **o
   declares no form at all is a producer that forgot. Only `revision_form: "legacy"`, corroborated by
   `.qfai/review/.legacy-packs`, marks a pack as predating the form.
   A `REVISE` verdict during iteration is written as `status: "FAIL"` here — see
-  `shared-skill-delegation-baseline.md#verdict-vocabulary`.
+  `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
 - Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor

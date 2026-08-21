@@ -152,7 +152,7 @@ Rules:
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
    This is not an exception to the MUST rule — it is a "no-question mode".
 
-This article survives context compaction because `constitution.md` is a P1 reload target.
+This article survives context compaction because `.qfai/assistant/constitution/constitution.md` is a P1 reload target.
 
 ---
 

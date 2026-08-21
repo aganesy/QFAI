@@ -10,7 +10,7 @@ lifecycle it does not define.
 
 - **Evidence, not ledger cells.** `/qfai-implement` writes `Status`, `DR-ID`
   and `Evidence` for every row — one writer, as
-  `constitution/drift-protocol.md` grants it. This stage produces the evidence
+  `.qfai/assistant/constitution/drift-protocol.md` grants it. This stage produces the evidence
   those cells point at, in `.qfai/evidence/atdd-<spec-id>.md` under
   `## Ledger rows advanced`, and hands it over.
 - The lifecycle is

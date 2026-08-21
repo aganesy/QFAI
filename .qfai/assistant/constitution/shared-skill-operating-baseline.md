@@ -29,6 +29,27 @@ It is not where the detail lives.
 A hard line ceiling backs this up in the asset tests, but it is a backstop, not
 the rule. A skill approaching it is a signal to move a section out.
 
+## Citation Path Form (Mandatory)
+
+A pointer only resolves if the reader knows what base to resolve it against.
+There is one base, and it is the project root.
+
+- **Cite a constitution document by its full path from the project root.**
+  Write the path from the project root, with `#anchor` appended when one
+  applies: `.qfai/assistant/constitution/drift-protocol.md`. Not the bare
+  filename, not the assistant-root form starting at **constitution/**, not a
+  **../../../** climb. That form is the only one that resolves from every
+  directory in the tree, and the only one that still resolves when read with
+  the cwd at the project root — which is where an agent's cwd is.
+- **The same holds when a constitution document cites another one**, including
+  a sibling in its own directory. A bare name works there only by accident of
+  where the citing file sits; it stops working the moment the text is quoted
+  elsewhere.
+- **Within a skill's own directory, keep pointers relative to that directory**:
+  `references/<topic>.md`, `templates/<name>.md`. Those name the skill's own
+  parts, not a shared document, and the surrounding text already establishes
+  which skill is meant.
+
 ## User Questions (AskUserQuestion Protocol)
 
 - When a question to the user is needed, use AskUserQuestion if the tool is available.
@@ -114,7 +135,7 @@ Rules:
 
 ## Gate Failure Autorepair Protocol
 
-When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `shared-skill-delegation-baseline.md#verdict-vocabulary`):
+When validate, doctor, test, lint, typecheck, build, capture, or report gates fail — **or when a blocking reviewer returns `REVISE`** (the in-flight verdict; `status: "FAIL"` is only what a review pack's `summary.json` serializes — see `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#verdict-vocabulary`):
 
 - inspect exit code, logs, `validate.json`, and cited files before reporting;
 - classify each finding as skill-owned artifact, upstream spec/contract, code/test defect, environment/tooling, or user decision;
@@ -125,7 +146,7 @@ When validate, doctor, test, lint, typecheck, build, capture, or report gates fa
 - rerun the same failing gate after each fix batch, **and once with no intervening change** when the failure looks nondeterministic — see `#nondeterministic-gates` below. The confirmation rerun is bounded at one: after it the finding is classified, not re-rolled;
 - do not weaken profiles, lower `--fail-on`, waive errors, invent evidence, or skip required reviewers;
 - stop for destructive changes, **any upstream spec/contract finding**, ambiguous product/spec decisions, missing permissions/tools, or repeated no-progress failures — the stop list is closed over the classification above, so every class the agent is told to use has a defined next action;
-- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `shared-skill-delegation-baseline.md#round-budget-must`.
+- stop on **round count** as well as on lack of progress: a reviewer gate that would enter its third round escalates to the user, even when every round has made progress. See `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#round-budget-must`.
 
 When stopping, report: cause, attempted fixes, remaining blocker, user action, retry gate, and **the work counts — how many items are complete, how many are blocked, and by which finding**.
 

@@ -1,6 +1,6 @@
 # Blocking vs advisory findings
 
-Provenance rules: `shared-skill-delegation-baseline.md#finding-provenance-must`.
+Provenance rules: `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Blocking
 
@@ -22,7 +22,7 @@ An **advisory** finding is one whose `Traces to:` is `none` — a new product
 obligation upstream never asked for. It MUST NOT be implemented as production
 code or pinned as a test assertion.
 
-Route it per `drift-protocol.md#reviewer-originated-obligations`: record it in
+Route it per `.qfai/assistant/constitution/drift-protocol.md#reviewer-originated-obligations`: record it in
 the reviewer response under `Advisory / Change Request proposals`.
 
 Do **not** edit `08_Open-questions.md` here. It is upstream SSOT under the Drift
@@ -34,7 +34,7 @@ phase (`/qfai-sdd`) records and adjudicates it.
 - A new advisory that does **not** change an already-approved obligation leaves
   the item free to reach `done`.
 - One that **does** change an approved obligation takes the Change Request path,
-  and `drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done`
+  and `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` applies: STOP, and no `done`
   for items depending on the obligation under dispute until approval and the
   owner rerun.
 
