@@ -154,6 +154,21 @@ export type ParsedArgs = {
   };
 };
 
+/**
+ * `--dry-run` を配線していないコマンド群。フラグを受理しても書き込みを
+ * 止められないため、parse 段階で拒否する対象。
+ */
+const DRY_RUN_UNSUPPORTED_COMMANDS = new Set([
+  "validate",
+  "report",
+  "guardrails",
+  "audit",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+]);
+
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     root: cwd,
@@ -323,6 +338,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.yes = true;
         break;
       case "--dry-run":
+        // `--dry-run` を実装しているのは init / doctor のみ。尊重できない
+        // コマンドで黙って受理すると、プレビューのつもりの実行がそのまま
+        // 書き込みになるため、ここで parse error として拒否する。
+        // 各コマンドが dry-run を実装したら DRY_RUN_UNSUPPORTED_COMMANDS
+        // から外し、main.ts で dryRun を配線する。
+        if (command !== null && DRY_RUN_UNSUPPORTED_COMMANDS.has(command)) {
+          markInvalid();
+          break;
+        }
         options.dryRun = true;
         break;
       case "--upgrade-assistant-tree":

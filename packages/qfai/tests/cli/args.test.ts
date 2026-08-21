@@ -241,6 +241,56 @@ describe("parseArgs", () => {
     });
   });
 
+  // `--dry-run` is only implemented by init / doctor. On every other
+  // command it used to be accepted and then ignored, so an operator
+  // reaching for a preview flag got a real write instead.
+  describe("--dry-run scope", () => {
+    it.each(["init", "doctor"])("is accepted on %s", (command) => {
+      const parsed = parseArgs([command, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dryRun).toBe(true);
+    });
+
+    it.each([
+      ["validate"],
+      ["report"],
+      ["guardrails"],
+      ["audit"],
+      ["atdd"],
+      ["handoff"],
+      ["discussion"],
+      ["prototyping"],
+    ])("marks --dry-run invalid on %s and leaves dryRun off", (command) => {
+      const parsed = parseArgs([command, "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.dryRun).toBe(false);
+    });
+
+    it("rejects --dry-run on a writing subcommand such as handoff upgrade", () => {
+      const parsed = parseArgs(["handoff", "upgrade", "legacy.yaml", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.dryRun).toBe(false);
+      // The subcommand and its positional are still parsed, so the
+      // rejection is about the flag rather than about the arguments.
+      expect(parsed.options.handoffAction).toBe("upgrade");
+      expect(parsed.options.handoffLegacyFile).toBe("legacy.yaml");
+    });
+
+    it("does not consume a following token when rejecting --dry-run", () => {
+      const parsed = parseArgs(["validate", "--dry-run", "--format", "github"], process.cwd());
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.validateFormat).toBe("github");
+    });
+
+    it("keeps honoring --dry-run alongside doctor --clean", () => {
+      const parsed = parseArgs(["doctor", "--clean", "--dry-run"], process.cwd());
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.doctorClean).toBe(true);
+      expect(parsed.options.dryRun).toBe(true);
+    });
+  });
+
   // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
   // --clause silently dropped on misuse, and --upgrade-scope did
   // not consume its value. Per-flag assertions follow.

@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,6 +40,24 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       expect(process.exitCode).toBe(1);
     } finally {
       process.exitCode = previousExitCode;
+    }
+  });
+
+  it("rejects --dry-run on handoff upgrade instead of writing the canonical file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-dryrun-"));
+    const legacyFile = path.join(root, "legacy.yaml");
+    await writeFile(legacyFile, "from: alpha\nto: beta\n", "utf-8");
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["handoff", "upgrade", legacyFile, "--root", root, "--dry-run"], root);
+      expect(process.exitCode).toBe(1);
+      // The whole point of the flag: nothing may be written.
+      await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).rejects.toThrow();
+    } finally {
+      process.exitCode = previousExitCode;
+      await rm(root, { recursive: true, force: true });
     }
   });
 

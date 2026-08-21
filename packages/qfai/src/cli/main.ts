@@ -302,7 +302,7 @@ Options:
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering,manifest}/ → constitution/manifest/catalog/process/)
-  --dry-run       変更を行わず表示のみ
+  --dry-run       init / doctor: 変更を行わず表示のみ（他コマンドでは指定エラー）
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
