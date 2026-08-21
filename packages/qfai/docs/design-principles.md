@@ -50,9 +50,13 @@ When a new validator is added, it MUST be:
 3. registered in the error-codes expected-message table in `cli/commands/validate.ts`.
 
 Enforcement: `tests/unit/validators-are-wired.test.ts` (added in Phase 2)
-fails CI if any prototyping validator export is not referenced from
-`validate.ts`. This is the primary defence against the Phase 1.8.3
-"executionPlan / delegationMap dead-code" failure mode.
+fails CI if any validator export under `src/core/validators/` is not invoked
+from the `validate.ts` symbol graph. A barrel re-export in
+`validators/index.ts`, or a mention in a comment, does not count as wiring.
+This is the primary defence against the Phase 1.8.3
+"executionPlan / delegationMap dead-code" failure mode. Validators that were
+already dead when the guard was widened are grandfathered on the dated
+`PENDING_WIRING` list in that file; the list may only shrink.
 
 ## P5. "Completion" is an artifact
 
