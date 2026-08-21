@@ -1656,6 +1656,18 @@ something is written, believed without reading it.
        `bareIsBuild` is evaluated after the token loop and gated on no target having been seen, so a
        flag whose argument is not consumed suppresses it. Written one commit after this list was
        extended, in the commit that extended it, and it made a real build read as nothing.
+   15. **The matrix guard's own replacement comment.** It said the assertion "demands the row not claim
+       more than the test delivers" and that "a raised score with no test behind it" was prevented by the
+       ledger check below it. Round 12 raised `Oracle strength` one grade with the partition kept
+       consistent and all three guards stayed green: the ledger check requires an annotation, a carrier
+       file and two function names, none of which constrains a score in any column. **This one is the
+       purest instance in the list** — it is a claim about what a TEST does, written in that test, in the
+       repair for a finding about claims of exactly that kind, and it took one mutation to refute.
+   16. **And the first repair for entry 15 was itself vacuous.** It required a raised column to be NAMED
+       in the row's justification section — and that section carries a bullet for all seven columns, so
+       the filter was empty whatever the table said. A test that cannot fail for the one row it guards.
+       The working version pins the PAIR: the score the section states and the score the table holds must
+       agree, which reddens on a raise in either artifact without the other.
 
    The working countermeasure is not vigilance: it is that every new claim gets an oracle round before
    it is reported, and that a claim over a file's contents is rewritten to **run** the thing whenever
@@ -1677,6 +1689,11 @@ something is written, believed without reading it.
    - **A corpus whose entries share a shape can only report on that shape.** Sixty-two bare commands
      say nothing about a wrapped one, and the accept direction can end up defending the refuse
      direction's vacuity rather than checking it.
+   - **A guard over a record can be vacuous for the very row it was written for.** Entries 15 and 16 are
+     one finding and its failed repair: the second required a justification to NAME a column, in a
+     section that names every column. Before writing a guard over prose, mutate the prose it guards —
+     the direction that matters is the one where the record is wrong, and a check that cannot express
+     that state is decoration however carefully it is worded.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final

@@ -452,20 +452,57 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const row = rows.find((candidate) => candidate.id === "US-0017-0007");
 
     expect(row, "the story keeps its row in the matrix").toBeDefined();
-    // A floor first: `every` over an empty map is vacuously true, so without this a row whose cells
-    // failed to parse would pass the assertion below. Round 2's `implementation-reviewer` found it.
+    // A floor first, because a row whose cells failed to parse would satisfy everything below it
+    // vacuously. Round 2's `implementation-reviewer` found that shape. Written once — it used to be here
+    // twice, the second copy left behind by the edit that deleted what the first was guarding.
     expect(
-      Object.keys(row?.cells ?? {}).length,
+      Object.keys(row?.cells ?? {}),
       "the row must have parsed into all eight columns before its scores mean anything",
-    ).toBe(COLUMNS.length);
-    // The scores are the matrix owner's to raise now that the story is covered, so this no longer
-    // demands all-❌ — it demands the row not claim more than the test delivers. `Oracle strength` is the
-    // column the withdrawal turned on, and the new test's oracle is a measured effect, so ⚠️ or ✅ are
-    // both defensible; what is not is a raised score with no test behind it, which the ledger check below
-    // is what actually prevents.
-    expect(Object.keys(row?.cells ?? {}), "the row must still carry every column").toHaveLength(
-      COLUMNS.length,
+    ).toHaveLength(COLUMNS.length);
+
+    // **A raised depth cell must be justified in the row's own section, by column name.**
+    //
+    // The previous comment here claimed this assertion "demands the row not claim more than the test
+    // delivers" and that "a raised score with no test behind it" was prevented by the ledger check below.
+    // Round 12 measured that false: raising `Oracle strength` one grade with the partition kept consistent
+    // left all three guards green. The ledger check requires an annotation, a carrier file and two
+    // function names — none of which constrains a score in any column.
+    //
+    // This is the matrix's own contract inverted. Today a `❌` needs a justification and a `✅` needs
+    // nothing, so LOWERING a cell costs an explanation and RAISING one is free — which is the wrong way
+    // round for a governance record whose failure mode is over-claiming. No test can check that a
+    // justification is true; what this checks is that raising a cell is a deliberate act with a sentence
+    // attached.
+    // The section states a score per column, as `- **<Column> `<score>`** — …`, so the pin is the PAIR:
+    // what the section says a column scores must be what the table gives it.
+    //
+    // A first version of this required only that a raised column be NAMED in the section — and the section
+    // carries a bullet for all seven, so the check was vacuous for the one row it guards. A test that
+    // cannot fail for its own subject is the defect it was written to fix, one level in.
+    const depthColumns = COLUMNS.filter((column) => column !== "Status");
+    const rowSection =
+      /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{3} |$)/.exec(text)?.[1]?.replace(/\s+/g, " ") ?? "";
+    expect(rowSection.length, "the row's justification section must be findable").toBeGreaterThan(
+      0,
     );
+
+    const disagreeing: string[] = [];
+    for (const column of depthColumns) {
+      const stated = new RegExp(`\\\\*\\\\*${column} \`([^\`]+)\`\\\\*\\\\*`).exec(rowSection)?.[1];
+      const scored = row?.cells[column] ?? "";
+      if (stated === undefined) {
+        disagreeing.push(`${column}: the section states no score for it`);
+        continue;
+      }
+      if (stated !== scored) {
+        disagreeing.push(`${column}: the section says ${stated}, the table says ${scored}`);
+      }
+    }
+    expect(
+      disagreeing,
+      "every depth column's score must agree between the table and the row's justification — a cell " +
+        "raised without its sentence being rewritten is the over-claim this record exists to prevent",
+    ).toEqual([]);
     // Anchored to the row's own justification section, not to the file. `toMatch(/withdrawn/i)` over
     // the whole record was satisfied by any occurrence anywhere — changing this very section's
     // "withdrawn" to "retired" left it green, which round 7 raised and round 8 measured.
