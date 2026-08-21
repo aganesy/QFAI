@@ -39,6 +39,55 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("passes spec split when the declared Spec column matches row position", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], {
+        "CAP-0001": "spec-0001",
+        "CAP-0002": "spec-0002",
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the moved CAP rows instead of spec-level errors when a row is inserted", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // CAP-0009 was inserted between CAP-0001 and CAP-0002, so row position now
+      // derives spec-0002 for CAP-0009 and spec-0003 for CAP-0002 while the
+      // declared column still carries what the author wrote.
+      await seedPolicies(root, ["CAP-0001", "CAP-0009", "CAP-0002"], {
+        "CAP-0001": "spec-0001",
+        "CAP-0009": "spec-0009",
+        "CAP-0002": "spec-0002",
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mismatches = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mismatches.map((issue) => issue.refs?.[0])).toEqual(["CAP-0009", "CAP-0002"]);
+      expect(mismatches[0]?.file).toBe(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+      );
+      expect(mismatches[0]?.refs).toEqual(["CAP-0009", "spec-0009", "spec-0002"]);
+      expect(
+        issues.some((issue) =>
+          ["QFAI-SPLIT-103", "QFAI-SPLIT-104", "QFAI-SPLIT-105"].includes(issue.code),
+        ),
+      ).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -94,18 +143,32 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
-async function seedPolicies(root: string, capIds: string[]): Promise<void> {
+async function seedPolicies(
+  root: string,
+  capIds: string[],
+  declaredSpecs?: Record<string, string>,
+): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
 
-  const capLines = capIds.map((capId) => `| ${capId} | capability | metric | note |`).join("\n");
+  const withSpecColumn = declaredSpecs !== undefined;
+  const capLines = capIds
+    .map((capId) => {
+      const specCell = declaredSpecs ? ` ${declaredSpecs[capId] ?? ""} |` : "";
+      return `| ${capId} | capability | metric | note |${specCell}`;
+    })
+    .join("\n");
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
     [
       "# 03 Capabilities",
       "",
-      "| CAP ID | Statement | Success metrics | Notes |",
-      "| ------ | --------- | --------------- | ----- |",
+      withSpecColumn
+        ? "| CAP ID | Statement | Success metrics | Notes | Spec |"
+        : "| CAP ID | Statement | Success metrics | Notes |",
+      withSpecColumn
+        ? "| ------ | --------- | --------------- | ----- | ---- |"
+        : "| ------ | --------- | --------------- | ----- |",
       capLines,
       "",
     ].join("\n"),

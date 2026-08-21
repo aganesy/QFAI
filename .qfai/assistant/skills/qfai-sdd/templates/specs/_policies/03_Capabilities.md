@@ -4,14 +4,20 @@
 
 - Capabilities are listed in execution order.
 - Spec directories are generated from this order (`spec-0001`, `spec-0002`, ...).
+- Row position is the mapping: inserting or reordering a row re-points every spec
+  directory below it, so a reorder is a rename of all of them plus their `Parent:` lines.
 - Keep IDs stable once published.
 
 ## CAP Catalog
 
-| CAP ID   | Statement (what)         | Success metrics (optional) | Notes (optional) |
-| -------- | ------------------------ | -------------------------- | ---------------- |
-| CAP-0001 | <what capability solves> | <metric>                   | <note>           |
-| CAP-0002 | <what capability solves> | <metric>                   | <note>           |
+`Spec` restates the row position (`spec-<row index, 4 digits>`) so the mapping is
+visible and diffable. Validation compares it against the position and reports a
+mismatch on the row (`QFAI-SPLIT-106`); position stays the truth.
+
+| CAP ID   | Statement (what)         | Success metrics (optional) | Notes (optional) | Spec      |
+| -------- | ------------------------ | -------------------------- | ---------------- | --------- |
+| CAP-0001 | <what capability solves> | <metric>                   | <note>           | spec-0001 |
+| CAP-0002 | <what capability solves> | <metric>                   | <note>           | spec-0002 |
 
 ## Authoring rules
 

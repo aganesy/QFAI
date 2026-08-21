@@ -1472,6 +1472,34 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ships the CAP catalogue template with the Spec column that carries the mapping", async () => {
+    const capabilitiesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "03_Capabilities.md",
+    );
+    const content = await readFile(capabilitiesPath, "utf-8");
+
+    const rows = content
+      .split(/\r?\n/)
+      .filter((line) => /^\|\s*CAP-\d{4}\s*\|/.test(line))
+      .map((line) => line.split("|").map((cell) => cell.trim()));
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((cells, index) => {
+      expect(cells[1]).toBe(`CAP-${String(index + 1).padStart(4, "0")}`);
+      expect(cells.at(-2)).toBe(`spec-${String(index + 1).padStart(4, "0")}`);
+    });
+
+    expect(content).toMatch(/\|\s*Spec\s*\|/);
+    expect(content).toContain("QFAI-SPLIT-106");
+    expect(content).toMatch(/inserting or reordering a row/i);
+  });
+
   it("ensures solution-architect agent contains required contract constraints", async () => {
     const agentPath = path.join(templateQfaiDir, "assistant", "agents", "solution-architect.md");
     const content = await readFile(agentPath, "utf-8");
