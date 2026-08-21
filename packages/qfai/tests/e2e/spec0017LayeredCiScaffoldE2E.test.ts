@@ -53,6 +53,7 @@ import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
+  invocationsOf,
   refusals,
 } from "../helpers/shippedLaneCommands.js";
 import { captureStdout } from "../helpers/stdout.js";
@@ -130,7 +131,13 @@ async function runStep(
     if (child.error !== undefined) {
       // `bash` is absent on some Windows images. Rethrowing turns a missing interpreter into a
       // failure of the property under test, which it is not.
-      const code = (child.error as NodeJS.ErrnoException).code;
+      // Narrowed rather than asserted: the project rule bars a bare `as`, and the repository already
+      // has this exact idiom in `scripts/check-atdd-annotation-ledger.mjs`.
+      const error: unknown = child.error;
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? String(error.code ?? "")
+          : "";
       if (code === "ENOENT")
         return { status: null, stdout: "", stderr: "", outputs: {}, skipped: true };
       throw child.error;
@@ -489,7 +496,8 @@ describe(
       // claim whose whole content is "there is nothing here", that is the wrong direction.
       //
       // This asks the decidable question instead: **what does the lane invoke?** The shipped tree
-      // invokes fifteen programs. Enumerating them and refusing everything else needs no corpus of
+      // invokes a small fixed set of programs. Enumerating them and refusing everything else needs no
+      // corpus of
       // build spellings and cannot be evaded by one. It fails CLOSED: adding an innocent program breaks
       // this test, which is the correct cost for a shipped surface — a new program in an adopter's lane
       // is a change someone should read.
@@ -514,6 +522,41 @@ describe(
             "which is the point of refusing it",
         )
         .toEqual([]);
+
+      // And the SET itself, pinned. Three sites used to carry three different counts of it, none
+      // derived; a set is checkable where a count is not, because a reader can see what changed rather
+      // than only that a number moved. Adding a program to a shipped lane must be a visible diff here.
+      const invoked = new Set<string>();
+      for (const job of Object.values(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          const run = isRecord(step) ? step["run"] : undefined;
+          if (typeof run !== "string") continue;
+          // PROGRAMS, not invocations: an `echo` invocation carries its whole message, so a pin over
+          // invocations would break on any wording edit and pin nothing anyone cares about.
+          for (const invocation of invocationsOf(run)) invoked.add(invocation.split(" ")[0] ?? "");
+        }
+      }
+      expect
+        .soft([...invoked].sort(), "the set of programs an adopter's lanes invoke")
+        .toEqual([
+          "[",
+          "corepack",
+          "cut",
+          "echo",
+          "exit",
+          "git",
+          "grep",
+          "node",
+          "npm",
+          "npx",
+          "pnpm",
+          "printf",
+          "read",
+          "tr",
+          "true",
+          "yarn",
+        ]);
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a

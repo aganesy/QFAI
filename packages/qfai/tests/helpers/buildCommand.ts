@@ -384,7 +384,9 @@ const TOOLS: Record<string, ToolGrammar> = {
     values: ["-d", "--destination", "-b", "--baseURL", "--config", "--cacheDir", "--theme"],
     bareIsBuild: true,
   },
-  jekyll: { dirs: ["-s", "--source"], values: ["-d", "--destination"] },
+  // `b` is jekyll's own documented alias for `build`, exactly as it is cargo's. The asymmetry was the
+  // finding: one was declared with a comment explaining why, and the other was not.
+  jekyll: { dirs: ["-s", "--source"], values: ["-d", "--destination"], builds: ["b"] },
   mkdocs: { dirs: [], values: ["-f", "--config-file"] },
   // Its own object rather than an alias of `COMPILER`: sub-members are labelled under the first key
   // that owns a shared object, so aliasing here would have relabelled `TOOLS.gcc.alwaysBuilds` as
@@ -401,6 +403,9 @@ const TOOLS: Record<string, ToolGrammar> = {
   // `tox -e build` runs the environment named `build`, and `R CMD build .` puts the verb one token in.
   // Neither needs a `builds` entry: declaring the tool is enough for the generic verb rule to read the
   // bare `build`, which is exactly the name-shaped case that rule is for.
+  // No `bareIsBuild`: bare `tox` runs the envlist, which is a test run more often than a build, and
+  // `tox -e build` gets its verdict from the generic verb rule reading the environment name. Round 11
+  // reported bare `tox` as `none` and this records that it is intended rather than missed.
   tox: { dirs: [], values: [] },
   R: { dirs: [], values: [] },
   ant: {
@@ -1009,7 +1014,11 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
       // build made the test punish a lane that legitimately configures, which is the shape this spec
       // rejects in writing. Only docker declared stops (`run`, `exec`), neither of which is `build`,
       // so nothing else moves.
-      if (stops.has(whole)) return "none";
+      // Both spellings, matching the generic rule one line below, which reads `verbTail` for exactly
+      // this reason. No command distinguishes them today — there is no colon-qualified `cmake build` or
+      // `docker run` — so this is a consistency repair rather than a demonstrated miss, and it stops
+      // being one the first time a `stops` entry is declared for gradle or another colon-qualifying tool.
+      if (stops.has(whole) || stops.has(verbTail)) return "none";
       if (whole === "build" || verbTail === "build") return "build";
     }
     // `isPathLike` belongs to the TOOL path only: a MANAGER's first bare token is a script NAME, and

@@ -762,6 +762,8 @@ const MEMBER_CASES: ReadonlyArray<readonly [string, BuildVerdict, string]> = [
   ["TOOLS.hugo.dirs.--source", "build", "hugo --source sub pnpm hello"],
   ["TOOLS.hugo.dirs.-s", "build", "hugo -s sub pnpm hello"],
   ["TOOLS.jekyll", "build", "jekyll build --trace"],
+  // jekyll's documented short form, declared the way cargo's identical `b` is.
+  ["TOOLS.jekyll.builds.b", "build", "jekyll b"],
   ["TOOLS.jekyll.dirs.--source", "build", "jekyll --source sub pnpm hello"],
   ["TOOLS.jekyll.dirs.-s", "build", "jekyll -s sub pnpm hello"],
   ["TOOLS.jekyll.values.--destination", "none", "jekyll --destination build"],

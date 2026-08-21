@@ -15,7 +15,9 @@
  * whole content is "there is nothing here", that is the wrong direction.
  *
  * So this module answers a decidable question instead: **what does the lane invoke?** The shipped tree
- * invokes ten programs. Enumerating those, and refusing everything else, needs no corpus and cannot be
+ * invokes a small fixed set of programs, pinned by the test rather than counted in prose — this line
+ * said ten while the story's E2E row said fifteen. Enumerating them, and refusing everything else, needs
+ * no corpus and cannot be
  * evaded by a build spelling nobody has written. It fails **closed**: adding an innocent program breaks
  * the test, which is correct for a shipped surface — a new program in an adopter's lane is a change that
  * should be read by someone.

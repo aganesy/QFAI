@@ -364,7 +364,9 @@ pass, and for a claim whose whole content is "there is nothing here", a miss is 
 which § "Gaps / Open risks" item 7.7 had already written down about this very assertion.
 
 So `tests/helpers/shippedLaneCommands.ts` answers a decidable question instead: **what does the lane
-invoke?** The shipped tree invokes fifteen programs. Nine cannot reach a build whatever their arguments
+invoke?** The set the shipped tree invokes is **pinned in the test, not counted here** — three sites
+carried three different numerals for it (ten, fifteen, and the two lists' own sizes), which is the
+recurring class again. A program that cannot reach a build whatever its arguments
 and are allowed by name; six could, and are allowed only as exact invocations, so `npx qfai` ships and
 `npx tsup` does not though they are the same program. It needs no corpus, cannot be evaded by a spelling
 nobody has written, and fails **closed** — an innocent new program breaks the test, which is the right
@@ -1269,18 +1271,46 @@ something is written, believed without reading it.
        rather than the count being derived from the stated rule. Weaker than the others, and recorded
        because it is the same substitution: a claim about how the row is written standing in for the
        measurement. Offered as a candidate by round 10 and accepted as one.
+   12. **The allowlist's "fails closed" justification.** The whole argument for replacing the classifier
+       was that a denylist over build spellings fails open while an allowlist fails closed. The
+       allowlist did not fail closed: `invocationOf` returned `undefined` for both "invokes nothing" and
+       "cannot be read", and `refusals()` read the second as consent — so every construct the scanner
+       did not understand was permission to run anything. Round 11 ran fifteen of eighteen real builds
+       past it, and probe 01 was `pnpm build`, the first entry its own corpus refuses, with one `if`
+       around it. This is the sharpest instance in the list because the claim was not incidental: it was
+       the *reason for the design*, it was written in three files, and it was never measured. Round 10
+       accepted it on the strength of a corpus that could not test it (entry 13).
+   13. **That corpus.** All 62 `PLANTED` entries were bare commands, so "0 escaped" carried no
+       information about wrapping — and the accept direction was worse than uninformative. Its
+       must-accept case produced no refusals *because of* the hole, so the test certifying the
+       instrument was derived from the instrument's blind spot and any real repair had to redden it.
+       That is entry 5 (probes generated from the sets they pin) at the level of a whole instrument
+       rather than a member.
+   14. **hugo's deleted `values`.** "Its own `bareIsBuild` decides before any flag can matter" — false;
+       `bareIsBuild` is evaluated after the token loop and gated on no target having been seen, so a
+       flag whose argument is not consumed suppresses it. Written one commit after this list was
+       extended, in the commit that extended it, and it made a real build read as nothing.
 
    The working countermeasure is not vigilance: it is that every new claim gets an oracle round before
    it is reported, and that a claim over a file's contents is rewritten to **run** the thing whenever
    running it is possible — as `tests/integration/shippedWorkflow*.test.ts` already does. Items 5, 6,
    7, 8 and 9 were each caught that way, by someone mutating the instrument rather than reading it.
 
-   **And the countermeasure is not sufficient, which item 8 is the proof of.** An oracle round is a
-   measurement against a corpus, and a corpus cannot establish an absence. Where the claim is "there is
-   nothing here", the instrument has to be inverted rather than tested harder — enumerate what is
-   permitted and refuse the rest, so the assertion needs no corpus and fails closed. That is what
-   `tests/helpers/shippedLaneCommands.ts` does, and it is the only repair in this list that answers a
-   whole item rather than an instance of one.
+   **And the countermeasure is not sufficient, which items 8 and 12 prove in sequence.** An oracle round
+   is a measurement against a corpus, and a corpus cannot establish an absence. Round 10's answer was to
+   invert the instrument — enumerate what is permitted and refuse the rest — and round 11 showed that
+   inverting the QUESTION is not the same as inverting the ANSWER. The allowlist asked the right
+   question and still fell through, because its parser conceded whatever it could not read. Inversion
+   only helps if the failure of the scan is itself a refusal.
+
+   Two further limits are worth stating, because each cost a round:
+
+   - **An oracle round on a pin whose needle is a closed enumeration proves nothing outside that
+     enumeration.** The pack-count pin passed every round it existed and went inert at exactly eleven
+     packs, when the numeral left the alternation its pattern listed. Matching nothing was a pass.
+   - **A corpus whose entries share a shape can only report on that shape.** Sixty-two bare commands
+     say nothing about a wrapped one, and the accept direction can end up defending the refuse
+     direction's vacuity rather than checking it.
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
@@ -1539,8 +1569,15 @@ which P1d refuted by showing `maxConcurrency` is project-scoped.
 
 ### Findings per round
 
-Every count below is **derived**: distinct finding identifiers appearing as a heading in the report,
-counted from the packs on disk. `id families` carries the derivation so the number can be checked
+**The rule below reproduces 25 of the 27 numeral-bearing rows**, and the two it does not are named.
+The rule: distinct finding identifiers appearing as a heading at level two to four, optionally
+backtick-wrapped, counted from the packs on disk.
+
+It said "Every count below is derived" for three rounds. Round 11 implemented the stated rule and ran it
+over all 27 rows: two disagree. Round 4's stage report gives 8 against a recorded 6, because two of its
+eight heading identifiers (`E6`, `X1`) are oracle-round ids rather than findings; round 7's P1d gives 0,
+because it enumerates its ids inline and carries none as headings. **Both exceptions are properties of
+those reports, not of the rule** — which is the opposite of what the next paragraph used to claim. `id families` carries the derivation so the number can be checked
 without recounting, and `summary` carries what that pack's own `summary.json` records where the two
 differ.
 
@@ -1577,6 +1614,9 @@ differ.
 | 10    | `implementation-reviewer` | REVISE  |       26 | B1-B6, M1-M9, m1-m11   |      26 |
 | 10    | `completion-reviewer`     | REVISE  |       20 | B1-B5, M1-M7, m1-m8    |      20 |
 | 10    | `qa-gatekeeper` (stage)   | REVISE  |       16 | B1-B9, A1-A7           |      16 |
+| 11    | `implementation-reviewer` | REVISE  |       16 | B1-B4, M1-M5, m1-m7    |      16 |
+| 11    | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M7, m1-m4    |      17 |
+| 11    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B8, A1-A7           |      15 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -1586,7 +1626,15 @@ headings, and its recorded 5 is exactly derivable from those — so it is enumer
 two, with a word prefix. Round 2's `R03` has four level-3 sections against a recorded 9. The honest
 statement is that identifier headings appear at level two or three, sometimes with a word prefix and
 sometimes backtick-wrapped, and that where a report enumerates advisories inline the recorded value was
-produced by hand. The rule as written fits the `completion-reviewer` reports and no others. Round 7's P1d slot is the one corrected: it recorded **3**
+produced by hand.
+
+This paragraph used to end "the rule as written fits the `completion-reviewer` reports and no others",
+and round 11 measured that false by fifteen reports: the rule reproduces all four
+`implementation-reviewer` rows, all six stage `qa-gatekeeper` rows from round 5 on, and five of the six
+P1d rows. A permissive reading — the identifier anywhere in the heading — reproduces only 8 of 27, so it
+is not the reading either. The sentence was a claim about how the reports are written, asserted over
+fifteen reports it had not been run against, in the paragraph whose whole subject is that counts must be
+derived rather than described. Round 7's P1d slot is the one corrected: it recorded **3**
 where its own report enumerates `M1` and `A1`-`A7` — eight — which round 7 had already reported for the
 round-6 pack and round 8 found again in the pack sealed at HEAD, so the seal event carried the defect
 forward instead of catching it. That pack is re-sealed, with the old value kept as `superseded:`. The
@@ -1841,7 +1889,7 @@ Serialization, stated because it is load-bearing: each manifest line is
 
 **The normalisation is the whole of it, and this record got it backwards once.** `.gitattributes`
 carries `* text=auto eol=lf`, so a file written with CRLF is stored LF-only and every checkout sees LF
-— while `git status` stays clean, because the filter runs on the way in. Exactly one of the 36 files
+— while `git status` stays clean, because the filter runs on the way in. Exactly one file
 across these packs is in that state: round 7's `qa-gatekeeper` report, 423 CRLF in this working tree and
 0 in its blob. The first six packs were LF-only throughout, which is why every round of agreement
 between a filtered hash and a raw-byte hash was luck.

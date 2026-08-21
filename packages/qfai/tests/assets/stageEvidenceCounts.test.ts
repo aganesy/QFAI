@@ -91,7 +91,8 @@ function countCases(text: string): number {
  * **Line endings are normalised to LF first**, and that is not cosmetic. `.gitattributes` carries
  * `* text=auto eol=lf`, so a file written with CRLF on Windows is stored LF-only and every checkout
  * sees LF — while `git status` stays clean, because the filter runs on the way in. Round 8 measured the
- * consequence: exactly one of the 36 pack files holds 423 CRLF in this working tree and 0 in its blob,
+ * consequence: exactly one pack file — round 7's `R03` — holds 423 CRLF in this working tree and 0 in
+ * its blob,
  * so hashing the working-tree bytes gave a seal that reproduced **only on this machine**. On
  * `ubuntu-latest` — and `tests/assets/**` runs in the `e2e` project, a required CI leg — the same test
  * would have failed from a clean checkout.
