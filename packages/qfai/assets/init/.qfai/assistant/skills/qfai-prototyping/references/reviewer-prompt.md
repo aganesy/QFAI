@@ -29,7 +29,7 @@ You write two different files. They are not interchangeable.
    reference, not from the block below.
 2. **Per-cycle summary** — `iter-NN/review.json`, one per cycle. The
    orchestrator folds it into `prototyping.json#iterations[]`, which
-   is what `qfai validate` checks. Its shape is the block below.
+   is what `npx qfai validate` checks. Its shape is the block below.
 
 The two share only `layoutAntiPatternsDetected` and
 `designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /
