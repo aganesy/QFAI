@@ -1,0 +1,134 @@
+/**
+ * QFAI-ASSETS-003 — the Stage 0 steering files finally have a detector.
+ *
+ * `qfai init` ships `.qfai/assistant/catalog/{manifest,product,structure,tech}.md`
+ * with literal `<...>` values, `qfai-implement` Stage 0 is told to take every
+ * gate command from `tech.md#standard-commands-copy-paste`, and no validator
+ * opened any of the four. The shipped templates themselves are driven here, so
+ * the test fails the moment the detector stops recognising the thing it is
+ * meant to catch.
+ */
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { afterEach, describe, expect, it } from "vitest";
+
+import { defaultConfig } from "../../src/core/config.js";
+import { validateAssistantAssets } from "../../src/core/validators/assistantAssets.js";
+
+// tests/validators/<this file> -> tests -> packages/qfai
+const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
+const shippedCatalogDir = path.join(packageRoot, "assets", "init", ".qfai", "assistant", "catalog");
+
+const tempDirs: string[] = [];
+
+async function newRoot(): Promise<string> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-assistant-assets-"));
+  tempDirs.push(root);
+  await mkdir(path.join(root, ".qfai", "assistant", "catalog"), { recursive: true });
+  return root;
+}
+
+async function writeCatalog(root: string, fileName: string, content: string): Promise<void> {
+  await writeFile(path.join(root, ".qfai", "assistant", "catalog", fileName), content, "utf-8");
+}
+
+/** Copy the file `qfai init` actually ships into the temp tree. */
+async function seedShipped(root: string, fileName: string): Promise<void> {
+  await writeCatalog(
+    root,
+    fileName,
+    await readFile(path.join(shippedCatalogDir, fileName), "utf-8"),
+  );
+}
+
+async function steeringFindings(root: string) {
+  const issues = await validateAssistantAssets(root, defaultConfig);
+  return issues.filter((found) => found.code === "QFAI-ASSETS-003");
+}
+
+afterEach(async () => {
+  while (tempDirs.length > 0) {
+    const dir = tempDirs.pop();
+    if (dir) await rm(dir, { recursive: true, force: true });
+  }
+});
+
+describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
+  it("flags the shipped tech.md and names the mandated gate-command section", async () => {
+    const root = await newRoot();
+    await seedShipped(root, "tech.md");
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    const [finding] = findings;
+    expect(finding?.severity).toBe("warning");
+    expect(finding?.rule).toBe("assistantAssets.steeringPlaceholder");
+    expect(finding?.file).toContain(path.join("catalog", "tech.md"));
+    expect(finding?.refs).toContain("Standard commands (copy-paste)");
+    // Every `<...>` slot in the section `qfai-implement` Stage 0 must read.
+    expect(finding?.message).toContain("Standard commands (copy-paste) (5)");
+    expect(finding?.loc?.line).toBeGreaterThan(0);
+  });
+
+  it("flags every one of the four shipped steering templates", async () => {
+    const root = await newRoot();
+    for (const fileName of ["manifest.md", "product.md", "structure.md", "tech.md"]) {
+      await seedShipped(root, fileName);
+    }
+
+    const findings = await steeringFindings(root);
+
+    expect(findings.map((found) => path.basename(found.file ?? "")).sort()).toEqual([
+      "manifest.md",
+      "product.md",
+      "structure.md",
+      "tech.md",
+    ]);
+  });
+
+  it("stays silent once the values are filled in", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "tech.md",
+      [
+        "# Tech Steering",
+        "",
+        "## Standard commands (copy-paste)",
+        "",
+        "- Install: `pnpm install --frozen-lockfile`",
+        "- Test: `pnpm test`",
+        "- Docs: <https://example.com/handbook>",
+        "- Contact: <team@example.com>",
+        "- Validate: `npx qfai validate --fail-on error --format github`",
+        "",
+      ].join("\n"),
+    );
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
+  it("flags a bare TBD value the way the operating baseline names it", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      ["# Structure Steering", "", "## Quality gates (SSOT)", "", "- lint: `TBD`", ""].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Quality gates (SSOT) (1)");
+  });
+
+  it("does not report a steering file that is absent", async () => {
+    const root = await newRoot();
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+});
