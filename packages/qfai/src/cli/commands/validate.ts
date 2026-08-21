@@ -170,7 +170,13 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
-  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  const { failOn, strictSuperseded } = resolveFailOn(
+    options,
+    configResult.config.validation.failOn,
+  );
+  if (strictSuperseded) {
+    emitStrictSupersededNotice(failOn);
+  }
   const willFail = shouldFail(normalized, failOn);
 
   const runLog = await writeValidateRunLog({
@@ -180,6 +186,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
     startedAt,
     command: "/qfai-validate",
     status: willFail ? "fail" : "pass",
+    failOn,
   });
   const runLogPath = toRelativePath(root, runLog.reportDir);
 
@@ -193,7 +200,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   const format = options.format ?? "text";
   if (format === "text") {
-    emitText(normalized);
+    emitText(normalized, failOn);
     emitTextRunLog(runLogPath);
   }
   if (format === "github") {
@@ -520,17 +527,39 @@ function recountIssues(
   };
 }
 
-function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
+/**
+ * 明示された `--fail-on` は `--strict` より優先される。だが `--strict` は
+ * ヘルプ上「方針」として書かれているため、既存の `--strict` レーンに後から
+ * `--fail-on error` を足すと warning ゲートが黙って外れる。どちらが勝ったかを
+ * 呼び出し側が名指しできるよう、解決値と「`--strict` が上書きされたか」を
+ * 併せて返す。閾値が一致する `--strict --fail-on warning` は矛盾ではないので
+ * 上書きとは扱わない。
+ */
+type ResolvedFailOn = {
+  failOn: FailOn;
+  strictSuperseded: boolean;
+};
+
+function resolveFailOn(options: ValidateOptions, fallback: FailOn): ResolvedFailOn {
   if (options.failOn) {
-    return options.failOn;
+    return {
+      failOn: options.failOn,
+      strictSuperseded: options.strict && options.failOn !== "warning",
+    };
   }
   if (options.strict) {
-    return "warning";
+    return { failOn: "warning", strictSuperseded: false };
   }
-  return fallback;
+  return { failOn: fallback, strictSuperseded: false };
 }
 
-function emitText(result: ValidationResult): void {
+function emitStrictSupersededNotice(failOn: FailOn): void {
+  process.stderr.write(
+    `qfai validate: --strict is superseded by --fail-on ${failOn} (effective failOn=${failOn})\n`,
+  );
+}
+
+function emitText(result: ValidationResult, failOn: FailOn): void {
   for (const item of result.issues) {
     const location = item.file ? ` (${item.file})` : "";
     const refs = item.refs && item.refs.length > 0 ? ` refs=${item.refs.join(",")}` : "";
@@ -549,6 +578,9 @@ function emitText(result: ValidationResult): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
+  // 実効 failOn はこれまで `--format github` の summary 行にしか現れず、既定の
+  // text 出力を読むレビュアーには終了コードの根拠が見えなかった。
+  process.stdout.write(`fail-on: ${failOn}\n`);
 }
 
 function emitTextRunLog(runLogPath: string): void {
