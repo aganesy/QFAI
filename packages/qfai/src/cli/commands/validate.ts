@@ -400,8 +400,13 @@ function buildDeprecationIssue(args: {
  * families and therefore claimed, for example, that `--profile tdd` had
  * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
  * calls it.
+ *
+ * Entries are prefix globs, never bare codes: a gate that gains a second code
+ * would otherwise drop out of the notice unannounced. Exported so
+ * `tests/core/findingCodeGrammar.test.ts` can prove that for the gates whose
+ * emitted codes it scans.
  */
-const GATE_GROUP_FAMILIES = {
+export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
@@ -423,7 +428,7 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
