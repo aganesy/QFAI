@@ -119,6 +119,30 @@ describe("reviewer verdict vocabulary", () => {
     }
   });
 
+  // The pointer to the authoritative schema and the claim about what that schema
+  // says sit on the same line of qfai-implement/SKILL.md. Stating the mapping as
+  // `status: "REVISE"` there sends an author to write a third verdict that
+  // `ALLOWED_ROSTER_STATUS` in `core/validators/reviewArtifacts.ts` rejects, so a
+  // correctly recorded rework round fails `QFAI-REVIEW-*` on the full scan.
+  it("names the same serialized status in the implement skill and its reference", async () => {
+    for (const content of await readShipped("skills/qfai-implement/SKILL.md")) {
+      expect(content).toContain('the `REVISE` -> `status: "FAIL"` mapping');
+      expect(content).not.toContain('`status: "REVISE"`');
+    }
+
+    for (const content of await readShipped(
+      "skills/qfai-implement/references/review-artifact-layout.md",
+    )) {
+      expect(content).toContain(
+        'A `REVISE` verdict during iteration is written as `status: "FAIL"`',
+      );
+    }
+
+    for (const content of await readShipped("constitution/shared-skill-delegation-baseline.md")) {
+      expect(content).toContain('maps to `status: "FAIL"`');
+    }
+  });
+
   it("keeps the review response template on PASS | REVISE", async () => {
     for (const content of await readShipped(
       "skills/qfai-discussion/templates/review/Rxx_reviewer.md",
