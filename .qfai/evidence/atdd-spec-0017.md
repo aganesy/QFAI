@@ -173,7 +173,7 @@ declared `US` is covered by a `describe`". **That script was not in the reposito
 landed in one atomic commit, history could not settle the ordering either. Round 1's `qa-gatekeeper`
 found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 23 tests
 in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`, and it reports what
-this stage claims: `8 claim(s) backed by a test annotation (spec-0017)`, exit 0.
+this stage claims: `9 claim(s) backed by a test annotation (spec-0017)`, exit 0.
 
 **5. One `runInit`, shared across the describes, with an `afterAll` teardown.** Nine inits of a full
 asset tree is nine times the same work; this spec's own integration slice was pushed past its timeout
@@ -314,7 +314,7 @@ pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneComma
       tests/unit/buildCommand.test.ts where it belongs)
 
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
-  -> check-atdd-annotation-ledger: 8 claim(s) backed by a test annotation (spec-0017), exit 0
+  -> check-atdd-annotation-ledger: 9 claim(s) backed by a test annotation (spec-0017), exit 0
 
 node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
   -> exit 1; 127 of 208 claims unbacked; see CR-20260820-0011
@@ -428,7 +428,94 @@ files — a number derived once and then described as derived.**
   callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
   the tracked set are equal.
 
-**Round 11 broke the instrument this stage had put the story on, and that is the round's result.**
+**The gate moved for the first time in eleven rounds: `error=2` to `error=1`.** Eleven rounds reviewed
+the instruments and none of them went back to the two open obligations, which is worth naming as its own
+failure mode — a review loop can converge on the quality of what exists while what is missing stays
+missing, because every round's agenda is the previous round's findings.
+
+**`US-0017-0007` is covered, and the reason it was uncovered was a category error.** Its E2E annotation
+was removed in round 1 because its only assertion — that `qfai.config.yaml` exists after init — was
+vacuous and duplicated `initE2E.test.ts`. What nobody then asked is why an E2E test for this story was
+looking at an adopter's tree at all. The story reads "as a maintainer tuning a 415-file suite", and its
+three slice surfaces are this repository's own vitest projects, CI matrix and scripts. Every other
+`tests/e2e/**` file here runs `qfai init` into a temporary directory, so the habit of the suite pointed at
+a tree the story is not about, and "no knob file ships" was recorded as the obstacle. It was never the
+obstacle.
+
+The new test, `tests/e2e/spec0017RunnerParallelismE2E.test.ts`, also answers a defect the eight existing
+tests share: every one of them asserts that a knob is **declared** at the site the runner reads it, and
+`vitest.knobs.ts` contains the proof that a declaration can be declared and do nothing — its own docstring
+records a project-level worker declaration that "type-checked, it ran, it emitted no warning — and it did
+nothing", at a 0.93 wall-clock ratio. So the story had eight tests and no assertion that the axis has an
+effect. This one observes the pool: four fixture files record their live intervals, run twice through the
+real `rootKnobs`, and the peak number of simultaneously live files is 1 at one worker and greater than 1
+at four. No wall-clock ratio and no threshold, because a threshold needs a machine and this suite runs on
+`ubuntu-latest` too.
+
+Falsified four ways, all reddening: declaring the axis at a scope the runner ignores, replacing the
+override with a fixed literal, switching off file parallelism, and renaming the override variable. **The
+fourth found a self-referential oracle in the first version of the test** — it read `WORKERS_ENV` from the
+module it was testing, so a rename carried the test along with it and every assertion stayed green. The
+name is a contract with the caller, so it is now pinned as a literal, which is the one value in that file
+that must not be derived from its subject.
+
+**`TC-0017-0016` and `TC-0017-0030` are covered**, in `tests/integration/spec0017OwnWorkflowScope.test.ts`,
+and both are about the own tree for the same reason. `QFAI-ATDD-112` now reports six rather than eight, and
+**the remaining six are exactly the parked rows**: `TC-0017-0032`..`TC-0017-0035` on `CR-20260820-0007`,
+whose acceptance criteria need numbers written into `07_Decisions.md` that `/qfai-implement` may not patch,
+and `TC-0017-0069` / `TC-0017-0070` on `CR-20260820-0012` and `DR-0017-0010`. For the first time the
+uncovered set and the recorded-blocked set are the same set.
+
+### A test that timed out, fixed structurally rather than by raising its budget
+
+`TC-0003-0039` timed out at 18.7s against a 15s limit while four projects ran together, and it belongs to
+`spec-0003` rather than to this spec — found because this stage's own runs surfaced it. It is recorded here
+because the diagnosis is the standing instruction applied to a concrete case: **the parallelism was not the
+cause, and raising the timeout would have moved the number instead of the cost.**
+
+Measured in isolation, with the machine otherwise idle, the file spent **14.36s** in tests and this one
+test spent 15.3s of a 15s budget. A test that costs its entire budget unloaded exceeds it under any load
+at all, so the timeout was a structural mismatch that ten workers merely revealed.
+
+Two structural facts caused it, and both are fixed:
+
+- **`spawnSync` blocks the worker.** A fork waiting on `git` cannot yield its slot, so nine sequential
+  spawns cost the sum of nine spawns and the pool gains nothing from having other work available. The two
+  spawn sites are promisified `execFile` now.
+- **Three independent fixtures were serialised for no reason.** A shallow clone, an orphan repo and an
+  unrecognised-path repo share no state — each has its own temporary directory — so they are built
+  concurrently, which is what makes the async conversion pay.
+
+Measured after: **9.39s**, down from 14.36s, with all ten tests passing.
+
+The conversion also demonstrated why a behaviour-preserving refactor is a claim rather than a fact. Making
+`git()` async left **six call sites without `await`**, `tsc -b` accepted every one of them, and the
+failure surfaced as a *different* test asserting the absence of a warning it now received. The type checker
+could not see it and the lint rule for floating promises did not fire on the shape used; what caught it was
+the suite.
+
+### A cross-artifact obligation: `TC-0017-0016` and the tree disagree
+
+The case reads "the set of non-minimal permission blocks is exactly the verdict's empty map and the
+publishing job's token write" — two. Measured, three job-level blocks depart from the workflow-level
+`contents: read`:
+
+```text
+ci.yml       ci-pass          {}                                   named by the case
+release.yml  github-release   {"contents":"write"}                 NOT named by the case
+release.yml  publish          {"contents":"read","id-token":"write"} named by the case
+```
+
+`github-release` needs `contents: write` to create a release, so the third departure is necessary rather
+than an over-grant. Two readings are available — the case is stale, or "non-minimal" means "broader than
+the job needs" and `contents: write` is minimal for that job — and the case's text does not distinguish
+them. **The test asserts the measured set of three and does not pretend the count is two.** Bending an
+assertion to fit a sentence the tree contradicts is how `US-0017-0004` spent ten rounds asserting
+something it could not check. Correcting `06_Test-Cases.md` belongs to whoever owns it; the property the
+case exists to protect — that the set of departures is closed and every member deliberate — holds under
+either reading and is what the test pins.
+
+**Round 11 broke the instrument this stage had put the story on, and that is the round's other result.**
 
 Three reviewers planted independently and the numbers agreed: fifteen of eighteen probes, and six planted
 into the shipped orchestrator with all ten annotated rows green and 123 tests across every other
@@ -1446,7 +1533,7 @@ currency both times.** Round 3 found the first version written at `16f611c7` bef
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
 round 11: the e2e figure is 1440 and the integration+unit figure 1212.
 
-e2e callsites at this tree: 877
+e2e callsites at this tree: 879
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -1480,7 +1567,7 @@ pnpm check-types                                exit 0
 pnpm -C packages/qfai test:e2e                  1440 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1212 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
-                                                8 claim(s) backed, exit 0
+                                                9 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0
   (named because round 9 found it absent from this block while `release.yml` runs it, and because it
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)

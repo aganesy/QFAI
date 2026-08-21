@@ -443,22 +443,26 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     ).toMatch(/how a script is [*_]?called[*_]? rather than what it [*_]?does[*_]?/);
   });
 
-  it("records the withdrawn US-0017-0007 claim rather than scoring it as covered", async () => {
+  it("requires the restored US-0017-0007 claim to be carried by a test that asserts an effect", async () => {
     const text = await readFile(MATRIX, "utf8");
     const rows = parseMatrix(text);
     const row = rows.find((candidate) => candidate.id === "US-0017-0007");
 
-    expect(row, "the withdrawn story stays in the matrix as the gap it is").toBeDefined();
+    expect(row, "the story keeps its row in the matrix").toBeDefined();
     // A floor first: `every` over an empty map is vacuously true, so without this a row whose cells
     // failed to parse would pass the assertion below. Round 2's `implementation-reviewer` found it.
     expect(
       Object.keys(row?.cells ?? {}).length,
       "the row must have parsed into all eight columns before its scores mean anything",
     ).toBe(COLUMNS.length);
-    expect(
-      Object.values(row?.cells ?? {}).every((score) => score === "❌"),
-      "a story no test covers cannot score above ❌ in any column",
-    ).toBe(true);
+    // The scores are the matrix owner's to raise now that the story is covered, so this no longer
+    // demands all-❌ — it demands the row not claim more than the test delivers. `Oracle strength` is the
+    // column the withdrawal turned on, and the new test's oracle is a measured effect, so ⚠️ or ✅ are
+    // both defensible; what is not is a raised score with no test behind it, which the ledger check below
+    // is what actually prevents.
+    expect(Object.keys(row?.cells ?? {}), "the row must still carry every column").toHaveLength(
+      COLUMNS.length,
+    );
     // Anchored to the row's own justification section, not to the file. `toMatch(/withdrawn/i)` over
     // the whole record was satisfied by any occurrence anywhere — changing this very section's
     // "withdrawn" to "retired" left it green, which round 7 raised and round 8 measured.
@@ -478,14 +482,39 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       "every section for the withdrawn story must say the claim was withdrawn",
     ).toEqual([]);
 
-    // The ledger line must be gone too, or the matrix and the gate disagree.
+    // The claim is restored, and this is the half that stops a restoration being a relapse. The
+    // annotation ledger is a bare list of ids — `CR-20260820-0011` is on file about 127 entries in it
+    // that no test carries — so a line there is not coverage. Three things must hold together.
     const ledger = await readFile(
       path.resolve(__dirname, "../../../../tests/e2e/qfai-traceability.md"),
       "utf8",
     );
     expect(
       ledger.includes("QFAI:SPEC-0017:US-0017-0007"),
-      "a withdrawn claim must not keep certifying itself through the annotation ledger",
-    ).toBe(false);
+      "the restored claim must be registered where the gate reads it",
+    ).toBe(true);
+
+    const carrier = await readFile(
+      path.resolve(__dirname, "../e2e/spec0017RunnerParallelismE2E.test.ts"),
+      "utf8",
+    );
+    expect(
+      carrier.includes("QFAI:SPEC-0017:US-0017-0007"),
+      "a real test file must carry the annotation, not only the ledger",
+    ).toBe(true);
+
+    // And the assertion must be over an EFFECT. The claim was withdrawn because its predecessor asserted
+    // that a file exists — true of a project with no knobs in it at all — so a restored claim carried by
+    // another existence check would be the same defect with a new file name. `vitest.knobs.ts` records a
+    // declaration that "did nothing" while type-checking and emitting no warning; the distinguishing
+    // property is that raising the axis changes what the runner does.
+    expect(
+      /peakConcurrency\(/.test(carrier),
+      "the carrier must observe the pool's behaviour rather than read the configuration back",
+    ).toBe(true);
+    expect(
+      /spawnSync\(/.test(carrier),
+      "and it must run the runner, which is what makes the observation an effect",
+    ).toBe(true);
   });
 });

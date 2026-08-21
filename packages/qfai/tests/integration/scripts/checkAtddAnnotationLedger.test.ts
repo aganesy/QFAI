@@ -282,7 +282,7 @@ describe("the CLI entry point", () => {
     const root = path.resolve(__dirname, "../../../../..");
     const result = run(["--spec", "0017"], root);
     expect(result.status).toBe(0);
-    expect(result.out).toMatch(/8 claim\(s\) backed by a test annotation \(spec-0017\)/);
+    expect(result.out).toMatch(/9 claim\(s\) backed by a test annotation \(spec-0017\)/);
   });
 
   it("gives the same answer from a subdirectory, because the root is module-relative", async () => {
@@ -394,9 +394,11 @@ describe("the guard against this repository's own ledger", () => {
     expect(scoped.unbacked, "every spec-0017 ledger claim must name a test that exists").toEqual(
       [],
     );
-    expect(scoped.checked, "spec-0017 claims eight stories after US-0017-0007 was withdrawn").toBe(
-      8,
-    );
+    expect(
+      scoped.checked,
+      "spec-0017 claims nine stories: US-0017-0007's claim was withdrawn in round 1 and restored in " +
+        "round 11, carried by a test that observes the runner pool rather than reading its configuration",
+    ).toBe(9);
 
     // Repo-wide the guard does NOT pass, and that is the finding rather than a defect in the guard:
     // 127 of 208 claims are backed by no annotation in any E2E test file. `CR-20260820-0011`.

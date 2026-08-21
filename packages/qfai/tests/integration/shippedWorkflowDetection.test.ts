@@ -15,7 +15,10 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { spawnSync } from "node:child_process";
+import { execFile } from "node:child_process";
+import { promisify } from "node:util";
+
+const execFileAsync = promisify(execFile);
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -80,14 +83,13 @@ async function runShell(body: string, cwd: string, env: Record<string, string>):
   const outputPath = path.join(stage, "github-output.txt");
   await writeFile(scriptPath, body, "utf-8");
   await writeFile(outputPath, "", "utf-8");
-  const child = spawnSync("bash", [scriptPath], {
+  // `execFile`, not `spawnSync`: a fork blocked in `spawnSync` cannot yield its slot, so the pool gains
+  // nothing from having other work available. `TC-0003-0039` builds three independent fixtures and this
+  // is what lets them overlap.
+  const child = await run("bash", [scriptPath], {
     cwd,
-    encoding: "utf-8",
     env: { ...process.env, GITHUB_OUTPUT: outputPath, ...env },
   });
-  if (child.error) {
-    throw child.error;
-  }
   const outputs: Record<string, string> = {};
   for (const line of (await readFile(outputPath, "utf-8")).split(/\r?\n/)) {
     const eq = line.indexOf("=");
@@ -98,16 +100,43 @@ async function runShell(body: string, cwd: string, env: Record<string, string>):
   return { status: child.status, stdout: child.stdout ?? "", stderr: child.stderr ?? "", outputs };
 }
 
-/** Runs git in a fixture repo, throwing loudly on any failure. */
-function git(cwd: string, ...args: string[]): string {
-  const child = spawnSync("git", args, { cwd, encoding: "utf-8" });
-  if (child.error) {
-    throw child.error;
+/**
+ * One child process, awaited rather than blocked on.
+ *
+ * A non-zero exit is not an error here — several callers assert on the status — so the rejection an
+ * `execFile` promise raises for it is caught and folded back into the same shape `spawnSync` returned.
+ */
+async function run(
+  command: string,
+  args: readonly string[],
+  options: { cwd: string; env?: NodeJS.ProcessEnv },
+): Promise<{ status: number | null; stdout: string; stderr: string }> {
+  try {
+    const { stdout, stderr } = await execFileAsync(command, [...args], {
+      cwd: options.cwd,
+      encoding: "utf-8",
+      ...(options.env === undefined ? {} : { env: options.env }),
+    });
+    return { status: 0, stdout, stderr };
+  } catch (error) {
+    if (typeof error === "object" && error !== null && "code" in error && "stdout" in error) {
+      return {
+        status: typeof error.code === "number" ? error.code : 1,
+        stdout: String(error.stdout ?? ""),
+        stderr: "stderr" in error ? String(error.stderr ?? "") : "",
+      };
+    }
+    throw error;
   }
+}
+
+/** Runs git in a fixture repo, throwing loudly on any failure. */
+async function git(cwd: string, ...args: string[]): Promise<string> {
+  const child = await run("git", args, { cwd });
   if (child.status !== 0) {
     throw new Error(`git ${args.join(" ")} failed (${String(child.status)}): ${child.stderr}`);
   }
-  return (child.stdout ?? "").trim();
+  return child.stdout.trim();
 }
 
 /** A fresh fixture repository with one base commit (README.md only). */
@@ -129,11 +158,11 @@ const COMMIT_IDENTITY = [
 
 async function makeRepo(): Promise<{ dir: string; baseSha: string }> {
   const dir = await newTempDir();
-  git(dir, "init", "--initial-branch=main");
+  await git(dir, "init", "--initial-branch=main");
   await writeFile(path.join(dir, "README.md"), "# fixture\n", "utf-8");
-  git(dir, "add", ".");
-  git(dir, ...COMMIT_IDENTITY, "commit", "-m", "base");
-  return { dir, baseSha: git(dir, "rev-parse", "HEAD") };
+  await git(dir, "add", ".");
+  await git(dir, ...COMMIT_IDENTITY, "commit", "-m", "base");
+  return { dir, baseSha: await git(dir, "rev-parse", "HEAD") };
 }
 
 /** Writes one file (creating parents) and commits it. */
@@ -141,8 +170,8 @@ async function commitChange(dir: string, relPath: string, content: string): Prom
   const filePath = path.join(dir, relPath);
   await mkdir(path.dirname(filePath), { recursive: true });
   await writeFile(filePath, content, "utf-8");
-  git(dir, "add", ".");
-  git(dir, ...COMMIT_IDENTITY, "commit", "-m", `change ${relPath}`);
+  await git(dir, "add", ".");
+  await git(dir, ...COMMIT_IDENTITY, "commit", "-m", `change ${relPath}`);
 }
 
 /**
@@ -286,25 +315,39 @@ describe("TC-0003-0039 (TDD-0039): shallow clone and unreachable base ref fail o
 
   /** Builds and runs the three degraded fixtures against the REAL shell. */
   async function runDegradedCases(): Promise<DegradedCase[]> {
-    // Shallow: a --depth 1 clone cannot prove the base commit reachable.
-    const origin = await makeRepo();
-    await commitChange(origin.dir, "src/app.ts", "export {};\n");
-    const cloneParent = await newTempDir();
-    git(cloneParent, "clone", "--depth", "1", pathToFileURL(origin.dir).href, "shallow-clone");
-    const shallowRun = await runDetection(path.join(cloneParent, "shallow-clone"), origin.baseSha);
-
-    // Unreachable base: a syntactically valid sha no commit answers to.
-    const orphan = await makeRepo();
-    await commitChange(orphan.dir, "src/app.ts", "export {};\n");
-    const unreachableRun = await runDetection(
-      orphan.dir,
-      "0123456789abcdef0123456789abcdef01234567",
-    );
-
-    // Unrecognized path: the only change is neither docs nor source class.
-    const stranger = await makeRepo();
-    await commitChange(stranger.dir, "logo.png", "placeholder bytes\n");
-    const unrecognizedRun = await runDetection(stranger.dir, stranger.baseSha);
+    // The three fixtures share no state — each has its own temporary directory — so they are built
+    // CONCURRENTLY. Serialised, this test spent its entire 15s budget with the machine idle and timed out
+    // at 18.7s under load, which is a structural mismatch rather than a parallelism problem: raising the
+    // timeout would have moved the number instead of the cost.
+    const [shallowRun, unreachableRun, unrecognizedRun] = await Promise.all([
+      // Shallow: a --depth 1 clone cannot prove the base commit reachable.
+      (async (): Promise<ShellRun> => {
+        const origin = await makeRepo();
+        await commitChange(origin.dir, "src/app.ts", "export {};\n");
+        const cloneParent = await newTempDir();
+        await git(
+          cloneParent,
+          "clone",
+          "--depth",
+          "1",
+          pathToFileURL(origin.dir).href,
+          "shallow-clone",
+        );
+        return runDetection(path.join(cloneParent, "shallow-clone"), origin.baseSha);
+      })(),
+      // Unreachable base: a syntactically valid sha no commit answers to.
+      (async (): Promise<ShellRun> => {
+        const orphan = await makeRepo();
+        await commitChange(orphan.dir, "src/app.ts", "export {};\n");
+        return runDetection(orphan.dir, "0123456789abcdef0123456789abcdef01234567");
+      })(),
+      // Unrecognized path: the only change is neither docs nor source class.
+      (async (): Promise<ShellRun> => {
+        const stranger = await makeRepo();
+        await commitChange(stranger.dir, "logo.png", "placeholder bytes\n");
+        return runDetection(stranger.dir, stranger.baseSha);
+      })(),
+    ]);
 
     return [
       { label: "shallow clone", run: shallowRun },
