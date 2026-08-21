@@ -851,10 +851,43 @@ function interpreterTail(
   return { kind: "tokens", tokens: [] };
 }
 
-function command(input: readonly string[], ctx: Context): BuildVerdict {
-  let tokens = stripPrefix(input);
-  if (!tokens.length) return "none";
+/**
+ * What a command's grammar decides BEFORE any token is read, in one place.
+ *
+ * Grouped because the order is load-bearing and used to be spread over two hundred lines. `alwaysBuilds`
+ * is only safe because the never-flags are refused first — `ant -version` read as a build until the
+ * single-dash spelling was declared — and a per-tool never must beat it for the same reason.
+ */
+function openingVerdict(
+  tokens: readonly string[],
+  tool: ToolGrammar | undefined,
+): BuildVerdict | undefined {
   if (refusedBy(tokens, NEVER_FLAGS)) return "none";
+  if (refusedBy(tokens, new Set(tool?.never ?? []))) return "none";
+  if (tool?.alwaysBuilds === true) return "build";
+  return undefined;
+}
+
+/** A command reduced to the program it runs and that program's own arguments. */
+interface Head {
+  readonly verdict?: BuildVerdict;
+  readonly tokens?: readonly string[];
+  readonly verb?: string;
+}
+
+/**
+ * Everything before the token loop: prefix stripping, the `node --run` shortcut, the interpreter
+ * hand-off and the script-file case.
+ *
+ * Extracted because `command()` was 211 lines and that length had a measured consequence: `bareIsBuild`
+ * is decided after the loop and hugo's grammar is declared 650 lines earlier, so a comment claiming the
+ * first "decides before any flag can matter" was written, reviewed and believed by readers who could not
+ * see both ends. Round 11 `B4`.
+ */
+function resolveHead(input: readonly string[], ctx: Context): Head {
+  let tokens = stripPrefix(input);
+  if (!tokens.length) return { verdict: "none" };
+  if (refusedBy(tokens, NEVER_FLAGS)) return { verdict: "none" };
 
   // Unquoted once, here, because `namesACommand` unquotes and this did not — so `stripPrefix` could
   // choose a tail beginning at a token this stage then failed to recognise. `sudo "pnpm" build` was
@@ -868,7 +901,7 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   // manager, so the shortcut belongs to node's entry in MANAGERS — and while it was a bare
   // string check, deleting `node` from that set changed no verdict and the member was unpinnable.
   if (head === "node" && MANAGERS.has(head)) {
-    if (tokens[1] === "--run") return script(tokens[2] ?? "", ctx);
+    if (tokens[1] === "--run") return { verdict: script(tokens[2] ?? "", ctx) };
     tokens = tokens.slice(1);
   } else {
     // The extension is stripped here too: `bash.exe -c "pnpm build"` and `pwsh.exe -Command ...` were
@@ -876,11 +909,11 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
     const interpreter = INTERPRETERS[stripExecutableExtension(head)];
     if (interpreter !== undefined) {
       const tail = interpreterTail(tokens, interpreter, head);
-      if (tail.kind === "shell") return shell(tail.line, ctx);
+      if (tail.kind === "shell") return { verdict: shell(tail.line, ctx) };
       tokens = [...tail.tokens];
     }
   }
-  if (!tokens.length) return "none";
+  if (!tokens.length) return { verdict: "none" };
 
   const first = unquote(tokens[0] ?? "");
   // The executable extension is stripped BEFORE the script-file test, because `pnpm.cmd` is a manager
@@ -890,10 +923,113 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const stripped = stripExecutableExtension(commandName(first));
   const known = MANAGERS.has(stripped) || TOOLS[stripped] !== undefined || BUNDLERS.has(stripped);
   if (!known && scriptFileRe().test(first)) {
-    return namesABuild(first.split("/").pop() ?? "") ? "heuristic" : "none";
+    return { verdict: namesABuild(first.split("/").pop() ?? "") ? "heuristic" : "none" };
+  }
+  return { tokens, verb: stripped };
+}
+
+/**
+ * What one flag token does: end the line as a build, move the manifest lookup, and/or consume tokens.
+ *
+ * **`consume` is the field with a consequence far from here.** A flag whose argument this does not
+ * consume leaves that argument sitting in target position, which sets `sawBare` in `command()` and
+ * suppresses the `bareIsBuild` decision at its end. Round 11 measured thirteen wrong verdicts across nine
+ * tools from that one relationship — and the reason a comment claiming the opposite could be written,
+ * reviewed and believed is that the two ends were 130 lines apart inside a 211-line function.
+ *
+ * The three effects are separate on purpose. A `dirs` flag consumes AND moves the lookup; a `values` flag
+ * consumes and does not; an inline `flag=value` moves the lookup and consumes NOTHING, because its value
+ * is inside the same token. A first extraction collapsed those and moved 143 member cases.
+ */
+interface FlagAction {
+  readonly build?: boolean;
+  readonly cwd?: string;
+  readonly consume: number;
+}
+
+function readFlag(
+  token: string,
+  tokens: readonly string[],
+  i: number,
+  g: {
+    readonly dirs: ReadonlySet<string>;
+    readonly values: ReadonlySet<string>;
+    readonly optional: ReadonlySet<string>;
+    readonly buildFlags: ReadonlySet<string>;
+    readonly isManager: boolean;
+    readonly verb: string;
+  },
+): FlagAction {
+  const { dirs, values, optional, buildFlags, isManager, verb } = g;
+  const next = tokens[i + 1];
+
+  const inline = /^(--?[\w.-]+)=(.*)$/.exec(token);
+  if (inline) {
+    const [, flag = "", value = ""] = inline;
+    // A build flag means build whichever way it is spelled. Every other branch here is exhaustive over
+    // the flag's meaning and this one skipped `buildFlags` entirely, so `cmake --build=.` was `none`
+    // while `cmake --build .` was `build`.
+    if (buildFlags.has(flag)) return { build: true, consume: 0 };
+    // No `consume`: the value is in this token.
+    if (dirs.has(flag)) return { cwd: normalise(value), consume: 0 };
+    if (TARGET_FLAGS.has(flag) && !RULES.isPathLike(value) && namesABuild(value)) {
+      return { build: true, consume: 0 };
+    }
+    return { consume: 0 };
   }
 
-  const verb = stripped;
+  if (TARGET_FLAGS.has(token)) {
+    if (next !== undefined && !next.startsWith("-") && namesABuild(next)) {
+      return { build: true, consume: 0 };
+    }
+    return { consume: next === undefined ? 0 : 1 };
+  }
+
+  if (optional.has(token)) {
+    // An optional-argument flag consumes only what could be its argument. `make -j build` is a real
+    // build; `make -j 4 build` is the same build with a job count.
+    return { consume: next !== undefined && /^\d+$/.test(next) ? 1 : 0 };
+  }
+
+  if (dirs.has(token) || values.has(token)) {
+    if (next === undefined || next.startsWith("-")) return { consume: 0 };
+    // Both consume; only a `dirs` flag moves the lookup.
+    return dirs.has(token) ? { cwd: normalise(next), consume: 1 } : { consume: 1 };
+  }
+
+  if (buildFlags.has(token)) return { build: true, consume: 0 };
+
+  // Three reasons not to consume, and each has a case that fails without it:
+  //
+  //   1. the flag is known to take no value (`--silent`), or takes one for THIS manager (`npm -w`);
+  //   2. the next token NAMES a command — `npx --yes esbuild src/index.ts --bundle` had the bundler
+  //      eaten, because a later bare token made the flag look value-taking;
+  //   3. nothing further could be the script, so consuming would leave the line empty
+  //      (`pnpm --no-frozen-lockfile build`, where the flag is in no list anyone wrote).
+  //
+  // v12 had only (3) and called it a replacement for the boolean list. Round 10 measured all
+  // twenty-two members changing a verdict without it.
+  if (isManager) {
+    const managerValues = new Set(MANAGER_VALUES[verb] ?? []);
+    const laterBare = tokens.slice(i + 2).some((candidate) => !candidate.startsWith("-"));
+    const consumes =
+      managerValues.has(token) ||
+      (!MANAGER_BOOLEAN.has(token) &&
+        next !== undefined &&
+        !next.startsWith("-") &&
+        !namesACommand(next) &&
+        laterBare);
+    if (consumes && next !== undefined) return { consume: 1 };
+  }
+  return { consume: 0 };
+}
+
+function command(input: readonly string[], ctx: Context): BuildVerdict {
+  const head = resolveHead(input, ctx);
+  if (head.verdict !== undefined) return head.verdict;
+  const tokens = head.tokens ?? [];
+  const verb = head.verb ?? "";
+
   if (BUNDLERS.has(verb)) return "build";
   const tool = ctx.unknownBinary === true ? UNKNOWN_BINARY : TOOLS[verb];
   const isManager = ctx.unknownBinary !== true && MANAGERS.has(verb);
@@ -907,10 +1043,8 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
   const builds = new Set(tool?.builds ?? []);
   const stops = new Set(tool?.stops ?? []);
   const buildPrefixes = tool?.buildPrefixes ?? [];
-  // Built once per call, not once per token — the previous version constructed a `Set` inside the
-  // predicate, so it was rebuilt for every token of every command.
-  if (refusedBy(tokens, new Set(tool?.never ?? []))) return "none";
-  if (tool?.alwaysBuilds === true) return "build";
+  const opening = openingVerdict(tokens, tool);
+  if (opening !== undefined) return opening;
   const noScripts = tokens.some((t) => NO_SCRIPTS.has(t));
   let cwd = ctx.cwd;
   let sawBare = false;
@@ -926,68 +1060,17 @@ function command(input: readonly string[], ctx: Context): BuildVerdict {
     }
 
     if (token.startsWith("-")) {
-      const inline = /^(--?[\w.-]+)=(.*)$/.exec(token);
-      if (inline) {
-        const [, flag = "", value = ""] = inline;
-        // A build flag means build whichever way it is spelled. Every other branch in this loop is
-        // exhaustive over the flag's meaning and this one skipped `buildFlags` entirely, so
-        // `cmake --build=.` was `none` while `cmake --build .` was `build`. No declared tool is known
-        // to ACCEPT the inline form — cmake requires the spaced spelling, and `tsc --outDir=dist` gets
-        // the right answer through `bareIsBuild` rather than through the flag — so this closes a
-        // reachability gap rather than a demonstrated miss. It is one line, and the asymmetry was the
-        // only place the loop's meaning depended on the spelling.
-        if (buildFlags.has(flag)) return "build";
-        if (dirs.has(flag)) cwd = normalise(value);
-        else if (TARGET_FLAGS.has(flag) && !RULES.isPathLike(value) && namesABuild(value)) {
-          return "build";
-        }
-        continue;
-      }
-      if (TARGET_FLAGS.has(token)) {
-        const value = tokens[i + 1];
-        if (value !== undefined && !value.startsWith("-") && namesABuild(value)) return "build";
-        if (value !== undefined) i += 1;
-        continue;
-      }
-      if (optional.has(token)) {
-        // An optional-argument flag consumes only what could be its argument. `make -j build` is a
-        // real build; `make -j 4 build` is the same build with a job count.
-        const value = tokens[i + 1];
-        if (value !== undefined && /^\d+$/.test(value)) i += 1;
-        continue;
-      }
-      if (dirs.has(token) || values.has(token)) {
-        const value = tokens[i + 1];
-        if (value !== undefined && !value.startsWith("-")) {
-          if (dirs.has(token)) cwd = normalise(value);
-          i += 1;
-        }
-        continue;
-      }
-      if (buildFlags.has(token)) return "build";
-      // Three reasons not to consume, and each has a case that fails without it:
-      //
-      //   1. the flag is known to take no value (`--silent`), or takes one for THIS manager (`npm -w`);
-      //   2. the next token NAMES a command — `npx --yes esbuild src/index.ts --bundle` had the
-      //      bundler eaten, because a later bare token made the flag look value-taking;
-      //   3. nothing further could be the script, so consuming would leave the line empty
-      //      (`pnpm --no-frozen-lockfile build`, where the flag is in no list anyone wrote).
-      //
-      // v12 had only (3) and called it a replacement for the boolean list. Round 10 measured all
-      // twenty-two members changing a verdict without it.
-      if (isManager) {
-        const value = tokens[i + 1];
-        const managerValues = new Set(MANAGER_VALUES[verb] ?? []);
-        const laterBare = tokens.slice(i + 2).some((t) => !t.startsWith("-"));
-        const consumes =
-          managerValues.has(token) ||
-          (!MANAGER_BOOLEAN.has(token) &&
-            value !== undefined &&
-            !value.startsWith("-") &&
-            !namesACommand(value) &&
-            laterBare);
-        if (consumes && value !== undefined) i += 1;
-      }
+      const action = readFlag(token, tokens, i, {
+        dirs,
+        values,
+        optional,
+        buildFlags,
+        isManager,
+        verb,
+      });
+      if (action.build === true) return "build";
+      if (action.cwd !== undefined) cwd = action.cwd;
+      i += action.consume;
       continue;
     }
 

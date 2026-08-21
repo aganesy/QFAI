@@ -247,7 +247,15 @@ describe(
       const unhardened: string[] = [];
       for (const file of files) {
         const text = await workflowText(file);
-        for (const ref of text.match(/uses:\s*\S+/g) ?? []) {
+        // Comments are not content. This scan read the RAW text while `US-0017-0003` two rows down
+        // skipped comment lines, so two adjacent scans of the same files disagreed — and round 11
+        // reddened this one with a backticked `uses:` inside a YAML comment. A false positive rather
+        // than a hole, and a scan that documentation can break is a scan people learn to work around.
+        const content = text
+          .split(/\r?\n/)
+          .filter((line) => !line.trim().startsWith("#"))
+          .join("\n");
+        for (const ref of content.match(/uses:\s*\S+/g) ?? []) {
           // A local composite action has no SHA to pin and is not a supply-chain edge.
           if (/uses:\s*\.\//.test(ref)) continue;
           if (!/@[0-9a-f]{40}\b/.test(ref)) floating.push(`${file}: ${ref.trim()}`);

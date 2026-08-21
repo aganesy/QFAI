@@ -428,6 +428,21 @@ files — a number derived once and then described as derived.**
   callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
   the tracked set are equal.
 
+**Round 11's `M5` is applied, and it is the one refactor in this spec with a measured consequence.**
+`command()` was 211 lines, and the reviewer's argument for splitting it was not tidiness: `bareIsBuild` is
+decided at the end of that function while hugo's grammar is declared 650 lines earlier, so a comment
+claiming the first "decides before any flag can matter" could be written, reviewed and believed by readers
+who could not see both ends. `resolveHead`, `openingVerdict` and `readFlag` are extracted, and `command()`
+is 127 lines. `readFlag`'s docstring now states the relationship the comment got wrong, beside the field
+that carries it.
+
+The first extraction attempt is worth recording because it failed in the way this spec keeps failing. It
+translated the branch mechanically — `continue` to `return`, an assignment to a returned field — and
+silently collapsed three distinct effects: a `values` flag stopped consuming its argument, and an inline
+`flag=value` was given a consume count when its value sits inside the same token. **143 member cases moved
+and the frozen `B4` probe fell from 32/32 to 22/32**, which is exactly what those cases exist for. A
+refactor that preserves behaviour is a claim, and this one was checked rather than asserted.
+
 **Round 10's `R02` majors and minors are applied, and two of them changed the grammar's shape rather
 than its contents.**
 
@@ -1370,7 +1385,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 11: the e2e figure is 1439 and the integration+unit figure 1212.
+round 11: the e2e figure is 1440 and the integration+unit figure 1212.
 
 e2e callsites at this tree: 876
 
@@ -1402,7 +1417,8 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
-pnpm -C packages/qfai test:e2e                  1439 passed / 16 skipped, exit 0
+pnpm check-types                                exit 0
+pnpm -C packages/qfai test:e2e                  1440 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1212 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 8 claim(s) backed, exit 0
