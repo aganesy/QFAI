@@ -102,10 +102,11 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ## Required Process
 
-### Phase: Stage 0 + Preflight — MANDATORY, runs first
+### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first
 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
+3. **Then run routing phase `plan`** — the only phase carrying `iteration: per-invocation`, and the one this stage exists ahead of: the planner must read the ledger those resets have already been applied to. Route `delivery-planner` over the whole ledger for the risk tiers, the T1 coherent groups, the parallel dispatch decision and the order the rows will be worked in (Volume Policy); it is **blocking** here, so a non-PASS stops the invocation before any row moves, and it does **not** pick the row — that is Phase Red step 1, which runs per row inside the frame this phase fixes. Route `test-design-analyst` over the same ledger for coverage and layer-ownership findings; it is mandatory and **not** blocking, because the repair for a missing obligation is upstream and this skill invents no row that no TC backs (Preconditions). What each receives and returns, how a named-`TDD-ID` or mutation-only invocation is confirmed rather than re-planned, and where the findings are recorded: `references/plan-phase.md`.
 
 ### Phase: Red (Write Failing Test)
 
@@ -186,23 +187,22 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`, which routes **five** phases for it. `plan` carries `iteration: per-invocation` — it runs once, before any row is touched (Required Process step 3, `references/plan-phase.md`). The other four — `red`, `build`, `test` and `review` — carry `iteration: per-ledger-item`: they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of the obligation its `Layer` names — `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`
   - enforces Red-Green-Refactor **ordering** (which phase may run next), not the RED/GREEN observation itself
-  - is the sole authority for parallel dispatch decisions
-- `frontend-engineer` / `backend-engineer`
-  - implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
+  - is the sole authority for parallel dispatch decisions, and is routed **blocking in the per-invocation `plan` phase**, where it frames the whole invocation before Phase Red selects the first row
+- `test-design-analyst`
+  - is routed in the `plan` phase only, and reports **coverage obligations and layer ownership** across the ledger: which row owes which `TC-*` / `US-*` / `CON-API-*`, and where an in-scope obligation has no row at all
+  - returns findings, never ledger edits, and is mandatory but **not** blocking — the repair for a missing obligation is upstream in `/qfai-sdd` or `/qfai-atdd`, which this skill reaches by handoff note; it adjudicates neither item scope (`delivery-planner`'s call) nor RED/GREEN evidence (`qa-gatekeeper`'s)
+- `frontend-engineer` / `backend-engineer` — implement the selected item only, write the failing test first, write minimal passing code, and refactor without unrelated changes
 - `qa-gatekeeper`
   - is the sole authority for validating **RED/GREEN observation evidence** — did the test fail (or pass) for the expected reason — and completion gate evidence. Routed per row in `red` (before production code) and `build` (after), not only in `review`
   - does not adjudicate item scope; a scope objection is `delivery-planner`'s call
-- `implementation-reviewer`
-  - reviews code quality, maintainability, backend correctness, and hidden coupling
-- `completion-reviewer`
-  - verifies spec alignment, drift-protocol compliance, and final DoD
-- `product-surface-reviewer`
-  - reviews UI-affecting implementation when the item changes surface behavior
+- `implementation-reviewer` — reviews code quality, maintainability, backend correctness, and hidden coupling
+- `completion-reviewer` — verifies spec alignment, drift-protocol compliance, and final DoD
+- `product-surface-reviewer` — reviews UI-affecting implementation when the item changes surface behavior
 
 ## Volume Policy (MUST)
 

@@ -62,6 +62,13 @@ routing:
   # self-attestation it exists to prevent.
   - skill: qfai-implement
     phases:
+      # Runs once, before any ledger row is touched: `delivery-planner` frames
+      # the invocation (risk tiers, T1 groups, dispatch, order) and blocks it
+      # when the plan is wrong, while `test-design-analyst` reports coverage /
+      # layer-ownership findings and does not block, because their repair is
+      # upstream. Written up in `qfai-implement/SKILL.md` under
+      # `### Phase: Plan (Frame the Invocation)` — a routed phase the skill body
+      # never named dispatched `test-design-analyst` with no task definition.
       - id: plan
         iteration: per-invocation
         mandatory_agents: [delivery-planner, test-design-analyst]
