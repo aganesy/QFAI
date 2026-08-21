@@ -314,22 +314,18 @@ Notes:
 
 ## Evidence (MANDATORY)
 
-Create and update: `.qfai/evidence/atdd-<spec-id>.md`
-
-Required sections: the template below is the list. Two of them carry a contract
-the heading cannot:
+Create and update `.qfai/evidence/atdd-<spec-id>.md`. Required sections: the
+template below is the list. Two of them carry a contract the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
-  row. Exactly one form per row, never both and never neither; the cell is an
-  anchor and the payload goes in the section
-  (`references/red-provenance.md#evidence-shape`). A rework round is a
-  `#### Round N` block nested **inside that row's section**, not a section of
-  its own: the list above is closed, and the nesting is what attributes the
-  round to a row (`references/review-fix-rounds.md`).
-- **Coverage Depth Matrix** — a link to
-  `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
-  The matrix and its per-`❌` justifications live in that committed file;
-  restating them here would lose them.
+  row (`references/red-provenance.md#evidence-shape`). Exactly one form per row,
+  never both and never neither; the cell is an anchor and the payload goes in
+  the section. A rework round is a `#### Round N` block nested **inside that
+  row's section**, not a section of its own: the list is closed, and nesting
+  attributes it to a row (`references/review-fix-rounds.md`).
+- **Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md`
+  and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live in
+  that committed file; restating them here would lose them.
 
 Template:
 
@@ -353,9 +349,8 @@ Template:
 ## Ledger rows advanced
 
 <!-- Index table + one `### TDD-NNNN` section per row:
-     `references/red-provenance.md#evidence-shape`.
-     Rework rounds nest inside a row's section as `#### Round N`:
-     `references/review-fix-rounds.md`. -->
+     `references/red-provenance.md#evidence-shape`. Rework rounds nest inside a
+     row's section as `#### Round N`: `references/review-fix-rounds.md`. -->
 
 ## Coverage Depth Matrix
 

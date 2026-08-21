@@ -387,16 +387,13 @@ post-escalation verification review of a user-named fix.
        verdict to name the `DR-ID` the row currently carries.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
        the GREEN subject plus `Refactor verify command` / `result`, the
-       `Shared-artifact re-verify` block when the row has one — it records the
-       earlier rows' re-runs and re-taken proofs, which these reviewers are the
-       ones who audit, so leaving it out let it be edited or deleted without
-       moving either hash — and, from every `#### Round N` block nested in
-       the row's `### <TDD-ID>` section, that block's **phase-authored** fields
-       only — the nesting is what says which row a round belongs to, and at
-       `###` the blocks were siblings of the row sections, so a rework in a
-       cycle that reworked two rows could not be attributed at all. `Round N: reviewer verdict` is written by these reviewers
-       after they have read the block, so taking the whole block put their own
-       line inside what they hashed.
+       `Shared-artifact re-verify` block when the row has one — these reviewers
+       audit the earlier rows' re-runs and re-taken proofs it records, so
+       omitting it let it be edited away without moving either hash — and, from
+       every `#### Round N` block nested in the row's `### <TDD-ID>` section,
+       that block's **phase-authored** fields only: nesting is the attribution;
+       `Round N: reviewer verdict` is theirs, written after reading it, so the
+       whole block put their own line in what they hashed.
 
      A field absent at that point contributes nothing — it is not a placeholder
      and not an error. Nothing written after an observation is in its subject,
