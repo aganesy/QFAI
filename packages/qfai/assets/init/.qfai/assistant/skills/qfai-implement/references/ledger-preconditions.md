@@ -8,8 +8,12 @@ one.
 ## Producer
 
 `/qfai-sdd` Phase 2b seeds one row per coverage-target TC from
-`06_Test-Cases.md`. `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
-annotations, not ledger rows — they never appear as rows here.
+`06_Test-Cases.md`, plus one `Layer = E2E` row per **active** `US-*` and one
+`Layer = API` row per **active** `CON-API-*` — the obligations those layers
+carry in `US-Refs` / `CON-API-Refs`. "Active" is the
+`.qfai/assistant/catalog/test-layers.md` exemption: a spec with no user-facing
+surface owes no `US-*` row, and a contract at `x-qfai-status: planned` owes no
+API row. Those rows are tracked here and their tests authored by `/qfai-atdd`.
 
 ## Recovery when it is missing
 
@@ -47,7 +51,8 @@ implementation.
 
 ### The two outcomes
 
-- **No coverage-target TC is declared** — the ledger is truthfully empty. Report
+- **No coverage-target TC is declared**, and the spec has no active `US-*` /
+  `CON-API-*` either — the ledger is truthfully empty. Report
   "nothing to do" and exit. Rerunning `/qfai-sdd` derives the same empty table
   and loops.
 - **At least one is declared** — the ledger is incomplete (a partial copy or an

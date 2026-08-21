@@ -314,21 +314,28 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 
-`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
-excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
-obligations there. A first run therefore finds **zero** `Layer = E2E` /
-`Layer = API` rows, legitimately, and this stage cannot create them — it is
-not the ledger's writer under any circumstance.
+`/qfai-sdd` Phase 2b seeds a `Layer = E2E` row per **active** `US-*` and a
+`Layer = API` row per **active** `CON-API-*`, alongside its rows for
+coverage-target `TC-*`. Both obligations are exempt in cases
+`catalog/test-layers.md` names: a spec that declares no user-facing surface
+owes no E2E reference for its `US-*`, and a contract at `x-qfai-status: planned`
+is excluded from `QFAI-ATDD-113`. A spec whose obligations are all exempt
+therefore finds **zero** `Layer = E2E` / `Layer = API` rows, legitimately, and
+this stage cannot create them — it is not the ledger's writer under any
+circumstance.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
 reason and carry on with the obligations.
 
-**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
-per coverage-target `TC-*`, and the ledger template says in as many words that
-`US-*` and `CON-API-*` are not rows there — so the request returns nothing and
-the spec is handed back and forth for rows no skill may write. Writing them
+**Do not raise it as a request for rows.** Check the exemption first: a spec
+with no user-facing surface signal, and no `CON-API-*` outside
+`x-qfai-status: planned`, is _supposed_ to have none — so the request returns
+nothing and the spec is handed back and forth for rows Phase 2b is right not to
+seed. A genuinely missing row for an **active** obligation is an incomplete
+Phase 2b: record it in this stage's report and carry on; it does not become
+writable here. Writing them
 here is not the alternative either: that would make this stage a second writer
 of a single-writer artifact. What the completion gate actually requires is
 `QFAI-ATDD-111` / `QFAI-ATDD-113` clean, which the annotations discharge and

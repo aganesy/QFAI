@@ -32,6 +32,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // TDDLIST_REQUIRED_COLUMN_MISSING errors.
       const header = template.split(/\r?\n/).find((line) => line.trim().startsWith("|"));
       expect(header).toBeDefined();
+      // The eight required columns lead, then the two obligation columns a
+      // seeded `Layer = E2E` / `Layer = API` row needs. Without them in the
+      // header `validateObligationColumn` reads the absent column as "this row
+      // carries no such obligation" and the seeded row is unverifiable.
       expect(cells(header ?? "")).toEqual([
         "TDD-ID",
         "TC-Refs",
@@ -41,6 +45,8 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Status",
         "DR-ID",
         "Evidence",
+        "US-Refs",
+        "CON-API-Refs",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
     });
@@ -55,7 +61,79 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
     it(`${tree}: the template claims no producer the shipped skills do not implement`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("`/qfai-atdd` does not write to\nthis ledger");
-      expect(template).not.toContain("`Layer = E2E`");
+      // The E2E/API rows are seeded by Phase 2b and tracked here; the removed
+      // claim was that `US-*` / `CON-API-*` are "**not** rows here", which left
+      // the two obligation columns documented, enforced and never produced.
+      expect(template).not.toContain("are **not** rows here");
+      expect(template).toContain("**one `Layer = E2E` row per active `US-*`**");
+      expect(template).toContain("**one `Layer = API` row per active `CON-API-*`**");
+    });
+
+    it(`${tree}: Phase 2b seeds obligation rows only for active obligations`, async () => {
+      // `catalog/test-layers.md` exempts a non-UI-bearing spec's `US-*` from
+      // `QFAI-ATDD-111` and a `x-qfai-status: planned` contract from
+      // `QFAI-ATDD-113`. Seeding unconditionally would create a
+      // completion-prohibiting `todo` row for a test that must not be written.
+      for (const surface of [
+        TEMPLATE,
+        "assistant/skills/qfai-sdd/SKILL.md",
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      ]) {
+        const text = await read(tree, surface);
+        expect(text, surface).toContain("x-qfai-status: planned");
+        expect(text, surface).toMatch(/QFAI-ATDD-111/);
+        expect(text, surface).toMatch(/QFAI-ATDD-113/);
+      }
+    });
+
+    it(`${tree}: every phase-order surface states the three seeded groups`, async () => {
+      // SKILL.md, its `project_memory` block and the phase checklist all
+      // described the seeding, and all three said "one row per coverage-target
+      // TC" and nothing else — so no surface an agent follows produced a
+      // `Layer = E2E` / `Layer = API` row.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("in **three groups**");
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory still describes one group").toContain("three groups");
+      expect(memory).toContain("`Layer = E2E` row per active `US-*`");
+      expect(memory).toContain("`Layer = API` row per active `CON-API-*`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Seed three groups of rows");
+      expect(checklists).toContain("one `Layer = E2E` row per **active** `US-*`");
+      expect(checklists).toContain("one `Layer = API` row per **active** `CON-API-*`");
+    });
+
+    it(`${tree}: the ledger names who writes production code for an E2E/API row`, async () => {
+      // `/qfai-atdd` authors the acceptance test and has no production agent.
+      // Without this stated, the E2E row reads as the sole carrier of the
+      // behaviour and has no implementer at all.
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain("**Who writes the production code for an E2E/API row.**");
+      expect(ledger).toContain("delivered by the same\nspec's `TC-*` rows");
+      expect(ledger).toContain("**Both columns are seeded, not hand-added.**");
+
+      // The reference the ATDD stage reads must agree: zero rows is the
+      // exemption case, not "these are never rows".
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance).not.toContain("are not row-producing");
+      expect(provenance).toContain("Phase 2b seeds a `Layer = E2E` row per **active** `US-*`");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).not.toContain("they never appear as rows here");
+      expect(preconditions).toContain("`Layer = API` row per **active** `CON-API-*`");
     });
 
     it(`${tree}: reseeding is stated as a delta, not a regeneration`, async () => {

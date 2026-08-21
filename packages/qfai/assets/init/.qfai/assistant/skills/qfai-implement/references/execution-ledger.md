@@ -65,6 +65,17 @@ separate.
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
 `TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.
 
+**Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
+`Layer = E2E` row per active `US-*` and one `Layer = API` row per active
+`CON-API-*`, and the shipped ledger template carries the two columns in its
+header for exactly that reason — a row of that layer with nowhere to record its
+obligation is unverifiable, and `validateObligationColumn` reads an absent
+column as "this row carries no such obligation". "Active" is the
+`test-layers.md` exemption: a spec with no user-facing surface owes no `US-*`
+row and a contract at `x-qfai-status: planned` owes no API row, so seeding
+either would park a completion-prohibiting row on a test that must not be
+written.
+
 The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
 so a forbidden placement cannot close a coverage-target TC.
@@ -287,7 +298,17 @@ RED question different rather than absent.
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this
-skill's Phase Green, from the RED that stage handed over. What makes the RED
+skill's Phase Green, from the RED that stage handed over.
+
+**Who writes the production code for an E2E/API row.** Normally nobody writes
+it _for that row_: the behaviour the journey exercises is delivered by the same
+spec's `TC-*` rows, which this skill executes on their own micro-cycles. The
+E2E/API row is a **coverage obligation** — it asserts that the delivered
+behaviour is reachable end to end, or that the contract is exercised — not the
+sole carrier of a feature. Reading it as the carrier leaves the row with no
+implementer, because `/qfai-atdd` has no production agent. Where the journey
+does reach a gap no TC row covers, Phase Green of **this** row closes it, and
+`red-not-observable.md`'s falsifiability path is what supplies the RED. What makes the RED
 question different there is ordering, not ownership: the work orders that build
 a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:
