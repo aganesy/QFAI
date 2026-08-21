@@ -256,6 +256,56 @@ function hasCommandShape(evidence: string): boolean {
 }
 
 /**
+ * The one legal shape of an `Evidence` cell.
+ *
+ * `execution-ledger.md#evidence-cell-contract` declared the cell a **pointer,
+ * not the payload** and illustrated it with a ~95-character example — but
+ * nothing enforced it, so the cells became the payload: measured across eight
+ * ledgers the pointer was larger than the file it points at in all eight, at a
+ * mean of 1,196 characters. Prose also drifts: across 510 rows the oracle
+ * obligation — the strongest one the contract states — appeared under no fixed
+ * name at all, so no gate could count its coverage.
+ *
+ * Closing the grammar is what turns that from prose into something countable.
+ * `ORACLE:` is the token that matters: it is the one obligation this adds
+ * rather than removes.
+ *
+ * `TIER:` is **optional**. The Tier obligation is owned elsewhere and is not
+ * settled; reserving the slot lets it land as a token later without a second
+ * grammar, while requiring it today would gate on a rule that does not exist.
+ *
+ * Everything the oversized cells carry today already belongs in the evidence
+ * file the anchor points at, so this moves content rather than deleting it.
+ */
+const EVIDENCE_CELL_GRAMMAR =
+  /^RED:(?:fail|falsifiability|n-a)\s+GREEN:pass\s+ORACLE:(?:proved|equivalent-mutant)(?:\s+TIER:T[1-3])?\s+REV:[0-9A-Za-z][\w.-]*\s+->\s+`?[^\s`]+`?$/;
+
+/**
+ * The cap, in characters, on an `Evidence` cell.
+ *
+ * A conforming pointer runs to roughly 100 characters, so 240 leaves room for
+ * a long anchor without leaving room for the payload.
+ */
+const EVIDENCE_CELL_MAX_CHARS = 240;
+
+/**
+ * Waiver rule ids for `TDDLIST_EVIDENCE_CELL_MALFORMED` /
+ * `TDDLIST_EVIDENCE_CELL_OVERSIZE`.
+ *
+ * Both are warnings for the reason `TDDLIST_EVIDENCE_STATUS_ONLY` is one:
+ * every ledger written before the grammar existed holds free prose, and
+ * turning all of it into build failures on upgrade is a migration, not a gate.
+ * A project that has audited its legacy rows waives them per path instead of
+ * rewriting evidence it can no longer reproduce.
+ */
+export const EVIDENCE_CELL_MALFORMED_RULE_ID = "TDDLIST-007";
+export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "TDDLIST-008";
+
+/** The grammar as an operator reads it, for the finding message. */
+const EVIDENCE_CELL_GRAMMAR_TEXT =
+  "RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<short-rev> -> <anchor>";
+
+/**
  * Test directories a `Layer` value implies. `null` means the layer has no
  * mandated directory, so no consistency claim is made about it.
  */
@@ -1279,6 +1329,46 @@ async function validateSpecTddList(
       );
       continue;
     }
+
+    // Phase 2 – Check 9d: the cell is a pointer, in one legal shape, capped.
+    //
+    // An oversize cell is reported once. It is malformed too — every cell that
+    // outgrew the cap did so by holding prose — but a cap breach and a grammar
+    // breach on one cell are one defect to fix, and reporting both would make
+    // the cap read as a second, separate obligation.
+    const isPointer = EVIDENCE_CELL_GRAMMAR.test(evidence);
+    if (evidence.length > EVIDENCE_CELL_MAX_CHARS) {
+      issues.push(
+        issue(
+          "TDDLIST_EVIDENCE_CELL_OVERSIZE",
+          `Evidence for spec-${specNumber} ${rowLabel} is ${evidence.length} characters, past the ${EVIDENCE_CELL_MAX_CHARS}-character cap. The cell is a pointer, not the payload — the commands and their output belong in the evidence file the anchor names`,
+          "warning",
+          relPath,
+          EVIDENCE_CELL_OVERSIZE_RULE_ID,
+          undefined,
+          "change",
+          `Evidence 列は証跡ファイルへの pointer です。コマンドと出力は \`.qfai/evidence/\` 配下のファイルに移し、セルには \`${EVIDENCE_CELL_GRAMMAR_TEXT}\` の形だけを ${EVIDENCE_CELL_MAX_CHARS} 文字以内で書いてください。`,
+        ),
+      );
+    } else if (!isPointer) {
+      issues.push(
+        issue(
+          "TDDLIST_EVIDENCE_CELL_MALFORMED",
+          `Evidence for spec-${specNumber} ${rowLabel} does not match the pointer grammar "${EVIDENCE_CELL_GRAMMAR_TEXT}": "${evidence}"`,
+          "warning",
+          relPath,
+          EVIDENCE_CELL_MALFORMED_RULE_ID,
+          undefined,
+          "change",
+          `Evidence 列は \`${EVIDENCE_CELL_GRAMMAR_TEXT}\` の一形だけを許します（例: \`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-<spec-id>.md#tdd-0001\`）。散文は anchor 先の証跡ファイルに移してください。`,
+        ),
+      );
+    }
+
+    // A conforming pointer names its verdict as `GREEN:pass` and carries no
+    // command, so the status-only rule would reject the exact shape the
+    // grammar mandates. The grammar is the stronger statement, so it wins.
+    if (isPointer) continue;
 
     // Only a cell that *claims a verdict* can be status-only evidence. A cell
     // holding some other note without a command is under-specified, but

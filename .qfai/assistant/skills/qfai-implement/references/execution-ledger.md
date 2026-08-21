@@ -89,11 +89,36 @@ The `Evidence` cell is a **pointer**, not the payload.
 runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
 below — of the per-item
 evidence contract — the RED/GREEN commands, their output, and the reviewer
-verdicts. The ledger cell records the outcome and says where to read the proof:
+verdicts. The ledger cell records the outcome and says where to read the proof.
+
+### The grammar (MUST)
+
+There is **one** legal shape, and it is capped at **240 characters**:
 
 ```
-RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
+RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<short-rev> -> <anchor>
 ```
+
+```
+RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0027`
+```
+
+- `RED:` — how the failing observation was obtained. `falsifiability` is the
+  falsifiability argument for a row whose RED cannot be observed directly;
+  `n-a` is a row that owes no RED (an ATDD-owned or documentation row).
+- `GREEN:` — `pass` is the only legal value. A row that is not green does not
+  carry evidence yet, and its `Status` says so.
+- `ORACLE:` — whether the oracle was **proved** or established by an
+  **equivalent-mutant** argument. This is the obligation the free-prose cell
+  made invisible: under no fixed name, no gate could count its coverage.
+- `TIER:` — **optional**, and reserved. Write it only when the project has
+  adopted a tier vocabulary.
+- `REV:` — the short revision the run was taken at (`evidence-revision.md`).
+- `-> <anchor>` — the heading in the evidence file, and nothing after it.
+  Backticks around the anchor are allowed.
+
+Everything else the cell used to carry belongs in the evidence file the anchor
+names. This is a move, not a deletion.
 
 ### Why it cannot hold the payload
 
@@ -137,10 +162,12 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                        | Fires when                                                          | Severity |
-| ------------------------------ | ------------------------------------------------------------------- | -------- |
-| `TDDLIST_EVIDENCE_EMPTY`       | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
-| `TDDLIST_EVIDENCE_STATUS_ONLY` | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+| Finding                           | Fires when                                                          | Severity |
+| --------------------------------- | ------------------------------------------------------------------- | -------- |
+| `TDDLIST_EVIDENCE_EMPTY`          | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
+| `TDDLIST_EVIDENCE_STATUS_ONLY`    | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
+| `TDDLIST_EVIDENCE_CELL_MALFORMED` | the cell does not match the grammar above                           | warning  |
+| `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning  |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -152,6 +179,11 @@ ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate. An empty cell is unambiguous,
 so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
 
+The two grammar findings are warnings for the same reason, waivable under
+`TDDLIST-007` (malformed) and `TDDLIST-008` (oversize). An oversize cell is
+reported **once**: it is malformed too, but a cap breach and a grammar breach
+on one cell are one defect to fix.
+
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
 `TDDLIST_EXCEPTION_MISSING_DR` gates.
@@ -160,9 +192,10 @@ Freshness is **not** gated: the ledger records no run identity, so no validator
 can distinguish a fresh command+result pair from a copied one. That rule stays
 with the routed reviewer (`qfai-implement/SKILL.md` "Evidence hard rules").
 
-A pointer cell satisfies these rules: the `evidence at <path>` form carries a
-path, which is one of the command shapes the gate accepts. The rules reject a
-bare verdict, not a pointer.
+A conforming pointer satisfies these rules: `TDDLIST_EVIDENCE_STATUS_ONLY`
+yields to the grammar, so the `GREEN:pass` token in the mandated shape is not
+read as a bare verdict. The rules reject a verdict written as prose, not a
+pointer.
 
 ## Selector granularity (MUST)
 

@@ -20,7 +20,11 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { validateTddList } from "../../src/core/validators/tddList.js";
+import {
+  EVIDENCE_CELL_MALFORMED_RULE_ID,
+  EVIDENCE_CELL_OVERSIZE_RULE_ID,
+  validateTddList,
+} from "../../src/core/validators/tddList.js";
 
 const TEST_FILE = "tests/unit/sample.test.ts";
 
@@ -228,6 +232,139 @@ describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
       const codes = await runOn(root, ledger([{ status: "done", evidence: "-" }]));
       expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
       expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+});
+
+/**
+ * The contract calls the cell a pointer; nothing made it one.
+ *
+ * `references/execution-ledger.md#evidence-cell-contract` illustrates the
+ * pointer with a ~95-character example, but the only cell-level checks were
+ * "non-empty" and "not a bare verdict". Measured across eight ledgers the
+ * pointer had grown larger than the file it points at in all eight, and the
+ * strongest obligation in the contract — the oracle proof — had no reserved
+ * token at all, so no gate could count its coverage.
+ */
+const POINTER =
+  "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`";
+
+describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
+  for (const evidence of [
+    // The legacy prose shape: a real command and a real result, in no grammar.
+    "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed",
+    // ORACLE is the token the whole grammar exists to make countable.
+    "RED:fail GREEN:pass REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    // A token present but off-vocabulary is malformed, not accepted prose.
+    "RED:fail GREEN:pass ORACLE:maybe REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    "RED:probably GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    // Out of order is a second shape, and there is only one legal shape.
+    "GREEN:pass RED:fail ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    // The anchor is what makes the cell a pointer; without it there is none.
+    "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d",
+    // Trailing prose after the anchor reopens the cell to the payload.
+    `${POINTER} and the reviewer agreed`,
+  ]) {
+    it(`reports "${evidence.slice(0, 48)}"`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence }]));
+        expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  for (const evidence of [
+    POINTER,
+    // `TIER:` is optional: the Tier obligation is owned elsewhere, so the
+    // grammar reserves it a slot without demanding it yet.
+    "RED:n-a GREEN:pass ORACLE:equivalent-mutant TIER:T2 REV:9f3c1de -> .qfai/evidence/impl.md#tdd-0002",
+    "RED:falsifiability GREEN:pass ORACLE:proved TIER:T3 REV:0ab12cd -> .qfai/evidence/impl.md#tdd-0003",
+  ]) {
+    it(`accepts "${evidence.slice(0, 48)}"`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence }]));
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+      });
+    });
+  }
+
+  // A conforming pointer names a verdict by construction (`GREEN:pass`) and
+  // carries no command, so the status-only gate would reject the very shape
+  // this grammar mandates unless it yields to it.
+  it("does not make the canonical pointer read as status-only evidence", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: POINTER }]));
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+
+  // Rows that have not run a cycle owe no pointer yet.
+  for (const status of ["todo", "red", "exception"]) {
+    it(`stays silent at Status=${status}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status, evidence: "some note" }]));
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  // An empty cell is one defect, not two.
+  it("does not double-report with TDDLIST_EVIDENCE_EMPTY", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: "-" }]));
+      expect(codes).toContain("TDDLIST_EVIDENCE_EMPTY");
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+
+  it("is a waivable warning, so legacy ledgers migrate instead of breaking", async () => {
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: "RED -> GREEN", tddId: "TDD-0042" }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(found?.severity).toBe("warning");
+      expect(found?.rule).toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
+      expect(found?.message).toContain("TDD-0042");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_CELL_OVERSIZE", () => {
+  // The observed failure: a mean cell of 1,196 characters against a contract
+  // whose own example is 95.
+  const OVERSIZE = `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> ${"x".repeat(240)}`;
+
+  it("reports a cell past the cap", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: OVERSIZE }]));
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+    });
+  });
+
+  // Two findings on one cell would make the cap look like a second defect.
+  it("does not double-report with TDDLIST_EVIDENCE_CELL_MALFORMED", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: "y".repeat(400) }]));
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+
+  it("stays silent on a pointer inside the cap", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: POINTER }]));
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+    });
+  });
+
+  it("is a waivable warning", async () => {
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: OVERSIZE }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_OVERSIZE");
+      expect(found?.severity).toBe("warning");
+      expect(found?.rule).toBe(EVIDENCE_CELL_OVERSIZE_RULE_ID);
     });
   });
 });

@@ -199,6 +199,12 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   Resolution is a containment check over the selector text and its last
   identifier token, not a runner-specific parse; waive `TDDLIST-006` for a
   selector form it cannot resolve.
+- `Evidence` is a **pointer**, not the payload: one legal shape
+  (`RED:… GREEN:pass ORACLE:… [TIER:…] REV:… -> <anchor>`), capped at 240
+  characters (`TDDLIST_EVIDENCE_CELL_MALFORMED` / `TDDLIST_EVIDENCE_CELL_OVERSIZE`,
+  both `warning`). `ORACLE:` is a required token so oracle-proof coverage is
+  countable rather than buried in prose. Ledgers predating the grammar waive
+  `TDDLIST-007` / `TDDLIST-008` while they migrate.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
   references, so it carries the approval that authorised an upstream reset, not
   only `Status = exception`. A row reset by a Drift Protocol sweep records the
