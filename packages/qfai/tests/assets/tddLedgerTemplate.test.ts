@@ -6,7 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
-import { validateTddList } from "../../src/core/validators/tddList.js";
+import { validateTddList, VALID_STATUSES } from "../../src/core/validators/tddList.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
@@ -43,6 +43,34 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Evidence",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
+    });
+
+    it(`${tree}: the Schema declares every Status the validator accepts`, async () => {
+      // The Schema table is the enum an author actually reads while filling the
+      // ledger. A value missing from it is unreachable on the default path, so
+      // the row must stay synchronised with `VALID_STATUSES`.
+      const template = await read(tree, TEMPLATE);
+      const schema = template.slice(template.indexOf("## Schema"));
+      const statusRow = schema.split(/\r?\n/).find((line) => cells(line)[0] === "Status");
+      expect(statusRow).toBeDefined();
+      for (const status of VALID_STATUSES) {
+        expect(statusRow ?? "").toContain(`\`${status}\``);
+      }
+    });
+
+    it(`${tree}: the Schema names the optional columns a blocked row needs`, async () => {
+      // The seeded ledger header carries the required columns only, so reaching
+      // for `blocked` without `Blocked-By` is TDDLIST_BLOCKED_MISSING_REF — an
+      // error naming a column the template never mentioned.
+      const template = await read(tree, TEMPLATE);
+      const schema = template.slice(template.indexOf("## Schema"));
+      for (const column of ["US-Refs", "CON-API-Refs", "Blocked-By"]) {
+        expect(schema).toContain(column);
+      }
+      expect(schema).toContain("TDDLIST_BLOCKED_MISSING_REF");
+      // `blocked` prohibits completion; `exception` satisfies it. A reader must
+      // not take the new value for a parking status.
+      expect(schema).toContain("never selected by Phase Red");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

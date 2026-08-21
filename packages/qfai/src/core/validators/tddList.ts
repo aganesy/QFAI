@@ -118,7 +118,10 @@ const REQUIRED_COLUMNS = TDD_LEDGER_REQUIRED_COLUMNS;
 // `exception` cannot absorb it: that is scoped to an anomaly, demands a DR-ID at
 // `error`, and satisfies spec completion — so a blocked row filed there would
 // silently close the obligation.
-const VALID_STATUSES = new Set([
+// Exported so the shipped `tdd/test-list.md` template's Schema section can be
+// asserted against it: a template naming fewer values hides them from the
+// author who fills the table in.
+export const VALID_STATUSES = new Set([
   "todo",
   "blocked",
   "red",

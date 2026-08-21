@@ -41,16 +41,32 @@ parsed as the ledger instead and raises eight
 
 Required columns, in the order used above:
 
-| Column    | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| TDD-ID    | `TDD-NNNN`, unique within this spec                          |
-| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
-| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
-| Test file | Project-root-relative path to the test module                |
-| Selector  | Test selector/description for targeted execution             |
-| Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
-| DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+| Column    | Description                                                                             |
+| --------- | --------------------------------------------------------------------------------------- |
+| TDD-ID    | `TDD-NNNN`, unique within this spec                                                     |
+| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements                                  |
+| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`                                      |
+| Test file | Project-root-relative path to the test module                                           |
+| Selector  | Test selector/description for targeted execution                                        |
+| Status    | `todo` / `blocked` / `red` / `green` / `refactor` / `review-fix` / `done` / `exception` |
+| DR-ID     | Decision Record ID for exception rows (`-` otherwise)                                   |
+| Evidence  | RED/GREEN command+result pairs proving the TDD cycle                                    |
+
+Optional columns. They are not in the header above — add the column to the
+ledger before writing a value that needs it:
+
+| Column       | Description                                                    |
+| ------------ | -------------------------------------------------------------- |
+| US-Refs      | The E2E user-story obligations this row implements             |
+| CON-API-Refs | The API contract obligations this row implements               |
+| Blocked-By   | What a `blocked` row is waiting on. **Required** on those rows |
+
+`Status = blocked` without a `Blocked-By` column raises
+`TDDLIST_BLOCKED_MISSING_REF` (`error`), so add the column in the same edit.
+`blocked` means "cannot be started". It is completion-prohibiting and is
+never selected by Phase Red — not a parking status like `exception`, which
+demands a `DR-ID` and satisfies spec completion. `review-fix` is the state a
+row holds while reworking a blocking reviewer's REVISE.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.
