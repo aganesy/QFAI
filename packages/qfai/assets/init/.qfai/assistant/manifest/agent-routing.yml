@@ -145,8 +145,9 @@ routing:
         blocking_agents: [test-design-analyst]
         rerun_policy: failed-agents-only
       # Stage gate P1b. `references/red-provenance.md` branch 1 requires
-      # `qa-gatekeeper` to confirm the RED *before any production code exists*,
-      # which is the same rule `qfai-implement` applies to its own rows — and
+      # `qa-gatekeeper` to confirm the RED before any code implementing the
+      # row's predicate exists (the step 1 seam does not count), which is the
+      # same rule `qfai-implement` applies to its own rows — and
       # there was no phase here to submit that to, so the instruction named a
       # routing phase this skill did not have. It must sit before
       # `implementation`: after the surfaces are built there is nothing left to

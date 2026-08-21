@@ -35,13 +35,28 @@ than as completed work.
 
 Take the first that applies, and record which one in the evidence file.
 
+**What the `qa-gatekeeper` RED gate confirms — on every branch.** Not "no
+production code exists", but that the failure is an assertion inside this row's
+selector, naming the predicate the row owns, observed **before any code
+implementing that predicate was written**. A step 1 seam is inside that state,
+not a breach of it: it resolves the symbol or route, implements no predicate,
+and answers with a status the row does not contract for
+(`../../qfai-implement/references/red-admissibility.md`). So is a surface that
+already existed and was wrong — there the tree the RED is observed against is
+the one before the fix. Read "production code" in step 4 and in
+`qfai-implement/SKILL.md` Phase Red with this meaning: code that implements the
+row's predicate, never the seam.
+
 1. **Observed RED (preferred).** Write the journey or API test **against the
    current tree**, before this cycle builds any surface it needs.
    1. **Ask `/qfai-implement` for the minimal seam first — for a surface that does not exist.** A row that reached branch 1 from branch 2's first-run check has its surface already; skip to step 2 and read the note there. A test for a route
       that does not exist yet fails with a 404 or an import error, and that is a
-      missing seam, not a RED — but the seam is production code, and this stage
-      owns none: its `red` phase is `acceptance-test-engineer` and
-      `qa-gatekeeper`, with no backend or frontend agent. Hand the row over for
+      missing seam, not a RED — but the seam lives in the production **tree**,
+      and this stage writes nothing there: its `red` phase is
+      `acceptance-test-engineer` and `qa-gatekeeper`, with no backend or
+      frontend agent. That is an ownership boundary, not a gate condition: the
+      seam implements no predicate, so step 4's precondition still holds with it
+      in place, per the preamble above. Hand the row over for
       its Phase Red step 3a — register the route, or add the export the test
       imports, so it **resolves but does not satisfy the row's predicate** — and
       come back with the seam in place. Skipping it makes the first failure of
@@ -151,12 +166,12 @@ Take the first that applies, and record which one in the evidence file.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
-      production code exists, and wait for PASS.** `qfai-implement/SKILL.md`
-      requires an independent reviewer to confirm the RED while the surface is
-      still absent; a confirmation sought after it is built is post-hoc
-      self-attestation of a state nobody can re-observe. Record the verdict
-      beside the pair.
+   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any code
+      implementing the row's predicate exists — the step 1 seam does not count —
+      and wait for PASS.** `qfai-implement/SKILL.md` requires an independent
+      reviewer to confirm the RED while the behaviour is still absent; a
+      confirmation sought after it is built is post-hoc self-attestation of a
+      state nobody can re-observe. Record the verdict beside the pair.
    5. **Stop there. Do not build the surface.** This skill owns acceptance
       tests, not production code — `agent-routing.yml` gives its implementation
       phase `acceptance-test-engineer` and no backend or frontend agent. The
@@ -178,10 +193,10 @@ Take the first that applies, and record which one in the evidence file.
    skipped: the surface exists, so there is no seam to ask for. Steps 3 and 4
    still run — `delivery-planner` still approves the slice before the RED is
    confirmed, and `qa-gatekeeper` still passes it, because the handover table
-   requires that PASS on every `observed-red` entry. What the gatekeeper
-   confirms is not "no production code exists" but that the failure is an
-   assertion inside this row's selector, naming the predicate the row owns,
-   observed **against the tree before the fix**. Record that pair, get the
+   requires that PASS on every `observed-red` entry. What that gate confirms is
+   stated in the preamble above and holds unchanged here: an assertion inside
+   this row's selector, naming the predicate the row owns, observed **against
+   the tree before the fix**. Record that pair, get the
    PASS, hand the fix to `/qfai-implement` Phase Green, and take the GREEN
    from the corrected surface. Record the branch as `observed-red` with a note
    that the surface existed and was wrong. Choosing branch 2 from existence alone sends a real,

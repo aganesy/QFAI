@@ -99,11 +99,11 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 });
 
 describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) => {
-  it("tells Phase: Red to obtain confirmation before production code exists", async () => {
+  it("tells Phase: Red to obtain confirmation before the row's predicate exists", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
     expect(flat).toContain(
-      "Submit that run to `qa-gatekeeper` and obtain confirmation **before** any production code exists",
+      "Submit that run to `qa-gatekeeper` and obtain confirmation **before** any code implementing the row's predicate exists — the step 3a seam does not count",
     );
   });
 

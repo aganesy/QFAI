@@ -329,14 +329,14 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     expect(ledger).toContain("completion item 10 reads the same split");
   });
 
-  it("submits the observed RED to qa-gatekeeper before any production code exists", async () => {
+  it("submits the observed RED to qa-gatekeeper before the row's predicate exists", async () => {
     // Branch 1 went straight from recording the RED to building the surface,
     // so the blocking confirmation `qfai-implement` requires could only be
     // sought after the fact — post-hoc self-attestation of a state nobody can
     // re-observe.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any production code exists",
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any code implementing the row's predicate exists — the step 1 seam does not count",
     );
     expect(provenance).toContain("Stage gate **P1b** is where steps 1-4 happen.");
   });
@@ -2459,5 +2459,80 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(reviewer).toContain(
       "**Validate evidence is a completion-gate input, not an item-cycle one.**",
     );
+  });
+});
+
+describe.each(TREES)('%s ("production code" means one thing for the seam)', (tree) => {
+  it("states what the RED gate confirms once, above the three branches", async () => {
+    // The only text that settled it sat inside branch 2's narrative about a
+    // surface that already existed and was wrong. A reader executing branch 1
+    // in order never reaches it, so branch 1 read as: step 1 orders the seam,
+    // step 4 forbids it.
+    const provenance = await read(tree, PROVENANCE);
+    const preamble = provenance.slice(
+      provenance.indexOf("## The three branches (MUST)"),
+      provenance.indexOf("1. **Observed RED (preferred).**"),
+    );
+    expect(flat(preamble)).toContain(
+      '**What the `qa-gatekeeper` RED gate confirms — on every branch.** Not "no production code exists"',
+    );
+    expect(flat(preamble)).toContain("A step 1 seam is inside that state, not a breach of it");
+    // And branch 2 defers to it rather than holding a second statement of it.
+    expect(flat(provenance)).not.toContain(
+      'What the gatekeeper confirms is not "no production code exists"',
+    );
+  });
+
+  it("does not call the step 1 seam production code while ordering it", async () => {
+    // Step 1's own wording made step 4's precondition false the moment step 1
+    // was carried out, on every new-surface row.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).not.toContain("the seam is production code");
+    expect(provenance).toContain(
+      "That is an ownership boundary, not a gate condition: the seam implements no predicate, so step 4's precondition still holds with it in place",
+    );
+  });
+
+  it("gives qa-gatekeeper's RED gate a clause that admits the seam", async () => {
+    // Its accept list is a set of necessary conditions, so a gatekeeper handed
+    // step 4's old phrasing could defend a REVISE from the text it was given —
+    // the right answer was only reachable via a reference the RED gate does
+    // not cite.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = gatekeeper.slice(
+      gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+      gatekeeper.indexOf("**Accept a GREEN**"),
+    );
+    const flatGate = flat(redGate);
+    expect(flatGate).toContain(
+      "**A minimal seam in the tree is an admissible state, not a ground for REVISE.**",
+    );
+    // With the three properties that make it decidable from the artifact.
+    expect(flatGate).toContain("it resolves the symbol or route the test reaches for");
+    expect(flatGate).toContain("it implements no predicate");
+    expect(flatGate).toContain("it answers with a status the row does not contract for");
+    expect(flatGate).toContain(
+      '"No production code exists" is **not** one of the conditions above',
+    );
+    // And cites the admissibility rule from the RED gate itself, not only from
+    // the `Satisfied-by` passage further down.
+    expect(flatGate).toContain(
+      ".qfai/assistant/skills/qfai-implement/references/red-admissibility.md",
+    );
+  });
+
+  it("keeps the seam out of the precondition in both skills and the routing map", async () => {
+    // `qfai-implement/SKILL.md` reproduced both halves and cited both
+    // references from the same phase, and `agent-routing.yml` restated the
+    // ambiguous phrasing in the comment that justifies the `red` phase.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "obtain confirmation **before** any code implementing the row's predicate exists — the step 3a seam does not count",
+    );
+    expect(implement).not.toContain("**before** any production code exists");
+
+    const routing = flat(await read(tree, "assistant/manifest/agent-routing.yml"));
+    expect(routing).toContain("row's predicate exists (the step 1 seam does not count)");
+    expect(routing).not.toContain("confirm the RED *before any production code exists*");
   });
 });

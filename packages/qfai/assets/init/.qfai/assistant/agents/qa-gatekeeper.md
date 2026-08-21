@@ -74,6 +74,18 @@ the row's own evidence; nothing in the calling work order substitutes for it.
 - when the `Selector` holds several entries, each entry's failure was observed
   separately. One aggregate run is not a RED for several entries.
 
+**A minimal seam in the tree is an admissible state, not a ground for REVISE.**
+The producer's Phase Red step 3a requires one for a surface that does not exist
+yet, so on a new-surface row the RED is necessarily observed with it in place.
+Accept it when all three hold: it resolves the symbol or route the test reaches
+for, it implements no predicate, and it answers with a status the row does not
+contract for. "No production code exists" is **not** one of the conditions
+above and must not be read into them — what the gate measures is that the
+failure is the row's own assertion, taken before any code implementing the
+row's predicate was written. See
+`.qfai/assistant/skills/qfai-implement/references/red-admissibility.md` and
+`.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`.
+
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite
 pass that does not name the row's selector is not a GREEN for that row.
