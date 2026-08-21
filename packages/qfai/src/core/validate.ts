@@ -24,6 +24,7 @@ import { validateDiscussionMermaid } from "./validators/discussMermaid.js";
 import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
+import { validateAssistantAnchorReferences } from "./validators/assistantAnchorReferences.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
@@ -310,7 +311,16 @@ async function runProfileValidators(
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
     return surface.issues;
   }
-  return [...surface.issues, ...(await runProfileOwnValidators())];
+  // Anchor integrity across the assistant tree runs in every profile too, and
+  // for the same reason: a citation that resolves to no heading is an
+  // instruction that silently does nothing, whichever stage followed it. That
+  // is a property of the installation, not of a stage. Its own walk tolerates
+  // the damage `QFAI-LINK-001` reports, so it cannot take that finding down.
+  return [
+    ...surface.issues,
+    ...(await validateAssistantAnchorReferences(root, config)),
+    ...(await runProfileOwnValidators()),
+  ];
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
