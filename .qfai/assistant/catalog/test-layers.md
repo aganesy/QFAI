@@ -469,18 +469,24 @@ Treat these as review signals in the same class as volume floors — worth a fin
 
 ## Test stub detection (QFAI-TEST-001 / QFAI-TEST-002)
 
-`QFAI-TEST-001` (error) reports the silent-placeholder construct of each
+`QFAI-TEST-001` reports the silent-placeholder construct of each
 supported stack:
 
-| Extensions           | Construct                                                           |
-| -------------------- | ------------------------------------------------------------------- |
-| `.ts` / `.js` family | `it.todo(` / `test.todo(` / `describe.todo(`                        |
-| `.py`                | `pytest.skip(`, `@pytest.mark.skip/skipif/xfail`, `@unittest.skip*` |
-| `.go`                | `t.Skip*(`                                                          |
-| `.java` / `.kt`      | `@Disabled` / `@Ignore`                                             |
-| `.rs`                | `#[ignore]`                                                         |
-| `.rb`                | a line starting `skip` / `pending`                                  |
-| `.cs`                | `[Ignore` / `Skip = "`                                              |
+| Extensions           | Construct                                                                                                    |
+| -------------------- | ------------------------------------------------------------------------------------------------------------ |
+| `.ts` / `.js` family | `it.todo(` / `test.todo(` / `describe.todo(` (error); `it.skip(` / `test.skip(` / `describe.skip(` (warning) |
+| `.py`                | `pytest.skip(`, `@pytest.mark.skip/skipif/xfail`, `@unittest.skip*`                                          |
+| `.go`                | `t.Skip*(`                                                                                                   |
+| `.java` / `.kt`      | `@Disabled` / `@Ignore`                                                                                      |
+| `.rs`                | `#[ignore]`                                                                                                  |
+| `.rb`                | a line starting `skip` / `pending`                                                                           |
+| `.cs`                | `[Ignore` / `Skip = "`                                                                                       |
+
+Every dialect is an `error` except the JS/TS `.skip` form. A `.todo` is a bare
+declaration and can only ever mean work not done; a `.skip` keeps its body, is
+what `qfai atdd scaffold` emits for a skeleton awaiting implementation, and can
+be waived per path in `.qfai/waivers.yml` — which a waiver aimed at an `error`
+rule cannot be.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a

@@ -24,6 +24,8 @@ import { validateTestTodoStubs } from "../../src/core/validators/testTodoStubs.j
 // own test files, so a literal occurrence here would make the suite report
 // itself. Mirrors what `testTodoStubs.test.ts` already does.
 const TODO = ".todo";
+// Same split for the `*.skip(` token, which the JS/TS dialect now matches too.
+const SKIP = ".skip";
 const JS_STUB = `it${TODO}('later');
 `;
 
@@ -146,5 +148,81 @@ describe("the opt-out still turns the whole validator off", () => {
       };
       expect(await validateTestTodoStubs(root, off)).toEqual([]);
     });
+  });
+});
+
+describe("the vitest/jest dialect also matches its stack's skip form", () => {
+  // Six of the seven dialects matched their stack's *skip* construct while the
+  // JS/TS entry matched `.todo` alone, so `it.skip` / `test.skip` /
+  // `describe.skip` — the form a developer actually writes to park a suite
+  // mid-change, and the form `qfai atdd scaffold` emits — cleared the only
+  // gate qfai has against work left as a silent placeholder.
+  const JS_SKIPS = [
+    'import { describe, it, test } from "vitest";',
+    "",
+    `it${SKIP}("skip form", () => {});`,
+    `test${SKIP}("test skip form", () => {});`,
+    `describe${SKIP}("suite skip form", () => {`,
+    '  it("would run", () => {});',
+    "});",
+    "",
+  ].join("\n");
+
+  it("reports every skip spelling, one finding per occurrence", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
+      expect(stubs).toHaveLength(3);
+      expect(stubs.map((i) => i.loc?.line)).toEqual([3, 4, 5]);
+    });
+  });
+
+  it("keeps refs on the exact construct so waivers and grouping stay stable", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const refs = issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.refs?.[0]);
+      expect(refs).toEqual([`it${SKIP}`, `test${SKIP}`, `describe${SKIP}`]);
+    });
+  });
+
+  it(`grades ${SKIP} as a warning while ${TODO} stays an error`, async () => {
+    // A `.todo` is a bare declaration and can only mean work not done. A
+    // `.skip` keeps its body and is what `qfai atdd scaffold` emits, so an
+    // `error` would fail the scaffold's own output on sight — and `waivers.ts`
+    // refuses any waiver aimed at an `error` rule, leaving a project no way to
+    // park a suite short of switching the gate off entirely.
+    await withTests({ "tests/a.test.ts": `${JS_STUB}${JS_SKIPS}` }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const bySeverity = new Map(
+        issues
+          .filter((i) => i.code === "QFAI-TEST-001")
+          .map((i) => [i.refs?.[0] ?? "", i.severity] as const),
+      );
+      expect(bySeverity.get(`it${TODO}`)).toBe("error");
+      expect(bySeverity.get(`it${SKIP}`)).toBe("warning");
+      expect(bySeverity.get(`describe${SKIP}`)).toBe("warning");
+    });
+  });
+
+  it("names the skip form in the message, not the todo form", async () => {
+    await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const first = issues.find((i) => i.code === "QFAI-TEST-001");
+      expect(first?.message).toContain(`it${SKIP}`);
+      expect(first?.message).not.toContain(TODO);
+      expect(first?.message).toContain("vitest/jest");
+    });
+  });
+
+  it("leaves a plain it()/describe() call alone", async () => {
+    await withTests(
+      {
+        "tests/a.test.ts": 'describe("s", () => {\n  it("works", () => {});\n});\n',
+        "tests/b.test.ts": "const rest = unit.skip(2);\n",
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
   });
 });

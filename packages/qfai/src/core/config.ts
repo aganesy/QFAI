@@ -40,8 +40,10 @@ export type QfaiValidationConfig = {
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
     /**
-     * When true (default), `qfai validate` rejects `it.todo` / `test.todo` /
-     * `describe.todo` stubs in test files (QFAI-TEST-001).
+     * When true (default), `qfai validate` reports the silent-placeholder
+     * construct of each supported stack in test files (QFAI-TEST-001). On
+     * JS/TS that is `it.todo` / `test.todo` / `describe.todo` (error) and
+     * `it.skip` / `test.skip` / `describe.skip` (warning).
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;

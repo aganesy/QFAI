@@ -2,10 +2,21 @@
  * Test stub validator (QFAI-TEST-001 / QFAI-TEST-002).
  *
  * Detects the silent-placeholder construct of each supported stack — `it.todo`
- * in vitest/jest, `pytest.skip` / `@pytest.mark.skip` in Python, `t.Skip` in
- * Go, `@Disabled` / `@Ignore` in JUnit, `#[ignore]` in Rust, `skip`/`pending`
- * in Ruby, `[Ignore]` in .NET. They neither pass nor fail, so they do not block
- * CI by default and rot as stale work-not-done markers.
+ * and `it.skip` (plus the `test.*` / `describe.*` spellings) in vitest/jest,
+ * `pytest.skip` / `@pytest.mark.skip` in Python, `t.Skip` in Go, `@Disabled` /
+ * `@Ignore` in JUnit, `#[ignore]` in Rust, `skip`/`pending` in Ruby,
+ * `[Ignore]` in .NET. They neither pass nor fail, so they do not block CI by
+ * default and rot as stale work-not-done markers.
+ *
+ * The vitest/jest `.skip` form is reported as a `warning`, not an `error`, and
+ * that asymmetry is deliberate. A `.todo` is a bare declaration — it can only
+ * ever mean work not done. A `.skip` keeps its body, and it is what
+ * `qfai atdd scaffold` emits for a skeleton the operator is expected to
+ * graduate, so an `error` would fail `qfai validate --fail-on error` on the
+ * scaffold's own output before a line of it had been written. `warning` also
+ * keeps the finding waivable: `waivers.ts` rejects any waiver aimed at an
+ * `error` rule, which would leave a project parking a suite mid-change no
+ * option but `forbidTestTodoStubs: false` — switching the whole gate off.
  *
  * `QFAI-TEST-002` (info) names extensions with no dialect, so a clean run on an
  * unsupported stack is not mistaken for evidence of no stubs.
@@ -22,7 +33,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
-import type { Issue } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
 import { issue } from "./utils.js";
 
 /**
@@ -50,19 +61,26 @@ type StubDialect = {
    * How the matched construct is named in the finding and its `refs`.
    *
    * Defaults to the matched text. The JS dialect overrides it so the label
-   * stays `it.todo` rather than the bare capture group — `refs` is what
-   * waivers and report grouping key on, and shortening it would silently
-   * change what an existing waiver matches.
+   * stays the exact construct (`it.todo`, `describe.skip`) rather than the
+   * bare capture group — `refs` is what waivers and report grouping key on,
+   * and shortening it would silently change what an existing waiver matches.
    */
   label?: (match: RegExpMatchArray) => string;
+  /**
+   * Severity of one match. Defaults to `error`, which is what every
+   * skip-shaped dialect carries. Only the JS dialect overrides it, to grade
+   * its `.skip` form down to `warning` — see the module docstring.
+   */
+  severity?: (match: RegExpMatchArray) => IssueSeverity;
 };
 
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
     extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"],
-    pattern: /\b(it|test|describe)\.todo\s*\(/g,
+    pattern: /\b(it|test|describe)\.(todo|skip)\s*\(/g,
     runner: "vitest/jest",
-    label: (match) => `${match[1]}.todo`,
+    label: (match) => `${match[1]}.${match[2]}`,
+    severity: (match) => (match[2] === "skip" ? "warning" : "error"),
   },
   {
     extensions: [".py"],
@@ -75,6 +93,49 @@ const STUB_DIALECTS: readonly StubDialect[] = [
   { extensions: [".rb"], pattern: /^\s*(?:skip|pending)\b/gm, runner: "RSpec/minitest" },
   { extensions: [".cs"], pattern: /\[Ignore\b|\bSkip\s*=\s*"/g, runner: ".NET test" },
 ];
+
+/** Every stub occurrence in one already-read file, one issue per occurrence. */
+function collectStubIssues(relFile: string, content: string, dialect: StubDialect): Issue[] {
+  const issues: Issue[] = [];
+  const lines = content.split(/\r?\n/);
+  for (let i = 0; i < lines.length; i += 1) {
+    const line = lines[i] ?? "";
+    // The docstring promises one issue per stub occurrence. Walk every
+    // match on the line via matchAll (the regex carries the `g` flag) so
+    // a line like `it.todo(...); test.todo(...);` produces two issues
+    // instead of just the first.
+    const lineNumber = i + 1;
+    for (const match of line.matchAll(dialect.pattern)) {
+      const matchedKind = dialect.label ? dialect.label(match) : match[0].trim();
+      const severity = dialect.severity ? dialect.severity(match) : "error";
+      // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
+      // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
+      // this. file is kept as the bare repo path so emitGitHub / waiver path
+      // matchers (matchFindingPath in waivers.ts) work correctly; the line
+      // number is carried in `loc.line`.
+      const stubIssue = issue(
+        "QFAI-TEST-001",
+        `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
+          `Implement the body or delete the stub.`,
+        severity,
+        relFile,
+        "validation.testStrategy.forbidTestTodoStubs",
+        [matchedKind],
+        "canonical",
+        "Implement the test body, or delete the stub entirely. " +
+          (severity === "warning"
+            ? "A deliberately parked suite can be waived per path in .qfai/waivers.yml. "
+            : "") +
+          "If you need to temporarily opt out of this check, set " +
+          "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
+      );
+      stubIssue.loc = { line: lineNumber };
+      issues.push(stubIssue);
+    }
+  }
+  return issues;
+}
 
 /** The dialect owning a file, or `null` when qfai knows no stub form for it. */
 function resolveStubDialect(relFile: string): StubDialect | null {
@@ -124,39 +185,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
       continue;
     }
 
-    const lines = content.split(/\r?\n/);
-    for (let i = 0; i < lines.length; i += 1) {
-      const line = lines[i] ?? "";
-      // The docstring promises one issue per stub occurrence. Walk every
-      // match on the line via matchAll (the regex carries the `g` flag) so
-      // a line like `it.todo(...); test.todo(...);` produces two issues
-      // instead of just the first.
-      const lineNumber = i + 1;
-      for (const match of line.matchAll(dialect.pattern)) {
-        const matchedKind = dialect.label ? dialect.label(match) : match[0].trim();
-        // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
-        // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
-        // this. file is kept as the bare repo path so emitGitHub / waiver path
-        // matchers (matchFindingPath in waivers.ts) work correctly; the line
-        // number is carried in `loc.line`.
-        const stubIssue = issue(
-          "QFAI-TEST-001",
-          `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
-            `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
-            `Implement the body or delete the stub.`,
-          "error",
-          relFile,
-          "validation.testStrategy.forbidTestTodoStubs",
-          [matchedKind],
-          "canonical",
-          "Implement the test body, or delete the stub entirely. " +
-            "If you need to temporarily opt out of this check, set " +
-            "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
-        );
-        stubIssue.loc = { line: lineNumber };
-        issues.push(stubIssue);
-      }
-    }
+    issues.push(...collectStubIssues(relFile, content, dialect));
   }
 
   if (unscannedExtensions.size > 0) {
