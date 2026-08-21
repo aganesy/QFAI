@@ -17,6 +17,7 @@
  */
 import { describe, expect, it } from "vitest";
 
+import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
@@ -267,6 +268,56 @@ describe("the shipped-lane allowlist", () => {
     expect(invocationOf("./ci/*/build.sh")).toBe(UNREADABLE);
     // And a real pipe still separates.
     expect(commandsOf("printf '%s' x | grep -q y")).toHaveLength(2);
+  });
+
+  it("records which instrument catches each planted build, so neither can narrow invisibly", () => {
+    // The two instruments cover each other's holes, and round 11 measured four commands where they give
+    // opposite answers:
+    //
+    //   npm install esbuild                       allowed by the allowlist, caught by the classifier
+    //   pnpm install --filter tsup                allowed by the allowlist, caught by the classifier
+    //   docker run --rm -v .:/w img make build    refused by the allowlist, missed by the classifier
+    //   docker exec ci make build                 refused by the allowlist, missed by the classifier
+    //
+    // (The first two are now refused by the allowlist as well, since an install naming a package is
+    // refused — but the shape is what matters: complementary coverage held by accident, asserted
+    // nowhere. Either instrument could have been narrowed and the loss would not have shown.)
+    //
+    // What is asserted is the floor, not the split: every planted line must be caught by AT LEAST ONE.
+    // A change that moves a line from "both" to "one" still passes, because that is a legitimate
+    // simplification; a change that moves it to "neither" fails, which is the only outcome that matters.
+    const missed: string[] = [];
+    const byAllowlistOnly: string[] = [];
+    const byClassifierOnly: string[] = [];
+    for (const line of PLANTED) {
+      const allowlist = refusals(line).length > 0;
+      const classifier = classifyBuildCommand(line) !== "none";
+      if (!allowlist && !classifier) missed.push(line);
+      else if (allowlist && !classifier) byAllowlistOnly.push(line);
+      else if (!allowlist && classifier) byClassifierOnly.push(line);
+    }
+    expect(missed, "a planted build neither instrument catches").toEqual([]);
+
+    // And the relationship, measured rather than assumed — which was worth measuring, because it is not
+    // the one round 11 described. On THIS corpus the two instruments agree on every single line: after
+    // this round's repairs neither is the sole catcher of anything here.
+    expect(
+      { byAllowlistOnly, byClassifierOnly },
+      "on the planted corpus the two instruments agree line for line; a non-empty list here means one " +
+        "of them has narrowed, or gained a shape the other lacks, and either is worth reading",
+    ).toEqual({ byAllowlistOnly: [], byClassifierOnly: [] });
+
+    // So **the classifier is not a second net for `US-0017-0004`**, and saying so is the point of this
+    // test. Its job is the OWN tree, where a miss is tolerable and the three-verdict labelling is what
+    // is wanted. Anything relying on it as a backstop for the story is relying on a coincidence that
+    // this assertion has now measured away.
+    const DOCKER_SHAPES = ["docker run --rm -v .:/w img make build", "docker exec ci make build"];
+    for (const line of DOCKER_SHAPES) {
+      expect(refusals(line), `${line}: the allowlist must catch it`).not.toEqual([]);
+      expect(classifyBuildCommand(line), `${line}: the classifier reads docker's stops`).toBe(
+        "none",
+      );
+    }
   });
 
   it("keeps the two lists disjoint, so a program cannot be allowed by both routes", () => {

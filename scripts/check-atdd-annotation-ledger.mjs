@@ -99,76 +99,92 @@ export function checkLedger(ledgerText, testSources, options = {}) {
  * @param {string} dir
  * @returns {Promise<Map<string, string>>} empty when the directory does not exist
  */
+/**
+ * The identity of a directory for cycle detection, or `undefined` when it contributes nothing.
+ *
+ * `realpath`, not `path.resolve`. The first version deduped lexically, and round 3 measured it against a
+ * self-referencing junction: 64 descents, `seen` grew to 64, zero hits, and what stopped the walk was the
+ * operating system. Resolving the links terminates the same walk in two steps.
+ *
+ * Correcting a comment that used to live here too: this repository's 83 tracked symlinks are all under
+ * dot-directories this walk skips by name, and ZERO are under either scanned tree. The hazard is real for
+ * an adopter's tree, not demonstrated by that count.
+ */
+async function identityOf(current) {
+  try {
+    return await realpath(current);
+  } catch (error) {
+    // A dangling or unresolvable path contributes nothing, and a cycle reported here is exactly what the
+    // caller's `seen` set is for — fall back to the lexical form rather than abandoning the walk.
+    if (!isMissing(error) && !isLoop(error)) throw error;
+    return path.resolve(current);
+  }
+}
+
+/**
+ * Is this entry a directory, following a symlink to one?
+ *
+ * `isDirectory()` is FALSE for a symlink to a directory, and this repository's test trees are full of
+ * them — so the first version walked past every linked subtree in silence. `stat` follows the link;
+ * `isSymbolicLink()` alone would not say which kind it is.
+ */
+async function entryIsDirectory(entry, full) {
+  if (entry.isDirectory()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    return (await stat(full)).isDirectory();
+  } catch (error) {
+    // A dangling link, and a link in a cycle, are both "this entry contributes nothing" rather than
+    // failures of the guard. `ELOOP` was unhandled here after round 3 guarded the other two sites, and
+    // round 4 measured the consequence end to end: a mutual cycle (`x -> y`, `y -> x`) gave exit 3, "no
+    // measurement taken", and dropped a real subtree the control run reads fine.
+    if (!isMissing(error) && !isLoop(error)) throw error;
+    return false;
+  }
+}
+
+/** Read one directory's entries into `sources`, returning the subdirectories still to walk. */
+async function readDirectoryInto(current, sources) {
+  /** @type {string[]} */
+  const found = [];
+  let entries;
+  try {
+    entries = await readdir(current, { withFileTypes: true });
+  } catch (error) {
+    // A tree that is not there contributes nothing, and neither does one the OS refuses to descend.
+    // `ELOOP` was previously unhandled, so a symlink cycle answered exit 3 — "no measurement taken" —
+    // instead of being skipped and measured around.
+    if (isMissing(error) || isLoop(error)) return found;
+    throw error;
+  }
+  for (const entry of entries) {
+    const full = path.join(current, entry.name);
+    if (await entryIsDirectory(entry, full)) {
+      if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
+      found.push(full);
+      continue;
+    }
+    if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
+    try {
+      sources.set(full, await readFile(full, "utf8"));
+    } catch (error) {
+      if (isMissing(error)) continue;
+      throw error;
+    }
+  }
+  return found;
+}
+
 export async function collectTestSources(dir) {
   const sources = new Map();
   /** @type {string[]} */
   const queue = [dir];
   const seen = new Set();
   for (let current = queue.pop(); current !== undefined; current = queue.pop()) {
-    // A symlink loop would otherwise walk forever, and the first version could not stop one: it
-    // deduped on `path.resolve`, which is LEXICAL. Round 3 measured it against a self-referencing
-    // junction — 64 descents, `seen` grew to 64, zero hits, and what actually stopped the walk was
-    // the operating system. `realpath` resolves the links, so the same walk terminates in two steps.
-    //
-    // Correcting the comment too: this repository's 83 tracked symlinks are all under dot-directories
-    // this walk skips by name, and ZERO are under either scanned tree. The hazard is real for an
-    // adopter's tree, not demonstrated by that count.
-    let key;
-    try {
-      key = await realpath(current);
-    } catch (error) {
-      // A dangling or unresolvable path contributes nothing, and a cycle reported here is exactly
-      // what the `seen` set is for — fall back to the lexical form rather than abandoning the walk.
-      if (!isMissing(error) && !isLoop(error)) throw error;
-      key = path.resolve(current);
-    }
+    const key = await identityOf(current);
     if (seen.has(key)) continue;
     seen.add(key);
-
-    let entries;
-    try {
-      entries = await readdir(current, { withFileTypes: true });
-    } catch (error) {
-      // A tree that is not there contributes nothing, and neither does one the OS refuses to descend.
-      // `ELOOP` was previously unhandled, so a symlink cycle answered exit 3 — "no measurement
-      // taken" — instead of being skipped and measured around.
-      if (isMissing(error) || isLoop(error)) continue;
-      throw error;
-    }
-    for (const entry of entries) {
-      const full = path.join(current, entry.name);
-
-      // `isDirectory()` is FALSE for a symlink to a directory, and this repository's test trees are
-      // full of them — so the first version walked past every linked subtree in silence. `stat`
-      // follows the link; `isSymbolicLink()` alone would not tell us which kind it is.
-      let directory = entry.isDirectory();
-      if (!directory && entry.isSymbolicLink()) {
-        try {
-          directory = (await stat(full)).isDirectory();
-        } catch (error) {
-          // A dangling link, and a link in a cycle, are both "this entry contributes nothing" rather
-          // than failures of the guard. `ELOOP` was unhandled HERE after round 3 guarded the other
-          // two sites, and round 4 measured the consequence end to end: a mutual cycle (`x -> y`,
-          // `y -> x`) still gave exit 3, "no measurement taken", and dropped a real subtree the
-          // control run reads fine. Three sites resolve paths; all three are guarded now.
-          if (!isMissing(error) && !isLoop(error)) throw error;
-          continue;
-        }
-      }
-      if (directory) {
-        if (entry.name === "node_modules" || entry.name.startsWith(".")) continue;
-        queue.push(full);
-        continue;
-      }
-
-      if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
-      try {
-        sources.set(full, await readFile(full, "utf8"));
-      } catch (error) {
-        if (isMissing(error)) continue;
-        throw error;
-      }
-    }
+    queue.push(...(await readDirectoryInto(current, sources)));
   }
   return sources;
 }

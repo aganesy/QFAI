@@ -260,7 +260,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 8 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 9 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -307,7 +307,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 8 passed (8), exit 0
+  -> Tests 9 passed (9), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
