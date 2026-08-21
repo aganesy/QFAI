@@ -36,7 +36,8 @@
  * escalation) and surfaces the finding anyway. validate is never
  * crashed by an auxiliary counter write failure.
  *
- * Scan scope: `<config.paths.testsDir>/atdd/**\/*.test.{ts,tsx,...}`.
+ * Scan scope: the scaffold directories under `<config.paths.testsDir>`, each
+ * globbed with every basename shape the writer's dialects emit.
  * Spec id is parsed from the path segment immediately after
  * `tests/atdd/` (e.g. `tests/atdd/spec-0008/TC-0008-0001.test.ts`
  * → spec id `spec-0008`). Non-canonical layouts degrade to
@@ -48,6 +49,7 @@ import { readFile } from "node:fs/promises";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { SCAFFOLD_PLACEHOLDER_MARKER } from "../atdd/scaffold.js";
+import { SCAFFOLD_PLACEHOLDER_GLOBS } from "../atdd/scaffoldDialect.js";
 import { atddTestKindDirs, collectTcLevels, isOutsideAtddObligation } from "../atddTraceability.js";
 import {
   listValidateCycleKeys,
@@ -63,12 +65,17 @@ import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 /**
- * Matches the per-TC `// TODO: implement assertion for <TC-ID>`
+ * Matches the per-TC `TODO: implement assertion for <TC-ID>`
  * comment that `qfai atdd scaffold` emits inside each skeleton.
  * Captures the TC-ID so the validator finding can name it and so
  * the escalation counter can advance per-TC (not per-file).
+ *
+ * Both line-comment prefixes the scaffold dialects use are accepted (`//` for
+ * vitest, `#` for pytest) — an anchored `//` would have made a Python skeleton
+ * invisible here, which is the same "the writer emitted it, no gate reads it"
+ * failure the dialect selection removes.
  */
-const TODO_MARKER_RE = /\/\/\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
+const TODO_MARKER_RE = /(?:\/\/|#)\s*TODO:\s*implement assertion for\s+(TC-\d{4}-\d{4})\b/g;
 
 /**
  * Declared `Level` values whose home is a directory this writer does not emit
@@ -195,10 +202,13 @@ export async function validateScaffoldPlaceholder(
   // literal `tests/api/**` that no validator reads, so following the
   // remediation left `QFAI-ATDD-112` exactly as it was.
   const dirs = atddTestKindDirs(config.paths.testsDir);
-  // Glob for any test extension the project uses. fast-glob
-  // returns absolute paths when the pattern is absolute.
-  const globPatterns = scaffoldDirs.map((dir) =>
-    path.posix.join(dir.replace(/\\/g, "/"), "**/*.test.{ts,tsx,mts,js,mjs,jsx,cts,cjs}"),
+  // One glob per scaffold directory per dialect the writer can emit, taken
+  // from the writer's own table so the two cannot drift: a hardcoded
+  // `**/*.test.{ts,...}` here stopped reporting the pytest skeletons the
+  // stack-aware writer emits. fast-glob returns absolute paths when the
+  // pattern is absolute.
+  const globPatterns = scaffoldDirs.flatMap((dir) =>
+    SCAFFOLD_PLACEHOLDER_GLOBS.map((pattern) => path.posix.join(dir.replace(/\\/g, "/"), pattern)),
   );
   // De-duplicated: an unusual `testsDir` could make two patterns resolve to the
   // same file, and counting it twice would double one skeleton's escalation.

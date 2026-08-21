@@ -1145,16 +1145,15 @@ function collectShortIds(text: string, prefix: "US" | "TC"): Set<string> {
 const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
 
 /**
- * Derives the per-layer file pattern from the project's configured
- * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
+ * Lifts the bare extension set out of the project's configured `testFileGlobs`
+ * (`tests/**\/*.py` -> `py`). Empty when nothing could be recovered.
  *
- * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
- * a pattern to append under `tests/{e2e,api,integration}/`. The extension set is
- * therefore lifted out of them, unioned with the structural annotation carriers
- * above, and recombined. When no extension can be recovered, the JS/TS default
- * is used.
+ * Exported because the scaffold writer selects its skeleton dialect from the
+ * same set (`core/atdd/scaffoldDialect.ts`): the command that PRODUCES ATDD
+ * tests and the scan that CONSUMES them must read this config key identically,
+ * or the writer emits an extension the scan never opens.
  */
-export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
+export function deriveTestFileExtensions(testFileGlobs: readonly string[]): Set<string> {
   const extensions = new Set<string>();
   for (const glob of testFileGlobs) {
     for (const match of glob.matchAll(/\.\{([^}]+)\}$/g)) {
@@ -1168,6 +1167,21 @@ export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string 
       extensions.add(single[1]);
     }
   }
+  return extensions;
+}
+
+/**
+ * Derives the per-layer file pattern from the project's configured
+ * `testFileGlobs`, so a non-JS repository is scanned with its own extensions.
+ *
+ * Configured globs describe whole paths (`tests/**\/*.py`); the ATDD scan needs
+ * a pattern to append under `tests/{e2e,api,integration}/`. The extension set is
+ * therefore lifted out of them, unioned with the structural annotation carriers
+ * above, and recombined. When no extension can be recovered, the JS/TS default
+ * is used.
+ */
+export function deriveAtddFilePattern(testFileGlobs: readonly string[]): string {
+  const extensions = deriveTestFileExtensions(testFileGlobs);
   if (extensions.size === 0) {
     return DEFAULT_TEST_FILE_GLOB;
   }

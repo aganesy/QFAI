@@ -4,8 +4,9 @@
  * For each TC entry in the target spec's Test-Cases catalogue whose declared
  * `Level` this stage owns — L1/Unit and L2/Component are skipped, and named on
  * stderr — the command writes a placeholder test file under
- * `<root>/tests/integration/<specId>/<TC-ID>.test.ts` — the directory
- * `QFAI-ATDD-112` scans, so a scaffolded test counts as coverage once its
+ * `<root>/tests/integration/<specId>/` — the directory `QFAI-ATDD-112` scans —
+ * in the language the project's own `validation.traceability.testFileGlobs`
+ * derive, so a scaffolded test counts as coverage once its
  * assertions are filled in. Existing files are
  * preserved untouched (idempotent). When a skeleton remains in its
  * placeholder shape across N runs (default 3, configurable via
@@ -20,6 +21,7 @@ import { loadConfig } from "../../core/config.js";
 import {
   atddTestKindDirs,
   collectTcLevels,
+  deriveAtddFilePattern,
   resolveAtddHomeKind,
 } from "../../core/atddTraceability.js";
 import {
@@ -29,6 +31,11 @@ import {
   scaffoldDestPath,
   type TCEntry,
 } from "../../core/atdd/scaffold.js";
+import {
+  resolveScaffoldDialect,
+  SCAFFOLD_DIALECTS,
+  type ScaffoldDialect,
+} from "../../core/atdd/scaffoldDialect.js";
 import {
   readScaffoldAttempts,
   recordScaffoldAttempt,
@@ -70,6 +77,22 @@ async function readDeclaredTcLevels(specDir: string): Promise<Map<string, string
  */
 const SCAFFOLD_HOME_KIND = "integration";
 
+/**
+ * Operator-facing refusal for a stack this command has no skeleton shape for.
+ * Names the derived scan pattern, so the reason is the config key the operator
+ * can act on rather than "unsupported".
+ */
+function unsupportedStackMessage(testFileGlobs: readonly string[], testsDir: string): string {
+  const known = SCAFFOLD_DIALECTS.map((dialect) => dialect.runner).join(" / ");
+  return (
+    `qfai atdd scaffold: no skeleton dialect for this project's test extensions — ` +
+    `validation.traceability.testFileGlobs derives ${deriveAtddFilePattern(testFileGlobs)}, ` +
+    `and this command emits ${known} skeletons only, which that pattern would not scan. ` +
+    `Author these TCs by hand under ${testsDir}/${SCAFFOLD_HOME_KIND}/<spec-id>/, keeping ` +
+    `their QFAI:SPEC-XXXX:TC-YYYY annotations.`
+  );
+}
+
 function validateSpecId(specId: string): boolean {
   // Permissive: accept `spec-NNNN` shapes; future renaming is at the
   // discretion of the spec authority.
@@ -89,9 +112,10 @@ async function processOneTc(
   specId: string,
   entry: TCEntry,
   testsDir: string,
+  dialect: ScaffoldDialect,
 ): Promise<PerTcOutcome> {
-  const destPath = scaffoldDestPath(root, specId, entry.tcId, testsDir);
-  const body = buildSkeleton(entry, specId);
+  const destPath = scaffoldDestPath(root, specId, entry.tcId, testsDir, dialect);
+  const body = buildSkeleton(entry, specId, dialect);
   const result = await emitSkeleton(entry, destPath, body);
   const destRel = path.relative(root, destPath).replace(/\\/g, "/");
   return {
@@ -165,6 +189,19 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // project that relocated testsDir (e.g. to `spec-tests`) emitted
   // scaffolds outside the tree where the rest of QFAI looked for them.
   const testsDirRel = config.paths.testsDir;
+  // The skeleton language comes from the same config key `QFAI-ATDD-112`
+  // derives its scan extensions from. Writing a `.test.ts` on a project whose
+  // globs derive `{feature,markdown,md,py}` put the file inside the scanned
+  // directory with an extension the scan never opens, so the documented happy
+  // path (scaffold -> fill in -> validate) could not clear the obligation the
+  // command exists to discharge — before or after fill-in.
+  const dialect = resolveScaffoldDialect(config.validation.traceability.testFileGlobs);
+  if (dialect === null) {
+    // Refuse rather than mislead: a skeleton in a language qfai has no shape
+    // for would be uncounted the same way, only silently.
+    writeErr(unsupportedStackMessage(config.validation.traceability.testFileGlobs, testsDirRel));
+    return 1;
+  }
   const specDir = path.resolve(options.root, specsDirRel, specId);
   let entries: TCEntry[];
   try {
@@ -248,7 +285,7 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
 
   const outcomes: PerTcOutcome[] = [];
   for (const entry of entries) {
-    const outcome = await processOneTc(options.root, specId, entry, testsDirRel);
+    const outcome = await processOneTc(options.root, specId, entry, testsDirRel, dialect);
     outcomes.push(outcome);
   }
 

@@ -19,6 +19,7 @@ import { access, mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { DEFAULT_SCAFFOLD_DIALECT, type ScaffoldDialect } from "./scaffoldDialect.js";
 
 /** Single parsed Test-Case entry. */
 export type TCEntry = {
@@ -290,50 +291,53 @@ export async function parseTestCases(specDir: string): Promise<TCEntry[]> {
   return out;
 }
 
-/**
- * Build the test-skeleton body for a single TC entry.
- *
- * The body carries:
- *   - a vitest framework import,
- *   - the per-TC annotation header (`QFAI:SPEC-XXXX:TC-YYYY-YYYY`),
- *   - reference comments for related AC / EX entries,
- *   - the placeholder sentinel + `// TODO: implement assertion for <TC>`,
- *   - a `describe(...)` with a single `it.skip(...)` placeholder.
- */
-export function buildSkeleton(entry: TCEntry, specId: string): string {
-  const annotation = `QFAI:${specId.toUpperCase()}:${entry.tcId}`;
-  const referenceLines: string[] = [];
+/** Reference comments (AC / EX / US / CON-API / Type) for one entry. */
+function buildReferenceLines(entry: TCEntry, commentPrefix: string): string[] {
+  const refs: string[] = [];
   if (entry.acRefs.length > 0) {
-    referenceLines.push(`// AC refs: ${entry.acRefs.join(", ")}`);
+    refs.push(`${commentPrefix} AC refs: ${entry.acRefs.join(", ")}`);
   }
   if (entry.exRefs.length > 0) {
-    referenceLines.push(`// EX refs: ${entry.exRefs.join(", ")}`);
+    refs.push(`${commentPrefix} EX refs: ${entry.exRefs.join(", ")}`);
   }
   if (entry.usRefs !== undefined && entry.usRefs.length > 0) {
-    referenceLines.push(`// US refs: ${entry.usRefs.join(", ")}`);
+    refs.push(`${commentPrefix} US refs: ${entry.usRefs.join(", ")}`);
   }
   if (entry.conApiRefs !== undefined && entry.conApiRefs.length > 0) {
-    referenceLines.push(`// CON-API refs: ${entry.conApiRefs.join(", ")}`);
+    refs.push(`${commentPrefix} CON-API refs: ${entry.conApiRefs.join(", ")}`);
   }
   if (entry.type !== undefined && entry.type.length > 0) {
-    referenceLines.push(`// Type: ${entry.type}`);
+    refs.push(`${commentPrefix} Type: ${entry.type}`);
   }
+  return refs;
+}
+
+/**
+ * Build the test-skeleton body for a single TC entry, in the project's own
+ * test language (`dialect`, resolved from `testFileGlobs` by the caller).
+ *
+ * The body carries:
+ *   - the per-TC annotation header (`QFAI:SPEC-XXXX:TC-YYYY-YYYY`),
+ *   - reference comments for related AC / EX entries,
+ *   - the placeholder sentinel + `TODO: implement assertion for <TC>`,
+ *   - the dialect's own runner idiom for an unimplemented test.
+ */
+export function buildSkeleton(
+  entry: TCEntry,
+  specId: string,
+  dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
+): string {
+  const annotation = `QFAI:${specId.toUpperCase()}:${entry.tcId}`;
+  const prefix = dialect.commentPrefix;
 
   const lines: string[] = [];
-  lines.push(`// ${annotation}`);
-  lines.push(`// ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`);
-  if (referenceLines.length > 0) {
-    lines.push(...referenceLines);
-  }
+  lines.push(`${prefix} ${annotation}`);
+  lines.push(
+    `${prefix} ${SCAFFOLD_PLACEHOLDER_MARKER} — replace this block with a real assertion.`,
+  );
+  lines.push(...buildReferenceLines(entry, prefix));
   lines.push("");
-  lines.push(`import { describe, it } from "vitest";`);
-  lines.push("");
-  lines.push(`describe(${JSON.stringify(entry.tcId)}, () => {`);
-  lines.push(`  // TODO: implement assertion for ${entry.tcId}`);
-  lines.push(`  it.skip(${JSON.stringify("pending — scaffold placeholder")}, () => {`);
-  lines.push(`    // TODO: implement assertion for ${entry.tcId}`);
-  lines.push(`  });`);
-  lines.push(`});`);
+  lines.push(...dialect.buildBody(entry.tcId));
   lines.push("");
   return lines.join("\n");
 }
@@ -416,7 +420,7 @@ export async function emitSkeleton(
 
 /**
  * Resolve the canonical scaffold output path for a (spec, TC) pair:
- * `<root>/<testsDir>/atdd/<specId>/<TC-ID>.test.ts`.
+ * `<root>/<testsDir>/integration/<specId>/<dialect basename>`.
  *
  * `testsDir` defaults to `"tests"` PURELY as a back-compat fallback
  * for external callers; the production caller in `cli/commands/
@@ -445,7 +449,18 @@ export function scaffoldDestPath(
   specId: string,
   tcId: string,
   testsDir: string = "tests",
+  dialect: ScaffoldDialect = DEFAULT_SCAFFOLD_DIALECT,
 ): string {
+  // The basename comes from the dialect, not a literal `.test.ts`.
+  //
+  // `QFAI-ATDD-112` derives the extensions it scans from
+  // `validation.traceability.testFileGlobs`, so on a project whose globs derive
+  // `{feature,markdown,md,py}` a `.test.ts` skeleton sat inside the scanned
+  // directory with an extension the scan never opens — uncovered, and not even
+  // reported as uncounted (`QFAI-ATDD-105` only sees files OUTSIDE the three
+  // roots). Same class of failure as the `atdd/` -> `integration/` move below,
+  // on the extension axis instead of the directory axis.
+  //
   // `<testsDir>/integration/`, not `<testsDir>/atdd/`.
   //
   // The scaffold is the only command qfai ships that PRODUCES ATDD test files,
@@ -455,7 +470,7 @@ export function scaffoldDestPath(
   // `TC-*` as uncovered, with no diagnostic saying why. `integration` is the
   // directory `catalog/test-layers.md` and `qfai-atdd/SKILL.md` already assign
   // to `TC-*`, so the writer now agrees with the gate rather than the reverse.
-  return path.resolve(root, testsDir, SCAFFOLD_LAYER_DIR, specId, `${tcId}.test.ts`);
+  return path.resolve(root, testsDir, SCAFFOLD_LAYER_DIR, specId, dialect.fileName(tcId));
 }
 
 /**

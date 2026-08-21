@@ -6,6 +6,18 @@ annotation. Skeletons land in `tests/integration/<spec-id>/` — the directory
 `QFAI-ATDD-112` scans — so a filled-in skeleton counts as coverage. It is
 idempotent: existing files are left untouched.
 
+## Which language the skeleton is written in
+
+The skeleton's language is derived from
+`qfai.config.yaml#validation.traceability.testFileGlobs` — the same key
+`QFAI-ATDD-112` derives its scan extensions from, so the file the command
+writes is always a file the gate reads. A JS/TS glob set (and the unconfigured
+default) gets `<TC-ID>.test.ts` with a `vitest` body; a Python one gets
+`test_<tc_id>.py` with a `pytest` body. A stack with neither is refused with a
+non-zero exit naming the derived pattern: author those TCs by hand in
+`tests/integration/<spec-id>/`, keeping the `QFAI:SPEC-XXXX:TC-YYYY`
+annotation.
+
 ## Which TCs are skipped, and why
 
 Skeletons are integration-only, so two groups of TC are skipped, both named on

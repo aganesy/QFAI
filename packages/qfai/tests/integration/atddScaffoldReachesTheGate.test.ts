@@ -14,14 +14,19 @@
  * same files.
  */
 
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { defaultConfig } from "../../src/core/config.js";
+import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import { runAtddScaffold } from "../../src/cli/commands/atddScaffold.js";
 import { scaffoldDestPath } from "../../src/core/atdd/scaffold.js";
+import {
+  resolveScaffoldDialect,
+  type ScaffoldDialect,
+} from "../../src/core/atdd/scaffoldDialect.js";
 import { evaluateAtddCodeTraceability } from "../../src/core/atddTraceability.js";
 import { validateAtddCodeTraceability } from "../../src/core/validators/atddCodeTraceability.js";
 
@@ -99,6 +104,127 @@ describe("the scaffold writes where the gate looks", () => {
         const issues = await validateAtddCodeTraceability(root, defaultConfig);
         expect(issues.map((i) => i.code)).toContain("QFAI-ATDD-112");
       },
+    );
+  });
+});
+
+/**
+ * Same failure as above, on the extension axis instead of the directory one.
+ *
+ * The writer emitted `<TC-ID>.test.ts` on every stack, while the gate derives
+ * the extensions it opens from `validation.traceability.testFileGlobs`. On a
+ * Python project the scaffold's own output sat inside `tests/integration/**`
+ * with an extension the scan never reads: uncovered before fill-in, uncovered
+ * after it, and not even reported as uncounted — `QFAI-ATDD-105` names files
+ * OUTSIDE the three scanned roots, and this one was inside.
+ */
+const PY_TEST_FILE_GLOBS = ["tests/**/test_*.py", "tests/**/*_test.py"] as const;
+
+const CONFIG_WITH_GLOBS = (globs: readonly string[]): string =>
+  [
+    "validation:",
+    "  traceability:",
+    "    testFileGlobs:",
+    ...globs.map((glob) => `      - "${glob}"`),
+    "",
+  ].join("\n");
+
+// The scaffold parser reads composite `TC-NNNN-NNNN` ids only, so the
+// short-form fixture above cannot drive an end-to-end scaffold run.
+const COMPOSITE_TC_TABLE = `# 06 Test Cases
+
+## Test Case Table
+
+| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |
+| ----- | ----- | ------- | ------ | ----- | -------- |
+| TC-0001-0001 | L3 | AC-0001-0001 | EX-0001-0001 | step | expected |
+`;
+
+/** Narrowing helper — a missing dialect is a test failure, not a fallback. */
+function requireDialect(globs: readonly string[]): ScaffoldDialect {
+  const dialect = resolveScaffoldDialect(globs);
+  if (dialect === null) {
+    throw new Error(`no scaffold dialect resolved for ${globs.join(", ")}`);
+  }
+  return dialect;
+}
+
+describe("the scaffold writes in the language the gate reads", () => {
+  it("keeps the vitest skeleton when the project configures no test globs", () => {
+    const dialect = requireDialect(defaultConfig.validation.traceability.testFileGlobs);
+    expect(dialect.id).toBe("js-ts");
+    const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
+    expect(dest.replace(/\\/g, "/")).toContain("/tests/integration/spec-0001/TC-0001-0001.test.ts");
+  });
+
+  it("names a pytest file when the configured globs derive `.py`", () => {
+    const dialect = requireDialect(PY_TEST_FILE_GLOBS);
+    expect(dialect.id).toBe("python");
+    const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
+    expect(dest.replace(/\\/g, "/")).toContain("/tests/integration/spec-0001/test_tc_0001_0001.py");
+  });
+
+  it("closes QFAI-ATDD-112 on a Python project with the file it just wrote", async () => {
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(0);
+        expect(errors).toEqual([]);
+
+        const emitted = path.join(
+          root,
+          "tests",
+          "integration",
+          "spec-0001",
+          "test_tc_0001_0001.py",
+        );
+        const body = await readFile(emitted, "utf-8");
+        // The annotation carries the project's own comment prefix, so the
+        // emitted file is valid in its own language.
+        expect(body).toContain("# QFAI:SPEC-0001:TC-0001-0001");
+        expect(body).not.toContain('from "vitest"');
+
+        // The end-to-end claim: the file the command wrote is a file the gate
+        // counts. Pre-fix this was `TC-0001-0001.test.ts` and the error stood.
+        const { config } = await loadConfig(root);
+        const issues = await validateAtddCodeTraceability(root, config);
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-ATDD-112");
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("refuses on a stack it has no skeleton shape for instead of writing an unread file", async () => {
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["spec/**/*_spec.rb"]) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        expect(errors.join("\n")).toMatch(/no skeleton dialect/);
+        // The derived pattern is named, so the refusal points at the config key
+        // the operator can act on.
+        expect(errors.join("\n")).toContain("rb");
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
     );
   });
 });
