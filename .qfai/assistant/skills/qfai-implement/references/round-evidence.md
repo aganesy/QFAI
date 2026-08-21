@@ -41,7 +41,8 @@ Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
 its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
 fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
-`Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
+`Selector`, `Layer`, and the refactor-verify fields — the pair and its
+`Refactor verify revision`. `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a
 second round showed they describe a round's RED, not the row's.
 
@@ -73,10 +74,11 @@ a change that has none. That rework takes the second path:
    `refactor -> review-fix` and back.
 2. **No round is opened.** Round blocks record RED/GREEN cycles; a
    behaviour-preserving change has none.
-3. Make the change, re-run the item's tests, and refresh
-   `Refactor verify command` / `Refactor verify result`. That refreshed pair is
-   the evidence the change kept GREEN, and it must be fresh — the pre-rework
-   pair is stale evidence.
+3. Make the change, re-run the item's tests, and refresh all three
+   `Refactor verify` fields — `command`, `result` and `revision`. That refreshed
+   triple is the evidence the change kept GREEN, and it must be fresh: the
+   pre-rework one is stale evidence, and the revision moved with the change, so
+   leaving it behind would make the re-review disagree with it at gate item 10.
 4. Record the trigger and the path taken on the current round's
    `Round N: reviewer verdict` line, then return to `refactor` and re-submit.
 

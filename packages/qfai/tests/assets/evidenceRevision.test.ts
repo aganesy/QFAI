@@ -75,14 +75,70 @@ describe("evidence and verdicts carry a revision", () => {
       );
     });
 
-    it(`${tree}: gate item 10 requires the four observations to agree`, async () => {
+    it(`${tree}: gate item 10 requires the final-tree observations to agree`, async () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
         // Article-free: the clause now opens a sentence of its own, after the
         // `Audited evidence hash` rule that addresses what the revision leaves out.
-        "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+        "Of the item's four sub-agent observations (items 3, 5, 7, 8), **only items 7 and 8 judge the final tree**",
       );
+      expect(skill).toContain("items 6, 7 and 8 agree among themselves");
+    });
+
+    it(`${tree}: item 5 is exempt, so item 6 is not forced to be a null refactor`, async () => {
+      // Items 5, 7 and 8 were required to name one revision while item 6
+      // demanded a refactor between them. On an uncommitted tree the refactor
+      // moves the content address by construction, so the two were jointly
+      // satisfiable only by refactoring nothing.
+      const skill = flat(await read(tree, SKILL));
+      const reference = flat(await read(tree, REFERENCE));
+
+      expect(skill).toContain(
+        "the GREEN is observed before Phase: Refactor, and step 4 there requests the reviews from `refactor` and never from `green`",
+      );
+      expect(skill).toContain(
+        "made this gate and item 6 jointly satisfiable only by a refactor that changed nothing",
+      );
+      expect(reference).toContain(
+        "left that pair jointly satisfiable only by a refactor that changed nothing — **only by not doing item 6**",
+      );
+      // The GREEN keeps the pre-refactor address, the way item 3 keeps its own.
+      expect(reference).toContain("Item 5 keeps its round block's `Revision`");
+    });
+
+    it(`${tree}: the reference tables which tree each of items 3, 5, 6, 7, 8 addresses`, async () => {
+      const reference = await read(tree, REFERENCE);
+
+      expect(reference).toContain("## Which tree each gate item addresses");
+      for (const row of [
+        "| 3 — RED observed",
+        "| 5 — GREEN observed",
+        "| 6 — GREEN re-confirmed after refactor",
+        "| 7 — `completion-reviewer` PASS",
+        "| 8 — `implementation-reviewer` PASS",
+      ]) {
+        expect(reference).toContain(row);
+      }
+      expect(flat(reference)).toContain(
+        "**Items 6, 7 and 8 MUST name the same revision. Items 3 and 5 each name their own**",
+      );
+    });
+
+    it(`${tree}: the refactor-verify pair carries the address items 6, 7 and 8 share`, async () => {
+      const skill = flat(await read(tree, SKILL));
+      const delegation = flat(await read(tree, DELEGATION));
+
+      // The write point is named, so the field is not left without one.
+      expect(skill).toContain(
+        "`Refactor verify revision` beside it: the state Phase: Refactor step 2's re-run was observed against",
+      );
+      expect(skill).toContain(
+        "**That is the address items 6, 7 and 8 share**, that run being the only observation of the refactored tree taken before the reviews",
+      );
+      // In the completion reviewers' audit subject: it is what their own
+      // `Reviewed revision` is checked against.
+      expect(delegation).toContain("`Refactor verify command` / `result` / `revision`");
     });
 
     it(`${tree}: staleness is defined mechanically`, async () => {
