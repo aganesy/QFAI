@@ -1,6 +1,6 @@
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { buildContractIndex } from "../contractIndex.js";
+import { buildContractIndex, type ContractIndex } from "../contractIndex.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
@@ -8,6 +8,11 @@ import { issue, readSafe } from "./utils.js";
 const FULL_CONTRACT_ID_RE = /\bCON-(API|DB|UI)-(\d+)\b/gi;
 const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
 const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid"]);
+const DECLARED_ID_HEADER_KEY = "declaredid";
+const DEPENDS_ON_HEADER_KEY = "dependson";
+
+type IndexTableRow = { cells: string[]; line: number };
+type IndexTable = { headers: string[]; rows: IndexTableRow[]; line: number };
 
 export async function validateContractReferences(
   root: string,
@@ -51,6 +56,8 @@ export async function validateContractReferences(
         ),
       );
     }
+
+    issues.push(...validateDependsOnColumn(filePath, text, contractIndex));
   }
 
   return issues;
@@ -58,6 +65,37 @@ export async function validateContractReferences(
 
 function extractContractIds(text: string): string[] {
   const ids = new Set<string>();
+
+  for (const table of parseIndexTables(text)) {
+    const targetColumnIndexes = table.headers
+      .map((column, columnIndex) => ({
+        columnKey: normalizeHeaderKey(column),
+        columnIndex,
+      }))
+      .filter((column) => CONTRACT_INDEX_HEADER_KEYS.has(column.columnKey))
+      .map((column) => column.columnIndex);
+
+    if (targetColumnIndexes.length === 0) {
+      continue;
+    }
+
+    for (const row of table.rows) {
+      for (const columnIndex of targetColumnIndexes) {
+        const cell = row.cells[columnIndex];
+        if (!cell) {
+          continue;
+        }
+        extractCellContractIds(cell, ids);
+      }
+    }
+  }
+
+  return Array.from(ids).sort((a, b) => a.localeCompare(b));
+}
+
+/** Every markdown table in the file, as header + body rows with 1-based lines. */
+function parseIndexTables(text: string): IndexTable[] {
+  const tables: IndexTable[] = [];
   const lines = text.split(/\r?\n/);
 
   for (let lineIndex = 0; lineIndex < lines.length - 1; lineIndex++) {
@@ -70,44 +108,126 @@ function extractContractIds(text: string): string[] {
       continue;
     }
 
-    const headerColumns = parseTableRow(headerLine);
-    const targetColumnIndexes = headerColumns
-      .map((column, columnIndex) => ({
-        columnKey: normalizeHeaderKey(column),
-        columnIndex,
-      }))
-      .filter((column) => CONTRACT_INDEX_HEADER_KEYS.has(column.columnKey))
-      .map((column) => column.columnIndex);
-
-    if (targetColumnIndexes.length === 0) {
-      continue;
-    }
-
-    lineIndex += 2;
-    while (lineIndex < lines.length) {
-      const rowLine = lines[lineIndex];
+    const rows: IndexTableRow[] = [];
+    let rowIndex = lineIndex + 2;
+    while (rowIndex < lines.length) {
+      const rowLine = lines[rowIndex];
       if (rowLine === undefined || !isTableRow(rowLine)) {
         break;
       }
-      if (isSeparatorRow(rowLine)) {
-        lineIndex++;
-        continue;
+      if (!isSeparatorRow(rowLine)) {
+        rows.push({ cells: parseTableRow(rowLine), line: rowIndex + 1 });
       }
-
-      const rowColumns = parseTableRow(rowLine);
-      for (const columnIndex of targetColumnIndexes) {
-        const cell = rowColumns[columnIndex];
-        if (!cell) {
-          continue;
-        }
-        extractCellContractIds(cell, ids);
-      }
-      lineIndex++;
+      rowIndex++;
     }
-    lineIndex--;
+
+    tables.push({ headers: parseTableRow(headerLine), rows, line: lineIndex + 1 });
+    lineIndex = rowIndex - 1;
   }
 
-  return Array.from(ids).sort((a, b) => a.localeCompare(b));
+  return tables;
+}
+
+/**
+ * The `Depends On` column must exist, and must mirror the contract files.
+ *
+ * The shipped index template carries the column in all three tables and states
+ * that it is the only place a multi-file schema's composition is written down —
+ * `QFAI-CONTRACT-011` forces that schema into N files. Nothing read the column,
+ * so a table could silently drop it, and a row could disagree with the
+ * `-- Depends on:` / `x-qfai-depends-on` declaration in the file it names,
+ * without producing a finding. Both are checked here because the index row is
+ * the one place the mandated mirror and its source are visible together.
+ */
+function validateDependsOnColumn(filePath: string, text: string, index: ContractIndex): Issue[] {
+  const issues: Issue[] = [];
+
+  for (const table of parseIndexTables(text)) {
+    const headerKeys = table.headers.map((column) => normalizeHeaderKey(column));
+    // Only the shipped contract-index shape is held to this: a table without a
+    // `Declared ID` column is some other table that happens to name contracts.
+    if (!headerKeys.includes(DECLARED_ID_HEADER_KEY)) {
+      continue;
+    }
+    const declaredIdColumn = headerKeys.indexOf(DECLARED_ID_HEADER_KEY);
+    const dependsOnColumn = headerKeys.indexOf(DEPENDS_ON_HEADER_KEY);
+
+    if (dependsOnColumn < 0) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-032",
+          `契約インデックスの表に \`Depends On\` 列がありません: ${table.headers.join(" | ")}`,
+          "warning",
+          filePath,
+          "contracts.index.dependsOnColumn",
+          undefined,
+          "change",
+          "`| Short ID | ... | Declared ID | File | Depends On | Purpose |` の形に列を戻し、各行に適用順の依存関係（無い場合は `-`）を記載してください。",
+          { loc: { line: table.line } },
+        ),
+      );
+      continue;
+    }
+
+    issues.push(
+      ...validateDependsOnRows(table, { declaredIdColumn, dependsOnColumn }, filePath, index),
+    );
+  }
+
+  return issues;
+}
+
+function validateDependsOnRows(
+  table: IndexTable,
+  columns: { declaredIdColumn: number; dependsOnColumn: number },
+  filePath: string,
+  index: ContractIndex,
+): Issue[] {
+  const issues: Issue[] = [];
+
+  for (const row of table.rows) {
+    const declaredIds = new Set<string>();
+    extractCellContractIds(row.cells[columns.declaredIdColumn] ?? "", declaredIds);
+    const contractId = declaredIds.size === 1 ? Array.from(declaredIds)[0] : undefined;
+    // An empty / example / multi-id row names no single contract to mirror, and
+    // an unknown id is already `QFAI-CONTRACT-030`'s finding.
+    if (!contractId || !index.ids.has(contractId)) {
+      continue;
+    }
+
+    const rowDependencies = new Set<string>();
+    extractCellContractIds(row.cells[columns.dependsOnColumn] ?? "", rowDependencies);
+    const fileDependencies = index.idToDependencies.get(contractId) ?? new Set<string>();
+    const missing = Array.from(fileDependencies)
+      .filter((dependency) => !rowDependencies.has(dependency))
+      .sort();
+    const extra = Array.from(rowDependencies)
+      .filter((dependency) => !fileDependencies.has(dependency))
+      .sort();
+    if (missing.length === 0 && extra.length === 0) {
+      continue;
+    }
+
+    const parts = [
+      missing.length > 0 ? `契約ファイル側のみ: ${missing.join(", ")}` : "",
+      extra.length > 0 ? `インデックス側のみ: ${extra.join(", ")}` : "",
+    ].filter((part) => part.length > 0);
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-033",
+        `契約インデックスの \`Depends On\` が契約ファイルの宣言と一致しません: ${contractId} (${parts.join(" / ")})`,
+        "warning",
+        filePath,
+        "contracts.index.dependsOnMirror",
+        [contractId, ...missing, ...extra],
+        "change",
+        "契約ファイルの `-- Depends on:` / `x-qfai-depends-on` と `Depends On` 列を同じ内容に揃えてください（依存が無い場合は `-`）。",
+        { loc: { line: row.line } },
+      ),
+    );
+  }
+
+  return issues;
 }
 
 function extractCellContractIds(cell: string, ids: Set<string>): void {

@@ -50,7 +50,9 @@
   resulting composition is stated; without it every consumer reconstructs the
   apply graph by reading the DDL, and getting it wrong is silent.
 - `QFAI-CONTRACT-014` errors on a declared dependency that names no existing
-  contract.
+  contract. `QFAI-CONTRACT-015` warns on a contract that states no apply order
+  at all, `QFAI-CONTRACT-032` on a table that dropped this column, and
+  `QFAI-CONTRACT-033` on a row whose cell disagrees with the file it names.
 
 - If no contracts are needed, keep each table and state `0 items` explicitly.
 - `<slug>` must be kebab-case from entity/router/screen.

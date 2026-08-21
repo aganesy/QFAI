@@ -36,6 +36,12 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
     that does not exist. Getting the set wrong is otherwise silent: the wrong
     subset still applies cleanly and the tests still pass, against a schema
     missing the tables under test.
+  - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
+    at all. Write `-` when nothing must be applied first: "no dependencies" and
+    "never stated" are different claims, and only the first is checkable.
+  - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
+    the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
+    whose cell disagrees with the declaration in the file that row names.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not

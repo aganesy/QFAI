@@ -48,6 +48,9 @@ const DEPENDS_ON_YAML_FLOW_RE = /^[ \t]*x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t
 const DEPENDS_ON_YAML_BLOCK_RE =
   /^[ \t]*x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
 const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
+// Non-global on purpose: a `/g` regex carries `lastIndex` between `test` calls.
+const DEPENDS_ON_DECLARATION_RE =
+  /^[ \t]*(?:#|\/\/|--|\*)?[ \t]*(?:Depends on:|x-qfai-depends-on:)/im;
 
 export function extractDeclaredDependencies(text: string): string[] {
   const found = new Set<string>();
@@ -64,4 +67,18 @@ export function extractDeclaredDependencies(text: string): string[] {
   const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
   if (block) push(block[1] ?? "");
   return Array.from(found).sort();
+}
+
+/**
+ * Whether the file states its apply order **at all**.
+ *
+ * `extractDeclaredDependencies` cannot answer this: it returns `[]` both for a
+ * contract that declared `-` ("nothing must be applied first") and for one that
+ * said nothing. Referential checks therefore never reach an undeclared
+ * contract, so the single failure mode the rule exists to prevent — no
+ * declaration anywhere, leaving the apply graph unstated — was the one case
+ * that produced no finding.
+ */
+export function hasDependencyDeclaration(text: string): boolean {
+  return DEPENDS_ON_DECLARATION_RE.test(text);
 }

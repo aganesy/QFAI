@@ -22,7 +22,10 @@ import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { buildContractIndex } from "../../src/core/contractIndex.js";
-import { extractDeclaredDependencies } from "../../src/core/contractsDecl.js";
+import {
+  extractDeclaredDependencies,
+  hasDependencyDeclaration,
+} from "../../src/core/contractsDecl.js";
 import { validateContracts } from "../../src/core/validators/contracts.js";
 
 async function withContracts<T>(
@@ -170,5 +173,77 @@ describe("QFAI-CONTRACT-014 — a declared dependency must resolve", () => {
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
       },
     );
+  });
+});
+
+describe("the declaration itself is distinguishable from its absence", () => {
+  it("reads `-` as a declaration, not as silence", () => {
+    // `extractDeclaredDependencies` returns `[]` for both, which is why the
+    // presence check cannot be derived from it.
+    expect(hasDependencyDeclaration("-- Depends on: -\n")).toBe(true);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: []\n")).toBe(true);
+  });
+
+  it("reads the YAML block form", () => {
+    expect(hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-API-0002\n")).toBe(true);
+  });
+
+  it("reports a file that says nothing about apply order", () => {
+    expect(
+      hasDependencyDeclaration("-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n"),
+    ).toBe(false);
+  });
+});
+
+describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
+  it("warns on a contract that declares none at all", async () => {
+    await withContracts(
+      { db: { "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n" } },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
+        expect(found?.severity).toBe("warning");
+        expect(found?.refs).toEqual(["CON-DB-0001"]);
+      },
+    );
+  });
+
+  it("stays silent when the contract writes `-` for none", async () => {
+    await withContracts(
+      {
+        db: {
+          "a.sql": "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: -\nCREATE TABLE a (x int);\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+      },
+    );
+  });
+
+  it("stays silent on an API contract declaring in its own idiom", async () => {
+    await withContracts(
+      {
+        api: {
+          "a.yaml":
+            "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [CON-API-0002]\n",
+          "b.yaml": "# QFAI-CONTRACT-ID: CON-API-0002\nopenapi: 3.0.0\nx-qfai-depends-on: []\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+      },
+    );
+  });
+
+  it("leaves a file with no contract id to QFAI-CONTRACT-010", async () => {
+    // Two findings on one file would only dilute the one that matters.
+    await withContracts({ db: { "a.sql": "CREATE TABLE a (x int);\n" } }, async (root) => {
+      const issues = await validateContracts(root, defaultConfig);
+      expect(issues.map((i) => i.code)).toContain("QFAI-CONTRACT-010");
+      expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+    });
   });
 });
