@@ -67,6 +67,10 @@ npx qfai report
 
 ## What you can do (CLI commands)
 
+- `npx qfai --version` (alias `-V`)
+  - Prints the installed QFAI version to stdout and exits 0. It works anywhere, including outside a project
+    with no `qfai.config.yaml`. The same value is also available as the `version` field of
+    `npx qfai doctor --format json`.
 - `npx qfai init`
   - Creates the QFAI workspace under `.qfai/` (requirements/specs/contracts/report) and installs the AI assistant kit
     (`assistant/` with the 4-layer tree — `constitution/`, `manifest/`, `catalog/`, `process/` — plus `agents/` and `skills/`), plus `qfai.config.yaml`.

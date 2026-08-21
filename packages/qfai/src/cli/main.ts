@@ -12,9 +12,17 @@ import { runValidate } from "./commands/validate.js";
 import { parseArgs } from "./lib/args.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
+import { resolveToolVersion } from "../core/version.js";
 
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
+
+  // `--version` / `-V` short-circuits before the usage branch so the
+  // version is readable from anywhere, including outside a project.
+  if (options.version) {
+    info(await resolveToolVersion());
+    return;
+  }
 
   if (!command || options.help) {
     info(usage());
@@ -341,6 +349,7 @@ Options:
   --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
   -h, --help      ヘルプ表示
+  -V, --version   バージョン表示（インストール済み qfai の版番を stdout に出力）
 `;
 }
 

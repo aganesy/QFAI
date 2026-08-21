@@ -150,6 +150,11 @@ export type ParsedArgs = {
     /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
     validateSpecIds: string[];
     help: boolean;
+    /**
+     * `--version` / `-V`: print the resolved tool version to stdout and
+     * exit 0. Accepted in the command position and as a trailing flag.
+     */
+    version: boolean;
     invalidExitCode: number;
   };
 };
@@ -171,6 +176,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     guardrailsPaths: [],
     validateSpecIds: [],
     help: false,
+    version: false,
     invalidExitCode: 1,
   };
 
@@ -180,6 +186,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   if (command === "--help" || command === "-h") {
     options.help = true;
+    command = null;
+  }
+
+  if (command === "--version" || command === "-V") {
+    options.version = true;
     command = null;
   }
 
@@ -741,6 +752,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       case "--help":
       case "-h":
         options.help = true;
+        break;
+      case "--version":
+      case "-V":
+        options.version = true;
         break;
       default:
         break;

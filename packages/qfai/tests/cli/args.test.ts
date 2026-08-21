@@ -316,3 +316,36 @@ describe("parseArgs", () => {
     });
   });
 });
+
+describe("parseArgs --version", () => {
+  it("treats --version in the command position as a version request", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["--version"], cwd);
+    expect(parsed.command).toBeNull();
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+    expect(parsed.options.help).toBe(false);
+  });
+
+  it("treats -V in the command position as a version request", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["-V"], cwd);
+    expect(parsed.command).toBeNull();
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("accepts --version as a trailing flag without marking the args invalid", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--version"], cwd);
+    expect(parsed.command).toBe("validate");
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("leaves version false when no version flag is present", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate"], cwd);
+    expect(parsed.options.version).toBe(false);
+  });
+});
