@@ -729,25 +729,6 @@ export const ALLOWED_ACTIONS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * Each shipped action step, at the job it was reviewed for.
- *
- * `ALLOWED_ACTIONS` allows an action by NAME, and a name is allowed everywhere. Round 15 put a
- * `uses:`-only `pnpm/action-setup` step into a lane whose body is an `echo` placeholder and it shipped
- * through the entire suite: a step with no `run:` is structurally invisible to `refusals()`, to the
- * program pin, to `bodyDigest` and to the body multiset, because every one of those reads bodies. The
- * lane then installed, in a file whose own header says no lane installs.
- *
- * So an action step is pinned where a `run:` body is pinned — to the step it was reviewed for. An array
- * of pairs, not a map, so an entry listed twice is visible rather than collapsed.
- */
-export const ALLOWED_ACTION_STEPS: ReadonlyArray<readonly [string, string]> = [
-  ["actions/checkout", "qfai-tests.yml#detection"],
-  ["actions/checkout", "qfai-validate.yml#validate"],
-  ["pnpm/action-setup", "qfai-validate.yml#validate"],
-  ["actions/setup-node", "qfai-validate.yml#validate"],
-];
-
-/**
  * Each shipped action at the exact commit it is pinned to.
  *
  * `ALLOWED_ACTIONS` holds NAMES, and a separate assertion required every `uses:` to carry a 40-hex SHA
@@ -824,6 +805,89 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
     '{"name":"qfai validate (full profile, fail on error)","runs-on":"${{ vars.QFAI_CI_RUNNER || \'ubuntu-latest\' }}","permissions":{"contents":"read"},"timeout-minutes":10}',
   ],
 ]);
+
+/**
+ * Every shipped step, in the job it belongs to and the order the file runs them, with its `run:`
+ * body reduced to a digest.
+ *
+ * The job shape above stops at `steps`, and a step has values of its own that nothing read: `if:`
+ * skips the step when it is false, and `id:` is what a later `steps.<id>.outputs` reference resolves
+ * through. A step that never runs is a step that never fails, one level below the lane.
+ *
+ * This replaces the separate body and action-step lists rather than sitting beside them: it contains
+ * both — the digest, the location, the order, the action, its inputs — and two lists saying one thing
+ * is the defect this file has found at four sizes. The named allowlists that remain (`ALLOWED_SHELLS`,
+ * `ALLOWED_ACTION_INPUTS`, `ALLOWED_STEP_ENV`, the key sets) are a different claim and are kept: this
+ * one says the document is not the reviewed one, and they say a KIND of thing is never allowed
+ * anywhere — which is what `refusals()` and the key walk need, and what gives a reader a message
+ * naming the rule rather than a diff of two JSON blobs.
+ */
+export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
+  [
+    "qfai-tests.yml#detection",
+    '{"name":"Checkout with full history via actions/checkout 4.4.0","uses":"actions/checkout@11d5960a326750d5838078e36cf38b85af677262","with":{"persist-credentials":false,"fetch-depth":0}}',
+  ],
+  [
+    "qfai-tests.yml#detection",
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}"},"shell":"bash","run":"<body 1c69b8c2bf4a16c4a82e8f737b0bfd6e6122a76cc96bc2426e8b6583a474e5a7>"}',
+  ],
+  [
+    "qfai-tests.yml#detection",
+    '{"name":"Probe layer-named test scripts","id":"scripts","shell":"bash","run":"<body 678c2db6a736f883ce9a17182e0e8d8d5a9de25dd9e16c56dfcf8e6e5062c79e>"}',
+  ],
+  [
+    "qfai-tests.yml#unit",
+    '{"name":"unit lane placeholder","run":"<body 09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523>"}',
+  ],
+  [
+    "qfai-tests.yml#component",
+    '{"name":"component lane placeholder","run":"<body c6497f24366cb07fac4e65f2fd95bb95926520a7894adb96c92643f719f5d9f9>"}',
+  ],
+  [
+    "qfai-tests.yml#integration",
+    '{"name":"integration lane placeholder","run":"<body 4defbb1b5a2ede5b36495e4747fc1220739ffd9a16957add74b1cdc887e786df>"}',
+  ],
+  [
+    "qfai-tests.yml#api",
+    '{"name":"api lane placeholder","run":"<body 3af03c5087ed07f3066fb114d17f61d850449cf9073dc78dc98617cf668944ea>"}',
+  ],
+  [
+    "qfai-tests.yml#e2e",
+    '{"name":"e2e lane placeholder","run":"<body b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93>"}',
+  ],
+  [
+    "qfai-tests.yml#verdict",
+    '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 8122e6678fcbb6ab8f6e4002e484b41249958de894690ded4cc8258f36692d20>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"Checkout via actions/checkout 4.4.0","uses":"actions/checkout@11d5960a326750d5838078e36cf38b85af677262","with":{"persist-credentials":false}}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 0978110b439e141fb9fcf5b90c35de8ebbcfdf50da6181c2f74c1435702f4bbf>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)","if":"${{ hashFiles(\'pnpm-lock.yaml\') != \'\' }}","uses":"pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"Resolve the Node version (adopter file wins, else fall open)","id":"node-version","shell":"bash","run":"<body 49e44c24d0bd88a0bc5a9a720970ff59b5f775a14f36b53a0f45585714c67ece>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    "{\"name\":\"Set up Node via actions/setup-node 4.4.0\",\"uses\":\"actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020\",\"with\":{\"node-version\":\"${{ steps.node-version.outputs.version }}\",\"cache\":\"${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}\"}}",
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body d7f6e8d3b5456c962a0062859324f37b2ffc1c3c2b136b180b3ed8b54bee3ea1>"}',
+  ],
+  [
+    "qfai-validate.yml#validate",
+    '{"name":"qfai validate","run":"<body cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9>"}',
+  ],
+];
 
 /**
  * The keys a shipped workflow, job and step may carry.
@@ -957,90 +1021,6 @@ export function bodyDigest(body: string): string {
   // someone has to do rather than a behaviour that slips past one.
   return createHash("sha256").update(body).digest("hex");
 }
-
-/**
- * The digest of every `run:` body the shipped tree contains, under `bodyDigest`.
- *
- * **This is the boundary, and it is a different KIND of claim from everything else in this file.** The
- * allowlist asks what a body invokes and answers with a parser; a twenty-agent sweep then ran fourteen
- * bodies past that parser and none of the fourteen was refuted. The reason it converges slowly is
- * structural rather than a matter of effort: enumerating bash grammar ends only at a complete bash
- * parser, and every gap on the way there fails open. Enumerating our own twelve bodies ends at twelve
- * and fails closed, because a body nobody reviewed has no digest here whatever it is written in.
- *
- * **Each digest carries the step it was reviewed FOR.** A `Set` of digests admitted any number of
- * bodies; a multiset closed replication and left permutation, and round 15 swapped two reviewed bodies
- * to move the lockfile-aware install into a job that runs on every pull request with every gate green.
- * An array of pairs rather than a map, because a map collapses a digest listed twice into one entry and
- * the pairing check below is the thing that would otherwise notice.
- *
- * What it does NOT do: it says nothing about behaviour, so it cannot tell a maintainer why a body is
- * acceptable, and it is silenced by pasting the new digest. That is deliberate. Pasting one is a
- * visible act in review, and review is where the question "what does this body now run?" is worth
- * asking — `refusals()` is the instrument that answers it, and this is the gate that makes someone ask.
- */
-export const ALLOWED_STEP_BODIES: ReadonlyArray<readonly [string, string]> = [
-  // 40 lines
-  [
-    "1c69b8c2bf4a16c4a82e8f737b0bfd6e6122a76cc96bc2426e8b6583a474e5a7",
-    "qfai-tests.yml#detection [Select lanes from the name-only diff]",
-  ],
-  // 35 lines
-  [
-    "678c2db6a736f883ce9a17182e0e8d8d5a9de25dd9e16c56dfcf8e6e5062c79e",
-    "qfai-tests.yml#detection [Probe layer-named test scripts]",
-  ],
-  // 1 line
-  [
-    "09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523",
-    "qfai-tests.yml#unit [unit lane placeholder]",
-  ],
-  // 1 line
-  [
-    "c6497f24366cb07fac4e65f2fd95bb95926520a7894adb96c92643f719f5d9f9",
-    "qfai-tests.yml#component [component lane placeholder]",
-  ],
-  // 1 line
-  [
-    "4defbb1b5a2ede5b36495e4747fc1220739ffd9a16957add74b1cdc887e786df",
-    "qfai-tests.yml#integration [integration lane placeholder]",
-  ],
-  // 1 line
-  [
-    "3af03c5087ed07f3066fb114d17f61d850449cf9073dc78dc98617cf668944ea",
-    "qfai-tests.yml#api [api lane placeholder]",
-  ],
-  // 1 line
-  [
-    "b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93",
-    "qfai-tests.yml#e2e [e2e lane placeholder]",
-  ],
-  // 8 lines
-  [
-    "8122e6678fcbb6ab8f6e4002e484b41249958de894690ded4cc8258f36692d20",
-    "qfai-tests.yml#verdict [Aggregate lane results (green on skip)]",
-  ],
-  // 52 lines
-  [
-    "0978110b439e141fb9fcf5b90c35de8ebbcfdf50da6181c2f74c1435702f4bbf",
-    "qfai-validate.yml#validate [Resolve the package manager (pnpm route fails closed)]",
-  ],
-  // 22 lines
-  [
-    "49e44c24d0bd88a0bc5a9a720970ff59b5f775a14f36b53a0f45585714c67ece",
-    "qfai-validate.yml#validate [Resolve the Node version (adopter file wins, else fall open)]",
-  ],
-  // 22 lines
-  [
-    "d7f6e8d3b5456c962a0062859324f37b2ffc1c3c2b136b180b3ed8b54bee3ea1",
-    "qfai-validate.yml#validate [Install dependencies (lockfile-aware)]",
-  ],
-  // 1 line
-  [
-    "cafa0558d597d81a2b477a24bf245ceb02e38e714767bde76bf0ff0918dd31d9",
-    "qfai-validate.yml#validate [qfai validate]",
-  ],
-];
 
 /** The `shell:` values a shipped step may declare. A `shell:` is a command template, so it is scanned. */
 export const ALLOWED_SHELLS: ReadonlySet<string> = new Set(["bash"]);

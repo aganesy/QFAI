@@ -53,15 +53,14 @@ import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_COMMITS,
   ALLOWED_ACTION_INPUTS,
-  ALLOWED_ACTION_STEPS,
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
   ALLOWED_WORKFLOW_SHAPE,
   ALLOWED_JOB_SHAPE,
   ALLOWED_SHELLS,
-  ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
   ALLOWED_STEP_KEYS,
+  ALLOWED_STEP_SHAPE,
   ALLOWED_WORKFLOW_KEYS,
   bodyDigest,
   invocationsOf,
@@ -634,66 +633,31 @@ describe(
       // into thirteen steps still showed twelve entries and both halves of the bijection stayed green —
       // planted and confirmed in round 14. One reviewed body run twice is two executions, and the count
       // is part of what was reviewed.
-      // Each body WHERE IT RUNS. The first version was a set of digests, which admitted any number of
-      // bodies; the second was a multiset, which closed replication and left permutation — round 15
-      // swapped two REVIEWED bodies and moved the lockfile-aware install into `qfai-tests.yml#detection`,
-      // a job with no `if:` that runs on every pull request, with every gate in this file green. A body
-      // is reviewed for the step it runs in, so the step is part of what was reviewed.
-      const bodies: string[] = [];
+      // Every step, where it runs, in the order it runs, with its body as a digest.
+      //
+      // Three pins collapsed into this one across rounds 14 to 16, each replacing the last because
+      // the last was a projection: a SET of digests admitted any number of bodies, a multiset closed
+      // replication and left permutation, a list of pairs closed permutation and left the step's own
+      // `if:` and `id:` unread — and a step that never runs is a step that never fails.
+      const steps: string[] = [];
       for (const [id, job] of Object.entries(map)) {
-        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
-        for (const step of steps) {
+        const stepList = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of stepList) {
           if (!isRecord(step)) continue;
-          const run = step["run"];
-          if (typeof run !== "string") continue;
-          const name = typeof step["name"] === "string" ? step["name"] : "(unnamed)";
-          bodies.push(`${id} [${name}] :: ${bodyDigest(run)}`);
-        }
-      }
-      // The unreviewed ones first, by name, because the pairing below reports a diff of two long lists
-      // and a reader needs the step rather than the hash.
-      expect
-        .soft(
-          bodies
-            .filter(
-              (body) =>
-                !ALLOWED_STEP_BODIES.some(([digest]) => digest === (body.split(" :: ")[1] ?? "")),
-            )
-            .map((body) => body.split(" :: ")[0] ?? ""),
-          "a shipped step body nobody reviewed; run `refusals()` over it, then write its digest down",
-        )
-        .toEqual([]);
-      // And the steps that have NO body, which every check above is structurally blind to. A
-      // `uses:`-only step runs an action, and round 15 put a `pnpm/action-setup` into a placeholder lane
-      // and watched it ship through the whole suite — `ALLOWED_ACTIONS` allows a name, and a name is
-      // allowed in every job. Pinned where the bodies are pinned: to the step it was reviewed for.
-      const actionSteps: string[] = [];
-      for (const [id, job] of Object.entries(map)) {
-        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
-        for (const step of steps) {
-          if (!isRecord(step)) continue;
-          const uses = step["uses"];
-          if (typeof uses !== "string") continue;
-          actionSteps.push(`${uses.split("@")[0] ?? uses} @ ${id}`);
+          const shape = { ...step };
+          const run = shape["run"];
+          if (typeof run === "string") shape["run"] = `<body ${bodyDigest(run)}>`;
+          steps.push(`${id} :: ${JSON.stringify(shape)}`);
         }
       }
       expect
         .soft(
-          actionSteps,
-          "an action runs whether or not the step has a `run:` body, so each one is pinned to the job " +
-            "it was reviewed for, IN ORDER — a checkout after an install is a different lane",
+          steps,
+          "every shipped step, in the job and the order it runs, with its body as a digest. A line " +
+            "whose digest differs is a body edited; one whose surroundings differ is a step renamed, " +
+            "moved, re-conditioned or given a different action",
         )
-        .toEqual(ALLOWED_ACTION_STEPS.map(([action, at]) => `${action} @ ${at}`));
-
-      expect
-        .soft(
-          bodies,
-          "each reviewed body must appear exactly once, at the step it was reviewed for and in the " +
-            "order the file runs them — replicated, swapped or reordered is a new thing to review. " +
-            "A line whose digest matches and whose location does not is a step renamed or moved; a " +
-            "line whose location matches and whose digest does not is a body edited",
-        )
-        .toEqual([...ALLOWED_STEP_BODIES].map(([digest, at]) => `${at} :: ${digest}`));
+        .toEqual(ALLOWED_STEP_SHAPE.map(([at, shape]) => `${at} :: ${shape}`));
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a

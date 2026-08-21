@@ -296,7 +296,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // "Inapplicable by the design" is not derivable from a table of scores — it is a claim about the
     // thing the story describes — so no predicate over coordinates can decide it, and a predicate that
     // admits whatever the other two classes reject decides nothing. What a test CAN hold is the list of
-    // cells someone has justified, which is the same move `ALLOWED_STEP_BODIES` makes one instrument
+    // cells someone has justified, which is the same move `ALLOWED_STEP_SHAPE` makes one instrument
     // over: enumerate our own surface, refuse the rest, and make an addition a review rather than a
     // silent pass. A new inapplicable cell reddens here until it is named in both places.
     const statusOf = new Map(rows.map((row) => [row.id, row.cells["Status"]]));
