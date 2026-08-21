@@ -150,6 +150,16 @@ export type ParsedArgs = {
     /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
     validateSpecIds: string[];
     help: boolean;
+    /**
+     * Unrecognized `--flag` tokens, in argv order. The CLI prints them
+     * before the usage text so a typo names itself.
+     */
+    unknownFlags: string[];
+    /**
+     * Exit code used when `invalid` is set. CLI-arg errors (unknown
+     * flag, malformed or missing value) exit 2 on every command, per
+     * the exit-code table in the init CLI contract.
+     */
     invalidExitCode: number;
   };
 };
@@ -171,7 +181,8 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     guardrailsPaths: [],
     validateSpecIds: [],
     help: false,
-    invalidExitCode: 1,
+    unknownFlags: [],
+    invalidExitCode: 2,
   };
 
   const args = [...argv];
@@ -186,9 +197,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const markInvalid = (): void => {
     invalid = true;
     options.help = true;
-    if (command === "guardrails") {
-      options.invalidExitCode = 2;
-    }
   };
 
   if (command === "guardrails") {
@@ -743,6 +751,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.help = true;
         break;
       default:
+        // 未知トークンの扱い: `--` で始まるものだけをフラグとみなし、
+        // parse error として markInvalid() する。位置引数
+        // (`discussion use <id>` / `handoff upgrade <legacy>` など) は
+        // 対象外に保つ必要があるため、「switch にマッチしなかった」で
+        // はなく `--` プレフィックスで判定する。
+        if (arg?.startsWith("--")) {
+          options.unknownFlags.push(arg);
+          markInvalid();
+        }
         break;
     }
   }

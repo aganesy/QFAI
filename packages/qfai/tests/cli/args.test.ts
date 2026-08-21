@@ -315,4 +315,57 @@ describe("parseArgs", () => {
       expect(parsed.options.auditScope).toBe("deviation");
     });
   });
+
+  // Unknown-flag handling. Pre-fix the flag switch ended with a bare
+  // `default: break;`, so any unrecognized `--token` was silently
+  // dropped: `qfai init --dryrun` performed a REAL init and still
+  // exited 0. `.qfai/contracts/cli/qfai-init.md` reserves exit 2 for
+  // CLI-arg errors, so an unknown flag must markInvalid() with 2.
+  describe("unknown flags", () => {
+    it("marks an unrecognized --flag invalid and reserves exit 2", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["init", "--bogus-flag", "--dry-run"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus-flag"]);
+    });
+
+    it("does not let a --dry-run typo fall through to a real init", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["init", "--dryrun"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.dryRun).toBe(false);
+      expect(parsed.options.invalidExitCode).toBe(2);
+      expect(parsed.options.unknownFlags).toEqual(["--dryrun"]);
+    });
+
+    it("collects every unknown flag in argv order", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--nope", "--strict", "--also-nope"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.strict).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--nope", "--also-nope"]);
+    });
+
+    it("keeps positional subcommand arguments exempt", () => {
+      const cwd = process.cwd();
+      const use = parseArgs(["discussion", "use", "disc-0001"], cwd);
+      expect(use.invalid).toBe(false);
+      expect(use.options.discussionId).toBe("disc-0001");
+      expect(use.options.unknownFlags).toEqual([]);
+
+      const handoff = parseArgs(["handoff", "upgrade", "legacy.md"], cwd);
+      expect(handoff.invalid).toBe(false);
+      expect(handoff.options.handoffLegacyFile).toBe("legacy.md");
+      expect(handoff.options.unknownFlags).toEqual([]);
+    });
+
+    it("routes arg errors on non-guardrails commands to exit 2 as well", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["validate", "--format"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.invalidExitCode).toBe(2);
+    });
+  });
 });

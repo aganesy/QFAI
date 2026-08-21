@@ -17,6 +17,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
+    if (invalid && options.unknownFlags.length > 0) {
+      const label = options.unknownFlags.length > 1 ? "unknown options" : "unknown option";
+      error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
+    }
     info(usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
