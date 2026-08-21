@@ -15,7 +15,12 @@ import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../../src/core/state.js";
+import {
+  readDiscussionCurrentId,
+  readStateObject,
+  updateState,
+  writeDiscussionCurrentId,
+} from "../../../src/core/state.js";
 
 let root: string;
 
@@ -63,5 +68,45 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     };
     expect(raw.unrelated?.keep).toBe(true);
     expect(raw.discussion?.currentId).toBe("discussion-20260101000000000");
+  });
+});
+
+describe("TC-0010-0012: updateState serializes concurrent read-modify-write", () => {
+  async function bumpCounter(target: string): Promise<number> {
+    return updateState(target, (existing) => {
+      const raw = existing.counter;
+      const next = typeof raw === "number" && Number.isInteger(raw) ? raw + 1 : 1;
+      return { next: { ...existing, counter: next }, result: next };
+    });
+  }
+
+  it("keeps every increment when 10 updates overlap", async () => {
+    const rounds = 10;
+    // Without the lock each call reads the same snapshot before any of them
+    // writes, so the last write wins and `counter` ends at 1.
+    await Promise.all(Array.from({ length: rounds }, () => bumpCounter(root)));
+
+    const state = await readStateObject(root);
+    expect(state?.counter).toBe(rounds);
+  });
+
+  it("does not let a concurrent pointer write clobber another key", async () => {
+    await Promise.all([
+      bumpCounter(root),
+      writeDiscussionCurrentId(root, "discussion-20260101000000000"),
+      bumpCounter(root),
+    ]);
+
+    const state = await readStateObject(root);
+    expect(state?.counter).toBe(2);
+    expect(await readDiscussionCurrentId(root)).toBe("discussion-20260101000000000");
+  });
+
+  it("skips the write when the mutation returns next=null", async () => {
+    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
+    const result = await updateState(root, () => ({ next: null, result: "untouched" }));
+
+    expect(result).toBe("untouched");
+    expect(await readDiscussionCurrentId(root)).toBe("discussion-20260101000000000");
   });
 });
