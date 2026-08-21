@@ -152,12 +152,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - `10_Plan.md` is the primary How SSOT for execution phases.
 - If `10_Plan.md` is missing, stop and run owner planning flow before proceeding.
 - Completion gate is validation with zero errors **for this spec**: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`. The scope flag is not optional bookkeeping. This skill runs one spec per invocation, and unscoped it reports every other spec's `QFAI-ATDD-111` / `-112` obligations — findings this run cannot act on and must not be blocked by. A `--spec` run also writes `<report>/validate.spec-<id>.json` rather than the shared `validate.json`, so the JSON gate artifact is per spec, and an unknown or unparseable value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening back to the whole repository. **That is not the same as being parallel-safe.** `<report>/validate.log` and the run-log pointer are shared by every run, scoped or not, and nothing serializes them — so two stages running at once can leave that pointer naming the other one's run. Cite the per-run `<report>/run-*/` directory, or this spec's `validate.spec-<id>.json`, as the Validate Hard Gate evidence; do not cite `validate.log` from a run you shared with another stage.
-- **`--spec` scopes the spec-owned rules only, and the gate still fails on the rest.** Every rule whose finding names a spec is scoped: `QFAI-ATDD-111` (US) and `QFAI-ATDD-112` (TC) by the specs they name, `QFAI-ATDD-101` / `-102` by the spec in the unknown token, `QFAI-ATDD-121` / `-122` / `-123` by the specs whose TCs are misplaced, and `D-SCAFFOLD-PLACEHOLDER` by the spec its skeleton belongs to. A scoped run reports all of those for the requested spec and drops a sibling's. What cannot be scoped **does** fail a scoped gate:
-  - `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`) are attributed to `.qfai/contracts/**`, which has no spec owner in the model;
-  - a reference, or a scaffold directory, naming a spec number no spec pack has, **and sitting where no spec owns it either**: `--spec` on that number is itself rejected, so nothing would report it otherwise. A file under the canonical `tests/<layer>/spec-NNNN/**` layout is owned by _that_ spec whatever its annotation says, so the same broken reference inside `tests/integration/spec-0002/**` belongs to `--spec 0002` and to no other run — reading it as a repo-wide blocker in a sibling run reports something that run cannot see;
-  - anything else reported against a repo-level path.
+- **`--spec` scopes the spec-owned rules only, and the gate still fails on the rest.** Every rule whose finding names a spec is scoped: `QFAI-ATDD-111` (US) and `QFAI-ATDD-112` (TC) by the specs they name, `QFAI-ATDD-101` / `-102` by the spec in the unknown token, `QFAI-ATDD-121` / `-122` / `-123` by the specs whose TCs are misplaced, and `D-SCAFFOLD-PLACEHOLDER` by the spec its skeleton belongs to. A scoped run reports all of those for the requested spec and drops a sibling's. What cannot be scoped **does** fail a scoped gate — `QFAI-ATDD-113` (`CON-API`) and `QFAI-ATDD-115` (`CON-DB`), attributed to `.qfai/contracts/**`, which has no spec owner in the model, and the repo-level cases beside them: `references/cross-spec-obligations.md#what-the-scope-flag-cannot-narrow` enumerates all of them.
 
-  So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage.
+  So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, under `## Cross-spec obligations`, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage. **That record is a terminal state, not a deferral of one**: a run whose every residual finding is attributed to a named sibling spec completes as **`PASS with cross-spec obligations`** (`#success-criteria-definition-of-done`), and the repo-wide `/qfai-verify` run settles the residue. Unnamed, that state is unreachable — the owning spec's run hits this same block from the other side, so every spec waits for every other one and the four moves just forbidden are the only exits left. It is not free: a finding you cannot attribute to a named sibling spec is **this** spec's, and it fails.
 
 - Coverage obligations are mandatory:
   - `tests/e2e/**` must cover all required `US-*`.
@@ -290,7 +287,7 @@ Notes:
 - All required `CON-API` are covered by API tests.
 - All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
   outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
-- Validation passes for this spec: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`.
+- Validation passes for this spec in the two parts the scope model implies — run `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`, then: (1) **no finding this spec owns remains**, every rule `--spec` narrows reporting clean for `<spec-id>`; and (2) **every residual finding is attributed and recorded**, since `QFAI-ATDD-113` / `-115` are filed against `.qfai/contracts/**`, which no spec owns, so a sibling's uncovered contract holds the command at exit 1 — each such finding names its owning sibling spec under `## Cross-spec obligations` in this stage's evidence, and the completion report says so. Both parts met is **`PASS with cross-spec obligations`**, the terminal state of a run that discharged everything its spec owns; requiring exit 0 outright left that run not-done with no other state to be in, which is the reading that ends in one of the four moves CRITICAL CONSTRAINTS forbids. A residual finding attributable to no named sibling spec is this spec's own and still FAILs (`references/cross-spec-obligations.md`).
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
 - Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
@@ -302,7 +299,7 @@ Notes:
 - Any required `US` / `TC` / `CON-API` remains uncovered.
 - Forbidden references remain.
 - Tests exist but were never executed.
-- Validation evidence is missing or failing.
+- Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
 - Coverage Depth Matrix is missing or contains unjustified ❌ cells (normal-path-only coverage is incomplete).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
@@ -316,7 +313,7 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Two of them carry a contract
+Required sections: the template below is the list. Three of them carry a contract
 the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
@@ -327,6 +324,7 @@ the heading cannot:
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
   restating them here would lose them.
+- **Cross-spec obligations** — one row per residual finding the scoped gate still exits 1 on, and `None` when it exited 0; it is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
 
 Template:
 
@@ -357,6 +355,8 @@ Template:
 See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / ⚠️ N / ❌ N.
 
 ## Work Orders Summary
+
+## Cross-spec obligations
 
 ## Execution logs
 

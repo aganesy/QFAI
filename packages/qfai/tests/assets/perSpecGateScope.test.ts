@@ -9,6 +9,11 @@
  *
  * These tests pin the flag into every per-spec gate statement, and pin the
  * honest limit alongside it: the contract-owned rules cannot be spec-scoped.
+ *
+ * They also pin the state that limit leaves a run in. Naming the limit without
+ * naming a terminal state made the compliant path — record the residue, report
+ * honestly — not-done by the skill's own DoD, and the four moves the skill
+ * forbids were the only exits left from the gate.
  */
 
 import { readFile } from "node:fs/promises";
@@ -23,6 +28,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
+const OBLIGATIONS = "assistant/skills/qfai-atdd/references/cross-spec-obligations.md";
 const IMPLEMENT = "assistant/skills/qfai-implement/SKILL.md";
 const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
 const FINAL = "assistant/skills/qfai-implement/references/final-checklist.md";
@@ -117,11 +123,107 @@ describe.each(TREES)("%s", (tree) => {
     // by that spec whatever its annotation says, so the same broken reference
     // is scoped to that spec's run and dropped from every other. Reading it as
     // a repo-wide blocker made a sibling run report something it cannot see.
-    const atdd = flat(await read(tree, ATDD));
-    expect(atdd).toContain("**and sitting where no spec owns it either**");
-    expect(atdd).not.toContain(
+    // The enumeration lives in the topic file, under the skill's line ceiling.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("**and sitting where no spec owns it either**");
+    expect(obligations).not.toContain(
       "naming a spec number no spec pack has: no spec owns it, and `--spec` on that number is itself rejected, so it belongs to every run",
     );
+    expect(flat(await read(tree, ATDD))).toContain(
+      "`references/cross-spec-obligations.md#what-the-scope-flag-cannot-narrow` enumerates all of them",
+    );
+  });
+
+  it("names the terminal state a run that records the residue ends in", async () => {
+    // The constraint forbids all four ways out of a sibling's
+    // `QFAI-ATDD-113`, so unless the compliant path has a name, the run is in
+    // no state the skill defines — and the state a skill does not name is the
+    // one an agent invents, out of the four forbidden moves.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("**That record is a terminal state, not a deferral of one**");
+    expect(atdd).toContain("**`PASS with cross-spec obligations`**");
+    expect(atdd).toContain("`#success-criteria-definition-of-done`");
+    // …and it is not a free pass: unattributable residue is still this spec's.
+    expect(atdd).toContain(
+      "a finding you cannot attribute to a named sibling spec is **this** spec's",
+    );
+  });
+
+  it("states the DoD as spec-owned clean plus attributed residue, not flat exit 0", async () => {
+    // A flat "validation passes" made the compliant run not-done by its own
+    // DoD, and the remedy it offers — the owning spec's next run — hits the
+    // identical block from the other side, so no spec could ever complete.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).not.toContain(
+      "- Validation passes for this spec: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`.",
+    );
+    expect(atdd).toContain("**no finding this spec owns remains**");
+    expect(atdd).toContain("**every residual finding is attributed and recorded**");
+    expect(atdd).toContain("Both parts met is **`PASS with cross-spec obligations`**");
+  });
+
+  it("carves the attributed residue out of the failing-validation not-done rule", async () => {
+    // Left inside it, the recorded obligation was simultaneously the mandated
+    // action and a not-done criterion.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).not.toContain("- Validation evidence is missing or failing.");
+    expect(atdd).toContain(
+      "**A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion**",
+    );
+    expect(atdd).toContain("it blocks _that_ spec's completion, not this one");
+    // The escape hatch has a floor: an entry naming no owner is still a FAIL.
+    expect(atdd).toContain("names **this** spec as the owner");
+  });
+
+  it("gives the mandated record a home in the stage's own evidence template", async () => {
+    // The constraint told the run to record a cross-spec obligation "in this
+    // stage's evidence", but every `Cross-spec obligations` definition lived
+    // in `/qfai-implement` — so the compliant path wrote into a section this
+    // stage's template did not define and no reviewer knew to read.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("under `## Cross-spec obligations`");
+    expect(atdd).toContain("Three of them carry a contract the heading cannot");
+    // The template block itself, not only the prose describing it.
+    expect(await read(tree, ATDD)).toContain("\n## Cross-spec obligations\n");
+
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    for (const field of [
+      "`Finding`",
+      "`Contract ID`",
+      "`Owning spec`",
+      "`Why not this stage's work`",
+      "`Closed by`",
+    ]) {
+      expect(obligations).toContain(field);
+    }
+    // `None` and the absent-section case, so an empty run is recordable and a
+    // silent one is not.
+    expect(obligations).toContain("Write `None` when the scoped run exited 0");
+    expect(obligations).toContain(
+      "an absent section after a run that exited 1 is unrecorded residue, not a clean run",
+    );
+  });
+
+  it("says which run settles the residue the stage completes with", async () => {
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("the repo-wide `/qfai-verify` run settles the residue");
+    expect(atdd).toContain("`/qfai-verify` settles the repo-wide residue at the end of the stage");
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("belongs to `/qfai-verify` at the end of the stage");
+    // The recorded obligation still blocks someone — its owner.
+    expect(obligations).toContain(
+      "It blocks the **owning** spec's completion until that spec's next `/qfai-atdd` run covers the contract",
+    );
+  });
+
+  it("keeps this residue distinct from cross-spec code ownership, which does block", async () => {
+    // Both kinds land in the same evidence heading, and only one of them is a
+    // completion prohibition. Collapsing them would either block every run that
+    // reports a sibling's contract, or unblock a run that left another spec's
+    // assertion unverified.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("../qfai-implement/references/cross-spec-ownership.md");
+    expect(obligations).toContain("That kind **blocks** completion while it is open");
   });
 
   it("limits the repo-wide TRACE claim to the findings that have no spec owner", async () => {
