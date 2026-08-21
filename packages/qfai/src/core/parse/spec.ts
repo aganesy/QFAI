@@ -91,6 +91,26 @@ export function extractBulletField(md: string, name: string): string | undefined
   return value;
 }
 
+/**
+ * The lifecycle status of a spec, read straight from its `Status:` bullet.
+ *
+ * Returns `undefined` when the bullet is absent or holds a value outside
+ * {@link SPEC_STATUS_VALUES}. `QFAI-STATUS-001` / `QFAI-STATUS-002` report
+ * those two cases on their own, and a caller that branches on the lifecycle
+ * (retiring a ledger, skipping a classification) must not act on a spelling no
+ * validator accepted.
+ *
+ * This is the cheap path for callers that need only the status: `parseSpec`
+ * also exposes it, but reads the whole document to do so.
+ */
+export function parseSpecStatus(md: string): SpecStatus | undefined {
+  const raw = extractBulletField(md, "Status");
+  if (raw === undefined || !isSpecStatus(raw)) {
+    return undefined;
+  }
+  return raw;
+}
+
 const SPEC_ID_RE = /\bSPEC-\d{4}\b/;
 const BR_LINE_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[0-3])\]\s*(.+)$/;
 const BR_LINE_ANY_PRIORITY_RE = /^\s*(?:[-*]\s*)?\[(BR-\d{4}-\d{4})\]\[(P[^\]]+)\]\s*(.+)$/;

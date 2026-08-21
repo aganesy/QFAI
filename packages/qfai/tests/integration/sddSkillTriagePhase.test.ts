@@ -114,6 +114,16 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/QFAI-TRIAGE-006/);
   });
 
+  it("tells SUPERSEDE / deprecation to migrate the ledger before retiring", async () => {
+    // Without this step, demoting a retired spec's ledger findings to `info`
+    // silently strands its unfinished rows instead of moving them.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/tdd\/test-list\.md/);
+    expect(ref).toMatch(/exception/);
+    expect(ref).toMatch(/`done` rows/);
+    expect(ref).toMatch(/info/);
+  });
+
   it("documents the append-first principle and impact cascade", async () => {
     const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
     expect(ref).toMatch(/append-first/i);

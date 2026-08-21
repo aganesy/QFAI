@@ -2,6 +2,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
+import { parseSpecStatus, type SpecStatus } from "./parse/spec.js";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
 // Canonical: catalog/ — registry artifacts (filename lists, lookup
@@ -141,6 +142,13 @@ export type SpecEntry = {
   layout: SpecLayoutKind;
   layeredStyle: LayeredStyle | null;
   specNumber: string;
+  /**
+   * The spec's lifecycle `Status:` bullet, when it declares one the enum
+   * recognises. Absent for a spec with no bullet, an unparseable value, or an
+   * unreadable spec file — all three cases are reported by their own rules, and
+   * a caller that branches on the lifecycle must treat them as still current.
+   */
+  status?: SpecStatus;
   // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
   sharedDir: string;
   requiredFiles: Partial<Record<RequiredSpecPackFile, string>>;
@@ -266,7 +274,29 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       });
     }),
   );
-  return entries.sort((a, b) => a.dir.localeCompare(b.dir));
+  const withStatus = await Promise.all(
+    entries.map(async (entry) => {
+      const status = await readSpecStatus(entry.specMetaPath);
+      return status === undefined ? entry : { ...entry, status };
+    }),
+  );
+  return withStatus.sort((a, b) => a.dir.localeCompare(b.dir));
+}
+
+/**
+ * Read one spec's lifecycle status from disk.
+ *
+ * A spec file that cannot be read yields no status rather than an exception:
+ * the layout collector is the entry point for the very validators that report a
+ * missing or unreadable spec file, so throwing here would replace those
+ * findings with a crash.
+ */
+async function readSpecStatus(specMetaPath: string): Promise<SpecStatus | undefined> {
+  try {
+    return parseSpecStatus(await readFile(specMetaPath, "utf-8"));
+  } catch {
+    return undefined;
+  }
 }
 
 export async function collectMissingRequiredFiles(

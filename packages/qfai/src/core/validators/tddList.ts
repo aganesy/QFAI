@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
@@ -546,10 +546,45 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
   for (const entry of entries) {
     const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
-    issues.push(...specIssues);
+    issues.push(...demoteRetiredSpecIssues(specIssues, entry));
   }
 
   return issues;
+}
+
+/**
+ * Ledger findings on a retired spec are a historical record, not live work.
+ *
+ * SUPERSEDE moves a spec's obligations to its successor and rewrites the
+ * source's `Status:`; deprecation and removal retire one without a successor.
+ * The ledger stayed where it was either way, so a retired spec kept offering
+ * `todo` rows as selectable work, kept demanding a resolution or a waiver for
+ * every parked `exception` row, and kept owing `Evidence` at `error` — for a
+ * spec nobody is allowed to touch, and that no later phase revisits because
+ * triage classification already ignores non-active specs.
+ *
+ * Demoted rather than dropped: the rows are the record of what the retired spec
+ * owed, and an operator migrating the live ones to the successor's ledger has
+ * to be able to list them. `info` keeps them printed while taking them out of
+ * `--fail-on error` / `--fail-on warning`.
+ *
+ * Only a status the enum recognises retires a ledger — an absent or
+ * unparseable one leaves the spec current here and is reported by its own rule.
+ */
+function demoteRetiredSpecIssues(issues: readonly Issue[], entry: SpecEntry): Issue[] {
+  const status = entry.status;
+  if (status === undefined || status === "active") {
+    return [...issues];
+  }
+  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (todo / red / green / refactor / exception) to the successor spec's \`${TDD_LIST_REL_PATH}\` and leave done rows as the historical record.`;
+  return issues.map((found): Issue => {
+    return {
+      ...found,
+      severity: "info",
+      message: `${found.message} [demoted to info: spec-${entry.specNumber} is Status: ${status}]`,
+      suggested_action: migration,
+    };
+  });
 }
 
 async function validateSpecTddList(

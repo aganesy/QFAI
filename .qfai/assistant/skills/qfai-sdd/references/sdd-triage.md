@@ -188,3 +188,20 @@ ops), `Rationale` (recommended for every row).
 - DELETE removes the spec directory entirely (record reason in delta).
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.
+
+### Ledger migration (SUPERSEDE / deprecation)
+
+Retiring a spec retires its execution ledger with it, so move the work
+**before** rewriting `Status:`:
+
+1. Migrate every live row of the source spec's `tdd/test-list.md`
+   (`todo` / `red` / `green` / `refactor` / `exception`) into the
+   successor spec's ledger, keeping the TC-Refs it carried.
+2. Leave `done` rows where they are — they are the historical record of
+   what the retired spec delivered.
+3. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+
+`validate` demotes every ledger finding on a non-active spec to `info`,
+matching the rule above that triage ignores such specs. That is what
+stops a retired ledger from gating the repository — and it is also why
+step 1 is mandatory: nothing will ask for those rows again.
