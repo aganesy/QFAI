@@ -13,6 +13,13 @@ import {
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
+/**
+ * Source-level split of the stub token, as in `tests/validators/testTodoStubs`:
+ * the fixture written to disk is the real construct, but this file must not
+ * trip the very gate it exercises when qfai validates its own repository.
+ */
+const TODO = ".todo";
+
 type Finding = { code: string; severity: string; message: string };
 
 async function findings(root: string): Promise<Finding[]> {
@@ -35,6 +42,29 @@ async function seedSpec(root: string): Promise<void> {
   await writeFile(
     path.join(specDir, "06_Test-Cases.md"),
     ["# 06 Test cases", "", "## TC-0001: title", "- Parent: EX-0001", ""].join("\n"),
+    "utf-8",
+  );
+}
+
+/**
+ * An acceptance test that is a silent stub, plus the config that scans for it.
+ *
+ * `testFileGlobs` defaults to `[]`, and `validateTestTodoStubs` returns early
+ * on an empty glob list — without the config the fixture would prove nothing.
+ */
+async function seedStubbedAcceptanceTest(root: string): Promise<void> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["validation:", "  traceability:", "    testFileGlobs:", "      - tests/**/*.test.ts", ""].join(
+      "\n",
+    ),
+    "utf-8",
+  );
+  const testDir = path.join(root, "tests", "e2e", "spec-0001");
+  await mkdir(testDir, { recursive: true });
+  await writeFile(
+    path.join(testDir, "us-0001.test.ts"),
+    [`it${TODO}("QFAI:SPEC-0001:US-0001 covers the login flow");`, ""].join("\n"),
     "utf-8",
   );
 }
@@ -191,6 +221,47 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
           expect(notice?.message).toContain(family);
         }
         expect(notice?.message).toContain("QFAI-ATDD-*");
+      });
+    });
+  });
+
+  it("reports the stub gate under the atdd profile", async () => {
+    // `/qfai-atdd` owns `tests/e2e/**`, `tests/api/**` and
+    // `tests/integration/**`, and names `--profile atdd` as its completion
+    // gate. A stubbed acceptance test satisfies `QFAI-ATDD-111` (the rule
+    // counts the annotation, not the assertion) and carries no scaffold
+    // marker, so without this validator the stage's own gate went green on a
+    // suite whose tests do not run.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedStubbedAcceptanceTest(root);
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const stub = (await findings(root)).find((entry) => entry.code === "QFAI-TEST-001");
+        expect(stub?.severity).toBe("error");
+      });
+    });
+  });
+
+  it("does not double-report the stub gate under the full profile", async () => {
+    // `runFullValidators` runs both profiles; the tdd one still owns the gate.
+    await withProject(async (root) => {
+      await seedStubbedAcceptanceTest(root);
+      await runValidate({ root, strict: false });
+      const stubs = (await findings(root)).filter((entry) => entry.code === "QFAI-TEST-001");
+      expect(stubs).toHaveLength(1);
+    });
+  });
+
+  it("stops listing the stub gate among what --profile atdd skipped", async () => {
+    // The notice is derived from `PROFILE_GATE_GROUPS`; leaving `QFAI-TEST-001`
+    // in the tdd group would tell the reader that the run it just made did not
+    // evaluate a rule it did.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("QFAI-TEST-001");
+        expect(notice?.message).toContain("TDDLIST_*");
       });
     });
   });

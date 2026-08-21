@@ -423,7 +423,11 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  // Its own group, not part of `tdd`: `runAtddValidators` runs the stub gate
+  // too, so a group that bundled it with the ledger and traceability families
+  // would report it as unevaluated on the profile that evaluates it.
+  "test-stubs": ["QFAI-TEST-001"],
+  tdd: ["TDDLIST_*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -441,10 +445,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   discussion: ["discussion"],
   sdd: ["sdd"],
   prototyping: ["prototyping"],
-  atdd: ["atdd-traceability", "atdd-scaffold"],
+  atdd: ["atdd-traceability", "atdd-scaffold", "test-stubs"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group.
-  tdd: ["tdd", "atdd-traceability"],
+  tdd: ["tdd", "atdd-traceability", "test-stubs"],
   "saas-package": ["prototyping"],
 };
 

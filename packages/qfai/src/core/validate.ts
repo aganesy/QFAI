@@ -460,6 +460,9 @@ async function runAtddValidators(
   root: string,
   config: ConfigLoadResult["config"],
   specScope?: SpecScope,
+  // `full` runs the TDD profile too, and that one owns the stub gate, so it
+  // opts out here rather than emitting every QFAI-TEST-001 finding twice.
+  includeTestTodoStubs = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})),
@@ -471,6 +474,16 @@ async function runAtddValidators(
     // Scoped: this validator writes `.qfai/state.json` escalation counters, so
     // an unscoped scan under `--spec` mutated sibling specs' state.
     ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
+    // QFAI-TEST-001. `qfai-atdd` names `--profile atdd` as its completion gate
+    // and owns `tests/e2e/**`, `tests/api/**` and `tests/integration/**`. An
+    // acceptance test written as a silent stub still satisfies QFAI-ATDD-111 /
+    // -112 / -113 — those count the annotation, not the assertion — and carries
+    // no scaffold marker, so D-SCAFFOLD-PLACEHOLDER does not see it either.
+    // Without this the stage's own gate went green on a suite whose tests do
+    // not run, and the repo-wide profiles that do catch it are not what the
+    // skill instructs the operator to run. Unscoped like the contract rules:
+    // the finding names a test file, which no spec owns.
+    ...(includeTestTodoStubs ? await validateTestTodoStubs(root, config) : []),
   ];
 }
 
@@ -531,7 +544,7 @@ async function runFullValidators(
     ...(await runSddValidators(root, config, true, false, specScope)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
-    ...(await runAtddValidators(root, config, specScope)),
+    ...(await runAtddValidators(root, config, specScope, false)),
     ...(await runTddValidators(root, config, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
   ];
