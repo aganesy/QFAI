@@ -31,7 +31,9 @@ When an agent needs to ask the user a question, the following rules apply (see a
    the agent MUST present the same question as a normal message with explicit numbered choices.
    The agent SHOULD preserve structured choice semantics (enumerated options, selection constraints).
    The reason for unavailability MUST be stated.
-4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked. The agent MUST proceed with explicit assumptions and MUST record them in outputs.
+4. **`--auto` consistency**: When `--auto` flag is active, no questions are asked.
+   The agent MUST NOT use AskUserQuestion or ask via plain text.
+   The agent MUST proceed with explicit assumptions and MUST record them in outputs.
 
 All SKILL.md files MUST include a
 `## User Questions (AskUserQuestion Protocol)` section with MUST-level wording.
