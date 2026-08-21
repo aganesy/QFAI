@@ -20,7 +20,8 @@ Run all of the following from the repository root, in order. Substitute the proj
 the placeholders; record the literal commands actually executed in evidence.
 
 1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
-   the ledger's `Selector`. Two runner-specific decisions, and both must be made from the ledger row:
+   the ledger's `Selector`. Three runner-specific decisions, and all three must be made from the
+   ledger row:
 
    **a. The name option.** The `Selector` is a test NAME, and every common runner takes a name
    through a flag, not a positional argument: a positional is a file filter. Vitest and Jest use
@@ -48,6 +49,20 @@ the placeholders; record the literal commands actually executed in evidence.
 
    Record the literal command actually run either way. If a project's runner selects by something
    else again, derive that unit from `Test file` in the same manner and say so in the evidence.
+
+   **c. One command per `Selector` entry.** A `Selector` may legally hold several entries — a
+   comma-separated list or a glob, for one boundary observed from several angles
+   (`selector-granularity.md`). The name options above take a substring, an expression or a regex;
+   none of them takes a list, and none of them takes a shell glob. Interpolating the whole cell into
+   one name option therefore matches nothing and **exits 0**: `vitest run <Test file> -t 'a, b'`
+   skips every test in the file and reports success, so the checkpoint passes without having run any
+   of the row's tests. This is the same rule Phase Red applies to a RED observation, for the same
+   reason. So **emit one command per entry**, run all of them, and record every one of them in
+   `Checkpoint verification command`. A glob entry is translated into the runner's own name language
+   rather than passed literally — `test_rejects_expired_token_*` is `-t 'test_rejects_expired_token_'`
+   for vitest or jest, `-k 'test_rejects_expired_token_'` for pytest and
+   `-run '^test_rejects_expired_token_'` for `go test`; when no exact translation exists, enumerate
+   the test names the glob covers and emit one command per name.
 
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
@@ -84,7 +99,11 @@ the full suite.
 ## Pass criteria
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
-reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
+reports zero `QFAI-TEST-001` findings. **Step 1 is not settled by its exit code.** Each of its
+per-entry runs passes only when the recorded output names that entry as having run — the same thing
+`qa-gatekeeper` demands of a GREEN ("A full-suite pass that does not name the row's selector is not
+a GREEN for that row"). A run that selected zero tests exits 0 and satisfies nothing, so an exit 0
+whose output names no test is a FAIL. Any non-zero exit is a FAIL: for a per-item checkpoint the
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
 

@@ -106,6 +106,44 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // A `Selector` may legally hold several entries. The name options take a
+  // substring, an expression or a regex — never a list, never a shell glob — so
+  // interpolating the whole cell once selects zero tests and still exits 0: the
+  // checkpoint would pass having run none of the row's tests.
+  it("emits one step 1 command per selector entry", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**c. One command per `Selector` entry.**");
+      expect(reference).toContain("emit one command per entry");
+      expect(reference).toContain("Checkpoint verification command");
+      // The silent form, which the flag shape turns into a no-op rather than an error.
+      expect(reference).toContain("exits 0");
+      // A glob is not a shell glob to any of these runners.
+      expect(reference).toContain("translated into the runner's own name language");
+      expect(reference).toContain("-run '^test_rejects_expired_token_'");
+      // The third decision is announced where the other two are counted.
+      expect(reference).not.toContain("Two runner-specific decisions");
+      expect(reference).toContain("Three runner-specific decisions");
+    }
+  });
+
+  // Step 1 exiting 0 having selected zero tests is exactly the failure mode a
+  // per-entry command set exists to prevent, so exit code alone cannot pass it.
+  it("requires step 1's output to name the entry it ran", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**Step 1 is not settled by its exit code.**");
+      expect(reference).toContain("the recorded output names that entry as having run");
+      expect(reference).toMatch(/an exit 0\s+whose output names no test is a FAIL/);
+    }
+  });
+
   // The reviewers PASS before the per-item checkpoint, so a fix made because
   // the checkpoint failed is code no reviewer has judged.
   it("requires a fresh reviewer PASS after a checkpoint fix", async () => {
