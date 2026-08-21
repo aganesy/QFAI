@@ -158,4 +158,24 @@ describe("TC-0015-0028: runAuditLog filters and orders records", () => {
     expect(out).toMatch(/timestamp\tscope\toperator\tclause/);
     expect(out.split("\n").length).toBeGreaterThanOrEqual(4);
   });
+
+  it("keeps the table a valid TSV stream when a filter matches nothing", async () => {
+    await seedRecords();
+    const written: string[] = [];
+    const errs: string[] = [];
+    const code = await runAuditLog({
+      root,
+      scope: "no-such-scope",
+      write: (m) => written.push(m),
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(0);
+    const rows = written.join("\n").split("\n");
+    // Header row, zero data rows — `cut -f2` must see `scope` only.
+    expect(rows).toEqual(["timestamp\tscope\toperator\tclause"]);
+    const scopeColumn = rows.slice(1).map((line) => line.split("\t")[1]);
+    expect(scopeColumn).toEqual([]);
+    // The prose hint is on stderr, never in the piped data channel.
+    expect(errs.join("\n")).toMatch(/no decision records/i);
+  });
 });

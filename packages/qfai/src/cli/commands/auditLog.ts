@@ -19,7 +19,9 @@ import { error as logError, info as logInfo } from "../lib/logger.js";
  * backward compatibility with the `qfai audit log --format table`
  * CLI surface; downstream consumers piping through `cut -f` or
  * `awk -F"\t"` should depend on the TSV layout, not on aligned
- * columns. Pass `--format json` for a structured payload.
+ * columns. An empty result set is the header row alone; the
+ * "nothing matched" hint goes to stderr so it never enters a pipe.
+ * Pass `--format json` for a structured payload.
  */
 export type AuditLogFormat = "table" | "json";
 
@@ -66,8 +68,13 @@ function sortNewestFirst(records: AuditLogRecordView[]): AuditLogRecordView[] {
   });
 }
 
+/**
+ * Render the TSV layout. The header row is unconditional: an empty
+ * result set is a header row with zero data rows, so stdout stays a
+ * well-formed TSV stream for `cut -f` / `awk -F"\t"` consumers. The
+ * human-facing "nothing matched" hint belongs on stderr instead.
+ */
 function formatTable(records: AuditLogRecordView[]): string {
-  if (records.length === 0) return "(no decision records)";
   const lines: string[] = [];
   lines.push("timestamp\tscope\toperator\tclause");
   for (const r of records) {
@@ -111,6 +118,9 @@ export async function runAuditLog(options: AuditLogOptions): Promise<number> {
     write(JSON.stringify(sorted, null, 2));
   } else {
     write(formatTable(sorted));
+    if (sorted.length === 0) {
+      writeErr("qfai audit log: no decision records matched.");
+    }
   }
   return 0;
 }
