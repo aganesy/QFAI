@@ -90,6 +90,31 @@ Default policy:
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
 
+### Counting unit (MUST)
+
+- **Five clarifying questions per skill invocation.** The counter is owned by the
+  agent that received the invocation, starts at zero when the invocation starts,
+  and does **not** reset between stages of that invocation. A delegated subagent
+  spends its caller's budget; it does not receive one of its own.
+- One AskUserQuestion call is one question, however many options it offers.
+
+### What does not count (MUST)
+
+- **Approval questions are exempt.** A question whose subject is a user decision
+  the skill declares mandatory — a per-row triage approval in `/qfai-sdd`, a
+  destructive-operation confirmation, an escalation under
+  `shared-skill-delegation-baseline.md#round-budget-must` — is a decision, not a
+  clarification. Such questions are unbounded and MUST still be asked after the
+  budget is exhausted. Skipping a mandatory approval to stay under the budget
+  violates this article; it is not compliance with it.
+
+### Exhaustion (MUST)
+
+Exhaustion stops the questions, not the work. Both stop conditions below mean
+the same thing: for the remainder of the invocation the agent enters `--auto`
+behaviour — ask no further clarifying questions, proceed with explicit
+assumptions, and label every assumption in the outputs.
+
 Stop conditions:
 
 - User says “stop / proceed / done”.

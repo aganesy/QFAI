@@ -36,6 +36,11 @@ Skill-specific examples:
 - configuration decisions
 - glob pattern confirmation
 
+Both examples are clarifications and count against the Article VI budget: at
+most 5 per invocation of this skill, after which the remaining choices are taken
+as labelled assumptions and recorded in the config diff — see
+`.qfai/assistant/constitution/constitution.md` Article VI.
+
 ## FORMAT SSOT (Mandatory)
 
 - Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.

@@ -79,6 +79,10 @@ Validators: `QFAI-STATUS-001..006`.
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
+Those per-row approvals are decisions, not clarifications: they are exempt from
+the Article VI clarification budget and MUST be asked however many rows triage
+produced. The budget applies only to this skill's clarifying questions — see
+`.qfai/assistant/constitution/constitution.md` Article VI.
 
 ## FORMAT SSOT (Mandatory)
 
