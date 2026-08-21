@@ -854,6 +854,57 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ships a root .gitattributes that pins the SSOT file types to LF", async () => {
+    // The Drift Protocol makes the diff of the shipped SSOT markdown a review
+    // artifact, and every one of those files is LF. Without an attributes file
+    // in the consumer repo, one whole-file rewrite on Windows flips a blob's
+    // line endings and the review degrades to "every line changed".
+    const attributesPath = path.join(templateRootDir, ".gitattributes");
+    expect(existsSync(attributesPath), "root init assets must ship .gitattributes").toBe(true);
+
+    const bytes = await readFile(attributesPath);
+    // The file that declares the repository LF must itself be LF.
+    expect(bytes.includes(0x0d), ".gitattributes must not contain CR").toBe(false);
+
+    const rules = bytes
+      .toString("utf-8")
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+    expect(rules).toContain("* text=auto eol=lf");
+    for (const pattern of ["*.md", "*.yml", "*.yaml", "*.json", "*.sql"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=lf")),
+        `.gitattributes must pin ${pattern} to eol=lf`,
+      ).toBe(true);
+    }
+    // Windows-only scripts are the documented exception: forcing LF on them
+    // breaks the interpreter that reads them.
+    for (const pattern of ["*.bat", "*.cmd"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=crlf")),
+        `.gitattributes must keep ${pattern} at eol=crlf`,
+      ).toBe(true);
+    }
+  });
+
+  it("states the LF line-ending policy in the Drift Protocol", async () => {
+    // The attributes file is create-only, so a project that already had one
+    // keeps it and can still produce an EOL-flipped diff. The protocol has to
+    // tell the reviewer adjudicating that diff how to read it.
+    const protocolPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "constitution",
+      "drift-protocol.md",
+    );
+    const protocol = await readFile(protocolPath, "utf-8");
+
+    expect(protocol).toContain(".gitattributes");
+    expect(protocol).toContain("--ignore-cr-at-eol");
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");

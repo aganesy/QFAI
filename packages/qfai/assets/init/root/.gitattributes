@@ -1,0 +1,35 @@
+# QFAI が seed する既定値。`qfai init` はこのファイルが無いときだけ作成し、
+# 既存の .gitattributes を上書きしない。
+#
+# QFAI が配置する SSOT 成果物（.qfai/ 配下の markdown / yaml / sql）はすべて
+# LF で配布される。Drift Protocol はそれらの diff をレビュー成果物と定めて
+# いるため、チェックアウトやエディタ保存でファイル全体の改行コードが反転すると
+# 「全行が変更された」diff になりレビューが成立しなくなる。
+# 改行コードをここで固定することでそれを防ぐ。
+
+# 既定: テキストは自動判定し、作業ツリーでも LF で取り出す
+* text=auto eol=lf
+
+# SSOT 成果物と設定ファイルは常に LF
+*.md    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.json  text eol=lf
+*.sql   text eol=lf
+
+# Windows 専用スクリプトのみ CRLF を維持
+*.bat   text eol=crlf
+*.cmd   text eol=crlf
+
+# バイナリは変換しない
+*.png   binary
+*.jpg   binary
+*.jpeg  binary
+*.gif   binary
+*.ico   binary
+*.pdf   binary
+*.woff  binary
+*.woff2 binary
+*.ttf   binary
+*.eot   binary
+*.zip   binary

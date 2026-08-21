@@ -318,6 +318,16 @@ is a defect.
   `.gitignore` block written by `npx qfai init` negates them after the ignore
   lines for exactly this reason.
 
+### Line endings in the artifacts under review
+
+Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and
+`npx qfai init` seeds a `.gitattributes` at the project root that keeps them
+that way. That seed is create-only: a project that already had a
+`.gitattributes` keeps its own, so on Windows a whole-file rewrite can still
+flip a blob from LF to CRLF and report every line as changed. A diff that reads
+as "all lines changed" is therefore not evidence of drift on its own — re-read
+it with `git diff --ignore-cr-at-eol` before adjudicating it.
+
 ## Non-negotiable constraints
 
 - Downstream skills must not patch upstream SSOT directly. **This is detected.**
