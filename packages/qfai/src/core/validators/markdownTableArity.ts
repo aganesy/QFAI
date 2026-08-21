@@ -16,6 +16,14 @@
  * This validator scans the spec pack for the mismatch itself. It is the one
  * place the two counts are compared, so a project no longer has to restate
  * "keep every row at exactly N columns" per work order and verify it by hand.
+ *
+ * Severity is scoped rather than blanket. The ledger tables — the TDD test list
+ * and the traceability ledger — are the ones other validators index by column
+ * position, so a mismatch there is a correctness defect and is reported as
+ * `error`, which the default `failOn: "error"` gate can actually stop on.
+ * Everywhere else in the spec pack the table is prose a human reads, so the
+ * mismatch stays a `warning`: promoting a young rule code to `error` across a
+ * whole spec pack is what floods a consuming repo on its first upgrade.
  */
 
 import path from "node:path";
@@ -23,11 +31,29 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
-import type { Issue } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
 /** Waivable as `QFAI-TABLE-001`; `TABLE-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const TABLE_ARITY_RULE_ID = "QFAI-TABLE-001";
+
+/**
+ * Files whose tables downstream validators read by column position.
+ *
+ * `tddList` resolves `Status` / `TC-Refs` with `headers.indexOf(name)` and the
+ * traceability ledger is walked the same way, so a shifted row there changes
+ * what a validator sees rather than only how the table renders. The three
+ * names are the ledger paths `specLayout` assigns across the spec-pack,
+ * layered and legacy layouts.
+ */
+export function isPositionallyReadTable(rel: string): boolean {
+  const normalized = rel.replace(/\\/g, "/").toLowerCase();
+  return (
+    normalized.endsWith("/tdd/test-list.md") ||
+    normalized.endsWith("/16_traceability-ledger.md") ||
+    normalized.endsWith("/traceability-matrix.md")
+  );
+}
 
 export type TableArityMismatch = {
   /** 1-based line of the offending data row. */
@@ -99,6 +125,7 @@ export async function validateMarkdownTableArity(
       continue;
     }
     const rel = path.relative(root, file).replace(/\\/g, "/");
+    const severity: IssueSeverity = isPositionallyReadTable(rel) ? "error" : "warning";
     for (const mismatch of findTableArityMismatches(text)) {
       const direction =
         mismatch.rowCount > mismatch.headerCount
@@ -109,7 +136,7 @@ export async function validateMarkdownTableArity(
         `Markdown table row arity mismatch at ${rel}:${mismatch.line} — header declares ` +
           `${mismatch.headerCount} column(s), row has ${mismatch.rowCount} (table "${mismatch.tableLabel}"). ` +
           `Read positionally, ${direction}.`,
-        "warning",
+        severity,
         rel,
         "specPack.tableArity",
         undefined,

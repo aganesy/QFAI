@@ -20,6 +20,7 @@ import { describe, expect, it, afterEach } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import {
   findTableArityMismatches,
+  isPositionallyReadTable,
   validateMarkdownTableArity,
 } from "../../src/core/validators/markdownTableArity.js";
 
@@ -121,6 +122,21 @@ describe("findTableArityMismatches", () => {
   });
 });
 
+describe("isPositionallyReadTable", () => {
+  it("matches the ledger paths of every spec layout, case-insensitively", () => {
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/tdd/test-list.md")).toBe(true);
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/16_Traceability-ledger.md")).toBe(true);
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/traceability-matrix.md")).toBe(true);
+    expect(isPositionallyReadTable(".qfai\\specs\\spec-0001\\tdd\\test-list.md")).toBe(true);
+  });
+
+  it("does not match a look-alike name outside the ledger set", () => {
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/test-list.md")).toBe(false);
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/06_Test-Cases.md")).toBe(false);
+    expect(isPositionallyReadTable(".qfai/specs/spec-0001/tdd/test-list-archive.md")).toBe(false);
+  });
+});
+
 describe("validateMarkdownTableArity", () => {
   it("reports each mismatching row with its line", async () => {
     const root = await withSpec({
@@ -141,6 +157,58 @@ describe("validateMarkdownTableArity", () => {
     expect(issues[0]?.loc).toEqual({ line: 5 });
     // The message must say what the reader loses, not merely that counts differ.
     expect(issues[0]?.message).toContain("1 cell(s) are discarded");
+  });
+
+  // Severity is pinned here on purpose. It decides whether the finding can stop
+  // a gate: every shipped invocation passes `--fail-on error`, and the config
+  // default is `error`, so a `warning` is advisory-only by construction.
+  it("emits `error` on the TDD test list, which validators read by column position", async () => {
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/tdd/test-list.md": [
+        "| TDD-ID | TC-Refs | Status |",
+        "| ------ | ------- | ------ |",
+        "| TDD-0001 | TC-0001 |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  it("emits `error` on the traceability ledger in every layout's spelling", async () => {
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
+        "| REQ | Spec | Code |",
+        "| --- | ---- | ---- |",
+        "| REQ-0001 | 01_Spec.md |",
+      ].join("\n"),
+      ".qfai/specs/spec-0002/traceability-matrix.md": [
+        "| REQ | Spec | Code |",
+        "| --- | ---- | ---- |",
+        "| REQ-0002 | spec.md |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues.map((found) => found.severity)).toEqual(["error", "error"]);
+  });
+
+  it("keeps `warning` on a spec-pack table no validator indexes positionally", async () => {
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/06_Test-Cases.md": [
+        "| TC-ID | Level | Notes |",
+        "| ----- | ----- | ----- |",
+        "| TC-0001 | unit |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("warning");
   });
 
   it("says the trailing columns read as empty when the row is short", async () => {
