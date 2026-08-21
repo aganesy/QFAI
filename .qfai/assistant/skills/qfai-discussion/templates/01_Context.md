@@ -16,7 +16,7 @@ Notes:
 
 - `primary_surface` is a classification field. Valid values: `web|mobile|desktop|cli|mixed|non-ui`.
 - `non-ui` is only valid when `ui_bearing: false`. It is a classification value, not a prototyping surface.
-- `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`.
+- `cli` is a UI-bearing surface. When classified as `cli`, set `ui_bearing: true`. `cli` is not a visual-prototyping surface, so a `cli` pack does not author root `DESIGN.md` (see `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`).
 - Prototyping surfaces (used in `prototyping.yaml`) are a subset: `web|mobile|desktop|cli|mixed`.
 
 ## Metadata

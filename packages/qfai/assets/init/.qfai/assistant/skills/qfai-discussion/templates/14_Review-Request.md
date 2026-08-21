@@ -41,7 +41,7 @@
   - Acceptance criteria are consistent with flows/state transitions
   - Security/operations risks are reflected in diagrams where relevant
 - Mermaid diagrams use ` ```mermaid ` fences only
-- Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing)
+- Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing on a visual-prototyping surface — `cli` packs author no root `DESIGN.md`)
 - Reference pool freshness and translation quality into `DESIGN.md`, and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
 - Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (when UI-bearing)
@@ -56,7 +56,7 @@
 
 <!-- Required for UI-bearing packs. Verifies brand SSOT and sidecar alignment. -->
 
-- Brand SSOT: verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
+- Brand SSOT (visual-prototyping surfaces only; skip for `cli`): verify root `DESIGN.md` defines `brand`, `audience`, and `visual.*` tokens, and that `# Brand Philosophy` body documents product intent, must-preserve interactions, brand signals, and differentiation targets
 - Evaluator axes: confirm reviewers will score against the four canonical UX axes (information architecture / navigation flow / usability / functionality) — these are fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` and no longer authored as sidecar files
 - History handling: verify `uiux/50_review_input_bundle.md` matches the one-lineage rule in `qfai-prototyping/SKILL.md` — no parallel candidates, no best-of-history, the latest iteration is accepted
 
@@ -64,7 +64,7 @@
 
 <!-- Required for UI-bearing packs. Reviews root DESIGN.md + uiux/ sidecar artifacts. -->
 
-- Verify root `DESIGN.md` is specific enough to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
+- Verify root `DESIGN.md` is specific enough (visual-prototyping surfaces only; a `cli` pack has none) to support divergent exploration (front-matter populated, `# Brand Philosophy` body written, do/don't and reference notes framed as deviate-from inputs)
 - Verify `uiux/50_review_input_bundle.md` states the one-lineage handling (latest iteration accepted, no best-of-history)
 - Verify screen contracts use nested strong schema with all 4 required states (default/loading/empty/error) and treat `uiux/40_screen_contracts.md` as the state SSOT
 

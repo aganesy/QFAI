@@ -13,7 +13,7 @@
 - [ ] Clarity and actionability
 - [ ] Mermaid diagrams are sufficient for decisions (scope/AC/risk consistency)
 - [ ] Mermaid diagrams use ` ```mermaid ` fences only
-- [ ] Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing)
+- [ ] Root `DESIGN.md` completeness and differentiation clarity — it parses, and its `# Brand Philosophy` body carries do/don't, brand signals, and exploration references framed as **deviate-from** inputs (when UI-bearing on a visual-prototyping surface — `cli` packs author no root `DESIGN.md`)
 - [ ] Reference pool freshness and translation quality into `DESIGN.md`, and Trend Scan freshness and evidence traceability at `04_Sources.md#Trend Scan` (when UI-bearing)
 - [ ] Canonical `uiux/` family complete — `00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md` — with no forbidden legacy sidecar (when UI-bearing)
 - [ ] Evaluator scoring covers all four canonical UX axes — information architecture / navigation flow / usability / functionality, fixed in `core/prototyping/evaluatorReview.ts#ORDINAL_AXES` (when UI-bearing)

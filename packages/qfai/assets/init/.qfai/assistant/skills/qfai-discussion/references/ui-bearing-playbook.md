@@ -8,14 +8,14 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 
 ## Surface Mapping
 
-| Surface | UI-bearing | Result                            |
-| ------- | ---------- | --------------------------------- |
-| web     | Yes        | Generate full uiux sidecar family |
-| mobile  | Yes        | Generate full uiux sidecar family |
-| desktop | Yes        | Generate full uiux sidecar family |
-| cli     | Yes        | Generate full uiux sidecar family |
-| mixed   | Yes        | Generate full uiux sidecar family |
-| non-ui  | No         | Skip uiux sidecars                |
+| Surface | UI-bearing | Result                                                       |
+| ------- | ---------- | ------------------------------------------------------------ |
+| web     | Yes        | Generate full uiux sidecar family                            |
+| mobile  | Yes        | Generate full uiux sidecar family                            |
+| desktop | Yes        | Generate full uiux sidecar family                            |
+| cli     | Yes        | Screen contracts only; no root `DESIGN.md` visual token tree |
+| mixed   | Yes        | Generate full uiux sidecar family                            |
+| non-ui  | No         | Skip uiux sidecars                                           |
 
 ## Detection Signals
 
@@ -26,14 +26,33 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 
 ## Sidecar Family SSOT
 
-For UI-bearing packs the brand SSOT is root `DESIGN.md` (drafted by
-`/qfai-discussion` and frozen by `/qfai-sdd` Phase 0 into
-`.qfai/contracts/design/DESIGN.md.lock.yaml`). The remaining sidecars are
+For UI-bearing packs on a visual-prototyping surface the brand SSOT is root
+`DESIGN.md` (drafted by `/qfai-discussion` and frozen by `/qfai-sdd` Phase 0
+into `.qfai/contracts/design/DESIGN.md.lock.yaml`). The remaining sidecars are
 the screen-level UX inputs:
 
 - `uiux/00_index.md`
 - `uiux/40_screen_contracts.md`
 - `uiux/50_review_input_bundle.md`
+
+### Visual-prototyping Surfaces vs `cli`
+
+Visual-prototyping surfaces are `web`, `mobile`, `desktop` and `mixed` — the
+surfaces `/qfai-prototyping` actually executes. Root `DESIGN.md` and its
+`visual.*` token tree are required **only** on those surfaces: the sole
+consumer of the token values is the prototyping loop's DESIGN.md drift
+scanner, and that loop rejects `cli`.
+
+`cli` stays `ui_bearing: true` and keeps the screen-level UX inputs above —
+those have downstream readers. It must NOT be blocked on inventing brand
+colors, font stacks, a type scale, spacing tokens, radii or shadows:
+
+- Do not author root `DESIGN.md` for a `cli` pack. `/qfai-sdd` freezes the
+  file's sha256 only when it exists, and nothing on the `cli` path reads a
+  token value.
+- Screen contracts stay mandatory, including their `route:` field, which on
+  `cli` names the command invocation (e.g. `route: myapp deploy --dry-run`)
+  instead of a web path.
 
 ### Trend Scan SSOT
 

@@ -3,6 +3,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { VISUAL_BROWSER_SURFACES } from "../../src/core/detection/surfaceType.js";
 import { FORBIDDEN_LEGACY_PATTERNS } from "../../src/core/validators/uix/threeLayer.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -24,6 +25,7 @@ const completionMatrixPath = path.join(
   "references",
   "discussion-completion-matrix.md",
 );
+const uiBearingPlaybookPath = path.join(templateBase, "references", "ui-bearing-playbook.md");
 
 // Shared vocabulary between the matrix and the Reviewer Gate templates. The
 // matrix wraps the phrase across two lines, so match on whitespace not a space.
@@ -139,6 +141,58 @@ describe("discussion skill template integration", () => {
       }
     }
     expect(offenders).toEqual([]);
+  });
+
+  // `cli` is discussion UI-bearing, but `/qfai-prototyping` rejects it, and the
+  // prototyping loop's DESIGN.md drift scanner is the only reader of the
+  // `visual.*` token values. Requiring a `cli` pack to author the token tree
+  // therefore blocks completion on an artifact nothing downstream reads.
+  it("cli pack が root DESIGN.md の visual token tree で完了をブロックされない", async () => {
+    const playbook = await readFile(uiBearingPlaybookPath, "utf-8");
+    const surfaceRow = (surface: string): string =>
+      playbook.split("\n").find((line) => new RegExp(`^\\|\\s*${surface}\\s+\\|`).test(line)) ?? "";
+
+    // The surfaces prototyping actually executes keep the full family. Tied to
+    // the code SSOT so a surface added there cannot silently skip this doc.
+    for (const surface of VISUAL_BROWSER_SURFACES) {
+      expect(surfaceRow(surface), `no Surface Mapping row for '${surface}'`).toMatch(
+        /Generate full uiux sidecar family/,
+      );
+    }
+
+    // `cli` stays UI-bearing but gets its own outcome.
+    const cliRow = surfaceRow("cli");
+    expect(cliRow).toMatch(/\|\s*Yes\s*\|/);
+    expect(cliRow).not.toMatch(/Generate full uiux sidecar family/);
+    expect(cliRow).toMatch(/no root `DESIGN\.md`/i);
+
+    // The completion matrix must carry the matching carve-out, or the pack is
+    // still blocked by condition 1 no matter what the playbook says.
+    const matrix = await readFile(completionMatrixPath, "utf-8");
+    const cliSection = matrix.split(/^## /m).find((section) => section.startsWith("CLI Packs"));
+    expect(cliSection).toBeDefined();
+    expect(cliSection).toMatch(/No root `DESIGN\.md` required/i);
+    const uiBearingConditions = collectOrderedList(
+      matrix.split(/^## /m).find((section) => section.startsWith("UI-bearing Packs")) ?? "",
+    );
+    expect(uiBearingConditions).toMatch(/Visual-prototyping surfaces/i);
+
+    // SKILL.md states the same requirement independently; if it still demands
+    // root DESIGN.md for every UI-bearing pack the carve-out is unreachable.
+    const skill = await readFile(skillPath, "utf-8");
+    expect(skill).toMatch(/Root `DESIGN\.md` is required only on the visual-prototyping surfaces/);
+    expect(skill).toMatch(/skip for `cli`/);
+
+    // `route` remains a required field for every surface
+    // (`validators/uix/screenContract.ts#REQUIRED_FIELDS`), so the template must
+    // re-scope it for cli rather than telling authors to drop it.
+    const screenContracts = await readFile(
+      path.join(uiuxTemplateDir, "40_screen_contracts.md"),
+      "utf-8",
+    );
+    expect(screenContracts).toMatch(/^- route:/m);
+    expect(screenContracts).toMatch(/`route:` is required on every surface/);
+    expect(screenContracts).toMatch(/command invocation/i);
   });
 
   it("09_Constraints.md が accessibility を正しい階層で参照している", async () => {

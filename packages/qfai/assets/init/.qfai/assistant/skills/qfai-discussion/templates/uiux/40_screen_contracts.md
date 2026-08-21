@@ -4,6 +4,11 @@
 
 Draft interaction contracts for key screens using the strong screen contract schema (11 required fields).
 
+`route:` is required on every surface, but a web path is only expected on the
+visual-prototyping surfaces (`web`, `mobile`, `desktop`, `mixed`). On a `cli`
+pack write the command invocation instead (e.g. `route: myapp deploy --dry-run`);
+do not invent a URL for a product that has none.
+
 ### Screen: [Screen Name]
 
 - screen_id: SCR-001
