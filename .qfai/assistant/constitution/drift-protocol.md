@@ -8,8 +8,8 @@ This file defines mandatory change control for all downstream execution phases.
 
 Upstream artifacts include, at minimum:
 
-- `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `08_Open-questions.md`, `09_delta.md`
-- `_policies/*` layered artifacts and `11_Contracts.md` (or project-equivalent contract index)
+- spec-layer files under `spec-*/`: `01_Spec.md`, `02_User-stories.md`, `03_Acceptance-Criteria.md`, `04_Business-Rules.md`, `05_Examples.md`, `06_Test-Cases.md`, `07_Decisions.md`, `08_Open-questions.md`, `09_delta.md`
+- `_policies/*` layered artifacts — numbered differently from the spec layer: Decisions is `_policies/08_Decisions.md` and delta is `_policies/10_delta.md` — and `11_Contracts.md` (or project-equivalent contract index)
 - `10_Plan.md` and other owner-phase planning outputs
 - Legacy spec-pack SSOT files when present: `spec.md`, `delta.md`, `plan.md`, `traceability-matrix.md`, `scenario.feature`, `case-catalogue.md`, and numbered pack files (for example `01_Spec.md`..`18_delta.md`)
 - contracts and schema decisions owned by earlier phases
@@ -87,7 +87,8 @@ A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red
 orders an anomalous row to `exception` as an inline step, and that status is
 invalid without a `DR-*` in the `DR-ID` column — enforced at `error` by
 `TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision Record
-(`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither
+(`spec-*/07_Decisions.md`, `_policies/08_Decisions.md`) is on the `#core-rule`
+list above, and neither
 of the first two whitelist entries covers minting one: a Decision Record is not
 an `.qfai/evidence/**` write and not a ledger-cell update.
 
@@ -102,8 +103,10 @@ The carve-out is exactly as narrow as that need:
 - **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase
   writes it, so creating a file there patches nothing. Editing an already-
   approved record is not covered.
-- **the record only, never the reference.** The `07_Decisions.md` /
-  `09_delta.md` entry that cites the DR stays an owner-skill write, exactly as
+- **the record only, never the reference.** The entry that cites the DR —
+  `spec-*/07_Decisions.md` + `spec-*/09_delta.md` for a spec artifact, or
+  `_policies/08_Decisions.md` + `_policies/10_delta.md` for a policy artifact —
+  stays an owner-skill write, exactly as
   step 2 already says for a Change Request. A compliant `exception` row needs
   the record and the `DR-ID` cell, not the upstream cross-reference.
 - **not an approval.** Creating the record does not decide the anomaly. A parked
@@ -153,9 +156,12 @@ ratifies a comparison the author knew was fabricated.
    pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
    (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
    `Approved at` and `Approved option` so the approval is a record, not a
-   memory. Creating this file is the only write this step makes: `09_delta.md`
-   and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
-   written there by the owner skill in step 4, never before approval.
+   memory. Creating this file is the only write this step makes: the delta and
+   Decisions files the reference lands in — `spec-*/09_delta.md` +
+   `spec-*/07_Decisions.md` for a spec artifact, or `_policies/10_delta.md` +
+   `_policies/08_Decisions.md` for a policy artifact — are upstream SSOT, so the
+   reference to this CR is written there by the owner skill in step 4, never
+   before approval.
    Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
    - context — for intent drift, what conflicts; for defect drift, what the
@@ -180,7 +186,8 @@ ratifies a comparison the author knew was fabricated.
    as the fix.
 4. Rerun the owner skill for the upstream artifact, **naming the invocation and
    the mode** the CR approved. That rerun is what records the CR reference in
-   `09_delta.md` / `07_Decisions.md`.
+   `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact, or
+   `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact.
 
    Invocation by artifact class:
 

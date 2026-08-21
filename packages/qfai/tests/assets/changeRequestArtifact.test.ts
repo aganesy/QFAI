@@ -194,18 +194,61 @@ describe("a Change Request is a defined artifact", () => {
       // `09_delta.md` / `07_Decisions.md` are upstream SSOT, so step 2 (before
       // approval) must not write them.
       const drift = await read(tree, "assistant/constitution/drift-protocol.md");
-      expect(drift).toContain(
-        "Creating this file is the only write this step makes: `09_delta.md`\n   and `07_Decisions.md` are upstream SSOT",
+      expect(flat(drift)).toContain(
+        "Creating this file is the only write this step makes: the delta and Decisions files the reference lands in",
       );
-      expect(drift).toContain("written there by the owner skill in step 4, never before approval");
+      expect(flat(drift)).toContain("are upstream SSOT");
+      expect(flat(drift)).toContain(
+        "written there by the owner skill in step 4, never before approval",
+      );
       // #373 made step 4 name the invocation and the rerun mode. The claim this
       // case pins — the reference lands upstream only via that rerun — is
       // unchanged, so it is asserted flattened: the wrap column is not the rule.
-      expect(drift.replace(/\s+/g, " ")).toContain(
-        "That rerun is what records the CR reference in `09_delta.md` / `07_Decisions.md`.",
-      );
+      expect(flat(drift)).toContain("That rerun is what records the CR reference in");
       const step2 = drift.slice(drift.indexOf("2. Create a Change Request"), drift.indexOf("3. "));
       expect(step2).not.toContain("Reference it from `09_delta.md`");
+    });
+
+    it(`${tree}: every CR-reference site names the policy-layer filenames too`, async () => {
+      // `_policies/` has no `07_Decisions.md` and no `09_delta.md` — there,
+      // `07_` is Constraints and `09_` is Open-questions. A step that names the
+      // spec-layer pair unqualified sends a policy-level CR reference either
+      // into Constraints / Open-questions or into two files the layer does not
+      // define, leaving the real homes (`08_`, `10_`) without the approval.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+
+      // step 4 — the mandated write.
+      expect(drift).toContain(
+        "That rerun is what records the CR reference in `spec-*/09_delta.md` + " +
+          "`spec-*/07_Decisions.md` for a spec artifact, or `_policies/10_delta.md` + " +
+          "`_policies/08_Decisions.md` for a policy artifact.",
+      );
+      // step 2 — the same pair, stated as upstream SSOT.
+      expect(drift).toContain(
+        "`spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact, or " +
+          "`_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact — " +
+          "are upstream SSOT",
+      );
+      // the Decision Record carve-out.
+      expect(drift).toContain(
+        "The entry that cites the DR — `spec-*/07_Decisions.md` + `spec-*/09_delta.md` " +
+          "for a spec artifact, or `_policies/08_Decisions.md` + `_policies/10_delta.md` " +
+          "for a policy artifact — stays an owner-skill write",
+      );
+      // the claim that the Decision Record homes are enumerated exhaustively.
+      expect(drift).toContain(
+        "Every upstream home for a Decision Record (`spec-*/07_Decisions.md`, " +
+          "`_policies/08_Decisions.md`) is on the `#core-rule` list above",
+      );
+      // the core-rule list the other three sites were read out of.
+      expect(drift).toContain("spec-layer files under `spec-*/`:");
+      expect(drift).toContain(
+        "Decisions is `_policies/08_Decisions.md` and delta is `_policies/10_delta.md`",
+      );
+
+      // The policy layer's real `07_` / `09_` must not be shadowed anywhere.
+      expect(drift).not.toContain("`_policies/07_Decisions.md`");
+      expect(drift).not.toContain("`_policies/09_delta.md`");
     });
 
     it(`${tree}: superseded requires the approval fields the gate demands`, async () => {
