@@ -82,8 +82,11 @@ describe("sub-agent roster completeness and handoff contracts", () => {
     );
     expect(content).toMatch(/`qa-gatekeeper` confirms or rejects each observation/i);
     expect(content).toMatch(/completion-reviewer[\s\S]*?implementation-reviewer/i);
+    // #701: the trigger is no longer restated inline. It is defined once in
+    // `references/ui-affecting.md` and every routing site cites that file, so
+    // the contract asserts the citation rather than a second copy of the rule.
     expect(content).toMatch(
-      /product-surface-reviewer[\s\S]*?added when the item affects UI behavior/i,
+      /product-surface-reviewer` is added when the item is UI-affecting[\s\S]*?references\/ui-affecting\.md/i,
     );
     // "routed blocking reviewers" was narrower than the real gate:
     // `blocking_agents` omits `implementation-reviewer`, whose REVISE still
