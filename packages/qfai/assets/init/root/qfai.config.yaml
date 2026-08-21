@@ -11,10 +11,12 @@ validation:
   require:
     specSections: []
   testStrategy:
-    requireLayerTags: false
-    requireSizeTags: false
     maxE2eScenarioRatio: null
     maxE2eScenarioCount: null
+    # `qfai validate` rejects `it.todo` / `test.todo` / `describe.todo` stubs in
+    # files matched by traceability.testFileGlobs (QFAI-TEST-001). Setting this
+    # to false is the documented opt-out and needs an accompanying waiver DR-ID.
+    forbidTestTodoStubs: true
   traceability:
     brMustHaveSc: true
     scMustHaveTest: true

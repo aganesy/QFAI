@@ -285,3 +285,36 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
     }
   });
 });
+
+describe("testStrategy key surface", () => {
+  // Issue #408: `requireLayerTags` / `requireSizeTags` were declared, defaulted
+  // and parsed here but read by nothing, so flipping either one changed no
+  // outcome. They are gone; a project that still carries them from an older
+  // `qfai init` must keep loading cleanly instead of hitting a config issue.
+  it("ignores the retired requireLayerTags / requireSizeTags keys", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-tags-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        [
+          "validation:",
+          "  testStrategy:",
+          "    requireLayerTags: true",
+          "    requireSizeTags: true",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const { config, issues } = await loadConfig(root);
+      expect(issues).toEqual([]);
+      expect(Object.keys(config.validation.testStrategy).sort()).toEqual([
+        "forbidTestTodoStubs",
+        "maxE2eScenarioCount",
+        "maxE2eScenarioRatio",
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

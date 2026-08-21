@@ -23,6 +23,9 @@ import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
+
+import { defaultConfig } from "../../src/core/config.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const initQfaiDir = path.join(repoRoot, "packages", "qfai", "assets", "init", ".qfai");
@@ -56,6 +59,18 @@ async function collectFiles(dir: string, base: string = dir): Promise<string[]> 
     }
   }
   return collected;
+}
+
+/** Narrow an unknown YAML node to a plain object, or null when it is not one. */
+function asRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+  const record: Record<string, unknown> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    record[key] = entry;
+  }
+  return record;
 }
 
 async function readOrNull(filePath: string): Promise<Buffer | null> {
@@ -116,6 +131,42 @@ describe("init assets root mirror", () => {
       const text = buffer.toString("utf-8");
       expect(text, `${label} qfai.config.yaml has no validation block`).toMatch(/^validation:/m);
       expect(text, `${label} qfai.config.yaml has no paths block`).toMatch(/^paths:/m);
+    }
+  });
+
+  // The shipped `testStrategy` block used to declare `requireLayerTags` and
+  // `requireSizeTags`, which nothing outside `config.ts` ever read, and to omit
+  // `forbidTestTodoStubs`, the one key a validator actually gates on. Hold the
+  // shipped surface equal to the surface the loader resolves, so every key an
+  // operator can see in the file is a key that can change an outcome.
+  it("ships a testStrategy block whose keys the config loader resolves", async () => {
+    const liveKeys = Object.keys(defaultConfig.validation.testStrategy).sort();
+    expect(liveKeys, "forbidTestTodoStubs is the live gate and must stay resolvable").toContain(
+      "forbidTestTodoStubs",
+    );
+
+    for (const [label, filePath] of [
+      ["init asset", initRootConfig],
+      ["repo root", rootConfig],
+    ] as const) {
+      const buffer = await readOrNull(filePath);
+      expect(buffer, `${label} qfai.config.yaml is missing`).not.toBeNull();
+      if (buffer === null) {
+        continue;
+      }
+      const validation = asRecord(asRecord(parseYaml(buffer.toString("utf-8")))?.validation);
+      const testStrategy = asRecord(validation?.testStrategy);
+      expect(
+        testStrategy,
+        `${label} qfai.config.yaml has no validation.testStrategy block`,
+      ).not.toBeNull();
+      if (testStrategy === null) {
+        continue;
+      }
+      expect(
+        Object.keys(testStrategy).sort(),
+        `${label} testStrategy keys drifted from the keys the config loader reads`,
+      ).toEqual(liveKeys);
     }
   });
 });

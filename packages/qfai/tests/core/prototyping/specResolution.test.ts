@@ -63,8 +63,6 @@ function makeConfig(overrides: Partial<QfaiConfig["prototyping"]> = {}): QfaiCon
       failOn: "error",
       require: { specSections: [] },
       testStrategy: {
-        requireLayerTags: false,
-        requireSizeTags: false,
         maxE2eScenarioRatio: null,
         maxE2eScenarioCount: null,
         forbidTestTodoStubs: true,

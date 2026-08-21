@@ -35,8 +35,6 @@ export type QfaiValidationConfig = {
     specSections: string[];
   };
   testStrategy: {
-    requireLayerTags: boolean;
-    requireSizeTags: boolean;
     maxE2eScenarioRatio: number | null;
     maxE2eScenarioCount: number | null;
     /**
@@ -189,8 +187,6 @@ export const defaultConfig: QfaiConfig = {
       specSections: [],
     },
     testStrategy: {
-      requireLayerTags: false,
-      requireSizeTags: false,
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
@@ -416,20 +412,6 @@ function normalizeValidation(
       ),
     },
     testStrategy: {
-      requireLayerTags: readBoolean(
-        testStrategyRaw?.requireLayerTags,
-        base.testStrategy.requireLayerTags,
-        "validation.testStrategy.requireLayerTags",
-        configPath,
-        issues,
-      ),
-      requireSizeTags: readBoolean(
-        testStrategyRaw?.requireSizeTags,
-        base.testStrategy.requireSizeTags,
-        "validation.testStrategy.requireSizeTags",
-        configPath,
-        issues,
-      ),
       maxE2eScenarioRatio: readOptionalRatio(
         testStrategyRaw?.maxE2eScenarioRatio,
         base.testStrategy.maxE2eScenarioRatio,
