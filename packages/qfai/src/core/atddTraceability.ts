@@ -115,7 +115,21 @@ export type AtddCodeTraceabilityResult = {
    * send the CLI report and the GitHub annotation at a file that is not there.
    */
   declaredSpecDirs: Map<string, string>;
+  /**
+   * Every declared `US-*`, active and deferred alike — the same
+   * declared-not-owed distinction the contract sets draw. A deferred story is
+   * still a known id, so an E2E test written ahead of its slice must not become
+   * a `QFAI-ATDD-101` unknown reference.
+   */
   specUsIds: Map<string, Set<string>>;
+  /**
+   * `US-*` refs excluded from the `QFAI-ATDD-111` obligation because their
+   * story declares `- x-qfai-status: planned`, formatted as `SPEC-NNNN:US-…`.
+   * Reported at `info` (`QFAI-ATDD-118`) so the deferral stays visible rather
+   * than silently shrinking the gate — the same treatment `QFAI-ATDD-114` and
+   * `-116` give the two contract kinds.
+   */
+  deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
   /**
    * Every declared `CON-API-*`, active and deferred alike. This is the public
@@ -382,8 +396,16 @@ export async function evaluateAtddCodeTraceability(
   // an L1/L2 annotation is owed to no ATDD directory at all.
   skippedTestFiles.push(...(await collectUncountedTestFiles(root, testsRoot, tcLevels)));
 
-  const missing = buildMissingRefs({
+  // Active = declared minus deferred, mirroring the contract collectors:
+  // `x-qfai-status: planned` suspends the E2E obligation for that one story, it
+  // does not un-declare it.
+  const { active: activeUsIds, deferred: deferredUsIds } = partitionDeclaredUs(
     specUsIds,
+    specRefs.usPlanned,
+  );
+
+  const missing = buildMissingRefs({
+    specUsIds: activeUsIds,
     usObligationScope: uiBearingSpecs,
     specTcIds,
     apiContractIds: activeApiContractIds,
@@ -407,6 +429,7 @@ export async function evaluateAtddCodeTraceability(
     testsRoot,
     contractsApiRoot,
     specUsIds,
+    deferredUsIds,
     specTcIds,
     apiContractIds: declaredApiContractIds,
     activeApiContractIds,
@@ -524,6 +547,8 @@ type SpecScopedRef = {
 
 async function collectSpecRefs(specsRoot: string): Promise<{
   us: Map<string, Set<string>>;
+  /** `spec -> US-ID` deferred by `- x-qfai-status: planned`; a subset of `us`. */
+  usPlanned: Map<string, Set<string>>;
   tc: Map<string, Set<string>>;
   /** `spec -> TC-ID -> declared Level`, lower-cased. Absent when no Level column. */
   tcLevels: Map<string, Map<string, string>>;
@@ -532,6 +557,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
 }> {
   const entries = await collectSpecEntries(specsRoot);
   const us = new Map<string, Set<string>>();
+  const usPlanned = new Map<string, Set<string>>();
   const tc = new Map<string, Set<string>>();
   const tcLevels = new Map<string, Map<string, string>>();
   const declaredSpecDirs = new Map(entries.map((entry) => [entry.specNumber, entry.dir]));
@@ -556,6 +582,16 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     if (usIds.size > 0) {
       us.set(entry.specNumber, usIds);
     }
+
+    // Intersected with the declared set, never taken on its own: a marker under
+    // a heading no collector recognises as a story would otherwise report a
+    // deferral for an id that carries no obligation to defer.
+    const plannedUsIds = new Set(
+      Array.from(collectPlannedUsIds(usText)).filter((id) => usIds.has(id)),
+    );
+    if (plannedUsIds.size > 0) {
+      usPlanned.set(entry.specNumber, plannedUsIds);
+    }
     if (tcIds.size > 0) {
       tc.set(entry.specNumber, tcIds);
     }
@@ -566,7 +602,7 @@ async function collectSpecRefs(specsRoot: string): Promise<{
     }
   }
 
-  return { us, tc, tcLevels, declaredSpecDirs };
+  return { us, usPlanned, tc, tcLevels, declaredSpecDirs };
 }
 
 /**
@@ -940,6 +976,41 @@ function partitionMissingTcByObligation(
   return { owed, unitComponent };
 }
 
+/**
+ * Splits the declared `US-*` ids into those that still owe an E2E reference and
+ * those a `- x-qfai-status: planned` marker defers.
+ *
+ * The deferred half is returned as formatted `SPEC-NNNN:US-…` refs — the shape
+ * `narrowToScope` filters and the CLI prints — so a `--spec` run reports its own
+ * deferrals only, exactly as it does for `QFAI-ATDD-117`.
+ */
+function partitionDeclaredUs(
+  specUsIds: Map<string, Set<string>>,
+  plannedBySpec: Map<string, Set<string>>,
+): { active: Map<string, Set<string>>; deferred: string[] } {
+  const active = new Map<string, Set<string>>();
+  const deferred: string[] = [];
+  for (const [spec, ids] of specUsIds.entries()) {
+    const planned = plannedBySpec.get(spec);
+    if (planned === undefined || planned.size === 0) {
+      active.set(spec, ids);
+      continue;
+    }
+    const remaining = new Set<string>();
+    for (const id of ids) {
+      if (planned.has(id)) {
+        deferred.push(formatUsRef(spec, id.replace(/^US-/, "")));
+      } else {
+        remaining.add(id);
+      }
+    }
+    if (remaining.size > 0) {
+      active.set(spec, remaining);
+    }
+  }
+  return { active, deferred: deferred.sort((left, right) => left.localeCompare(right)) };
+}
+
 export const PLANNED_CONTRACT_KEY = "x-qfai-status";
 const PLANNED_CONTRACT_VALUE = "planned";
 
@@ -1058,6 +1129,69 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
   )}[ \\t]*$`,
   "im",
 );
+
+/**
+ * Heading form of a user story, e.g. `## US-0001-0002: title`.
+ *
+ * The compound id is admitted as well as the short one: a layered spec pack
+ * numbers its stories `US-<spec>-<serial>`, and matching only `US-\d{4}` would
+ * leave every real project's stories unable to carry the marker below.
+ */
+const US_HEADING_RE = /^##\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+
+/**
+ * The `x-qfai-status: planned` deferral in user-story meta-line form.
+ *
+ * The same token both contract kinds use, written as one of the `- Key: value`
+ * meta lines a `## US-NNNN` block already carries (`- Parent:`, `- Goal:`).
+ * Matched on its own line only, and attributed to the block it sits in — a
+ * marker written once at the top of the document must not be able to defer
+ * every story the file declares, which is the nesting mistake
+ * {@link isPlannedApiContract} guards against on the contract side.
+ */
+const PLANNED_US_META_LINE_RE = new RegExp(
+  `^[ \\t]*[-*][ \\t]*["']?${escapeRegExp(PLANNED_CONTRACT_KEY)}["']?[ \\t]*:[ \\t]*["']?${escapeRegExp(
+    PLANNED_CONTRACT_VALUE,
+  )}["']?[ \\t]*$`,
+  "i",
+);
+
+/**
+ * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
+ *
+ * A story whose acceptance cannot be observed at E2E in this slice had no
+ * in-band way to say so: `CON-API-*` and `CON-DB-*` both defer with
+ * `x-qfai-status: planned`, while a `US-*` could only be left uncovered (a hard
+ * `QFAI-ATDD-111` error), covered by a test asserting nothing, or erased by
+ * declaring the whole spec non-user-facing. This is the per-story counterpart.
+ *
+ * Fenced samples and HTML comments are masked first, on the same terms as
+ * {@link collectTcLevels}: an illustrative block showing the marker must not
+ * silently drop a real story's obligation.
+ */
+export function collectPlannedUsIds(rawUsText: string): Set<string> {
+  const planned = new Set<string>();
+  const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
+  let current: string | null = null;
+  for (const line of lines) {
+    const heading = US_HEADING_RE.exec(line.trim());
+    if (heading?.[1]) {
+      current = heading[1].toUpperCase();
+      continue;
+    }
+    // Any other `##` heading closes the block; the marker belongs to the story
+    // it is written under, not to whatever story came before it in the file.
+    if (/^##\s+/.test(line.trim())) {
+      current = null;
+      continue;
+    }
+    if (current !== null && PLANNED_US_META_LINE_RE.test(line)) {
+      planned.add(current);
+      current = null;
+    }
+  }
+  return planned;
+}
 
 async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
   const files = await collectDbContractFiles(dbRoot);
