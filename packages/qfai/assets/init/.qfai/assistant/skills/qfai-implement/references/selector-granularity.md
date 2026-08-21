@@ -21,8 +21,12 @@ _conflate_:
   upstream (`../../qfai-sdd/references/spec-traceability-rules.md` **Ownership split**), so a matrix
   shape first visible at RED is stopped and raised as a Change Request, never split in place
   (`../SKILL.md` Phase Red).
-- A selector that accumulates unrelated boundaries **invalidates the RED observation** — see the Red
-  phase below.
+- A selector that accumulates unrelated boundaries **invalidates the RED observation.** A single test
+  function can fail only once, so if one selector entry carries an entire obligation matrix, "the
+  expected reason" is whichever assert happens to execute first — every assertion after it is
+  unobserved on every RED run, and a non-deterministic assertion placed early silently disables
+  everything below it. `../SKILL.md` Phase Red step 5 stops such a row rather than proceeding to
+  Green on it.
 - **Precedence, when the two rules seem to disagree:** the row-splitting rule wins. If you cannot
   name the single boundary that every selector entry on a row observes, the row is carrying more
   than one and must be split.
