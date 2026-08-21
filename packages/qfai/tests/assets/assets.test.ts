@@ -412,6 +412,41 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {
+    // `--auto-serve` gained an SPA route fallback: a document request that
+    // matches no file on disk is served `index.html`. generator-prompt.md is
+    // injected into the generator sub-agent every cycle, so a stale "no SPA
+    // fallback" claim there makes the generator declare hash routes and avoid
+    // the parameterized contract routes the fallback exists to make capturable.
+    for (const tree of [templateQfaiDir, path.join(repoRoot, ".qfai")]) {
+      const generatorRef = await readFile(
+        path.join(
+          tree,
+          "assistant",
+          "skills",
+          "qfai-prototyping",
+          "references",
+          "generator-prompt.md",
+        ),
+        "utf-8",
+      );
+
+      // The stale claims must be gone.
+      expect(generatorRef).not.toContain("it has no SPA fallback");
+      expect(generatorRef).not.toContain("they will 404 under `--auto-serve`");
+      expect(generatorRef).not.toContain("so a `/settings` route 404s while");
+
+      // The behaviour the server actually implements must be stated.
+      expect(generatorRef).toContain("`index.html` instead of 404");
+      expect(generatorRef).toContain("`text/html`");
+      expect(generatorRef).toContain("/pairs/:instrument");
+
+      // The two genuine non-fallback cases stay documented.
+      expect(generatorRef).toContain("Sub-resource requests");
+      expect(generatorRef).toContain("path-traversal 403 guard");
+    }
+  });
+
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
     const skillPath = path.join(
       templateQfaiDir,
