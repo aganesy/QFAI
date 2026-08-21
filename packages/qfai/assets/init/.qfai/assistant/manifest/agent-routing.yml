@@ -1,5 +1,22 @@
 schema_version: "1.0"
 
+# Contract with each skill's `roles:` frontmatter (validated by
+# `QFAI-AGENT-014` / `QFAI-AGENT-015`):
+#
+# A skill's `roles:` is the closed set of agents it may dispatch, so it must be
+# a SUPERSET of every agent this manifest binds to that skill —
+# `mandatory_agents`, `conditional_agents`, `blocking_agents` and
+# `parallel_groups` across all of its phases — plus every reviewer its
+# `review_profile` selects. A missing `mandatory_agents` / `blocking_agents`
+# entry is an error: the run cannot finish without dispatching a role the skill
+# never declared. A missing conditional entry is a warning.
+#
+# The reverse also holds: a declared role that neither this manifest nor the
+# skill's review profile selects is a stale grant and is reported as a warning.
+# The one exception is `orchestrator`, the invoking agent, which
+# `constitution/shared-skill-delegation-baseline.md` governs instead of any
+# routing phase.
+
 routing:
   - skill: qfai-discussion
     phases:

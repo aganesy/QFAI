@@ -6,6 +6,12 @@ import { parse as parseYaml } from "yaml";
 import { parseAgentFrontmatter } from "../agentFrontmatter.js";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
+import {
+  emptySkillRouting,
+  recordRoutedAgents,
+  validateSkillRoles,
+  type SkillRouting,
+} from "./skillRoles.js";
 import { exists, issue } from "./utils.js";
 
 const REQUIRED_AGENT_SECTIONS = [
@@ -81,7 +87,7 @@ function manifestRelativePath(absolute: string, root: string): string {
   return path.relative(root, absolute).replace(/\\/g, "/");
 }
 
-export async function validateAgentDefinition(root: string, _config: QfaiConfig): Promise<Issue[]> {
+export async function validateAgentDefinition(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
   const catalogPath = await resolveManifestFile(root, "agent-catalog.yml");
@@ -181,8 +187,9 @@ export async function validateAgentDefinition(root: string, _config: QfaiConfig)
     }
   }
 
-  await validateRouting(routingPath, catalogIds, issues, root);
-  await validateProfiles(profilesPath, reviewerIds, issues, root);
+  const routing = await validateRouting(routingPath, catalogIds, issues, root);
+  const profiles = await validateProfiles(profilesPath, reviewerIds, issues, root);
+  await validateSkillRoles(root, config, routing, profiles, issues);
 
   return issues;
 }
@@ -280,8 +287,12 @@ async function validateRouting(
   catalogIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<void> {
+): Promise<Map<string, SkillRouting>> {
   const rel = manifestRelativePath(routingPath, root);
+  // Collected during this walk rather than re-parsed by `validateSkillRoles`:
+  // the per-skill routed set is exactly what the walk already resolves, and a
+  // second parse could disagree with the one these findings came from.
+  const routed = new Map<string, SkillRouting>();
   try {
     const parsed: unknown = parseYaml(await readFile(routingPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -294,7 +305,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return;
+      return routed;
     }
     const routingRoot = parsed as Record<string, unknown>;
     if (!Array.isArray(routingRoot.routing)) {
@@ -307,7 +318,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return;
+      return routed;
     }
 
     for (const [routeIndex, route] of routingRoot.routing.entries()) {
@@ -315,6 +326,7 @@ async function validateRouting(
         continue;
       }
       const routeObj = route as Record<string, unknown>;
+      const routedEntry = collectRouteHeader(routeObj, routed);
       if (!Array.isArray(routeObj.phases)) {
         continue;
       }
@@ -395,6 +407,9 @@ async function validateRouting(
             );
           }
         }
+        if (routedEntry) {
+          collectPhaseAgents(routedEntry, phaseObj);
+        }
       }
     }
   } catch {
@@ -407,6 +422,39 @@ async function validateRouting(
         "agentDefinition.routingParse",
       ),
     );
+  }
+  return routed;
+}
+
+/**
+ * Register a routing entry under its skill name and remember the review
+ * profile it declares. Unnamed routes are skipped: there is no skill whose
+ * `roles:` they could be held against.
+ */
+function collectRouteHeader(
+  routeObj: Record<string, unknown>,
+  routed: Map<string, SkillRouting>,
+): SkillRouting | undefined {
+  if (typeof routeObj.skill !== "string" || routeObj.skill.length === 0) {
+    return undefined;
+  }
+  const entry = routed.get(routeObj.skill) ?? emptySkillRouting();
+  if (typeof routeObj.review_profile === "string") {
+    entry.reviewProfile = routeObj.review_profile;
+  }
+  routed.set(routeObj.skill, entry);
+  return entry;
+}
+
+/** Fold one phase's four agent fields into the skill's collected routed set. */
+function collectPhaseAgents(entry: SkillRouting, phase: RoutingPhase): void {
+  recordRoutedAgents(entry, phase.mandatory_agents, "required");
+  recordRoutedAgents(entry, phase.blocking_agents, "required");
+  recordRoutedAgents(entry, phase.conditional_agents, "conditional");
+  if (Array.isArray(phase.parallel_groups)) {
+    for (const group of phase.parallel_groups) {
+      recordRoutedAgents(entry, group, "conditional");
+    }
   }
 }
 
@@ -449,8 +497,12 @@ async function validateProfiles(
   reviewerIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<void> {
+): Promise<Map<string, Set<string>>> {
   const rel = manifestRelativePath(profilesPath, root);
+  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-015`
+  // needs this side of the manifest too before it can call a declared role
+  // unreachable.
+  const selections = new Map<string, Set<string>>();
   try {
     const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -463,7 +515,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return;
+      return selections;
     }
     const profilesRoot = parsed as Record<string, unknown>;
     if (
@@ -480,7 +532,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return;
+      return selections;
     }
     const profiles = profilesRoot.profiles as Record<string, unknown>;
     for (const [profileName, profile] of Object.entries(profiles)) {
@@ -488,6 +540,10 @@ async function validateProfiles(
         continue;
       }
       const profileObj = profile as Record<string, unknown>;
+      selections.set(
+        profileName,
+        collectProfileReviewers(profileObj.always_required, profileObj.conditional_required),
+      );
       validateReviewerRefs(
         profileObj.always_required,
         reviewerIds,
@@ -516,6 +572,23 @@ async function validateProfiles(
       ),
     );
   }
+  return selections;
+}
+
+/** Every reviewer a profile can select, required or conditional alike. */
+function collectProfileReviewers(always: unknown, conditional: unknown): Set<string> {
+  const reviewers = new Set<string>();
+  for (const value of [always, conditional]) {
+    if (!Array.isArray(value)) {
+      continue;
+    }
+    for (const entry of value) {
+      if (typeof entry === "string" && entry.length > 0) {
+        reviewers.add(entry);
+      }
+    }
+  }
+  return reviewers;
 }
 
 function formatSkillLabel(skill: unknown, routeIndex: number): string {

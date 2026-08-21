@@ -78,3 +78,48 @@ export function parseAgentFrontmatter(content: string): AgentFrontmatterParseRes
     },
   };
 }
+
+/**
+ * The `roles:` list a skill declares in its own frontmatter.
+ *
+ * `agent-routing.yml` and this list both say who may act inside a skill, and
+ * until `QFAI-AGENT-014` / `QFAI-AGENT-015` nothing compared them. Reading it
+ * here rather than in the validator keeps the frontmatter delimiter a single
+ * expression, shared with `parseAgentFrontmatter`.
+ *
+ * `undefined` — no frontmatter, unparseable frontmatter, or no `roles:` key —
+ * means "this skill makes no declaration", which is deliberately different
+ * from declaring an empty list: only the latter is a claim the validator can
+ * hold a routing manifest against.
+ */
+export function parseSkillRoles(content: string): string[] | undefined {
+  const match = content.match(FRONTMATTER_PATTERN);
+  const rawFrontmatter = match?.[1];
+  if (!rawFrontmatter) {
+    return undefined;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(rawFrontmatter);
+  } catch {
+    return undefined;
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    return undefined;
+  }
+
+  const roles = (parsed as Record<string, unknown>).roles;
+  if (!Array.isArray(roles)) {
+    return undefined;
+  }
+
+  const names: string[] = [];
+  for (const entry of roles) {
+    if (typeof entry === "string" && entry.trim().length > 0) {
+      names.push(entry.trim());
+    }
+  }
+  return names;
+}
