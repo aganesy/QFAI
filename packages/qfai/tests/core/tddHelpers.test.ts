@@ -106,8 +106,12 @@ describe("isCoverageTargetLevel", () => {
     expect(isCoverageTargetLevel("smoke")).toBe(true);
   });
 
-  it("treats empty string as coverage target", () => {
-    expect(isCoverageTargetLevel("")).toBe(true);
+  it("excludes an undeclared Level, which QFAI-ATDD-112 owns", () => {
+    // Not the conservative reading of an unreadable cell — there is no cell to
+    // read. `resolveAtddHomeKind(undefined)` already routes such a TC to
+    // `tests/integration/**` at `error`, so claiming it here as well gave one
+    // TC two gates, two owners and two evidence files.
+    expect(isCoverageTargetLevel("")).toBe(false);
   });
 
   it("is case-insensitive", () => {

@@ -70,6 +70,12 @@ and `L2` are coverage targets that need a ledger row and `L3`-`L5` are not. A
 value it recognises in neither spelling is conservatively treated as a target,
 and `TDDLIST_UNKNOWN_LEVEL` reports it rather than letting it pass silently.
 
+An **empty** cell is not that case: it declares nothing, so the TC gets no
+ledger row and `QFAI-ATDD-112` owns it from `<testsDir>/integration/**` like any
+other TC with no declared `Level`. Declare a `Level` for every TC — leaving the
+cell blank hands the TC to `/qfai-atdd`, which is rarely what a unit-level
+oracle wants.
+
 ### Type column values
 
 - `normal` — Happy path / expected successful behavior.

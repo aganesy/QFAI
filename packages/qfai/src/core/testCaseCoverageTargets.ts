@@ -148,17 +148,6 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   // L1` row in a second table would otherwise be owed by nothing at all.
 
   const tableLeveledTcIds = new Set<string>();
-  // Coverage targets admitted by the blank/absent-`Level` fallback rather than
-  // by a declaration, and therefore still revocable.
-  //
-  // `classifyCoverageLevel("")` is `coverage-target` on purpose — an unstated
-  // `Level` must not silently drop the TC out of the only gate L1/L2 have. But
-  // a row that says nothing cannot out-rank a later row that says `L3`: the
-  // ATDD collector ignores a blank cell entirely and takes the `L3`, so leaving
-  // the provisional target in place made a correctly annotated integration TC
-  // owe `QFAI-ATDD-112` *and* `TDDLIST_TC_NOT_COVERED`. Tracking which ids the
-  // fallback added is what lets the first explicit `Level` settle it either way.
-  const provisionalTcIds = new Set<string>();
   for (const table of resolveTestCaseTables(content)) {
     // Lower-cased on both sides: `resolveTestCaseTables` now accepts a `tc-id`
     // / `TC-Id` header the way the ATDD collector always has, and a
@@ -190,40 +179,30 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // `QFAI-ATDD-112`, and an inflated target count in the report.
       if (tableLeveledTcIds.has(tcId)) continue;
       const level = levelIndex >= 0 ? (row[levelIndex] ?? "").trim().toLowerCase() : "";
-      if (levelIndex >= 0) {
+      if (levelIndex >= 0 && classifyCoverageLevel(level) === "unrecognized") {
         // The unrecognized-value report sits behind the same rule, for the same
         // reason it does in the heading pass: a superseded row's `Level` is not
         // in force and must not be described as making the TC a mandatory
         // ledger row.
-        if (classifyCoverageLevel(level) === "unrecognized") {
-          unrecognizedLevels.add((row[levelIndex] ?? "").trim());
-        }
-        if (level.length > 0) {
-          // The first *explicit* `Level` is the declaration, and it settles a
-          // provisional target in whichever direction it points.
-          tableLeveledTcIds.add(tcId);
-          if (!isCoverageTargetLevel(level)) {
-            if (provisionalTcIds.delete(tcId)) {
-              unitComponentTcIds.delete(tcId);
-              coverageTargetLevels.delete(tcId);
-            }
-            continue;
-          }
-          if (provisionalTcIds.delete(tcId)) {
-            // Provisionally recorded as `""`; the declaration replaces it, so
-            // the `Level`/`Layer` crosswalk reads the level the spec states
-            // rather than the absence an earlier row happened to show.
-            coverageTargetLevels.set(tcId, level);
-          }
-        }
+        unrecognizedLevels.add((row[levelIndex] ?? "").trim());
       }
-      // Reaches here when: (a) Level is a coverage target, or (b) Level column is absent (fallback: all TCs)
+      // A row that declares no `Level` — blank cell, or no `Level` column at
+      // all — declares nothing, and nothing is not a claim. It is not settled
+      // either: a later row that does declare one still speaks for the TC, so
+      // this row neither records a target nor enters `tableLeveledTcIds`.
+      // Claiming it here made a `Level`-less TC a coverage target while
+      // `QFAI-ATDD-112` was claiming the same TC for `tests/integration/**`
+      // (`tddHelpers.classifyCoverageLevel`), which is one TC owed to two
+      // owners and a seeded row whose `Layer` nothing could derive. The
+      // heading form already left it to ATDD; the table form now agrees.
+      if (level.length === 0) continue;
+      // The first *explicit* `Level` is the declaration, and it settles the TC
+      // in whichever direction it points.
+      tableLeveledTcIds.add(tcId);
+      if (!isCoverageTargetLevel(level)) continue;
       unitComponentTcIds.add(tcId);
       if (!coverageTargetLevels.has(tcId)) {
         coverageTargetLevels.set(tcId, level);
-      }
-      if (level.length === 0) {
-        provisionalTcIds.add(tcId);
       }
     }
   }

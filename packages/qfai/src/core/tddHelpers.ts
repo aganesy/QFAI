@@ -66,10 +66,23 @@ export type LevelClassification = "coverage-target" | "non-coverage" | "unrecogn
  * `TDDLIST_TC_NOT_COVERED` demanded a ledger row for every TC. Classifying
  * positively means an unrecognized value is *visible* rather than silently
  * becoming a coverage target.
+ *
+ * **An undeclared `Level` is not a coverage target.** A blank cell, and a
+ * `06_Test-Cases.md` with no `Level` column at all, reach here as `""`, and
+ * `atddTraceability.resolveAtddHomeKind(undefined)` already routes exactly that
+ * TC to `tests/integration/**` and keeps `QFAI-ATDD-112` (`error`) on it —
+ * deliberately, as the conservative answer for a `Level` qfai cannot read.
+ * Answering `coverage-target` here as well made one TC a ledger coverage target
+ * *and* an ATDD annotation obligation: two owners, two test trees, two evidence
+ * files, and no derivable `Layer` for the row the ledger would seed, which is
+ * what gate item 10 selects the evidence file by. The heading form already
+ * behaved this way — a `## TC-0001` block with no `- Level:` line is claimed by
+ * ATDD alone — so this is the table form joining it, not a new rule. The TC is
+ * not thereby owed by nothing: it is owed by `QFAI-ATDD-112`.
  */
 export function classifyCoverageLevel(level: string): LevelClassification {
   const normalized = level.trim().toLowerCase();
-  if (normalized.length === 0) return "coverage-target";
+  if (normalized.length === 0) return "non-coverage";
   if (UNIT_COMPONENT_LAYERS.has(normalized)) return "coverage-target";
   if (NON_COVERAGE_LAYERS.has(normalized)) return "non-coverage";
   return "unrecognized";

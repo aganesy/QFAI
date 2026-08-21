@@ -20,8 +20,14 @@ describe("classifyCoverageLevel", () => {
     expect(classifyCoverageLevel("smoke")).toBe("unrecognized");
   });
 
-  it("treats an empty cell as a coverage target", () => {
-    expect(classifyCoverageLevel("")).toBe("coverage-target");
+  it("leaves an undeclared Level to ATDD instead of claiming it too", () => {
+    // A blank cell — and a `06_Test-Cases.md` with no `Level` column, which
+    // reaches here the same way — is already owned by `QFAI-ATDD-112`:
+    // `resolveAtddHomeKind(undefined)` routes it to `tests/integration/**` and
+    // keeps the obligation. Answering `coverage-target` here as well put one TC
+    // on two gates with two owners and two evidence files.
+    expect(classifyCoverageLevel("")).toBe("non-coverage");
+    expect(classifyCoverageLevel("   ")).toBe("non-coverage");
   });
 });
 

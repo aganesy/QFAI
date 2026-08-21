@@ -177,7 +177,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   mandated directory, so this ledger row is their whole obligation and
   `TDDLIST_TC_NOT_COVERED` is the gate that enforces it. See
   `catalog/test-layers.md`.
-- If `06_Test-Cases.md` has no test-case classification column, every TC is treated as a coverage target.
+- A TC with no declared `Level` — a blank cell, or a `06_Test-Cases.md` with no test-case classification column at all — is **not** a coverage target and gets no row. It is owned by `QFAI-ATDD-112`, which routes it to `tests/integration/**`; seeding a row for it as well would put one TC on two gates with two owners and two evidence files, and give the row a `Layer` the spec does not support.
 - `Status=exception` requires a non-empty DR-ID. An `exception` row is not a
   dead end: a Drift Protocol sweep may reset it to `todo` like any other status
   when the rerun changed the obligation it was raised against.
