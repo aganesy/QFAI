@@ -28,7 +28,7 @@ type Review = {
     usability: "weak" | "acceptable" | "strong" | "exceptional";
     functionality: "weak" | "acceptable" | "strong" | "exceptional";
   };
-  proseCritique: string; // 200..500 words
+  proseCritique: string; // 200..500 English words, or 600..2500 CJK characters
   layoutAntiPatternsDetected: string[]; // lap-* IDs
   designMdViolations: {
     // populated by static gate, not by you
@@ -118,7 +118,7 @@ acceptable}` and `hasLap(r)` be `r.layoutAntiPatternsDetected.length > 0`.
   prior → `continue`.
 - Else → `refine`.
 
-## Prose critique format (200–500 words)
+## Prose critique format (200–500 English words, or 600–2500 CJK characters)
 
 Address: (1) what works on each of the 4 axes, (2) what doesn't,
 (3) structural ceiling if any, (4) concrete IA / flow / state

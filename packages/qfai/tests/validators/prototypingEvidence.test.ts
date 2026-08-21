@@ -246,6 +246,40 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
+  it("emits no QFAI-PROT-002 when proseCritique is a 600-character Japanese critique", async () => {
+    const root = await newTempDir();
+    const japaneseCritique = "情報設計と導線は概ね良好である。".repeat(50);
+    expect(japaneseCritique.split(/\s+/u).length).toBe(1);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), proseCritique: japaneseCritique }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(issues.filter((i) => i.code === "QFAI-PROT-002")).toEqual([]);
+  });
+
+  it("emits QFAI-PROT-002 naming the CJK band when a Japanese proseCritique is too short", async () => {
+    const root = await newTempDir();
+    const shortJapanese = "情報設計は弱い。".repeat(10);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), proseCritique: shortJapanese }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) =>
+          i.code === "QFAI-PROT-002" &&
+          i.message.includes("proseCritique") &&
+          i.message.includes("characters outside band 600..2500"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits QFAI-PROT-006 when iterations.length > 15", async () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));
