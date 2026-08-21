@@ -125,3 +125,8 @@ below read. Write it once, in its own file, and link it from the stage evidence.
   `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
   uncommitted stage-evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
+- `qfai validate --profile atdd` reports the three file-level facts the readings
+  above assume: `QFAI-ATDD-131` when a spec with ATDD-owned tests has no matrix,
+  `QFAI-ATDD-132` when the matrix is excluded by `.gitignore`, and
+  `QFAI-ATDD-133` when the stage evidence inlines the table instead of linking
+  it. None of them reads the cells — that judgement stays with the reviewer.

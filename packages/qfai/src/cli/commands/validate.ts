@@ -732,6 +732,12 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
+  "QFAI-ATDD-131":
+    "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
+  "QFAI-ATDD-132":
+    "The Coverage Depth Matrix is not excluded by `.gitignore`; the matrix and its justifications are committed.",
+  "QFAI-ATDD-133":
+    "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` is a link plus totals, not an inline table.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":
