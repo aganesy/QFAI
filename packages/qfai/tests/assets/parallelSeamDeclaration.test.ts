@@ -96,6 +96,23 @@ describe("declared seam", () => {
       );
     });
 
+    it(`${tree}: reconciliation takes its roots from structure steering, not a literal src/`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Step 1's prose and its own command must name the same operand.
+      expect(policy).toContain(
+        "For each slice, list the paths it actually touched under the production roots `catalog/structure.md` declares",
+      );
+      expect(policy).toContain(
+        "substituting `<source root>` from that section rather than assuming",
+      );
+      // An empty diff is a mis-read root, not a clean seam.
+      expect(policy).toContain(
+        "A zero-path result is never evidence of a clean seam: re-read `catalog/structure.md`",
+      );
+      expect(policy).not.toContain("list the `src/` paths it actually touched");
+    });
+
     it(`${tree}: the SKILL carries both the gate note and the reconcile step`, async () => {
       const skill = flat(await read(tree, SKILL));
 
@@ -106,8 +123,9 @@ describe("declared seam", () => {
         "a ledger without that column supports parallel dispatch only for seams that already exist",
       );
       expect(skill).toContain(
-        "diff each slice's touched `src/` paths against its declared `Owning module`",
+        "diff each slice's touched paths under the production roots `catalog/structure.md` declares against its declared `Owning module`",
       );
+      expect(skill).not.toContain("diff each slice's touched `src/` paths");
     });
   }
 });
