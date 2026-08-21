@@ -681,19 +681,21 @@ describe(
       }
       expect
         .soft(
-          actionSteps.sort(),
+          actionSteps,
           "an action runs whether or not the step has a `run:` body, so each one is pinned to the job " +
-            "it was reviewed for — a second step using a reviewed action is a second thing to review",
+            "it was reviewed for, IN ORDER — a checkout after an install is a different lane",
         )
-        .toEqual(ALLOWED_ACTION_STEPS.map(([action, at]) => `${action} @ ${at}`).sort());
+        .toEqual(ALLOWED_ACTION_STEPS.map(([action, at]) => `${action} @ ${at}`));
 
       expect
         .soft(
-          bodies.sort(),
-          "each reviewed body must appear exactly once, at the step it was reviewed for — so a body " +
-            "replicated into a second step, or swapped with another step's, is a new thing to review",
+          bodies,
+          "each reviewed body must appear exactly once, at the step it was reviewed for and in the " +
+            "order the file runs them — replicated, swapped or reordered is a new thing to review. " +
+            "A line whose digest matches and whose location does not is a step renamed or moved; a " +
+            "line whose location matches and whose digest does not is a body edited",
         )
-        .toEqual([...ALLOWED_STEP_BODIES].map(([digest, at]) => `${at} :: ${digest}`).sort());
+        .toEqual([...ALLOWED_STEP_BODIES].map(([digest, at]) => `${at} :: ${digest}`));
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a
