@@ -2345,7 +2345,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**fourteen** rounds, **38** reviewer responses, **37 REVISE and one PASS** — the PASS being P1d's sixth
+**fifteen** rounds, **38** reviewer responses, **37 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. Every earlier version of this line was a round
 behind, which rounds 4, 5, 6 and 7 each said; the numbers here are derived from
 `.qfai/review/review-2026082*/R0*.md` **from `review-20260820200000000` onwards** rather than
@@ -2403,7 +2403,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Fourteen** packs, one per round — and round 13's holds a request and no reports, because its three
+**Fifteen** packs, one per round — and round 13's holds a request and no reports, because its three
 reviewers died on `ENOTFOUND` before writing. Zero is a legitimate response count for a round; it is not
 a passed one. The seal is *supposed* to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures the gap **per round**, without a
@@ -2471,6 +2471,8 @@ Review pack seal:  06638643339fc1eb1f8bd9d3d1cccf7013db314361ac3d6b2eac4609cff07
                    before writing. A pack with nothing in it is closed, not in flight.
 Review pack:       .qfai/review/review-20260822030000000/            (round 14 — stage gates only)
 Review pack seal:  3b81e2422d6bebde7e59071b82e1be184d684f7189b5a53b734136569b136bbc
+Review pack:       .qfai/review/review-20260822060000000/            (round 15 — stage gates only)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
