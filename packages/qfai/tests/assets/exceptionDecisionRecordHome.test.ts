@@ -50,7 +50,9 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(end, "the section after the whitelist moved").toBeGreaterThan(start);
     const whitelist = drift.slice(start, end);
     expect(whitelist).toContain("`.qfai/decisions/`");
-    expect(whitelist).toContain("DR-<id>-<slug>.md");
+    // The whitelist spells the DR filename out rather than deferring `<id>` to
+    // another file — see decisionRecordIdGrammar.test.ts for why.
+    expect(whitelist).toContain("DR-NNNN-MMMM-<slug>.md");
   });
 
   it("keeps the carve-out to creation, not to patching upstream", async () => {

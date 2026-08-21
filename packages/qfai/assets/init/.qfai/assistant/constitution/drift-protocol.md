@@ -46,8 +46,9 @@ case required reading the agent roster and reasoning backwards from it.
   `#when-drift-is-detected` path.
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
-  anomaly Decision Record (`DR-<id>-<slug>.md`, where `<id>` follows the
-  Decision Record ID scheme in the spec's `07_Decisions.md`)
+  anomaly Decision Record (`DR-NNNN-MMMM-<slug>.md` spec-scoped, or
+  `DR-NNNN-<slug>.md` policy-level — deliberately **not** the CR's date form;
+  see the ID scheme in the spec's `07_Decisions.md`)
 
 Any exception beyond this list requires explicit user approval.
 
