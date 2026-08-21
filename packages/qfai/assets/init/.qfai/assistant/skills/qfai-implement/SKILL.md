@@ -185,7 +185,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 
 ### Formal Sub-agent Roster
 
-This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe.
+This skill delegates through the centralized routing policy in `.qfai/assistant/manifest/agent-routing.yml`. Its `red`, `build`, `test` and `review` phases carry `iteration: per-ledger-item` — they run once **per row**, not once per invocation, which is what puts `qa-gatekeeper` in a phase where a RED state still exists to observe. `acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`. Acceptance tests are `/qfai-atdd`'s owned artifact (Non-goals), so the role has no work in this skill and routing it here would license an edit to a test this skill does not own. `Layer = E2E` / `API` / `Integration` rows reach that role through `/qfai-atdd` — on the first pass via the handover this skill consumes, and on a REVISE via the Phase Red step 3b handback — never through a phase here.
 
 - `delivery-planner`
   - reads `test-list.md`, selects the next pending item, and is the sole authority for **item selection and item scope** — whether this row's selector is a sufficient slice of the obligation its `Layer` names — `TC-Refs` for `Unit` / `Component` / `Integration`, `US-Refs` for `E2E`, `CON-API-Refs` for `API`
@@ -202,8 +202,6 @@ This skill delegates through the centralized routing policy in `.qfai/assistant/
   - verifies spec alignment, drift-protocol compliance, and final DoD
 - `product-surface-reviewer`
   - reviews UI-affecting implementation when the item changes surface behavior
-
-`acceptance-test-engineer` is deliberately **absent** — from this roster, from the `roles:` list above, and from every `qfai-implement` phase in `agent-routing.yml`. Acceptance tests are `/qfai-atdd`'s owned artifact (Non-goals), so the role has no work in this skill and routing it here would license an edit to a test this skill does not own. `Layer = E2E` / `API` / `Integration` rows reach that role through `/qfai-atdd` — on the first pass via the handover this skill consumes, and on a REVISE via the Phase Red step 3b handback — never through a phase here.
 
 ## Volume Policy (MUST)
 
