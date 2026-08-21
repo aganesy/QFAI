@@ -70,13 +70,19 @@ If spec and code conflict:
 ## Article V — Traceability is mandatory
 
 Maintain traceability links:
-**Require → Spec → Scenario → Tests → Code → Verification evidence**
+**Require → Spec → US → AC → BR → EX → TC → Tests → Code → Verification evidence**
+
+`US → AC → BR → EX → TC` are the layered spec items (`02_User-stories.md`
+through `06_Test-Cases.md`). A legacy spec-pack project carries a single
+`Scenario` hop (`scenario.feature`) in their place; that hop is superseded and
+the layered layout never produces it, so do not reference it in a layered
+project. `drift-protocol.md` lists the legacy SSOT files it belongs to.
 
 Whenever practical, reference:
 
 - requirement IDs
 - spec section anchors
-- scenario titles
+- layered item IDs (`US-*`, `AC-*`, `BR-*`, `EX-*`, `TC-*`)
 
 ---
 

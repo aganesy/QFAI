@@ -6,7 +6,7 @@ These principles are inspired by “constitution / articles” patterns used by 
    If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
 
 2. **Traceability is mandatory**  
-   Every meaningful change must be traceable: **Require → Spec → Scenario → Tests → Code → Verification evidence**.
+   Every meaningful change must be traceable: **Require → Spec → US → AC → BR → EX → TC → Tests → Code → Verification evidence**.
 
 3. **Evidence over confidence**  
    Prefer observable proof (logs, commands, file diffs, test results). If you cannot verify, say so and record it.
