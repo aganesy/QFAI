@@ -54,8 +54,7 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
   - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`)
-  - `.qfai/contracts/api/**` (CON-API)
-  - `.qfai/contracts/db/**` (CON-DB)
+  - `.qfai/contracts/api/**` (CON-API) and `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
 - P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
@@ -72,10 +71,11 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   - `.qfai/specs/<spec-id>/05_Examples.md`
   - `.qfai/specs/<spec-id>/06_Test-Cases.md`
   - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff.
+  - `.qfai/contracts/api/**` (`CON-API`) and `.qfai/contracts/db/**` (`CON-DB`) — what `QFAI-ATDD-113` / `QFAI-ATDD-115` grade this stage on. Both are attributed to `.qfai/contracts/**` and survive `--spec`, so a run that never opens them cannot know which contracts it owes, and cannot reach the `-- x-qfai-status: planned` deferral either.
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
-- Do not read `_policies/**` by default.
+- Default Mode is a floor, not a closed set — Inputs Priority P4 governs what else this stage may open — but do not read `_policies/**` by default.
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -114,7 +114,7 @@ Use the shared schema.
 - Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-gate-baseline`.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
-  - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
+  - coverage obligations met: E2E covers `US`, API covers `CON-API`, Integration covers every declared `CON-DB` (`QFAI-ATDD-115`) — a contract outside the slice deferred with `-- x-qfai-status: planned`, never silently uncovered — and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
   - Drift Protocol is enforced;
@@ -369,7 +369,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 - **Test Case Depth Analyst**: `test-design-analyst` evaluates test cases using `references/test-case-depth-checklist.md`, produces Coverage Depth Matrix, flags gaps in boundary/error/edge coverage.
 - Test Volume Estimator: compute US/TC/CON signals with evidence.
-- ATDD Implementers, one per layer: required `US` coverage in E2E, `CON-API` in API, `TC` in Integration.
+- ATDD Implementers, one per layer: required `US` coverage in E2E, `CON-API` in API, `TC` and `CON-DB` in Integration.
 - Reviewer: validate coverage obligations + gate results + Coverage Depth Matrix (non-edit).
 - Runtime Gatekeeper: run suites and capture logs.
 
