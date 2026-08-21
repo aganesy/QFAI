@@ -203,13 +203,20 @@ Take the first that applies, and record which one in the evidence file.
    touch the file — sends a row with a perfectly good falsifiability story to
    `exception`.
 
-   Use the shared path in
-   `../../qfai-implement/references/red-not-observable.md`: record `Satisfied-by`,
-   mutate the production predicate the journey asserts on, run this row's test
-   and confirm it fails, restore, and record `Falsifiability command` /
-   `Falsifiability result` beside the GREEN pair. `qa-gatekeeper` accepts this
-   form as the row's minimum evidence, and the row proceeds to `green` and
-   `done` normally.
+   `/qfai-implement` Phase Red **step 3c** follows the shared path in
+   `../../qfai-implement/references/red-not-observable.md`: it records
+   `Satisfied-by`, mutates the production predicate the journey asserts on,
+   runs this row's selector, confirms the failure, restores, and writes
+   `Falsifiability command` / `Falsifiability result` beside the GREEN pair.
+   `qa-gatekeeper` accepts this form as the row's minimum evidence, and the row
+   proceeds to `green` and `done` normally.
+
+   What this stage owes at the handover is the predicate to break: **record
+   `Satisfied-by` naming it, and hand the row over.** Nothing else in this
+   branch is this stage's to run. For everything else that entry has to carry,
+   read the `Falsifiability` row of `## Evidence shape` below — it is the one
+   statement of the entry's contents, so a partial list here cannot disagree
+   with it.
 
    **`Satisfied-by` takes whatever already implements the predicate.** The
    shared reference names a sibling `TDD-NNNN` because that is its usual case,

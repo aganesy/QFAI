@@ -636,6 +636,28 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     );
     expect(provenance).toContain("writes the trio into this row's entry here");
   });
+
+  it("keeps branch 2's closing procedure in the third person, with step 3c as its subject", async () => {
+    // The paragraph that closes branch 2 is the only one shaped like a
+    // procedure, so it is the one an operator follows. Written in the bare
+    // imperative it told this stage to mutate production source — verbatim the
+    // act the paragraph above it calls the breach the boundary exists to
+    // prevent — and the actor it names, `/qfai-implement` Phase Red step 3c,
+    // appeared nowhere in it.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`/qfai-implement` Phase Red **step 3c** follows the shared path in",
+    );
+    expect(provenance).not.toContain(
+      "mutate the production predicate the journey asserts on, run this row's test",
+    );
+    // The one obligation that is this stage's, and so the only imperative left.
+    expect(provenance).toContain("What this stage owes at the handover is the predicate to break");
+
+    // The partial field list is gone: the entry's contents are stated once, in
+    // the `## Evidence shape` table, so the two cannot disagree.
+    expect(provenance).toContain("read the `Falsifiability` row of `## Evidence shape` below");
+  });
 });
 
 describe.each(TREES)("%s (someone can perform every step)", (tree) => {
