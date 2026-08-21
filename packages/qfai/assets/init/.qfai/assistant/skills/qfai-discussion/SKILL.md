@@ -25,6 +25,15 @@ mode: interactive-by-default
 
 [DRIFT-PROTOCOL:MANDATORY]
 
+## User Questions (AskUserQuestion Protocol)
+
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
+
+Skill-specific examples:
+
+- ask-user bucket decisions (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE triage operations)
+- destructive operations and scope expansions outside the active envelope
+
 ## Goal
 
 Produce a unified 15-file discussion pack plus exploration-first UI sidecars so `/qfai-sdd` and `/qfai-prototyping` can operate without forcing an early visual direction decision.
@@ -146,6 +155,8 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
   - `primarySpecId` (when absent from inputs)
 
 A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
+
+Ask every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above.
 
 project_memory:
 
