@@ -166,3 +166,47 @@ describe.each(TREES)("%s (the summary cannot license what the list forbids)", (t
     expect(skill).toContain("**When the investigation finds the obligation itself was wrong**");
   });
 });
+
+describe.each(TREES)("%s (`blocked` is reachable after the cycle starts)", (tree) => {
+  it("admits every active source into `blocked`, not `todo` alone", async () => {
+    // `todo` -> `blocked` was the only inbound edge, in a list that declares
+    // itself complete and prohibits every unlisted edge. All three blockers the
+    // edge names surface once the work hits them — an upstream defect at GREEN,
+    // a cross-spec row found unfinished at integration, a Change Request raised
+    // because this row exposed the conflict — so the row is already past `todo`
+    // and had nowhere legal to record the blocker.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("- Any active status -> `blocked`");
+    expect(ledger).not.toContain("- `todo` -> `blocked`");
+    expect(ledger).toContain("**The source is not restricted to `todo`**");
+    // The three wrong answers the narrow edge left, named so an agent does not
+    // reach for one of them again.
+    expect(ledger).toContain("`exception` would silently satisfy completion");
+  });
+
+  it("rewords the resumption now that a blocked row may have started", async () => {
+    // "the row never started, so nothing is being undone" stopped being true
+    // the moment `blocked` became reachable from `red` or later.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).not.toContain("the row never started");
+    expect(ledger).toContain("**restarts its cycle from `todo`** and owes a fresh RED");
+    expect(ledger).toContain("retained, not discarded");
+    expect(ledger).toContain("| `blocked` -> `todo` | resumption — the row restarts its own cycle");
+  });
+
+  it("says a resumed cycle opens a round, so the retained blocks are not overwritten", async () => {
+    // `round-evidence.md` enumerated only the reviewer `REVISE` as an opener,
+    // which would have made the resumed RED/GREEN pair either a second round 1
+    // or no round at all.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain("A row resumed from `blocked`");
+  });
+
+  it("defines `blocked` as cannot proceed, and keeps it out of `exception`", async () => {
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("`blocked` means **cannot proceed**");
+    expect(ledger).toContain("It is **not** `exception`.");
+  });
+});

@@ -37,6 +37,13 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 `Refactor verify` pair instead. Rounds are numbered and repeatable, not appended
 as free prose.
 
+**A row resumed from `blocked` opens a round too.** `blocked` is reachable from
+any active status (`execution-ledger.md#allowed-transitions`), so a row can be
+stopped after it has already observed a RED/GREEN pair, and `blocked -> todo`
+restarts its cycle. The rounds recorded before the block are retained; the
+resumed cycle is the next round, not a second round 1 — overwriting the earlier
+pair would erase the only record of what was observed before the blocker.
+
 Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
 its place), the GREEN pair, the reviewer verdict. Row-level fields are not round

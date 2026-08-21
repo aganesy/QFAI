@@ -182,11 +182,27 @@ Valid status values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`
 This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 `TDDLIST_EXCEPTION_PARKED` links here; both defer to what follows.
 
-- `todo` -> `blocked` (the row cannot be started: an upstream defect, an
+- Any active status -> `blocked` (the row cannot proceed: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the
   blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+  **The source is not restricted to `todo`**, and mirrors the `exception` edge
+  below for the same reason: all three blockers named here surface when the work
+  reaches them — an upstream defect when the GREEN implementation hits it, a
+  cross-spec row found unfinished when the integration is wired, a Change
+  Request raised _because_ this row exposed the conflict — so the row is
+  usually already at `red`, `green` or `refactor`. With `todo` as the only
+  source those rows had nowhere legal to record the blocker: `exception` would
+  silently satisfy completion, the upstream reset needs an approved `CR-*` that
+  by definition does not exist yet, and leaving the row at `green` throws away
+  the `Blocked-By` this status exists to hold and re-derives the determination
+  on every pass.
 - `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
-  backward transition**: the row never started, so nothing is being undone.
+  backward transition**: nothing upstream changed, so nothing is being undone.
+  The row **restarts its cycle from `todo`** and owes a fresh RED — a blocker
+  that stopped a row mid-cycle has almost always moved the tree its earlier RED
+  was observed on. Its rounds so far are **retained, not discarded**: the round
+  blocks already written stay in the evidence file, and the resumed cycle opens
+  the next round under `round-evidence.md`'s numbering.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)
@@ -238,7 +254,7 @@ is not backward:
 
 | Edge                                      | Why it is legal                                     | Approval needed |
 | ----------------------------------------- | --------------------------------------------------- | --------------- |
-| `blocked` -> `todo`                       | resumption — the row never started                  | none            |
+| `blocked` -> `todo`                       | resumption — the row restarts its own cycle         | none            |
 | `exception` -> `todo`                     | anomaly resolved — nothing upstream changed         | none            |
 | **any status** -> `todo` (upstream reset) | owner-approved re-entry, cycle restarts from `todo` | approved `CR-*` |
 | `refactor` -> `red`                       | QA rejection recovery on this row's own evidence    | `qa-gatekeeper` |
@@ -327,12 +343,19 @@ after its surface passes on the first run. So:
 
 ## Blocked rows
 
-`blocked` means **cannot be started**, not "not started yet" and not "anomaly".
+`blocked` means **cannot proceed**, not "not started yet" and not "anomaly".
 
+- It is reachable from **any active status**, not only from `todo`. "Cannot
+  proceed" covers "cannot be started" and is not narrower than it: a row whose
+  blocker surfaced at `red`, `green` or `refactor` is the common case, and it
+  files the blocker here rather than at `exception`.
 - It is **completion-prohibiting**, exactly like `todo`. A spec must not close
   over an unimplemented obligation, and naming the blocker does not discharge it.
 - It is **not** selectable. Phase Red picks the first `todo` row and skips
   `blocked` ones, so the loop head stops re-issuing rows that cannot proceed.
+  A row blocked mid-cycle is not selectable either — no phase selects `red`,
+  `green` or `refactor` — so the status stops the loop at whatever point the
+  blocker appeared.
 - It is **not** `exception`. `exception` is scoped to an anomaly, requires a
   `DR-*`, and satisfies spec completion — filing a blocked row there would
   silently close the obligation.
