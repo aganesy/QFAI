@@ -9,8 +9,12 @@ incoming requirement against the existing specs.
 ## Principle (read first)
 
 Default = modify an existing active spec (UPDATE:APPEND /
-UPDATE:MODIFY / UPDATE:REMOVE — the colon-separated form, no space, is
-the canonical SSOT for validators and `references/sdd-triage.md`).
+UPDATE:MODIFY / UPDATE:REMOVE — the colon-separated form is prose
+shorthand for the operation pair, never a cell value. In the Triage
+table the pair occupies two cells: `Operation` = `UPDATE`, `Sub-op` =
+`APPEND` / `MODIFY` / `REMOVE`. Writing `UPDATE:APPEND` into the
+`Operation` cell fails `QFAI-TRIAGE-003`; see
+`references/sdd-triage.md` for the row shape).
 CREATE is reserved for clear scope deviations introducing a new
 capability that is also being added to `_policies/03_Capabilities.md`.
 Validator `QFAI-TRIAGE-006` enforces this: every CREATE row must cite
