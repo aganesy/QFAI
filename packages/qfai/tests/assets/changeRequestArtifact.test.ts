@@ -151,19 +151,19 @@ describe("a Change Request is a defined artifact", () => {
       // The normal loop starts at the first `todo` row and exits on all-`done`,
       // so without a preflight an approved reset would never be reached.
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
-      expect(skill).toContain(
-        // #371 folded the Stage-0 steering refresh into the same first phase,
-        // so the heading names both. The preflight is still first and still
-        // mandatory, which is what this case is about.
-        "### Phase: Stage 0 + Preflight — MANDATORY, runs first",
-      );
+      // #371 folded the Stage-0 steering refresh into the same first phase and
+      // #658 the routed `plan` phase, so the heading names all three. The
+      // preflight is still first and still mandatory, which is what this case
+      // is about.
+      const preflightHeading = "### Phase: Stage 0 + Preflight + Plan — MANDATORY, runs first";
+      expect(skill).toContain(preflightHeading);
       // The all-terminal exit bullet also carries the spec-level checkpoint
       // obligation added by #304, so assert the preflight clause rather than
       // the whole sentence.
       expect(skill).toContain(
         "**and the mandatory Change Request\n  preflight (see Required Process) reset nothing**",
       );
-      expect(skill.indexOf("### Phase: Preflight")).toBeLessThan(
+      expect(skill.indexOf(preflightHeading)).toBeLessThan(
         skill.indexOf("### Phase: Red (Write Failing Test)"),
       );
 
