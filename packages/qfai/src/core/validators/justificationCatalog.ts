@@ -18,6 +18,16 @@
  * spec-governance change (extends the closed REQ contract) and MUST
  * be done in lockstep with the owning spec and reviewer SSOTs.
  *
+ * IMPORTANT — emitter scope: the catalog compiles into the published
+ * bundle, but not every code has an emitter that ships with it.
+ * `R-PACK-LOCATION-DRIFT` is raised only by QFAI's own repository lint
+ * lane (`pnpm ci:lint`, backed by an unpublished script), so a
+ * consuming project's `qfai validate` never produces it. Its entry
+ * says so in its `description` — a code whose only emitter is
+ * repo-local MUST disclose that there, otherwise the catalog
+ * advertises a rule the consumer does not get. The reverse direction
+ * (a new code arriving with no emitter at all) is guarded by a test.
+ *
  * Notes:
  *   - `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is documented warning per the
  *     active spec governance; it stays in the catalog so the
@@ -65,7 +75,7 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-PACK-LOCATION-DRIFT",
     severity: "error",
     description:
-      "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged.",
+      "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged. Scope: this code has no emitter in the published package — it is raised only by QFAI's own repository lint lane (`pnpm ci:lint`), so `qfai validate` never produces it in a consuming project. The justification contract below still applies to a Reviewer subagent that reports the code by hand.",
   },
   {
     code: "R-SKILL-MANIFEST-DRIFT",
