@@ -453,9 +453,10 @@ export async function runPrototypingCertify(
   // ANY iteration directory). Anchor the per-screen check to the
   // ACCEPTED iter only.
   //
-  // Codex review: the prototyping CLI contract specifies that only
-  // `<screen>.review.json` is a per-cycle Reviewer artifact (no
-  // `.html`, no `.png`, no `.interaction.json`). This flat-iter
+  // Codex review: the shipped review-payload reference
+  // (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`)
+  // specifies that only `<screen>.review.json` is a per-cycle Reviewer
+  // artifact (no `.html`, no `.png`, no `.interaction.json`). This flat-iter
   // `.html` gate predates that contract and remains in force for
   // backward compatibility with the pre-CHG-002 layout and the
   // current iterate driver, which still emits flat

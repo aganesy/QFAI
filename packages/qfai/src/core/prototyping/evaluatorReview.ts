@@ -308,10 +308,12 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  * This is the schema written to
  * `iter-NN/spec-NNNN/<screen>.review.json` by the product-surface
  * reviewer sub-agent and consumed by the prototyping CLI loop. The
- * SSOT for this schema is the prototyping CLI contract at
- * `.qfai/contracts/cli/qfai-prototyping.md` (§Review payload).
+ * SSOT for this schema is the shipped reference at
+ * `.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`,
+ * which `qfai init` installs into every consuming project — the
+ * reviewer sub-agent runs there and has to be able to read it.
  *
- * Shape (11 required top-level fields, per CLI contract):
+ * Shape (11 required top-level fields, per that reference):
  *   - top-level discriminators (`specId`, `screenId`, `cycle`,
  *     `sessionStatus`, `retryCount`) identify the (spec, screen, cycle)
  *     triple and the Reviewer Playwright session outcome (the
@@ -533,8 +535,8 @@ function pushDmvErrors(
 
 /**
  * Parse and validate a reviewer-driven per-spec / per-screen review
- * payload against the prototyping CLI contract
- * (`.qfai/contracts/cli/qfai-prototyping.md` §Review payload).
+ * payload against the shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`).
  *
  * Fail-fast on shape errors but aggregate every named-field violation
  * so callers can render the full diagnostic surface in one pass — the

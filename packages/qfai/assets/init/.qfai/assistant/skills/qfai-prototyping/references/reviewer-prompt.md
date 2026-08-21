@@ -16,7 +16,27 @@ the static compliance gate, not by you.
 - Root `DESIGN.md` (read-only context: `# Brand Philosophy`,
   `audience.emotion`, `audience.do_not_look_like`).
 
-## Output (`iter-NN/review.json`)
+## Outputs — two files, two schemas
+
+You write two different files. They are not interchangeable.
+
+1. **Per-spec / per-screen payload** —
+   `iter-NN/<spec-id>/<screen>.review.json`, one per screen. This is
+   the file the prototyping CLI parses and certify requires. Its
+   schema is closed (11 required top-level fields, unknown keys
+   rejected) and lives in
+   `references/review-payload-schema.md`. Write it from that
+   reference, not from the block below.
+2. **Per-cycle summary** — `iter-NN/review.json`, one per cycle. The
+   orchestrator folds it into `prototyping.json#iterations[]`, which
+   is what `qfai validate` checks. Its shape is the block below.
+
+The two share only `layoutAntiPatternsDetected` and
+`designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /
+`evidenceRefs` exist on the summary only — putting them in a
+`<screen>.review.json` fails the closed schema.
+
+## Per-cycle summary (`iter-NN/review.json`)
 
 ```ts
 type Review = {
@@ -104,7 +124,8 @@ button in the browser is not sufficient for app-like interfaces.
 
 If `layoutAntiPatternsDetected.length > 0`, cap
 `informationArchitecture` at `acceptable` (cannot be `strong` /
-`exceptional`).
+`exceptional`). The cap applies to both outputs: `scores.*` on the
+per-cycle summary and `ordinalAxes.*` on the per-screen payload.
 
 ## pivotDirective rules
 
