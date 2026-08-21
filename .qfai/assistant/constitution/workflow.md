@@ -140,6 +140,10 @@ At the beginning of each stage (`qfai-discussion`, `qfai-sdd`, `qfai-prototyping
 
 Do not continue downstream work on stale steering.
 
+This contract narrows, and does not replace, the project-memory read of **Article III** in
+`constitution/constitution.md`: Article III says what to read at stage start, Stage 0 says which
+of those files must additionally be verified and repaired before the stage proceeds.
+
 ---
 
 ## Delegation pattern (multi‑role)

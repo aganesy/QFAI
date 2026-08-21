@@ -45,10 +45,19 @@ Do **not** guess file paths, existing commands, or project policies.
 Before producing deliverables, read **project memory**:
 
 1. `.qfai/assistant/constitution/*`
-2. `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
+2. `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`,
+   and `.qfai/assistant/catalog/*`
+   (`.qfai/assistant/manifest/agent-catalog.yml` on demand — read it when a routed role's
+   full definition is needed and `.qfai/assistant/agents/<id>.md` is not already in context.
+   It is a generated mirror of those agent definitions, so it carries no fact they do not.)
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)
+
+At the start of a stage this read composes with the **Stage 0 — Steering refresh contract**
+in `constitution/workflow.md`: items 1-2 above cover _reading_ project memory, Stage 0 adds the
+obligation to _check and update_ the four `catalog/` steering files it names. One bootstrap, two
+obligations — do not treat them as competing lists.
 
 Outputs MUST align with:
 
