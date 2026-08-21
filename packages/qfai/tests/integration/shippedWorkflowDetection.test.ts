@@ -59,9 +59,16 @@ const newTempDir = useTempDirPool("qfai-wfdetect-");
 let orchestratorDocPromise: Promise<unknown> | undefined;
 
 async function orchestratorDoc(): Promise<unknown> {
-  orchestratorDocPromise ??= readFile(shippedWorkflowPath(ORCHESTRATOR), "utf-8").then((text) =>
-    parse(text),
-  );
+  // The PROMISE is cached, not the value, so concurrent callers share one read — and a REJECTION is not
+  // cached, which the first version got wrong. A transient failure would otherwise be replayed to every
+  // later caller in the file, turning one bad read into ten test failures with one cause and no way to
+  // tell from the output that they were the same event.
+  orchestratorDocPromise ??= readFile(shippedWorkflowPath(ORCHESTRATOR), "utf-8")
+    .then((text) => parse(text))
+    .catch((error: unknown) => {
+      orchestratorDocPromise = undefined;
+      throw error;
+    });
   return orchestratorDocPromise;
 }
 

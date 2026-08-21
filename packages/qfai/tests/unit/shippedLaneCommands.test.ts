@@ -15,7 +15,11 @@
  * shipped tree's own shapes must not be — a guard that refuses everything is as useless as one that
  * refuses nothing, which is why both directions are here.
  */
+import { readFile, readdir } from "node:fs/promises";
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
@@ -272,6 +276,41 @@ describe("the shipped-lane allowlist", () => {
     ]) {
       expect(refusals(line), `${line} must be accepted`).toEqual([]);
     }
+  });
+
+  it("holds no by-name program the shipped tree does not invoke", async () => {
+    // An allowlist over a FIXED surface should hold nothing that surface does not use: an unused entry is
+    // a slot a future edit can fill without anyone reading it. Round 12 found three — `[[`, `test` and
+    // `false` — and a trim only lasts a round unless something keeps it trimmed.
+    //
+    // Derived from the shipped tree rather than from a second list, so this cannot drift from what
+    // `US-0017-0004` measures.
+    const dir = path.resolve(__dirname, "../../assets/init/root/.github/workflows");
+    const invoked = new Set<string>();
+    for (const file of (await readdir(dir)).filter((name) => /\.ya?ml$/.test(name))) {
+      const parsed: unknown = parseYaml(await readFile(path.join(dir, file), "utf8"));
+      if (typeof parsed !== "object" || parsed === null || !("jobs" in parsed)) continue;
+      const jobs = parsed.jobs;
+      if (typeof jobs !== "object" || jobs === null) continue;
+      for (const job of Object.values(jobs)) {
+        if (typeof job !== "object" || job === null || !("steps" in job)) continue;
+        const steps = job.steps;
+        if (!Array.isArray(steps)) continue;
+        for (const step of steps) {
+          if (typeof step !== "object" || step === null || !("run" in step)) continue;
+          const body = step.run;
+          if (typeof body !== "string") continue;
+          for (const invocation of invocationsOf(body)) {
+            invoked.add(invocation.split(" ")[0] ?? "");
+          }
+        }
+      }
+    }
+    expect(invoked.size, "the shipped tree must invoke something").toBeGreaterThan(0);
+    expect(
+      [...HARMLESS_PROGRAMS].filter((program) => !invoked.has(program)).sort(),
+      "a by-name program the shipped tree never invokes is a slot a future edit can fill unread",
+    ).toEqual([]);
   });
 
   it("reads a payload as opaque rather than as commands", () => {

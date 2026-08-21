@@ -264,7 +264,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 9 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 10 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -324,7 +324,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 9 passed (9), exit 0
+  -> Tests 10 passed (10), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
@@ -681,6 +681,23 @@ set, and the comment on the `describe` says which.
 The general rule, which is now the first thing to do when a `TC` looks uncoverable or merely uncovered:
 **grep `.qfai/decisions/` for a CR naming it in its `Blocked set` before writing anything.** An uncovered
 row with an open intent CR behind it is doing its job.
+
+### A second timeout, measured and left to its owner
+
+`TC-0006-0018` (`tests/integration/spec0006DoctorProbeOrder.test.ts`) timed out at **15133ms** against a
+15s limit during a four-project run at ten workers. Measured in isolation it takes **8.52s**, so it has
+about 6.5s of headroom — tight, but not the state `TC-0003-0039` was in, which spent its entire budget with
+the machine idle.
+
+**It is not the same defect and not the same fix.** `TC-0003-0039` was nine sequential `spawnSync` calls
+over three independent fixtures, so making them async and concurrent took the file from 14.36s to 3.53s.
+This one calls `runDoctor` in process and spends its time probing; there is no serialisation to remove, and
+the cost is the work itself.
+
+So it is recorded rather than repaired: it belongs to `spec-0006`, a fix would be a guess at another spec's
+test, and the honest statement is the measurement — 8.52s of a 15s budget, one observed failure under
+concurrent load, passing in isolation and in every other run this stage made. **What would be dishonest is
+raising the timeout**, which is the move this record has already rejected once in exactly these terms.
 
 ### The disagreement itself, which stands whatever is approved
 
