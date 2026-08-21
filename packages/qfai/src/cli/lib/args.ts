@@ -9,6 +9,12 @@ export type ParsedArgs = {
     yes: boolean;
     dryRun: boolean;
     upgradeAssistantTree: boolean;
+    /**
+     * `qfai init --verbose`: expand the run report's `skipped` list. Off by
+     * default so a no-op re-run reports its skip count instead of every
+     * shipped asset path.
+     */
+    verbose: boolean;
     reportFormat: "md" | "json";
     reportOut?: string;
     reportIn?: string;
@@ -163,6 +169,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     yes: false,
     dryRun: false,
     upgradeAssistantTree: false,
+    verbose: false,
     reportFormat: "md",
     reportRunValidate: false,
     doctorFormat: "text",
@@ -327,6 +334,9 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       case "--upgrade-assistant-tree":
         options.upgradeAssistantTree = true;
+        break;
+      case "--verbose":
+        options.verbose = true;
         break;
       case "--format": {
         const next = readOptionValue(args, i);

@@ -791,8 +791,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
       await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
 
+      // --verbose expands the skipped list; the default report is counts only.
       const output = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
 
       // Both files retain their original custom content
@@ -884,8 +885,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
 
       // Case B: Both files exist — re-run
+      // The skipped list is behind --verbose; the counts alone cannot name a file.
       const output2 = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(output2).toContain("code-review.instructions.md");
       expect(output2).toContain("principles.instructions.md");
@@ -1300,9 +1302,11 @@ describe("qfai init", { timeout: 60000 }, () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
       expect(firstRun).toMatch(/created:\s*\d+/);
+      expect(firstRun).toContain("DESIGN.md");
 
+      // --verbose expands the skipped list; without it the re-run reports counts only.
       const secondRun = await captureStdout(async () => {
-        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
       });
       expect(secondRun).toContain("skipped paths:");
       expect(secondRun).toContain("DESIGN.md");

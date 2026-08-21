@@ -32,6 +32,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         dryRun: options.dryRun,
         yes: options.yes,
         upgradeAssistantTree: options.upgradeAssistantTree,
+        verbose: options.verbose,
       });
       return;
     case "validate":
@@ -303,6 +304,7 @@ Options:
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering,manifest}/ → constitution/manifest/catalog/process/)
   --dry-run       変更を行わず表示のみ
+  --verbose       init: 実行レポートの skipped パス一覧を展開（既定は件数のみ）
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式

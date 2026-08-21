@@ -86,6 +86,13 @@ export type InitOptions = {
   yes: boolean;
   upgradeAssistantTree?: boolean;
   /**
+   * `--verbose`: expand the `skipped` list in the run report. Off by default —
+   * a no-op re-run skips every shipped asset, and that list is the "nothing to
+   * do here" case, so the report names its count and points at this flag
+   * instead of printing several hundred paths.
+   */
+  verbose?: boolean;
+  /**
    * Overrides the running tool version for the deprecation-severity decision.
    * Tests need it to exercise both sides of a sunset; without it the only
    * observable behaviour is whatever side the shipped version happens to sit
@@ -206,6 +213,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     options.dryRun,
     "init",
     destRoot,
+    options.verbose ?? false,
   );
 
   for (const note of upgradeResult.preservedNotes) {
@@ -958,6 +966,21 @@ function removeManagedBlock(content: string): string {
   return lines.length > 0 ? lines.join("\n") + "\n" : "";
 }
 
+function listReportPaths(paths: string[], baseDir: string): void {
+  for (const absolute of paths) {
+    info(`    - ${path.relative(baseDir, absolute)}`);
+  }
+}
+
+/**
+ * 実行レポート。詳細を出す価値があるのは `copied` の側である。
+ *
+ * `--dry-run` は「これから何に触れるのか」に答えるための機能なので、
+ * `copied` は `removed` と同じく全件列挙し、見出しも dryRun で言い分ける。
+ * 逆に `skipped` は「ここは何もすることがない」ケースであり、初期化済み
+ * ディレクトリへの no-op 再実行では同梱アセット全件がここに入る。既定は
+ * カウントのみに畳み、一覧は `--verbose` の背後に置く。
+ */
 function report(
   copied: string[],
   skipped: string[],
@@ -965,26 +988,27 @@ function report(
   dryRun: boolean,
   label: string,
   baseDir: string,
+  verbose: boolean,
 ): void {
   info(`qfai ${label}: ${dryRun ? "dry-run" : "done"}`);
   if (copied.length > 0) {
-    info(`  created: ${copied.length}`);
+    info(`  ${dryRun ? "would create" : "created"}: ${copied.length}`);
+    info(dryRun ? "  would create paths:" : "  created paths:");
+    listReportPaths(copied, baseDir);
   }
   if (skipped.length > 0) {
     info(`  skipped: ${skipped.length}`);
-    info("  skipped paths:");
-    for (const skippedPath of skipped) {
-      const relative = path.relative(baseDir, skippedPath);
-      info(`    - ${relative}`);
+    if (verbose) {
+      info("  skipped paths:");
+      listReportPaths(skipped, baseDir);
+    } else {
+      info("  (re-run with --verbose to list the skipped paths)");
     }
   }
   if (removed.length > 0) {
     info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
     info(dryRun ? "  would remove paths:" : "  removed paths:");
-    for (const removedPath of removed) {
-      const relative = path.relative(baseDir, removedPath);
-      info(`    - ${relative}`);
-    }
+    listReportPaths(removed, baseDir);
   }
 }
 

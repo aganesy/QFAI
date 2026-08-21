@@ -212,6 +212,17 @@ describe("parseArgs", () => {
   // --clause are used on a subcommand that does NOT accept the flag,
   // the parser MUST (1) consume the value token so it cannot leak
   // into the positional stream, AND (2) call markInvalid() so the
+  it("parses --verbose for init and defaults it off", () => {
+    const cwd = process.cwd();
+    const withFlag = parseArgs(["init", "--dir", ".", "--verbose"], cwd);
+    expect(withFlag.invalid).toBe(false);
+    expect(withFlag.options.verbose).toBe(true);
+
+    const without = parseArgs(["init", "--dir", "."], cwd);
+    expect(without.invalid).toBe(false);
+    expect(without.options.verbose).toBe(false);
+  });
+
   describe("validate --spec", () => {
     it("collects a single --spec value", () => {
       const parsed = parseArgs(["validate", "--spec", "0003"], process.cwd());
