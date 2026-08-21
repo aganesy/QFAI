@@ -21,6 +21,30 @@ describe("parseArgs", () => {
     expect(parsed.options.validateFormat).toBe("github");
   });
 
+  it("parses --fail-on {never|warning|error} and rejects other values", () => {
+    const cwd = process.cwd();
+    for (const value of ["never", "warning", "error"] as const) {
+      const parsed = parseArgs(["validate", "--fail-on", value], cwd);
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.failOn).toBe(value);
+    }
+    // A misspelled or mis-cased threshold must not fall through to the
+    // config default: the gate would then silently differ from the flag.
+    for (const value of ["errr", "nver", "ERROR"]) {
+      const bogus = parseArgs(["validate", "--fail-on", value], cwd);
+      expect(bogus.invalid).toBe(true);
+      expect(bogus.options.help).toBe(true);
+      expect(bogus.options.failOn).toBeUndefined();
+    }
+  });
+
+  it("requires a value for --fail-on", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--fail-on"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+  });
+
   it("does not consume other options as a value for --out", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["report", "--out", "--format", "json"], cwd);
