@@ -45,6 +45,18 @@ Exit codes:
 | 64   | I/O error (cannot read/write target tree)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
 | 65   | Conflict — old-layout files present and `--upgrade-assistant-tree` not supplied while running on a layout the validator would reject. **Reserved — not emitted.** A fresh `qfai init` seeds the 4-layer tree alongside the legacy one, reports `D-DEPRECATED-PATH` (warning inside the window, error from the sunset — see below), and expects the user to opt in to `--upgrade-assistant-tree`. Exit 65 stays unimplemented deliberately: `--upgrade-assistant-tree` copies and never deletes, so exit 65 would name a remediation command that cannot clear it. Legacy presence is failed by `qfai validate`, which the deprecation contract charges with enforcement. |
 
+#### `--force` (asset regeneration) — `agent-routing.yml` phase merge
+
+`--force` regenerates `assistant/skills/**` and `assistant/agents/**` and never overwrites `assistant/manifest/**`, which is user configuration edited through `qfai-configure`. The one manifest gap that exclusion cannot leave open is a routing phase the regenerated skills name: `--force` therefore runs an **add-only** merge of the shipped `manifest/agent-routing.yml` into the project's copy.
+
+Behavior:
+
+- A `routing[]` skill entry the project lacks is appended whole; a phase the project lacks is inserted at the position the shipped table gives it, relative to the phases the project does have. Comments travel with the inserted node.
+- A phase the project already declares MUST NOT be edited or removed. Its agent lists are the project's taxonomy.
+- When a declared phase omits an agent the shipped phase lists in `mandatory_agents` / `blocking_agents`, the omission is **respected and reported** (`W-ROUTING-AGENT-DIVERGED`), never restored — restoring it would overwrite a decision made through the supported path.
+- Additions are reported as `I-ROUTING-PHASE-MERGED`. `--dry-run` reports without writing, and the file is left byte-identical when nothing was added.
+- An unparsable or unexpectedly shaped project manifest is reported and skipped; `init` does not fail on it (`qfai validate` owns `QFAI-AGENT-002`).
+
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 
 Relocates files from the pre-recut layout (`.qfai/assistant/instructions/*`, `.qfai/assistant/steering/*`, `.qfai/assistant/manifest/*`) to the post-recut layout (`constitution/`, `manifest/`, `catalog/`, `process/`) per the canonical relocation table.

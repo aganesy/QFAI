@@ -45,6 +45,7 @@ import {
   legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
+import { mergeRoutingPhases } from "../../core/manifest/routingPhaseMerge.js";
 import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
@@ -73,6 +74,13 @@ const execAsync = promisify(execCb);
  * The cost is that `agent-catalog.yml#developer_instructions` can drift from
  * `assistant/agents/*.md` in an installed project. That is the lesser failure:
  * drift is visible and repairable, a silently overwritten taxonomy is neither.
+ *
+ * One half of that drift is not tolerable, though: a phase the shipped skills
+ * route to. A skill updated by `--force` runs against a routing table that
+ * predates the phase it now names, and nothing said so. `--force` therefore
+ * also runs `mergeRequiredRoutingPhases`, an **add-only** merge of missing
+ * skills and phases into `manifest/agent-routing.yml` — see
+ * `core/manifest/routingPhaseMerge.ts` for why it adds and never edits.
  *
  * `specs/`, `contracts/`, `steering/` and everything else stay create-only for
  * the same reason: they hold project content.
@@ -106,7 +114,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
     );
   }
 
@@ -139,6 +147,14 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
+
+  // The routing manifest is user configuration, so it is never overwritten —
+  // but the skills just regenerated above may name phases an older project's
+  // table does not have. Add-only merge; runs after the create-only copy so a
+  // fresh project already has the file (and the merge then finds nothing).
+  const routingMergeNotes = options.force
+    ? await mergeRequiredRoutingPhases(assistantAssets, destRoot, options.dryRun)
+    : [];
 
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
@@ -208,7 +224,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     destRoot,
   );
 
-  for (const note of upgradeResult.preservedNotes) {
+  for (const note of [...upgradeResult.preservedNotes, ...routingMergeNotes]) {
     info(note);
   }
 
@@ -376,6 +392,71 @@ async function seedProjectSteering(
   }
 
   return { copied, skipped };
+}
+
+// ---------------------------------------------------------------------------
+// agent-routing.yml add-only phase merge (--force)
+// ---------------------------------------------------------------------------
+
+const ROUTING_MANIFEST_FILE = "agent-routing.yml";
+
+/**
+ * Merge the routing phases the shipped skills require into the project's own
+ * `manifest/agent-routing.yml`, adding only. Returns the operator notes to
+ * print; an unreadable manifest is reported, never repaired, and never fails
+ * `init` — the rest of the run is still useful.
+ */
+async function mergeRequiredRoutingPhases(
+  assistantAssets: string,
+  destRoot: string,
+  dryRun: boolean,
+): Promise<string[]> {
+  const templatePath = path.join(assistantAssets, "manifest", ROUTING_MANIFEST_FILE);
+  const projectPath = joinAssistantLayer(destRoot, "manifest", ROUTING_MANIFEST_FILE);
+  const sources = await readRoutingSources(templatePath, projectPath);
+  if (!sources) return [];
+
+  const result = mergeRoutingPhases(sources.template, sources.project);
+  const notes: string[] = [];
+  const rel = path.relative(destRoot, projectPath).replace(/\\/g, "/");
+  const additions = [
+    ...result.addedSkills,
+    ...result.addedPhases.map((entry) => `${entry.skill}/${entry.phase}`),
+  ];
+  for (const added of additions) {
+    notes.push(
+      `  I-ROUTING-PHASE-MERGED: ${rel} ${dryRun ? "would gain" : "gained"} ${added} (add-only; existing phases untouched).`,
+    );
+  }
+  for (const warning of result.warnings) {
+    notes.push(`  W-ROUTING-AGENT-DIVERGED: ${warning}`);
+  }
+
+  if (result.content !== null && !dryRun) {
+    await writeFile(projectPath, result.content, "utf-8");
+  }
+  return notes;
+}
+
+async function readRoutingSources(
+  templatePath: string,
+  projectPath: string,
+): Promise<{ template: string; project: string } | null> {
+  try {
+    const [template, project] = await Promise.all([
+      readFile(templatePath, "utf-8"),
+      readFile(projectPath, "utf-8"),
+    ]);
+    return { template, project };
+  } catch (err) {
+    if (isEnoent(err)) {
+      // Either the project predates the manifest layer or the asset mirror is
+      // incomplete. Neither is this step's to repair: validate reports the
+      // missing manifest (QFAI-AGENT-002).
+      return null;
+    }
+    throw err;
+  }
 }
 
 // ---------------------------------------------------------------------------

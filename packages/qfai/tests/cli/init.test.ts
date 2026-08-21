@@ -16,6 +16,7 @@ import { promisify } from "node:util";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { isMap, isSeq, parseDocument } from "yaml";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
@@ -630,6 +631,61 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
       expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A project that installed an older package keeps its own agent-routing.yml
+  // (manifest/ is user configuration and --force never overwrites it), so a
+  // phase added to the shipped routing used to reach new projects only: the
+  // regenerated skills routed to a phase the project's table did not have.
+  it("--force merges a missing routing phase in without rewriting the project's taxonomy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Roll this project back to a table without the ATDD `red` phase, and
+      // give it a taxonomy of its own: an extra agent in `coverage`, and one
+      // shipped-required agent deliberately dropped from it.
+      const doc = parseDocument(await readFile(routingPath, "utf-8"));
+      const routing = doc.get("routing");
+      if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
+      const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
+      if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
+      const phases = atdd.get("phases");
+      if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
+      phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
+      const coverage = phases.items.find((item) => isMap(item) && item.get("id") === "coverage");
+      if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
+      coverage.set("mandatory_agents", ["house-engineer"]);
+      await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      const merged = await readFile(routingPath, "utf-8");
+      const atddSection = merged.slice(merged.indexOf("- skill: qfai-atdd"));
+      // The phase is back, ahead of `implementation` as shipped.
+      expect(atddSection.indexOf("- id: red")).toBeGreaterThan(-1);
+      expect(atddSection.indexOf("- id: red")).toBeLessThan(
+        atddSection.indexOf("- id: implementation"),
+      );
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      // The project's own edit is untouched, and its dropped required agent is
+      // reported rather than restored.
+      expect(merged).toContain("house-engineer");
+      expect(captured).toContain("W-ROUTING-AGENT-DIVERGED");
+      expect(captured).toContain("test-design-analyst");
+
+      // Idempotent: a second --force has nothing left to add.
+      const second = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+      expect(second).not.toContain("I-ROUTING-PHASE-MERGED");
+      expect(await readFile(routingPath, "utf-8")).toBe(merged);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
