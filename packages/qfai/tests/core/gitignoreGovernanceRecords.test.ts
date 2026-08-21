@@ -59,6 +59,18 @@ describe("the managed block keeps governance records tracked", () => {
     );
   });
 
+  it("re-includes the per-item evidence the completion gate anchors into", () => {
+    // Gate item 10 resolves every `test-list.md` Evidence anchor against
+    // `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
+    // for an E2E / API / Integration row. Ignored, the anchor resolves only on
+    // the machine that ran the gate.
+    const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+    for (const negation of ["!.qfai/evidence/implement-*.md", "!.qfai/evidence/atdd-*.md"]) {
+      expect(QFAI_GITIGNORE_GOVERNANCE_NEGATIONS).toContain(negation);
+      expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
+    }
+  });
+
   it("re-includes the parent directories a leaf negation cannot reach", () => {
     // Git cannot re-include a path whose parent directory is excluded, so a
     // pre-existing `.qfai/` or `.qfai/*` shadows the leaf negations entirely.
@@ -77,11 +89,19 @@ describe("git honours the managed block against a broad pre-existing rule", () =
   const stillIgnored = [
     ".qfai/evidence/prototyping/mutation-log.jsonl",
     ".qfai/report/validate.json",
+    // The negation is narrow on purpose: the other stage evidence files stay
+    // regenerable logs, and re-including them was never the point.
+    ".qfai/evidence/sdd-spec-0001.md",
+    ".qfai/evidence/verify-spec-0001.md",
   ];
   /** Governance records that must stay reachable. */
   const stillTracked = [
     ".qfai/evidence/decisions/2026-01-01T00-00-00.000Z.json",
     ".qfai/decisions/CR-0001.md",
+    // The two files gate item 10 names, and the only ones it resolves an
+    // Evidence anchor against.
+    ".qfai/evidence/implement-spec-0001.md",
+    ".qfai/evidence/atdd-spec-0001.md",
   ];
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {
