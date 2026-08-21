@@ -1,7 +1,7 @@
 # Evidence revision (what state the observation describes)
 
 Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, and
-`#evidence-hard-rules` says stale evidence MUST NOT be reused. That rule needs
+`../SKILL.md#evidence-hard-rules` says stale evidence MUST NOT be reused. That rule needs
 something to compare against. This file defines it.
 
 ## The field

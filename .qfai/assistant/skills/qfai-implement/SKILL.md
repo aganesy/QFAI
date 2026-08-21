@@ -104,7 +104,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Stage 0 + Preflight — MANDATORY, runs first
 
-1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
+1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory` and `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 
 ### Phase: Red (Write Failing Test)
@@ -126,8 +126,8 @@ The eight required columns, the allowed transitions and the exception rules are 
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
    > run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
    > row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
-   > observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
-   > Green.
+   > observation**. Split the row per `references/execution-ledger.md#selector-granularity-must` (rules
+   > and examples: `references/selector-granularity.md`) before continuing; do not proceed to Green.
 
 ### Phase: Green (Make It Pass)
 
