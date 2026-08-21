@@ -292,9 +292,13 @@ describe("the integration surface is checked for links that did not survive chec
       expect(found?.message).toContain(`${String(total)} 件`);
       // The remediation must not send the operator to `--force`: `qfai init`
       // repairs a flattened link on its own, and preserves anything else.
-      expect(found?.suggested_action).toContain("`qfai init` を再実行");
+      // Scoped to the opening line, which is the remedy for the damage this
+      // case reports — a later line covers the retired wrapper, where
+      // `--force` is what prunes it, and that is a different remedy.
+      const opening = found?.suggested_action?.split("\n")[0];
+      expect(opening).toContain("`qfai init` を再実行");
+      expect(opening).not.toContain("qfai init --force");
       expect(found?.suggested_action).toContain("git config --global core.symlinks true");
-      expect(found?.suggested_action).not.toContain("qfai init --force");
     });
   });
 });
@@ -1015,6 +1019,11 @@ describe("what init wrote is still checked after the roster moves on", () => {
       const found = await finding(root);
       expect(found?.refs).toContain(".claude/skills/legacy-research");
       expect(found?.message).toContain("which this version does not ship");
+      // The remedy names the command that repairs it, and says where the
+      // repair stops: `--force` prunes the wrapper, never the canonical
+      // document behind it.
+      expect(found?.suggested_action).toContain("`qfai init --force`");
+      expect(found?.suggested_action).toContain("canonical 側");
     });
   });
 

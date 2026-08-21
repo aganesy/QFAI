@@ -1127,7 +1127,7 @@ async function syncIntegrationWrappers(
 
   // Step 1: Prune deprecated wrappers (commands, prompts, old non-symlink dirs)
   const removed = options.force
-    ? await pruneStaleQfaiWrappers(destRoot, skills, options.dryRun)
+    ? await pruneStaleQfaiWrappers(destRoot, skills, agents, options.dryRun)
     : [];
 
   // Step 2: Write README files as regular files
@@ -1887,6 +1887,7 @@ async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<s
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
+  canonicalAgents: string[],
   dryRun: boolean,
 ): Promise<string[]> {
   const canonical = new Set(canonicalSkills);
@@ -1941,13 +1942,109 @@ async function pruneStaleQfaiWrappers(
     }
   }
 
-  // 4. Agent symlinks: NOT auto-pruned.
-  // Agent symlinks use different suffixes per integration dir (.md vs .agent.md),
-  // so stale agent symlinks (agents removed from canonical) are not auto-detected.
-  // ensureSymlink --force recreates existing entries but does not remove orphaned ones.
-  // Manual removal is required when a canonical agent is deleted.
+  // 4. Remove agent wrappers that name an agent this version no longer ships.
+  await pruneStaleAgentWrappers(destRoot, canonicalAgents, removed, dryRun);
 
   return removed;
+}
+
+/**
+ * Agent wrappers whose target names a canonical agent the shipped roster no
+ * longer contains.
+ *
+ * Matched by the **resolved target**, not by the entry name: agent wrappers
+ * carry a different suffix per integration directory (`.md` vs `.agent.md`),
+ * so a name test cannot tell a retired wrapper from a file somebody wrote, and
+ * that is why this step used to be skipped altogether. The target is the thing
+ * init actually writes, and it is the same predicate `QFAI-LINK-001` reports on
+ * — so detection and repair stay in agreement by construction.
+ *
+ * The canonical `.qfai/assistant/agents/*.md` behind a retired wrapper is
+ * deliberately **not** deleted. That tree is create-only and a project may add
+ * agents of its own to it; removing a file there would destroy content init
+ * never wrote. `QFAI-LINK-001` says so in its remedy.
+ */
+async function pruneStaleAgentWrappers(
+  destRoot: string,
+  canonicalAgents: string[],
+  removed: string[],
+  dryRun: boolean,
+): Promise<void> {
+  const shipped = new Set(canonicalAgents.map((name) => `${name}.md`));
+  const agentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+
+  for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
+    const fullDir = path.join(destRoot, dir);
+    if (!(await exists(fullDir))) {
+      continue;
+    }
+    const entries = await readdir(fullDir, { withFileTypes: true });
+    for (const entry of entries) {
+      // Same sidecar exemption as the skill dirs: a `.qfai-repair-<n>` file
+      // holds the content a failed repair preserved, and is sometimes the only
+      // copy of it left.
+      if (SIDECAR_RE.test(entry.name)) {
+        continue;
+      }
+      const entryPath = path.join(fullDir, entry.name);
+      const target = await agentWrapperTarget(entryPath, entry);
+      if (target === null) {
+        continue;
+      }
+      const resolved = path.resolve(fullDir, target);
+      // Only an entry init itself could have written: a direct child of the
+      // canonical agents directory. Anything pointing elsewhere is somebody
+      // else's link, and anything pointing deeper is not a wrapper shape init
+      // produces.
+      if (path.dirname(resolved) !== agentsDir || shipped.has(path.basename(resolved))) {
+        continue;
+      }
+      removed.push(entryPath);
+      if (!dryRun) {
+        await rm(entryPath, { recursive: true, force: true });
+      }
+    }
+  }
+}
+
+/**
+ * The path an agent wrapper points at, in either form a checkout can leave it
+ * in, or `null` when the entry is not a wrapper.
+ *
+ * A flattened wrapper — the regular file a `core.symlinks false` checkout
+ * writes, holding the target bytes — has to answer too, or a retired wrapper
+ * survives the prune on exactly the platform where flattening is the default.
+ * A file holding anything else (an agent document a project wrote by hand) is
+ * not a wrapper and is preserved: the content has to be a single-line relative
+ * path landing on a canonical agent for this to remove it.
+ */
+async function agentWrapperTarget(entryPath: string, entry: Dirent): Promise<string | null> {
+  if (entry.isSymbolicLink()) {
+    try {
+      return await readlink(entryPath);
+    } catch (err: unknown) {
+      // Absence is a race with something else removing the entry — there is
+      // nothing left to prune. Any other fault means the target could not be
+      // read, and answering "not a wrapper" would silently keep it.
+      if (isEnoent(err)) {
+        return null;
+      }
+      throw err;
+    }
+  }
+  if (!entry.isFile()) {
+    return null;
+  }
+  const content = await readPinnedRegularFile(entryPath, 4096).catch((err: unknown) => {
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  });
+  if (content === null || content.length === 0 || /[\r\n]/.test(content)) {
+    return null;
+  }
+  return content;
 }
 
 async function pruneMatchingEntries(
