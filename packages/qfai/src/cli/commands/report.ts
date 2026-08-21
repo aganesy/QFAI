@@ -10,7 +10,7 @@ import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
-import { warnIfTruncated } from "../lib/warnings.js";
+import { warnIfTruncated, withTruncatedScanIssue } from "../lib/warnings.js";
 
 export type ReportOptions = {
   root: string;
@@ -45,14 +45,17 @@ export async function runReport(options: ReportOptions): Promise<void> {
         }
       : validated;
     ranNarrowProfileInCi = ciProfileIssue !== null;
-    const normalized = normalizeValidationResult(root, result);
+    // A truncated scan has to reach `validate.json#issues` before the file is
+    // written, otherwise the artifact a reviewer opens records the run as
+    // clean while its coverage numbers came from a partial file set.
+    const normalized = withTruncatedScanIssue(normalizeValidationResult(root, result), "report");
     await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
     validation = normalized;
   } else {
     const input = options.inputPath ?? configResult.config.output.validateJsonPath;
     const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
     try {
-      validation = await readValidationResult(inputPath);
+      validation = withTruncatedScanIssue(await readValidationResult(inputPath), "report");
     } catch (err) {
       if (isEnoent(err)) {
         error(
