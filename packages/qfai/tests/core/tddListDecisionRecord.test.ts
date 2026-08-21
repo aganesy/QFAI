@@ -35,9 +35,13 @@ type Fixture = {
   specDecisions?: string;
   /** Body of `_policies/08_Decisions.md`. */
   policyDecisions?: string;
+  /** Filenames created under `.qfai/decisions/` — the Drift Protocol's record home. */
+  decisionRecords?: string[];
 };
 
-async function run(fixture: Fixture): Promise<Array<{ code: string; severity: string }>> {
+async function run(
+  fixture: Fixture,
+): Promise<Array<{ code: string; severity: string; message: string }>> {
   const root = path.join(
     os.tmpdir(),
     `qfai-dr-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -61,13 +65,22 @@ async function run(fixture: Fixture): Promise<Array<{ code: string; severity: st
       fixture.policyDecisions ?? "# 08 Decisions\n",
       "utf-8",
     );
+    for (const name of fixture.decisionRecords ?? []) {
+      const recordDir = path.join(root, ".qfai", "decisions");
+      await mkdir(recordDir, { recursive: true });
+      await writeFile(
+        path.join(recordDir, name),
+        "# record\n\nSupersedes DR-0009-0009.\n",
+        "utf-8",
+      );
+    }
     await writeFile(
       path.join(specDir, "tdd", "test-list.md"),
       `${HEADER}\n| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | exception | ${fixture.drId} | - |\n`,
       "utf-8",
     );
     const issues = await validateTddList(root, defaultConfig);
-    return issues.map((i) => ({ code: i.code, severity: i.severity }));
+    return issues.map((i) => ({ code: i.code, severity: i.severity, message: i.message }));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -141,6 +154,54 @@ describe("the DR-ID resolves to a Decisions file", () => {
       policyDecisions: "# 08 Decisions\n\n### DR-0270: envelope taxonomy\n",
     });
     expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  // The Drift Protocol lets an implement-stage anomaly create the record under
+  // `.qfai/decisions/` while still forbidding the `07_Decisions.md` write that
+  // would cite it. Resolving only against the upstream files made the compliant
+  // path a dead end: the DR-ID the protocol mandates was reported unresolved on
+  // every subsequent validate, leaving only the forbidden write or a waiver.
+  it("resolves a spec-scoped id against a standalone record in .qfai/decisions/", async () => {
+    const found = await codes({
+      drId: "DR-0001-0003",
+      decisionRecords: ["DR-0001-0003-park-the-row.md"],
+    });
+    expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("resolves a policy-level id against a standalone record", async () => {
+    const found = await codes({
+      drId: "DR-0270",
+      decisionRecords: ["DR-0270-envelope-taxonomy.md"],
+    });
+    expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("reads the record's filename, not its prose", async () => {
+    // A record that cites a neighbouring decision must not thereby declare it,
+    // which is why the filename alone is the declaration.
+    const found = await codes({
+      drId: "DR-0009-0009",
+      decisionRecords: ["DR-0001-0003-park-the-row.md"],
+    });
+    expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("ignores a non-DR file in the record directory", async () => {
+    // Change Requests live in the same directory and declare no DR.
+    const found = await codes({
+      drId: "DR-0015-0005",
+      decisionRecords: ["CR-20260731-0001-widen-the-search.md"],
+    });
+    expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("names all three homes in the unresolved message", async () => {
+    const issues = await run({ drId: "DR-0015-0005" });
+    const message = issues.find((i) => i.code === "TDDLIST_EXCEPTION_UNRESOLVED_DR")?.message ?? "";
+    expect(message).toContain("07_Decisions.md");
+    expect(message).toContain("_policies/08_Decisions.md");
+    expect(message).toContain(".qfai/decisions/DR-*.md");
   });
 
   it("is waivable, because a project may keep decisions elsewhere", async () => {

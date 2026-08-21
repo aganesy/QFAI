@@ -1,4 +1,4 @@
-import { stat } from "node:fs/promises";
+import { readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -344,6 +344,33 @@ const DR_ID_SHAPED = /^DR[-_\d]/i;
 const DR_DECLARATION_FILES = ["07_Decisions.md"];
 const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
 
+/**
+ * The standalone-record home, relative to the project root.
+ *
+ * The Drift Protocol carve-out lets an implement-stage anomaly create
+ * `.qfai/decisions/DR-<id>-<slug>.md` while still forbidding the upstream
+ * `07_Decisions.md` / `09_delta.md` write that would cite it. Resolving only
+ * against the upstream files therefore reported every protocol-compliant record
+ * as declared nowhere, leaving the operator to either make the forbidden write
+ * or waive the rule.
+ */
+const DR_RECORD_DIR = path.join(".qfai", "decisions");
+
+/**
+ * `DR-<id>[-<slug>].md`, where the id is the declaration.
+ *
+ * The filename is read rather than the body: a record that cites a neighbouring
+ * decision in its prose must not thereby declare it.
+ */
+const DR_RECORD_FILE = /^(DR-\d{4}(?:-\d{4})?)(?:-.*)?\.md$/i;
+
+/** Every location a `DR-*` may be declared in, for the unresolved-DR message. */
+const DR_SEARCHED_LOCATIONS = [
+  ...DR_DECLARATION_FILES,
+  toPosixRel(DR_POLICY_DECLARATION_FILE),
+  `${toPosixRel(DR_RECORD_DIR)}/DR-*.md`,
+].join(", ");
+
 /** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
 export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
 
@@ -352,15 +379,43 @@ function toPosixRel(value: string): string {
 }
 
 /**
- * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
- * shared `_policies/08_Decisions.md`.
+ * Every `DR-*` declared as a standalone record under `.qfai/decisions/`.
  *
- * Both files are read, not one: a policy-level decision is cited from spec
- * ledgers, and resolving only against the spec-local file would report every
- * such citation as unresolved.
+ * An absent directory is the common case (no anomaly has been recorded yet) and
+ * an unreadable one must not fail the whole ledger check, so both yield an
+ * empty set.
  */
-async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
+async function collectRecordDirDrIds(root: string): Promise<Set<string>> {
   const declared = new Set<string>();
+  const dir = path.join(root, DR_RECORD_DIR);
+  let entries: string[];
+  try {
+    entries = await readdir(dir);
+  } catch {
+    return declared;
+  }
+  for (const entry of entries) {
+    const id = DR_RECORD_FILE.exec(entry)?.[1];
+    if (id !== undefined) declared.add(id.toUpperCase());
+  }
+  return declared;
+}
+
+/**
+ * Every `DR-*` declared for this spec: its own `07_Decisions.md`, the shared
+ * `_policies/08_Decisions.md`, and the standalone records under
+ * `.qfai/decisions/`.
+ *
+ * All three are read, not one: a policy-level decision is cited from spec
+ * ledgers, and the Drift Protocol sends an implement-stage anomaly record to
+ * `.qfai/decisions/` precisely because the upstream files are off limits there.
+ */
+async function collectDeclaredDrIds(
+  specDir: string,
+  specsRoot: string,
+  root: string,
+): Promise<Set<string>> {
+  const declared = await collectRecordDirDrIds(root);
   const files = [
     ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
     path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
@@ -1005,7 +1060,7 @@ async function validateSpecTddList(
   }
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
-  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot);
+  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot, root);
   {
     for (const ref of ledgerRows()) {
       const rowIdxLabel = ref.label;
@@ -1062,7 +1117,7 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_UNRESOLVED_DR",
-            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}) is declared in no Decisions file. Searched ${DR_DECLARATION_FILES.join(", ")} and ${toPosixRel(DR_POLICY_DECLARATION_FILE)}`,
+            `DR-ID ${unresolved.join(", ")} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}) is declared in no Decisions file. Searched ${DR_SEARCHED_LOCATIONS}`,
             "warning",
             relPath,
             // Rule id, not a dotted path: a project keeping its decision
@@ -1071,7 +1126,7 @@ async function validateSpecTddList(
             UNRESOLVED_DR_RULE_ID,
             unresolved,
             "change",
-            `該当の Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に記載してください。別の場所で管理している場合は \`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
+            `該当の Decision Record を \`.qfai/decisions/DR-<id>-<slug>.md\` に作成するか、spec の 07_Decisions.md（policy-level なら _policies/08_Decisions.md）に記載してください。この 3 箇所のいずれでもない場所で管理している場合に限り、\`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
           ),
         );
       }
