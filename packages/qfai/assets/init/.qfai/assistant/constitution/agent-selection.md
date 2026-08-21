@@ -1,10 +1,7 @@
 ---
+id: agent-selection
 category: project
-update-frequency: occasional
-dependencies:
-  - 02_project/spec-driven-development.md
-  - 02_project/mcp.md
-version: 2.0.0
+update_frequency: occasional
 ---
 
 <!-- markdownlint-disable MD041 -->
