@@ -39,18 +39,11 @@ parsed as the ledger instead and raises eight
 
 ## Schema
 
-Required columns, in the order used above:
+The ledger schema — required columns, the optional `US-Refs` / `CON-API-Refs` /
+`Blocked-By` columns, the `Status` vocabulary, and the `Evidence` cell contract
+— is defined in
+`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`.
 
-| Column    | Description                                                  |
-| --------- | ------------------------------------------------------------ |
-| TDD-ID    | `TDD-NNNN`, unique within this spec                          |
-| TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
-| Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
-| Test file | Project-root-relative path to the test module                |
-| Selector  | Test selector/description for targeted execution             |
-| Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
-| DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
-
-See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
-for the full rules.
+Do not restate it here. A second copy has nothing keeping it honest: it drifts
+silently away from the rules `validateTddList` enforces, and an author filling
+this ledger reads the copy, not the rules.

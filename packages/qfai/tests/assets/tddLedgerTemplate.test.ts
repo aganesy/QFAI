@@ -183,6 +183,39 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain('Report\n  "nothing to do" and exit');
     });
 
+    it(`${tree}: the template points at the schema instead of restating it`, async () => {
+      const template = await read(tree, TEMPLATE);
+      // The inline `## Schema` table drifted five cells behind the reference it
+      // linked two lines below itself, and the `Evidence` row told the author to
+      // paste command output into a one-line GFM cell — which truncates the
+      // ledger or misaligns every column after it, silently. A copy has nothing
+      // keeping it honest, so the template now carries exactly one table (the
+      // ledger) and a pointer.
+      const tableLines = template.split(/\r?\n/).filter((line) => line.trim().startsWith("|"));
+      expect(tableLines).toHaveLength(2);
+
+      expect(template).toContain("references/spec-traceability-rules.md#tdd-execution-ledger");
+      expect(template).toContain("Do not restate it here.");
+
+      // The three descriptions the reference had already superseded.
+      expect(template).not.toContain("RED/GREEN command+result pairs proving the TDD cycle");
+      expect(template).not.toContain("Decision Record ID for exception rows");
+      expect(template).not.toMatch(/`todo`\s*\/\s*`red`\s*\/\s*`green`/);
+
+      // The pointer must resolve: the heading the anchor is built from, and the
+      // rules it promises are there.
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("## TDD Execution Ledger");
+      expect(rules).toContain("Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`");
+      expect(rules).toContain("`Evidence` is a **pointer**");
+      expect(rules).toContain(
+        "Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,",
+      );
+    });
+
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {
       const template = await read(tree, TEMPLATE);
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-tpl-"));
