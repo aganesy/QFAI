@@ -218,7 +218,10 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs append at `todo`, and changed / removed TCs are reset or retired
-   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+   under the upstream-reset rule (`references/sdd-phase-checklists.md`). Fill each
+   row's optional `Owning module` from the TC's parent `BR`, which already names
+   the behaviour's home, and leave `-` only when no single module owns the row —
+   `delivery-planner` has nothing else to judge parallel dispatch on.
 8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
    against the `BR` / `AC` Phase 2 produced: name the realizing contract for
    each, and resolve every persisted attribute it names to a column, field or
@@ -355,6 +358,6 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo, Owning module from the TC's parent BR) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

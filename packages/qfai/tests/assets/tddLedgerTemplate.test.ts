@@ -41,6 +41,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Status",
         "DR-ID",
         "Evidence",
+        // Optional, but only `/qfai-sdd` can author it: see
+        // `tests/assets/parallelSeamDeclaration.test.ts`.
+        "Owning module",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
     });

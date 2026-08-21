@@ -143,8 +143,8 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
-  `blocked` row is waiting on and is required on those rows.
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`. `Blocked-By`
+  names what a `blocked` row is waiting on and is required on those rows.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
@@ -159,6 +159,12 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Optional columns detail: `US-Refs`, `CON-API-Refs` — the E2E and API obligations a
   row implements. Required when the row carries one, since `TC-*` annotations
   are forbidden in `tests/e2e/**` and `tests/api/**`.
+- Optional columns detail: `Owning module` — the production module the row will write,
+  one per row, `-` when not declared. `/qfai-sdd` seeds it at Phase 2b from the TC's
+  parent `BR`; it is the only evidence `delivery-planner` can judge parallel dispatch on,
+  since RED-first guarantees the module does not exist yet. A ledger without the column
+  leaves parallel dispatch unevaluable
+  (`qfai-implement/references/parallelization-policy.md`).
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
   explicitly inert to it — recording one does not raise or lower TC coverage.
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.

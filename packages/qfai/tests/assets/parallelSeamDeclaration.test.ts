@@ -22,6 +22,12 @@ const SKILL = `${IMPLEMENT}/SKILL.md`;
 const LEDGER = `${IMPLEMENT}/references/execution-ledger.md`;
 const POLICY = `${IMPLEMENT}/references/parallelization-policy.md`;
 
+const SDD = "assistant/skills/qfai-sdd";
+const SDD_SKILL = `${SDD}/SKILL.md`;
+const SDD_RULES = `${SDD}/references/spec-traceability-rules.md`;
+const SDD_CHECKLISTS = `${SDD}/references/sdd-phase-checklists.md`;
+const SDD_TEMPLATE = `${SDD}/templates/specs/spec/tdd/test-list.md`;
+
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
@@ -107,6 +113,50 @@ describe("declared seam", () => {
       );
       expect(skill).toContain(
         "diff each slice's touched `src/` paths against its declared `Owning module`",
+      );
+    });
+  }
+});
+
+/**
+ * The declaring half of #391 shipped without its producing half: every column
+ * the policy adjudicates on is authored by `/qfai-sdd` Phase 2b, and that
+ * skill had never heard of `Owning module`. A seeded ledger therefore hit
+ * "the allow conditions cannot be evaluated at all" in every project the
+ * tooling creates, silently — the column is optional, so nothing warns.
+ */
+describe("declared seam has a producer", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: the seeded ledger header carries the column`, async () => {
+      const template = await read(tree, SDD_TEMPLATE);
+      const header = template.split(/\r?\n/).find((line) => line.trim().startsWith("|"));
+
+      expect(header).toContain("| Owning module |");
+      // Documented in the same file, so a seeded `-` is readable as a decision.
+      expect(flat(template)).toContain(
+        "| Owning module | The production module this row will write",
+      );
+      expect(flat(template)).toContain(
+        "Fill it from the TC's parent `BR`, which already names the behaviour's home.",
+      );
+    });
+
+    it(`${tree}: Phase 2b is told to fill it, from the source the schema names`, async () => {
+      const skill = flat(await read(tree, SDD_SKILL));
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+
+      expect(skill).toContain("Fill each row's optional `Owning module` from the TC's parent `BR`");
+      expect(checklists).toContain("Declare each row's `Owning module` from the TC's parent `BR`");
+    });
+
+    it(`${tree}: the traceability rules list it among the optional columns`, async () => {
+      const rules = flat(await read(tree, SDD_RULES));
+
+      expect(rules).toContain(
+        "Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`",
+      );
+      expect(rules).toContain(
+        "Optional columns detail: `Owning module` — the production module the row will write",
       );
     });
   }

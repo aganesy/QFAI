@@ -34,12 +34,12 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | Owning module |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------------- |
 
 ## Schema
 
-Required columns, in the order used above:
+Required columns, in the order the ledger header uses them:
 
 | Column    | Description                                                  |
 | --------- | ------------------------------------------------------------ |
@@ -51,6 +51,19 @@ Required columns, in the order used above:
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+
+The header carries one optional column, seeded here because
+`/qfai-implement` cannot obtain it later:
+
+| Column        | Description                                                   |
+| ------------- | ------------------------------------------------------------- |
+| Owning module | The production module this row will write; `-` = not declared |
+
+Fill it from the TC's parent `BR`, which already names the behaviour's home.
+A row left at `-` still executes, serially only: `delivery-planner` judges
+parallel dispatch on this column alone, because under RED-first the module
+does not exist yet. See
+`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.
