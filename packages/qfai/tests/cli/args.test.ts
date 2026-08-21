@@ -241,6 +241,27 @@ describe("parseArgs", () => {
     });
   });
 
+  // `report` accepts the same flag: the scoping `validate --spec` introduced
+  // used to stop at the report boundary, where `markInvalid()` rejected it.
+  describe("report --spec", () => {
+    it("collects --spec values without marking the parse invalid", () => {
+      const parsed = parseArgs(
+        ["report", "--spec", "0003", "--spec", "spec-0004", "--format", "json"],
+        process.cwd(),
+      );
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.reportSpecIds).toEqual(["0003", "spec-0004"]);
+      expect(parsed.options.reportFormat).toBe("json");
+      // The validate slot must stay untouched — the two scopes are separate.
+      expect(parsed.options.validateSpecIds).toEqual([]);
+    });
+
+    it("defaults to an empty scope, which means the whole repo", () => {
+      const parsed = parseArgs(["report"], process.cwd());
+      expect(parsed.options.reportSpecIds).toEqual([]);
+    });
+  });
+
   // misuse surfaces as a parse error. Pre-fix, --spec / --operator /
   // --clause silently dropped on misuse, and --upgrade-scope did
   // not consume its value. Per-flag assertions follow.

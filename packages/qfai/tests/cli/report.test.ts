@@ -206,6 +206,74 @@ describe("report", { timeout: 15000 }, () => {
     expect(report).toContain("# QFAI Report");
   });
 
+  it("scopes input, output and spec-pack artifacts to --spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const specsRoot = path.join(root, ".qfai", "specs");
+    for (const specName of ["spec-0003", "spec-0004"]) {
+      const specDir = path.join(specsRoot, specName);
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), `# ${specName}\n`, "utf-8");
+      await writeFile(path.join(specDir, "02_User-Stories.md"), `# ${specName} US\n`, "utf-8");
+    }
+
+    const reportRoot = path.join(root, ".qfai", "report");
+    // Worker 0004's slice: `validate --spec` writes only its own scoped file.
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+      specIds: ["0004"],
+    });
+    await rm(path.join(reportRoot, "validate.json"), { force: true });
+
+    // Sibling worker 0003's artifact. A repo-wide `report` rewrites it.
+    const siblingCoverage = path.join(reportRoot, "spec-0003", "coverage.md");
+    await mkdir(path.dirname(siblingCoverage), { recursive: true });
+    await writeFile(siblingCoverage, "SENTINEL\n", "utf-8");
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({ root, format: "md", specIds: ["0004"] });
+      expect(process.exitCode).not.toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    // Input defaulted to validate.spec-0004.json, output to the matching name.
+    const scopedReport = await readFile(path.join(reportRoot, "report.spec-0004.md"), "utf-8");
+    expect(scopedReport).toContain("# QFAI Report");
+    await expect(readFile(path.join(reportRoot, "report.md"), "utf-8")).rejects.toThrow();
+
+    // Only the scoped pack's artifacts were rewritten.
+    expect(await readFile(siblingCoverage, "utf-8")).toBe("SENTINEL\n");
+    const ownCoverage = await readFile(path.join(reportRoot, "spec-0004", "coverage.md"), "utf-8");
+    expect(ownCoverage).toContain("# Coverage (spec-0004)");
+  });
+
+  it("refuses an unresolvable --spec value instead of writing a shared name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    await runValidate({ root, strict: false, failOn: "never", format: "github" });
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({ root, format: "md", specIds: ["../outside"] });
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    await expect(
+      readFile(path.join(root, ".qfai", "report", "report.md"), "utf-8"),
+    ).rejects.toThrow();
+  });
+
   it("links file paths with --base-url", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });

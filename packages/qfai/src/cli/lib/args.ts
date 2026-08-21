@@ -149,6 +149,8 @@ export type ParsedArgs = {
     atddSpecId?: string;
     /** `--spec <id>` values for `qfai validate` (repeatable; empty = whole repo). */
     validateSpecIds: string[];
+    /** `--spec <id>` values for `qfai report` (repeatable; empty = whole repo). */
+    reportSpecIds: string[];
     help: boolean;
     invalidExitCode: number;
   };
@@ -170,6 +172,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     strict: false,
     guardrailsPaths: [],
     validateSpecIds: [],
+    reportSpecIds: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -666,6 +669,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else if (command === "validate") {
           // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
           options.validateSpecIds.push(next);
+        } else if (command === "report") {
+          // Repeatable, same shape as `validate`. Without this branch the
+          // per-spec scoping `validate --spec` introduced stopped one command
+          // later: a slice worker holding `validate.spec-0003.json` had no way
+          // to render its own slice without writing the shared `report.md`.
+          options.reportSpecIds.push(next);
         } else {
           markInvalid();
         }

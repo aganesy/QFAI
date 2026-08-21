@@ -1,16 +1,19 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { QfaiConfig } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
+import { buildSpecScope } from "../../core/specScope.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
+import { scopedReportPath } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -20,11 +23,67 @@ export type ReportOptions = {
   runValidate?: boolean;
   baseUrl?: string;
   profile?: ValidationProfile;
+  /** `--spec <id>` values; empty / absent = the whole repo. */
+  specIds?: readonly string[];
 };
+
+type ReportPaths = {
+  /** Where the validate result is read from (or written to under `--run-validate`). */
+  validateJsonPath: string;
+  /** Absolute path the rendered report is written to. */
+  outPath: string;
+};
+
+/**
+ * Resolves the validate-result path and the rendered-report path, applying
+ * `--spec` scoping when present.
+ *
+ * A scoped run reads `validate.spec-<ids>.json` — what `validate --spec` wrote
+ * — and writes `report.spec-<ids>.md` / `.json`, so parallel slice workers stop
+ * racing on the shared `report.md`. An explicit `--out` still wins.
+ *
+ * `null` when any `--spec` value carries no resolvable spec number: the same
+ * refusal `scopedReportPath` makes for `validate`, so raw input never reaches a
+ * filename and a failing scope never writes the file a healthy one would.
+ */
+function resolveReportPaths(
+  root: string,
+  config: QfaiConfig,
+  options: ReportOptions,
+): ReportPaths | null {
+  const outRoot = resolvePath(root, config, "outDir");
+  const defaultOut =
+    options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
+  const configuredValidateJson = config.output.validateJsonPath;
+  const specIds = options.specIds ?? [];
+  const scopedValidateJson =
+    specIds.length > 0 ? scopedReportPath(configuredValidateJson, specIds) : configuredValidateJson;
+  const scopedOut = specIds.length > 0 ? scopedReportPath(defaultOut, specIds) : defaultOut;
+  if (scopedValidateJson === null || scopedOut === null) {
+    return null;
+  }
+  const out = options.outPath ?? scopedOut;
+  return {
+    validateJsonPath: scopedValidateJson,
+    outPath: path.isAbsolute(out) ? out : path.resolve(root, out),
+  };
+}
 
 export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
+  const specIds = options.specIds ?? [];
+  const paths = resolveReportPaths(root, configResult.config, options);
+  if (paths === null) {
+    error(
+      [
+        `qfai report: --spec の値を spec 番号として解釈できません: ${specIds.join(", ")}`,
+        "例: --spec 0003 / --spec spec-0004",
+      ].join("\n"),
+    );
+    process.exitCode = 2;
+    return;
+  }
   let validation: ValidationResult;
   let ranNarrowProfileInCi = false;
   if (options.runValidate) {
@@ -32,11 +91,10 @@ export async function runReport(options: ReportOptions): Promise<void> {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
     const ciProfileIssue = buildCiProfileIssue(options.profile);
-    const validated = await validateProject(
-      root,
-      configResult,
-      options.profile ? { profile: options.profile } : {},
-    );
+    const validated = await validateProject(root, configResult, {
+      ...(options.profile ? { profile: options.profile } : {}),
+      ...(specIds.length > 0 ? { specIds } : {}),
+    });
     const result = ciProfileIssue
       ? {
           ...validated,
@@ -46,10 +104,10 @@ export async function runReport(options: ReportOptions): Promise<void> {
       : validated;
     ranNarrowProfileInCi = ciProfileIssue !== null;
     const normalized = normalizeValidationResult(root, result);
-    await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
+    await writeValidationResult(root, paths.validateJsonPath, normalized);
     validation = normalized;
   } else {
-    const input = options.inputPath ?? configResult.config.output.validateJsonPath;
+    const input = options.inputPath ?? paths.validateJsonPath;
     const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
     try {
       validation = await readValidationResult(inputPath);
@@ -83,15 +141,13 @@ export async function runReport(options: ReportOptions): Promise<void> {
         ? formatReportMarkdown(data, { baseUrl: options.baseUrl })
         : formatReportMarkdown(data);
 
-  const outRoot = resolvePath(root, configResult.config, "outDir");
-  const defaultOut =
-    options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
-  const out = options.outPath ?? defaultOut;
-  const outPath = path.isAbsolute(out) ? out : path.resolve(root, out);
+  const outPath = paths.outPath;
 
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${output}\n`, "utf-8");
-  await writeSpecPackReports(root, configResult.config);
+  // Scoped: touch only the packs this run owns. An unscoped call rewrites every
+  // spec pack, which is how a slice worker clobbered its siblings' artifacts.
+  await writeSpecPackReports(root, configResult.config, buildSpecScope(specIds));
 
   if (ranNarrowProfileInCi) {
     // Reported, not fatal: the run happened and its findings are real. Exiting

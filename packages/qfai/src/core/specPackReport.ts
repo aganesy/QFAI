@@ -5,6 +5,7 @@ import type { QfaiConfig } from "./config.js";
 import { resolvePath } from "./config.js";
 import { buildContractIndex } from "./contractIndex.js";
 import { collectSpecEntries } from "./specLayout.js";
+import { isSpecInScope, type SpecScope } from "./specScope.js";
 import {
   parseAcceptanceCriteriaIds,
   parseExamplesFeature,
@@ -44,10 +45,25 @@ const REQUIRED_LEDGER_COLUMNS = [
   "tc_ids",
 ] as const;
 
-export async function writeSpecPackReports(root: string, config: QfaiConfig): Promise<void> {
+/**
+ * Writes `<outDir>/<spec>/coverage.md` and `<outDir>/<spec>/traceability-graph.json`
+ * for every spec pack, or only for the packs in `scope`.
+ *
+ * The scope is what keeps parallel slice workers from corrupting each other:
+ * an unscoped run rewrites every pack on disk, so a worker that owns spec-0003
+ * overwrote spec-0004's coverage artifacts on its way past — even when the
+ * rendered report itself was redirected with `--out`. An absent scope still
+ * means "every spec", so the repo-wide `qfai report` is unchanged.
+ */
+export async function writeSpecPackReports(
+  root: string,
+  config: QfaiConfig,
+  scope?: SpecScope,
+): Promise<void> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const outRoot = resolvePath(root, config, "outDir");
-  const entries = await collectSpecEntries(specsRoot);
+  const allEntries = await collectSpecEntries(specsRoot);
+  const entries = allEntries.filter((entry) => isSpecInScope(entry.specNumber, scope));
   const contractIndex = await buildContractIndex(root, config);
 
   for (const entry of entries) {
