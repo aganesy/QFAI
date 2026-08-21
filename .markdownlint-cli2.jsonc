@@ -53,6 +53,7 @@
     ".qfai/evidence/*[0-9]*.md",
     ".qfai/report/atdd-traceability/**",
     ".qfai/report/preflight_summary.md",
+    ".qfai/report/preflight/**",
     ".qfai/report/run-*/**",
     ".qfai/report/specs-coverage/**",
     ".qfai/report/validate.json",

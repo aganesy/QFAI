@@ -3,6 +3,7 @@
 ## Status
 
 - status: <ready | blocked>
+- run id: run-<timestamp>
 - source: discussion-pack
 - selected discussion-pack: <path | (not found)>
 

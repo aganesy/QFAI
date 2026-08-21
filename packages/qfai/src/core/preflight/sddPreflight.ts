@@ -4,14 +4,27 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import { allocateRunDir } from "../runLog.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
+const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
+/**
+ * Preflight runs get their own parent directory instead of sharing
+ * `<outDir>/run-*` with the validate run log. Everything that reads `<outDir>`
+ * treats a `run-*` directory there as a validate run — `writeValidateRunLog`
+ * suppresses a stale `validate.log` by comparing against the newest one, and
+ * the shipped Validate Hard Gate asks the reader to check that `run_log:` names
+ * that same newest directory. A preflight directory in that namespace would
+ * answer both questions with a run that never validated anything.
+ */
+const PREFLIGHT_RUN_ROOT = "preflight";
 
 export type SddPreflightSource = "discussion-pack";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
   assumptions?: string[];
+  startedAt?: Date;
 };
 
 export type SddPreflightResult = {
@@ -22,7 +35,18 @@ export type SddPreflightResult = {
   openQuestions: string[];
   blockers: string[];
   nextCommands: string[];
+  /** Run id of this preflight, in `run-<17-digit local timestamp>` form. */
+  runId: string;
+  /** Immutable, run-scoped summary — the path evidence files must cite. */
   preflightSummaryPath: string;
+  /** Overwritten-every-run copy at `<outDir>/preflight_summary.md`, for humans. */
+  latestPreflightSummaryPath: string;
+};
+
+type PreflightRun = {
+  runId: string;
+  summaryPath: string;
+  latestSummaryPath: string;
 };
 
 export async function runSddPreflight(
@@ -32,9 +56,7 @@ export async function runSddPreflight(
 ): Promise<SddPreflightResult> {
   const discussionRoot = resolvePath(root, config, "discussionDir");
   const reportRoot = resolvePath(root, config, "outDir");
-  const summaryPath = path.join(reportRoot, "preflight_summary.md");
-
-  await mkdir(reportRoot, { recursive: true });
+  const run = await allocatePreflightRun(reportRoot, options.startedAt ?? new Date());
 
   const readiness = await inspectLatestDiscussionPack(discussionRoot);
   const nextCommands = ["/qfai-discussion"];
@@ -42,14 +64,14 @@ export async function runSddPreflight(
   const blockers = resolvePreflightBlockers(readiness);
 
   if (blockers.length > 0) {
-    await writeFile(
-      summaryPath,
-      `${buildBlockedPreflightSummary({
+    await publishPreflightSummary(
+      run,
+      buildBlockedPreflightSummary({
+        runId: run.runId,
         selectedDiscussionPack: readiness.latestPackDir,
         blockers,
         nextCommands,
-      })}\n`,
-      "utf-8",
+      }),
     );
 
     return {
@@ -60,7 +82,7 @@ export async function runSddPreflight(
       openQuestions: carryOverOpenQuestions,
       blockers,
       nextCommands,
-      preflightSummaryPath: summaryPath,
+      ...toSummaryPaths(run),
     };
   }
 
@@ -69,14 +91,14 @@ export async function runSddPreflight(
   const reqText = reqPath ? await readSafe(reqPath) : "";
   const reqCount = countReqIds(reqText);
 
-  await writeFile(
-    summaryPath,
-    `${buildReadyPreflightSummary({
+  await publishPreflightSummary(
+    run,
+    buildReadyPreflightSummary({
+      runId: run.runId,
       selectedDiscussionPack: selectedInputPath,
       importedReqCount: reqCount,
       openQuestions: carryOverOpenQuestions,
-    })}\n`,
-    "utf-8",
+    }),
   );
 
   return {
@@ -87,8 +109,42 @@ export async function runSddPreflight(
     openQuestions: carryOverOpenQuestions,
     blockers: [],
     nextCommands,
-    preflightSummaryPath: summaryPath,
+    ...toSummaryPaths(run),
   };
+}
+
+function toSummaryPaths(
+  run: PreflightRun,
+): Pick<SddPreflightResult, "runId" | "preflightSummaryPath" | "latestPreflightSummaryPath"> {
+  return {
+    runId: run.runId,
+    preflightSummaryPath: run.summaryPath,
+    latestPreflightSummaryPath: run.latestSummaryPath,
+  };
+}
+
+/** Reserve `<outDir>/preflight/run-<timestamp>/` for this preflight. */
+async function allocatePreflightRun(reportRoot: string, startedAt: Date): Promise<PreflightRun> {
+  const runRoot = path.join(reportRoot, PREFLIGHT_RUN_ROOT);
+  await mkdir(runRoot, { recursive: true });
+
+  const { runId, runDir } = await allocateRunDir(runRoot, startedAt);
+  return {
+    runId,
+    summaryPath: path.join(runDir, PREFLIGHT_SUMMARY_FILE),
+    latestSummaryPath: path.join(reportRoot, PREFLIGHT_SUMMARY_FILE),
+  };
+}
+
+/**
+ * Write the run-scoped summary first, then refresh the latest pointer with the
+ * same body. The run-scoped copy is never rewritten, so an evidence file that
+ * cites it keeps resolving to the state that justified its decisions.
+ */
+async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
+  const contents = `${body}\n`;
+  await writeFile(run.summaryPath, contents, "utf-8");
+  await writeFile(run.latestSummaryPath, contents, "utf-8");
 }
 
 function resolvePreflightBlockers(readiness: {
@@ -141,6 +197,7 @@ function resolvePreflightBlockers(readiness: {
 }
 
 function buildBlockedPreflightSummary(input: {
+  runId: string;
   selectedDiscussionPack: string | null;
   blockers: string[];
   nextCommands: string[];
@@ -151,6 +208,7 @@ function buildBlockedPreflightSummary(input: {
     "## Status",
     "",
     "- status: blocked",
+    `- run id: ${input.runId}`,
     `- latest discussion-pack: ${input.selectedDiscussionPack ?? "(not found)"}`,
     "",
     "## Blockers",
@@ -164,6 +222,7 @@ function buildBlockedPreflightSummary(input: {
 }
 
 function buildReadyPreflightSummary(input: {
+  runId: string;
   selectedDiscussionPack: string | null;
   importedReqCount: number;
   openQuestions: string[];
@@ -177,6 +236,7 @@ function buildReadyPreflightSummary(input: {
     "## Status",
     "",
     "- status: ready",
+    `- run id: ${input.runId}`,
     "- source: discussion-pack",
     `- selected discussion-pack: ${input.selectedDiscussionPack ?? "(unknown)"}`,
     "",

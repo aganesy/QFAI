@@ -402,15 +402,27 @@ function formatTimestamp17(date: Date): string {
   return `${year}${month}${day}${hours}${minutes}${seconds}${millis}`;
 }
 
-async function allocateRunReportDir(outDir: string, startedAt: Date): Promise<ValidateRunLog> {
+/**
+ * Allocate a fresh `run-<17-digit local timestamp>` directory under `parentDir`.
+ *
+ * The name is derived from the run's start time and the directory is created
+ * exclusively, so two runs that start in the same millisecond get distinct ids
+ * instead of writing over each other. Shared with the preflight writer, which
+ * needs the same "one directory per run, lexically ordered" addressing under a
+ * parent of its own.
+ */
+export async function allocateRunDir(
+  parentDir: string,
+  startedAt: Date,
+): Promise<{ runId: string; runDir: string }> {
   const maxAttempts = 2000;
   for (let attempt = 0; attempt < maxAttempts; attempt++) {
     const candidateDate = new Date(startedAt.getTime() + attempt);
     const runId = `run-${formatTimestamp17(candidateDate)}`;
-    const reportDir = path.join(outDir, runId);
+    const runDir = path.join(parentDir, runId);
     try {
-      await mkdir(reportDir);
-      return { runId, reportDir };
+      await mkdir(runDir);
+      return { runId, runDir };
     } catch (error) {
       if (isAlreadyExistsError(error)) {
         continue;
@@ -418,7 +430,12 @@ async function allocateRunReportDir(outDir: string, startedAt: Date): Promise<Va
       throw error;
     }
   }
-  throw new Error("run-log directory allocation failed after retrying timestamp collisions");
+  throw new Error("run directory allocation failed after retrying timestamp collisions");
+}
+
+async function allocateRunReportDir(outDir: string, startedAt: Date): Promise<ValidateRunLog> {
+  const { runId, runDir } = await allocateRunDir(outDir, startedAt);
+  return { runId, reportDir: runDir };
 }
 
 function isAlreadyExistsError(error: unknown): boolean {

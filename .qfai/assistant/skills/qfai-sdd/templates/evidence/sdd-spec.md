@@ -17,7 +17,11 @@
 
 ## Preflight summary path
 
-- `.qfai/report/preflight_summary.md`
+- `.qfai/report/preflight/run-<timestamp>/preflight_summary.md` (run id: <run-id>)
+
+> Cite the run-scoped copy, never `.qfai/report/preflight_summary.md`. That path
+> is the latest-run pointer and every rerun rewrites it, so once a second cycle
+> has run it no longer names the preflight this spec was triaged against.
 
 ## Triage decisions
 
