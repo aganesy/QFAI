@@ -118,10 +118,10 @@ passed. This list is the flag reference for the sub-command — when it and
   so the decision replays. Use instead of hand-editing
   `frozenLicenseCatalog`, which is a lock-drift exit 2. See
   "License-verify hard-stop (exit 66)" below.
-- `--primary-spec-id <spec-id>` — pin the primary UI-bearing spec at
-  cycle 0 when several candidates resolve. Accepts `NNNN` or
-  `spec-NNNN`; takes precedence over the `qfai.config.yaml`
-  `prototyping.primarySpecId` field.
+- `--primary-spec-id <spec-id>` — pin the UI-bearing spec the loop
+  treats as primary at cycle 0 when several candidates resolve.
+  Accepts `NNNN` or `spec-NNNN`; takes precedence over the equivalent
+  `qfai.config.yaml` pin under `prototyping`.
 - `--emit-skeletons` — cycle 0 only: write one placeholder HTML file
   per declared screen as a seed aid, not an alternative output shape.
   Ignored at cycle >= 1. Detail:
