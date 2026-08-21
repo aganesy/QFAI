@@ -272,14 +272,18 @@ a table cell: a GFM row is one physical line and a cell ends at every unescaped
 either truncates the proof or breaks every row below it
 (`../../qfai-implement/references/execution-ledger.md#evidence-cell-contract`).
 
-`qa-gatekeeper` requires an `Oracle proof` on **every** item — a named
-production mutation that makes the test fail, or a recorded `equivalent-mutant`
-— because a passing run does not show the test depends on the behaviour the row
-owns. A natural RED is not a substitute: it shows the test failed before the
-code existed, not that it discriminates once the code does. Branch 2 satisfies
-this with the mutation it already performs; branch 1 names the mutation it
-intends and `/qfai-implement` records the run at GREEN, when there is production
-code to mutate.
+`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** —
+branch 1 and branch 2 — a named production mutation that makes the test fail,
+or a recorded `equivalent-mutant`, because a passing run does not show the test
+depends on the behaviour the row owns. A natural RED is not a substitute: it
+shows the test failed before the code existed, not that it discriminates once
+the code does. Branch 2 satisfies this with the mutation it already performs;
+branch 1 names the mutation it intends and `/qfai-implement` records the run at
+GREEN, when there is production code to mutate. A branch-3 row owes none — it
+never reaches a GREEN or completion gate, the scope `agents/qa-gatekeeper.md`
+puts on the requirement, and it is reached only when neither form is available;
+its audit subject at P1d is the row identity and obligation reference plus the
+`DR-ID` and the DR artifact, as the `exception` row above states.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in

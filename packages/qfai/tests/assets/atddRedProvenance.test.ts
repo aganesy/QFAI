@@ -173,6 +173,23 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     expect(provenance).toContain("branch 1 names the mutation it intends");
   });
 
+  it("does not owe an Oracle proof on a branch-3 row", async () => {
+    // The requirement was stated on "**every** item", which no branch-3 row
+    // can satisfy: it is reached only when neither a mutation nor an
+    // `equivalent-mutant` is available, and `:254` ends "do not enter Phase
+    // Green". `agents/qa-gatekeeper.md` already scopes the requirement to a
+    // GREEN or completion gate; the reference dropped that qualifier and never
+    // named branch 3, so a P1d handover read as owing a proof it cannot make.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** — branch 1 and branch 2 —",
+    );
+    expect(provenance).toContain("A branch-3 row owes none");
+    expect(provenance).toContain("it never reaches a GREEN or completion gate");
+    expect(provenance).toContain("its audit subject at P1d is the row identity");
+    expect(provenance).not.toContain("requires an `Oracle proof` on **every** item");
+  });
+
   it("accepts a valid exception as the third evidence form", async () => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("or a `DR-*` recording why neither was available");
