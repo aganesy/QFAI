@@ -170,7 +170,7 @@ bare verdict, not a pointer.
 as a comma-separated list or a glob. What is restricted is what a row may _conflate_ — **one
 independently observable boundary per selector entry**, with RED observed per entry, and a
 matrix-shaped `TC-*` decomposed across rows before RED begins (`TC-Refs` is many-to-many with
-`TDD-ID`). A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
+`TDD-ID`), by `/qfai-sdd` Phase 2b, which owns the rows. A selector that accumulates unrelated boundaries invalidates the RED observation. Rules
 and examples: `selector-granularity.md`.
 
 ## Status Lifecycle

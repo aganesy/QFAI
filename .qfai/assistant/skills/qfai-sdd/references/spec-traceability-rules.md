@@ -166,7 +166,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `US-*` on E2E, `CON-API-*` on API.
 - `Selector` may hold one entry, a comma-separated list, or a glob pattern. It is not limited to a single test function.
 - `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
-- A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.
+- A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed. The split is seeded where the rows are owned — `/qfai-sdd` Phase 2b (`sdd-phase-checklists.md`) — and never by `/qfai-implement`, whose only cells are `Status`, `DR-ID` and `Evidence`: a matrix shape first visible at RED stops that row and comes back here through a Change Request.
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`
   appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
   it says nothing about where the test file lives. A `TC-*` whose declared

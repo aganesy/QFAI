@@ -126,8 +126,20 @@ The eight required columns, the allowed transitions and the exception rules are 
    > whichever assert happens to execute first — every assertion after it is unobserved on every RED
    > run, and a non-deterministic assertion placed early silently disables everything below it. A TDD
    > row whose selector accumulates unrelated boundaries therefore **invalidates its own RED
-   > observation**. Split the row per `#selector-granularity-must` before continuing; do not proceed to
-   > Green.
+   > observation**. **This skill does not split it.** The split is seeded by `/qfai-sdd` Phase 2b
+   > (`../qfai-sdd/references/sdd-phase-checklists.md`), and adding or re-scoping a row is an upstream
+   > write this skill does not own — `Status`, `DR-ID` and `Evidence` are its only cells
+   > (`../qfai-sdd/references/spec-traceability-rules.md` **Ownership split**,
+   > `.qfai/assistant/constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). A matrix
+   > shape first visible here is the residual case and takes a named, bounded path instead: raise a
+   > Change Request per `#when-drift-is-detected` naming the boundaries the row conflates and the
+   > split it asks `/qfai-sdd` for — creating that record is whitelisted — and stop the row. **Judge
+   > the shape while the row is still `todo`**, at selection in step 1 and before step 2 writes
+   > `todo -> red`: write `todo -> blocked` with that `CR-*` in `Blocked-By`, so the row is skipped
+   > rather than re-derived every pass (`references/execution-ledger.md#blocked-rows`), and select the
+   > next row. A row already past `todo` when the shape surfaces keeps its status and stops with a
+   > handoff note naming the `CR-*`. Never split in place, and never proceed to Green on an
+   > invalidated RED.
 
 ### Phase: Green (Make It Pass)
 

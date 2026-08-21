@@ -16,7 +16,11 @@ _conflate_:
   rejection reasons, a status-code matrix, or several independent state transitions is split across
   multiple TDD rows — one falsifying oracle per row — rather than accumulated behind one selector.
   The splitting rule: **one row per independently observable boundary**. Rows that decompose the
-  same `TC-*` all carry that `TC-*` in `TC-Refs`; `TC-Refs` is many-to-many with `TDD-ID`.
+  same `TC-*` all carry that `TC-*` in `TC-Refs`; `TC-Refs` is many-to-many with `TDD-ID`. **The
+  decomposition is `/qfai-sdd` Phase 2b's write, not this skill's** — adding or re-scoping a row is
+  upstream (`../../qfai-sdd/references/spec-traceability-rules.md` **Ownership split**), so a matrix
+  shape first visible at RED is stopped and raised as a Change Request, never split in place
+  (`../SKILL.md` Phase Red).
 - A selector that accumulates unrelated boundaries **invalidates the RED observation** — see the Red
   phase below.
 - **Precedence, when the two rules seem to disagree:** the row-splitting rule wins. If you cannot
