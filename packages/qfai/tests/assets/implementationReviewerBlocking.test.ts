@@ -50,6 +50,9 @@ async function loadProfiles(tree: string): Promise<Record<string, Profile>> {
 
 const REVIEWER_NAME = /(?:-reviewer|-gatekeeper)$/;
 
+/** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 describe("routed reviewers block", () => {
   for (const tree of QFAI_TREES) {
     it(`${tree}: every mandatory reviewer in a review phase is also blocking`, async () => {
@@ -107,6 +110,28 @@ describe("routed reviewers block", () => {
       const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
 
       expect(skill).toContain(`routing-profile: ${entry?.review_profile}`);
+    });
+
+    it(`${tree}: no prose still works around the reviewer's absence`, async () => {
+      // The manifest fix left three prose sites describing the pre-fix split.
+      // Derive the claim from the manifest so the docs cannot drift back.
+      const entry = (await loadRouting(tree)).find((e) => e.skill === "qfai-implement");
+      const review = entry?.phases?.find((p) => p.id === "review");
+      const blocking = review?.blocking_agents ?? [];
+      const mandatory = review?.mandatory_agents ?? [];
+      expect([...mandatory].sort()).toEqual([...blocking].sort());
+
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      const policy = unwrap(
+        await read(tree, "assistant/skills/qfai-implement/references/volume-policy.md"),
+      );
+      for (const doc of [skill, policy]) {
+        for (const agent of blocking) {
+          expect(doc).not.toContain(`\`${agent}\` is mandatory but not`);
+        }
+        expect(doc).not.toContain('"Required" is wider than `blocking_agents`');
+      }
+      expect(skill).toContain("Every reviewer in `blocking_agents` blocks `done`");
     });
 
     it(`${tree}: the 11-point gate still names the reviewer`, async () => {

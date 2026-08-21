@@ -210,8 +210,7 @@ Scale the ceremony to the ledger: derive a **risk tier** per row, **batch** T1 g
 reviews per coherent BR/AC group, process multiple specs as a **sequential queue**, state the
 implied **cost** before starting. The tier scales how **often** a gate runs, never **whether** it
 runs: `agent-routing.yml` keeps `qa-gatekeeper`, `completion-reviewer` and
-`implementation-reviewer` all mandatory (only the first two are in `blocking_agents`, but item 8 of
-the 11-point gate makes an `implementation-reviewer` REVISE block `done` anyway), and criticality
+`implementation-reviewer` all mandatory and all blocking, and criticality
 (authz, crypto, money, data integrity) forces T2 regardless of layer. Why this exists, the tier
 table, the group-formation transitions and the queue-advance steps: `references/volume-policy.md`.
 
@@ -224,7 +223,7 @@ All agent-to-agent transitions follow these contracts:
 3. `qa-gatekeeper` confirms or rejects each observation. A RED rejection stops the row before Green; it does not wait for the `review` phase.
 4. After the item reaches `refactor`, implementation agent submits it to `completion-reviewer` for spec alignment and to `implementation-reviewer` for code quality review. Review is requested from `refactor`, never from `green`, so a `REVISE` always lands on the one status with an outbound `review-fix` edge.
 5. `product-surface-reviewer` is added when the item affects UI behavior or rendered output.
-6. Only after every required reviewer passes may the item transition to `done`. "Required" is wider than `blocking_agents`: `implementation-reviewer` is mandatory and its `REVISE` blocks `done` independently of that list, and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
+6. Only after every required reviewer passes may the item transition to `done`. Every reviewer in `blocking_agents` blocks `done` — for `qfai-implement` that is `implementation-reviewer`, `qa-gatekeeper` and `completion-reviewer` — and `product-surface-reviewer` joins for UI-affecting items. The authority for an item transition is `#item-completion-checklist-12-point-gate`, not the routing list, which governs phase progression (`references/volume-policy.md#routing-is-unchanged`).
 7. For T1 rows the submitted unit in steps 2-4 is the coherent group, not the row; every required reviewer still runs, once per group. T2/T3 rows submit alone.
 
 #### Precedence between `delivery-planner` and `qa-gatekeeper`
