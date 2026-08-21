@@ -53,6 +53,7 @@ import { classifyBuildCommand } from "../helpers/buildCommand.js";
 import {
   ALLOWED_ACTION_COMMITS,
   ALLOWED_ACTION_INPUTS,
+  ALLOWED_ACTION_STEPS,
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
   ALLOWED_SHELLS,
@@ -268,10 +269,28 @@ describe(
           if (/uses:\s*\.\//.test(ref)) continue;
           if (!/@[0-9a-f]{40}\b/.test(ref)) floating.push(`${file}: ${ref.trim()}`);
         }
-        const checkouts = (text.match(/uses:\s*actions\/checkout/g) ?? []).length;
-        const refusals = (text.match(/persist-credentials:\s*false/g) ?? []).length;
-        if (checkouts > refusals) {
-          unhardened.push(`${file}: ${checkouts} checkout(s), ${refusals} refusal(s)`);
+        // Per STEP, from the parsed document. This counted `actions/checkout` occurrences against
+        // `persist-credentials:\s*false` occurrences in the RAW text — two lines below the comment
+        // explaining why the comment-stripped `content` exists — so a checkout with
+        // `persist-credentials: true` plus a comment mentioning `false` was reported hardened, and one
+        // step's refusal covered another step's omission. Counting a phrase is the "how it is written"
+        // class; the document already says which step carries which input.
+        const parsed: unknown = parseYaml(text);
+        const jobs = isRecord(parsed) && isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+        for (const [id, job] of Object.entries(jobs)) {
+          const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+          for (const step of steps) {
+            if (!isRecord(step)) continue;
+            const uses = typeof step["uses"] === "string" ? step["uses"] : "";
+            if (!/^actions\/checkout(@|$)/.test(uses)) continue;
+            const inputs = isRecord(step["with"]) ? step["with"] : {};
+            if (inputs["persist-credentials"] !== false) {
+              unhardened.push(
+                `${file}#${id}: checkout without persist-credentials: false ` +
+                  `(${JSON.stringify(inputs["persist-credentials"])})`,
+              );
+            }
+          }
         }
       }
       expect
@@ -338,6 +357,35 @@ describe(
       // body, so the test executed an unrelated step and asserted against it. `qfai-validate.yml`
       // has one job today, which is exactly why it was invisible; the sibling orchestrator has
       // eight, and folding the validate work into it is this spec's own direction.
+      // EVERY `setup-node`, not the first one that resolves. This loop `continue`d past any
+      // `setup-node` whose `node-version` did not reference a step output, so round 15 added a second one
+      // carrying `node-version: lts/*` — which the literal check two rows up also misses, because that
+      // check needs a leading digit — and the row went on asserting the real resolver while the later
+      // step overrode it. Finding one step that resolves correctly is not the same as there being no
+      // other, which is the shape of every "the tree contains none" claim in this file.
+      const unresolved: string[] = [];
+      for (const [id, job] of Object.entries(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          const uses = typeof step["uses"] === "string" ? step["uses"] : "";
+          if (!/setup-node/.test(uses)) continue;
+          const withBlock = isRecord(step["with"]) ? step["with"] : {};
+          const version =
+            typeof withBlock["node-version"] === "string" ? withBlock["node-version"] : "";
+          if (!/\$\{\{\s*steps\.[A-Za-z0-9_-]+\.outputs\.[A-Za-z0-9_-]+\s*\}\}/.test(version)) {
+            unresolved.push(`${id}: node-version ${JSON.stringify(version)}`);
+          }
+        }
+      }
+      expect
+        .soft(
+          unresolved,
+          "every setup-node in the shipped set must take its version from a resolved step output; a " +
+            "second one with a literal overrides the first without reddening anything else",
+        )
+        .toEqual([]);
+
       let resolverId: string | undefined;
       let resolverBody: string | undefined;
       for (const job of Object.values(map)) {
@@ -584,7 +632,12 @@ describe(
       // into thirteen steps still showed twelve entries and both halves of the bijection stayed green —
       // planted and confirmed in round 14. One reviewed body run twice is two executions, and the count
       // is part of what was reviewed.
-      const bodies: { digest: string; at: string }[] = [];
+      // Each body WHERE IT RUNS. The first version was a set of digests, which admitted any number of
+      // bodies; the second was a multiset, which closed replication and left permutation — round 15
+      // swapped two REVIEWED bodies and moved the lockfile-aware install into `qfai-tests.yml#detection`,
+      // a job with no `if:` that runs on every pull request, with every gate in this file green. A body
+      // is reviewed for the step it runs in, so the step is part of what was reviewed.
+      const bodies: string[] = [];
       for (const [id, job] of Object.entries(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
         for (const step of steps) {
@@ -592,22 +645,51 @@ describe(
           const run = step["run"];
           if (typeof run !== "string") continue;
           const name = typeof step["name"] === "string" ? step["name"] : "(unnamed)";
-          bodies.push({ digest: bodyDigest(run), at: `${id} [${name}]` });
+          bodies.push(`${id} [${name}] :: ${bodyDigest(run)}`);
+        }
+      }
+      // The unreviewed ones first, by name, because the pairing below reports a diff of two long lists
+      // and a reader needs the step rather than the hash.
+      expect
+        .soft(
+          bodies
+            .filter(
+              (body) =>
+                !ALLOWED_STEP_BODIES.some(([digest]) => digest === (body.split(" :: ")[1] ?? "")),
+            )
+            .map((body) => body.split(" :: ")[0] ?? ""),
+          "a shipped step body nobody reviewed; run `refusals()` over it, then write its digest down",
+        )
+        .toEqual([]);
+      // And the steps that have NO body, which every check above is structurally blind to. A
+      // `uses:`-only step runs an action, and round 15 put a `pnpm/action-setup` into a placeholder lane
+      // and watched it ship through the whole suite — `ALLOWED_ACTIONS` allows a name, and a name is
+      // allowed in every job. Pinned where the bodies are pinned: to the step it was reviewed for.
+      const actionSteps: string[] = [];
+      for (const [id, job] of Object.entries(map)) {
+        const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
+        for (const step of steps) {
+          if (!isRecord(step)) continue;
+          const uses = step["uses"];
+          if (typeof uses !== "string") continue;
+          actionSteps.push(`${uses.split("@")[0] ?? uses} @ ${id}`);
         }
       }
       expect
         .soft(
-          bodies.filter((body) => !ALLOWED_STEP_BODIES.has(body.digest)).map((body) => body.at),
-          "a shipped step body nobody reviewed; run `refusals()` over it, then write its digest down",
+          actionSteps.sort(),
+          "an action runs whether or not the step has a `run:` body, so each one is pinned to the job " +
+            "it was reviewed for — a second step using a reviewed action is a second thing to review",
         )
-        .toEqual([]);
+        .toEqual(ALLOWED_ACTION_STEPS.map(([action, at]) => `${action} @ ${at}`).sort());
+
       expect
         .soft(
-          bodies.map((body) => body.digest).sort(),
-          "the shipped bodies and the reviewed digests must correspond one for one, so a reviewed " +
-            "body replicated into a second step is a second thing to review",
+          bodies.sort(),
+          "each reviewed body must appear exactly once, at the step it was reviewed for — so a body " +
+            "replicated into a second step, or swapped with another step's, is a new thing to review",
         )
-        .toEqual([...ALLOWED_STEP_BODIES].sort());
+        .toEqual([...ALLOWED_STEP_BODIES].map(([digest, at]) => `${at} :: ${digest}`).sort());
 
       // The other channel, which round 10 found invisible to BOTH instruments: a build arriving as an
       // action input. `uses: gradle/actions/setup-gradle` with `arguments: build` runs a build without a

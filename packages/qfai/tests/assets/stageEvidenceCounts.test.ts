@@ -489,9 +489,19 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // split stayed where it was.
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
     const packs = await packsOnDisk();
+    // **Responses are counted over CLOSED packs only.** Counting the in-flight one made this row red for
+    // the duration of every round: a reviewer's report lands, the certified total is stale, and the
+    // required `e2e` leg exits 1 until the round ends — which the stage cannot fix without editing the
+    // subject mid-round, the one thing the round's own rules forbid. Round 15's gatekeeper measured this
+    // tree green and then red four minutes later with nothing between but a sibling's report landing.
+    //
+    // The sentence certifies rounds that are OVER, so that is what it counts. The newest pack is excluded
+    // for the same reason the seal rule below excludes it: it is not finished. The ROUND count still
+    // covers every pack, because opening one is what makes a round exist.
+    const closed = packs.slice(0, -1);
     const responses = (
       await Promise.all(
-        packs.map(async (pack) => {
+        closed.map(async (pack) => {
           const entries = await readdir(path.join(ROOT, ".qfai/review", pack));
           return entries.filter((name) => /^R0\d+_.*\.md$/.test(name)).length;
         }),
@@ -508,8 +518,12 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).not.toBeNull();
     if (certified === null) return;
 
-    // Spelled-out numerals, because that is how the sentence reads. Only the values this record has
-    // used or could next use need a spelling.
+    // Spelled-out numerals, because that is how the sentence reads. The table ran out at `fifteen`
+    // until round 15's gatekeeper pointed out that round 16 was therefore red whatever the record said —
+    // a pin whose needle is a closed enumeration, which is the defect the retracted-claims guard names in
+    // its own words about its own alternation. The table's job is to READ a numeral, not to bound one, so
+    // it now covers every value this stage could reach and an unreadable word is reported rather than
+    // treated as a mismatch.
     const WORDS: Record<string, number> = {
       one: 1,
       two: 2,
@@ -526,6 +540,21 @@ describe("the stage evidence's counts are derived, not typed", () => {
       thirteen: 13,
       fourteen: 14,
       fifteen: 15,
+      sixteen: 16,
+      seventeen: 17,
+      eighteen: 18,
+      nineteen: 19,
+      twenty: 20,
+      "twenty-one": 21,
+      "twenty-two": 22,
+      "twenty-three": 23,
+      "twenty-four": 24,
+      "twenty-five": 25,
+      "twenty-six": 26,
+      "twenty-seven": 27,
+      "twenty-eight": 28,
+      "twenty-nine": 29,
+      thirty: 30,
     };
     const wrong: string[] = [];
     const statedRounds = WORDS[certified[1] ?? ""];

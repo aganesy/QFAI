@@ -15,6 +15,7 @@
  * shipped tree's own shapes must not be — a guard that refuses everything is as useless as one that
  * refuses nothing, which is why both directions are here.
  */
+import { createHash } from "node:crypto";
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
@@ -314,36 +315,56 @@ describe("the shipped-lane allowlist", () => {
     ).toEqual([]);
   });
 
-  it("gives two bodies that behave differently two different digests", () => {
-    // The gate is IDENTITY, so a collision is the hole itself. `payloadDigest` collapses every
-    // whitespace run, which is right for a `node -e` argument and wrong for a body: a newline inside
-    // `$( … )` is the difference between one command and two, and the shipped tree contains exactly
-    // this substitution. Found by attacking the gate rather than by a review round.
-    const one = 'if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then echo shallow; fi';
-    const two = one.replace("git rev-parse", "git\nrev-parse");
-    expect(payloadDigest(one), "the collapsing digest cannot tell these two apart").toBe(
-      payloadDigest(two),
-    );
-    expect(bodyDigest(one), "and the body digest must").not.toBe(bodyDigest(two));
-    // **"Trailing whitespace is not a behaviour" was the next line of this test, and it was wrong.**
-    // Round 14 found the second collision there: a trailing space after a line continuation ends the
-    // continuation, so `echo a \\` and `echo a \\ ` are one command and two, and stripping
-    // trailing whitespace gave them one digest. Both sides pass `refusals()`, so the scanner could
-    // not have caught what the digest let through. `bodyDigest` normalizes line endings and nothing
-    // else now, and the tolerance the stripping was bought for did not exist: YAML removes a block
-    // scalar's indentation when it parses it, so re-indenting a step never moved the digest.
-    const continued = "echo a \\\n  && echo b";
-    const broken = "echo a \\ \n  && echo b";
-    expect(bodyDigest(continued), "a trailing space after a continuation IS a behaviour").not.toBe(
-      bodyDigest(broken),
-    );
-    // And the one normalization that remains, which is unreachable from the gate: the `yaml` parser
-    // strips CR from a block scalar, so no CR ever reaches `bodyDigest` in production. It is kept
-    // for a future caller that reads raw YAML text, and exercised here so it is a branch someone can
-    // break rather than one nobody can observe — which is what round 14 found it to be.
-    expect(bodyDigest("echo a\r\necho b"), "a line ending is not a behaviour").toBe(
-      bodyDigest("echo a\necho b"),
-    );
+  it("gives two inputs that behave differently two different digests", () => {
+    // **Three collisions, one per attempt to normalize, and the third one killed the practice.** The
+    // gate is IDENTITY, so a collision IS the hole, and each of these was found by someone attacking a
+    // digest rather than reading it:
+    //
+    //   collapsing whitespace     a newline inside `$( … )` is one command or two   (round 14, mine)
+    //   stripping trailing space  a space after a continuation ends the continuation (round 14, twice)
+    //   folding CRLF to LF        a CR before the newline ends it the same way       (round 15)
+    //
+    // The third was the sharpest, because round 14 had recorded that branch as UNREACHABLE on a
+    // measurement of block scalars, where the parser folds line breaks itself — and a quoted flow
+    // scalar hands the digest a live CR. Measuring the reachable case and concluding about every case
+    // is the class this spec's record catalogues.
+    //
+    // So neither digest normalizes anything now, and the assertions below are written against a local
+    // copy of the rule that was dropped. A test that asserted `payloadDigest` still collides would
+    // have to be deleted the moment the collapse was, taking the lesson with it.
+    const collapsing = (text: string): string =>
+      createHash("sha256").update(text.replace(/\s+/g, " ").trim()).digest("hex");
+
+    const pairs: ReadonlyArray<readonly [string, string, string]> = [
+      [
+        "a newline inside a substitution is one command or two",
+        'if [ "$(git rev-parse --is-shallow-repository)" = "true" ]; then echo shallow; fi',
+        'if [ "$(git\nrev-parse --is-shallow-repository)" = "true" ]; then echo shallow; fi',
+      ],
+      [
+        "a trailing space ends a line continuation",
+        "echo a \\\n  && echo b",
+        "echo a \\ \n  && echo b",
+      ],
+      ["a CR before the newline ends it too", "echo a \\\nnpx tsup", "echo a \\\r\nnpx tsup"],
+      [
+        "a newline terminates a // comment, so collapsing swallows the statement after it",
+        '// read the manifest\nprocess.stdout.write("x");',
+        '// read the manifest process.stdout.write("x");',
+      ],
+    ];
+
+    const survived: string[] = [];
+    for (const [why, left, right] of pairs) {
+      // The dropped rule cannot tell them apart — which is why it was dropped, and asserting it here
+      // keeps each pair's point checkable rather than remembered.
+      expect(collapsing(left), `the collapsing rule cannot tell these apart: ${why}`).toBe(
+        collapsing(right),
+      );
+      if (bodyDigest(left) === bodyDigest(right)) survived.push(`bodyDigest: ${why}`);
+      if (payloadDigest(left) === payloadDigest(right)) survived.push(`payloadDigest: ${why}`);
+    }
+    expect(survived, "two inputs that behave differently must not share a digest").toEqual([]);
   });
 
   it("accepts the shapes the shipped tree actually contains", () => {
