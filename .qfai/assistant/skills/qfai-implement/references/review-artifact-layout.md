@@ -12,12 +12,20 @@ must be written to a review pack, not left in conversation. There is exactly **o
 └── summary.json                             # required
 ```
 
-- One pack per review round for one `TDD-ID`. Do not nest `<scope>/<layer>/attempt-NN/`
+- One pack per review round. A round covers one `TDD-ID`, or the members of one T1 coherent group
+  (`volume-policy.md#batched-review`). Do not nest `<scope>/<layer>/attempt-NN/`
   directories under `.qfai/review/` — that layout is not validated and packs written there are
   invisible to `npx qfai validate`.
 - The scope of the pack is recorded **inside** the artifacts, not in the directory name. In
-  `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the
-  `TDD-ID` in `review_request.md`.
+  `summary.json` set `target.kind: "spec"` and `target.path` to the spec dir, and name the round's
+  `TDD-ID`s in `review_request.md` as a **list** — one id for a T2 or T3 row, the group's whole
+  membership for a T1 coherent group, written as the single block `volume-policy.md#batched-review`
+  already requires of the evidence file. The verdict then carries one `Audited evidence hash` per
+  listed id (`shared-skill-delegation-baseline.md#reviewer-response-template`).
+- A T1 group review is **one** reviewer turn, so it produces **one** pack. Do not write a pack per
+  member: N packs assert N rounds, N-1 of which never happened, each holding a copy of the same
+  verdict. Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the
+  same `review-<timestamp>/` directory.
 - Minimum `summary.json` shape (`version: "2.0"`):
   `version`, `created_at`, `target.{kind,path}`, `routing_profile`, `overall_status` (`PASS|FAIL`),
   `reviewers[]` where each entry is `{ reviewer, status: PASS|FAIL|NA, feedback_count }`,

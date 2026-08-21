@@ -2373,6 +2373,28 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(layout).toContain(".qfai/review/.legacy-packs");
   });
 
+  it("lets one pack cover a whole T1 coherent group", async () => {
+    // The pack rule read "One pack per review round for one `TDD-ID`" while
+    // `volume-policy.md#batched-review` makes a T1 group one reviewer turn over
+    // several rows, so the batched round had no legal artifact: one pack per
+    // member asserts rounds that never happened, one pack naming every member
+    // contradicted the layout as written.
+    const layout = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
+    );
+    expect(layout).toContain(
+      "One pack per review round. A round covers one `TDD-ID`, or the members of one T1 coherent group (`volume-policy.md#batched-review`).",
+    );
+    expect(layout).toContain("name the round's `TDD-ID`s in `review_request.md` as a **list**");
+    expect(layout).toContain(
+      "A T1 group review is **one** reviewer turn, so it produces **one** pack.",
+    );
+    expect(layout).toContain(
+      "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory.",
+    );
+    expect(layout).not.toContain("One pack per review round for one `TDD-ID`");
+  });
+
   it("gives the implementation reviewer the subject it hashes", async () => {
     // It records its own `Audited evidence hash` over the row s phase-authored
     // fields, and those live in an evidence file the diff does not carry.
