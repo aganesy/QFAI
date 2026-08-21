@@ -2,13 +2,14 @@
 
 Whether a passing test's pass **depends on the behaviour the item owns**.
 
-Nothing in qfai asked this. The completion gate and the per-item evidence contract
-record a command that failed and a command that passed; GREEN is measured as
-`exit code == 0`. Downstream, ATDD coverage is annotation presence, the strongest
-content check on a `done` row is that the test file exists, and the Coverage
-Depth Matrix counts **case categories**, never oracle strength. A test that
-cannot fail therefore cleared RED, GREEN, refactor, all completion points,
-`QFAI-ATDD-111/112/113` and `npx qfai validate`.
+Nothing in qfai asked this until completion item 5. Before it, the gate and the
+per-item evidence contract recorded a command that failed and a command that
+passed, and GREEN was measured as `exit code == 0`. Downstream, ATDD coverage was
+annotation presence, the strongest content check on a `done` row was that the
+test file exists, and the Coverage Depth Matrix counted **case categories**,
+never oracle strength — so a test that cannot fail cleared RED, GREEN, refactor,
+all completion points, `QFAI-ATDD-111/112/113` and `npx qfai validate`. Item 5
+and the `Oracle proof` field below are what close that hole.
 
 ## `Oracle proof` — the evidence field
 
@@ -41,7 +42,8 @@ the same method. That satisfies `Oracle proof`; do not do it twice.
 
 ## Weak-oracle shapes to look for
 
-These are the failure modes seen in the wild. Each passes today's gates.
+These are the failure modes seen in the wild. Each clears an exit-code-only
+GREEN, which is what `Oracle proof` is checked against.
 
 - **Truthiness where the value is available.** `expect(result).toBeTruthy()` when
   the boundary's own value is in hand. Assert the value.
