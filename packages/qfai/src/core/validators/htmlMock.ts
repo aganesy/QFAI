@@ -20,8 +20,6 @@ export async function validateHtmlMock(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const startTime = performance.now();
-  const budget = config.uiux?.htmlMockTimeout ?? 2000;
 
   const patterns = [
     path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md"),
@@ -209,18 +207,6 @@ export async function validateHtmlMock(
         );
       }
     }
-  }
-
-  if (performance.now() - startTime > budget) {
-    issues.push(
-      issue(
-        "QFAI-MOCK-099",
-        `HTML Mock validation exceeded ${budget}ms budget. All blocks were validated.`,
-        "warning",
-        undefined,
-        "htmlMock.performanceBudget",
-      ),
-    );
   }
 
   return issues;

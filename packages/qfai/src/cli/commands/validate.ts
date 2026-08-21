@@ -9,7 +9,12 @@ import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
-import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
+import type {
+  Issue,
+  ValidationProfile,
+  ValidationResult,
+  ValidationTimings,
+} from "../../core/types.js";
 import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
@@ -549,6 +554,35 @@ function emitText(result: ValidationResult): void {
   process.stdout.write(
     `counts: info=${result.counts.info} warning=${result.counts.warning} error=${result.counts.error}\n`,
   );
+  const overruns = formatTimingOverruns(result.timings);
+  if (overruns) {
+    process.stdout.write(`${overruns}\n`);
+  }
+}
+
+/**
+ * The validator groups that overshot their budget, as one text line, or `null`
+ * when everything fit.
+ *
+ * Printed next to the counts rather than pushed as a finding: how long a run
+ * took describes the machine, not the tree, so it must not move
+ * `counts.warning` and make the same commit report different totals on a
+ * laptop and on a loaded CI runner.
+ */
+export function formatTimingOverruns(timings: ValidationTimings | undefined): string | null {
+  if (!timings) {
+    return null;
+  }
+  const parts: string[] = [];
+  if (timings.uiuxMs > timings.uiuxBudgetMs) {
+    parts.push(`uiux=${Math.round(timings.uiuxMs)}ms (budget ${timings.uiuxBudgetMs}ms)`);
+  }
+  if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
+    parts.push(
+      `htmlMock=${Math.round(timings.htmlMockMs)}ms (budget ${timings.htmlMockBudgetMs}ms)`,
+    );
+  }
+  return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
 }
 
 function emitTextRunLog(runLogPath: string): void {
