@@ -13,6 +13,12 @@ const REFLECTION_APPLY_RE = /action:\s*apply/i;
 const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
+  // `uiux.requireResearchSummary: false` is the documented opt-out for this gate.
+  // Leaving it unset keeps the historical behaviour (the gate runs).
+  if (config.uiux?.requireResearchSummary === false) {
+    return [];
+  }
+
   const issues: Issue[] = [];
   const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
   const files = await fg(pattern, { absolute: true });

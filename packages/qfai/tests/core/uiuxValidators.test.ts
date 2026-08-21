@@ -209,6 +209,32 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-006");
   });
 
+  it("skips the Research Summary gate when uiux.requireResearchSummary is false", async () => {
+    const root = await newTempDir();
+    await seedResearchSummaryWithoutSources(root);
+
+    const issues = await validateResearchSummary(root, {
+      ...defaultConfig,
+      uiux: { ...defaultConfig.uiux, requireResearchSummary: false },
+    });
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("keeps the Research Summary gate when uiux.requireResearchSummary is true or unset", async () => {
+    const root = await newTempDir();
+    await seedResearchSummaryWithoutSources(root);
+
+    const optedIn = await validateResearchSummary(root, {
+      ...defaultConfig,
+      uiux: { ...defaultConfig.uiux, requireResearchSummary: true },
+    });
+    const unset = await validateResearchSummary(root, defaultConfig);
+
+    expect(optedIn.map((item) => item.code)).toContain("QFAI-RESEARCH-001");
+    expect(unset.map((item) => item.code)).toContain("QFAI-RESEARCH-001");
+  });
+
   it("does not treat best_practices ids as source entries", async () => {
     const root = await newTempDir();
     const discussionDir = path.join(root, ".qfai", "discussion");
@@ -592,6 +618,13 @@ describe("uiux validators", () => {
     expect(issues.some((item) => item.code === "QFAI-DT-006")).toBe(false);
   });
 });
+
+async function seedResearchSummaryWithoutSources(root: string): Promise<void> {
+  const discussionDir = path.join(root, ".qfai", "discussion");
+  await mkdir(discussionDir, { recursive: true });
+  const md = ["# Spec", "", "## Research Summary", "sources:", ""].join("\n");
+  await writeFile(path.join(discussionDir, "opt-out.md"), md, "utf-8");
+}
 
 async function newTempDir(): Promise<string> {
   const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-uiux-"));
