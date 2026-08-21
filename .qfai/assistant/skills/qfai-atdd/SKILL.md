@@ -246,8 +246,8 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 ## Volume Signals (mandatory, not gates)
 
 E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`.
-When a signal is low or high, propose options and a recommendation; never fail
-on a signal value alone.
+`E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**.
+A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
 
 ### Estimator output table (required)
 
