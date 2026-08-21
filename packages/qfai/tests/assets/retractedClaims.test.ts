@@ -78,6 +78,16 @@ const GOVERNANCE = [
   "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
   "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
   "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
+  // Added round 16, after two refuted claims planted in the first of them left the guard green.
+  // The list was widened in round 15 and was short by four — the widening named the files the
+  // round happened to be looking at rather than the files this stage wrote, which is the same
+  // shape as the scoping it replaced, one size smaller.
+  // NOT this file: `RETRACTED` holds the claims verbatim, so scanning it would report every needle
+  // against its own entry. A list of what was retracted is not an assertion of it, and that is the
+  // one place in the repository where the distinction is structural rather than a matter of quoting.
+  "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
+  "packages/qfai/tests/unit/buildCommand.test.ts",
+  "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
   ".qfai/decisions/DR-0017-0010-two-tuning-guard-rows-cannot-be-reddened-before-the-history-they-measure-exists.md",
   ".qfai/decisions/CR-20260820-0012-tdd-0069-waits-for-a-ci-run-that-is-gated-on-the-annotation-it-would-justify.md",
   ".qfai/decisions/CR-20260820-0011-the-e2e-annotation-ledger-certifies-127-stories-no-test-carries.md",

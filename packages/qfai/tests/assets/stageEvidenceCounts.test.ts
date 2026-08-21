@@ -160,6 +160,45 @@ async function packsOnDisk(): Promise<string[]> {
     .sort();
 }
 
+// Spelled-out numerals, because that is how the sentence reads. The table ran out at `fifteen`
+// until round 15's gatekeeper pointed out that round 16 was therefore red whatever the record said —
+// a pin whose needle is a closed enumeration, which is the defect the retracted-claims guard names in
+// its own words about its own alternation. The table's job is to READ a numeral, not to bound one, so
+// it now covers every value this stage could reach and an unreadable word is reported rather than
+// treated as a mismatch.
+const WORDS: Record<string, number> = {
+  one: 1,
+  two: 2,
+  three: 3,
+  four: 4,
+  five: 5,
+  six: 6,
+  seven: 7,
+  eight: 8,
+  nine: 9,
+  ten: 10,
+  eleven: 11,
+  twelve: 12,
+  thirteen: 13,
+  fourteen: 14,
+  fifteen: 15,
+  sixteen: 16,
+  seventeen: 17,
+  eighteen: 18,
+  nineteen: 19,
+  twenty: 20,
+  "twenty-one": 21,
+  "twenty-two": 22,
+  "twenty-three": 23,
+  "twenty-four": 24,
+  "twenty-five": 25,
+  "twenty-six": 26,
+  "twenty-seven": 27,
+  "twenty-eight": 28,
+  "twenty-nine": 29,
+  thirty: 30,
+};
+
 describe("the stage evidence's counts are derived, not typed", () => {
   it("reasons about every file it added against the rejected options", async () => {
     // The Delta Rejected Guard table promised to cover "every artifact added since" for five rounds and
@@ -184,8 +223,12 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // second time: every tracked file is also named in the prose below the table, so deleting a row
     // left it green. Two vacuous versions of one check, both caught by deleting the row it guards —
     // which is the procedure this record argues for and the reason it is written down.
+    // FENCED regions removed, and a row must have the columns of a row. The first version read any
+    // line beginning `| ` + a backticked path, so a fenced sample carrying the path satisfied it
+    // with the real table row deleted — a check over prose that prose can satisfy by accident.
+    const unfenced = section.replace(/^```[\s\S]*?^```/gm, "");
     const listed = new Set(
-      [...section.matchAll(/^\|\s*`([^`]+)`/gm)].map((match) => match[1] ?? ""),
+      [...unfenced.matchAll(/^\|\s*`([^`]+)`\s*\|[^\n]*\|/gm)].map((match) => match[1] ?? ""),
     );
     expect(listed.size, "the table must have a first column to read").toBeGreaterThan(5);
     const missing = [...TRACKED, ...HELPERS].filter(
@@ -222,16 +265,28 @@ describe("the stage evidence's counts are derived, not typed", () => {
     expect(held, "the corpus must hold something for this row to be about").toBeGreaterThan(20);
 
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    // Emphasis stripped first. The record writes numerals as `**31**` all through, and matching
+    // only whitespace-adjacent digits made two wrong sizes in that style invisible — the same
+    // needle-shaped blindness this check was written to close, one style along.
+    const prose = evidence.replaceAll("**", "");
     // Every numeral within a few words of `mechanism`, in either order, so a rewording is still
-    // read. `29 mechanisms`, `all 29 through`, `all 29 listed` and the block's own table row are
-    // the four the record carries today.
+    // read.
     const sites = [
-      ...evidence.matchAll(/(\d+)(?:\s+\S+){0,3}\s+mechanisms?\b/g),
-      ...evidence.matchAll(/mechanisms?(?:\s+\S+){0,3}\s+(\d+)\b/g),
-      ...evidence.matchAll(/lets all (\d+) through/g),
-      ...evidence.matchAll(/with all (\d+) listed/g),
+      ...prose.matchAll(/(\d+)(?:\s+\S+){0,3}\s+mechanisms?\b/g),
+      ...prose.matchAll(/mechanisms?(?:\s+\S+){0,3}\s+(\d+)\b/g),
+      ...prose.matchAll(/lets all (\d+) through/g),
+      ...prose.matchAll(/with all (\d+) listed/g),
     ];
-    const SITES = 4;
+    // How many sites there are is READ FROM THE RECORD, not typed here. `SITES = 4` was a literal
+    // the record never stated while its nearest sentence said three, so adding one true sentence
+    // reddened this row and a reader had no way to know which number was authoritative.
+    const stated = /corpus size appears (\w+) times in this section/.exec(prose);
+    expect(stated, "the record must say how many times it states the corpus size").not.toBeNull();
+    const SITES = WORDS[stated?.[1] ?? ""] ?? -1;
+    expect(
+      SITES,
+      `the record's word for the site count must be readable: ${stated?.[1] ?? "?"}`,
+    ).toBeGreaterThan(0);
     const wrong = sites
       .filter((match) => Number(match[1]) !== held)
       .map((match) => `${match[0]}: corpus holds ${String(held)}`);
@@ -589,44 +644,6 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).not.toBeNull();
     if (certified === null) return;
 
-    // Spelled-out numerals, because that is how the sentence reads. The table ran out at `fifteen`
-    // until round 15's gatekeeper pointed out that round 16 was therefore red whatever the record said —
-    // a pin whose needle is a closed enumeration, which is the defect the retracted-claims guard names in
-    // its own words about its own alternation. The table's job is to READ a numeral, not to bound one, so
-    // it now covers every value this stage could reach and an unreadable word is reported rather than
-    // treated as a mismatch.
-    const WORDS: Record<string, number> = {
-      one: 1,
-      two: 2,
-      three: 3,
-      four: 4,
-      five: 5,
-      six: 6,
-      seven: 7,
-      eight: 8,
-      nine: 9,
-      ten: 10,
-      eleven: 11,
-      twelve: 12,
-      thirteen: 13,
-      fourteen: 14,
-      fifteen: 15,
-      sixteen: 16,
-      seventeen: 17,
-      eighteen: 18,
-      nineteen: 19,
-      twenty: 20,
-      "twenty-one": 21,
-      "twenty-two": 22,
-      "twenty-three": 23,
-      "twenty-four": 24,
-      "twenty-five": 25,
-      "twenty-six": 26,
-      "twenty-seven": 27,
-      "twenty-eight": 28,
-      "twenty-nine": 29,
-      thirty: 30,
-    };
     const wrong: string[] = [];
     const statedRounds = WORDS[certified[1] ?? ""];
     if (statedRounds !== packs.length) {

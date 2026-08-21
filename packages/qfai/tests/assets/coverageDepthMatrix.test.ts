@@ -379,6 +379,24 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       classC.filter((cell) => !namedInProse.has(cell)),
       "a class C cell the record does not name with its own reason",
     ).toEqual([]);
+    // And the other direction, which the comment above already claimed and the check did not do:
+    // a reason written for a cell that is not a member is a justification with nothing under it,
+    // and it passed. The roster's whole point is that adding a member is a review; so is keeping
+    // a reason for one that left.
+    const classCStart = text.indexOf("**Class C — property:");
+    expect(classCStart, "class C's paragraph must be findable").toBeGreaterThan(-1);
+    const afterC = text.slice(classCStart + 1);
+    const classCEnd = afterC.search(/^(?:\*\*Class |## )/m);
+    const classCReasons = classCEnd === -1 ? afterC : afterC.slice(0, classCEnd);
+    const inClassCSection = new Set(
+      [...classCReasons.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
+        (match) => `${match[1] ?? ""}/${match[2] ?? ""}`,
+      ),
+    );
+    expect(
+      [...inClassCSection].filter((cell) => !classC.includes(cell)),
+      "a class C reason in the record for a cell the table does not put in class C",
+    ).toEqual([]);
     expect(
       [...stated.keys()].sort(),
       "every class the table uses must have a justification paragraph, and no more",

@@ -1029,11 +1029,16 @@ The last line is the falsification, in both directions: swapping the previous he
 assertion reddens it with all 29 listed, and swapping it back leaves the file green. A corpus that passes
 against both versions of its subject would be measuring nothing, which is entry 5 of that list.
 
-**The three numerals in that block are derived**, by `tests/assets/stageEvidenceCounts.test.ts`, from the
-corpus itself. They were typed until round 14 and were four short, because the corpus gains entries every
-round a reviewer proves a new escape — the same shape as the stale pair § "Findings per round" carried,
-and the reason that one now carries no numerals at all. Where a numeral earns its place it is derived;
-where it does not, it goes.
+**The corpus size appears four times in this section, and every one of them is derived** by
+`tests/assets/stageEvidenceCounts.test.ts` from the corpus itself — that sentence is where the guard reads
+how many sites to expect, so adding a fifth statement without saying so reddens, and rewording one away
+reddens too. It said "the three numerals in that block" until round 16, which was wrong twice over: there
+are four, and one of them sits outside the block the sentence points at.
+
+They were typed until round 14 and were four short, because the corpus gains entries every round a
+reviewer proves a new escape — the same shape as the stale pair § "Findings per round" carried, and the
+reason that one now carries no numerals at all. Where a numeral earns its place it is derived; where it
+does not, it goes.
 
 **And the first attack on the new gate came from attacking it rather than from a review round.** The
 digest was `payloadDigest` — the whitespace-collapsing hash the `node -e` payloads already use — and

@@ -78,6 +78,25 @@ export function commandsOf(body: string): string[] {
   let current = "";
   let quote = "";
   let inComment = false;
+  // Where a here-document's data ends, once one has been opened on the current line. The skip has to
+  // wait for the newline: everything between the delimiter and it is still command text.
+  let heredocEnd: number | undefined;
+
+  // The last CODE character before `at`, spaces and tabs skipped.
+  //
+  // **Three decisions in this walk were reading the raw text**, and `codeMask` — computed at the top of
+  // this function, whose own comment says a second weaker parse of the same text was retired — knew
+  // better than all three. An ESCAPED `>` decided them: `echo a\>|npx tsup` pipes a build into `npx
+  // tsup` in bash, while the noclobber rule read the `\>` as an operator and joined the two commands
+  // into one `echo`. Seven spellings ran a real build that way, confirmed by executing them.
+  const lastCode = (at: number): string => {
+    for (let j = at - 1; j >= 0; j -= 1) {
+      if (!mask[j]) continue;
+      if (/[ \t]/.test(body[j] ?? "")) continue;
+      return body[j] ?? "";
+    }
+    return "";
+  };
 
   const flush = (): void => {
     out.push(current);
@@ -111,6 +130,12 @@ export function commandsOf(body: string): string[] {
     // reading its lines as commands refused the script the lane was printing, which is a refusal
     // nobody can act on because there is nothing there to fix. The delimiter is consumed with the
     // operator so the `<<` still reaches `redirectionsOf` and the stdin rule still fires.
+    //
+    // **Only the DATA is skipped.** The first version of this jumped from the operator to the end of the
+    // here-document, discarding the rest of the operator's own line with it — so `read x <<EOF && npx
+    // tsup` executed the build and `read x <<EOF > evil.cjs` created the file, both reporting nothing.
+    // `cat <<EOF >> "$GITHUB_OUTPUT"` is GitHub's documented multiline-output idiom, so a lane reaching
+    // for it is ordinary rather than adversarial. The skip is deferred to the newline instead.
     if (ch === "<" && body[i + 1] === "<" && body[i + 2] !== "<" && quote === "") {
       let k = i + 2;
       if (body[k] === "-") k += 1;
@@ -135,13 +160,17 @@ export function commandsOf(body: string): string[] {
         const lineEnd = body.indexOf("\n", k);
         if (lineEnd !== -1) {
           const rest = body.slice(lineEnd + 1);
-          const closer = new RegExp(
-            `^[ \\t]*${delimiter.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}[ \\t]*$`,
-            "m",
-          );
+          // Every regex metacharacter, escaped. The first version wrote this class as
+          // `[.*+?^${}()|[\\]\\\\]`, where the `\\]` closes the class rather than escaping a bracket —
+          // so it escaped nothing, and a delimiter carrying `+` or `$` made the closer never match and
+          // swallowed the rest of the body. Round 16 measured it by extracting the class from this
+          // file's own bytes, which is the only way to see it: reading the line looks right.
+          const quoted = delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          const closer = new RegExp(`^[ \\t]*${quoted}[ \\t]*$`, "m");
           const at = closer.exec(rest);
           current += body.slice(i, k);
-          i = lineEnd + (at === null ? rest.length : at.index + at[0].length);
+          heredocEnd = lineEnd + (at === null ? rest.length : at.index + at[0].length);
+          i = k - 1;
           continue;
         }
       }
@@ -177,8 +206,10 @@ export function commandsOf(body: string): string[] {
       continue;
     }
     // A comment starts only at the beginning of a WORD. bash runs `echo a#b && npx tsup`; the
-    // previous version dropped the rest of the line at the `#` and the build ran unseen.
-    if (ch === "#" && (i === 0 || /[\s;&|(]/.test(body[i - 1] ?? " "))) {
+    // previous version dropped the rest of the line at the `#` and the build ran unseen. It read the
+    // RAW previous character until round 16, so an escaped space made `echo a\\ #b && npx tsup`
+    // start a comment where bash starts none.
+    if (ch === "#" && (i === 0 || /^$|[\s;&|(]/.test(lastCode(i)))) {
       inComment = true;
       continue;
     }
@@ -212,7 +243,7 @@ export function commandsOf(body: string): string[] {
     // `echo a|grep -f <(make)` splits — its `)` closes the process substitution.
     // `>|` is bash's noclobber override, one operator. Splitting it at the `|` left a fragment whose
     // whole content was `>`, which the write scan then reported as a write to the empty string.
-    const clobber = ch === "|" && /[>]/.test(current.replace(/[ \t]+$/, "").slice(-1));
+    const clobber = ch === "|" && lastCode(i) === ">";
     const isAlternation = (): boolean => {
       // A `)` that closes a group already open at this point is not a case arm, so the pipe inside
       // `( echo x | npx tsup )` is a pipe. Depth is counted over CODE positions only.
@@ -238,7 +269,7 @@ export function commandsOf(body: string): string[] {
     // three meanings, and the shipped tree will reach for the second the first time a lane wants a
     // diagnostic off stdout.
     const redirectAmp =
-      ch === "&" && (body[i + 1] === ">" || /[<>]/.test(current.replace(/\s+$/, "").slice(-1)));
+      ch === "&" && ((body[i + 1] === ">" && mask[i + 1] === true) || /[<>]/.test(lastCode(i)));
     if (
       ch === ";" ||
       (ch === "|" && !clobber && !isAlternation()) ||
@@ -247,6 +278,12 @@ export function commandsOf(body: string): string[] {
     ) {
       const piped = ch === "|";
       flush();
+      // The data of any here-document opened on this line is skipped HERE, after the line's own
+      // commands have been read.
+      if (ch === "\n" && heredocEnd !== undefined) {
+        i = heredocEnd;
+        heredocEnd = undefined;
+      }
       // A pipe IS a redirection of the downstream command's stdin, so it leaves a token shaped like
       // one. Dropping it made `echo "<javascript>" | node` read as a bare `node`, which is allowed.
       if (piped) current = `${STDIN_FROM_PIPE} `;
@@ -726,6 +763,30 @@ export const ALLOWED_ACTION_COMMITS: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * What the three keys whose VALUE decides an execution context are allowed to say.
+ *
+ * The key enumerations below decide which keys may appear and nothing read what these three said. Round
+ * 16 added `pull_request_target` to the trigger and flipped `contents: read` to `contents: write` on the
+ * job that runs the lockfile-aware install: every digest, both multisets and the key walk stayed green,
+ * and the result is a fork's pull request running with a writable token against an install that executes
+ * the adopter's lifecycle scripts.
+ *
+ * Serialized rather than compared structurally, because what is pinned is the whole value and not a
+ * property of it — the same reason the bodies are hashed rather than parsed.
+ */
+export const ALLOWED_TRIGGER = JSON.stringify({
+  push: { branches: ["main", "master"] },
+  pull_request: null,
+});
+
+export const ALLOWED_RUNS_ON = "${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}";
+
+export const ALLOWED_PERMISSIONS: ReadonlySet<string> = new Set([
+  JSON.stringify({ contents: "read" }),
+  JSON.stringify({}),
+]);
+
+/**
  * The keys a shipped workflow, job and step may carry.
  *
  * **Enumerated because the dangerous ones cannot be.** Four rounds closed four execution channels one
@@ -784,7 +845,7 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
 /**
  * The `node -e` payloads a shipped lane may carry, as sha256 of their whitespace-collapsed text.
  *
- * Hashes rather than the text itself, because the two payloads are 514 and 909 characters of multi-line
+ * Hashes rather than the text itself, because the two payloads are 630 and 1039 characters of multi-line
  * JavaScript and a literal copy here would break on every reflow of the shipped file. A reflow IS a change
  * someone should read, so the hash failing is the intended behaviour and the fix is to re-measure and
  * re-record — not to loosen the comparison.
@@ -995,10 +1056,48 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  * which program reads the value — and enumerating names fails closed the way the invocation list does:
  * a variable nobody wrote down is refused whether or not anyone has worked out what it would do.
  */
-export const ALLOWED_STEP_ENV: ReadonlySet<string> = new Set(["QFAI_BASE_REF", "QFAI_NEEDS_JSON"]);
+export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
+  ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
+  ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
+]);
+
+/**
+ * Which lanes each job waits on.
+ *
+ * `needs` is on the allowed job-key list and nothing read what it says. The verdict job aggregates the
+ * lane results it is given, so `needs: [detection]` drops five lanes out of the aggregate and the job
+ * still reports green — with no `run:` line changed, no action added and no key introduced. The sibling
+ * integration test asserts that `needs` CONTAINS `detection` and then executes the body against its own
+ * injected stub, so nothing in the suite reads the edges the shipped file actually declares.
+ *
+ * Serialized, because the ORDER is part of what was reviewed: an aggregate over a list is only as
+ * complete as the list.
+ */
+export const ALLOWED_LANE_EDGES: ReadonlyMap<string, string> = new Map([
+  ["qfai-tests.yml#unit", JSON.stringify("detection")],
+  ["qfai-tests.yml#component", JSON.stringify("detection")],
+  ["qfai-tests.yml#integration", JSON.stringify("detection")],
+  ["qfai-tests.yml#api", JSON.stringify("detection")],
+  ["qfai-tests.yml#e2e", JSON.stringify("detection")],
+  [
+    "qfai-tests.yml#verdict",
+    JSON.stringify(["detection", "unit", "component", "integration", "api", "e2e"]),
+  ],
+]);
 
 /** Where a shipped command may write. A redirect creates a file, and a created file can be code. */
 const ALLOWED_REDIRECT_TARGETS: ReadonlySet<string> = new Set(["$GITHUB_OUTPUT", "/dev/null"]);
+
+/** One redirection, with the span it occupies so a reader can remove exactly it. */
+interface Redirection {
+  readonly writes: boolean;
+  readonly reads: boolean;
+  readonly target: string;
+  readonly source: string;
+  readonly duplicates: boolean;
+  readonly start: number;
+  readonly end: number;
+}
 
 /**
  * Every redirection this command performs, found by CHARACTER rather than by token shape.
@@ -1014,16 +1113,8 @@ const ALLOWED_REDIRECT_TARGETS: ReadonlySet<string> = new Set(["$GITHUB_OUTPUT",
  * uses, which is also what keeps a `>` inside a quoted string from being read as a redirection —
  * `tokensOf` strips quotes, so a token-based scan could not have told those apart even in principle.
  */
-function redirectionsOf(
-  command: string,
-): { writes: boolean; reads: boolean; target: string; source: string; duplicates: boolean }[] {
-  const found: {
-    writes: boolean;
-    reads: boolean;
-    target: string;
-    source: string;
-    duplicates: boolean;
-  }[] = [];
+function redirectionsOf(command: string): Redirection[] {
+  const found: Redirection[] = [];
   let quote = "";
   for (let i = 0; i < command.length; i += 1) {
     const ch = command[i] ?? "";
@@ -1112,6 +1203,8 @@ function redirectionsOf(
       target: named,
       source: command.slice(start, j),
       duplicates: duplicatesDescriptor,
+      start,
+      end: j,
     });
     i = j - 1;
   }
@@ -1130,9 +1223,15 @@ function redirectionsOf(
  * about what a redirection is, which is how the two token tests came to disagree with it.
  */
 function withoutRedirections(command: string): string {
+  // By OFFSET, right to left. `String.replace` takes the FIRST occurrence, which undid the
+  // quote-aware scan that found the span: two identical redirections removed the same one twice,
+  // and a `source` that also appears earlier as ordinary text removed the text instead. The scan
+  // already knows where each one is, and using anything else here is a second answer to a question
+  // it had already answered.
   let out = command;
-  for (const redirection of redirectionsOf(command)) {
-    out = out.replace(redirection.source, " ");
+  const spans = [...redirectionsOf(command)].sort((a, b) => b.start - a.start);
+  for (const redirection of spans) {
+    out = `${out.slice(0, redirection.start)} ${out.slice(redirection.end)}`;
   }
   return out;
 }

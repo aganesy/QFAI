@@ -56,10 +56,14 @@ import {
   ALLOWED_ACTION_STEPS,
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
+  ALLOWED_LANE_EDGES,
+  ALLOWED_PERMISSIONS,
+  ALLOWED_RUNS_ON,
   ALLOWED_SHELLS,
   ALLOWED_STEP_BODIES,
   ALLOWED_STEP_ENV,
   ALLOWED_STEP_KEYS,
+  ALLOWED_TRIGGER,
   ALLOWED_WORKFLOW_KEYS,
   bodyDigest,
   invocationsOf,
@@ -760,8 +764,15 @@ describe(
         // the same shipped surface.
         const env = holder["env"];
         if (isRecord(env)) {
-          for (const key of Object.keys(env)) {
-            if (!ALLOWED_STEP_ENV.has(key)) refusedUses.push(`${label}: sets env ${key}`);
+          for (const [key, value] of Object.entries(env)) {
+            // The VALUE as well as the name. `QFAI_NEEDS_JSON` naming a single lane rather than the
+            // whole `needs` map hands the verdict step one result to aggregate, and the step body then
+            // faithfully reports green over it — a key on the allowed list, saying something else.
+            const pinned = ALLOWED_STEP_ENV.get(key);
+            if (pinned === undefined) refusedUses.push(`${label}: sets env ${key}`);
+            else if (value !== pinned) {
+              refusedUses.push(`${label}: env ${key} is ${JSON.stringify(value)}`);
+            }
           }
         }
       };
@@ -769,9 +780,33 @@ describe(
       // through the SAME function as the other two: the first version of this repair restated the
       // `container` / `services` / `shell:` rules here in a second copy, and two copies of one rule is
       // the defect this file has now found at four different sizes.
+      // The VALUES of the three keys that decide an execution context, which the key enumeration below
+      // reads the presence of and not the content of. A trigger is who may start the run, `permissions`
+      // is what token it holds, and `runs-on` is whose machine it lands on — none of them appears in a
+      // `run:` body, so every body-shaped check in this file is blind to all three.
+      const contexts: string[] = [];
       for (const file of await shippedWorkflowFiles()) {
         const parsed: unknown = parseYaml(await workflowText(file));
         if (!isRecord(parsed)) continue;
+        contexts.push(`${file} on: ${JSON.stringify(parsed["on"] ?? null)}`);
+        const jobs = isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+        for (const [id, job] of Object.entries(jobs)) {
+          if (!isRecord(job)) continue;
+          if (job["runs-on"] !== ALLOWED_RUNS_ON) {
+            contexts.push(`${file}#${id} runs-on: ${JSON.stringify(job["runs-on"])}`);
+          }
+          const permissions = JSON.stringify(job["permissions"] ?? null);
+          if (!ALLOWED_PERMISSIONS.has(permissions)) {
+            contexts.push(`${file}#${id} permissions: ${permissions}`);
+          }
+          // The lane edges. An aggregate is only as complete as the list it aggregates, and `needs` is
+          // an enumerated key whose value nothing read.
+          const edges = JSON.stringify(job["needs"] ?? null);
+          const pinnedEdges = ALLOWED_LANE_EDGES.get(`${file}#${id}`) ?? "null";
+          if (edges !== pinnedEdges) {
+            contexts.push(`${file}#${id} needs: ${edges}`);
+          }
+        }
         // Two of `readUses`'s checks can fire here and the rest cannot: GitHub defines no top-level
         // `uses:`, `with:`, `shell:` or `env:` — so what this call site enforces at the workflow level is
         // the KEY enumeration, which is the check that catches `defaults:` and everything after it.
@@ -779,6 +814,13 @@ describe(
         // whether the workflow level needs a rule of its own will read this line to find out.
         readUses(`${file} (workflow level)`, parsed, ALLOWED_WORKFLOW_KEYS);
       }
+      expect
+        .soft(
+          contexts.filter((line) => !line.endsWith(`on: ${ALLOWED_TRIGGER}`)),
+          "a trigger, a token or a runner this tree does not ship — none of which appears in a `run:` " +
+            "body, so no digest and no body scan can see one",
+        )
+        .toEqual([]);
       for (const [id, job] of Object.entries(map)) {
         if (!isRecord(job)) continue;
         // The JOB level first. The previous version read `step["uses"]` inside `job["steps"]`, so a job
