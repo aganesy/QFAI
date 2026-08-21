@@ -212,6 +212,10 @@ export async function runInit(options: InitOptions): Promise<void> {
     info(note);
   }
 
+  for (const note of projectSteeringResult.staleNotes) {
+    info(note);
+  }
+
   // Legacy steering/ sunset warning (D-DEPRECATED-PATH). Emitted AFTER
   // the report summary so the warning stays at the bottom of the
   // terminal output and is not buried by the skipped-paths list (PR
@@ -272,7 +276,10 @@ function assistantLayerGitkeepBody(layer: AssistantLayer): string {
 
 function buildProjectSteeringReadmeBody(): string {
   // Kind enum is sourced from the SSOT in assistantPaths.ts so a contract
-  // change automatically updates the README without manual sync.
+  // change automatically updates the README without manual sync. The
+  // derivation binds the body written at seed time only: an existing README is
+  // never rewritten, so a later enum change surfaces as the drift notice
+  // seedProjectSteering emits, not as an in-place refresh.
   const kindLines = WORKLOG_ENTRY_KINDS.map((k) => `- \`${k}\``);
   return [
     "# .qfai/steering/ — AI work-log surface",
@@ -314,8 +321,10 @@ function buildProjectSteeringReadmeBody(): string {
 }
 
 function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT)
-  // so the template cannot drift from the validator.
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT) so the
+  // template cannot drift from the validator at seed time. An already-seeded
+  // template is create-only; later heading changes are reported by the drift
+  // notice in seedProjectSteering rather than written over the user's copy.
   const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
     heading,
     "",
@@ -349,23 +358,76 @@ function buildProjectSteeringEntryTemplate(): string {
   ].join("\n");
 }
 
+/**
+ * Locates the first line at which an on-disk seed file stopped matching the
+ * body this release generates, plus both line counts. A full unified diff is
+ * deliberately not produced: the notice is printed next to a skipped-paths
+ * list that routinely runs to several hundred entries, and the operator's
+ * question is only "is my copy current?".
+ */
+function summarizeSeedDrift(onDisk: string, generated: string): string {
+  const current = onDisk.split("\n");
+  const latest = generated.split("\n");
+  const span = Math.max(current.length, latest.length);
+  let firstDiffLine = span;
+  for (let i = 0; i < span; i += 1) {
+    if (current[i] !== latest[i]) {
+      firstDiffLine = i + 1;
+      break;
+    }
+  }
+  return `first differing line ${firstDiffLine}; on disk ${current.length} lines, latest seed ${latest.length} lines`;
+}
+
+/**
+ * Reads an existing seed file for the drift comparison. A file that cannot be
+ * read (permissions, a directory in its place, a dangling link) is not a drift
+ * signal and must not fail the init run, so the comparison is simply skipped.
+ */
+async function readSeedBodyForDrift(fullPath: string): Promise<string | undefined> {
+  try {
+    return await readFile(fullPath, "utf-8");
+  } catch {
+    return undefined;
+  }
+}
+
 async function seedProjectSteering(
   destRoot: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; staleNotes: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const staleNotes: string[] = [];
 
-  const targets: Array<{ rel: string[]; body: string }> = [
-    { rel: ["README.md"], body: buildProjectSteeringReadmeBody() },
-    { rel: [".gitkeep"], body: "" },
-    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate() },
+  // `derived` marks the bodies built from the SSOT constants. Those are the
+  // ones that go stale when a release extends WORKLOG_ENTRY_KINDS or
+  // HANDOFF_REQUIRED_SECTIONS; `.gitkeep` carries no content to compare.
+  const targets: Array<{ rel: string[]; body: string; derived: boolean }> = [
+    { rel: ["README.md"], body: buildProjectSteeringReadmeBody(), derived: true },
+    { rel: [".gitkeep"], body: "", derived: false },
+    { rel: ["_templates", "entry.md"], body: buildProjectSteeringEntryTemplate(), derived: true },
   ];
 
   for (const target of targets) {
     const fullPath = joinProjectSteering(destRoot, ...target.rel);
     if (await pathExists(fullPath)) {
       skipped.push(fullPath);
+      // The steering seed is create-only and stays that way — see the note on
+      // STANDARD_ASSET_PATHS: this surface holds project content, so not even
+      // --force rewrites it. What the skipped-paths list cannot express is the
+      // difference between "skipped because it is already current" and
+      // "skipped because it no longer matches this release's seed", so the
+      // second case is reported explicitly instead of refreshing silently.
+      if (target.derived) {
+        const onDisk = await readSeedBodyForDrift(fullPath);
+        if (onDisk !== undefined && onDisk !== target.body) {
+          const rel = path.relative(destRoot, fullPath).replace(/\\/g, "/");
+          staleNotes.push(
+            `  NOTE: ${rel} differs from the seed this qfai release generates (${summarizeSeedDrift(onDisk, target.body)}).`,
+          );
+        }
+      }
       continue;
     }
     copied.push(fullPath);
@@ -375,7 +437,14 @@ async function seedProjectSteering(
     }
   }
 
-  return { copied, skipped };
+  if (staleNotes.length > 0) {
+    staleNotes.push(
+      "  The .qfai/steering/ seed is create-only, so the file(s) above were left unchanged.",
+      "  To compare against the current bodies: qfai init --dir <scratch-dir>, then diff <scratch-dir>/.qfai/steering/ against your own.",
+    );
+  }
+
+  return { copied, skipped, staleNotes };
 }
 
 // ---------------------------------------------------------------------------

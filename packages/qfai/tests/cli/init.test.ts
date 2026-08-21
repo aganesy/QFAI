@@ -1382,6 +1382,46 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init reports a stale steering seed
+  it("TC-0003-0022 (TDD-0022): re-init reports .qfai/steering/ seed drift instead of skipping silently", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022c-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // An untouched tree is already current: the seed files appear in the
+      // skipped list and must not draw a drift notice.
+      const cleanRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
+
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      await writeFile(readmePath, "# my custom worklog notes\n", "utf-8");
+      await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
+
+      const staleRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(staleRun).toContain(
+        ".qfai/steering/README.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toContain(
+        ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toMatch(
+        /first differing line \d+; on disk \d+ lines, latest seed \d+ lines/,
+      );
+      expect(staleRun).toContain("create-only");
+      // The notice never implies a rewrite happened.
+      expect(await readFile(readmePath, "utf-8")).toBe("# my custom worklog notes\n");
+      expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
