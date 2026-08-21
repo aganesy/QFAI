@@ -2232,6 +2232,46 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(shared).toContain("A consumer clearing a mismatch reads **both** places");
   });
 
+  it("gives the stage-level re-verify block one home, in the file the gate reads", async () => {
+    // The producer parenthesised `coverage-depth-<spec-id>.md` while the
+    // `RED test hash` gate reads the stage evidence file — `atdd-<spec-id>.md`
+    // everywhere else in the shipped assets. A block written to the file the
+    // consumer never opens leaves the `done` row's mismatch standing, and a
+    // `done` row cannot take the fresh RED the mismatch route asks for.
+    const shared = flat(await read(tree, SHARED_ARTIFACT));
+    expect(shared).toContain(
+      "`## Shared-artifact re-verify` in the stage evidence file (`.qfai/evidence/atdd-<spec-id>.md`, immediately before `## Final status`)",
+    );
+    expect(shared).not.toContain("(`.qfai/evidence/coverage-depth-<spec-id>.md`, beside");
+
+    // The gate names the same path, so "the stage evidence file" cannot be read
+    // as the committed matrix file sitting beside it.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "the `## Shared-artifact re-verify` block in the stage evidence file of a stage that moved the artifact — `.qfai/evidence/atdd-<spec-id>.md`, never the Coverage Depth Matrix file beside it",
+    );
+  });
+
+  it("carries the re-verify heading in the ATDD evidence template, inside the seal", async () => {
+    // `SKILL.md` declares the template closed — "the template below is the
+    // list" — so a heading absent from it is a section nobody writes. It has to
+    // sit before `## Final status`: the stage review's subject is the whole
+    // file minus that section, so a block after it is outside the seal and
+    // could be edited with no hash moving.
+    const atdd = await read(tree, ATDD);
+    const heading = atdd.indexOf("\n## Shared-artifact re-verify\n");
+    const finalStatus = atdd.indexOf("\n## Final status (PASS/FAIL) + who confirmed\n");
+    expect(heading).toBeGreaterThan(-1);
+    expect(finalStatus).toBeGreaterThan(heading);
+
+    const flatAtdd = flat(atdd);
+    expect(flatAtdd).toContain("Three of them carry a contract the heading cannot");
+    expect(flatAtdd).toContain(
+      "`/qfai-implement`'s `RED test hash` gate reads it in **this** file",
+    );
+    expect(flatAtdd).toContain("`None` when this stage edited no shared test artifact");
+  });
+
   it("reads the validate evidence from the configured output paths", async () => {
     // A project that moved `output.validateJsonPath` or `paths.outDir` writes
     // its evidence where it said to, and looking at the default path reported a

@@ -316,8 +316,8 @@ Notes:
 
 Create and update: `.qfai/evidence/atdd-<spec-id>.md`
 
-Required sections: the template below is the list. Two of them carry a contract
-the heading cannot:
+Required sections: the template below is the list. Three of them carry a
+contract the heading cannot:
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per
   row. Exactly one form per row, never both and never neither; the cell is an
@@ -327,6 +327,13 @@ the heading cannot:
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
   restating them here would lose them.
+- **Shared-artifact re-verify** — the stage-level record of every completed row
+  whose shared test artifact this stage edited
+  (`references/shared-test-artifacts.md`). `/qfai-implement`'s `RED test hash`
+  gate reads it in **this** file; written into the Coverage Depth Matrix file
+  instead it is never consulted, and a correctly re-verified `done` row stays
+  mismatched with nothing able to clear it. `None` when this stage edited no
+  such artifact.
 
 Template:
 
@@ -361,6 +368,13 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 ## Execution logs
 
 ## Gaps / Open risks
+
+## Shared-artifact re-verify
+
+<!-- One entry per affected row — spec and `TDD-ID` together, the re-run, the
+     re-taken proof and the artifact's new manifest and hash:
+     `references/shared-test-artifacts.md`. `None` when this stage edited no
+     shared test artifact a completed row reads. -->
 
 ## Final status (PASS/FAIL) + who confirmed
 ```
