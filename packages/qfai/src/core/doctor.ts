@@ -206,7 +206,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "skills が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+          message: "skills is not created yet, so the check was skipped (run 'qfai init')",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "skipped_missing_assets") {
@@ -214,8 +214,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "info",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message:
-            "init assets が見つからないため検査をスキップしました（インストール状態を確認してください）",
+          message: "init assets not found, so the check was skipped (check the installation)",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else if (diff.status === "ok") {
@@ -223,7 +222,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           id: "skills.integrity",
           severity: "ok",
           title: "Skills integrity (.qfai/assistant/skills)",
-          message: "標準 assets と一致しています",
+          message: "Matches the standard assets",
           details: { skillsDir: toRelativePath(root, diff.skillsDir) },
         });
       } else {
@@ -236,13 +235,15 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
           severity: "warning",
           title: "Skills integrity (.qfai/assistant/skills)",
           message:
-            "標準資産 '.qfai/assistant/skills/**' が改変されています。skills の直編集は非推奨です（アップデート/再 init で上書きされ得ます）。",
+            "The standard assets under '.qfai/assistant/skills/**' have been modified. Editing skills directly is discouraged (an update or a re-init can overwrite them).",
           details: {
             skillsDir: toRelativePath(root, diff.skillsDir),
             missing: diff.missing,
             extra: diff.extra,
             changed: diff.changed,
-            nextActions: ["必要なら qfai init --force で skills を標準状態へ戻す"],
+            nextActions: [
+              "If needed, run qfai init --force to restore skills to their standard state",
+            ],
           },
         });
       }
@@ -260,10 +261,10 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     severity: deprecatedPromptsExists || deprecatedPromptsConfigured ? "warning" : "ok",
     title: "Deprecated path: promptsDir",
     message: deprecatedPromptsConfigured
-      ? "promptsDir は deprecated です。設定で指定されています（skillsDir へ移行してください）"
+      ? "promptsDir is deprecated and is set in the config (migrate to skillsDir)"
       : deprecatedPromptsExists
-        ? "promptsDir は deprecated です。存在しても検証では使用されません（skillsDir を使用してください）"
-        : "promptsDir は deprecated です（未作成で問題ありません）",
+        ? "promptsDir is deprecated; even when it exists it is not used by validation (use skillsDir)"
+        : "promptsDir is deprecated (not being created is fine)",
     details: {
       path: toRelativePath(root, deprecatedPromptsDir),
       configured: deprecatedPromptsConfigured,

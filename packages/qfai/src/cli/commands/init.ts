@@ -106,7 +106,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force regenerates .qfai/assistant/skills/**, assistant/agents/** and the symlink assets (.agents/.claude/.github/.codex), and removes the legacy 10_workflow.md and the old wrappers (specs/contracts/steering and assistant/manifest/** are not overwritten — the manifest is user configuration edited by `qfai-configure`).",
     );
   }
 
@@ -173,10 +173,10 @@ export async function runInit(options: InitOptions): Promise<void> {
   );
   if (instructionsCreated && !options.dryRun) {
     info("");
-    info("Copilot コードレビュー用 instructions を作成しました。");
-    info("有効化: PR コメントで '@github-copilot review' を実行するか、");
-    info("GitHub Actions ワークフローで自動レビューを設定してください。");
-    info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
+    info("Created the instructions files for Copilot code review.");
+    info("To enable it: comment '@github-copilot review' on a PR, or");
+    info("configure automatic review in a GitHub Actions workflow.");
+    info("Reference: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
   report(
@@ -1073,10 +1073,10 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config core.symlinks true の設定に失敗しました。",
-        "手動で以下を実行してください:",
+        "Failed to set git config core.symlinks true.",
+        "Run the following manually:",
         "  git config core.symlinks true",
-        `原因: ${detail}`,
+        `Cause: ${detail}`,
       ].join("\n"),
     );
   }
@@ -1180,8 +1180,8 @@ async function syncIntegrationWrappers(
             typeof err === "object" && err !== null ? (err as { code?: string }).code : undefined;
           const detail = err instanceof Error ? err.message : String(err);
           throw new Error(
-            `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
-              ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
+            `Failed to read the instructions template: ${templateSrc}` +
+              ` (${code ?? detail}). Check that the package is installed correctly.`,
           );
         }
         await writeFile(dest, content, "utf-8");
@@ -1328,10 +1328,10 @@ async function ensureSymlink(
       if (isEpermOnWindows(err)) {
         throw new Error(
           [
-            "symlink の作成に失敗しました (EPERM)。",
-            "Windows では Developer Mode を有効にする必要があります:",
-            "  設定 > システム > 開発者向け > 開発者モード を ON",
-            "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+            "Failed to create a symlink (EPERM).",
+            "On Windows, Developer Mode has to be enabled:",
+            "  Settings > System > For developers > Developer Mode: ON",
+            "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
           ].join("\n"),
         );
       }
@@ -1383,7 +1383,7 @@ async function claimSidecar(linkPath: string): Promise<string> {
     }
   }
   throw new Error(
-    `修復用の退避先を確保できません: ${base} と連番の候補がすべて既存です。前回の修復が残した .qfai-repair-* を確認して退避してください。`,
+    `Cannot reserve a sidecar path for the repair: ${base} and every numbered candidate already exists. Check for .qfai-repair-* files left behind by an earlier repair and move them aside.`,
   );
 }
 
@@ -1424,9 +1424,9 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
     if (original === null) {
       throw new Error(
         [
-          `退避したファイルを復元できません（種別が変わったか、上限 ${String(SIDECAR_COPY_MAX_BYTES)} bytes を超えています）: ${linkPath}`,
-          `このファイルシステムでは hard link を作成できず、内容のコピーはその上限までに制限しています。`,
-          `元のファイルは次の場所にあります: ${sidecar}`,
+          `Cannot restore the sidecar file (its kind changed, or it exceeds the ${String(SIDECAR_COPY_MAX_BYTES)} byte ceiling): ${linkPath}`,
+          `This filesystem cannot create hard links, so the content copy is capped at that ceiling.`,
+          `The original file is here: ${sidecar}`,
         ].join("\n"),
         { cause: linkErr },
       );
@@ -1456,14 +1456,14 @@ async function restoreSidecar(sidecar: string, linkPath: string): Promise<void> 
       );
       throw new Error(
         [
-          `退避したファイルのパーミッションを復元できなかったため、復元を取り消しました: ${linkPath}`,
-          `原因: ${describeError(modeErr)}`,
+          `Rolled the restore back because the sidecar file's permissions could not be restored: ${linkPath}`,
+          `Cause: ${describeError(modeErr)}`,
           ...(removeErr === null
             ? []
             : [
-                `作成済みの復元先を削除できませんでした（権限が元と異なります）: ${describeError(removeErr)}`,
+                `Could not remove the restore destination that had already been created (its permissions differ from the original): ${describeError(removeErr)}`,
               ]),
-          `元のファイル（パーミッションを含む）は次の場所にあります: ${sidecar}`,
+          `The original file, permissions included, is here: ${sidecar}`,
         ].join("\n"),
         { cause: modeErr },
       );
@@ -1536,10 +1536,10 @@ async function recreateFlattenedLink(
     if (restoreErr === null) throw readErr;
     throw new Error(
       [
-        `平坦化された symlink の修復に失敗しました: ${linkPath}`,
-        `退避したファイルの読み取りに失敗しました: ${describeError(readErr)}`,
-        `復元にも失敗しました: ${describeError(restoreErr)}`,
-        `元のファイルは次の場所にあります: ${sidecar}`,
+        `Failed to repair the flattened symlink: ${linkPath}`,
+        `Failed to read the sidecar file: ${describeError(readErr)}`,
+        `The restore failed as well: ${describeError(restoreErr)}`,
+        `The original file is here: ${sidecar}`,
       ].join("\n"),
       { cause: readErr },
     );
@@ -1583,29 +1583,29 @@ async function recreateFlattenedLink(
     // sidecar — a path is more use than a copy pasted into an error message.
     const restored =
       restoreError === undefined
-        ? "元のファイルは復元しました。"
+        ? "The original file was restored."
         : [
             occupied
-              ? `${linkPath} には別プロセスが作成したファイルが存在するため、復元しませんでした（上書きを避けています）。`
-              : `元のファイルの復元にも失敗しました: ${describeError(restoreError)}`,
-            `元の内容は次の場所に退避してあります: ${sidecar}`,
-            "内容:",
+              ? `${linkPath} holds a file created by another process, so it was not restored (an overwrite is avoided).`
+              : `Restoring the original file failed as well: ${describeError(restoreError)}`,
+            `The original content is kept here: ${sidecar}`,
+            "Content:",
             original,
           ].join("\n");
     if (isEpermOnWindows(err)) {
       throw new Error(
         [
-          `平坦化された symlink の修復に失敗しました (EPERM): ${linkPath}`,
+          `Failed to repair the flattened symlink (EPERM): ${linkPath}`,
           restored,
-          "Windows では Developer Mode を有効にする必要があります:",
-          "  設定 > システム > 開発者向け > 開発者モード を ON",
-          "詳細: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
+          "On Windows, Developer Mode has to be enabled:",
+          "  Settings > System > For developers > Developer Mode: ON",
+          "Details: https://learn.microsoft.com/windows/apps/get-started/enable-your-device-for-development",
         ].join("\n"),
       );
     }
     if (restoreError !== undefined) {
       throw new Error(
-        [`平坦化された symlink の修復に失敗しました: ${linkPath}`, restored].join("\n"),
+        [`Failed to repair the flattened symlink: ${linkPath}`, restored].join("\n"),
         { cause: err },
       );
     }
@@ -1625,7 +1625,7 @@ async function recreateFlattenedLink(
   const stillOurs = await readPinnedRegularFile(sidecar, 4096).catch(() => null);
   if (stillOurs === null || toComparableTarget(stillOurs) !== toComparableTarget(target)) {
     info(
-      `  note: 修復は成功しましたが、退避ファイルの内容が検査時から変わっていたため削除していません: ${sidecar}`,
+      `  note: the repair succeeded, but the sidecar file was left in place because its content changed since it was inspected: ${sidecar}`,
     );
     info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);
     return "created";
@@ -1634,7 +1634,7 @@ async function recreateFlattenedLink(
     await rm(sidecar, { recursive: true, force: true });
   } catch (cleanupErr: unknown) {
     info(
-      `  note: 修復は成功しましたが退避ファイルを削除できませんでした: ${sidecar} (${describeError(cleanupErr)})`,
+      `  note: the repair succeeded, but the sidecar file could not be removed: ${sidecar} (${describeError(cleanupErr)})`,
     );
   }
   info(`  repaired: ${linkPath} was a flattened symlink (recreating)`);

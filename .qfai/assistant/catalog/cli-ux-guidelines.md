@@ -24,6 +24,32 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 
 > **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
 
+## Message Language
+
+operator 向けに CLI が出力する文字列は **英語** で書く。`<CODE>` と
+`[at <file>]` の形だけでなく、`<message>` の言語もこの規定に従う。
+
+対象 (operator-facing surface):
+
+- `usage()` を含む `qfai --help` の全文
+- `error()` / `warn()` / `info()` および stdout/stderr へ直接書く文字列
+- `qfai doctor` の check `title` / `message` / `details.nextActions`
+- `Issue.message` — 新規に追加する finding message は英語で書く
+
+対象外:
+
+- ソースコード中のコメント / JSDoc（配布物ではなく、実装者向け）
+- ユーザが自分のリポジトリに置く成果物（spec / contract / discussion pack）の
+  本文。これらはプロジェクトの言語に従う
+
+理由: rule code、`.qfai/contracts/cli/` 配下の CLI contract、および
+`error()` / `info()` 呼び出しの大多数が既に英語であり、単一言語に揃えることで
+log grep / alert rule / runbook が言語を場合分けせずに済む。
+
+> **Known gap:** `src/core/validators/**` には英語化が済んでいない
+> finding message が残っている。既存メッセージの移行は段階的に行うが、
+> 新規追加は上記の規定に従う。
+
 ## Severity Decision Matrix
 
 | Category                                              | Error                                                   | Warning                                                                  |

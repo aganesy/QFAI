@@ -881,7 +881,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       expect(output).toContain("created:");
       // Activation guidance proves instructions were included in created
-      expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
+      expect(output).toContain("Created the instructions files for Copilot code review.");
 
       // Case B: Both files exist — re-run
       const output2 = await captureStdout(async () => {

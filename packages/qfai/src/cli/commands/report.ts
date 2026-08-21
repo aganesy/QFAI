@@ -29,7 +29,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
   let ranNarrowProfileInCi = false;
   if (options.runValidate) {
     if (options.inputPath) {
-      warn("report: --run-validate が指定されたため --in は無視します。");
+      warn("report: --in is ignored because --run-validate was given.");
     }
     const ciProfileIssue = buildCiProfileIssue(options.profile);
     const validated = await validateProject(
@@ -57,14 +57,14 @@ export async function runReport(options: ReportOptions): Promise<void> {
       if (isEnoent(err)) {
         error(
           [
-            `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
+            `qfai report: input file not found: ${inputPath}`,
             "",
-            "まず qfai validate を実行してください。例:",
+            "Run qfai validate first. For example:",
             "  qfai validate",
-            "（デフォルトの出力先: .qfai/report/validate.json）",
+            "(default output path: .qfai/report/validate.json)",
             "",
-            "または report に --run-validate を指定してください。",
-            "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+            "Alternatively, pass --run-validate to report.",
+            "If you use the GitHub Actions template, run the workflow's validate job first.",
           ].join("\n"),
         );
         process.exitCode = 2;
@@ -98,7 +98,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
     // non-zero here made every stage gate that names a narrow profile
     // unreachable in CI.
     warn(
-      "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
+      "report: a non-full-scan profile was run in CI. That is valid as a stage gate, but run a full scan with --profile full (or with no --profile) before declaring completion.",
     );
   }
   info(
@@ -111,7 +111,7 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   const raw = await readFile(inputPath, "utf-8");
   const parsed = JSON.parse(raw) as unknown;
   if (!isValidationResult(parsed)) {
-    throw new Error(`validate.json の形式が不正です: ${inputPath}`);
+    throw new Error(`validate.json has an invalid shape: ${inputPath}`);
   }
   return parsed;
 }

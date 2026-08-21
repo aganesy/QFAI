@@ -627,8 +627,8 @@ function emitGitHubSummary(
   if (options.dropped > 0 || options.omitted > 0) {
     const details = [
       "qfai validate note:",
-      options.dropped > 0 ? `重複除外=${options.dropped}` : null,
-      options.omitted > 0 ? `上限省略=${options.omitted}` : null,
+      options.dropped > 0 ? `deduped=${options.dropped}` : null,
+      options.omitted > 0 ? `omittedOverLimit=${options.omitted}` : null,
     ]
       .filter(Boolean)
       .join(" ");
@@ -636,15 +636,11 @@ function emitGitHubSummary(
   }
 
   const relative = toRelativePath(options.root, options.jsonPath);
-  process.stdout.write(
-    `qfai validate note: 詳細は ${relative} または --format text を参照してください。\n`,
-  );
-  process.stdout.write(
-    `qfai validate note: run-log は ${options.runLogPath} を参照してください。\n`,
-  );
+  process.stdout.write(`qfai validate note: see ${relative} or --format text for the details.\n`);
+  process.stdout.write(`qfai validate note: see ${options.runLogPath} for the run-log.\n`);
 
   process.stdout.write(
-    "qfai validate note: 次は qfai report で report.md を生成できます（例: qfai report）。\n",
+    "qfai validate note: next, qfai report generates report.md (e.g. qfai report).\n",
   );
 }
 
