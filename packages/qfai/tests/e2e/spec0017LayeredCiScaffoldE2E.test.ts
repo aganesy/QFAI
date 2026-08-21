@@ -41,7 +41,7 @@
  * spec's own integration slice was pushed past its timeout by exactly that shape.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, access, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, access, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -163,6 +163,33 @@ async function jobs(): Promise<Record<string, unknown>> {
     throw new Error(`${ORCHESTRATOR} did not parse to a document with a jobs map`);
   }
   return parsed["jobs"];
+}
+
+/**
+ * Every job in EVERY shipped workflow, keyed `<file>#<job>`.
+ *
+ * `jobs()` reads the orchestrator alone, and both `US-0017-0004` assertions used to call it — while the
+ * story they carry is about an adopter's lanes, plural. Round 10 planted a real build in
+ * `qfai-validate.yml` and measured it missed here and caught only by the own-tree scan in
+ * `tests/unit/buildCommand.test.ts`: the gap was covered, by a test annotated for something else, and a
+ * reader of this annotation would not have known its scope was one file.
+ *
+ * The set is derived from the shipped directory rather than listed, so a third workflow is in scope the
+ * moment it ships instead of the round after someone remembers to add it.
+ */
+async function shippedJobs(): Promise<Record<string, unknown>> {
+  const dir = path.join(await project(), ".github", "workflows");
+  const files = (await readdir(dir)).filter((name) => /\.ya?ml$/.test(name)).sort();
+  if (files.length === 0) throw new Error("the shipped tree has no workflows to read");
+  const out: Record<string, unknown> = {};
+  for (const file of files) {
+    const parsed: unknown = parseYaml(await workflowText(file));
+    if (!isRecord(parsed) || !isRecord(parsed["jobs"])) {
+      throw new Error(`${file} did not parse to a document with a jobs map`);
+    }
+    for (const [id, job] of Object.entries(parsed["jobs"])) out[`${file}#${id}`] = job;
+  }
+  return out;
 }
 
 // QFAI:SPEC-0017:US-0017-0001
@@ -414,7 +441,11 @@ describe(
       //     adopter and a name-shaped match is all that is available. This assertion therefore
       //     rejects **both** `build` and `heuristic`, which is the stronger claim: not even a
       //     suspicious name appears in a shipped lane.
-      const map = await jobs();
+      //
+      // Over the whole shipped SET, not the orchestrator alone. Round 10 planted a build in
+      // `qfai-validate.yml` and this row did not see it, because it read one file while its annotation
+      // claims a property of an adopter's lanes.
+      const map = await shippedJobs();
       const rebuilding: string[] = [];
       for (const [id, job] of Object.entries(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];
@@ -455,7 +486,7 @@ describe(
       // The split between the two lists is the whole design. A program whose arguments cannot reach a
       // build is allowed by NAME; a program that could build is allowed only as an exact invocation, so
       // `npx qfai` ships and `npx tsup` does not, though they are the same program.
-      const map = await jobs();
+      const map = await shippedJobs();
       const refused: string[] = [];
       for (const [id, job] of Object.entries(map)) {
         const steps = isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : [];

@@ -268,9 +268,10 @@ sweep cannot reach. That guard exists because the previous version of this line 
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 7 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 8 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
-  did not hold
+  did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
+  and underived through five findings of exactly that shape
 - **new** `packages/qfai/tests/assets/retractedClaims.test.ts` — 10 tests requiring a claim a review
   round refuted to appear only inside quotation marks, because "it is gone now" was itself the false
   statement round 5 found
@@ -303,7 +304,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 7 passed (7), exit 0
+  -> Tests 8 passed (8), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 10 passed (10), exit 0
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/buildCommand.test.ts
@@ -354,6 +355,64 @@ It also closes the channel round 10 found invisible to **both** instruments: a b
 `uses: gradle/actions/setup-gradle` with `arguments: build`, which no `run:` scan can see. The actions a
 shipped lane may use and the input keys they may be given are enumerated, so `arguments` and `args` are
 refused by not appearing.
+
+**Both `US-0017-0004` assertions now read every shipped workflow, not the orchestrator alone.** Round 10
+planted a real build in `qfai-validate.yml` and measured this row missing it — caught only by the
+own-tree scan in `tests/unit/buildCommand.test.ts`, a test annotated for something else. The gap was
+covered and the annotation's scope was narrower than the story it carries, which a reader could not have
+known. `shippedJobs()` derives the set from the shipped workflow directory rather than listing it, so a
+third workflow is in scope the moment it ships. Falsified: a plain `pnpm build` and an `npx tsup` planted
+in the second workflow each redden the row.
+
+**Round 10's seven advisories are applied, and four of them were the same defect in different
+files — a number derived once and then described as derived.**
+
+- **A1.** The retracted-claims guard's own docstring said "two entries left this list in round 8" and
+  named a reason; all three current entries measure at zero occurrences, so the note described a state
+  two rounds gone. A stale prose claim inside the instrument built to stop stale prose claims, and
+  structurally invisible to it, because `GOVERNANCE` holds records and not the guards that read them.
+  The comment now states the membership RULE — "absent from every governance file", which the assertion
+  re-measures on every run — instead of the history, so there is nothing left to go stale.
+- **A2.** Three figures were derived in `coverage-depth-spec-0017.md` and retyped here, where nothing
+  read them: the `Status` totals, the `❌` partition ("5 rows and 38 depth cells") and the sentence
+  naming the predicate's version. All three measured correct and all three were free to drift; the
+  version pair agreed at v12 by luck. `coverageDepthMatrix.test.ts` now seeks each statement in **both**
+  records and requires every occurrence to equal the measured value. Falsified five ways: each figure
+  drifting, the version going stale, and the version sentence being deleted — all five redden.
+- **A3.** `## Final status` certifies with "**ten** rounds, **29** reviewer responses, **28 REVISE and
+  one PASS**". Correct when checked, derived by nothing, and with a correctness lifetime of exactly one
+  round — rounds 4, 5, 6, 7 and 10 each found this sentence a round behind, five findings of one shape.
+  Two of the three are now derived from the packs on disk. The verdict split is not derivable (two of
+  twenty-nine reports state a verdict in a parseable form), so what is pinned is the arithmetic: the
+  split must SUM to the derived response count, which is exactly how all five findings failed. Falsified
+  six ways, all reddening, including the sentence being unbolded or deleted.
+- **A4.** The scope fix above.
+- **A5.** Recorded as accepted, not fixed. `VERSION` is exported and pinned against the record, which
+  closed round 7's literal-pin defect and round 9's discussed-a-future-version defect — and it is a
+  narrowing rather than a derivation: nothing in the grammar contributes to the constant, so a grammar
+  change with a forgotten bump leaves both sides agreeing on the old number. The honest statement is
+  that the version moved from two hand-maintained places to one.
+- **A6.** Out of this stage's reach and carried by prose, as disclosed: `tdd/test-list.md`'s `Evidence`
+  text is `/qfai-implement`'s cell to write.
+- **A7.** `CLAIMS`, `OWED` and `COUNTED` in `stageEvidenceCounts.test.ts` were three literals naming the
+  same six files with nothing tying them together, so a file could have its count checked while its
+  `.each` / `.for` precondition went unchecked — and that precondition is the only reason counting
+  callsites is valid. One `TRACKED` list now feeds all three, with an assertion that the claimed set and
+  the tracked set are equal.
+
+**Round 10's `R01` minors are applied, and three of them were larger than they looked.** A boolean tool
+field decided verdicts unswept — `grammarMembers()` named `bareIsBuild` literally, so `alwaysBuilds` was
+invisible to the sweep from the moment it was added; `TOOL_BOOLEANS` declares the class instead. A
+sub-member deletion replaced one alias only, so `gmake` kept the `-C` that `make` had lost: the grammar
+under test was de-aliased exactly while the sweep measured it. And the canonical owner of a shared object
+could rotate mid-sweep, because restoring a deleted tool key moves it to the end of the key order —
+frozen in an `OWNER` map captured from the pristine grammar, it cannot. The rest: `deleteMember` throws on
+a path naming no member rather than reporting it `undetected`; scoped package names survive both lookup
+sites, with `@swc/cli` declared; `namesACommand` reads one token rather than testing its regex on the raw
+one and its sets on the basename; the inline `flag=value` branch consults `buildFlags`; the odd-parity
+guard reads both flattenings; a repeated `--spec` is a usage error; and the two live call sites no probe
+distinguished are pinned rather than deleted, each by a command measured to change when the line is
+removed.
 
 The classifier keeps its other job — finding builds in the OWN tree, where a miss is tolerable and the
 three-verdict labelling is the point — and stops being load-bearing for the story it could not secure.

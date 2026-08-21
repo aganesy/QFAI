@@ -18,6 +18,35 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 const MATRIX = path.resolve(__dirname, "../../../../.qfai/evidence/coverage-depth-spec-0017.md");
+/**
+ * The stage record, which RESTATES three of the matrix's derived numbers.
+ *
+ * Every check below measures from the matrix table and used to look for the statement only in the
+ * matrix file — so the copies here were retyped, unread, and free to drift. Two numbers were in that
+ * state (the `Status` totals and the `❌` depth-cell count) plus the sentence naming the predicate's
+ * version. A number derived in one file and restated in another is derived in one file only.
+ */
+const RECORD = path.resolve(__dirname, "../../../../.qfai/evidence/atdd-spec-0017.md");
+
+/**
+ * Every occurrence of a stated form, across BOTH records, labelled by the file it came from.
+ *
+ * `matchAll` and not `exec`, for the reason this file has re-learnt three times: `exec` returns the
+ * first match, so a second, older statement placed after the true one is invisible and the pin holds by
+ * the accident of ordering.
+ */
+async function statements(
+  pattern: RegExp,
+): Promise<Array<{ file: string; match: RegExpMatchArray }>> {
+  const out: Array<{ file: string; match: RegExpMatchArray }> = [];
+  for (const file of [MATRIX, RECORD]) {
+    const text = await readFile(file, "utf8");
+    for (const match of text.matchAll(new RegExp(pattern.source, "g"))) {
+      out.push({ file: path.basename(file), match });
+    }
+  }
+  return out;
+}
 
 const COLUMNS = [
   "Normal path",
@@ -131,19 +160,35 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const tally: Record<Score, number> = { "✅": 0, "⚠️": 0, "❌": 0 };
     for (const row of rows) tally[row.cells["Status"] ?? "⚠️"] += 1;
 
-    const declared = /Totals by `Status`: \*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+)\*\*/.exec(text);
-    expect(declared, "the file must state its Status totals in the pinned form").not.toBeNull();
-    const stated = {
-      "✅": Number(declared?.[1]),
-      "⚠️": Number(declared?.[2]),
-      "❌": Number(declared?.[3]),
-    };
-
-    expect(stated, "the declared total must equal the table's own Status column").toEqual(tally);
+    // Both records, because both state it. The stage record's copy reads "derived ... so the two
+    // cannot part again" and was read by nothing: the check opened the matrix only.
+    const declared = await statements(
+      /Totals by `Status`:\s+\*\*✅ (\d+) \/ ⚠️ (\d+) \/ ❌ (\d+)\*\*/,
+    );
     expect(
-      stated["✅"] + stated["⚠️"] + stated["❌"],
-      "the three counts must account for every row, which is where ✅ 3 / ⚠️ 2 / ❌ 4 failed",
-    ).toBe(rows.length);
+      declared.map((entry) => entry.file),
+      "both records must state the Status totals in the pinned form",
+    ).toEqual(["coverage-depth-spec-0017.md", "atdd-spec-0017.md"]);
+
+    const wrong: string[] = [];
+    for (const { file, match } of declared) {
+      const stated = {
+        "✅": Number(match[1]),
+        "⚠️": Number(match[2]),
+        "❌": Number(match[3]),
+      };
+      if (JSON.stringify(stated) !== JSON.stringify(tally)) {
+        wrong.push(
+          `${file}: states ${JSON.stringify(stated)}, table holds ${JSON.stringify(tally)}`,
+        );
+      }
+      // The three counts must account for every row, which is where ✅ 3 / ⚠️ 2 / ❌ 4 failed.
+      const sum = stated["✅"] + stated["⚠️"] + stated["❌"];
+      if (sum !== rows.length) {
+        wrong.push(`${file}: the totals sum to ${String(sum)} against ${String(rows.length)} rows`);
+      }
+    }
+    expect(wrong, "a stated Status total that the table does not hold").toEqual([]);
   });
 
   it("names as many ❌ depth cells as the table holds", async () => {
@@ -169,6 +214,23 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
 
     const statusFailures = rows.filter((row) => row.cells["Status"] === "❌").length;
     expect(Number(declaredCells?.[2])).toBe(statusFailures);
+
+    // The stage record restates the same partition in its own words — "unchanged at 5 rows and 38
+    // depth cells" — and nothing read it. Same numbers, second file, so same check: measured from the
+    // table, sought wherever it is stated.
+    const restated = await statements(/at (\d+) rows and (\d+)\s+depth cells/);
+    expect(
+      restated.map((entry) => entry.file),
+      "the stage record must restate the ❌ partition in the pinned form",
+    ).toContain("atdd-spec-0017.md");
+    const disagreeing = restated
+      .filter(({ match }) => Number(match[1]) !== statusFailures || Number(match[2]) !== cells)
+      .map(
+        ({ file, match }) =>
+          `${file}: states ${match[1] ?? "?"} rows / ${match[2] ?? "?"} cells, table holds ` +
+          `${String(statusFailures)} / ${String(cells)}`,
+      );
+    expect(disagreeing, "a restated ❌ partition the table does not hold").toEqual([]);
 
     // Every ❌ cell must fall in exactly one named class. Checking that by the class SIZES is not
     // checking it: round 2 broke the first version three ways — cutting a class's enumeration while
@@ -353,19 +415,27 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // version - placed after the true one - was invisible, and the pin held only by the accident of
     // ordering. That is the `.exec` defect round 6 required fixed in this stage's guards and round 7
     // found still live at a third site, reintroduced here one round later by the fix for something else.
-    const flat = text.replace(/\s+/g, " ");
-    const naming = [
-      ...flat.matchAll(/`?v(\d+)`? lives in `packages\/qfai\/tests\/helpers\/buildCommand\.ts`/g),
-    ];
+    // BOTH records carry this sentence and only one of them was read. Round 10 measured them
+    // agreeing at v12 by luck; nothing prevented the unread copy from staying at v11 forever, which is
+    // the same "derived in one file, retyped in another" shape as the two counts above.
+    const naming: Array<{ file: string; version: number }> = [];
+    for (const file of [MATRIX, RECORD]) {
+      const flat = (await readFile(file, "utf8")).replace(/\s+/g, " ");
+      for (const match of flat.matchAll(
+        /`?v(\d+)`? lives in `packages\/qfai\/tests\/helpers\/buildCommand\.ts`/g,
+      )) {
+        naming.push({ file: path.basename(file), version: Number(match[1]) });
+      }
+    }
     expect(
-      naming.length,
-      "the record must carry a sentence naming the predicate's version and its file, in the form " +
+      [...new Set(naming.map((entry) => entry.file))].sort(),
+      "both records must name the predicate's version and its file, in the form " +
         "`vN` lives in `packages/qfai/tests/helpers/buildCommand.ts`",
-    ).toBeGreaterThan(0);
+    ).toEqual(["atdd-spec-0017.md", "coverage-depth-spec-0017.md"]);
     expect(
-      naming.map((match) => Number(match[1])),
+      naming.filter((entry) => entry.version !== current),
       `every such sentence must name the version the helper is at: v${String(current)}`,
-    ).toEqual(naming.map(() => current));
+    ).toEqual([]);
     // The record wraps, so the phrase is matched over collapsed whitespace and either emphasis form.
     expect(
       text.replace(/\s+/g, " "),

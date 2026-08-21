@@ -34,6 +34,27 @@ const ROOT = path.resolve(__dirname, "../../../..");
 /** The first review pack this stage opened; earlier directories belong to other stages. */
 const FIRST_PACK = "review-20260820200000000";
 
+/**
+ * The test files whose sizes this record states — ONE list, read by all three guards below.
+ *
+ * They used to be three independent literals (`CLAIMS`, `OWED`, `COUNTED`), naming the same six files
+ * with nothing tying them together. A file added to one and not the others would have had its count
+ * checked while its `.each` / `.for` precondition went unchecked — and that precondition is the whole
+ * reason `countCases` is allowed to count callsites. The pairing is the invariant; three lists could
+ * not express it.
+ */
+const TRACKED = [
+  "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
+  "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
+  "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
+  "packages/qfai/tests/assets/retractedClaims.test.ts",
+  "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
+  "packages/qfai/tests/unit/buildCommand.test.ts",
+] as const;
+
+/** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */
+const asRecorded = (file: string): string => file.replace(/^packages\/qfai\//, "");
+
 async function source(relative: string): Promise<string> {
   return readFile(path.join(ROOT, relative), "utf8");
 }
@@ -157,6 +178,14 @@ describe("the stage evidence's counts are derived, not typed", () => {
       },
     ];
 
+    // Every tracked file is claimed, and nothing else is. Without this the list below could drift from
+    // `TRACKED` in either direction: a file whose count is checked but whose `.each` precondition is
+    // not, or a file counted for a precondition whose count nothing reads.
+    expect(
+      [...new Set(CLAIMS.map((claim) => claim.file))].sort(),
+      "the claimed files and the tracked files are the same set",
+    ).toEqual([...TRACKED].sort());
+
     // EVERY occurrence, not the first. Round 6 found `## Work performed` stating one file's size three
     // times — "four tests", "5 tests", "4 tests", for a file holding 5 — with two of them wrong and
     // invisible, because `exec` returns only the first match. A duplicate bullet was how the third got
@@ -199,16 +228,10 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // The floor is per FILE, not per match. Round 6 pointed out that dropping the `-> ` from one
     // recorded output removes it from coverage while a bare `rows.length > 2` stays satisfied, so the
     // files this stage added are named and each must appear.
-    const OWED = [
-      "tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
-      "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
-      "tests/assets/coverageDepthMatrix.test.ts",
-      "tests/assets/retractedClaims.test.ts",
-      "tests/unit/buildCommand.test.ts",
-      // This file. Absent from the list for two rounds, so the one guard that requires every other
-      // guard's run to be recorded was the guard whose own run could go unrecorded.
-      "tests/assets/stageEvidenceCounts.test.ts",
-    ];
+    // Derived from `TRACKED`, not retyped. This file is in it — absent for two rounds, so the one
+    // guard that requires every other guard's run to be recorded was the guard whose own run could go
+    // unrecorded.
+    const OWED = TRACKED.map(asRecorded);
     const quoted = new Set(rows.map((row) => row[1] ?? ""));
     expect(
       OWED.filter((file) => !quoted.has(file)),
@@ -240,16 +263,8 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // chain via `(?:\.\w+)*`. `.concurrent` is not exotic here — this repository's knobs set
     // `maxConcurrency`. The pattern now matches whatever `countCases` matches, which is the invariant
     // the pair needs.
-    const COUNTED = [
-      "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
-      "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
-      "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
-      "packages/qfai/tests/assets/retractedClaims.test.ts",
-      "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
-      "packages/qfai/tests/unit/buildCommand.test.ts",
-    ];
     const offenders: string[] = [];
-    for (const file of COUNTED) {
+    for (const file of TRACKED) {
       const text = await source(file);
       if (/^[ \t]*(?:it|test|describe)(?:\.\w+)*\.(?:each|for)\b/m.test(text)) offenders.push(file);
     }
@@ -330,6 +345,82 @@ describe("the stage evidence's counts are derived, not typed", () => {
       recorded.map((match) => Number(match[1])).filter((value) => value !== scoped.checked),
       `every recorded guard output must be what the guard reports (${String(scoped.checked)})`,
     ).toEqual([]);
+  });
+
+  it("derives the round and response counts `## Final status` certifies with", async () => {
+    // The three numbers in "**ten** rounds, **29** reviewer responses, **28 REVISE and one PASS**"
+    // were correct when checked and derived by nothing — and their correctness has a lifetime of ONE
+    // ROUND. That is not a hypothetical: rounds 4, 5, 6, 7 and 10 each found this sentence a round
+    // behind, five findings of one shape, which is the strongest signal in this record that a number
+    // nothing derives goes stale on schedule.
+    //
+    // Two of the three are mechanically derivable and are derived here. The verdict split is not:
+    // reviewers do not write their verdict in one parseable form (two of twenty-nine use
+    // `**Verdict: REVISE**`), so inventing a marker now would only pin the reports written after it.
+    // What IS pinnable is the arithmetic — the split must SUM to the derived response count — and that
+    // is exactly the failure mode all five findings had: a round landed, the total moved, and the
+    // split stayed where it was.
+    const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
+    const packs = await packsOnDisk();
+    const responses = (
+      await Promise.all(
+        packs.map(async (pack) => {
+          const entries = await readdir(path.join(ROOT, ".qfai/review", pack));
+          return entries.filter((name) => /^R0\d+_.*\.md$/.test(name)).length;
+        }),
+      )
+    ).reduce((sum, count) => sum + count, 0);
+
+    const certified =
+      /\*\*(\w+)\*\* rounds, \*\*(\d+)\*\* reviewer responses, \*\*(\d+) REVISE and (\w+) PASS\*\*/.exec(
+        evidence,
+      );
+    expect(
+      certified,
+      "`## Final status` states the three counts in the pinned form",
+    ).not.toBeNull();
+    if (certified === null) return;
+
+    // Spelled-out numerals, because that is how the sentence reads. Only the values this record has
+    // used or could next use need a spelling.
+    const WORDS: Record<string, number> = {
+      one: 1,
+      two: 2,
+      three: 3,
+      four: 4,
+      five: 5,
+      six: 6,
+      seven: 7,
+      eight: 8,
+      nine: 9,
+      ten: 10,
+      eleven: 11,
+      twelve: 12,
+      thirteen: 13,
+      fourteen: 14,
+      fifteen: 15,
+    };
+    const wrong: string[] = [];
+    const statedRounds = WORDS[certified[1] ?? ""];
+    if (statedRounds !== packs.length) {
+      wrong.push(
+        `rounds: record says ${certified[1] ?? "?"}, ${String(packs.length)} packs on disk`,
+      );
+    }
+    const statedResponses = Number(certified[2]);
+    if (statedResponses !== responses) {
+      wrong.push(
+        `responses: record says ${String(statedResponses)}, disk holds ${String(responses)}`,
+      );
+    }
+    const revise = Number(certified[3]);
+    const pass = WORDS[certified[4] ?? ""] ?? Number.NaN;
+    if (revise + pass !== responses) {
+      wrong.push(
+        `the verdict split sums to ${String(revise + pass)} against ${String(responses)} responses`,
+      );
+    }
+    expect(wrong, "a count in `## Final status` that the packs on disk do not support").toEqual([]);
   });
 
   it("names every pack on disk, with a recomputing seal for each closed one", async () => {

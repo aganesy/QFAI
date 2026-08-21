@@ -225,11 +225,16 @@ const WORDS: Record<string, number> = {
  */
 const RETIRED: readonly string[] = [
   // Removed from the records outright rather than quoted, which is the better end state: nothing can
-  // read them as assertions because they are not there. Each was verified absent across all five
-  // governance files before being listed, and the second assertion below still catches reintroduction.
-  // Two entries left this list in round 8: the W-family record in `## Execution logs` now quotes
-  // both, so they are live-and-quoted rather than absent. The second assertion below is what
-  // noticed — writing that record made a retired declaration false in the same commit.
+  // read them as assertions because they are not there. The list is not a claim about history and does
+  // not need maintaining as one — membership means exactly "absent from every governance file", and the
+  // assertion below re-measures that on every run, so an entry that gets reintroduced fails whatever
+  // any comment says about it.
+  //
+  // The previous version of this comment said "two entries left this list in round 8" and named a
+  // reason. Round 10 measured all three current entries at zero occurrences, so the note described a
+  // state two rounds gone — a stale prose claim inside the instrument built to stop stale prose claims,
+  // and structurally invisible to it, because `GOVERNANCE` holds records and not the guards that read
+  // them. Stating the rule instead of the history removes the thing that could go stale.
   "P1d has run three times",
   "transition itself is still owed a P1d PASS",
   "no filters",
