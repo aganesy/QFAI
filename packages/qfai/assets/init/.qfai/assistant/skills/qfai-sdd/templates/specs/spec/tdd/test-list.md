@@ -34,8 +34,8 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | BR-Ref | Layer | Test file | Selector | Status | DR-ID | Evidence |
+| ------ | ------- | ------ | ----- | --------- | -------- | ------ | ----- | -------- |
 
 ## Schema
 
@@ -45,12 +45,21 @@ Required columns, in the order used above:
 | --------- | ------------------------------------------------------------ |
 | TDD-ID    | `TDD-NNNN`, unique within this spec                          |
 | TC-Refs   | Test cases from `06_Test-Cases.md` this row implements       |
+| BR-Ref    | The one `BR-*` this row serves — the T1 review-group key     |
 | Layer     | `Unit`, `Component`, `Integration`, `API` or `E2E`           |
 | Test file | Project-root-relative path to the test module                |
 | Selector  | Test selector/description for targeted execution             |
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+
+`BR-Ref` is resolved here because this is the only phase where `03`, `04` and
+`06` are all open: take the TC's `AC-Refs` from `06_Test-Cases.md`, take every
+`BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`, and keep the
+**lowest-numbered** `BR-*`. Write `-` when no `BR` reaches the row.
+`/qfai-implement` batches its T1 reviews on this value and can close no group
+without it. It is derived from upstream, not from run state, so a reseed
+re-resolves it — that is not the row rewrite the delta rule forbids.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

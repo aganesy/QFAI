@@ -65,8 +65,12 @@ progression, not the ledger write.
 ## Batched review
 
 For T1 rows, run **one** `completion-reviewer` pass and **one**
-`implementation-reviewer` pass per _coherent group_ — a set of items that share
-a BR or an AC — instead of one pass per item. The group is the review unit:
+`implementation-reviewer` pass per _coherent group_ — the set of items that
+share one `BR-Ref` value — instead of one pass per item. The group key is a
+ledger column (`execution-ledger.md#group-key-column-optional-required-for-t1-batching`)
+precisely so every operation below is a predicate over the row, not over a join
+the runner would have to redo, differently, on each row selection. The group is
+the review unit:
 
 - record the group's member `TDD-ID`s as a single block in the evidence file;
 - a `REVISE` on the group blocks every member until it is resolved;
@@ -81,16 +85,24 @@ redo it. A T1 row whose refactor verify is GREEN sits in `refactor` — that is
 the review-ready state — and waits there for its group. Members still move
 `refactor -> done`, only together.
 
-- **Open** the group when the first T1 row of a BR/AC reaches `refactor`.
-- **Fill** it by continuing to process that BR/AC's remaining rows one item at
-  a time. The one-item-at-a-time constraint is about the Red/Green cycle: at
-  most one row is in `red` or `green` at any moment. A row parked in `refactor`
-  is an in-flight member of the **open** group, not an abandoned item, so
-  parking is not a violation of that constraint.
+- **Open** the group when a T1 row reaches `refactor` and no group is open. Its
+  `BR-Ref` value becomes the group's key; a row carrying `-` opens a group of
+  one, which closes on the next row.
+- **Fill** it by continuing to process the ledger's remaining T1 rows carrying
+  that same `BR-Ref`, one item at a time. The one-item-at-a-time constraint is
+  about the Red/Green cycle: at most one row is in `red` or `green` at any
+  moment. A row parked in `refactor` is an in-flight member of the **open**
+  group, not an abandoned item, so parking is not a violation of that
+  constraint.
 - **Close** the group — this is the review-start condition — at whichever comes
-  first: every member has reached `refactor`; the next `todo` row belongs to a
-  different BR/AC; the ledger has no `todo` rows left. A group never spans a
-  spec, so finishing a ledger also closes the open group.
+  first: every row carrying the key has reached `refactor`; the next `todo` row
+  carries a different `BR-Ref`; the ledger has no `todo` rows left. A group
+  never spans a spec, so finishing a ledger also closes the open group.
+- The last close condition is a **terminator, not a grouping rule**. It closes
+  whatever group is still open when the ledger runs out. A run that reaches it
+  without ever having closed a group on one of the other two has batched the
+  whole spec into one group — which mixes every tier the ledger holds and is
+  already forbidden above.
 - **Review** on close: one `qa-gatekeeper` turn over the members' recorded
   RED/GREEN evidence, one `completion-reviewer` pass, one
   `implementation-reviewer` pass. On `REVISE` no member goes `done`; where the
@@ -113,6 +125,27 @@ the review-ready state — and waits there for its group. Members still move
   the checkpoint would have caught.
 - A group left open when the run ends is a completion prohibition: rows still in
   `refactor` already block spec-level completion.
+
+### When the ledger carries no `BR-Ref` column
+
+A ledger seeded before the column existed has no key, and every predicate above
+is unevaluable against it. Do **not** fall through to "the ledger has no `todo`
+rows left": that is the terminator, and using it as the grouping rule makes the
+whole spec one group. Pick one of two, in this order:
+
+1. Reseed the ledger through `/qfai-sdd` Phase 2b, which fills `BR-Ref`. This is
+   a schema addition — it writes no `Status` or `Evidence` cell — so it is not
+   the regeneration the ledger's delta rule forbids.
+2. Resolve the key yourself, once per row, by the procedure
+   `execution-ledger.md` states (`TC-Refs` -> the TC's `AC-Refs` in
+   `06_Test-Cases.md` -> every `BR` whose `AC-Refs` names one of them in
+   `04_Business-Rules.md`, lowest-numbered `BR-*` wins), and record the group's
+   key next to its member `TDD-ID`s in the evidence file. The tie-break is what
+   makes the answer the same for the next agent that reads the same rows.
+
+When neither is available — no `04_Business-Rules.md`, or no `BR` reaches the
+row — every T1 row is its own group and is reviewed alone. That costs the
+batching, not the gate.
 
 ## Multi-spec queue
 

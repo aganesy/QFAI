@@ -35,6 +35,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(cells(header ?? "")).toEqual([
         "TDD-ID",
         "TC-Refs",
+        "BR-Ref",
         "Layer",
         "Test file",
         "Selector",
@@ -43,6 +44,27 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Evidence",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
+    });
+
+    it(`${tree}: the seeded ledger carries the T1 review-group key`, async () => {
+      // `/qfai-implement` opens, fills and closes a T1 review group by the row's
+      // `BR-Ref`. Phase 2b is the only phase with `03`, `04` and `06` all open,
+      // so a ledger seeded without the column leaves every group boundary
+      // underivable downstream.
+      // Compared with soft wraps collapsed: prettier owns where these sentences
+      // break, and the assertion is about the rule, not the column it broke at.
+      const template = (await read(tree, TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(template).toContain("The one `BR-*` this row serves");
+      expect(template).toContain("keep the **lowest-numbered** `BR-*`");
+      expect(template).toContain("Write `-` when no `BR` reaches the row.");
+      expect(template).toContain("`04_Business-Rules.md`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("- Fill `BR-Ref` —");
+      expect(checklists).toContain("lowest-numbered `BR-*` wins");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {
