@@ -284,6 +284,12 @@ every rule above, but their tests are authored by `/qfai-atdd`
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
+**Who seeds them.** `/qfai-sdd` Phase 2b, one `Layer = Integration` row per
+integration-level `TC-*`, alongside the coverage-target rows
+(`references/ledger-preconditions.md#producer`). `TDDLIST_TC_NOT_COVERED` never
+asks for one, because an `L3` TC is not a coverage target — so an absent
+`Integration` row is an unseeded row, not a spec without integration work.
+
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and
 no backend or frontend agent. The surface a journey needs is built by this

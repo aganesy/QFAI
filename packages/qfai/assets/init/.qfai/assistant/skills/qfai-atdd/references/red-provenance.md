@@ -314,11 +314,11 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 ## A spec with no ATDD-owned rows
 
-`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*`, which
-excludes `L4` / `L5`; `US-*` and `CON-API-*` are not row-producing
-obligations there. A first run therefore finds **zero** `Layer = E2E` /
-`Layer = API` rows, legitimately, and this stage cannot create them — it is
-not the ledger's writer under any circumstance.
+`/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*` and a
+`Layer = Integration` row per integration-level `TC-*`; `US-*` and `CON-API-*`
+are not row-producing obligations there. A first run therefore finds **zero**
+`Layer = E2E` / `Layer = API` rows, legitimately, and this stage cannot create
+them — it is not the ledger's writer under any circumstance.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and

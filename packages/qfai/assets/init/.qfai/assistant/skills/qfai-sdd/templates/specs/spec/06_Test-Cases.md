@@ -26,7 +26,9 @@ TC table, find no `TC-ID` column, and silently disable `TDDLIST_TC_NOT_COVERED`
 for the whole spec.)
 
 `L1` and `L2` are TDD coverage targets — each needs a `tdd/test-list.md` row.
-`L3` is not. An obligation that spans two layers is two TC rows.
+`L3` is not a coverage target, and still needs one: Phase 2b seeds it a
+`Layer = Integration` row whose test `/qfai-atdd` authors. An obligation that
+spans two layers is two TC rows.
 
 **`L4` and `L5` are not `TC-*` values.** An oracle that lands at the service
 boundary (L4) or on a full-system journey (L5) is a misfiled obligation —
@@ -63,12 +65,18 @@ the summaries below are a reading aid, not a second definition.
 - `L5` — E2E. The oracle observes a full-system journey. Tests live in
   `<testsDir>/e2e/**`.
 
-Which codes require a `tdd/test-list.md` row is decided by
+Which codes a **gate** requires a `tdd/test-list.md` row for is decided by
 `isCoverageTargetLevel`. It recognises both spellings of every layer — the code
 form (`L1`-`L5`) and the word form (`unit`, `integration`, `e2e`, …) — so `L1`
-and `L2` are coverage targets that need a ledger row and `L3`-`L5` are not. A
-value it recognises in neither spelling is conservatively treated as a target,
-and `TDDLIST_UNKNOWN_LEVEL` reports it rather than letting it pass silently.
+and `L2` are coverage targets whose missing row is an error and `L3`-`L5` are
+not. A value it recognises in neither spelling is conservatively treated as a
+target, and `TDDLIST_UNKNOWN_LEVEL` reports it rather than letting it pass
+silently.
+
+Which codes **get** a row is wider than that: `L3` gets a `Layer = Integration`
+row too, seeded by the same Phase 2b and ungated, because that row is what puts
+the integration layer in the Red/Green/Refactor cycle. `L4` / `L5` get none —
+they are misfiled as `TC-*` in the first place.
 
 ### Type column values
 

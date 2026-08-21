@@ -58,6 +58,85 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).not.toContain("`Layer = E2E`");
     });
 
+    it(`${tree}: the Integration group of rows has a named producer`, async () => {
+      // `Layer = Integration` is a legal ledger row with a documented owner,
+      // evidence file and gate branch, but `isCoverageTargetLevel("l3")` is
+      // `false` — so "one row per coverage-target TC" was the whole seeding
+      // rule and it produced none of them. The rows existed in consuming
+      // projects anyway, created outside any documented path.
+      expect(isCoverageTargetLevel("l3")).toBe(false);
+      expect(isCoverageTargetLevel("integration")).toBe(false);
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "plus **one `Layer = Integration` row per integration-level (`L3`) TC**",
+      );
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("**one `Layer = Integration` row per integration-level TC**");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain(
+        "**and one `Layer = Integration` row per\n   integration-level (`L3`) TC**",
+      );
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "- Add one `Layer = Integration` row per integration-level (`L3`) TC as well",
+      );
+
+      // The consumer of those rows names the same producer, so an agent
+      // reading either file alone reaches the same answer.
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain("**Who seeds them.** `/qfai-sdd` Phase 2b");
+    });
+
+    it(`${tree}: an integration-level TC alone does not make a header-only ledger truthful`, async () => {
+      // `TDDLIST_TC_NOT_COVERED` skips `L3`, so a spec whose obligations are
+      // all integration-level validates clean with an empty ledger. Exiting on
+      // that reads a silent gate as "nothing to do".
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain(
+        "confirm it declares **neither** a\ncoverage-target TC **nor** an integration-level TC",
+      );
+      expect(preconditions).toContain("- **Only integration-level TCs are declared**");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("no coverage-target TC **and** no integration-level TC");
+    });
+
+    it(`${tree}: the delta does not retire a row whose TC is still declared at L3`, async () => {
+      // "retire the row of a TC ... no longer a coverage target" reads as an
+      // instruction to delete every seeded `Layer = Integration` row on the
+      // next reseed, evidence and all — the TC is present, it is simply not a
+      // target.
+      const template = await read(tree, TEMPLATE);
+      expect(template).not.toContain("or no longer a\ncoverage target");
+      expect(template).toContain("Retirement is keyed on the TC, not on coverage-target status.");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).not.toContain("deleted upstream or no longer a coverage target");
+      expect(checklists).toContain("A row whose TC is still declared at `L3` is not stale");
+    });
+
     it(`${tree}: reseeding is stated as a delta, not a regeneration`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");

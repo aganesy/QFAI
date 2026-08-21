@@ -7,9 +7,24 @@ one.
 
 ## Producer
 
-`/qfai-sdd` Phase 2b seeds one row per coverage-target TC from
-`06_Test-Cases.md`. `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
-annotations, not ledger rows — they never appear as rows here.
+`/qfai-sdd` Phase 2b seeds this ledger from `06_Test-Cases.md`, in two groups:
+
+- **one row per coverage-target TC** — the rows this skill drives end to end,
+  and the only ones `TDDLIST_TC_NOT_COVERED` demands;
+- **one `Layer = Integration` row per integration-level TC** — a TC whose
+  `Level` is `L3` or the word `integration`. These are ATDD-owned rows
+  (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
+  `/qfai-atdd` and their `Evidence` anchors into
+  `.qfai/evidence/atdd-<spec-id>.md`, but the row itself lives here and this
+  skill advances it under every rule that file states.
+
+`US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:` annotations, not
+ledger rows — they never appear as rows here.
+
+**No validator asks for the second group.** An integration-level TC is not a
+coverage target, so `TDDLIST_TC_NOT_COVERED` stays silent whether its row is
+present or absent. Phase 2b is that row's only producer, and a clean
+`npx qfai validate` is not evidence that the row was unwanted.
 
 ## Recovery when it is missing
 
@@ -22,12 +37,14 @@ backs.
 
 ## An empty ledger is a fault only when `06_Test-Cases.md` disagrees
 
-A header-only table has two very different causes and they need opposite
-responses, so never treat "no rows" as "nothing to do" on its own.
+A header-only table has very different causes and they need opposite responses,
+so never treat "no rows" as "nothing to do" on its own.
 
-Before exiting, read `06_Test-Cases.md` and confirm it declares **no**
-coverage-target TC, judged exactly as the validator judges it
-(`qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`).
+Before exiting, read `06_Test-Cases.md` and confirm it declares **neither** a
+coverage-target TC **nor** an integration-level TC. Judge the first exactly as
+the validator judges it
+(`qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`); the
+second no validator judges at all, so read the `Level` cells yourself.
 
 ### What counts as a coverage target
 
@@ -45,11 +62,21 @@ Never narrow this to a chosen pair of level names. Guidance that names a
 narrower allowlist makes a header-only ledger look truthful and skips the whole
 implementation.
 
-### The two outcomes
+Being a non-target is not being row-less. `integration` / `L3` sits on the
+exclusion list because `TDDLIST_TC_NOT_COVERED` does not gate it, not because
+the ledger has no row for it — it has the ATDD-owned `Layer = Integration` row
+named under **Producer**, and that row is why a spec whose obligations are all
+integration-level is not finished when the gate is quiet.
 
-- **No coverage-target TC is declared** — the ledger is truthfully empty. Report
+### The outcomes
+
+- **Neither is declared** — the ledger is truthfully empty. Report
   "nothing to do" and exit. Rerunning `/qfai-sdd` derives the same empty table
   and loops.
-- **At least one is declared** — the ledger is incomplete (a partial copy or an
-  interrupted Phase 2b) and `npx qfai validate` reports `TDDLIST_TC_NOT_COVERED`.
-  Run the recovery above instead of exiting.
+- **At least one coverage-target TC is declared** — the ledger is incomplete (a
+  partial copy or an interrupted Phase 2b) and `npx qfai validate` reports
+  `TDDLIST_TC_NOT_COVERED`. Run the recovery above instead of exiting.
+- **Only integration-level TCs are declared** — the ledger is incomplete in the
+  same way, and nothing says so: the rows Phase 2b owes are the ATDD-owned
+  group, which no gate demands. Run the recovery here too. This is the case a
+  silent `validate` makes look finished.

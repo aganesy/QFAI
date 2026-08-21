@@ -44,10 +44,11 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 
 - Copy `templates/specs/spec/tdd/test-list.md` when `<spec-id>/tdd/test-list.md` does not exist.
 - Add one row per coverage-target TC from `06_Test-Cases.md`, `Status = todo`.
+- Add one `Layer = Integration` row per integration-level (`L3`) TC as well, `Status = todo`. These are ATDD-owned rows (`../../qfai-implement/references/execution-ledger.md`): `/qfai-atdd` authors their tests, this phase is the only thing that creates the rows, and no validator reports them missing.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.
-- Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
+- Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or whose `Level` moved to a layer this phase does not seed (`L4` / `L5`). Never leave a stale `done` row nor a selectable row for a TC that no longer exists. A row whose TC is still declared at `L3` is not stale — retiring it for not being a coverage target discards the integration rows this phase itself seeds.
 - Keep the ledger table the first markdown table in the file.
-- An empty table is a valid outcome when the spec declares no coverage-target TC.
+- An empty table is a valid outcome only when the spec declares no coverage-target TC **and** no integration-level TC.
 
 ## Phase 2c: Obligation reconciliation
 
