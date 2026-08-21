@@ -77,14 +77,18 @@ describe("item completion checklist end-to-end enforcement", () => {
     );
     // The gate point #251 added: the verdict half of the evidence file is
     // appended only after both reviewers have returned PASS.
-    // The file is named by item 10, not hard-coded here: an `E2E` / `API` row's
-    // evidence lives in `atdd-<spec-id>.md`, because that is the stage that ran
-    // its RED. Pinning `implement-<spec-id>.md` in this gate is what made a
-    // correctly evidenced ATDD-owned row unable to reach `done`.
+    // The file is named by item 10, not hard-coded here: an `E2E` / `API` /
+    // `Integration` row's evidence lives in `atdd-<spec-id>.md`, because that is
+    // the stage that ran its RED. Pinning `implement-<spec-id>.md` in this gate
+    // is what made a correctly evidenced ATDD-owned row unable to reach `done`,
+    // and naming only two of the three layers here re-pinned the same defect for
+    // the `Integration` row.
     expect(c).toMatch(
       /The item's evidence file \(item 10\) is appended with both reviewer verdicts after items 7-8 returned PASS/,
     );
-    expect(c).toMatch(/`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` row/);
+    expect(c).toMatch(
+      /`\.qfai\/evidence\/atdd-<spec-id>\.md` for an `E2E` \/ `API` \/ `Integration` row/,
+    );
     expect(c).toMatch(/checkpoint.*verif/i);
   });
 });
