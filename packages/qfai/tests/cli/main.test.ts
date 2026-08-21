@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readdir, readFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -53,6 +53,29 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       expect(process.exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
+    }
+  });
+
+  it("writes the init tree to --root instead of the cwd", async () => {
+    const base = await mkdtemp(path.join(os.tmpdir(), "qfai-init-root-"));
+    const target = path.join(base, "target");
+    const cwd = path.join(base, "cwd");
+    try {
+      await mkdir(target, { recursive: true });
+      await mkdir(cwd, { recursive: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["init", "--root", target, "--yes"], cwd);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+
+      await expect(readdir(path.join(target, ".qfai"))).resolves.not.toHaveLength(0);
+      await expect(readdir(cwd)).resolves.toEqual([]);
+    } finally {
+      await rm(base, { recursive: true, force: true });
     }
   });
 });

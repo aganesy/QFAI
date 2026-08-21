@@ -315,4 +315,33 @@ describe("parseArgs", () => {
       expect(parsed.options.auditScope).toBe("deviation");
     });
   });
+
+  describe("init destination resolution", () => {
+    it("uses --root as the init destination when --dir is omitted", () => {
+      const parsed = parseArgs(["init", "--root", "/tmp/target"], "/tmp/cwd");
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dir).toBe("/tmp/target");
+      expect(parsed.options.root).toBe("/tmp/target");
+      expect(parsed.options.rootExplicit).toBe(true);
+    });
+
+    it("keeps --dir as the init destination when both flags are supplied", () => {
+      const parsed = parseArgs(["init", "--root", "/tmp/target", "--dir", "/tmp/out"], "/tmp/cwd");
+      expect(parsed.invalid).toBe(false);
+      expect(parsed.options.dir).toBe("/tmp/out");
+      expect(parsed.options.dirExplicit).toBe(true);
+    });
+
+    it("falls back to cwd for init when neither flag is supplied", () => {
+      const parsed = parseArgs(["init"], "/tmp/cwd");
+      expect(parsed.options.dir).toBe("/tmp/cwd");
+      expect(parsed.options.dirExplicit).toBe(false);
+    });
+
+    it("does not rewrite --dir for non-init commands", () => {
+      const parsed = parseArgs(["validate", "--root", "/tmp/target"], "/tmp/cwd");
+      expect(parsed.options.dir).toBe("/tmp/cwd");
+      expect(parsed.options.root).toBe("/tmp/target");
+    });
+  });
 });

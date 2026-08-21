@@ -296,8 +296,8 @@ Commands:
   prototyping show-spec                 解決された primary prototyping spec を出力
 
 Options:
-  --root <path>   対象ディレクトリ
-  --dir <path>    init の出力先
+  --root <path>   対象ディレクトリ（init では --dir 未指定時の出力先として扱う）
+  --dir <path>    init の出力先（init で --root と併用した場合は --dir が優先）
   --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents を上書き（assistant/manifest/** を含むそれ以外は既存があればスキップ）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
