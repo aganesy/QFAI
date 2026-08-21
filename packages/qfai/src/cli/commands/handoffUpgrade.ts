@@ -16,7 +16,7 @@
  * if absent so a clean project can run `qfai handoff upgrade` without
  * a preparatory `mkdir`.
  */
-import { mkdir, readFile, writeFile, rename, unlink } from "node:fs/promises";
+import { mkdir, readFile, stat, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
@@ -45,6 +45,18 @@ export type HandoffUpgradeOptions = {
   legacyFile: string;
   /** Optional override for the canonical destination path. */
   destinationPath?: string;
+  /**
+   * Allow overwriting an EXISTING canonical destination. Without it the
+   * run is refused (the canonical handoff is a consumed SSOT, not
+   * scratch output). With it, the prior file is renamed to
+   * `<dest>.backup-<ISO>` before the new content lands.
+   */
+  force?: boolean;
+  /**
+   * Preview only: resolve the destination, report the field mapping and
+   * whether `--force` would be required, and write nothing.
+   */
+  dryRun?: boolean;
   /** Output sink. Defaults to console.log. */
   write?: (message: string) => void;
   /** Error sink. Defaults to console.error. */
@@ -178,6 +190,155 @@ function toYaml(canonical: Record<string, string>, legacy: Record<string, unknow
 }
 
 /**
+ * True iff `p` exists. A non-ENOENT `stat` failure (EACCES / EPERM /
+ * EBUSY) leaves existence undecidable, so we fail CLOSED and report
+ * "exists": the caller then refuses the destructive write instead of
+ * renaming over a file it could not inspect.
+ */
+async function destinationExists(p: string): Promise<boolean> {
+  try {
+    await stat(p);
+    return true;
+  } catch (err: unknown) {
+    return !isEnoent(err);
+  }
+}
+
+/**
+ * Repo-relative, posix-slashed rendering used by every operator-facing
+ * message in this module.
+ */
+function toRelPosix(root: string, abs: string): string {
+  return path.relative(root, abs).replace(/\\/g, "/");
+}
+
+/**
+ * `--dry-run` preview. Reports the resolved destination, whether the
+ * real run would be refused for want of `--force`, the canonical slots
+ * that would be filled, and the legacy field count — then writes
+ * nothing at all.
+ */
+function reportDryRun(args: {
+  root: string;
+  legacyAbs: string;
+  destAbs: string;
+  destExists: boolean;
+  force: boolean;
+  legacyFile: string;
+  canonical: Record<string, string>;
+  legacyFieldCount: number;
+  write: (message: string) => void;
+}): void {
+  const destRel = toRelPosix(args.root, args.destAbs);
+  const slots = Object.keys(args.canonical);
+  args.write(`qfai handoff upgrade --dry-run: no changes written.`);
+  args.write(`  legacy source: ${toRelPosix(args.root, args.legacyAbs)}`);
+  args.write(`  destination:   ${destRel} (${args.destExists ? "exists" : "new"})`);
+  args.write(`  canonical field(s): ${slots.length > 0 ? slots.join(", ") : "(none)"}`);
+  args.write(`  legacy field(s) preserved under legacy:: ${args.legacyFieldCount}`);
+  if (args.destExists && !args.force) {
+    args.write(
+      `  a real run would be REFUSED: ${destRel} already exists. ` +
+        `Re-invoke with \`qfai handoff upgrade ${args.legacyFile} --force\` to overwrite ` +
+        `(the existing file is backed up to ${destRel}.backup-<ISO> first).`,
+    );
+  } else if (args.destExists) {
+    args.write(`  --force given: ${destRel} would be backed up to ${destRel}.backup-<ISO> first.`);
+  }
+}
+
+/** Map recognized legacy fields onto the canonical schema slots. */
+function buildCanonicalSlots(parsed: Record<string, unknown>): Record<string, string> {
+  const canonical: Record<string, string> = {};
+  for (const field of HANDOFF_MINIMUM_FIELDS) {
+    const v = parsed[field];
+    if (typeof v === "string" && v !== "") {
+      canonical[field] = v;
+    }
+  }
+  return canonical;
+}
+
+/**
+ * Success-message suffix naming the raw-bytes preservation key. The
+ * `__legacy_raw__` sentinel is an internal name, but the emitted YAML
+ * carries it as a literal key under `legacy:` — so an operator who
+ * opens `handoff.yaml` and finds a key they did not author can
+ * correlate it back to the upgrade output instead of treating it as
+ * junk to be hand-deleted. Empty when no fallback parse happened.
+ */
+function rawSentinelNote(parsed: Record<string, unknown>): string {
+  return Object.prototype.hasOwnProperty.call(parsed, LEGACY_RAW_SENTINEL)
+    ? ` (raw legacy text preserved verbatim under legacy.${LEGACY_RAW_SENTINEL}; do not hand-edit)`
+    : "";
+}
+
+function describeError(err: unknown): string {
+  return err instanceof Error ? err.message : String(err);
+}
+
+/** Best-effort staging cleanup; a failure here is never fatal. */
+async function removeQuietly(p: string): Promise<void> {
+  try {
+    await unlink(p);
+  } catch {
+    // ignore cleanup failure
+  }
+}
+
+/** Outcome of the staged write. `backupRel` names the file we preserved. */
+type CommitResult = { ok: true; backupRel: string | null } | { ok: false; message: string };
+
+/**
+ * Stage → back up → rename. The prior canonical file (when one exists
+ * and `--force` was given) is renamed to `<dest>.backup-<ISO>` BEFORE
+ * the staged content lands, so an operator's hand-curated handoff is
+ * always recoverable from disk rather than only from git. Every failure
+ * path fails closed: the staged file is removed and, if the backup
+ * rename already happened, it is restored over the destination.
+ */
+async function commitCanonicalWrite(args: {
+  root: string;
+  destAbs: string;
+  destExists: boolean;
+  yaml: string;
+}): Promise<CommitResult> {
+  const stagedPath = `${args.destAbs}.tmp`;
+  try {
+    await mkdir(path.dirname(args.destAbs), { recursive: true });
+    await writeFile(stagedPath, `${args.yaml}\n`, "utf-8");
+  } catch (err: unknown) {
+    await removeQuietly(stagedPath);
+    return { ok: false, message: describeError(err) };
+  }
+  let backupAbs: string | null = null;
+  if (args.destExists) {
+    const candidate = `${args.destAbs}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+    try {
+      await rename(args.destAbs, candidate);
+      backupAbs = candidate;
+    } catch (err: unknown) {
+      await removeQuietly(stagedPath);
+      return {
+        ok: false,
+        message: `could not back up the existing canonical handoff (${describeError(err)}); nothing was overwritten`,
+      };
+    }
+  }
+  try {
+    await rename(stagedPath, args.destAbs);
+  } catch (err: unknown) {
+    await removeQuietly(stagedPath);
+    if (backupAbs !== null) {
+      // Put the operator's file back where it was.
+      await rename(backupAbs, args.destAbs).catch(() => undefined);
+    }
+    return { ok: false, message: describeError(err) };
+  }
+  return { ok: true, backupRel: backupAbs === null ? null : toRelPosix(args.root, backupAbs) };
+}
+
+/**
  * Run the upgrade. Two-stage write: stage to a `.tmp` sibling via
  * `writeFile`, then `rename` over the canonical destination — POSIX
  * rename within the same directory is atomic at the directory-entry
@@ -190,6 +351,12 @@ function toYaml(canonical: Record<string, string>, legacy: Record<string, unknow
  * loss"; upgrade callers retry from the legacy source if the
  * canonical write is lost. If parsing fails (or the legacy file is
  * unreadable), no write to the canonical file is performed.
+ *
+ * Atomicity is not overwrite protection: an EXISTING canonical
+ * destination is refused unless `force` is set (exit 1, naming the path
+ * and the `--force` recovery hint), and even under `force` the prior
+ * file is preserved as `<dest>.backup-<ISO>`. `dryRun` reports the
+ * resolved destination and field mapping and mutates nothing.
  */
 export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise<number> {
   const write = options.write ?? logInfo;
@@ -222,54 +389,58 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
     );
     return 1;
   }
-  // Build canonical slot mapping + preserve originals under `legacy:`.
-  const canonical: Record<string, string> = {};
-  for (const field of HANDOFF_MINIMUM_FIELDS) {
-    const v = parsed[field];
-    if (typeof v === "string" && v !== "") {
-      canonical[field] = v;
-    }
+  const canonical = buildCanonicalSlots(parsed);
+  // Count only OPERATOR-visible legacy keys: the sentinel is excluded
+  // so a fallback-only payload reads "preserved 0 legacy field(s)".
+  const visibleKeys = Object.keys(parsed).filter((k) => k !== LEGACY_RAW_SENTINEL);
+  const rawNote = rawSentinelNote(parsed);
+  const destRel = toRelPosix(options.root, destAbs);
+  const force = options.force === true;
+  const destExists = await destinationExists(destAbs);
+  // `--dry-run` reports and returns BEFORE any filesystem mutation —
+  // the destructive path must never run under a preview flag.
+  if (options.dryRun === true) {
+    reportDryRun({
+      root: options.root,
+      legacyAbs,
+      destAbs,
+      destExists,
+      force,
+      legacyFile: options.legacyFile,
+      canonical,
+      legacyFieldCount: visibleKeys.length,
+      write,
+    });
+    return 0;
   }
-  const yaml = toYaml(canonical, parsed);
-  // Atomic write: stage to a sibling temp file, then rename. On any
-  // mid-write failure we attempt to remove the temp file so the
-  // canonical destination is left untouched. The parent directory
-  // (`.qfai/` on default-canonical resolution) is created up-front so
-  // a clean project can run upgrade without a preparatory `mkdir`.
-  const stagedPath = `${destAbs}.tmp`;
-  try {
-    await mkdir(path.dirname(destAbs), { recursive: true });
-    await writeFile(stagedPath, `${yaml}\n`, "utf-8");
-    await rename(stagedPath, destAbs);
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : String(err);
-    writeErr(`qfai handoff upgrade: failed to write canonical handoff: ${message}`);
-    try {
-      await unlink(stagedPath);
-    } catch {
-      // ignore cleanup failure
-    }
+  // Overwrite guard. `.qfai/handoff.yaml` is a consumed SSOT, so a
+  // second `upgrade` (or one pointed at a stale legacy file) must not
+  // silently replace a hand-curated canonical file. Refuse, naming the
+  // existing path and the recovery hint.
+  if (destExists && !force) {
+    writeErr(
+      `qfai handoff upgrade: ${destRel} already exists. Overwriting it would discard the ` +
+        `current canonical handoff. Re-invoke with \`qfai handoff upgrade ${options.legacyFile} --force\` ` +
+        `to back it up to ${destRel}.backup-<ISO> and overwrite, or delete the file manually ` +
+        `if it is no longer needed.`,
+    );
     return 1;
   }
-  // Count only OPERATOR-visible legacy keys and name the raw-bytes
-  // preservation key explicitly. The `__legacy_raw__` sentinel is an
-  // internal name; the emitted YAML carries it as a literal key under
-  // `legacy:`, so the operator sees an unfamiliar key in their
-  // `handoff.yaml` after a fallback parse. The success message now:
-  //   - excludes the sentinel from the structural-field count so a
-  //     fallback-only payload reads "preserved 0 legacy field(s)";
-  //   - names the sentinel key (`legacy.__legacy_raw__`) so an
-  //     operator who opens `handoff.yaml` and sees a key they did
-  //     not author can correlate it back to the upgrade output
-  //     instead of treating it as junk to be hand-deleted.
-  const visibleKeys = Object.keys(parsed).filter((k) => k !== LEGACY_RAW_SENTINEL);
-  const hasRawSentinel = Object.prototype.hasOwnProperty.call(parsed, LEGACY_RAW_SENTINEL);
-  const rawNote = hasRawSentinel
-    ? ` (raw legacy text preserved verbatim under legacy.${LEGACY_RAW_SENTINEL}; do not hand-edit)`
-    : "";
+  const commit = await commitCanonicalWrite({
+    root: options.root,
+    destAbs,
+    destExists,
+    yaml: toYaml(canonical, parsed),
+  });
+  if (!commit.ok) {
+    writeErr(`qfai handoff upgrade: failed to write canonical handoff: ${commit.message}`);
+    return 1;
+  }
+  const backupNote =
+    commit.backupRel === null ? "" : ` Previous file backed up to ${commit.backupRel}.`;
   write(
-    `qfai handoff upgrade: wrote ${path.relative(options.root, destAbs).replace(/\\/g, "/")} ` +
-      `(preserved ${visibleKeys.length} legacy field(s) under legacy:${rawNote}).`,
+    `qfai handoff upgrade: wrote ${destRel} ` +
+      `(preserved ${visibleKeys.length} legacy field(s) under legacy:${rawNote}).${backupNote}`,
   );
   return 0;
 }

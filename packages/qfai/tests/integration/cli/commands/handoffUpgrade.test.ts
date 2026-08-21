@@ -8,13 +8,14 @@
  */
 // QFAI:SPEC-0015:TC-0015-0030
 
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import { runHandoffUpgrade } from "../../../../src/cli/commands/handoffUpgrade.js";
+import { run } from "../../../../src/cli/main.js";
 
 let root: string;
 
@@ -234,5 +235,196 @@ metadata:
     // representative line from the multi-line body survives.
     expect(body).toMatch(/multi-line/);
     expect(body).toMatch(/block scalar/);
+  });
+});
+
+/**
+ * Overwrite guard: `.qfai/handoff.yaml` is a consumed SSOT (the
+ * saas-package completion profile reads it by that exact path), so a
+ * re-run — or a run pointed at a stale legacy file — must not silently
+ * replace a hand-curated canonical file. Pre-fix the command staged a
+ * `.tmp` sibling and renamed over the destination unconditionally,
+ * reporting success with no backup and no prompt.
+ */
+describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
+  const CURATED = [
+    "companyName: Acme Corp",
+    "primarySpecId: spec-0007",
+    "signature: hand-edited-canonical-DO-NOT-LOSE",
+    "notes: three weeks of hand curation live in this file",
+    "",
+  ].join("\n");
+
+  async function seedCanonicalAndLegacy(): Promise<string> {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), CURATED, "utf-8");
+    await writeFile(
+      path.join(root, "legacy-old.yml"),
+      "companyName: Wrong Co\nprimarySpecId: spec-0001\n",
+      "utf-8",
+    );
+    return path.join(root, ".qfai", "handoff.yaml");
+  }
+
+  it("refuses to overwrite an existing canonical handoff without --force", async () => {
+    const destAbs = await seedCanonicalAndLegacy();
+    const out: string[] = [];
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      write: (m) => out.push(m),
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    // The curated file is byte-identical.
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe(CURATED);
+    // The refusal names the existing path AND the recovery hint.
+    const message = errs.join("\n");
+    expect(message).toMatch(/\.qfai\/handoff\.yaml already exists/);
+    expect(message).toMatch(/qfai handoff upgrade legacy-old\.yml --force/);
+    // No staged remnant is left behind.
+    await expect(readFile(`${destAbs}.tmp`, "utf-8")).rejects.toThrow();
+    expect(out).toEqual([]);
+  });
+
+  it("writes normally when no canonical handoff exists yet", async () => {
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8");
+    expect(body).toMatch(/companyName: "FreshCo"/);
+  });
+
+  it("with --force, backs the prior file up to <dest>.backup-<ISO> before overwriting", async () => {
+    const destAbs = await seedCanonicalAndLegacy();
+    const out: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      force: true,
+      write: (m) => out.push(m),
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    const body = await readFile(destAbs, "utf-8");
+    expect(body).toMatch(/companyName: "Wrong Co"/);
+    // The hand-curated bytes survive on disk, not only in git.
+    const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+      n.startsWith("handoff.yaml.backup-"),
+    );
+    expect(backups).toHaveLength(1);
+    const backupName = backups[0] ?? "";
+    await expect(readFile(path.join(root, ".qfai", backupName), "utf-8")).resolves.toBe(CURATED);
+    // The success line names the backup so the operator can find it.
+    expect(out.join("\n")).toMatch(/backed up to \.qfai\/handoff\.yaml\.backup-/);
+  });
+
+  it("honours --dry-run: nothing is written and the preview names the refusal", async () => {
+    const destAbs = await seedCanonicalAndLegacy();
+    const out: string[] = [];
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      dryRun: true,
+      write: (m) => out.push(m),
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(0);
+    expect(errs).toEqual([]);
+    // Untouched — pre-fix `--dry-run` performed the very overwrite it
+    // was invoked to prevent.
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe(CURATED);
+    const preview = out.join("\n");
+    expect(preview).toMatch(/no changes written/);
+    expect(preview).toMatch(/destination:\s+\.qfai\/handoff\.yaml \(exists\)/);
+    expect(preview).toMatch(/companyName/);
+    expect(preview).toMatch(/would be REFUSED/);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  it("honours --dry-run on a clean project without creating the destination", async () => {
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    const out: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      dryRun: true,
+      write: (m) => out.push(m),
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    expect(out.join("\n")).toMatch(/destination:\s+\.qfai\/handoff\.yaml \(new\)/);
+    await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).rejects.toThrow();
+  });
+});
+
+/**
+ * The guard is only real if the CLI threads the flags. Pre-fix
+ * `main.ts` constructed `runHandoffUpgrade({root, legacyFile})` and
+ * dropped `--force` / `--dry-run` on the floor, so a command-level
+ * test is what pins the regression.
+ */
+describe("qfai handoff upgrade CLI flag threading", () => {
+  async function seed(): Promise<string> {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "handoff.yaml"), "signature: keep-me\n", "utf-8");
+    await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+    return path.join(root, ".qfai", "handoff.yaml");
+  }
+
+  async function runCli(argv: string[]): Promise<number | undefined> {
+    const previous = process.exitCode;
+    process.exitCode = undefined;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+    try {
+      await run(argv, root);
+      return process.exitCode;
+    } finally {
+      stdout.mockRestore();
+      stderr.mockRestore();
+      process.exitCode = previous;
+    }
+  }
+
+  it("exits 1 and preserves the canonical file when --force is absent", async () => {
+    const destAbs = await seed();
+    const code = await runCli(["handoff", "upgrade", "legacy-old.yml", "--root", root]);
+    expect(code).toBe(1);
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe("signature: keep-me\n");
+  });
+
+  it("writes nothing under --dry-run even when --force is also given", async () => {
+    const destAbs = await seed();
+    const code = await runCli([
+      "handoff",
+      "upgrade",
+      "legacy-old.yml",
+      "--root",
+      root,
+      "--dry-run",
+      "--force",
+    ]);
+    expect(code).toBe(0);
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe("signature: keep-me\n");
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  it("overwrites with a backup when --force is given", async () => {
+    const destAbs = await seed();
+    const code = await runCli(["handoff", "upgrade", "legacy-old.yml", "--root", root, "--force"]);
+    expect(code).toBe(0);
+    await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "Wrong Co"/);
+    const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+      n.startsWith("handoff.yaml.backup-"),
+    );
+    expect(backups).toHaveLength(1);
   });
 });
