@@ -18,7 +18,7 @@ This file defines the canonical stages and delegation expectations.
 
 At the start of any work, classify the change and record it in:
 
-- `09_delta.md` Change Log (latest CL entry)
+- `09_delta.md` `## Change Summary` (latest `DELTA-NNNN` entry)
 - PR description (Change Type section)
 
 Allowed values:
