@@ -812,22 +812,26 @@ describe("qfai init", { timeout: 60000 }, () => {
   });
 
   // QFAI:SPEC-0003:TC-0003-0003
-  it("--force does not override instructions", async () => {
+  it("--force refreshes instructions from the shipped template", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       const instrDir = path.join(root, ".github", "instructions");
       await mkdir(instrDir, { recursive: true });
-      await writeFile(path.join(instrDir, "code-review.instructions.md"), "custom-cr\n", "utf-8");
-      await writeFile(path.join(instrDir, "principles.instructions.md"), "custom-pr\n", "utf-8");
+      await writeFile(path.join(instrDir, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await writeFile(path.join(instrDir, "principles.instructions.md"), "stale-pr\n", "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect(await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8")).toBe(
-        "custom-cr\n",
+      const codeReview = await readFile(
+        path.join(instrDir, "code-review.instructions.md"),
+        "utf-8",
       );
-      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toBe(
-        "custom-pr\n",
-      );
+      const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
+
+      expect(codeReview).not.toBe("stale-cr\n");
+      expect(codeReview).toContain("[BLOCKER]");
+      expect(principles).not.toBe("stale-pr\n");
+      expect(principles).toContain("YAGNI");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

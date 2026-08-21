@@ -112,10 +112,10 @@ Scenario: instructions の既存ファイル保護
 
 ```gherkin
 # AC-0003-0013
-Scenario: --force でも instructions は上書きされない
-  Given 両方の instructions ファイルが存在する
+Scenario: --force で instructions が更新される
+  Given 両方の instructions ファイルがカスタム内容で存在する
   When `qfai init --force` を実行する
-  Then どちらのファイルも変更されない
+  Then どちらのファイルも shipped テンプレートの内容で再生成される
 ```
 
 ```gherkin

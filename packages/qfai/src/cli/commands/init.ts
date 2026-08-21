@@ -1160,12 +1160,19 @@ async function syncIntegrationWrappers(
     }
   }
 
-  // Step 3.5: Distribute Copilot review instructions (create-only, force-disabled)
+  // Step 3.5: Distribute Copilot review instructions (create-only, `--force` refreshes).
+  //
+  // These two files are qfai-authored review guidance shipped from `assets/`, not
+  // project content — the same category as `copilot-instructions.md` just above and
+  // as the `STANDARD_ASSET_PATHS` trees. Skipping them unconditionally meant a
+  // correction to the shipped template reached new projects and nobody else, with no
+  // command that would update an installed repository and no signal that it was
+  // running stale guidance. `--force` is the supported refresh path.
   const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
   for (const fileName of instructionsFiles) {
     const dest = path.join(destRoot, ".github", "instructions", fileName);
     const alreadyExists = await pathExists(dest);
-    if (alreadyExists) {
+    if (alreadyExists && !options.force) {
       skipped.push(dest);
     } else {
       copied.push(dest);
