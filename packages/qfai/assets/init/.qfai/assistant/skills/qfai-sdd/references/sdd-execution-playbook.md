@@ -19,7 +19,13 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 1. Identify the latest discussion-pack.
 2. Stop if required files are missing.
 3. Stop if blocking OQ remain.
-4. Stop if the latest UI-bearing pack is missing valid `prototyping.yaml`.
+4. Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse
+   against the schema in
+   `skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`.
+   Absence is legal and must not stop Stage 0: `/qfai-discussion` emits the file only when the
+   pack is UI-bearing **and** an explicit prototyping recommendation is useful, so a complete
+   UI-bearing pack may legitimately omit it. Never author one to clear this gate — a
+   recommendation the discussion did not make is a fabricated rationale record.
 
 ## Stage 1: Triage
 

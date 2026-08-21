@@ -1,0 +1,92 @@
+/**
+ * Stage 0 must not stop on a `prototyping.yaml` `/qfai-discussion` may legally omit (#599).
+ *
+ * The producer emits the file only when the pack is UI-bearing *and* an explicit
+ * prototyping recommendation is useful, and the UI-bearing completion matrix does
+ * not list it — so a complete UI-bearing pack can lack it. Stage 0 nevertheless
+ * stopped on "missing valid `prototyping.yaml`", deadlocking the hand-off: no code
+ * arbitrates the file (`src/**` never reads it), so the only way past the gate was
+ * for the agent to fabricate a recommendation the discussion decided against.
+ */
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+import { describe, expect, it } from "vitest";
+
+// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
+
+const PLAYBOOK = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
+const DISCUSSION_SKILL = "assistant/skills/qfai-discussion/SKILL.md";
+const DISCUSSION_RULES = "assistant/skills/qfai-discussion/references/discussion-artifact-rules.md";
+const COMPLETION_MATRIX =
+  "assistant/skills/qfai-discussion/references/discussion-completion-matrix.md";
+
+const read = (tree: string, rel: string): Promise<string> =>
+  readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+/** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
+const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
+
+describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () => {
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: Stage 0 no longer stops on a missing prototyping.yaml`, async () => {
+      const playbook = flat(await read(tree, PLAYBOOK));
+
+      expect(playbook).not.toContain(
+        "Stop if the latest UI-bearing pack is missing valid `prototyping.yaml`",
+      );
+      expect(playbook).toContain("Absence is legal and must not stop Stage 0");
+    });
+
+    it(`${tree}: Stage 0 still stops on a present-but-invalid prototyping.yaml`, async () => {
+      const playbook = flat(await read(tree, PLAYBOOK));
+
+      // The validity half of the old check is the half that has value.
+      expect(playbook).toContain(
+        "Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
+      );
+      expect(playbook).toContain(
+        "`skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`",
+      );
+    });
+
+    it(`${tree}: Stage 0 forbids fabricating the file to clear the gate`, async () => {
+      const playbook = flat(await read(tree, PLAYBOOK));
+
+      expect(playbook).toContain("Never author one to clear this gate");
+    });
+
+    it(`${tree}: the schema anchor Stage 0 cites exists in the producer's rules`, async () => {
+      const rules = await read(tree, DISCUSSION_RULES);
+
+      // `#prototypingyaml` is the GitHub slug of this heading; if the heading is
+      // renamed, Stage 0's citation dangles.
+      expect(rules).toContain("## `prototyping.yaml`");
+      expect(flat(rules)).toContain("When `prototyping.yaml` is present, use the single-thread");
+    });
+
+    it(`${tree}: the producer still keeps emission conditional`, async () => {
+      const skill = flat(await read(tree, DISCUSSION_SKILL));
+      const matrix = await read(tree, COMPLETION_MATRIX);
+
+      // Option A keeps the producer as the owner of the decision; if a later
+      // change makes emission unconditional, Stage 0's wording must move too.
+      expect(skill).toContain(
+        "Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.",
+      );
+      expect(skill).toContain(
+        "UI-bearing discussion packs may include `prototyping.yaml` as an optional recommendation artifact",
+      );
+      // The UI-bearing completion gate must keep omitting it.
+      const uiBearing = matrix.slice(
+        matrix.indexOf("## UI-bearing Packs"),
+        matrix.indexOf("## Non-UI Packs"),
+      );
+      expect(uiBearing.length).toBeGreaterThan(0);
+      expect(uiBearing).not.toContain("prototyping.yaml");
+    });
+  }
+});
