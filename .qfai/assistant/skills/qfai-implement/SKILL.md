@@ -107,6 +107,15 @@ The eight required columns, the allowed transitions and the exception rules are 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
 
+### Phase: Skeleton (Once Per Project, Before The First Red)
+
+1. **The exit criterion is executable, not prose**: the system starts from a declared entrypoint and one declared `US-*` is answered over a **real socket**, proven by a committed smoke script that exits non-zero otherwise. An already-passing smoke script satisfies the phase — run it, record the run, continue. A spec set with no runnable entrypoint (a library) records `Skeleton: not applicable` with the reason; the verdict is written and the phase is never skipped silently.
+2. **Write no predicate here.** No authorization decision, no business rule, no calculation, no persistence invariant; routes return constants or pass-throughs. A predicate authored in this phase is a **blocking** finding — it belongs to a row.
+3. **Write the seam debt back as `todo` rows in the same commit** — also **blocking**. The skeleton may be shallow; it may not be invisible to the ledger.
+4. **Budget 3 cycles, then halt with a Change Request** — deliberately the opposite of the row-level policy. Refining rows while the product cannot start is the exact failure this phase exists to prevent.
+
+This is a precondition of the RED rule, not a relaxation of it: against a running skeleton, `404 where the row asserts 200` is an assertion failure inside the row's own `Selector` rather than a missing seam, which is what makes `Layer = E2E` and `Layer = API` rows observable at all (`references/red-admissibility.md`). The applicability test, the smoke-script contract, the halt and the evidence fields are in `references/walking-skeleton.md`.
+
 ### Phase: Red (Write Failing Test)
 
 1. Read `test-list.md`. **A named row wins**: when the invocation names one or more `TDD-ID`s — `/qfai-atdd` stage gate P1c hands over by id — process exactly those, in the order given, and select nothing else. Row order in the ledger is not a priority: a branch-2 row sitting above the named one would otherwise be picked up first, and its checkpoint runs the full suite against a tree that still holds the named row's deliberate RED, so it fails and lands at `refactor`, which this step does not re-select. Otherwise, **rework first**: if any row is at `review-fix`, select the first such row and resume its rework (`references/round-evidence.md`) before any `todo` row — one left by an interrupted session is otherwise never picked up. Otherwise select the first row with `Status = todo`, skipping any `blocked` row — it cannot be started, and re-issuing it is what made the determination get re-derived every pass (`references/execution-ledger.md#blocked-rows`). **A mutation-only request wins over even that, and moves no row.** `/qfai-atdd` sends one when a stage that owns no ledger row has edited a shared test artifact a completed row reads (`../qfai-atdd/references/shared-test-artifacts.md`): it names, per affected row, that row's spec and `TDD-ID`, the mutation its `Oracle proof` plan or `Satisfied-by` names, and the selector to run under the changed artifact. Apply the mutation, run the selector, capture the failure, **revert in the same step**, re-run for the restored GREEN, and return both. **Write nothing to `test-list.md` and nothing to that row's evidence**: the row stays `done`, no round block opens, and the returned pair is recorded by the requesting stage in its own `## Shared-artifact re-verify` block. This is the only entry that takes a row already at a terminal status, and it takes it read-only — every path below selects `todo`, a named row or `review-fix`, none of which a `done` row can be, so without this the request had no receiver and the requesting stage could never complete.
@@ -140,15 +149,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 ### Phase: Refactor
 
 1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file**, check whether another spec's `tdd/test-list.md` names it in `Test file`; if so the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
-2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
-   smallest selector that covers the module you touched **plus its reverse
-   dependency closure** — walk the production import graph backwards, not just the
-   test files that import the module directly. Fall back to the package containing
-   the touched module whenever that walk cannot be completed; never "every test in
-   the repository" at this step. Cadence: **narrow suite per item, full suite at
-   each checkpoint boundary**, because a full run per item is quadratic in ledger
-   size. Full rules, the fallback triggers and the boundary list:
-   `references/relevant-test-suite.md`.
+2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the smallest selector that covers the module you touched **plus its reverse dependency closure** — walk the production import graph backwards, not just the test files that import the module directly. Fall back to the package containing the touched module whenever that walk cannot be completed; never "every test in the repository" at this step. Cadence: **narrow suite per item, full suite at each checkpoint boundary**, because a full run per item is quadratic in ledger size. Full rules, the fallback triggers and the boundary list: `references/relevant-test-suite.md`.
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review
    (`implementation-reviewer`). A T1 row submits with its coherent group and stays in
@@ -169,9 +170,7 @@ The eight required columns, the allowed transitions and the exception rules are 
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
    is a user-approved accepted-risk waiver. Completion cannot be declared while
    any `exception` row lacks such a waiver.
-4. If a multi-spec queue was confirmed, announce the next queued spec and restart at
-   Phase: Red with its ledger; exit only after the last entry (Volume Policy >
-   Advancing the queue).
+4. If a multi-spec queue was confirmed, announce the next queued spec and restart at Phase: Red with its ledger; exit only after the last entry (Volume Policy > Advancing the queue). The Skeleton phase runs once per **project**, so a queued spec that shares the entrypoint already proven does not repeat it.
 
 ## Sub-agent Delegation (MANDATORY)
 

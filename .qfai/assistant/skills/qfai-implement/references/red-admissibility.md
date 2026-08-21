@@ -37,6 +37,12 @@ Each of these proves the seam is absent. None of them says anything about
 whether the assertions discriminate — which is the property RED exists to
 establish.
 
+For a `Layer = E2E` or `Layer = API` row the absent seam is frequently the
+**program itself**: a system with no entrypoint cannot answer a request, so
+every such row collects rather than asserts and none of them is startable. That
+is not a defect in this criterion — it is what `Phase: Skeleton` exists to
+remove before the first row is selected (`walking-skeleton.md`).
+
 This matters most exactly where discriminating power matters most. Under the
 skill's own ordering, Phase Red writes the test and Phase Green writes the
 production code, so for any row that introduces a new module or symbol the first
