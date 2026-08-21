@@ -528,9 +528,16 @@ describe("the shipped-lane allowlist", () => {
     );
     expect(both, "an invocation whose program is already allowed by name").toEqual([]);
     expect(ALLOWED_ACTIONS.size, "the action allowlist is not empty").toBeGreaterThan(0);
-    expect(ALLOWED_ACTION_INPUTS.has("arguments"), "`arguments` is the `uses:` build channel").toBe(
-      false,
+    // Per action since round 15, so the channel must be shut for every one of them: a flat set let each
+    // action accept the other two's inputs, and `arguments` on any of the three is the same channel.
+    const carriesBuildInput = [...ALLOWED_ACTION_INPUTS].flatMap(([action, inputs]) =>
+      ["arguments", "args", "run"]
+        .filter((key) => inputs.has(key))
+        .map((key) => `${action}: ${key}`),
     );
-    expect(ALLOWED_ACTION_INPUTS.has("args"), "as is `args`").toBe(false);
+    expect(
+      carriesBuildInput,
+      "`arguments`, `args` and `run` are the channels a `uses:` build arrives by, on any action",
+    ).toEqual([]);
   });
 });

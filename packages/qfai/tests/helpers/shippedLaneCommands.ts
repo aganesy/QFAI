@@ -495,8 +495,11 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
     if (/^[A-Za-z_]\w*=/.test(token)) {
       // An assignment whose VALUE names a program is a way to run one: `GIT_EXTERNAL_DIFF=./ext-diff.sh
       // git diff --ext-diff HEAD` runs an arbitrary script, and skipping the prefix made it invisible.
-      // A path or a script file is refused; `IFS=`, `NODE_ENV=production` and `declared=…` are not, which
-      // is what keeps the shipped tree readable.
+      // The prefix NAME must be enumerated: `ALLOWED_ENV_PREFIXES` holds `IFS` and nothing else, so
+      // `NODE_ENV=production npm ci` and `declared=x npm ci` are both unreadable rather than
+      // allowed. Two comments here said the opposite for three rounds — measured by round 15 —
+      // and the shipped tree stays readable because its only prefixed command is `IFS= read`,
+      // while its `declared=$( … )` assignment carries no command after it and invokes nothing.
       if (/^[A-Za-z_]\w*=/.test(token)) prefixNames.push(token.slice(0, token.indexOf("=")));
       i += 1;
       continue;
@@ -764,11 +767,18 @@ export const ALLOWED_STEP_KEYS: ReadonlySet<string> = new Set([
   "uses",
   "with",
 ]);
-export const ALLOWED_ACTION_INPUTS: ReadonlySet<string> = new Set([
-  "cache",
-  "fetch-depth",
-  "node-version",
-  "persist-credentials",
+/**
+ * The inputs each shipped action may be given, per ACTION.
+ *
+ * One flat set across all three until round 15, so each action accepted the other two's inputs — a
+ * `node-version` on a checkout, a `fetch-depth` on `setup-node`. Neither does anything today, and that is
+ * the argument for enumerating rather than for guessing which cross-product is harmless: the shipped set
+ * is four entries across three actions and is ours to state exactly.
+ */
+export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
+  ["actions/checkout", new Set(["fetch-depth", "persist-credentials"])],
+  ["actions/setup-node", new Set(["cache", "node-version"])],
+  ["pnpm/action-setup", new Set<string>()],
 ]);
 
 /**
@@ -1131,7 +1141,7 @@ function withoutRedirections(command: string): string {
 function bareArgumentsOf(command: string): string[] {
   const tokens = tokensOf(withoutRedirections(command));
   // The SAME prefix walk `invocationOf` uses. Counting from index 1 assumed token 0 is the program, and
-  // with an assignment prefix it is not — `NODE_ENV=production npm ci` yielded `["npm", "ci"]`, so
+  // with an assignment prefix it is not — `IFS= read -r changed_path` yielded `["read", "-r"]`, so
   // `TAKES_NO_PACKAGE` refused a line the shipped tree may legitimately contain. Two coordinate systems in
   // one small pair of functions, which is the defect the classifier's `namesACommand` had.
   const head = headIndexOf(tokens);

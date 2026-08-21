@@ -152,14 +152,22 @@ vehicle for this row.
 **The cycle is over-determined, and worse than the scoped numbers suggest.** Two passes of P1d found
 successively more of it:
 
-- clearing `QFAI-ATDD-112` still leaves `error=1` from `QFAI-ATDD-111`, which stands **deliberately**
-  because this stage withdrew `US-0017-0007`'s unearned annotation;
+- clearing `QFAI-ATDD-112` leaves the scoped gate at `error=0`. **Corrected 2026-08-22, after round 15**
+  — this bullet read "still leaves `error=1` from `QFAI-ATDD-111`, which stands deliberately because this
+  stage withdrew `US-0017-0007`'s unearned annotation", which was true when written and was refuted by
+  round 12: the story is about this repository's own suite, it is covered by
+  `tests/e2e/spec0017RunnerParallelismE2E.test.ts`, and `QFAI-ATDD-111` is clear for this spec;
 - `QFAI-ATDD-112`'s eight **scoped** TCs are the six `blocked` rows plus these two, so a green `build`
   needs three other CRs resolved _and_ `TC-0017-0070` annotated — which `EX-0017-0054` makes impossible
   pre-merge. Under the strict reading `TDD-0069` is blocked on `TDD-0070`;
 - and the scoped count is the wrong one to reason from. **`build` runs three UNSCOPED profiles**
-  (`ci.yml:376-428`). Unscoped, `QFAI-ATDD-111` is **12 US across five specs** and `QFAI-ATDD-112` is
-  **15 TCs across four**, re-derived here rather than taken on trust:
+  (`ci.yml:376-428`). Unscoped, `QFAI-ATDD-111` is **11 US across four specs** and `QFAI-ATDD-112` is
+  **15 TCs across four**. **Corrected 2026-08-22, after round 15** — the first figure read "12 US across
+  five specs", which is the double-count the stage evidence retracts by name ("that sentence used to end
+  'plus `US-0017-0007` makes 12', which was double-counting a row already inside the eleven"). It
+  survived here because it is written as two counts in one sentence, so no needle in the retracted-claims
+  guard reached it, and because that guard read `.qfai/evidence/**` and this file's own name and not the
+  wording. Re-derived rather than taken on trust:
 
   ```text
   QFAI-ATDD-112, unscoped:  SPEC-0003 1   SPEC-0008 4   SPEC-0015 2   SPEC-0017 8   = 15

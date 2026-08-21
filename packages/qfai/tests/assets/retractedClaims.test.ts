@@ -97,6 +97,10 @@ interface Retracted {
  */
 const RETRACTED: readonly Retracted[] = [
   {
+    claim: "12 US across five specs",
+    why: "eleven across four; the same double-count as `15 TC across five specs`, written as two counts in one sentence so no needle reached it (round 15 B1)",
+  },
+  {
     claim: "US-0017-0007 is uncovered",
     why: "covered since round 12 by a test that observes an effect; the correction moved one paragraph and left five sites, two of them in sections that certify (round 14 B3)",
   },

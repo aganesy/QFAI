@@ -726,9 +726,11 @@ describe(
           }
           const inputs = holder["with"];
           if (isRecord(inputs)) {
+            // Per action. One flat set let each action take the other two's inputs, which is a
+            // cross-product nobody enumerated hiding inside an enumeration.
+            const allowed = ALLOWED_ACTION_INPUTS.get(action) ?? new Set<string>();
             for (const key of Object.keys(inputs)) {
-              if (!ALLOWED_ACTION_INPUTS.has(key))
-                refusedUses.push(`${label}: ${action} with ${key}`);
+              if (!allowed.has(key)) refusedUses.push(`${label}: ${action} with ${key}`);
             }
           }
         }

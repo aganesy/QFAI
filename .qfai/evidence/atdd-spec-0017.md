@@ -2038,7 +2038,7 @@ pnpm verify:pack                                exit 0
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 error=4  (see § "The full profile")
+node ... validate --profile full                 error=50 (see § "The full profile")
 ```
 
 **`--project assets` does not exist**, and an earlier version of this block named it. The workspace
@@ -2289,15 +2289,36 @@ not in this record.
 
 ### The full profile
 
-`validate --profile full` reports **`error=4`** at this stage's HEAD, and `build` runs that profile.
-Two are `QFAI-ATDD-111` / `-112` **unscoped** — **11 US across four specs, of which this spec owns
-NONE**, and 15 TCs across four, of which it owns 8; `build` needs all of them; the other two are
-`QFAI-REVIEW-004` / `-005` against
-**this stage's own in-flight review pack** — a pack cannot satisfy the layout contract until its last
-reviewer has landed and it has been sealed. Round 4's gatekeeper found this undisclosed, and it is the
-same class of gap as the two packs that were missing `summary.json`: masked in CI only because the
-`tdd` step fails first on the scoped gate's error, which was `error=2` when this was written and is
-`error=1` now.
+`validate --profile full` reports **`error=50`** at this stage's HEAD, and `build` runs that profile.
+Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
+and never re-run, in the block whose own first sentence says it is re-measured rather than carried. The
+round-14 commit that re-measured the two suite totals did not touch this one, so "re-measured" was true
+of the sentence beside it and false of this.
+
+The fifty, by rule:
+
+```text
+QFAI-REVIEW-007   45   summary.json missing or misusing `revision_form`
+QFAI-REVIEW-004    2   review pack layout
+QFAI-REVIEW-005    1   review pack layout
+QFAI-ATDD-111      1   unscoped: 11 US across four specs, of which this spec owns NONE
+QFAI-ATDD-112      1   unscoped: 15 TCs across four specs, of which it owns 8
+```
+
+`QFAI-ATDD-111` and `-112` are one finding each, not one per item — which is why four was ever a
+plausible total, and why the two numbers in the table above are the ones `build` actually needs cleared.
+
+**`QFAI-REVIEW-007` is a rule this record had never named**, and exactly one of its forty-five belongs to
+this stage: round 14's `summary.json` carried `revision_form: "commit"`, a value the contract does not
+admit. It is corrected and the pack re-sealed. The other forty-four are packs other stages wrote, and
+they are a cross-spec obligation rather than this stage's work — recorded here with their number, per
+this skill's CRITICAL CONSTRAINTS, rather than waived.
+
+`QFAI-REVIEW-004` / `-005` are against **this stage's own in-flight review pack** — a pack cannot satisfy
+the layout contract until its last reviewer has landed and it has been sealed. Round 4's gatekeeper found
+this undisclosed, and it is the same class of gap as the two packs that were missing `summary.json`:
+masked in CI only because the `tdd` step fails first on the scoped gate's error, which was `error=2` when
+this was written and is `error=1` now.
 
 P1d's gate is **closed** — it passed at pass 6 and round 8 did not re-route it, because re-deciding a
 decided gate is not a review. A ninth stage round is owed. This stage does not claim its own repairs
@@ -2470,7 +2491,10 @@ Review pack seal:  06638643339fc1eb1f8bd9d3d1cccf7013db314361ac3d6b2eac4609cff07
                    Closed with a request and no reports: all three of its reviewers died on ENOTFOUND
                    before writing. A pack with nothing in it is closed, not in flight.
 Review pack:       .qfai/review/review-20260822030000000/            (round 14 — stage gates only)
-Review pack seal:  3b81e2422d6bebde7e59071b82e1be184d684f7189b5a53b734136569b136bbc
+Review pack seal:  2e22d875cb38120ee6f9ced8b0cd368107060027c64bdec79a61dbd7f4906e44
+                   Re-sealed at round 15: its `summary.json` carried `revision_form: "commit"`,
+                   which `QFAI-REVIEW-007` rejects. One of the forty-five that rule reports
+                   unscoped, and the only one of the forty-five this stage wrote.
 Review pack:       .qfai/review/review-20260822060000000/            (round 15 — stage gates only)
 Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
