@@ -39,6 +39,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
+import { checkAssistantAssetLineBudget } from "./doctor/assetLineBudget.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -250,6 +251,7 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
   }
 
   addCheck(checks, await buildAgentFrontmatterCheck(root));
+  addCheck(checks, await buildAssetLineBudgetCheck(root));
 
   const deprecatedPromptsDir = resolvePath(root, config, "promptsDir");
   const deprecatedPromptsExists = await exists(deprecatedPromptsDir);
@@ -504,6 +506,58 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     },
     summary: summarize(checks),
     checks,
+  };
+}
+
+/**
+ * Reports assistant assets that exceed the shipped line ceiling.
+ *
+ * The ceiling used to be asserted only by the framework's own asset test, which
+ * is not published, so a project created by init had no way to check the rule
+ * its operating baseline states. Severity is `warning`: an oversized asset is
+ * authoring drift, not something that stops the active profile.
+ */
+async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
+  const report = await checkAssistantAssetLineBudget(root);
+  const title = "Assistant asset line budget";
+  const details = {
+    assistantDir: toRelativePath(root, report.assistantDir),
+    maxLines: report.maxLines,
+    scanned: report.scanned,
+    oversized: report.oversized,
+    unreadable: report.unreadable,
+  };
+
+  if (report.status === "skipped_missing_assistant") {
+    return {
+      id: "assets.lineBudget",
+      severity: "info",
+      title,
+      message:
+        "assistant assets が未作成のため検査をスキップしました（'qfai init' を実行してください）",
+      details,
+    };
+  }
+
+  if (report.status === "ok") {
+    return {
+      id: "assets.lineBudget",
+      severity: "ok",
+      title,
+      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です`,
+      details,
+    };
+  }
+
+  return {
+    id: "assets.lineBudget",
+    severity: "warning",
+    title,
+    message: `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています（references/ へ節を切り出してください）`,
+    details: {
+      ...details,
+      nextActions: ["超過ファイルの1トピックを skill 配下の references/ に移す"],
+    },
   };
 }
 

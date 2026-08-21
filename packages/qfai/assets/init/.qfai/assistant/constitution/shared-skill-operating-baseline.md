@@ -26,8 +26,12 @@ It is not where the detail lives.
   the file (and anchor, when the file covers more than one topic) so the reader
   is never left guessing where the rule went.
 
-A hard line ceiling backs this up in the asset tests, but it is a backstop, not
-the rule. A skill approaching it is a signal to move a section out.
+A hard line ceiling backs this up: **500 lines per assistant asset file**, for
+every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
+`content.split(/\r?\n/).length` — blank lines included. `qfai doctor` measures
+it and reports every file over the ceiling as `assets.lineBudget`. The ceiling
+is a backstop, not the rule: a file approaching it is a signal to move a section
+out, not to raise the number.
 
 ## User Questions (AskUserQuestion Protocol)
 
