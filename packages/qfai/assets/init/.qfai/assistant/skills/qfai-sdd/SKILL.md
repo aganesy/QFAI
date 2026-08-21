@@ -80,6 +80,32 @@ Validators: `QFAI-STATUS-001..006`.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
+### `--auto` and approval-required rows
+
+`--auto` is a no-question mode (`.qfai/assistant/constitution/constitution.md`,
+AskUserQuestion rule 4). Stage 1 requires a question for CREATE / DELETE /
+SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE. The precedence is:
+
+- **`--auto` covers Stage 1 classification only.** An approval-required row is
+  outside its scope, so rule 4 does not license deciding the row without the
+  operator. This is a scope boundary, not an exception to rule 4.
+- **An approval-required row suspends `--auto` for that row.** Ask via
+  AskUserQuestion when an operator is present, and record the answer in
+  `Approved By`.
+- **Never synthesize an `Approved By` value.** `Approved By` is the only trace
+  that a spec deletion or merge was authorized, so an invented approver is a
+  false audit record — worse than a stopped run.
+- **With no operator present, stop the stage.** Leave `Approved By` as `-`, do
+  not enter Phase 0, and write a `blocker` work-log entry (see
+  `## Work-log entries`) naming every unapproved row with its Operation and
+  target. The resulting `QFAI-TRIAGE-005` errors are the reported state of a
+  suspended run, not a gate to route around.
+- Runs whose Triage is entirely UPDATE:APPEND / UPDATE:MODIFY carry no
+  approval-required row, so `--auto` completes them without a question.
+
+This changes no bucket in `## Default Autopilot Policy`: the six operations stay
+in `ask-user`, and `--auto` never moves them to auto-decide.
+
 ## FORMAT SSOT (Mandatory)
 
 - Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory`.
