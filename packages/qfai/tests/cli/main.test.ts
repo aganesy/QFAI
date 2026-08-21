@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,6 +25,36 @@ describe("cli root discovery", { timeout: 15000 }, () => {
 
       const validatePath = path.join(root, ".qfai", "report", "validate.json");
       await expect(readFile(validatePath, "utf-8")).resolves.toContain('"toolVersion"');
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sets exitCode from report so --fail-on gates the run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["report", "--root", root, "--run-validate", "--fail-on", "never"], root);
+        expect(process.exitCode).toBe(0);
+
+        const validatePath = path.join(root, ".qfai", "report", "validate.json");
+        const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+        const seededPath = path.join(root, ".qfai", "report", "validate.seeded.json");
+        await writeFile(
+          seededPath,
+          `${JSON.stringify({ ...parsed, counts: { info: 0, warning: 0, error: 1 } }, null, 2)}\n`,
+          "utf-8",
+        );
+
+        await run(["report", "--root", root, "--in", seededPath, "--fail-on", "error"], root);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
     } finally {
       await rm(root, { recursive: true, force: true });
     }

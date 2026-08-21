@@ -51,9 +51,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     case "report":
       {
         const resolvedRoot = await resolveRoot(options);
-        await runReport({
+        process.exitCode = await runReport({
           root: resolvedRoot,
           format: options.reportFormat,
+          strict: options.strict,
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.reportOut !== undefined ? { outPath: options.reportOut } : {}),
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),

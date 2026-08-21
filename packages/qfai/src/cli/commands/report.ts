@@ -1,6 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
+import type { FailOn } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
@@ -9,6 +10,7 @@ import { createReportData, formatReportJson, formatReportMarkdown } from "../../
 import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
+import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
 
@@ -20,9 +22,15 @@ export type ReportOptions = {
   runValidate?: boolean;
   baseUrl?: string;
   profile?: ValidationProfile;
+  failOn?: FailOn;
+  strict?: boolean;
 };
 
-export async function runReport(options: ReportOptions): Promise<void> {
+/**
+ * レポートを書き出し、`validate` と同じ基準で終了コードを返す。
+ * 0=gate 通過 / 1=gate 不通過 / 2=入力 validate.json 欠如。
+ */
+export async function runReport(options: ReportOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
   let validation: ValidationResult;
@@ -67,8 +75,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
             "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
           ].join("\n"),
         );
-        process.exitCode = 2;
-        return;
+        return 2;
       }
       throw err;
     }
@@ -101,10 +108,25 @@ export async function runReport(options: ReportOptions): Promise<void> {
       "report: CI で full-scan ではない profile を実行しました。stage gate としては有効ですが、完了宣言の前に --profile full（または --profile 指定なし）で full-scan を実行してください。",
     );
   }
+  // `report --run-validate` は CI の単一ステップとして使われる。gate を
+  // 持たないと validate が拒否する状態でも永続的に緑になるため、validate と
+  // 同じ failOn 解決と severity 比較で終了コードを決める。
+  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
   info(
-    `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error}`,
+    `report: info=${validation.counts.info} warning=${validation.counts.warning} error=${validation.counts.error} failOn=${failOn}`,
   );
   info(`wrote report: ${outPath}`);
+  return shouldFail(validation, failOn) ? 1 : 0;
+}
+
+function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
+  if (options.failOn) {
+    return options.failOn;
+  }
+  if (options.strict) {
+    return "warning";
+  }
+  return fallback;
 }
 
 async function readValidationResult(inputPath: string): Promise<ValidationResult> {

@@ -48,16 +48,10 @@ describe("report", { timeout: 15000 }, () => {
 
     const reportPath = path.join(root, ".qfai", "report", "report.md");
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runReport({ root, format: "md" });
+    const exitCode = await runReport({ root, format: "md" });
 
-      expect(process.exitCode).toBe(2);
-      await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
-    } finally {
-      process.exitCode = previousExitCode;
-    }
+    expect(exitCode).toBe(2);
+    await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
   });
 
   it("runs report with --run-validate", async () => {
@@ -375,5 +369,56 @@ describe("report", { timeout: 15000 }, () => {
     expect(report.prototyping?.evidence?.specsCoverage?.expectedSpecIds).toEqual(["0001"]);
     expect(report.prototyping?.evidence?.specsCoverage?.missingSpecIds).toEqual([]);
     expect(report.prototyping?.evidence?.specsCoverageStatus).toBe("complete");
+  });
+});
+
+describe("report exit code", { timeout: 15000 }, () => {
+  async function seedValidation(counts: {
+    info: number;
+    warning: number;
+    error: number;
+  }): Promise<{ root: string; inputPath: string }> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-gate-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await runValidate({ root, strict: false, failOn: "never", format: "github" });
+
+    const validatePath = path.join(root, ".qfai", "report", "validate.json");
+    const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+    const inputPath = path.join(root, ".qfai", "report", "validate.seeded.json");
+    await writeFile(inputPath, `${JSON.stringify({ ...parsed, counts }, null, 2)}\n`, "utf-8");
+    return { root, inputPath };
+  }
+
+  it("exits 1 when the report carries an error and failOn defaults to error", async () => {
+    const { root, inputPath } = await seedValidation({ info: 4, warning: 5, error: 1 });
+
+    const exitCode = await runReport({ root, format: "md", inputPath });
+
+    expect(exitCode).toBe(1);
+  });
+
+  it("honours --fail-on never on a report that carries an error", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 1 });
+
+    const exitCode = await runReport({ root, format: "md", inputPath, failOn: "never" });
+
+    expect(exitCode).toBe(0);
+  });
+
+  it("honours --strict on a report that carries only warnings", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 2, error: 0 });
+
+    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
+    expect(await runReport({ root, format: "md", inputPath, strict: true })).toBe(1);
+  });
+
+  it("still writes the report artifact when the gate fails", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 3 });
+    const reportPath = path.join(root, ".qfai", "report", "gated.md");
+
+    const exitCode = await runReport({ root, format: "md", inputPath, outPath: reportPath });
+
+    expect(exitCode).toBe(1);
+    await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
   });
 });
