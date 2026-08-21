@@ -1686,6 +1686,50 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("names only the pre-recut surfaces it probed when reporting that none were found", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-upgrade-manifest-"));
+    try {
+      // Populate the canonical manifest/ layer and leave the two pre-recut
+      // surfaces (steering/, instructions/) absent. The helper deliberately
+      // never stats manifest/ — its path is unchanged by the recut — so
+      // neither the note nor the memo may claim it was examined.
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      await mkdir(manifestDir, { recursive: true });
+      await writeFile(path.join(manifestDir, "my-routing.yml"), "phases: []\n", "utf-8");
+
+      const stdout = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
+      });
+
+      expect(stdout).toContain(
+        "W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found",
+      );
+      expect(stdout).not.toContain("{steering,instructions,manifest}");
+
+      const memoMatches = await fg(
+        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
+        { cwd: root, dot: true },
+      );
+      expect(memoMatches.length).toBe(1);
+      const memoBody = await readFile(path.join(root, memoMatches[0] ?? ""), "utf-8");
+      expect(memoBody).toContain(
+        "No pre-recut surfaces (`.qfai/assistant/{steering,instructions}/`) found",
+      );
+      expect(memoBody).not.toContain("{steering,instructions,manifest}");
+      expect(memoBody).not.toContain(
+        "Source layout: .qfai/assistant/{steering, instructions, manifest}/",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0025 (TDD-0025): assistantPaths.ts SSOT — init.ts routes new layers through the helper
   it("TC-0003-0025 (TDD-0025): init.ts builds new 4-layer paths through assistantPaths.ts helpers", async () => {
     const initSrc = await readFile(
