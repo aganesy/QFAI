@@ -9,7 +9,7 @@ to move it. Keep it here so step 1 stays a selection rule and nothing else.
 
 `/qfai-atdd` sends one when a stage that owns no ledger row has edited a shared
 test artifact that a completed row reads
-(`../qfai-atdd/references/shared-test-artifacts.md`). That stage owns no
+(`../../qfai-atdd/references/shared-test-artifacts.md`). That stage owns no
 production agent, so it cannot take the mutation itself; the row it needs
 re-verified is `done`, so no other entry of this skill can receive it. Without
 this branch the request had no receiver and the requesting stage could never

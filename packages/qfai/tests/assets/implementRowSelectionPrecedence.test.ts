@@ -15,7 +15,7 @@
  * `references/mutation-only-request.md`.
  */
 
-import { readFile } from "node:fs/promises";
+import { access, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -64,6 +64,18 @@ describe("Phase Red row selection states its precedence as an order", () => {
       expect(items[3]).toContain("first row with `Status = todo`");
     });
 
+    it(`${dir}: the lead-in does not cap a multi-id invocation at one row`, async () => {
+      const step = flat(stepOne(await read(dir, "SKILL.md")));
+
+      // Branch 2 takes "one or more" ids and orders "exactly those, in the order
+      // given". A lead-in reading "select **exactly one** row by the precedence
+      // below" outranks it on an ordered read, so an agent could work the first
+      // id and stop, leaving the rest of the handover unprocessed.
+      expect(step).not.toContain("select **exactly one** row by the precedence below");
+      expect(step).toContain("Each iteration works **exactly one** row");
+      expect(step).toContain("works them all, one per iteration, in the order given");
+    });
+
     it(`${dir}: the winning branch no longer back-references the weakest one`, async () => {
       const step = stepOne(await read(dir, "SKILL.md"));
 
@@ -87,7 +99,9 @@ describe("Phase Red row selection states its precedence as an order", () => {
     it(`${dir}: the reference carries the inputs, the sequence and the no-write rule`, async () => {
       const reference = flat(await read(dir, "references/mutation-only-request.md"));
 
-      expect(reference).toContain("`../qfai-atdd/references/shared-test-artifacts.md`");
+      // Resolved from `references/`, not from the skill root: one `..` lands
+      // back in `qfai-implement/`, so the cross-skill hop needs two.
+      expect(reference).toContain("`../../qfai-atdd/references/shared-test-artifacts.md`");
       expect(reference).toContain("the selector to run under the changed artifact");
       expect(reference).toContain("**Revert in the same step**");
       expect(reference).toContain("Re-run for the restored GREEN");
@@ -95,6 +109,26 @@ describe("Phase Red row selection states its precedence as an order", () => {
         "**Write nothing to `test-list.md` and nothing to that row's evidence.**",
       );
       expect(reference).toContain("`## Shared-artifact re-verify`");
+    });
+
+    it(`${dir}: every relative path the reference cites resolves to a real file`, async () => {
+      const relDir = path.posix.join(dir, "references");
+      const reference = await read(dir, "references/mutation-only-request.md");
+
+      // Pinning the citation string alone let a wrong number of `..` segments
+      // pass; the target has to exist relative to the file that names it.
+      const cited = [...reference.matchAll(/`((?:\.\.\/)+[\w./-]+\.md)(?:#[\w-]+)?`/g)].map(
+        (match) => match[1],
+      );
+      expect(cited.length, "no relative citation found").toBeGreaterThan(0);
+
+      for (const target of cited) {
+        const resolved = path.resolve(repoRoot, relDir, target);
+        await expect(
+          access(resolved),
+          `${relDir}/mutation-only-request.md cites ${target}, which does not exist`,
+        ).resolves.toBeUndefined();
+      }
     });
   }
 });
