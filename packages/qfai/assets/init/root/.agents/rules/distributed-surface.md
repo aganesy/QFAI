@@ -6,10 +6,17 @@ identifiers must not appear there.
 
 ## Distributed Surface (SSOT)
 
-Define the surface once, in the packaging manifest itself, and read it from
-there. For an npm package the `"files"` field of `package.json` is that
-definition; for other ecosystems it is the equivalent include list. Never
-maintain a second hand-written list of shipped paths — the two drift.
+Declare the surface once, in the packaging manifest — for an npm package the
+`"files"` field of `package.json`, elsewhere the equivalent include list — and
+never keep a second hand-written list of shipped paths beside it; the two
+drift.
+
+That include list is a declaration, not the finished packlist. A packer adds
+files of its own (npm always ships the manifest, the README, the LICENSE, and
+whatever `main` and `bin` point at) and an ignore file can drop entries the
+include list named. So when a check has to enumerate what actually ships, ask
+the packer: `npm pack --dry-run --json` for npm, the equivalent dry run
+elsewhere. Scanning the include list alone misses published files.
 
 ## Forbidden in the Distributed Surface
 
@@ -30,10 +37,18 @@ version marker this project minted for itself is forbidden.
 
 ## Canonical Version Source
 
-Exactly one version number _of this project_ may appear in shipped files: the
-released version recorded in the packaging manifest. Do not invent a private
-schema-version counter alongside it. Express a breaking change by raising the
-released version, not by adding a marker.
+The only version _of this project_ a shipped file may present as current is
+the released version recorded in the packaging manifest. Do not invent a
+private schema-version or format-version counter alongside it, and do not let
+a shipped artifact carry one as a field. Express a breaking change by raising
+the released version, not by adding a marker.
+
+Naming this project's **past** releases is not a marker and must not be
+stripped. Migration guides, deprecation notices, compatibility shims and the
+documented history of a public API all have to say which release they are
+about, and removing those numbers destroys the information. What this rule
+forbids is a parallel counter this project minted for itself — not a factual
+reference to a release that happened.
 
 ## Where Internal IDs Are Fine
 

@@ -192,12 +192,23 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     const tmpDir = await newTempDir();
     await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-    const citingFiles = [".github/copilot-instructions.md", ".codex/README.md"];
+    // Every entry point an agent loads on its own: Codex reads `AGENTS.md`,
+    // Claude Code reads `CLAUDE.md`, Copilot reads its instructions file.
+    // `.codex/README.md` is not auto-loaded, but it makes the same claim, so
+    // its citations have to resolve too.
+    const citingFiles = [
+      "AGENTS.md",
+      "CLAUDE.md",
+      ".github/copilot-instructions.md",
+      ".codex/README.md",
+    ];
     const missing: string[] = [];
 
     for (const citing of citingFiles) {
-      const content = await readFile(path.join(tmpDir, ...citing.split("/")), "utf-8");
-      const cited = new Set(content.match(RULE_REFERENCE_RE) ?? []);
+      const citingPath = path.join(tmpDir, ...citing.split("/"));
+      const content = await readFile(citingPath, "utf-8").catch(() => null);
+      expect(content, `qfai init did not create ${citing}`).not.toBeNull();
+      const cited = new Set(content?.match(RULE_REFERENCE_RE) ?? []);
       expect(cited.size, `${citing} cites no .agents/rules path`).toBeGreaterThan(0);
       for (const rulePath of cited) {
         const stats = await stat(path.join(tmpDir, ...rulePath.split("/"))).catch(() => null);
