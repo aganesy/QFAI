@@ -41,7 +41,8 @@ most 5 per invocation of this skill, after which the remaining choices are taken
 as labelled assumptions and recorded in the config diff — see
 `.qfai/assistant/constitution/constitution.md` Article VI. The `hard-required`
 inputs in Default Autopilot Policy are the exception: they are never assumed,
-and a missing one blocks the run until it is provided.
+and a missing one blocks the run until it is provided — but only where this run
+consumes it; one this run never reads is not asked for at all.
 
 ## FORMAT SSOT (Mandatory)
 

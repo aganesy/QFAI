@@ -110,29 +110,44 @@ Default policy:
   clarification. Such questions are unbounded and MUST still be asked after the
   budget is exhausted. Skipping a mandatory approval to stay under the budget
   violates this article; it is not compliance with it.
-- **`hard-required` inputs are exempt.** An input a skill's
-  `Default Autopilot Policy` lists under `hard-required` — `companyName` and
-  brand intent in `/qfai-configure`, a missing `primarySpecId` — has no default
-  and MUST NOT be guessed once the budget is exhausted. Ask for it; if it is
-  still missing, stop and name what is blocked. Assumptions cover
-  clarifications, never inputs the skill declares undefaultable.
+- **`hard-required` inputs are exempt — but only where the invocation needs
+  them.** An input a skill's `Default Autopilot Policy` lists under
+  `hard-required` has no default and MUST NOT be guessed once the budget is
+  exhausted. The exemption is **scoped to the inputs the requested work actually
+  consumes**: `companyName` and brand intent when the run produces brand-facing
+  output, `primarySpecId` when the run is spec-scoped. An input the requested
+  path never reads MUST NOT be asked for and MUST NOT block the run — a
+  `/qfai-verify` run on a repository with no brand surface executes its quality
+  gates without ever asking for `companyName`. When a **needed** input is still
+  missing, stop and name what is blocked. Assumptions cover clarifications,
+  never inputs the skill declares undefaultable **and** the run requires.
 
 ### Exhaustion (MUST)
 
 Exhaustion stops the questions, not the work: for the remainder of the
-invocation the agent enters `--auto` behaviour — ask no further clarifying
-questions, proceed with explicit assumptions, and label every assumption in the
-outputs. The exemptions above survive exhaustion unchanged.
+invocation the agent is in **clarification-exhausted mode** — ask no further
+clarifying questions, proceed with explicit assumptions, and label every
+assumption in the outputs.
 
-An explicit **“stop” is not exhaustion** and MUST NOT be read as `--auto`. It
-ends the invocation: ask nothing further, do no further work, make no further
-file changes, and report what was completed and what remains.
+Clarification-exhausted mode is **not `--auto`**. `--auto` is a no-question mode
+(Article X, rule 4) that forbids AskUserQuestion and plain-text questions
+outright; clarification-exhausted mode silences clarifications only, so the
+exemptions above survive it unchanged — mandatory approvals and needed
+`hard-required` inputs MUST still be asked. An agent that exhausts the budget
+mid-invocation therefore never has to choose between skipping a mandatory
+approval and breaking the `--auto` rules: it is not under them.
+
+An explicit **“stop” is not exhaustion** and MUST NOT be read as `--auto` or as
+clarification-exhausted mode. It ends the invocation: ask nothing further, do no
+further work, make no further file changes, and report what was completed and
+what remains.
 
 Stop conditions:
 
 - User says “stop” → abort the invocation; no further work or file changes.
 - User says “proceed / done” → `--auto` behaviour for the rest of the invocation.
-- Question budget is exhausted → `--auto` behaviour for the rest of the invocation.
+- Question budget is exhausted → clarification-exhausted mode for the rest of the
+  invocation.
 
 ---
 
@@ -190,6 +205,10 @@ Rules:
    The agent MUST NOT use AskUserQuestion or ask via plain text.
    The agent MUST proceed with explicit assumptions and MUST record them in outputs.
    This is not an exception to the MUST rule — it is a "no-question mode".
+5. **Exhausting the Article VI budget is not `--auto`**: it enters
+   clarification-exhausted mode, which silences clarifying questions only.
+   Rule 4 does not apply to it — mandatory approvals and the `hard-required`
+   inputs that invocation actually consumes MUST still be asked.
 
 This article survives context compaction because `constitution.md` is a P1 reload target.
 

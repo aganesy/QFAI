@@ -81,7 +81,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-que
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 Those per-row approvals are decisions, not clarifications: they are exempt from
 the Article VI clarification budget and MUST be asked however many rows triage
-produced. The budget applies only to this skill's clarifying questions — see
+produced. The budget applies only to this skill's clarifying questions, and
+exhausting it enters clarification-exhausted mode rather than `--auto`, so a
+sixth approval-required row is still approved by the user — see
 `.qfai/assistant/constitution/constitution.md` Article VI.
 
 ## FORMAT SSOT (Mandatory)

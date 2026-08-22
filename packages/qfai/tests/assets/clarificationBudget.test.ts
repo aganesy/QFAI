@@ -29,6 +29,7 @@ function expectPhrase(content: string, phrase: string): void {
 }
 
 const CONSTITUTION = "assistant/constitution/constitution.md";
+const COMMUNICATION = "assistant/constitution/communication.md";
 const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
 const SDD = "assistant/skills/qfai-sdd/SKILL.md";
 const CONFIGURE = "assistant/skills/qfai-configure/SKILL.md";
@@ -55,9 +56,28 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "### Exhaustion (MUST)");
       // "Stop condition" must not be readable as "abort the run".
       expectPhrase(content, "Exhaustion stops the questions, not the work");
-      expectPhrase(content, "the agent enters `--auto`\nbehaviour");
+      expectPhrase(content, "the agent is in **clarification-exhausted mode**");
       expectPhrase(content, "label every assumption in the outputs");
-      expectPhrase(content, "Question budget is exhausted → `--auto` behaviour");
+      expectPhrase(content, "Question budget is exhausted → clarification-exhausted mode");
+    });
+
+    it(`${tree}: exhaustion is a distinct state, not --auto`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      // Article X rule 4 bans every question under `--auto`. Equating the two
+      // would force the agent to choose between skipping a mandatory approval
+      // and violating `--auto`, so exhaustion MUST stay its own state.
+      expectPhrase(content, "Clarification-exhausted mode is **not `--auto`**");
+      expectPhrase(content, "clarification-exhausted mode silences clarifications only");
+      expectPhrase(
+        content,
+        "mandatory approvals and needed\n`hard-required` inputs MUST still be asked",
+      );
+      // Article X must say the same thing where the `--auto` ban is declared.
+      expectPhrase(content, "**Exhausting the Article VI budget is not `--auto`**");
+      expectPhrase(content, "Rule 4 does not apply to it");
+      const communication = await read(tree, COMMUNICATION);
+      expectPhrase(communication, "**Exhaustion is not `--auto`**");
+      expectPhrase(communication, "where rule 4 does not apply");
     });
 
     it(`${tree}: Article VI keeps an explicit "stop" out of --auto`, async () => {
@@ -83,13 +103,38 @@ describe("the clarification budget is countable", () => {
     it(`${tree}: Article VI never lets exhaustion assume a hard-required input`, async () => {
       const content = await read(tree, CONSTITUTION);
       // Otherwise the budget contradicts every skill's `hard-required` bucket.
-      expectPhrase(content, "**`hard-required` inputs are exempt.**");
+      expectPhrase(
+        content,
+        "**`hard-required` inputs are exempt — but only where the invocation needs\n  them.**",
+      );
       expectPhrase(
         content,
         "has no default\n  and MUST NOT be guessed once the budget is exhausted",
       );
-      expectPhrase(content, "if it is\n  still missing, stop and name what is blocked");
+      expectPhrase(
+        content,
+        "When a **needed** input is still\n  missing, stop and name what is blocked",
+      );
       expectPhrase(content, "never inputs the skill declares undefaultable");
+    });
+
+    it(`${tree}: the hard-required exemption is scoped to what the run consumes`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      // Every skill's `Default Autopilot Policy` lists the same three entries,
+      // so an unscoped rule would make `/qfai-verify` demand `companyName`
+      // from a repository that has no brand surface and stop when unanswered.
+      expectPhrase(content, "**scoped to the inputs the requested work actually\n  consumes**");
+      expectPhrase(
+        content,
+        "An input the requested\n  path never reads MUST NOT be asked for and MUST NOT block the run",
+      );
+      expectPhrase(content, "executes its quality\n  gates without ever asking for `companyName`");
+      const operating = await read(tree, OPERATING);
+      expectPhrase(operating, "**that this invocation actually consumes**");
+      expectPhrase(
+        operating,
+        "input the requested path never reads is neither asked for nor a blocker",
+      );
     });
 
     it(`${tree}: the shared baseline restates the budget for every skill`, async () => {
@@ -106,6 +151,11 @@ describe("the clarification budget is countable", () => {
       const content = await read(tree, SDD);
       expectPhrase(content, "exempt from\nthe Article VI clarification budget");
       expectPhrase(content, "MUST be asked however many rows triage\nproduced");
+      // The sixth approval-required row is the case the budget must not eat.
+      expectPhrase(
+        content,
+        "exhausting it enters clarification-exhausted mode rather than `--auto`",
+      );
       expectPhrase(content, "`.qfai/assistant/constitution/constitution.md` Article VI");
     });
 
@@ -119,6 +169,7 @@ describe("the clarification budget is countable", () => {
         "The `hard-required`\ninputs in Default Autopilot Policy are the exception",
       );
       expectPhrase(content, "a missing one blocks\nthe run until it is provided");
+      expectPhrase(content, "but only where this run\nconsumes it");
       expectPhrase(content, "`.qfai/assistant/constitution/constitution.md` Article VI");
     });
   }

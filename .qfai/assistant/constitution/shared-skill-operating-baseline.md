@@ -41,8 +41,11 @@ the rule. A skill approaching it is a signal to move a section out.
   proceeds with labelled assumptions instead of asking.
   Mandatory approval questions and `hard-required` inputs are exempt from the
   budget: approvals MUST still be asked, and a missing `hard-required` input
-  MUST be asked for rather than assumed — if it stays missing, stop instead of
-  guessing. See `constitution.md` Article VI.
+  **that this invocation actually consumes** MUST be asked for rather than
+  assumed — if it stays missing, stop instead of guessing. A `hard-required`
+  input the requested path never reads is neither asked for nor a blocker.
+  Exhaustion is not `--auto`, so these questions survive it.
+  See `constitution.md` Article VI.
 
 ## Canonical qfai Launcher (Mandatory)
 
