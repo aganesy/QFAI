@@ -201,6 +201,33 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // Moving the static gates to the per-spec set means a lint/format/type defect
+  // over a `done` row's code first surfaces where no row can be re-opened:
+  // `done` has one exit (the approved upstream reset) and the skill skips `done`
+  // rows on re-execution. Without a stated repair path the failure is unfixable.
+  it("gives the per-spec FAIL a legal repair path", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const criteria = flat(section(reference, "## Pass criteria"));
+
+      expect(headingSlugs(reference)).toContain("repairing-a-per-spec-fail");
+      // The failure mode the section exists for, named.
+      expect(criteria).toContain("formatter, linter or type-check failure");
+      expect(criteria).toContain("skips `done` rows on re-execution");
+      // The repair: fix in place, no status moves, fresh reviewer verdicts first.
+      expect(criteria).toContain("**A per-spec FAIL is not a ledger event.**");
+      expect(criteria).toContain("leave every `Status` where it is");
+      expect(criteria).toContain("re-run the **whole** per-spec set");
+      // A fix that moves the obligation is the one case that does reopen a row,
+      // and it goes through the existing approved reset rather than a new edge.
+      expect(criteria).toContain("that is a Change Request");
+      expect(criteria).toContain("change-request-reset.md");
+    }
+  });
+
   it("launches the CLI through npx, which is how a project dependency resolves", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(

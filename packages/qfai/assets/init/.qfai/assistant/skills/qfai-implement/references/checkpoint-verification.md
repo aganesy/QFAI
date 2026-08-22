@@ -115,6 +115,32 @@ commands alone would let an item reach `done` carrying code no reviewer ever saw
 skill's own stale-evidence rule forbids. A fix that changes nothing a reviewer judged — re-running
 after a flaky external service, say — needs no re-review; record which case applied.
 
+### Repairing a per-spec FAIL
+
+A per-item FAIL keeps its row at `refactor`, where every repair edge is still available. The
+per-spec set has no such row: every row is `done` or a valid `exception` before it runs, and steps 3
+and 4 run **only** here — so an ordinary implementation defect over code a `done` row produced, a
+formatter, linter or type-check failure among them, first becomes visible at a boundary where
+`execution-ledger.md#allowed-transitions` gives `done` a single exit (the approved upstream reset)
+and `SKILL.md` skips `done` rows on re-execution. Stated without the rest of this section, that
+failure would have no legal repair path at all.
+
+**A per-spec FAIL is not a ledger event.** Fix it in place and leave every `Status` where it is: no
+row's obligation moved, its test is unchanged and still green, so no TDD cycle restarts and no reset
+is owed. What _is_ owed is the reviewer PASS. The fix changes production code the affected rows'
+routed blocking reviewers already passed, so re-submit it to every one of them whose scope it
+touches, record the fresh verdicts under a new `Revision` in each affected row's evidence entry, and
+only then re-run the **whole** per-spec set. Spec-level completion is declared from that re-run,
+never from the failed one.
+
+Two findings leave that path. When the fix cannot be made without changing a row's own test or the
+obligation behind it, the obligation itself moved — that is a Change Request, and the row re-enters
+through the approved reset (`change-request-reset.md`), which is the legal reopen precisely because
+something upstream changed. When the finding has no spec owner — the `.qfai/contracts/**` and
+un-owned `QFAI-TRACE-*` findings step 4 describes — it is not repaired from here at all: record it
+with its owning artifact as step 4 requires, and the boundary stays unpassed until its owner clears
+it.
+
 ## Spec-level boundary on an already-complete ledger
 
 A ledger is **terminal** when every row is `done` or a valid `exception` — the same condition the
