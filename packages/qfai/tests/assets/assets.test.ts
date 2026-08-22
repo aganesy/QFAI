@@ -878,22 +878,77 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
 
     // Backticked tokens only: prose mentions such as `npx qfai init --force`
-    // do not count as documenting the flag.
-    const documented = [
-      "--dir <path>",
-      "--force",
-      "--dry-run",
-      "--upgrade-assistant-tree",
-      "--yes",
-    ];
+    // do not count as documenting the flag. `--dir <path>` is documented with
+    // its value placeholder inside the same span, so a trailing space closes
+    // the token just as a backtick does.
+    const documentsFlag = (readme: string, flag: string): boolean =>
+      readme.includes(`\`${flag}\``) || readme.includes(`\`${flag} `);
+
     for (const readme of readmes) {
-      for (const flag of documented) {
-        expect(readme, `README must document the init flag ${flag}`).toContain(`\`${flag}\``);
-      }
       // `--upgrade-assistant-tree` is the remedy the deprecation finding
       // prints at operators, and the migration copies instead of deleting.
       expect(readme).toContain("D-DEPRECATED-PATH");
       expect(readme).toContain("copied, never deleted");
+    }
+
+    // SSOT drift guard: the documented set is DERIVED from the actual flag
+    // registration, not hand-maintained. `main.ts` decides which parsed
+    // options `runInit` receives, and `args.ts` decides which `--flag`
+    // writes each of those options — so a new init flag added to the parser
+    // and wired into `runInit` fails this test until both READMEs list it,
+    // whether or not the CLI ever prints guidance mentioning it.
+    const mainSource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "main.ts"),
+      "utf-8",
+    );
+    const argsSource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "lib", "args.ts"),
+      "utf-8",
+    );
+
+    // 1. Which ParsedArgs options does the `init` command consume?
+    const initCase = /case "init":([\s\S]*?)\breturn;/.exec(mainSource);
+    expect(initCase, 'main.ts must keep a `case "init":` dispatch block').not.toBeNull();
+    const initOptionKeys = new Set<string>();
+    for (const match of (initCase?.[1] ?? "").matchAll(/options\.([A-Za-z][A-Za-z0-9]*)/g)) {
+      const key = match[1];
+      if (key !== undefined) {
+        initOptionKeys.add(key);
+      }
+    }
+    expect(initOptionKeys.size).toBeGreaterThan(0);
+
+    // 2. Which `--flag` writes each of those options in the parser?
+    const flagsByOption = new Map<string, Set<string>>();
+    const caseBlocks = argsSource.split(/\n\s*case (?=")/);
+    for (const block of caseBlocks) {
+      const flagMatch = /^"(--[a-z][a-z0-9-]*)":/.exec(block);
+      const flag = flagMatch?.[1];
+      if (flag === undefined) continue;
+      for (const assignment of block.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=/g)) {
+        const key = assignment[1];
+        if (key === undefined) continue;
+        const bucket = flagsByOption.get(key) ?? new Set<string>();
+        bucket.add(flag);
+        flagsByOption.set(key, bucket);
+      }
+    }
+
+    // 3. Every flag that can set an init option must be documented in both
+    //    READMEs. An init option with no flag at all means the derivation
+    //    broke and is failed rather than skipped.
+    for (const key of initOptionKeys) {
+      const flags = flagsByOption.get(key);
+      expect(flags, `args.ts must register a --flag that sets options.${key}`).toBeDefined();
+      expect((flags?.size ?? 0) > 0).toBe(true);
+      for (const flag of flags ?? []) {
+        for (const readme of readmes) {
+          expect(
+            documentsFlag(readme, flag),
+            `README must document the init flag ${flag} (sets options.${key})`,
+          ).toBe(true);
+        }
+      }
     }
 
     // Drift guard: any `qfai init --<flag>` the tool prints at operators must
@@ -924,9 +979,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(printedFlags.size).toBeGreaterThan(0);
     for (const flag of printedFlags) {
       for (const readme of readmes) {
-        expect(readme, `README must document the init flag ${flag} that the CLI prints`).toContain(
-          `\`${flag}\``,
-        );
+        expect(
+          documentsFlag(readme, flag),
+          `README must document the init flag ${flag} that the CLI prints`,
+        ).toBe(true);
       }
     }
   });
