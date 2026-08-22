@@ -9,6 +9,10 @@
  *   - prototyping.json.reviewerGate.result === "PASS"
  *   - root DESIGN.md parses, and the latest iteration HTML contains zero
  *     DESIGN.md violations (color / font / radius / shadow drift)
+ *   - on the per-spec layout, every `<screen>.review.json` required by
+ *     the frozen set both EXISTS and parses against the shipped
+ *     reviewer payload schema (closed schema; a malformed payload is
+ *     the same coverage rejection as a missing one)
  *
  * `certify --check` re-computes evidence digests against the stored
  * certificate and exits non-zero on drift. The check ALSO re-hashes the
@@ -54,6 +58,7 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
+import { parseEvaluatorReview } from "../../core/prototyping/evaluatorReview.js";
 import {
   resolvePrimaryPrototypingSpec,
   resolveSurfaceUnion,
@@ -656,6 +661,7 @@ export async function runPrototypingCertify(
       );
     } else {
       const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
+      const invalidPayloads: Array<{ expectedPath: string; errors: string[] }> = [];
       // codex r3270911400 (P1, chatgpt-codex-connector): the previous
       // optimisation pre-built a per-spec map from `screenContracts.sourceRef`
       // and used it whenever the indexed entry was non-empty, only
@@ -699,6 +705,18 @@ export async function runPrototypingCertify(
               screen: screen.screenId,
               expectedPath: rel,
             });
+            continue;
+          }
+          // Presence alone is not evidence: a truncated, empty or
+          // `{}`-only payload used to seal a certificate because the
+          // gate never opened the file. The shipped reference
+          // (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`)
+          // declares the payload a CLOSED schema whose violation is a
+          // hard failure, so parse it here with the same parser the
+          // reference documents.
+          const payloadErrors = await collectReviewPayloadErrors(abs);
+          if (payloadErrors.length > 0) {
+            invalidPayloads.push({ expectedPath: rel, errors: payloadErrors });
           }
         }
       }
@@ -722,6 +740,32 @@ export async function runPrototypingCertify(
         // declared screen" → exit 64; returning 2 (input error) here
         // would split the same coverage rejection across two exit
         // codes and break operator workflows that key on 64.
+        return 64;
+      }
+      if (invalidPayloads.length > 0) {
+        error(
+          "qfai prototyping certify: accepted iteration " +
+            `${acceptedIterDir} has ${invalidPayloads.length} review.json payload(s) that ` +
+            "do not satisfy the reviewer payload schema " +
+            "(.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md):",
+        );
+        // Same bounded-stderr policy as the missing-pair branch above:
+        // cap the rendered diagnostics so a large frozen set cannot
+        // flood the operator's terminal.
+        let renderedErrors = 0;
+        for (const entry of invalidPayloads.slice(0, 20)) {
+          error(`  - ${entry.expectedPath}:`);
+          for (const detail of entry.errors) {
+            if (renderedErrors >= 20) break;
+            error(`      ${detail}`);
+            renderedErrors += 1;
+          }
+          if (renderedErrors >= 20) break;
+        }
+        // A malformed payload is the same evidence gap as a missing
+        // one — the (spec, screen) pair carries no parsable review —
+        // so it shares the coverage rejection code (exit 64) instead
+        // of introducing a third exit code for the same class.
         return 64;
       }
     }
@@ -1871,6 +1915,34 @@ async function loadJson(filePath: string): Promise<unknown> {
  * checks elsewhere; certify's strict gates upstream (lock-unreadable,
  * stale-iter-readdir) catch the broader permission-flip vector.
  */
+/**
+ * Read one `<screen>.review.json` and validate it against the shipped
+ * reviewer payload reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`)
+ * via {@link parseEvaluatorReview}.
+ *
+ * Returns the aggregated schema violations; an empty array means the
+ * payload parses cleanly. Unreadable / non-JSON files are reported as
+ * a single violation rather than thrown, so one corrupt payload cannot
+ * abort the sweep over the remaining (spec, screen) pairs.
+ */
+async function collectReviewPayloadErrors(absPath: string): Promise<string[]> {
+  let raw: string;
+  try {
+    raw = await readFile(absPath, "utf-8");
+  } catch (err) {
+    return [`unreadable: ${err instanceof Error ? err.message : String(err)}`];
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(raw);
+  } catch (err) {
+    return [`invalid JSON: ${err instanceof Error ? err.message : String(err)}`];
+  }
+  const result = parseEvaluatorReview(parsed);
+  return result.ok ? [] : [...result.errors];
+}
+
 async function fileExists(absPath: string): Promise<boolean> {
   try {
     const s = await stat(absPath);

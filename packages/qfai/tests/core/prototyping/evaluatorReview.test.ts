@@ -834,6 +834,32 @@ describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () =
     expect(result.errors.some((e) => /unknown field: softWarnings\.extraWarn/.test(e))).toBe(true);
   });
 
+  // The shipped reference declares the payload closed at EVERY level.
+  // `designMdViolations[]` elements were the one nested object whose
+  // key set was never checked, so `{kind, found, severity}` passed and
+  // the unknown data was silently dropped.
+  it("rejects unknown keys inside a designMdViolations[] element", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        designMdViolations: [{ kind: "color", found: "#fff", severity: "blocking" }],
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(
+      result.errors.some((e) => /unknown field: designMdViolations\[0\]\.severity/.test(e)),
+    ).toBe(true);
+  });
+
+  it("still accepts a well-formed designMdViolations[] element", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({ designMdViolations: [{ kind: "color", found: "#fff" }] }),
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.review.designMdViolations).toEqual([{ kind: "color", found: "#fff" }]);
+  });
+
   it("rejects the legacy flat timeBudgetSoftWarning key (closed-schema regression)", () => {
     const result = parseEvaluatorReview(
       baseReviewerPayload({

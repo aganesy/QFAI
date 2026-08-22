@@ -18,8 +18,14 @@ key, misspelled field, legacy flat key) fails the whole file.
 One file per (spec x screen x cycle). `<spec-id>` is the spec
 directory name (`spec-NNNN`), `<screen>` is the screen id declared in
 that spec's UI contract. `<screen>.review.json` is the **only**
-per-cycle Reviewer artifact — the Reviewer does not write `.html`,
-`.png` or `.interaction.json`.
+per-(spec x screen) artifact the Reviewer writes — no `.html`, no
+`.png`, no `.interaction.json`.
+
+The Reviewer's other output is the per-cycle summary
+`iter-NN/review.json` (one per cycle, a different shape — see
+`references/reviewer-prompt.md`), which the orchestrator folds into
+`prototyping.json#iterations[]`. It is not a per-screen artifact and
+is never parsed against this schema.
 
 ## Shape (11 required top-level fields)
 
@@ -47,12 +53,13 @@ type ReviewerPayload = {
   };
   layoutAntiPatternsDetected: string[]; // lap-001..lap-008 ids
   designMdViolations: {
+    // closed too: `kind` + `found` only, no extra key per element
     kind: "color" | "font" | "radius" | "shadow";
     found: string;
   }[];
   wallTimeSec: number; // non-negative finite; Reviewer-measured
   softWarnings: {
-    timeBudget: boolean; // true iff wallTimeSec exceeded the per-spec cap
+    timeBudget: boolean; // true iff wallTimeSec > 300 (5 min per spec)
   };
 };
 ```
@@ -62,18 +69,19 @@ bounded prose.
 
 ## Field rules
 
-| Field                        | Rule                                                                       |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| `specId` / `screenId`        | non-empty strings                                                          |
-| `cycle`                      | integer, `0..9`; both bounds are enforced                                  |
-| `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                    |
-| `retryCount`                 | non-negative integer                                                       |
-| `ordinalAxes`                | all 4 axes required, each an ordinal verdict; no extra axis                |
-| `impressions`                | all 6 `*Feel` fields required, each a string of at most 200 words          |
-| `layoutAntiPatternsDetected` | array of strings; empty array required for convergence                     |
-| `designMdViolations`         | array of `{kind, found}`; filled by the static gate; empty for convergence |
-| `wallTimeSec`                | non-negative finite number; informational, no upper bound                  |
-| `softWarnings`               | required, closed, single boolean key `timeBudget`                          |
+| Field                        | Rule                                                                                                      |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
+| `specId` / `screenId`        | non-empty strings                                                                                         |
+| `cycle`                      | integer, `0..9`; both bounds are enforced                                                                 |
+| `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                                                   |
+| `retryCount`                 | non-negative integer                                                                                      |
+| `ordinalAxes`                | all 4 axes required, each an ordinal verdict; no extra axis                                               |
+| `impressions`                | all 6 `*Feel` fields required, each a string of at most 200 words                                         |
+| `layoutAntiPatternsDetected` | array of strings; empty array required for convergence                                                    |
+| `designMdViolations`         | array of `{kind, found}` (element closed: no other key); filled by the static gate; empty for convergence |
+| `wallTimeSec`                | non-negative finite number; informational, no upper bound                                                 |
+| `softWarnings`               | required, closed, single boolean key `timeBudget`                                                         |
+| `softWarnings.timeBudget`    | `wallTimeSec > 300` (the per-spec cap is 300 seconds = 5 min/spec)                                        |
 
 `menuReachabilityFeel` describing an unreachable menu entry is
 accepted — the `*Feel` fields are qualitative critique, not gates.
@@ -102,10 +110,25 @@ for this (spec, screen) pair:
 
 The retry budget is `N = 3` attempts per (spec, screen) pair with
 exponential backoff (`base * 2^attemptIndex` ms, `base = 250`).
-Exhausting it for every reviewer attempted on the pair is the Reviewer
-Playwright hard-stop: the run exits `64` with `sessionStatus` recorded
-in the payload, which is what distinguishes it from a converged exit
-`64`.
+
+Who records which status:
+
+- The Reviewer records `sessionStatus` itself whenever it can still
+  write a payload for the pair — a session that completed is `ok`; one
+  that only came up after failed attempts records `retryExhausted` with
+  the `retryCount` actually consumed.
+- When the pair never produced a session at all, no payload is written:
+  the CLI-side dispatch persists `<screen>.review.json` only on a
+  successful attempt, so a `launchFailed` / fully-exhausted pair leaves
+  **no file**. Do not invent one — an absent payload is the signal.
+
+That is also what separates the two exit `64`s: a converged run has a
+parsable payload for every (spec, screen) pair, while a Reviewer
+Playwright hard-stop leaves the pair without one and
+`npx qfai prototyping certify` names the missing pair on stderr.
+certify reads every payload it does find and rejects the run the same
+way when one fails this schema — a present-but-unparsable payload is
+not evidence.
 
 `impressions.*` prose is not deterministic and MUST NOT be asserted for
 exact equality. The stable surfaces are `ordinalAxes.*`,

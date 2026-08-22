@@ -496,6 +496,14 @@ function isDesignMdViolationKind(value: string): value is DesignMdViolation["kin
   return VIOLATION_KINDS.has(value);
 }
 
+/**
+ * Allowed keys of a single `designMdViolations[]` element. The shipped
+ * reference declares the payload closed at every level, so an element
+ * carrying an unlisted key (e.g. a hand-added `severity`) is a hard
+ * failure rather than silently-dropped data.
+ */
+const DESIGN_MD_VIOLATION_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["kind", "found"]);
+
 function pushDmvErrors(
   record: Record<string, unknown>,
   errors: string[],
@@ -517,6 +525,13 @@ function pushDmvErrors(
       errors.push(`designMdViolations[${i}] must be an object {kind, found}`);
       continue;
     }
+    let entryOk = true;
+    for (const key of Object.keys(entry)) {
+      if (!DESIGN_MD_VIOLATION_KNOWN_KEYS.has(key)) {
+        errors.push(`unknown field: designMdViolations[${i}].${key}`);
+        entryOk = false;
+      }
+    }
     const kindValue = entry.kind;
     if (typeof kindValue !== "string" || !isDesignMdViolationKind(kindValue)) {
       errors.push(
@@ -528,6 +543,7 @@ function pushDmvErrors(
       errors.push(`designMdViolations[${i}].found must be a string`);
       continue;
     }
+    if (!entryOk) continue;
     out.push({ kind: kindValue, found: entry.found });
   }
   return out;
@@ -560,6 +576,7 @@ function pushDmvErrors(
  *   - `softWarnings` required as a closed nested object with the
  *     single boolean key `timeBudget`
  *   - any extra top-level / nested key is rejected (closed schema;
+ *     `designMdViolations[]` elements included — `{kind, found}` only;
  *     protects against typos and schema drift). The legacy flat
  *     `timeBudgetSoftWarning?: string` key is no longer accepted —
  *     callers must use `softWarnings.timeBudget: boolean`.

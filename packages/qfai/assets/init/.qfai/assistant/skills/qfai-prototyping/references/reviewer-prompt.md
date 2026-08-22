@@ -18,18 +18,24 @@ the static compliance gate, not by you.
 
 ## Outputs — two files, two schemas
 
-You write two different files. They are not interchangeable.
+You write two different files. They are not interchangeable. Both
+paths are given in full below and are relative to the project root —
+write them exactly there, or the CLI will not find them.
 
 1. **Per-spec / per-screen payload** —
-   `iter-NN/<spec-id>/<screen>.review.json`, one per screen. This is
-   the file the prototyping CLI parses and certify requires. Its
-   schema is closed (11 required top-level fields, unknown keys
-   rejected) and lives in
+   `.qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json`,
+   one per screen. `<spec-id>` is the spec directory name
+   (`spec-NNNN`); the per-spec subdirectory is mandatory, and a
+   multi-spec run is rejected without it. This is the file the
+   prototyping CLI parses and certify requires. Its schema is closed
+   (11 required top-level fields, unknown keys rejected) and lives in
    `references/review-payload-schema.md`. Write it from that
    reference, not from the block below.
-2. **Per-cycle summary** — `iter-NN/review.json`, one per cycle. The
-   orchestrator folds it into `prototyping.json#iterations[]`, which
-   is what `npx qfai validate` checks. Its shape is the block below.
+2. **Per-cycle summary** —
+   `.qfai/evidence/prototyping/iter-NN/review.json`, one per cycle.
+   The orchestrator folds it into `prototyping.json#iterations[]`,
+   which is what `npx qfai validate` checks. Its shape is the block
+   below.
 
 The two share only `layoutAntiPatternsDetected` and
 `designMdViolations`. `scores` / `proseCritique` / `pivotDirective` /

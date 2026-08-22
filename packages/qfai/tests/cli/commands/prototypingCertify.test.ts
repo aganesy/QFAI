@@ -29,6 +29,7 @@ import {
 } from "../../../src/cli/commands/prototypingCertify.js";
 import { readUiContractScreenContracts } from "../../../src/core/contracts/screenContracts.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
+import { reviewPayload } from "../../helpers/reviewPayload.js";
 
 // Canonical DESIGN.md that satisfies the brand-SSOT parse + final-iter
 // violation scan. Copied verbatim from the legacy fixture so the
@@ -76,10 +77,6 @@ const CERT_DESIGN_MD = [
 const CLEAN_FINAL_HTML =
   "<!doctype html>\n<html><head><style>body { font-family: Inter, system-ui, sans-serif; }</style></head>" +
   "<body><main><h1>Acme</h1></main></body></html>\n";
-
-// Minimal qualitative review payload — the certify presence check only
-// cares about file existence at the expected path, not the schema.
-const REVIEW_JSON_STUB = JSON.stringify({ ok: true });
 
 const tempDirs: string[] = [];
 
@@ -194,13 +191,14 @@ async function seedReviewJson(
   specDirName: string,
   screenId: string,
   iterIndex = 1,
+  body = reviewPayload(specDirName, screenId),
 ): Promise<void> {
   const dir = path.join(
     root,
     `.qfai/evidence/prototyping/iter-${String(iterIndex).padStart(2, "0")}/${specDirName}`,
   );
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, `${screenId}.review.json`), REVIEW_JSON_STUB, "utf-8");
+  await writeFile(path.join(dir, `${screenId}.review.json`), body, "utf-8");
 }
 
 describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.json presence)", () => {
@@ -250,6 +248,53 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
 
     const exit = await runPrototypingCertify({ root, check: false });
     expect(exit).toBe(0);
+  });
+
+  // The shipped reviewer payload reference declares `<screen>.review.json`
+  // a CLOSED schema whose violation is a hard failure. Before this gate
+  // certify only stat()-ed the file, so `{}` or truncated JSON sealed a
+  // certificate with unusable review evidence.
+  it("exits 64 and names the schema violations when a present review.json does not parse against the closed payload schema", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    // `settings` exists but carries an empty object — every required
+    // field is missing.
+    await seedReviewJson(root, "spec-0012", "settings", 1, "{}\n");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-0012/settings.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes("missing field: specId"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when a present review.json is not valid JSON at all", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings", 1, "{ truncated");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("invalid JSON"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
   });
 
   it("rejects across multiple frozen specs — names the (spec, screen) pair for the spec whose subdir is entirely missing", async () => {
