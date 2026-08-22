@@ -7,12 +7,17 @@
  *   3. write missing default-keyed config fields (does NOT overwrite
  *      user-authored values).
  *
- * Disabled in CI by default (`process.env.CI === "true"` → emit
- * `"autoremediate disabled in CI"` and return without remediating).
- * Honors `--dry-run` by surfacing the plan without side effects.
- * Honors `--yes` by skipping interactive confirmation; this CLI is
- * non-interactive today, so `--yes` mostly serves as a documented
- * forward-compatible flag.
+ * Disabled in CI by default: the caller detects a standard CI environment
+ * (`isCiEnvironment`) and passes `isCi`, which makes this emit
+ * `"autoremediate disabled in CI"` and return without remediating.
+ * Honors `--dry-run` by surfacing the plan in the future tense, without
+ * side effects.
+ *
+ * `--yes` is meant to skip the interactive confirmation the CLI contract
+ * requires before any install / tracked-file write. That prompt is NOT
+ * implemented yet, so today the pass runs unattended either way — a known
+ * deviation from the contract (see `.qfai/contracts/cli/qfai-doctor.md`),
+ * not a relaxation of it.
  *
  * The `npm install` call is routed through a pluggable runner so tests
  * can substitute a no-op stub. The default runner is loaded lazily and
@@ -21,6 +26,8 @@
 
 import { readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { parse as parseYaml } from "yaml";
 
 import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
@@ -54,9 +61,47 @@ export type AutoremediateSummary = {
 };
 
 const DEFAULT_KEYED_CONFIG_FIELDS: ReadonlyArray<{
-  yamlKey: string;
+  /** Top-level mapping key, as the parsed document spells it (no colon). */
+  key: string;
   defaultLine: string;
-}> = [{ yamlKey: "review:", defaultLine: "review:\n  staleTtlDays: 14\n" }];
+}> = [{ key: "review", defaultLine: "review:\n  staleTtlDays: 14\n" }];
+
+/**
+ * The document's top-level mapping keys, or `null` when the file is not a
+ * mapping this pass may safely append to.
+ *
+ * Presence used to be decided by a raw-text `^review:` regex, which reads a
+ * *spelling* rather than the document. `"review":` and `'review' :` are valid
+ * YAML for the same key, so a config that set `staleTtlDays: 30` under a quoted
+ * key was misread as unset: the pass appended a second `review:` block, which
+ * either makes the file invalid (duplicate key) or — on a last-wins reader —
+ * silently replaces the operator's 30 with 14. Parsing answers for every
+ * spelling of the key at once.
+ *
+ * `null` is also the answer for a document that does not parse or is not a
+ * mapping (a list, a scalar): appending text to it cannot be made safe, so the
+ * caller declines rather than guessing.
+ */
+function topLevelKeys(source: string): Set<string> | null {
+  if (source.trim().length === 0) {
+    return new Set<string>();
+  }
+  let parsed: unknown;
+  try {
+    parsed = parseYaml(source);
+  } catch {
+    return null;
+  }
+  // An empty document (`---`, or a comment-only file) parses to null and is
+  // still a file this pass may append a first key to.
+  if (parsed === null || parsed === undefined) {
+    return new Set<string>();
+  }
+  if (typeof parsed !== "object" || Array.isArray(parsed)) {
+    return null;
+  }
+  return new Set(Object.keys(parsed));
+}
 
 async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   const { spawn } = await import("node:child_process");
@@ -92,19 +137,18 @@ async function tryFillConfigDefaults(
       return { written, lines };
     }
   }
+  const presentKeys = topLevelKeys(existing);
+  if (presentKeys === null) {
+    lines.push(
+      `autoremediate: skipped config-fill (${configPath} is not a parseable YAML mapping)`,
+    );
+    return { written, lines };
+  }
   let appended = existing;
   for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
-    // Anchor key existence at column 0 of any line (multiline-mode
-    // regex) so we do NOT false-match nested keys (`  review:`),
-    // YAML comments (`# review:`), or substring occurrences in
-    // values (`description: "code_review: ..."`). The yamlKey
-    // SSOT carries the trailing colon, so escape the literal `:`
-    // when building the regex.
-    const literal = field.yamlKey.replace(/[\\^$.*+?()[\]{}|]/gu, "\\$&");
-    const keyRe = new RegExp(`^${literal}`, "mu");
-    if (!keyRe.test(appended)) {
+    if (!presentKeys.has(field.key)) {
       appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
-      written.push(field.yamlKey.replace(/:$/u, ""));
+      written.push(field.key);
     }
   }
   if (written.length > 0) {
@@ -176,9 +220,26 @@ export async function runAutoremediate(
     ...(options.dryRun ? { dryRun: true } : {}),
   });
   const archivedNames = cleanResult.archived.map((entry) => entry.packName);
-  lines.push(
-    `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
-  );
+  // `cleanStaleReviewPacks` populates `archived` under dry-run too — it lists
+  // the packs a live run WOULD move. Reporting that count with the past-tense
+  // `archived=N` wording made a preview read as a completed archive, so an
+  // operator checking the plan saw packs already gone. Mirror the `--clean`
+  // dry-run vocabulary instead (`would archive` / `would move ->`).
+  if (options.dryRun) {
+    lines.push(
+      `autoremediate: would archive review packs=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+    );
+    for (const packName of archivedNames) {
+      lines.push(`  would move -> _archive/${packName}`);
+    }
+  } else {
+    lines.push(
+      `autoremediate: review packs archived=${archivedNames.length}, in-ttl=${cleanResult.skippedInTtl.length}`,
+    );
+    for (const packName of archivedNames) {
+      lines.push(`  -> _archive/${packName}`);
+    }
+  }
 
   // (3) Write missing default-keyed config fields (user-authored values
   // are NOT touched because we only append the key when absent).

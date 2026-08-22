@@ -110,12 +110,43 @@ describe("`qfai doctor` CLI contract surface", () => {
     expect(contract).toContain("`qfai.config.yaml`");
     expect(contract).toContain("`<root>/.gitignore`");
     expect(contract).toContain("`npm install <name>`");
+    // The `npm install` has no `--no-save`, so it lands on tracked files too.
+    expect(contract).toContain("`package.json`");
+    expect(contract).toContain("`package-lock.json`");
+    // Both halves of the legacy-pack migration, not the manifest alone.
+    expect(contract).toContain("`.qfai/review/.legacy-packs`");
+    expect(contract).toContain("`.qfai/review/review-<ts>/summary.json`");
     // `--clean`
     expect(contract).toContain("`.qfai/review/_archive/`");
     // The CI suppression an operator relies on before running this in a lane.
-    expect(contract).toContain("`CI=true` disables `--autoremediate`");
+    expect(contract).toContain("disables `--autoremediate`");
+    expect(contract).toContain("`GITHUB_ACTIONS=true`");
     // `--dry-run` / `--yes` semantics, absent entirely before this.
     expect(contract).toContain("### `--dry-run` / `--yes` interaction");
+  });
+
+  it("keeps the `--yes` confirmation gate as a requirement, not a retracted one", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // The gate the owning spec mandates must still read as mandatory. The
+    // pre-fix wording ("non-interactive today, so `--yes` ... changes no
+    // behavior") froze the unimplemented state into the contract, which
+    // would have made an unattended install-and-write the specified
+    // behaviour rather than a defect.
+    expect(contract).not.toContain("changes no behavior on its own");
+    expect(contract).toContain("REQUIRES by default");
+    expect(contract).toContain("Known implementation deviation:");
+  });
+
+  it("describes `--out` as redirecting stdout rather than duplicating it", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // `runDoctor` writes the summary to the file and prints only
+    // `doctor: wrote <path>`, so the summary is never on both channels — and
+    // under `--format json` the stdout line is not JSON.
+    expect(contract).not.toContain("writes the rendered summary to `<path>` in addition to stdout");
+    expect(contract).toContain("INSTEAD of stdout");
+    expect(contract).toContain("doctor: wrote <absolute path>");
   });
 
   it("lists the core/doctor modules that exist on disk", async () => {

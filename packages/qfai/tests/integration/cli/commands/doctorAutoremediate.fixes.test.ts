@@ -113,4 +113,51 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(updated).toContain("staleTtlDays: 30");
     expect(summary.configFieldsWritten).not.toContain("review");
   });
+
+  it("recognises a quoted top-level `review` key and leaves the user value alone", async () => {
+    // `"review":` is valid YAML for the same key. Deciding presence with a raw
+    // `^review:` text match called it absent and appended a SECOND `review:`
+    // block — a duplicate key that either invalidates the file or, on a
+    // last-wins reader, replaces the operator's 30 with the default 14. The
+    // guarantee "user-authored values are never overwritten" only holds if
+    // presence is read off the parsed document.
+    const root = await newTempDir("quoted-key");
+    const configPath = path.join(root, "qfai.config.yaml");
+    const original = '"review":\n  staleTtlDays: 30\n';
+    await writeFile(configPath, original, "utf-8");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+
+    expect(summary.configFieldsWritten).not.toContain("review");
+    const updated = await readFile(configPath, "utf-8");
+    expect(updated).toBe(original);
+    expect(updated).not.toContain("staleTtlDays: 14");
+  });
+
+  it("declines to append to a qfai.config.yaml that is not a parseable mapping", async () => {
+    // Appending `review:` to a document that does not parse cannot be made
+    // safe; report the skip instead of compounding the damage.
+    const root = await newTempDir("unparseable");
+    const configPath = path.join(root, "qfai.config.yaml");
+    const original = "paths:\n  specsDir: .qfai/specs\n : : :\n";
+    await writeFile(configPath, original, "utf-8");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+
+    expect(summary.configFieldsWritten).toEqual([]);
+    expect(await readFile(configPath, "utf-8")).toBe(original);
+    expect(summary.lines.join("\n")).toContain("skipped config-fill");
+  });
 });

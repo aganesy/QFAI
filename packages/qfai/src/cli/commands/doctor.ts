@@ -6,6 +6,7 @@ import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
+import { isCiEnvironment } from "../../core/phasePolicy.js";
 import { info } from "../lib/logger.js";
 
 export type DoctorCommandOptions = {
@@ -104,7 +105,15 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
   if (options.autoremediate) {
-    const isCi = process.env["CI"] === "true";
+    // The owning business rule suppresses autoremediation on "standard CI
+    // env vars", not on the single `CI` variable. A bare
+    // `process.env.CI === "true"` left a lane
+    // that exports only `GITHUB_ACTIONS=true` remediating: `.gitignore`
+    // rewrite, `npm install`, archive and config-fill all ran in a context
+    // the contract promises is suppressed. `isCiEnvironment` is the repo's
+    // SSOT for that detection (`core/phasePolicy.ts`); reuse it so the two
+    // CI gates cannot drift apart.
+    const isCi = isCiEnvironment();
     // Thread the resolved skill profile into the autoremediate orchestrator
     // so the install phase actually reaches the runtimeDependencies probe.
     // Without `skill`, runAutoremediate's (1) install branch is skipped
