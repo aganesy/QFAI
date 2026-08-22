@@ -302,14 +302,69 @@ describe("collectPlannedUsIds", () => {
     expect(collectPlannedUsIds(text).size).toBe(0);
   });
 
-  it("reads the marker from a catalog list entry", () => {
+  it("reads the marker from inside a catalog list entry", () => {
     const text = userStories(
-      ["## US Catalog", "", "- US-0001: a", `${PLANNED}`, "- US-0002: b", ""].join("\n"),
+      ["## US Catalog", "", "- US-0001: a", `  ${PLANNED}`, "- US-0002: b", ""].join("\n"),
     );
     // A pack whose stories live only in the catalog list declares them all the
     // same — `collectShortIds` reads the ids from these lines — so the marker
-    // has to reach them there too.
+    // has to reach them there too, nested under the entry it defers.
     expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("closes a catalog entry at its Markdown item boundary", () => {
+    const text = userStories(
+      [
+        "## US Catalog",
+        "",
+        "- US-0001: a",
+        "",
+        "Some prose about the catalog.",
+        "",
+        PLANNED,
+        "",
+      ].join("\n"),
+    );
+    // A blank line and a paragraph end the list item, so a document-level marker
+    // written after it is not inside US-0001 and must not defer it — otherwise a
+    // stray line silently erases a `QFAI-ATDD-111` error.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("does not let a sibling catalog entry carry another entry's marker", () => {
+    const text = userStories(["## US Catalog", "", "- US-0001: a", PLANNED, ""].join("\n"));
+    // At the same column the marker is a sibling item, not content of US-0001.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("rejects a meta line that is not a list item", () => {
+    const text = userStories(["## US-0001: a", "", "-x-qfai-status: planned", ""].join("\n"));
+    // No space after the list marker: not a Markdown list item, so a typo cannot
+    // pass as a deferral.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("rejects an unterminated or mismatched quote around the value", () => {
+    for (const line of [
+      "- x-qfai-status: 'planned",
+      "- x-qfai-status: \"planned'",
+      "- 'x-qfai-status: planned",
+      "- \"x-qfai-status': planned",
+    ]) {
+      const text = userStories(["## US-0001: a", "", line, ""].join("\n"));
+      expect(collectPlannedUsIds(text).size).toBe(0);
+    }
+  });
+
+  it("accepts a matched pair of quotes on either half", () => {
+    for (const line of [
+      "- 'x-qfai-status': 'planned'",
+      '- "x-qfai-status": "planned"',
+      "- x-qfai-status: 'planned'",
+    ]) {
+      const text = userStories(["## US-0001: a", "", line, ""].join("\n"));
+      expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+    }
   });
 
   it("does not treat a list item merely mentioning an id as a declaration", () => {

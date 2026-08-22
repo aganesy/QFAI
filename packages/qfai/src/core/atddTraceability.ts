@@ -1185,13 +1185,40 @@ const US_LIST_ITEM_RE = /^[-*][ \t]+(US-\d{4}(?:-\d{4})?)[ \t]*[:：]?/;
  * marker written once at the top of the document must not be able to defer
  * every story the file declares, which is the nesting mistake
  * {@link isPlannedApiContract} guards against on the contract side.
+ *
+ * Only the canonical meta line is accepted, because a match silently removes a
+ * `QFAI-ATDD-111` error: whitespace after the list marker is required (so the
+ * non-list `-x-qfai-status: planned` is not a deferral), and a quoted key or
+ * value must carry the *same* quote character at both ends (so neither the
+ * unterminated `- x-qfai-status: 'planned` nor a mixed `"…'` pair defers a
+ * story). A typo in a meta line has to fail loudly rather than pass as a
+ * deferral.
  */
-const PLANNED_US_META_LINE_RE = new RegExp(
-  `^[ \\t]*[-*][ \\t]*["']?${escapeRegExp(PLANNED_CONTRACT_KEY)}["']?[ \\t]*:[ \\t]*["']?${escapeRegExp(
-    PLANNED_CONTRACT_VALUE,
-  )}["']?[ \\t]*$`,
-  "i",
-);
+const PLANNED_US_META_LINE_RE = (() => {
+  const key = escapeRegExp(PLANNED_CONTRACT_KEY);
+  const value = escapeRegExp(PLANNED_CONTRACT_VALUE);
+  /** Bare, or wrapped in a matched pair of the same quote character. */
+  const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
+  return new RegExp(
+    `^[ \\t]*[-*][ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${quoted(value)}[ \\t]*$`,
+    "i",
+  );
+})();
+
+/** Indent column of a line, counting a tab as the four columns Markdown gives it. */
+function indentColumn(line: string): number {
+  let column = 0;
+  for (const char of line) {
+    if (char === " ") {
+      column += 1;
+    } else if (char === "\t") {
+      column += 4;
+    } else {
+      break;
+    }
+  }
+  return column;
+}
 
 /**
  * The `US-*` ids a spec pack defers from the `QFAI-ATDD-111` obligation.
@@ -1210,36 +1237,59 @@ const PLANNED_US_META_LINE_RE = new RegExp(
  * `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog list entry
  * ({@link US_LIST_ITEM_RE}) — and closes at the next opener or any heading, so
  * every declared story can carry the marker and none inherits a neighbour's.
+ *
+ * A catalog entry closes on its Markdown item boundary as well: its block ends
+ * at the first non-blank line that is not indented past the entry's own marker
+ * column. Without that, prose or a blank line after `- US-0001: …` left the
+ * entry open to the next heading, and a document-level `- x-qfai-status:
+ * planned` written well outside it deferred US-0001 — the very leak the
+ * document-root rule closes on the heading side. So the marker must sit *inside*
+ * the entry, indented under it.
  */
 export function collectPlannedUsIds(rawUsText: string): Set<string> {
   const planned = new Set<string>();
   const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
   let current: string | null = null;
+  /** Marker column of the catalog entry that opened `current`; `null` for a heading. */
+  let entryColumn: number | null = null;
+  const close = (): void => {
+    current = null;
+    entryColumn = null;
+  };
   for (const line of lines) {
-    const heading = US_HEADING_RE.exec(line.trim());
+    const trimmed = line.trim();
+    const heading = US_HEADING_RE.exec(trimmed);
     if (heading?.[1]) {
       current = heading[1].toUpperCase();
+      entryColumn = null;
       continue;
     }
     // Any other heading closes the block, at every depth: the marker belongs to
     // the story it is written under, not to whatever story came before it in
     // the file, and a non-story subsection (`#### Notes`) ends the block too.
-    if (ANY_HEADING_RE.test(line.trim())) {
-      current = null;
+    if (ANY_HEADING_RE.test(trimmed)) {
+      close();
       continue;
     }
     // A catalog entry opens a block of its own, so the marker reaches a story
     // that has no heading. Checked after the heading arms and before the marker
     // arm: the marker's own line does not open with a `US-*` id, so the two
     // list forms cannot collide.
-    const listItem = US_LIST_ITEM_RE.exec(line.trim());
+    const listItem = US_LIST_ITEM_RE.exec(trimmed);
     if (listItem?.[1]) {
       current = listItem[1].toUpperCase();
+      entryColumn = indentColumn(line);
+      continue;
+    }
+    // Left the catalog entry: a sibling list item, a paragraph, or any other
+    // content at or left of its marker column is no longer inside it.
+    if (entryColumn !== null && trimmed !== "" && indentColumn(line) <= entryColumn) {
+      close();
       continue;
     }
     if (current !== null && PLANNED_US_META_LINE_RE.test(line)) {
       planned.add(current);
-      current = null;
+      close();
     }
   }
   return planned;
