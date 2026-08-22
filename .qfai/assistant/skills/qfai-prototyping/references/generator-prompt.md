@@ -213,7 +213,9 @@ target server does with that URL therefore decides the routing shape:
 - `--auto-serve` starts the built-in static file server, and its
   routing is SPA-style: a document request (GET/HEAD whose `Accept`
   includes `text/html`) that matches no file under the served directory
-  is served `index.html` instead of 404. So **path routes**
+  is served that directory's `index.html` instead of 404 — when the
+  directory holds one, which the single-file envelope below guarantees
+  and a skeleton-only tree does not. So **path routes**
   (`/settings`), a `history.pushState` shell and parameterized contract
   routes (`/pairs/:instrument`, `/reports/:reportId`) all resolve —
   declare the contract `route` values the product needs and let the
@@ -225,13 +227,15 @@ target server does with that URL therefore decides the routing shape:
   `.png`, `fetch()`) carry no `text/html` in `Accept`, so a genuinely
   missing asset still 404s instead of receiving an HTML body, and the
   path-traversal 403 guard runs ahead of the fallback.
-- Per-screen files (`--emit-skeletons`, below) decide _which_ HTML is
-  served, not whether a route resolves: `--emit-skeletons` writes
-  `<screenId>.html`, and the static server resolves a URL to a literal
-  path before it falls back — it does not append `.html`, so
-  `/settings` is served the `index.html` fallback while `/settings.html`
-  serves that screen's skeleton. `htmlSourceCopy` changes nothing here:
-  it runs after the capture has already navigated successfully.
+- The fallback needs an `index.html` to fall back _to_. Per-screen files
+  (`--emit-skeletons`, below) write `<screenId>.html` and no
+  `index.html`, and the static server resolves a URL to a literal path
+  before it falls back — it does not append `.html`. So in a
+  skeleton-only cycle-0 tree `/settings.html` serves that screen's
+  skeleton while `/settings` still **404s** and loses that screen's
+  evidence; `/settings` only reaches the fallback once you author an
+  `index.html` alongside the skeletons. `htmlSourceCopy` changes nothing
+  here: it runs after the capture has already navigated successfully.
 
 Keep the contract `route` values as the product needs them. Against a
 server other than `--auto-serve`, match the routing shape to what that

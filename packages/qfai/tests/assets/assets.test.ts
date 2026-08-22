@@ -444,6 +444,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       // The two genuine non-fallback cases stay documented.
       expect(generatorRef).toContain("Sub-resource requests");
       expect(generatorRef).toContain("path-traversal 403 guard");
+
+      // The third one: the fallback needs an index.html to fall back TO.
+      // `resolveServablePath` returns null when the served directory has
+      // none, so a skeleton-only cycle-0 tree still 404s path routes and
+      // loses that screen's evidence. Saying the fallback is unconditional
+      // would send the generator into exactly that hole.
+      expect(generatorRef).toContain("The fallback needs an `index.html` to fall back _to_");
+      expect(generatorRef).toMatch(/skeleton-only cycle-0 tree[\s\S]{0,120}still \*\*404s\*\*/);
     }
 
     // generator-prompt.md is one half of an SSOT-sync pair; the scanner it is
@@ -465,6 +473,20 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(scannerSource).toContain("`index.html` to a document request");
     expect(scannerSource).toContain("parameterized contract routes");
     expect(scannerSource).toContain("path-traversal 403 guard");
+
+    // The operator-facing half of the same contract. certify's missing-HTML
+    // recovery text is what an operator reads after a capture gap, and it is
+    // inside the same CLI as the prompt above: if it keeps advising "the
+    // server 404s path routes, use hash routes", the operator rewrites the
+    // contract routes the generator was told to keep.
+    const certifySource = await readFile(
+      path.join(repoRoot, "packages", "qfai", "src", "cli", "commands", "prototypingCertify.ts"),
+      "utf-8",
+    );
+    expect(certifySource).not.toContain("use hash routes or point --target-url");
+    expect(certifySource).toContain("serves index.html to any document ");
+    expect(certifySource).toContain("Do not reshape contract routes into hash ");
+    expect(certifySource).toContain("has nothing to fall back to and still 404s");
   });
 
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
