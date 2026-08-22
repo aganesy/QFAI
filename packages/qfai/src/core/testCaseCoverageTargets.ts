@@ -44,6 +44,20 @@ export type TestCaseIds = {
   /** `Level` values that match neither vocabulary; reported so a mismatch is visible. */
   unrecognizedLevels: Set<string>;
   /**
+   * Declared TCs that state no `Level` at all — a blank cell, a heading with no
+   * `- Level:` line, or a `06_Test-Cases.md` with no `Level` column. They are
+   * not coverage targets (`tddHelpers.classifyCoverageLevel`) and are owed to
+   * `QFAI-ATDD-112` instead.
+   *
+   * Exposed rather than merely skipped because the previous rule *did* make
+   * them targets: a project upgraded from it still carries the ledger rows that
+   * rule seeded, and a stale row keeps the TC owned by `/qfai-implement` while
+   * ATDD owns it too. `validateTddList` reads this to report those rows so they
+   * can be retired or given a `Level`. Empty on the early-return paths, where
+   * no `Level` was read at all and silence is the honest answer.
+   */
+  undeclaredLevelTcIds: Set<string>;
+  /**
    * Set when no `TC-ID`-bearing table could be located. Both TC checks go
    * silent in that case, so the caller reports the miss rather than letting
    * "nothing found" read as "everything covered".
@@ -67,11 +81,25 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   const unitComponentTcIds = new Set<string>();
   const unrecognizedLevels = new Set<string>();
   const coverageTargetLevels = new Map<string, string>();
+  const undeclaredLevelTcIds = new Set<string>();
   const collected: TestCaseIds = {
     knownTcIds,
     unitComponentTcIds,
     unrecognizedLevels,
     coverageTargetLevels,
+    undeclaredLevelTcIds,
+  };
+  // Every TC for which some heading or row carried a non-empty `Level`,
+  // whatever that value classified as. The complement against `knownTcIds` is
+  // the undeclared set, which cannot be built as we go: a TC whose first row
+  // says nothing may be declared by a later one.
+  const levelDeclaredTcIds = new Set<string>();
+  const settleUndeclared = (): void => {
+    undeclaredLevelTcIds.clear();
+    for (const tcId of knownTcIds) {
+      if (levelDeclaredTcIds.has(tcId)) continue;
+      undeclaredLevelTcIds.add(tcId);
+    }
   };
   const testCasesPath = path.join(specDir, TEST_CASES_FILE_NAME);
   if (!(await exists(testCasesPath))) return { ...collected, fileMissing: true };
@@ -99,6 +127,12 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
   const headingLeveledTcIds = new Set<string>();
   for (const [tcId, level] of collectHeadingTcLevelsFrom(content)) {
     knownTcIds.add(tcId);
+    // Before the first-declaration guard below: a superseded duplicate heading
+    // is still a heading that states a `Level`, so the TC is declared either
+    // way. An empty `- Level:` line states nothing and does not count.
+    if (level.trim().length > 0) {
+      levelDeclaredTcIds.add(tcId);
+    }
     // Reported only for a declaration that is actually in force. A superseded
     // duplicate heading raised `TDDLIST_UNKNOWN_LEVEL` for a value nothing
     // reads, with a message ("every such TC becomes a mandatory ledger row")
@@ -136,6 +170,10 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
     // `TDDLIST_TC_TABLE_UNRESOLVED` nor `TDDLIST_TC_NOT_COVERED` was raised
     // and ATDD asked for the default integration annotation instead.
     const brokenSection = hasTestCaseTableSection(content);
+    // Settled on the heading-only path too: a `## TC-0001` block with no
+    // `- Level:` line is exactly the shape the old rule made a target, so a
+    // heading-form spec can carry the same stale ledger rows a table one does.
+    settleUndeclared();
     return knownTcIds.size > 0 && !brokenSection
       ? collected
       : { ...collected, unresolved: resolution.reason };
@@ -199,6 +237,7 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       // The first *explicit* `Level` is the declaration, and it settles the TC
       // in whichever direction it points.
       tableLeveledTcIds.add(tcId);
+      levelDeclaredTcIds.add(tcId);
       if (!isCoverageTargetLevel(level)) continue;
       unitComponentTcIds.add(tcId);
       if (!coverageTargetLevels.has(tcId)) {
@@ -206,5 +245,6 @@ export async function collectTestCaseIds(specDir: string): Promise<TestCaseIds> 
       }
     }
   }
+  settleUndeclared();
   return collected;
 }

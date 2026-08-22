@@ -738,8 +738,14 @@ async function validateSpecTddList(
   }
 
   // Check 5: TC reference existence
-  const { knownTcIds, unitComponentTcIds, unrecognizedLevels, coverageTargetLevels, unresolved } =
-    await collectTestCaseIds(specDir);
+  const {
+    knownTcIds,
+    unitComponentTcIds,
+    unrecognizedLevels,
+    coverageTargetLevels,
+    undeclaredLevelTcIds,
+    unresolved,
+  } = await collectTestCaseIds(specDir);
   // The offending `Level` cell lives in 06_Test-Cases.md, not in the ledger
   // this validator is otherwise reading. Reporting `relPath` here pointed
   // the CLI, the JSON `file` field and any `scope.paths` waiver at a file
@@ -803,6 +809,59 @@ async function validateSpecTddList(
           ),
         );
       }
+    }
+  }
+
+  // Check 5d: the migration direction — a ledger row that still claims a TC
+  // declaring no `Level`.
+  //
+  // Dropping such a TC from the coverage targets stops *new* rows being seeded
+  // for it, but it cannot unwrite the rows the previous rule already produced:
+  // that rule made a blank cell (or a `06_Test-Cases.md` with no `Level`
+  // column) a coverage target, and `/qfai-sdd` Phase 2b seeded a row per
+  // target. On an upgraded project that row survives, Check 5 keeps accepting
+  // its reference because the TC is still declared, and nothing else looks at
+  // the pairing — so `/qfai-implement` still picks the `todo` row while
+  // `QFAI-ATDD-112` (`error`) demands the same TC's annotated test under
+  // `tests/integration/**`. That is the double ownership this rule exists to
+  // end, surviving in exactly the projects that had it.
+  //
+  // Only a row whose `Layer` claims the ledger's own coverage layers is
+  // reported. `Integration` rows citing the TC agree with its ATDD home rather
+  // than competing with it (`execution-ledger.md#atdd-owned-rows`), `E2E` / API
+  // placements are Check 5c's `error`, and a `Layer` outside the vocabulary is
+  // Check 5a's. A blank `Layer` is reported: it is the shape the old seeding
+  // produced and the one that names no owner at all.
+  //
+  // `warning`, like every other rule that lands on ledgers written before it
+  // existed: the fix is a `/qfai-sdd` rerun or a `Level` declaration, and an
+  // `error` on upgrade would block a branch on a row the project did not write
+  // by hand.
+  if (undeclaredLevelTcIds.size > 0) {
+    for (const entry of ledgerRows()) {
+      const rawLayer = cell(entry, "Layer").toLowerCase();
+      const claimsLedgerCoverage =
+        rawLayer.length === 0 || rawLayer === "-" || UNIT_COMPONENT_LAYERS.has(rawLayer);
+      if (!claimsLedgerCoverage) continue;
+      const stale = splitTcRefs(cell(entry, "TC-Refs"))
+        .map((ref) => ref.toUpperCase())
+        .filter((ref) => isWellFormedTcRef(ref))
+        .filter((ref) => undeclaredLevelTcIds.has(ref))
+        .sort((left, right) => left.localeCompare(right));
+      if (stale.length === 0) continue;
+      issues.push(
+        issue(
+          "TDDLIST_TC_LEVEL_UNDECLARED",
+          `${stale.join(", ")} declare(s) no Level in ${TEST_CASES_FILE_NAME}, so ${stale.length > 1 ? "they are" : "it is"} owned by QFAI-ATDD-112 (tests/integration/**) and not by tdd/test-list.md — but spec-${specNumber} (${entry.label}) still carries a coverage row for ${stale.length > 1 ? "them" : "it"}. Retire the row or declare the TC's Level`,
+          "warning",
+          relPath,
+          "tddList.tcLevelUndeclared",
+          stale,
+          "change",
+          `${TEST_CASES_FILE_NAME} で当該 TC に \`Level\`（\`L1\` / \`L2\` なら ledger 所有）を宣言するか、\`/qfai-sdd\` でこの行を退役させてください。Level 未宣言の TC は \`/qfai-atdd\` が \`tests/integration/**\` で所有します。`,
+          { relatedFiles: [testCasesRelPath] },
+        ),
+      );
     }
   }
 

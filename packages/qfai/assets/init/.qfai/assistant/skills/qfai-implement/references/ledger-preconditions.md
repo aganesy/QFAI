@@ -58,6 +58,13 @@ If a `Level`-less TC should be implement-owned, the fix is in
 `06_Test-Cases.md`: declare a coverage-target `Level` (`L1` or `L2`), and Phase
 2b seeds the row on the next run.
 
+A ledger written before this rule may already hold such a row — the older rule
+did make a `Level`-less TC a target. `TDDLIST_TC_LEVEL_UNDECLARED` (`warning`)
+reports each one, because the row keeps the TC on this ledger while
+`QFAI-ATDD-112` holds the same TC. Do not implement it: either declare the TC's
+`Level` or retire the row through `/qfai-sdd`. A row whose `Layer` is
+`Integration` is not reported — that one already agrees with the TC's ATDD home.
+
 ### The `Layer` a seeded row carries
 
 Every row seeded from `06_Test-Cases.md` comes from a declared coverage-target
