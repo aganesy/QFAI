@@ -13,6 +13,7 @@
  * scoped spec is not one of them, and an unscoped run still sees everything.
  */
 
+import { existsSync, mkdirSync, mkdtempSync, rmSync } from "node:fs";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -45,9 +46,18 @@ async function seedCapabilities(root: string, capIds: readonly string[]): Promis
   );
 }
 
-/** A minimal layered (`v1421`) spec pack: `01_Spec.md` + `02_User-stories.md` + a marker. */
-async function seedSpec(root: string, specNumber: string, capId: string): Promise<void> {
-  const specDir = path.join(root, ".qfai", "specs", `spec-${specNumber}`);
+/**
+ * A minimal layered (`v1421`) spec pack: `01_Spec.md` + `02_User-stories.md` +
+ * a marker. `dirName` overrides the directory spelling so a case-sensitive
+ * filesystem can hold two packs under one normalised id.
+ */
+async function seedSpec(
+  root: string,
+  specNumber: string,
+  capId: string,
+  dirName = `spec-${specNumber}`,
+): Promise<void> {
+  const specDir = path.join(root, ".qfai", "specs", dirName);
   await mkdir(specDir, { recursive: true });
   await writeFile(
     path.join(specDir, "01_Spec.md"),
@@ -151,4 +161,47 @@ describe("QFAI-SPLIT count findings are attributable to a spec scope", () => {
       ]);
     });
   });
+});
+
+/**
+ * True when the temp directory distinguishes `spec-0001/` from `SPEC-0001/`.
+ *
+ * `SPEC_DIR_RE` matches case-insensitively, so only on such a filesystem can
+ * two real directories collapse onto one normalised id. Probed synchronously
+ * because `it.skipIf` is evaluated while the suite is being collected.
+ */
+function tmpdirIsCaseSensitive(): boolean {
+  const probe = mkdtempSync(path.join(os.tmpdir(), "qfai-split-case-"));
+  try {
+    mkdirSync(path.join(probe, "Case"));
+    return !existsSync(path.join(probe, "case"));
+  } finally {
+    rmSync(probe, { recursive: true, force: true });
+  }
+}
+
+describe("QFAI-SPLIT-102 attribution survives a duplicated normalised spec id", () => {
+  it.skipIf(!tmpdirIsCaseSensitive())(
+    "names both real directories that share one normalised id",
+    async () => {
+      await withTempRoot(async (root) => {
+        await seedCapabilities(root, ["CAP-0001"]);
+        await seedSpec(root, "0001", "CAP-0001");
+        // Same number, different spelling: two layered packs, one CAP.
+        await seedSpec(root, "0001", "CAP-0001", "SPEC-0001");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const specsRoot = resolvePath(root, defaultConfig, "specsDir");
+        const count = issues.find((finding) => finding.code === "QFAI-SPLIT-102");
+        // Neither missing nor extra — without the duplicate the finding would
+        // carry no `relatedFiles` and stay in every `--spec` scope.
+        expect([...(count?.relatedFiles ?? [])].sort()).toEqual(
+          [path.join(specsRoot, "SPEC-0001"), path.join(specsRoot, "spec-0001")].sort(),
+        );
+
+        expect(scopedCodes(issues, root, scopeFor("0001"))).toEqual(["QFAI-SPLIT-102"]);
+        expect(scopedCodes(issues, root, scopeFor("0002"))).toEqual([]);
+      });
+    },
+  );
 });

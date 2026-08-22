@@ -19,18 +19,20 @@ const CAP_ID_RE = /\bCAP-\d{4}\b/g;
  * implicated directories under `relatedFiles` lets the scope filter derive the
  * owners, the representative-plus-`relatedFiles` shape `QFAI-ID-001` uses.
  *
- * `known` maps a lower-cased id to the directory `collectSpecEntries`
- * enumerated, so a `SPEC-0004/` spelling on a case-sensitive filesystem keeps
- * its real path. A missing spec has no entry and its path is synthesised: the
- * finding is then owned by a directory that does not exist yet, which is
- * precisely the spec whose run has to see it.
+ * `known` maps a lower-cased id to *every* directory `collectSpecEntries`
+ * enumerated under it, so a `SPEC-0004/` spelling on a case-sensitive
+ * filesystem keeps its real path — and a `spec-0001/` that coexists with a
+ * `SPEC-0001/` contributes both, since either one alone would name only half of
+ * what the count finding is about. A missing spec has no entry and its path is
+ * synthesised: the finding is then owned by a directory that does not exist
+ * yet, which is precisely the spec whose run has to see it.
  */
 function specDirPaths(
   specsRoot: string,
   specIds: readonly string[],
-  known: ReadonlyMap<string, string>,
+  known: ReadonlyMap<string, readonly string[]>,
 ): string[] {
-  return specIds.map((specId) => known.get(specId) ?? path.join(specsRoot, specId));
+  return specIds.flatMap((specId) => known.get(specId) ?? [path.join(specsRoot, specId)]);
 }
 
 export async function validateSpecSplitByCapability(
@@ -82,14 +84,35 @@ export async function validateSpecSplitByCapability(
     return issues;
   }
 
-  const specDirById = new Map<string, string>();
+  // `SPEC_DIR_RE` is case-insensitive, so on a case-sensitive filesystem
+  // `spec-0001/` and `SPEC-0001/` are two entries under one normalised id.
+  // Keeping only the last one would lose the very directory that makes
+  // `layeredEntries.length` disagree with `capIds.length`.
+  const specDirsById = new Map<string, string[]>();
   for (const entry of layeredEntries) {
-    specDirById.set(path.basename(entry.dir).toLowerCase(), entry.dir);
+    const specId = path.basename(entry.dir).toLowerCase();
+    const dirs = specDirsById.get(specId);
+    if (dirs === undefined) {
+      specDirsById.set(specId, [entry.dir]);
+    } else {
+      dirs.push(entry.dir);
+    }
   }
   const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
-  const missingSpecIds = expectedSpecIds.filter((specId) => !specDirById.has(specId));
-  const extraSpecIds = Array.from(specDirById.keys()).filter(
+  const missingSpecIds = expectedSpecIds.filter((specId) => !specDirsById.has(specId));
+  const extraSpecIds = Array.from(specDirsById.keys()).filter(
     (specId) => !expectedSpecIds.includes(specId),
+  );
+  // An id held by several real directories is neither missing nor extra, yet it
+  // is exactly what the count finding reports. Without it a duplicate-only
+  // mismatch would leave `relatedFiles` empty, and `isFindingInSpecScope` reads
+  // an unattributed finding as belonging to every `--spec` scope — the sibling
+  // gate failure this attribution exists to stop.
+  const duplicatedSpecIds = Array.from(specDirsById.entries())
+    .filter(([, dirs]) => dirs.length > 1)
+    .map(([specId]) => specId);
+  const countSpecIds = Array.from(
+    new Set([...missingSpecIds, ...extraSpecIds, ...duplicatedSpecIds]),
   );
 
   if (capIds.length !== layeredEntries.length) {
@@ -104,7 +127,7 @@ export async function validateSpecSplitByCapability(
         "canonical",
         undefined,
         {
-          relatedFiles: specDirPaths(specsRoot, [...missingSpecIds, ...extraSpecIds], specDirById),
+          relatedFiles: specDirPaths(specsRoot, countSpecIds, specDirsById),
         },
       ),
     );
@@ -121,7 +144,7 @@ export async function validateSpecSplitByCapability(
         missingSpecIds,
         "canonical",
         undefined,
-        { relatedFiles: specDirPaths(specsRoot, missingSpecIds, specDirById) },
+        { relatedFiles: specDirPaths(specsRoot, missingSpecIds, specDirsById) },
       ),
     );
   }
@@ -137,7 +160,7 @@ export async function validateSpecSplitByCapability(
         extraSpecIds,
         "canonical",
         undefined,
-        { relatedFiles: specDirPaths(specsRoot, extraSpecIds, specDirById) },
+        { relatedFiles: specDirPaths(specsRoot, extraSpecIds, specDirsById) },
       ),
     );
   }
