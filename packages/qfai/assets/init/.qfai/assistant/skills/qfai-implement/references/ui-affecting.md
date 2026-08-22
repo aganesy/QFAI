@@ -35,7 +35,8 @@ Both are declarations the project already owns. The test reads them and nothing 
 Evaluate the clauses against the row **as the ledger declares it**, in order, and stop at the first
 that holds. An item is **UI-affecting** when any of the following holds:
 
-1. Its `Owning module`, **normalised** (below), matches a declared UI path. Evaluated
+1. Its `Owning module` matches a declared UI path, matched as **two candidates** (below) so that
+   both the repo-relative and the dotted-module form the ledger allows are covered. Evaluated
    **only when the ledger declares one**: that column is optional
    (`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`) and `-`
    means "not declared", so a rule keyed on it alone would be unevaluable on the ledgers that omit
@@ -51,23 +52,26 @@ that holds. An item is **UI-affecting** when any of the following holds:
 ### Normalising `Owning module`
 
 `Owning module` is declared **either** as a repo-relative path **or** as a dotted module path
-(`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`), while
-`structure.md`'s globs match POSIX paths only — so an untranslated `src.components.Button` misses a
-declared `src/components/**` and the row answers `n/a` on a technicality. Clause 1 therefore matches
-the **normalised** value, under one rule with no judgement in it:
+(`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`), while declared
+UI paths are POSIX globs — so an untranslated `src.components.Button` misses a declared
+`src/components/**` and the row answers `n/a` on a technicality.
 
-- the cell contains `/` → it is already a repo-relative path; match it verbatim.
-- otherwise → it is a dotted module path; replace **every** `.` with `/`
-  (`src.components.Button` → `src/components/Button`) and match that.
+Deciding **which of the two forms the cell is** is what goes wrong: nothing short of an extension
+list separates the root-level path `App.tsx` from the dotted module `src.components.Button`, and a
+dot-to-slash rule applied to the first produces `App/tsx`, which matches nothing. So clause 1 does
+not classify the cell. It matches **two candidate strings**, in this order, and holds as soon as one
+of them matches a declared UI path:
 
-The branches are disjoint by construction: a dotted module path carries no `/`, and a repo-relative
-path of more than one segment always does. A single-segment cell contains neither, so both branches
-leave it unchanged.
+1. the cell **verbatim** — the repo-relative reading, and the only one that can match a glob ending
+   in a file extension (`App.tsx` against a declared `*.tsx`);
+2. the cell with every `.` replaced by `/` — the dotted-module reading
+   (`src.components.Button` → `src/components/Button`). Skipped when the cell contains `/`, which
+   only a path does.
 
-A normalised dotted module names a module, not a file, so it cannot match a glob that ends in a file
-extension (`src/ui/**/*.tsx`). A project whose ledgers use the dotted form declares its UI surfaces
-as directory globs (`src/ui/**`) — the syntax that section already shows. Clause 2 is unaffected
-either way: `Test file` is required and always a path.
+Candidate 2 can only add matches, never remove one, so evaluating both is free: a dotted module
+carries no `/` and cannot match a path glob verbatim, and a path put through it yields a string
+(`App/tsx`) that names no declared directory. Clause 2 is unaffected either way: `Test file` is
+required and always a path.
 
 ### What "linked" means
 

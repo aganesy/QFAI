@@ -270,13 +270,20 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // `execution-ledger.md` allows `Owning module` to be a dotted module
       // path, but declared UI paths are POSIX globs: untranslated,
       // `src.components.Button` misses `src/components/**` and the row answers
-      // `n/a` on a technicality. One rule, no judgement in it.
+      // `n/a` on a technicality.
       expect(definition).toContain("### Normalising `Owning module`");
-      expect(definition).toContain("the cell contains `/`");
-      expect(definition).toContain("replace **every** `.` with `/`");
       expect(definition).toContain("`src.components.Button` → `src/components/Button`");
-      // The two branches must be stated as disjoint, or the rule is not unique.
-      expect(definition).toContain("disjoint by construction");
+      expect(definition).toContain("every `.` replaced by `/`");
+
+      // The rule must not classify the cell first: no rule short of an
+      // extension list tells the root-level path `App.tsx` from the dotted
+      // module `src.components.Button`, and dot-to-slash would mangle it to
+      // `App/tsx`. Both readings are matched instead, verbatim first.
+      expect(definition).toContain("not classify the cell");
+      expect(definition).toContain("**two candidate strings**");
+      expect(definition).toContain("the cell **verbatim**");
+      expect(definition).toContain("`App.tsx`");
+      expect(definition).toContain("Skipped when the cell contains `/`");
 
       // And the declaration side points at that rule, since its own matching
       // rule only covers path cells.
