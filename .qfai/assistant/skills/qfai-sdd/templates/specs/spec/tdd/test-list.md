@@ -10,11 +10,15 @@ Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**.
 `/qfai-sdd` seeds them at Phase 2b. An empty table below is valid — it means
 the spec has no coverage-target TC yet, not that the ledger is missing.
 
-`Tier` is seeded with the row, from its `Layer` and the criticality list in
-`.qfai/assistant/skills/qfai-implement/references/volume-policy.md`. The stage
-that fixes `Layer` already holds every input the derivation takes, and
-`/qfai-implement` needs the answer before it starts the row — so it is declared
-here and never written into `Evidence`.
+`Tier` is seeded with the row, from its `Layer`, what the item touches
+(infrastructure, a public API surface, a `CON-*` contract or persisted schema →
+`T2`; UI behavior or rendered output → `T3`) and the criticality list in
+`.qfai/assistant/skills/qfai-implement/references/volume-policy.md`. `Layer`
+alone does not decide it: a `Unit` row over persisted schema and a `Component`
+row over rendered output are `T2` and `T3`. The stage that fixes `Layer` already
+holds every input the derivation takes, and `/qfai-implement` needs the answer
+before it starts the row — so it is declared here and
+never written into `Evidence`.
 
 `US-*` and `CON-API-*` are **not** rows here. They are ATDD obligations,
 traced by `QFAI:` annotations in the test tree per

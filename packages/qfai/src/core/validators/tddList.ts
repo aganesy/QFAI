@@ -1193,9 +1193,11 @@ async function validateSpecTddList(
         undefined,
         "canonical",
         "Write one of `T1` / `T2` / `T3`, or `-` when the tier is not declared. " +
-          "Derive it from the row's `Layer` and the criticality list in " +
-          "`references/volume-policy.md`; a blank or `-` cell is read as `T1`, so an " +
-          "unrecognized value would silently buy the cheapest ceremony.",
+          "Derive it from the row's `Layer`, what the row touches (infrastructure, a " +
+          "public API surface, a contract or persisted schema, UI or rendered output) " +
+          "and the criticality list in `references/volume-policy.md`; a blank or `-` " +
+          "cell is read as `T1`, so an unrecognized value would silently buy the " +
+          "cheapest ceremony.",
       ),
     );
   }

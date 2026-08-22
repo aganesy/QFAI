@@ -216,10 +216,15 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    — one row per coverage-target TC, `Status = todo`; copy
    `templates/specs/spec/tdd/test-list.md` when absent. Without it
    `/qfai-implement` starts with zero selectable items. **Seed `Tier` with the
-   row**, from its `Layer` and the criticality list in
-   `../qfai-implement/references/volume-policy.md`: this stage already holds
-   every input the derivation takes, and a blank cell is read downstream as
-   `T1`. **Seeding is a delta,
+   row**, from its `Layer`, **what the item touches** (infrastructure, a public
+   API surface, a `CON-*` contract or persisted schema → `T2`; UI behavior or
+   rendered output → `T3`) and the criticality list in
+   `../qfai-implement/references/volume-policy.md`. `Layer` alone is not the
+   derivation: a `Unit` row over persisted schema or a `Component` row over
+   rendered output is `T2` / `T3`, and seeding it `T1` buys the batched ceremony
+   the validator cannot catch, because it only checks the value range. This
+   stage already holds every input the derivation takes, and a blank cell is
+   read downstream as `T1`. **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs append at `todo`, and changed / removed TCs are reset or retired
    under the upstream-reset rule (`references/sdd-phase-checklists.md`).
@@ -359,6 +364,7 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo, Tier derived with Layer) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo, Tier derived from Layer + what the row touches (infrastructure / public API / CON-\* contract / persisted schema = T2, UI or rendered output = T3) + criticality) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Exception to that delta: re-derive Tier on every Phase 2b re-run, and a **raised** Tier (T1 -> T2/T3, T2 -> T3) is an upstream reset even for an unchanged TC — return Status to todo and cite the driving CR-\* in DR-ID and in Evidence, keeping the prior Evidence as history. A lowered Tier keeps Status and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

@@ -97,9 +97,54 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(checklists).toContain("Re-derive `Tier` on every re-run");
       expect(checklists).toContain("it overrides the delta rule above");
       expect(checklists).toContain(
-        "return `Status` to `todo`, clear the now-void `Evidence`, and record the driving `CR-*` in `DR-ID`",
+        "return `Status` to `todo`, record the driving `CR-*` in `DR-ID`, and cite that `CR-*` in `Evidence` **above the retained prior trail**",
       );
       expect(checklists).toContain("A **lowered** tier keeps `Status` and `Evidence`");
+
+      // The reset is the upstream reset, so it obeys that rule's own contract:
+      // `execution-ledger.md` makes the reset cite its approval in `Evidence`
+      // and the template keeps prior `Evidence`. Wiping the cell would delete
+      // the only record of the cycle the raise withdrew, and with it the
+      // reviewer's way to audit that the reopen was authorised.
+      expect(checklists).not.toContain("clear the now-void `Evidence`");
+      expect(checklists).toContain("never as credit toward the new tier");
+
+      // The short project_memory is what a compacted run keeps, so the
+      // exception has to survive there too — otherwise that run reads the
+      // unqualified delta rule and leaves the raised row `done`.
+      const memory = unwrap(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      expect(memory).toContain(
+        "a **raised** Tier (T1 -> T2/T3, T2 -> T3) is an upstream reset even for an unchanged TC",
+      );
+      expect(memory).toContain("keeping the prior Evidence as history");
+      expect(memory).toContain("A lowered Tier keeps Status and Evidence.");
+    });
+
+    it(`${tree}: the tier derivation reads what the row touches, not only Layer`, async () => {
+      // `volume-policy.md` tiers on three inputs — `Layer`, what the item
+      // touches, and criticality. Naming only two of them here seeds a `Unit`
+      // row over persisted schema, or a `Component` row over rendered output,
+      // as T1; the validator only checks the value range, so the batched
+      // ceremony would stand.
+      const template = unwrap(await read(tree, TEMPLATE));
+      expect(template).toContain("from its `Layer`, what the item touches");
+      expect(template).toContain(
+        "a `Unit` row over persisted schema and a `Component` row over rendered output are `T2` and `T3`",
+      );
+
+      const checklists = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md"),
+      );
+      expect(checklists).toContain("The tier table takes three inputs, not one");
+      expect(checklists).toContain(
+        "A `Unit` row over persisted schema or a `Component` row over rendered output is therefore not `T1`",
+      );
+
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      expect(skill).toContain("**what the item touches**");
+      expect(skill).toContain("`Layer` alone is not the derivation");
+      // Including the compacted memory line.
+      expect(skill).toContain("Tier derived from Layer + what the row touches");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {
