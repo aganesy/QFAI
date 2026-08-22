@@ -26,3 +26,11 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
       formality: record the finding, its owning spec and why it is not this run's work,
       say so in the completion report, and do **not** claim the gate passed, weaken the
       profile or lower `--fail-on`. The repo-wide run belongs to `/qfai-verify`.
+- [ ] The same run reports zero `QFAI-TEST-002` findings. `QFAI-TEST-002` is `info`, so it never
+      fails `--fail-on error` — it reports that the stub scan produced **no evidence**: an empty
+      `validation.traceability.testFileGlobs` (the value `qfai init` ships, under which zero files
+      are scanned and `QFAI-TEST-001` cannot fire at all), or an extension qfai has no stub dialect
+      for. Under either, the zero-`QFAI-TEST-001` box above certifies nothing, so ticking this list
+      on the exit code alone declares completion over an unrun gate. Configure the globs
+      (`/qfai-configure`) and re-run; for extensions qfai cannot scan, record the finding and a
+      waiver DR-ID. Do **not** tick the box because the command exited 0.

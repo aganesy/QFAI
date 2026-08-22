@@ -149,6 +149,31 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // `QFAI-TEST-002` is `info`, so `--fail-on error` exits 0 on it. A project
+  // still carrying the `testFileGlobs: []` that `qfai init` ships scans zero
+  // files, `QFAI-TEST-001` cannot fire, and gates phrased as "zero
+  // QFAI-TEST-001" passed on a stub scan that never ran. Every gate that names
+  // the one code must name the other.
+  it("blocks completion on QFAI-TEST-002, not only on QFAI-TEST-001", async () => {
+    for (const dir of SKILL_DIRS) {
+      const checkpoint = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(checkpoint).toContain(
+        "reports zero `QFAI-TEST-001` **and** zero `QFAI-TEST-002` findings",
+      );
+      expect(checkpoint).toContain("Reading that exit 0 as a pass passes a gate that");
+
+      const checklist = await readFile(path.join(dir, "references", "final-checklist.md"), "utf-8");
+      expect(checklist).toContain("The same run reports zero `QFAI-TEST-002` findings.");
+      expect(checklist).toContain("Do **not** tick the box because the command exited 0.");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**Or the run reports `QFAI-TEST-002`**");
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");

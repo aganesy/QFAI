@@ -93,13 +93,20 @@ function resolveStubDialect(relFile: string): StubDialect | null {
  * governs. Returning no issues here made a never-executed stub scan
  * indistinguishable from a clean one — the exact non-result-read-as-result this
  * finding exists to prevent.
+ *
+ * `file` is the config file, not `root`: the thing to edit is
+ * `validation.traceability.testFileGlobs` in qfai.config.yaml. Filing it against
+ * `root` made `normalizeIssuePaths` render it as `.`, so validate.json, the
+ * GitHub annotation and the report hotspot all blamed the repository root, and a
+ * path-scoped waiver on qfai.config.yaml could never match it. Same convention
+ * as the other config findings (`configReferenceIntegrity.ts`).
  */
-function reportEmptyTestFileGlobs(root: string): Issue {
+function reportEmptyTestFileGlobs(): Issue {
   return issue(
     "QFAI-TEST-002",
     "テストスタブ検出は有効ですが、`validation.traceability.testFileGlobs` が空のため 0 ファイルしか scan していません。クリーンな結果はスタブ不在の証拠になりません",
     "info",
-    root,
+    "qfai.config.yaml",
     "validation.traceability.testFileGlobs",
     ["validation.traceability.testFileGlobs"],
     "canonical",
@@ -114,7 +121,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
 
   const globs = config.validation.traceability.testFileGlobs;
   if (globs.length === 0) {
-    return [reportEmptyTestFileGlobs(root)];
+    return [reportEmptyTestFileGlobs()];
   }
 
   const excludeGlobs = Array.from(

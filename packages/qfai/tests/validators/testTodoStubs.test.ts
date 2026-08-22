@@ -195,6 +195,11 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
     const finding = issues[0];
     expect(finding?.severity).toBe("info");
+    // The file to edit is qfai.config.yaml. Filing it against `root` would let
+    // normalizeIssuePaths render it as `.`, blaming the repository root in
+    // validate.json / annotations / report hotspots, and no path-scoped waiver
+    // on qfai.config.yaml would match it.
+    expect(finding?.file).toBe("qfai.config.yaml");
     expect(finding?.rule).toBe("validation.traceability.testFileGlobs");
     expect(finding?.message).toContain("validation.traceability.testFileGlobs");
     expect(finding?.suggested_action).toContain("qfai-configure");
