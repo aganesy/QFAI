@@ -1164,6 +1164,18 @@ const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 const ANY_HEADING_RE = /^#{1,6}\s+/;
 
 /**
+ * Catalog form of a user story, e.g. `- US-0001: summary`.
+ *
+ * {@link collectShortIds} declares an id from this line too, so a pack whose
+ * stories live only in the `## US Catalog` list — no per-story heading — owed
+ * `QFAI-ATDD-111` with no way to defer. The id must *open* the item, not merely
+ * appear in it: `- Goal: as described in US-0002` is prose about another story,
+ * not a declaration of one, and treating it as a block opener would hand the
+ * next marker to the wrong id.
+ */
+const US_LIST_ITEM_RE = /^[-*][ \t]+(US-\d{4}(?:-\d{4})?)[ \t]*[:：]?/;
+
+/**
  * The `x-qfai-status: planned` deferral in user-story meta-line form.
  *
  * The same token both contract kinds use, written as one of the `- Key: value`
@@ -1193,6 +1205,11 @@ const PLANNED_US_META_LINE_RE = new RegExp(
  * Fenced samples and HTML comments are masked first, on the same terms as
  * {@link collectTcLevels}: an illustrative block showing the marker must not
  * silently drop a real story's obligation.
+ *
+ * A block opens at either shape {@link collectShortIds} declares an id from — a
+ * `##`-or-deeper heading ({@link US_HEADING_RE}) or a catalog list entry
+ * ({@link US_LIST_ITEM_RE}) — and closes at the next opener or any heading, so
+ * every declared story can carry the marker and none inherits a neighbour's.
  */
 export function collectPlannedUsIds(rawUsText: string): Set<string> {
   const planned = new Set<string>();
@@ -1209,6 +1226,15 @@ export function collectPlannedUsIds(rawUsText: string): Set<string> {
     // the file, and a non-story subsection (`#### Notes`) ends the block too.
     if (ANY_HEADING_RE.test(line.trim())) {
       current = null;
+      continue;
+    }
+    // A catalog entry opens a block of its own, so the marker reaches a story
+    // that has no heading. Checked after the heading arms and before the marker
+    // arm: the marker's own line does not open with a `US-*` id, so the two
+    // list forms cannot collide.
+    const listItem = US_LIST_ITEM_RE.exec(line.trim());
+    if (listItem?.[1]) {
+      current = listItem[1].toUpperCase();
       continue;
     }
     if (current !== null && PLANNED_US_META_LINE_RE.test(line)) {

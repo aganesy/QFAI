@@ -243,6 +243,33 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
     );
   });
 
+  it("defers a story declared only in the catalog list", async () => {
+    await withProject(
+      {
+        us: userStories(
+          [
+            "## US Catalog",
+            "",
+            "- US-0001-0001: covered by this slice",
+            "- US-0001-0002: outside this slice",
+            `  ${PLANNED}`,
+            "",
+          ].join("\n"),
+        ),
+        tests: { "tests/e2e/slice.test.ts": "// QFAI:SPEC-0001:US-0001-0001\n" },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        // These ids are declared and owed exactly like heading-form ones, so
+        // without a catalog-form block the story had a hard error and no exit.
+        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-111");
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001-0002",
+        ]);
+      },
+    );
+  });
+
   it("ignores a marker written outside a story block", async () => {
     await withProject(
       { us: userStories(`${PLANNED}\n\n${TWO_STORIES.split("\n\n").slice(1).join("\n\n")}`) },
@@ -273,6 +300,25 @@ describe("collectPlannedUsIds", () => {
     // Fenced samples and HTML comments are not the spec — the same masking every
     // other spec-pack collector applies.
     expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("reads the marker from a catalog list entry", () => {
+    const text = userStories(
+      ["## US Catalog", "", "- US-0001: a", `${PLANNED}`, "- US-0002: b", ""].join("\n"),
+    );
+    // A pack whose stories live only in the catalog list declares them all the
+    // same — `collectShortIds` reads the ids from these lines — so the marker
+    // has to reach them there too.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("does not treat a list item merely mentioning an id as a declaration", () => {
+    const text = userStories(
+      ["## US-0001: a", "", "- Goal: as described in US-0002", PLANNED, ""].join("\n"),
+    );
+    // The id has to open the item. Otherwise prose about a sibling story would
+    // capture the next marker and defer the wrong id.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
   });
 
   it("lets a non-story heading close the block", () => {

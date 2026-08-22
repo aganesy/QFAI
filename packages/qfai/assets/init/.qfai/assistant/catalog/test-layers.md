@@ -283,7 +283,7 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
     surface typing, so the obligation stays project-wide for it.
   - **Deferral.** A story whose acceptance cannot be observed at E2E in the
     current slice defers with a `- x-qfai-status: planned` meta line inside its
-    own `US-XXXX` block (`##` or deeper) in `02_User-stories.md` — the same token the two
+    own `US-XXXX` block (a `##`-or-deeper heading, or its catalog list entry) in `02_User-stories.md` — the same token the two
     contract kinds use. It leaves `QFAI-ATDD-111` and is reported as
     `QFAI-ATDD-118` (`info`); remove the marker when the slice is implemented.
     It counts only inside the story block it is written in, so one above the
