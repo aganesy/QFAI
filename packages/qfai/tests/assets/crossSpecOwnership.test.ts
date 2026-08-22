@@ -58,9 +58,55 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(skill).toContain(
       "**Before editing a production file or a test file — here or in any other phase**",
     );
+    // Red writes the test and Green writes the production code, both before
+    // Refactor; a run that never refactors reached the guard after the fact.
     expect(skill).toContain(
-      "run the cross-spec check of `references/cross-spec-ownership.md` before writing it",
+      "When the test goes into a file that already exists, run the cross-spec check of `references/cross-spec-ownership.md` before writing it",
     );
+    expect(skill).toContain(
+      "When it goes into a file that already exists, run the cross-spec check of `references/cross-spec-ownership.md` before writing it",
+    );
+  });
+
+  it("widens to the package when the reverse walk cannot complete", async () => {
+    // Dynamic imports, DI wiring and generated code leave the closure short,
+    // and `relevant-test-suite.md` already answers that with a package
+    // fallback — detection has to take the same one or it under-detects.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**When the walk cannot be completed, widen.**");
+    expect(reference).toContain(
+      "Take the **package fallback** `relevant-test-suite.md` defines for exactly that case",
+    );
+    expect(reference).toContain("an unresolvable edge is unknown reach, not absent reach");
+  });
+
+  it("compares path against path whole, aliasing only for dotted modules", async () => {
+    // `src/parser.ts` and `src/parser.py` are two modules two specs may own.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**Path against path is compared whole**, extension included");
+    expect(reference).toContain("`src/parser.ts` and `src/parser.py` are two modules");
+    expect(reference).toContain("alias used only to line a dotted module up with a path");
+  });
+
+  it("lets the evidence record a reverse-dependency hit", async () => {
+    // The reverse branch hits rows that name the file in neither column, so a
+    // `Blocked TDD-IDs` defined as "rows that name the file" was unfillable.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "the ones naming the file directly, and the ones whose `Test file` the reverse-dependency walk reached",
+    );
+  });
+
+  it("re-runs the blocked selectors before handing them to the reviewer", async () => {
+    // `completion-reviewer` audits evidence and executes nothing, so on the
+    // recorded GREEN alone it re-ratifies a run that predates the edit.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**Re-run, then re-review.**");
+    expect(reference).toContain(
+      "re-run each `Blocked TDD-ID`'s `Selector` against the changed tree, read-only",
+    );
+    expect(reference).toContain("with those fresh results as its input");
+    expect(reference).toContain("The reviewer audits phase-authored evidence; it executes nothing");
   });
 
   it("scopes detection to the rows that actually carry a certification", async () => {

@@ -57,22 +57,40 @@ such a file does not require permission — it requires a record and a re-review
      restriction, not a clearance — the same reading `execution-ledger.md` gives
      it for parallel dispatch. Detection never passes silently just because the
      column is absent.
+   - **When the walk cannot be completed, widen.** Dynamic imports, DI or
+     container wiring, reflection, generated code, or no import-graph tool at
+     hand all leave the closure short of the tests that really reach the file.
+     Take the **package fallback** `relevant-test-suite.md` defines for exactly
+     that case — every test in the package containing the file being edited —
+     and match `Test file` against that set instead. Incomplete resolution
+     widens here for the same reason it widens there: an unresolvable edge is
+     unknown reach, not absent reach.
 
    **Normalize before comparing.** `Owning module` legally holds a
    repo-relative path **or** a dotted module path (`execution-ledger.md`).
    Decide which form the cell holds **before** touching its dots — a value
    carrying `/` or ending in a source extension is a path — and read `.` as a
    separator **only** in the dotted form, so `src/foo.bar.ts` keeps its dot
-   instead of collapsing onto `src/foo/bar.ts` and manufacturing a hit. Then
-   compare with the source-root prefix and the extension dropped:
-   `shirube.domain.notification` and `src/shirube/domain/notification.ts` are
-   the same module and must match.
+   instead of collapsing onto `src/foo/bar.ts` and manufacturing a hit.
+   **Path against path is compared whole**, extension included: `src/parser.ts`
+   and `src/parser.py` are two modules two specs may own separately, and
+   dropping the suffix makes editing either one hit the other. The
+   extension-less, separator-normalized form is an **alias used only to line a
+   dotted module up with a path** — `shirube.domain.notification` and
+   `src/shirube/domain/notification.ts` are the same module and must match.
 
 2. **Record.** Add a `## Cross-spec obligations` entry to this spec's evidence
    file (fields below).
-3. **Re-review.** Run `completion-reviewer` against the affected specs'
-   obligations as well as this one's. The reviewer is the party that can say
-   whether the other spec's assertions still hold.
+3. **Re-run, then re-review.** First re-run each `Blocked TDD-ID`'s `Selector`
+   against the changed tree, read-only: nothing in the other spec's ledger or
+   evidence moves, and the result is captured under `Obligation at risk`. Then
+   run `completion-reviewer` against the affected specs' obligations as well as
+   this one's, **with those fresh results as its input**. The reviewer audits
+   phase-authored evidence; it executes nothing. Handed only the recorded GREEN,
+   it would re-ratify a run that predates the edit — and a changed fixture,
+   helper or setup breaks that selector without changing a line the reviewer
+   reads. The reviewer is still the party that says whether the obligation
+   holds; the re-run is what gives it something current to say it about.
 4. **Do not close over it.** An open entry is a completion prohibition
    (`qfai-implement/SKILL.md#completion-prohibition-conditions`).
 
@@ -80,15 +98,15 @@ such a file does not require permission — it requires a record and a re-review
 
 Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row):
 
-| Field                | Meaning                                                       |
-| -------------------- | ------------------------------------------------------------- |
-| `TDD-ID`             | the row in **this** spec whose work forced the change         |
-| `Blocked spec`       | the spec whose `done` rows the file belongs to                |
-| `Blocked TDD-IDs`    | the rows in that spec that name the file                      |
-| `File`               | the exact path changed                                        |
-| `Change required`    | what had to change, in one sentence                           |
-| `Obligation at risk` | what that spec asserted about the file that is now unverified |
-| `Resolution`         | `re-reviewed` (the reviewer confirmed it holds) or `CR-*`     |
+| Field                | Meaning                                                                                                                                                  |
+| -------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `TDD-ID`             | the row in **this** spec whose work forced the change                                                                                                    |
+| `Blocked spec`       | the spec whose `done` rows the file belongs to                                                                                                           |
+| `Blocked TDD-IDs`    | the rows in that spec the detection step matched — the ones naming the file directly, and the ones whose `Test file` the reverse-dependency walk reached |
+| `File`               | the exact path changed                                                                                                                                   |
+| `Change required`    | what had to change, in one sentence                                                                                                                      |
+| `Obligation at risk` | what that spec asserted about the file that is now unverified                                                                                            |
+| `Resolution`         | `re-reviewed` (the reviewer confirmed it holds) or `CR-*`                                                                                                |
 
 `Obligation at risk` is the load-bearing field. "Changed a shared helper" is not
 a record; "spec-0004 TDD-0012 asserts this helper rejects an empty batch, and
