@@ -34,7 +34,7 @@ QFAI Skill Body (SSOT)
 ## Preconditions
 
 - **`.qfai/specs/<spec-id>/tdd/test-list.md` must exist and contain the eight required columns.** It is the ledger every step of this skill reads.
-- **Producer**: `/qfai-sdd` Phase 2b seeds it — one row per coverage-target TC, one `Layer = E2E` row per active `US-*`, one `Layer = API` row per active `CON-API-*` (`references/execution-ledger.md`). Do **not** proceed with an absent ledger and do **not** invent rows that no TC backs, nor an E2E / API row that no `US-*` / `CON-API-*` backs.
+- **Producer**: `/qfai-sdd` Phase 2b seeds it — one row per coverage-target TC, one `Layer = E2E` row per active `US-*`, one `Layer = API` row per active `CON-API-*` the spec owns (`references/execution-ledger.md`). Do **not** proceed with an absent ledger and do **not** invent rows that no TC backs, nor an E2E / API row that no `US-*` / `CON-API-*` backs.
 - **An empty ledger is a fault only when `06_Test-Cases.md` disagrees.** Never read a header-only table as "nothing to do" on its own. The recovery procedure and the coverage-target test that separates a truthfully empty ledger from an incomplete one are in `references/ledger-preconditions.md`; read it before exiting on an empty ledger.
 
 ## Spec Auto-Discovery Protocol
