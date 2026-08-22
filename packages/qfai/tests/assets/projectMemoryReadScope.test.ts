@@ -6,9 +6,13 @@
  * `(if relevant)`); items 1 and 2 did not. Item 2's `.qfai/assistant/manifest/*`
  * glob pulled in `manifest/agent-catalog.yml`, which is the one file the
  * framework exempts from `SKILL_MD_MAX_LINES` precisely because it is
- * "generated, not authored" — a per-entry mirror of `assistant/agents/<id>.md`
- * that `tests/codex/agents.test.ts` asserts stays identical to those sources.
- * By construction it carries no fact the agent definitions do not.
+ * "generated, not authored". Only its `developer_instructions` field is
+ * generated: `tests/codex/agents.test.ts` asserts that field stays identical to
+ * `assistant/agents/<id>.md`, and nothing else in the entry is mirrored there.
+ * `owned_artifacts`, `tool_profile`, `permission_profile`, and
+ * `specialization_tags` live only in the catalog — `constitution/agent-selection.md`
+ * names it SSOT alongside `agent-routing.yml` and `review-profiles.yml` — so the
+ * scoping may drop the duplicated body and nothing more.
  *
  * The article also fired at the same instant as `workflow.md`'s Stage 0
  * steering-refresh contract, overlapped it on `catalog/`, and neither cited the
@@ -49,7 +53,7 @@ function articleIII(constitution: string): string {
 }
 
 describe.each(QFAI_TREES)("%s", (tree) => {
-  it("keeps the generated agent mirror off the unconditional project-memory read", async () => {
+  it("names the manifest files it needs instead of globbing the whole directory", async () => {
     const article = articleIII(await read(tree, CONSTITUTION));
     // The whole-directory glob is what dragged the 1,622-line mirror in.
     expect(article).not.toContain("`.qfai/assistant/manifest/*`");
@@ -57,13 +61,23 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(article).toContain("`.qfai/assistant/manifest/review-profiles.yml`");
   });
 
-  it("keeps the mirror reachable, as an on-demand lookup with its reason stated", async () => {
+  it("scopes the skip to the mirrored body, keeping the catalog-only metadata mandatory", async () => {
     const article = articleIII(await read(tree, CONSTITUTION));
-    // Dropping the file entirely would lose the routed-role lookup; the article
-    // has to say when to read it and why it is not in the prefix.
-    expect(article).toContain("`.qfai/assistant/manifest/agent-catalog.yml` on demand");
+    // Only `developer_instructions` duplicates the agent card. The ownership,
+    // tool, and permission metadata exists nowhere else, so a card in context
+    // must never stand in for the catalog entry.
+    expect(article).toContain("`.qfai/assistant/manifest/agent-catalog.yml`");
+    expect(article).toContain("`owned_artifacts`");
+    expect(article).toContain("`tool_profile`");
+    expect(article).toContain("`permission_profile`");
+    expect(article).toContain("`specialization_tags`");
+    // The mirrored body, and only it, is the part the article may let an
+    // already-loaded agent card satisfy.
+    expect(article).toContain(
+      "Only the entry's `developer_instructions` body is a generated mirror",
+    );
     expect(article).toContain("`.qfai/assistant/agents/<id>.md`");
-    expect(article).toContain("generated mirror");
+    expect(article).toContain("on demand");
   });
 
   it("still mandates the authored project memory it always did", async () => {
