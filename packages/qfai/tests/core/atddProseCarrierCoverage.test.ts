@@ -279,6 +279,55 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("does not count configuration and hook chains, which collect no test", async () => {
+    // A Playwright file of fixtures and hooks runs nothing on its own, so
+    // counting it would take every obligation in it out of the partition.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "import { test } from '@playwright/test';",
+            "test.describe.configure({ mode: 'parallel' });",
+            "test.use({ locale: 'ja-JP' });",
+            "test.beforeEach(async () => {});",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("still counts the modifier chains that do declare a suite", async () => {
+    for (const declaration of [
+      'test.describe.serial("US-0001", () => {});',
+      'it.concurrent.each([1])("US-0001", () => {});',
+      'Deno.test("US-0001", () => {});',
+      'QUnit.test("US-0001", () => {});',
+    ]) {
+      await withProject(
+        {
+          us: ["US-0001"],
+          files: {
+            "tests/e2e/us-0001.test.ts": `// QFAI:SPEC-0001:US-0001\n${declaration}\n`,
+          },
+        },
+        async (root) => {
+          expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+            "QFAI-ATDD-118",
+          );
+        },
+      );
+    }
+  });
+
   it("keeps reading code past a regex literal, whatever quoting it contains", async () => {
     // Blanking literals must not blank code: a backtick inside a regex would
     // open a template literal and swallow every line up to the next one,

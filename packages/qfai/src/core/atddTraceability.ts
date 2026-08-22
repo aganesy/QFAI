@@ -323,15 +323,27 @@ export async function evaluateAtddCodeTraceability(
     }
 
     const text = await readSafe(file);
-    if (hasRunnableTestStructure(file, text)) {
+    const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
+    const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
+    const apiAnnotations = extractApiContractAnnotations(text);
+    const dbAnnotations = extractDbContractAnnotations(text);
+    // Only a file that carries an annotation can ever be looked up in
+    // `executableCarriers`, so classifying the rest is work with no reader —
+    // and the classification tokenizes the whole body, which on a monorepo of
+    // twenty thousand test files is the difference between a cheap scan and a
+    // CI timeout. Deliberately ordered after the extractions for that reason.
+    if (
+      (usAnnotations.length > 0 ||
+        tcAnnotations.length > 0 ||
+        apiAnnotations.length > 0 ||
+        dbAnnotations.length > 0) &&
+      hasRunnableTestStructure(file, text)
+    ) {
       // `path.normalize`, because that is the key `recordSpecRef` /
       // `recordContractRef` store — fast-glob yields POSIX separators even on
       // Windows, so the raw path would never match the recorded one there.
       executableCarriers.add(path.normalize(file));
     }
-    const usAnnotations = extractSpecScopedAnnotations(text, US_TEST_ANNOTATION_RE);
-    const tcAnnotations = extractSpecScopedAnnotations(text, TC_TEST_ANNOTATION_RE);
-    const apiAnnotations = extractApiContractAnnotations(text);
 
     for (const ref of usAnnotations) {
       const token = formatUsToken(ref.spec, ref.id);
@@ -396,7 +408,7 @@ export async function evaluateAtddCodeTraceability(
       }
     }
 
-    for (const contractId of extractDbContractAnnotations(text)) {
+    for (const contractId of dbAnnotations) {
       // Declared = active ∪ deferred, for the same reason as CON-API: a
       // deferral suspends the obligation, it does not un-declare the contract.
       if (!declaredDbContractIds.has(contractId)) {
@@ -1229,10 +1241,29 @@ const PROSE_CARRIER_EXTENSIONS: ReadonlySet<string> = new Set(["md", "markdown"]
  * enabled" or "it passes": a disabled skeleton is owned by the scaffold
  * placeholder gate, and a green run is owned by the test command itself.
  */
+/**
+ * Chain segments that still leave a call declaring a test or a suite.
+ *
+ * An open `[\w$]+` chain accepted the configuration and hook forms too, and
+ * those declare nothing: a Playwright file holding only `test.use(...)`,
+ * `test.beforeEach(...)` and `test.describe.configure(...)` collects no test
+ * yet read as an executable carrier, which took every obligation in it out of
+ * `coveredByCarrierOnly`. Only modifiers a runner still collects through are
+ * listed, so `test.describe.serial(` matches and `test.describe.configure(`
+ * does not.
+ */
+const TEST_MODIFIER_SEGMENT =
+  "skip|only|todo|fails|failing|concurrent|sequential|serial|parallel|each|for|runIf|skipIf|describe";
+
 const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   // xUnit / BDD call form with the modifier chains the frameworks allow:
   // `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
-  /(?:^|[^\w$.])(?:it|test|describe|context|specify|suite|scenario)\s*(?:\.\s*[\w$]+\s*)*\(/,
+  new RegExp(
+    `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
+  ),
+  // Namespaced runners whose entry point is a property, so the call form above
+  // rejects them on the `.` before `test`: Deno's built-in runner and QUnit.
+  /(?:^|[^\w$.])(?:Deno\s*\.\s*test|QUnit\s*\.\s*(?:test|only|todo|skip))(?:\s*\.\s*(?:only|skip|ignore|each))*\s*\(/,
   // Gherkin: a `.feature` is executed scenario by scenario. `Background:` is
   // deliberately absent — it is the shared preamble those scenarios run, not a
   // scenario a runner collects, so a feature that has only one declares no test.
@@ -1276,61 +1307,68 @@ function blankSpan(span: string): string {
  * Regex literals are tracked for one reason: a backtick inside one (`/^\s*```/`
  * is real code in this repository) would otherwise open a template literal and
  * blank every line up to the next backtick, taking a genuine declaration with
- * it. Whether a `/` opens a literal or divides is decided by the preceding
- * token, which is the standard heuristic and the reason `lastValue` is tracked
- * across the loop.
+ * it. Whether a `/` opens a literal or divides is decided by the token before
+ * it, which is the standard heuristic.
+ *
+ * Single pass, and it never slices the tail: {@link NON_CODE_OPENER_RE} jumps
+ * straight to the next character that could open a span, and the sticky
+ * patterns match in place. Re-reading the remainder of the body at every
+ * character made the cost quadratic in file size, on a path that runs over
+ * every annotated carrier in the project.
  */
-function stripCommentsAndLiterals(text: string): string {
-  let out = "";
-  let index = 0;
-  // True when the last code token could end a value, so a following `/` is
-  // division rather than the start of a regex literal.
-  let lastValue = false;
-  while (index < text.length) {
-    const rest = text.slice(index);
-    const block = /^\/\*[\s\S]*?(?:\*\/|$)/.exec(rest);
-    if (block) {
-      out += blankSpan(block[0]);
-      index += block[0].length;
-      continue;
+const NON_CODE_OPENER_RE = /["'`/#]/g;
+const BLOCK_COMMENT_RE = /\/\*[\s\S]*?(?:\*\/|$)/y;
+const LINE_COMMENT_RE = /(?:\/\/|#(?![[!]))[^\n]*/y;
+const TRIPLE_QUOTED_RE = /"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$)/y;
+const QUOTED_RE = /"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?/y;
+const REGEX_LITERAL_RE = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/y;
+/** Characters that can end a value, so a `/` after one divides. */
+const VALUE_END_RE = /["'`\w$)\]]/;
+
+/** Matches the non-code span opening at `at`, or `null` when none does. */
+function nonCodeSpanAt(text: string, at: number): string | null {
+  for (const pattern of [BLOCK_COMMENT_RE, LINE_COMMENT_RE, TRIPLE_QUOTED_RE, QUOTED_RE]) {
+    pattern.lastIndex = at;
+    const match = pattern.exec(text);
+    if (match && match[0].length > 0) {
+      return match[0];
     }
-    const line = /^(?:\/\/|#(?![[!]))[^\n]*/.exec(rest);
-    if (line) {
-      out += blankSpan(line[0]);
-      index += line[0].length;
-      continue;
-    }
-    const triple = /^(?:"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$))/.exec(rest);
-    if (triple) {
-      out += blankSpan(triple[0]);
-      index += triple[0].length;
-      lastValue = true;
-      continue;
-    }
-    const quoted = /^(?:"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?)/.exec(rest);
-    if (quoted && quoted[0].length > 0) {
-      out += blankSpan(quoted[0]);
-      index += quoted[0].length;
-      lastValue = true;
-      continue;
-    }
-    if (!lastValue) {
-      const regex = /^\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/.exec(rest);
-      if (regex) {
-        out += blankSpan(regex[0]);
-        index += regex[0].length;
-        lastValue = true;
-        continue;
-      }
-    }
-    const char = text.charAt(index);
-    if (!/\s/.test(char)) {
-      lastValue = /[\w$)\]]/.test(char);
-    }
-    out += char;
-    index += 1;
   }
-  return out;
+  if (text.charAt(at) !== "/" || endsValueBefore(text, at)) {
+    return null;
+  }
+  REGEX_LITERAL_RE.lastIndex = at;
+  return REGEX_LITERAL_RE.exec(text)?.[0] ?? null;
+}
+
+/** True when the nearest non-whitespace character before `at` ends a value. */
+function endsValueBefore(text: string, at: number): boolean {
+  for (let back = at - 1; back >= 0; back -= 1) {
+    const char = text.charAt(back);
+    if (!/\s/.test(char)) {
+      return VALUE_END_RE.test(char);
+    }
+  }
+  return false;
+}
+
+function stripCommentsAndLiterals(text: string): string {
+  const parts: string[] = [];
+  let plainFrom = 0;
+  NON_CODE_OPENER_RE.lastIndex = 0;
+  let opener: RegExpExecArray | null;
+  while ((opener = NON_CODE_OPENER_RE.exec(text)) !== null) {
+    const at = opener.index;
+    const span = nonCodeSpanAt(text, at);
+    if (span === null) {
+      continue;
+    }
+    parts.push(text.slice(plainFrom, at), blankSpan(span));
+    plainFrom = at + span.length;
+    NON_CODE_OPENER_RE.lastIndex = plainFrom;
+  }
+  parts.push(text.slice(plainFrom));
+  return parts.join("");
 }
 
 /** True when `file` is a carrier a runner could execute, judged on its body. */
