@@ -34,6 +34,9 @@ const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const REVIEW_FIX = "assistant/skills/qfai-atdd/references/review-fix-rounds.md";
 const SHARED_ARTIFACT = "assistant/skills/qfai-atdd/references/shared-test-artifacts.md";
+const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
+const CROSS_SPEC = "assistant/skills/qfai-implement/references/cross-spec-ownership.md";
+const NOT_OBSERVABLE = "assistant/skills/qfai-implement/references/red-not-observable.md";
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
@@ -580,13 +583,14 @@ describe.each(TREES)("%s (natural RED and the shared falsifiability gate)", (tre
       await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
     );
     expect(shared).toContain(
-      "accepted only on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`",
+      "accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed over by `/qfai-atdd`",
     );
     // And still refused elsewhere: widening it for every row would let an
     // ordinary TDD row reach `done` with no production change and no sibling.
-    expect(shared).toContain(
-      "On a `Unit` / `Component` / `Integration` row it is **not** accepted",
-    );
+    // `Integration` is on the accepting side because it is ATDD-owned — the
+    // gatekeeper below already judged it that way, so refusing it here sent a
+    // correct Integration trio to `exception`.
+    expect(shared).toContain("On a `Unit` / `Component` row it is **not** accepted");
 
     const gatekeeper = flat(await read(tree, GATEKEEPER));
     expect(gatekeeper).toContain(
@@ -892,7 +896,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("keeps a pre-split row gateable where its evidence actually is", async () => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
+      "an `E2E` / `API` / `Integration` row that reached `done` or `review-fix` before its `Layer` moved into the ATDD-owned set",
     );
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
@@ -1567,7 +1571,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("for **every** `E2E` / `API` row past `todo`");
+    expect(implement).toContain("for **every** `E2E` / `API` / `Integration` row past `todo`");
     expect(implement).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
@@ -1958,7 +1962,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // let a row that never produced an ATDD handoff pass as complete.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("**A row that carries the marker**");
-    expect(implement).toContain("which for an `E2E` / `API` row means the ATDD file");
+    expect(implement).toContain(
+      "which for an `E2E` / `API` / `Integration` row means the ATDD file",
+    );
     expect(implement).not.toContain(
       "A row with no marker is judged by the current rule whatever its status. Accept that anchor",
     );
@@ -2487,6 +2493,64 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(ledger).toContain(
       "E2E/API/Integration row whose anchor names the ATDD file reaches `done`",
     );
+  });
+
+  it("sends the Integration checkpoint evidence to the same file item 12 rechecks", async () => {
+    // The per-item checkpoint rule branched only E2E/API to the ATDD file, so a
+    // MUST-followed Integration row wrote its checkpoint trio to
+    // `implement-<spec-id>.md` while gate item 12 recomputed the seal inside the
+    // ATDD entry item 10 selected. The row could not reach `done`.
+    const checkpoint = flat(await read(tree, CHECKPOINT));
+    expect(checkpoint).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
+    // The spec-level boundary picks the same file for the same set: a spec whose
+    // every row is ATDD-owned never created the implement file.
+    expect(checkpoint).toContain("row is ATDD-owned (`E2E` / `API` / `Integration`");
+  });
+
+  it("sends the Integration cross-spec obligation to the layer-owned file too", async () => {
+    // Recording it in `implement-<spec-id>.md` separates the blocking entry from
+    // the ATDD file item 10 and the completion prohibition read, so completion
+    // could be declared with the affected spec's re-review still open.
+    const crossSpec = flat(await read(tree, CROSS_SPEC));
+    expect(crossSpec).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
+    expect(crossSpec).toContain(
+      "The whole `## Cross-spec obligations` entry goes in that one file",
+    );
+  });
+
+  it("admits the Integration falsifiability branch instead of forcing an exception", async () => {
+    // An ATDD-owned row's surface exists by P4, so the normal case is a first-run
+    // pass whose `Satisfied-by` is a production path. Allowing that form on E2E/API
+    // only, and naming Integration in the refusing list, sent every correct
+    // Integration trio to `exception` at completion review.
+    const notObservable = flat(await read(tree, NOT_OBSERVABLE));
+    expect(notObservable).toContain(
+      "**Or, on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed over by `/qfai-atdd`",
+    );
+    expect(notObservable).toContain(
+      "**is accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed over by `/qfai-atdd`**",
+    );
+    expect(notObservable).toContain("On a `Unit` / `Component` row it is **not** accepted");
+    expect(notObservable).not.toContain("`Unit` / `Component` / `Integration` row it is **not**");
+  });
+
+  it("migrates a pre-existing Integration row's evidence with the same marker pass", async () => {
+    // Integration was implement-owned until this version, so an existing row past
+    // `todo` holds a lawful implement anchor. Marking only E2E/API left that row
+    // rejected at item 10 with no forward transition able to re-take its RED.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**`Integration` moved later than `E2E` / `API`**");
+    expect(implement).toContain(
+      "the Orchestrator Protocol sent it to `implement-<spec-id>.md` until this version",
+    );
+    // The marker pass itself is the migration, so it has to cover the layer that
+    // moved: an unmarked legacy Integration row is judged by the current rule and
+    // has no forward transition that could re-take its RED on the ATDD side.
+    expect(implement).toContain("the pass below runs once more, over the `Integration` rows");
   });
 
   it("routes the Integration gatekeeper at the file its provenance is in", async () => {
