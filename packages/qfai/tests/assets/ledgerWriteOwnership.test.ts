@@ -27,6 +27,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const POLICY = "assistant/skills/qfai-implement/references/parallelization-policy.md";
+const REVISION = "assistant/skills/qfai-implement/references/evidence-revision.md";
 const IMPLEMENTATION_AGENTS = ["backend-engineer", "frontend-engineer", "acceptance-test-engineer"];
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -114,6 +115,58 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(policy).toContain("`observed-red` row has no such field");
     expect(policy).toMatch(/satisfies `Oracle proof` with its\s+falsifiability fields/);
     expect(policy).toContain("A block missing the field **its own branch** requires");
+  });
+
+  it("checks block completeness while the worker's worktree still stands", async () => {
+    // The un-recoverable fields name a tree the merge destroys, so "goes back
+    // to the worker" is a remedy only before that worktree is removed.
+    // Detecting the gap during post-merge reconciliation leaves the row with
+    // no route to the missing field at all.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("**Before the merge, and before any slice worktree is removed**");
+    expect(policy).toContain("A short block goes back to its worker **there**");
+    expect(policy).toContain(
+      "an incomplete block blocks the **merge**, which is recoverable, rather than the row",
+    );
+  });
+
+  it("re-takes the revision-bound observations on the merged trunk", async () => {
+    // Sibling slices land in the trunk, so a worker's GREEN and reviewer
+    // verdicts name a revision the row never finally landed at — stale on
+    // arrival at gate item 10 however complete the returned block is.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("the trunk is a different revision from every slice worktree");
+    expect(policy).toContain(
+      "the GREEN `Revision`, each reviewer's `Reviewed revision` and `Audited evidence hash`, and the `Review pack seal`",
+    );
+    expect(policy).toContain("**Re-take those observations on the integrated tree**");
+    expect(policy).toContain("Post-merge integration verify does not cover it");
+    // And the fields that cannot be re-taken are named as exempt, so step 1's
+    // deadline does not read as redundant with step 2.
+    expect(policy).toContain(
+      "`RED revision`, `Falsifiability revision` and `Oracle proof` are exempt from step 2",
+    );
+  });
+
+  it("cites anchors that resolve to real `evidence-revision.md` headings", async () => {
+    // A staleness rule cited by a dangling anchor is a rule the worker cannot
+    // read, and both citations above carry the whole justification for step 2.
+    const policy = await read(tree, POLICY);
+    const raw = await readFile(path.join(repoRoot, tree, REVISION), "utf-8");
+    const slugs = [...raw.matchAll(/^#+\s+(.+)$/gm)].map(([, title]) =>
+      title
+        .toLowerCase()
+        .replace(/[^\w\s-]/g, "")
+        .trim()
+        .replace(/\s+/g, "-"),
+    );
+    const cited = [...policy.matchAll(/evidence-revision\.md#([\w-]+)/g)].map(
+      ([, anchor]) => anchor,
+    );
+    expect(cited.length).toBeGreaterThan(0);
+    for (const anchor of cited) {
+      expect(slugs).toContain(anchor);
+    }
   });
 
   it("reconciles the merged ledger before integration verify, and fails on a stale row", async () => {

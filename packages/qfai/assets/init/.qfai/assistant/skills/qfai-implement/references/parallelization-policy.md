@@ -217,7 +217,43 @@ unchanged. Two consequences are specific to dispatch:
     (`oracle-strength.md`).
 
   A block missing the field **its own branch** requires goes back to the worker
-  that produced it, not to the orchestrator's recovery path.
+  that produced it, not to the orchestrator's recovery path — and that return
+  path exists only while that worker's worktree does, which is what the next
+  subsection sequences.
+
+#### Check completeness before the merge, re-take the rest after it
+
+The two remedies above have opposite deadlines. Run them in one order or a
+merged row can never reach `done`:
+
+1. **Before the merge, and before any slice worktree is removed**, the
+   orchestrator validates every returned block against the field list the row's
+   own branch selects. A short block goes back to its worker **there**, while
+   the tree its missing field names still stands. Afterwards no one can re-take
+   `RED revision`, `Falsifiability revision` or `Oracle proof`: the tree each
+   named is not reconstructible from the trunk, and the orchestrator may not
+   write code. So an incomplete block blocks the **merge**, which is
+   recoverable, rather than the row, which by then is not.
+2. **After the merge**, the trunk is a different revision from every slice
+   worktree — the sibling slices landed in it. The fields that must name the
+   state the item finally landed at are therefore stale on arrival however
+   complete the block is: the GREEN `Revision`, each reviewer's
+   `Reviewed revision` and `Audited evidence hash`, and the `Review pack seal`.
+   Gate item 10 requires items 5, 7 and 8 to agree on one revision, so applying
+   the worker's payload verbatim leaves every merged row unable to reach `done`
+   (`evidence-revision.md#what-makes-evidence-stale`). **Re-take those
+   observations on the integrated tree** — re-run the GREEN and dispatch both
+   reviewers against the merged trunk — and write the refreshed values into the
+   row. That is a re-observation, not new code, so it stays inside the
+   orchestrator's delegation. Post-merge integration verify does not cover it:
+   it rules on the merged suite, not on each row's audit trail.
+
+`RED revision`, `Falsifiability revision` and `Oracle proof` are exempt from
+step 2 and carry over unchanged — they are transient observations that name
+their own tree by design
+(`evidence-revision.md#a-transient-observation-names-its-own-revision`). That
+exemption is exactly why step 1 has a deadline: they are the only fields step 2
+cannot regenerate.
 
 ## Failed integration verify
 
