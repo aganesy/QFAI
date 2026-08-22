@@ -325,8 +325,17 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  */
 const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
 
-/** Every `spec-NNNN` a single `Existing Spec` cell names. */
-const EXISTING_SPEC_ID_RE = /spec-\d{4}/g;
+/**
+ * Every `spec-`-prefixed token a single `Existing Spec` cell names, taken
+ * whole: the match runs to the end of the alphanumeric run and may not start
+ * inside one. Extracting `spec-\d{4}` directly would read a typo'd
+ * `spec-00010` as the existing `spec-0001` and let the row through, so the
+ * token is captured first and checked against the well-formed shape after.
+ */
+const EXISTING_SPEC_TOKEN_RE = /(?<![0-9A-Za-z])spec-[0-9A-Za-z]*/g;
+
+/** The only well-formed spec token: `spec-` plus exactly four digits. */
+const EXISTING_SPEC_ID_RE = /^spec-\d{4}$/;
 
 /**
  * Range notation in an `Existing Spec` cell. A range names no spec
@@ -621,7 +630,12 @@ function validateExistingSpecCell(
     return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
   }
 
-  const namedIds = cell.match(EXISTING_SPEC_ID_RE) ?? [];
+  const namedTokens = cell.match(EXISTING_SPEC_TOKEN_RE) ?? [];
+  const malformed = namedTokens.filter((token) => !EXISTING_SPEC_ID_RE.test(token));
+  if (malformed.length > 0) {
+    return report(`Existing Spec の spec ID 表記が不正です: ${malformed.join(", ")}`, malformed);
+  }
+  const namedIds = namedTokens;
   if (namedIds.length === 0) {
     return EXISTING_SPEC_POLICY_RE.test(cell)
       ? []

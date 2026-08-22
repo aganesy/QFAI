@@ -196,6 +196,33 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-008)", () => 
     ]);
   });
 
+  it("emits QFAI-TRIAGE-008 for a spec token that is not exactly four digits", () => {
+    // `spec-00010` shares a prefix with the existing `spec-0001`; matching the
+    // whole token keeps the typo from borrowing that spec's existence.
+    const issues = validateTriageSection(
+      buildDelta([["REQ-1", "extend", "spec-00010", "UPDATE", "APPEND", "-", "why"]]),
+      DELTA_PATH,
+      KNOWN,
+    );
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-008"]);
+    expect(issues[0]?.refs).toEqual(["spec-00010"]);
+    expect(
+      codesFor([["REQ-1", "extend", "spec-001", "UPDATE", "APPEND", "-", "why"]], KNOWN),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+    // A malformed member of a `+` enumeration is caught even when the other
+    // member resolves.
+    expect(
+      codesFor(
+        [["REQ-1", "merge", "spec-0003+spec-0004x", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+    // The grammar check does not need the known-spec set.
+    expect(codesFor([["REQ-1", "extend", "spec-00010", "UPDATE", "APPEND", "-", "why"]])).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+  });
+
   it("requires the `-` literal on a CREATE row and rejects a spec ID there", () => {
     expect(
       codesFor([["REQ-1", "new scope", "-", "CREATE", "-", "user@host", "CAP-0001"]], KNOWN),
