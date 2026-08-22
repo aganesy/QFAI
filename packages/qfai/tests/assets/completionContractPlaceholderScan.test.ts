@@ -59,13 +59,27 @@ describe("completion contract placeholder scan", () => {
       expect(bullet).toContain("**undocumented** `TBD`");
     });
 
-    it(`${tree}: the carve-out states OQ is a tracked artifact, not a placeholder`, async () => {
+    it(`${tree}: the OQ carve-out is scoped to tracking structure only`, async () => {
       const baseline = flat(await read(tree, BASELINE));
 
       expect(baseline).toContain("### What the placeholder scan does not flag");
-      expect(baseline).toContain("**`OQ` and `OPEN QUESTION` are not placeholders.**");
-      expect(baseline).toContain("a tracked artifact with an owner, a status and a due date");
+      expect(baseline).toContain(
+        "**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.**",
+      );
+      expect(baseline).toContain("row carrying its tracking fields — ID, owner, status, due");
       expect(baseline).toContain("must never be reported as an unresolved placeholder");
+    });
+
+    it(`${tree}: untracked OQ / OPEN QUESTION occurrences stay scanned`, async () => {
+      // The carve-out must not blanket-exempt the strings: a bare value left in
+      // spec prose or a contract field is the case the scan still has to catch.
+      const baseline = flat(await read(tree, BASELINE));
+
+      expect(baseline).toContain("Everywhere else the two strings are still scanned");
+      expect(baseline).toContain(
+        "a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose or a contract field",
+      );
+      expect(baseline).toContain("or a row missing its owner, status or due date, is a hit");
     });
 
     it(`${tree}: a documented TBD must not be deleted`, async () => {

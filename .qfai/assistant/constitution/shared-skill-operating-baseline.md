@@ -180,12 +180,16 @@ Before declaring completion, you MUST:
 
 ### What the placeholder scan does not flag
 
-**`OQ` and `OPEN QUESTION` are not placeholders.** An `OQ-ID` row is a
-tracked artifact with an owner, a status and a due date, and the
-`Open-questions.md` files are required outputs that ship containing both strings
-while recording zero open questions. Article II and `workflow.md` both end an
-unverifiable fact by recording an Open Question, so the record they prescribe
-must never be reported as an unresolved placeholder.
+**`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: an
+`OQ-NNNN-NNNN` row carrying its tracking fields — ID, owner, status, due — and
+the `Open Questions` heading, `OQ-ID` table header and empty-state row that the
+required `Open-questions.md` files ship with while recording zero open
+questions. Article II and `workflow.md` both end an unverifiable fact by
+recording an Open Question, so the tracked record they prescribe must never be
+reported as an unresolved placeholder. Everywhere else the two strings are still
+scanned: a bare `OQ` or `OPEN QUESTION` left as a value in generated spec prose
+or a contract field, or a row missing its owner, status or due date, is a hit
+like any other token.
 
 **A documented `TBD` is a compliant record.** `constitution.md` Article II and
 `thinking.md` require writing `TBD` together with a note of what evidence is
