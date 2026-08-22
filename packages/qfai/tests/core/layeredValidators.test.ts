@@ -203,21 +203,79 @@ describe("v1.4.36 layered validators", () => {
   it("stops at the end of the catalog table instead of reading a later one", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
-      // A change-log table that reuses the same column positions must not be
-      // folded in as a second catalog row for CAP-0001.
-      await seedPolicies(
-        root,
-        ["CAP-0001", "CAP-0002"],
-        ["spec-0001", "spec-0002"],
-        [
-          "## Change log",
-          "",
+      // A change-log table that reuses the same column positions, inside the
+      // catalog's own section, must not be folded in as a second catalog row
+      // for CAP-0001.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001", "spec-0002"], {
+        trailingMarkdown: [
           "| CAP ID | Spec | Change |",
           "| --- | --- | --- |",
           "| CAP-0001 | spec-0002 | moved before the split |",
           "",
         ].join("\n"),
-      );
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the table under the CAP Catalog heading, not an earlier one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A migration table placed above the catalog declares a complete, valid
+      // mapping while the catalog itself leaves every Spec cell blank. Taking
+      // the first table with both headers would let that blank catalog pass.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        leadingMarkdown: [
+          "## Migration record",
+          "",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | migrated |",
+          "| CAP-0002 | spec-0002 | migrated |",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reads a catalog written without the CAP Catalog heading", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", "spec-0003"], {
+        heading: false,
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats an escaped pipe in a Spec cell as text, not as a column boundary", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `owner \| spec-0001` is one GFM cell declaring one directory. Splitting
+      // on every `|` would shift the columns and drop the id, so the row would
+      // draw a bogus QFAI-SPLIT-106.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["owner \\| spec-0001", "spec-0002"]);
       await seedSpec(root, "0001", "CAP-0001");
       await seedSpec(root, "0002", "CAP-0002");
 
@@ -300,17 +358,25 @@ describe("v1.4.36 layered validators", () => {
   });
 });
 
+interface SeedPoliciesOptions {
+  /** Markdown emitted before the `## CAP Catalog` heading. */
+  readonly leadingMarkdown?: string;
+  /** Markdown appended after the catalog table. */
+  readonly trailingMarkdown?: string;
+  /** Set to `false` for a legacy catalog written without the heading. */
+  readonly heading?: boolean;
+}
+
 /**
  * Seeds `_policies`. Pass `declaredSpecIds` to emit the `Spec` column that
  * declares the CAP -> spec directory mapping; `null` leaves a row's cell empty.
  * Omit it to get the legacy catalog with no `Spec` column at all.
- * `trailingMarkdown` is appended after the catalog table.
  */
 async function seedPolicies(
   root: string,
   capIds: string[],
   declaredSpecIds?: (string | null)[],
-  trailingMarkdown = "",
+  options: SeedPoliciesOptions = {},
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -328,9 +394,19 @@ async function seedPolicies(
         : `| ${capId} | capability | metric | note |`,
     )
     .join("\n");
+  const heading = options.heading === false ? [] : ["## CAP Catalog", ""];
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
-    ["# 03 Capabilities", "", ...header, capLines, "", trailingMarkdown].join("\n"),
+    [
+      "# 03 Capabilities",
+      "",
+      options.leadingMarkdown ?? "",
+      ...heading,
+      ...header,
+      capLines,
+      "",
+      options.trailingMarkdown ?? "",
+    ].join("\n"),
     "utf-8",
   );
 

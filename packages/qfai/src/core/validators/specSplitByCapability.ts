@@ -3,6 +3,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
@@ -13,18 +14,40 @@ const CAP_HEADER_RE = /^cap(\s*id)?$/i;
 const SPEC_HEADER_RE = /^spec(\s*(id|dir|directory))?$/i;
 /** A GFM alignment cell (`---`, `:---`, `---:`, `:---:`). */
 const DELIMITER_CELL_RE = /^:?-+:?$/;
+/** The catalog's own heading, at any ATX level (`## CAP Catalog`). */
+const CAP_CATALOG_HEADING_RE = /^#{1,6}\s+CAP\s+Catalog\s*$/i;
+/** Any ATX heading, which closes the section opened by the one above. */
+const HEADING_RE = /^#{1,6}\s/;
 
-/** Splits a markdown table row into trimmed cells; `[]` when the line is not a row. */
+/**
+ * Splits a markdown table row into trimmed cells; `[]` when the line is not a
+ * row.
+ *
+ * Delegates to the repository's {@link splitMarkdownRow}, whose contract is
+ * that `\|` is a literal pipe inside a cell rather than a column boundary — a
+ * hand-split on `|` would cut `owner \| spec-0001` in two and lose the spec id
+ * the cell actually declares.
+ */
 function tableCells(line: string): string[] {
-  const trimmed = line.trim();
-  if (!trimmed.startsWith("|")) {
-    return [];
+  return looksLikeTableRow(line) ? splitMarkdownRow(line) : [];
+}
+
+/**
+ * The lines that belong to the `## CAP Catalog` section.
+ *
+ * The catalog is the table under that heading, so a migration or audit table
+ * placed earlier in the file can never be adopted as the catalog. Documents
+ * with no such heading fall back to the whole file, which keeps catalogs
+ * authored before the heading became canonical parseable.
+ */
+function catalogSectionLines(lines: readonly string[]): readonly string[] {
+  const start = lines.findIndex((line) => CAP_CATALOG_HEADING_RE.test(line.trim()));
+  if (start < 0) {
+    return lines;
   }
-  return trimmed
-    .slice(1)
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
+  const body = lines.slice(start + 1);
+  const end = body.findIndex((line) => HEADING_RE.test(line));
+  return end < 0 ? body : body.slice(0, end);
 }
 
 interface CatalogRow {
@@ -91,16 +114,17 @@ function readCatalogBody(
 /**
  * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
  *
- * Only the first well-formed markdown table that carries both headers is
- * parsed — header row, alignment row, then its own consecutive body rows.
- * Declared mode is decided by the presence of the spec column, not by how many
- * cells are filled in: a catalog that adds the column and leaves every cell
- * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
- * rather than silently falling back to the positional derivation. Returns
- * `null` only when no such table carries a spec column at all.
+ * The search is bounded to the `## CAP Catalog` section, and inside it only
+ * the first well-formed markdown table that carries both headers is parsed —
+ * header row, alignment row, then its own consecutive body rows. Declared mode
+ * is decided by the presence of the spec column, not by how many cells are
+ * filled in: a catalog that adds the column and leaves every cell empty
+ * declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`) rather
+ * than silently falling back to the positional derivation. Returns `null` only
+ * when no such table carries a spec column at all.
  */
 function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
-  const lines = capabilityText.split(/\r?\n/);
+  const lines = catalogSectionLines(capabilityText.split(/\r?\n/));
   for (let index = 0; index < lines.length; index += 1) {
     const header = tableCells(lines[index] ?? "");
     if (header.length === 0) {
