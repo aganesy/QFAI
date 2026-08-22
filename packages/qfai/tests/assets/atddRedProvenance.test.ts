@@ -611,7 +611,10 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // RED is one of the two.
     expect(revision).toContain("**Every RED is one.**");
     expect(revision).toContain("A RED `/qfai-atdd` handed over is taken before the production");
-    expect(revision).toContain("leaves `Revision` for the GREEN and the two reviews");
+    // "the routed reviews", not "the two": a UI-affecting row routes
+    // `product-surface-reviewer` as well, and its `Reviewed revision` is held
+    // to the same agreement (#571).
+    expect(revision).toContain("leaves `Revision` for the GREEN and the routed reviews");
   });
 
   it("takes branch-1 rows through P1c one at a time", async () => {

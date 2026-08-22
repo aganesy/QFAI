@@ -385,7 +385,7 @@ post-escalation verification review of a user-named fix.
        for another existing `DR-*`, one already waived perhaps, with the
        revision and the hash both unmoved. Gate item 10 also requires the
        verdict to name the `DR-ID` the row currently carries.
-     - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
+     - **Completion review** (`completion-reviewer` / `implementation-reviewer` / `product-surface-reviewer` — the routed set is wider than two whenever the row is UI-affecting, and naming only two left the parity verdict's subject undefined, so the reviewer and gate item 10 each chose one and a correct UI row could not reach `done`):
        the GREEN subject plus `Refactor verify command` / `result`, the
        `Shared-artifact re-verify` block when the row has one — it records the
        earlier rows' re-runs and re-taken proofs, which these reviewers are the
@@ -393,7 +393,7 @@ post-escalation verification review of a user-named fix.
        moving either hash — and, from every `### Round N` block the row
        carries, that block's **phase-authored** fields only. `Round N: reviewer verdict` is written by these reviewers
        after they have read the block, so taking the whole block put their own
-       line inside what they hashed.
+       line inside what they hashed. **`product-surface-reviewer` takes that same subject and one record class more**: each surface artifact the row's entry names that lives under `.qfai/evidence/**` — a runtime screenshot, an HTML capture — whole, one record per artifact under its repo-relative path, in the step 3 order. `Reviewed revision` excludes that tree, so nothing else pins the rendered output this verdict is actually about, and a screenshot replaced after the PASS moved neither the revision nor a subject built from fields alone. Artifacts it reads from **inside** the revision — `.qfai/contracts/design/prototype-handoff.yaml`, `.qfai/prototypes/winner/index.html`, the UI contracts — contribute no record: `Reviewed revision` already pins them, and hashing them twice would stale this verdict on an unrelated prototype edit. A row with no such artifact has no extra record, not a placeholder.
 
      A field absent at that point contributes nothing — it is not a placeholder
      and not an error. Nothing written after an observation is in its subject,

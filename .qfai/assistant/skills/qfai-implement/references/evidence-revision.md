@@ -109,7 +109,7 @@ Revision: <git rev> | working-tree+<content hash>
 
   **The ledger is excluded from it.** Phase Green step 3 writes `green` and
   Refactor step 3 writes `refactor` into `test-list.md` between the
-  observations, and gate item 10 requires the GREEN and the two reviews to name
+  observations, and gate item 10 requires the GREEN and the routed reviews to name
   the **same** revision — so a hash over the whole of `git diff HEAD` moved on
   its own bookkeeping and no uncommitted item could reach `done`. Compute it
   over the tree **minus `.qfai/specs/*/tdd/test-list.md` and `.qfai/evidence/**`\*\*:
@@ -218,6 +218,15 @@ Consequences:
 - An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
   revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
+- **A UI-affecting row has a fifth: gate item 9**, the `product-surface-reviewer`
+  PASS recorded as `Prototype parity`. Its `Reviewed revision` is held to this
+  same rule and must equal `Revision`. The routed set is the subject here, not a
+  fixed pair: reading "the two reviews" as the whole of it let a parity PASS
+  taken against an earlier rendering stand while the UI moved underneath it, and
+  that is the one verdict a later reader cannot re-derive from the spec and the
+  diff — it was an observation of a surface that no longer exists. A row that
+  routed no parity reviewer has nothing extra to agree; the rule applies where
+  item 9 does.
 - **The exception is item 3, on every row, above under _A transient
   observation names its own revision_.** A RED is observed before the code that
   makes it pass exists, so on an uncommitted tree Phase Green moves the content
@@ -231,7 +240,7 @@ Consequences:
   that no longer exists. In both, that is the property the observation is worth
   having, not decay. Each records its own field — `RED revision` beside the RED
   pair, `Falsifiability revision` beside the trio — and leaves `Revision` for
-  the GREEN and the two reviews, which must still agree with each other. Folding
+  the GREEN and the routed reviews, which must still agree with each other. Folding
   either into `Revision` made a correct row permanently stale and unable to
   reach `done`: the `observed-red` E2E/API rows first, and every branch-2 row
   once the gate began reading the mutated tree.
