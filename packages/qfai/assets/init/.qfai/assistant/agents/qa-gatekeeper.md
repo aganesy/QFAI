@@ -115,7 +115,13 @@ falsifiability evidence that passes. On a handed-over row, **the predicate
 out of bounds.
 
 **On any other row the sibling row is still required** — production code
-no ledger row owns is the anomaly case there, not a substitute. See
+no ledger row owns is the anomaly case there, not a substitute. **One
+exception, and it is not unowned code**: a row resumed from `blocked` may name
+**itself** plus the round whose GREEN wrote the predicate, because
+`blocked` -> `todo` restarts a cycle this row had already implemented. Check it
+against the **retained round block** rather than a sibling, and treat the
+predicate that round's GREEN wrote as the owned code for the Oracle Strength
+Check. See
 `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 

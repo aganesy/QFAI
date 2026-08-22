@@ -202,7 +202,14 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   that stopped a row mid-cycle has almost always moved the tree its earlier RED
   was observed on. Its rounds so far are **retained, not discarded**: the round
   blocks already written stay in the evidence file, and the resumed cycle opens
-  the next round under `round-evidence.md`'s numbering.
+  the next round under `round-evidence.md`'s numbering. **When the block
+  happened at `green` or `refactor` this row's own implementation is still
+  there, so that fresh RED passes on its first run — that is the
+  falsifiability path of `red-not-observable.md`, not `exception`.**
+  `Satisfied-by` names this row's own retained round, the one case where it
+  names the row itself; the round block left behind is the audit trail a
+  sibling row id provides in the ordinary case. Weakening the correct test
+  until it fails is forbidden here as everywhere.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
 - `green` -> `refactor` (improve code quality while keeping tests green)

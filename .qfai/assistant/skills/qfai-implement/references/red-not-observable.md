@@ -15,6 +15,14 @@ run.
   path rather than a row id (step 1). Specific to those rows: their surfaces
   come from work orders that never appear in the ledger, which is not true of
   a `Unit` / `Component` / `Integration` row.
+- **Or, on a row resumed from `blocked`, satisfied by this row's own earlier
+  round** — `blocked` is reachable from `green` and `refactor`
+  (`execution-ledger.md#allowed-transitions`) and `blocked` -> `todo` restarts
+  the cycle, so the fresh RED that resumption owes is re-run against production
+  code **this row already wrote**. **Not an anomaly** and does **not** go to
+  `exception`: without this case the edge the ledger deliberately widened would
+  have no legal way back to `done`. Same procedure, and `Satisfied-by` takes
+  this row's own row id and the round that satisfied it (step 1).
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -43,6 +51,16 @@ for the natural RED and let the row proceed to `green` and `done`:
    is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
    step 5 sends it to `exception`. Widening the field for every row would let
    an ordinary TDD row reach `done` with no production change and no sibling.
+
+   **On a row resumed from `blocked` it is this row's own row id plus the round
+   whose GREEN wrote the predicate** (`TDD-0007 round 1`) — the only case where
+   `Satisfied-by` names the row itself, and it is open on every `Layer`. What a
+   reviewer checks in place of the sibling is that **retained round block**:
+   `round-evidence.md` keeps the rounds recorded before the block, so the GREEN
+   that wrote the predicate is on record and the mutation has a named boundary.
+   A row carrying no such round was never resumed from `blocked`, and this form
+   is not open to it — which is why it does not reopen the "no production
+   change and no sibling" hole the paragraph above closes.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

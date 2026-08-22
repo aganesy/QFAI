@@ -209,4 +209,46 @@ describe.each(TREES)("%s (`blocked` is reachable after the cycle starts)", (tree
     expect(ledger).toContain("`blocked` means **cannot proceed**");
     expect(ledger).toContain("It is **not** `exception`.");
   });
+
+  it("gives a row resumed from `green` / `refactor` a legal way to observe its RED", async () => {
+    // Widening the inbound edge means a row can be blocked after its
+    // implementation exists. `blocked` -> `todo` then owes a fresh RED that
+    // passes on its first run, and `red-not-observable.md` classified the
+    // row's own implementation as neither of its two non-anomalous cases — so
+    // it fell to "anything else" and `exception`, while weakening the test to
+    // manufacture a RED is forbidden. The edge this PR legalised had no route
+    // back to `done`.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "**When the block happened at `green` or `refactor` this row's own implementation is still there",
+    );
+    expect(ledger).toContain("falsifiability path of `red-not-observable.md`, not `exception`");
+
+    const reference = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(reference).toContain(
+      "**Or, on a row resumed from `blocked`, satisfied by this row's own earlier round**",
+    );
+    expect(reference).toContain(
+      "**On a row resumed from `blocked` it is this row's own row id plus the round whose GREEN wrote the predicate**",
+    );
+    // The retained round block is what a reviewer audits in place of the
+    // sibling row id, so the widened form stays checkable.
+    expect(reference).toContain("**retained round block**");
+    expect(reference).toContain("A row carrying no such round was never resumed from `blocked`");
+    // The narrow refusal it must not swallow.
+    expect(reference).toContain("On a `Unit` / `Component` / `Integration` row it is **not**");
+  });
+
+  it("lets the gatekeeper accept the one `Satisfied-by` that names its own row", async () => {
+    // `qa-gatekeeper.md` required a sibling row on every non-ATDD row, which
+    // would have REVISEd the evidence the resumption path now prescribes.
+    const gatekeeper = flat(await read(tree, "assistant/agents/qa-gatekeeper.md"));
+    expect(gatekeeper).toContain("**On any other row the sibling row is still required**");
+    expect(gatekeeper).toContain(
+      "a row resumed from `blocked` may name **itself** plus the round whose GREEN wrote the predicate",
+    );
+    expect(gatekeeper).toContain("Check it against the **retained round block** rather than a");
+  });
 });
