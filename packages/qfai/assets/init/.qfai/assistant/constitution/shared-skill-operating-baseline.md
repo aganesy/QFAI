@@ -176,7 +176,7 @@ Before declaring completion, you MUST:
 - resolve or explicitly defer undefined or ambiguous items with rationale;
 - verify every expected artifact exists and required sections are populated;
 - scan generated artifacts for unresolved placeholders such as `TBD`, `TODO`, `TBA`, `TBC`, `XXX`, `???`, `OQ`, `OPEN QUESTION`, `UNDEFINED`, and `PLACEHOLDER`;
-- run the smallest applicable smoke check and report its outcome. Where no smoke check applies, report it as UNRUN with the reason. UNRUN accompanies the completion claim; it does not satisfy this bullet.
+- run the smallest applicable smoke check and report its outcome. Only PASS satisfies this bullet: FAIL and UNRUN are blockers, so they go in a stop report with the reason, never next to a completion claim.
 
 The first three bullets are self-inspection: they are discharged by rereading
 what you just wrote, so an agent that hallucinated an artifact will confirm its
@@ -191,5 +191,7 @@ unfilled, and that is a finding to report, not a reason to skip the bullet.
 
 UNRUN is the same verdict `.qfai/assistant/constitution/quality.md` gives a gate
 with no discoverable command, and it means the same thing here: **not passed**.
-Report it where a failing gate would go — in the completion message, next to the
-completion claim, with the reason that makes it falsifiable later.
+A smoke check that ran and failed is not passed either. Both stop the run: do
+not declare completion on a FAIL or an UNRUN — report the outcome as a blocker
+with the reason that makes it falsifiable later, and hand back the stop report
+instead of the completion claim.

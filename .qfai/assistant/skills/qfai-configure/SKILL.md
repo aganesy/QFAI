@@ -130,7 +130,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the minimum runnable path you just recorded, executed once exactly as written, plus `npx qfai validate --fail-on error` against the `qfai.config.yaml` this run produced — a path recorded but never executed is UNRUN, not a pass.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): `npx qfai validate --fail-on error` against the `qfai.config.yaml` this run produced, plus one terminating command drawn from the minimum runnable path you just recorded — its smallest test or check invocation, or a readiness probe against a service the path starts. The long-running parts of that path (dev server, database) are setup for the probe, never the check itself: a command that does not exit cannot return the pass/fail this bullet needs. A path whose terminating command was recorded but never executed is UNRUN, not a pass.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ## Goal
