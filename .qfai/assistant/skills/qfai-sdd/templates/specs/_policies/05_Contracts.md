@@ -49,10 +49,13 @@
   forces a multi-table schema into N files, so this column is the only place the
   resulting composition is stated; without it every consumer reconstructs the
   apply graph by reading the DDL, and getting it wrong is silent.
+- Leave no cell blank: a blank `Depends On` is "never stated", not "no
+  dependencies", and only `-` says the second.
 - `QFAI-CONTRACT-014` errors on a declared dependency that names no existing
   contract. `QFAI-CONTRACT-015` warns on a contract that states no apply order
-  at all, `QFAI-CONTRACT-032` on a table that dropped this column, and
-  `QFAI-CONTRACT-033` on a row whose cell disagrees with the file it names.
+  at all, `QFAI-CONTRACT-032` on a table that dropped this column,
+  `QFAI-CONTRACT-033` on a row whose cell is blank or disagrees with the file it
+  names, and `QFAI-CONTRACT-034` on a contract with no row in any table.
 
 - If no contracts are needed, keep each table and state `0 items` explicitly.
 - `<slug>` must be kebab-case from entity/router/screen.

@@ -38,10 +38,17 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
     missing the tables under test.
   - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
     at all. Write `-` when nothing must be applied first: "no dependencies" and
-    "never stated" are different claims, and only the first is checkable.
+    "never stated" are different claims, and only the first is checkable. The
+    key on its own (`-- Depends on:` with nothing after it) is still silence.
   - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
     the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
-    whose cell disagrees with the declaration in the file that row names.
+    whose cell disagrees with the declaration in the file that row names — a
+    blank cell included, for the same reason: it records no claim at all.
+  - `QFAI-CONTRACT-034` (warning) reports a contract that appears in no index
+    table. Deleting the row hides the contract and its apply order from every
+    reader of the index, and the row-level checks need a row to compare.
+  - Only tables whose `Declared ID` column holds `CON-*` ids are held to these
+    rules; a table indexing another artifact kind by slug is left alone.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not

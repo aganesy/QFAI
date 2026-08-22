@@ -193,6 +193,14 @@ describe("the declaration itself is distinguishable from its absence", () => {
       hasDependencyDeclaration("-- QFAI-CONTRACT-ID: CON-DB-0001\nCREATE TABLE a (x int);\n"),
     ).toBe(false);
   });
+
+  it("reads a valueless key as silence, not as a declaration", () => {
+    // The key alone states nothing, so accepting it would suppress
+    // `QFAI-CONTRACT-015` for exactly the file the rule is about.
+    expect(hasDependencyDeclaration("-- Depends on:\nCREATE TABLE a (x int);\n")).toBe(false);
+    expect(hasDependencyDeclaration("x-qfai-depends-on:\nopenapi: 3.0.0\n")).toBe(false);
+    expect(hasDependencyDeclaration("-- Depends on: TBD\n")).toBe(false);
+  });
 });
 
 describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {

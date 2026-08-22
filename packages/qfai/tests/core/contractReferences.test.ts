@@ -287,11 +287,80 @@ describe("the contract index's Depends On column", () => {
         "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
         "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
         indexRow("CON-DB-0001"),
+        "| DB-001 | orders | CON-DB-0001 | `.qfai/contracts/db/db-0001-sample.sql` | - | schema |",
       ]);
 
       const issues = await validateContractReferences(root, defaultConfig);
       expect(issues.some((item) => item.code === "QFAI-CONTRACT-033")).toBe(false);
       expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(false);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-034")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a blank cell rather than reading it as `no dependencies`", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      // The file declares `[]`, so a set comparison alone would call the blank
+      // cell a match and leave "never stated" indistinguishable from "none".
+      await seedApiContract(root, "CON-API-0001", []);
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        indexRow(""),
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-033");
+
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toEqual(["CON-API-0001"]);
+      expect(issue?.loc?.line).toBe(7);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves a table that indexes another artifact kind by slug alone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      // A long-lived index also carries Design / UI tables whose `Declared ID`
+      // is a slug; they declare no `CON-*` id and owe no apply order.
+      await writeIndex(root, [
+        "| Short ID | Entity | Declared ID | File | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ------- |",
+        "| DCON-005 | Design System | design-system | `.qfai/contracts/design/design-system.yaml` | tokens |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
+  it("reports a contract no index table names", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md"),
+        ["# 05 Contracts", "", "## API Contracts", "", "0 items", ""].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-034");
+
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toEqual(["CON-API-0001"]);
+      expect(issue?.file).toContain("api-0001-sample.yaml");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

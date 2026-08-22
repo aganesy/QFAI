@@ -10,6 +10,8 @@ const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
 const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid"]);
 const DECLARED_ID_HEADER_KEY = "declaredid";
 const DEPENDS_ON_HEADER_KEY = "dependson";
+/** A cell that states "none" rather than an id: `-` in a `Depends On` or a placeholder `Declared ID`. */
+const NONE_CELL_RE = /^(?:[-–—]|\[[ \t]*\]|none|なし)$/i;
 
 type IndexTableRow = { cells: string[]; line: number };
 type IndexTable = { headers: string[]; rows: IndexTableRow[]; line: number };
@@ -32,6 +34,7 @@ export async function validateContractReferences(
 
   const issues: Issue[] = [];
   const severity = config.validation.traceability.unknownContractIdSeverity;
+  const mirroredIds = new Set<string>();
   for (const filePath of Array.from(contractIndexFiles).sort((a, b) => a.localeCompare(b))) {
     const text = await readSafe(filePath);
     if (text.trim().length === 0) {
@@ -39,6 +42,7 @@ export async function validateContractReferences(
     }
 
     const referencedIds = extractContractIds(text);
+    referencedIds.forEach((contractId) => mirroredIds.add(contractId));
     for (const contractId of referencedIds) {
       if (contractIndex.ids.has(contractId)) {
         continue;
@@ -58,6 +62,49 @@ export async function validateContractReferences(
     }
 
     issues.push(...validateDependsOnColumn(filePath, text, contractIndex));
+  }
+
+  if (contractIndexFiles.size > 0) {
+    issues.push(...validateIndexCoverage(mirroredIds, contractIndex));
+  }
+
+  return issues;
+}
+
+/**
+ * Every contract must appear in a contract index.
+ *
+ * `QFAI-CONTRACT-030` reads index → files and `QFAI-CONTRACT-033` compares a
+ * row against the file it names, so both need a row to exist. Delete the row
+ * and the contract — and the apply order it declares — becomes invisible to
+ * everyone reading the index, with no finding anywhere. The mirrored set is
+ * accumulated across *all* index files first: a spec-pack repo keeps one index
+ * per spec while contracts are global, so a per-file check would report every
+ * contract against every other spec's index.
+ */
+function validateIndexCoverage(mirroredIds: Set<string>, index: ContractIndex): Issue[] {
+  const issues: Issue[] = [];
+
+  for (const contractId of Array.from(index.ids).sort((a, b) => a.localeCompare(b))) {
+    if (mirroredIds.has(contractId)) {
+      continue;
+    }
+    const files = Array.from(index.idToFiles.get(contractId) ?? []).sort((a, b) =>
+      a.localeCompare(b),
+    );
+    issues.push(
+      issue(
+        "QFAI-CONTRACT-034",
+        `契約がどの契約インデックスにも記載されていません: ${contractId}`,
+        "warning",
+        files[0],
+        "contracts.index.coverage",
+        [contractId],
+        "change",
+        "`_policies/05_Contracts.md`（spec-pack では `11_Contracts.md`）の該当表に行を追加し、`Declared ID` と `Depends On` を記載してください。",
+        files.length > 1 ? { relatedFiles: files.slice(1) } : undefined,
+      ),
+    );
   }
 
   return issues;
@@ -150,6 +197,9 @@ function validateDependsOnColumn(filePath: string, text: string, index: Contract
       continue;
     }
     const declaredIdColumn = headerKeys.indexOf(DECLARED_ID_HEADER_KEY);
+    if (!declaresCanonicalContractIds(table, declaredIdColumn)) {
+      continue;
+    }
     const dependsOnColumn = headerKeys.indexOf(DEPENDS_ON_HEADER_KEY);
 
     if (dependsOnColumn < 0) {
@@ -177,6 +227,34 @@ function validateDependsOnColumn(filePath: string, text: string, index: Contract
   return issues;
 }
 
+/**
+ * Whether a `Declared ID` table is the apply-order index, not a lookalike.
+ *
+ * `Declared ID` alone is too broad. A long-lived `_policies/05_Contracts.md`
+ * also carries Design and UI tables whose `Declared ID` holds a slug
+ * (`design-system`, `screens`) rather than a `CON-*` id; those name no
+ * apply-order participants — design contracts are outside the id-declaration
+ * rule entirely — so demanding a `Depends On` column of them is a false
+ * positive. A table qualifies when every non-empty `Declared ID` cell resolves
+ * to exactly one canonical contract id; an empty cell and the `-` placeholder
+ * are neutral, which is what keeps the shipped `0 items` template — the table
+ * with no contracts yet — under the column check.
+ */
+function declaresCanonicalContractIds(table: IndexTable, declaredIdColumn: number): boolean {
+  for (const row of table.rows) {
+    const cell = (row.cells[declaredIdColumn] ?? "").trim();
+    if (cell.length === 0 || NONE_CELL_RE.test(cell)) {
+      continue;
+    }
+    const ids = new Set<string>();
+    extractCellContractIds(cell, ids);
+    if (ids.size !== 1) {
+      return false;
+    }
+  }
+  return true;
+}
+
 function validateDependsOnRows(
   table: IndexTable,
   columns: { declaredIdColumn: number; dependsOnColumn: number },
@@ -195,8 +273,29 @@ function validateDependsOnRows(
       continue;
     }
 
+    const dependsOnCell = (row.cells[columns.dependsOnColumn] ?? "").trim();
     const rowDependencies = new Set<string>();
-    extractCellContractIds(row.cells[columns.dependsOnColumn] ?? "", rowDependencies);
+    extractCellContractIds(dependsOnCell, rowDependencies);
+    // A blank cell is silence, not "no dependencies". Comparing sets alone
+    // would normalize it to the same empty set an explicit `-` produces, so the
+    // very distinction this column exists to record would stay unmade in the
+    // index — a contract declaring `-` and one declaring nothing read alike.
+    if (rowDependencies.size === 0 && !NONE_CELL_RE.test(dependsOnCell)) {
+      issues.push(
+        issue(
+          "QFAI-CONTRACT-033",
+          `契約インデックスの \`Depends On\` セルが適用順を記載していません: ${contractId}`,
+          "warning",
+          filePath,
+          "contracts.index.dependsOnMirror",
+          [contractId],
+          "change",
+          "`Depends On` 列に先に適用すべき契約 ID を記載してください。依存が無い場合は `-` と明記します（空欄は「未記載」であり「依存なし」ではありません）。",
+          { loc: { line: row.line } },
+        ),
+      );
+      continue;
+    }
     const fileDependencies = index.idToDependencies.get(contractId) ?? new Set<string>();
     const missing = Array.from(fileDependencies)
       .filter((dependency) => !rowDependencies.has(dependency))

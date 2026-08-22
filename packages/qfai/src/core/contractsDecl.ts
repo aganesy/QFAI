@@ -48,9 +48,10 @@ const DEPENDS_ON_YAML_FLOW_RE = /^[ \t]*x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t
 const DEPENDS_ON_YAML_BLOCK_RE =
   /^[ \t]*x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
 const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
-// Non-global on purpose: a `/g` regex carries `lastIndex` between `test` calls.
-const DEPENDS_ON_DECLARATION_RE =
-  /^[ \t]*(?:#|\/\/|--|\*)?[ \t]*(?:Depends on:|x-qfai-depends-on:)/im;
+/** The explicit ways to write "nothing must be applied before this contract". */
+const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
+/** Non-global on purpose: a `/g` regex carries `lastIndex` between `exec` calls. */
+const DEPENDS_ON_YAML_SCALAR_RE = /^[ \t]*x-qfai-depends-on:[ \t]*(\S[^\n]*?)[ \t]*$/im;
 
 export function extractDeclaredDependencies(text: string): string[] {
   const found = new Set<string>();
@@ -78,7 +79,22 @@ export function extractDeclaredDependencies(text: string): string[] {
  * contract, so the single failure mode the rule exists to prevent — no
  * declaration anywhere, leaving the apply graph unstated — was the one case
  * that produced no finding.
+ *
+ * The key alone is not a declaration. A bare `-- Depends on:` or
+ * `x-qfai-depends-on:` with no value states nothing, so accepting it would
+ * suppress `QFAI-CONTRACT-015` for exactly the file the rule is about. Only a
+ * value counts: contract ids, or one of the explicit "none" spellings (`-`,
+ * `[]`, `none`).
  */
 export function hasDependencyDeclaration(text: string): boolean {
-  return DEPENDS_ON_DECLARATION_RE.test(text);
+  if (extractDeclaredDependencies(text).length > 0) {
+    return true;
+  }
+  for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
+    if (DEPENDS_ON_NONE_VALUE_RE.test((match[1] ?? "").trim())) {
+      return true;
+    }
+  }
+  const scalar = DEPENDS_ON_YAML_SCALAR_RE.exec(text);
+  return scalar !== null && DEPENDS_ON_NONE_VALUE_RE.test((scalar[1] ?? "").trim());
 }
