@@ -22,7 +22,7 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
-import { error, info } from "../lib/logger.js";
+import { error, info, warn } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import {
@@ -144,6 +144,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // The copy above is create-only, so it cannot repair a marker-less README a
   // previous version of init left behind.
   const markerRewritten = await ensureAssistantMarker(assistantAssets, destRoot, options.dryRun);
+  const rewrittenPaths = new Set(markerRewritten);
 
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
@@ -197,6 +198,10 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.copied,
       ...upgradeResult.copied,
     ],
+    // The marker rewrite runs after a create-only copy that has already
+    // recorded the same README as skipped. Reporting it in both columns tells
+    // a reader running without `--force` that the file was left untouched at
+    // the same time as saying it was written, so the rewrite's paths win.
     [
       ...rootResult.skipped,
       ...qfaiResult.skipped,
@@ -207,7 +212,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...assistantTreeResult.skipped,
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
-    ],
+    ].filter((entry) => !rewrittenPaths.has(entry)),
     [...removed, ...upgradeResult.removed],
     options.dryRun,
     "init",
@@ -272,10 +277,18 @@ const ASSISTANT_README_MAX_BYTES = 64 * 1024;
  * whatever the entry resolves to — a symlink another process put there between
  * the check and the write, or a hard link the README already shared with a file
  * outside the project — and would have written the template into it. `rename`
- * replaces the directory entry, so the other name keeps its inode.
+ * replaces the directory entry, so the other name keeps its inode. What the
+ * entry carried comes with it: its mode, and its bytes exactly as they were.
+ *
+ * Two conditions make the repair decline rather than proceed, both of them
+ * cases where going ahead is worse than leaving the file alone: a merge that
+ * would overshoot the ceiling the rule reads the marker under, and a pathname
+ * that stopped being the inode this read while the merge was being written.
  *
  * Absence is not this function's case: the template copy that runs before it
  * creates the file, and reporting the same path twice would double-count it.
+ * That copy has already recorded an existing README as *skipped*, so a path
+ * this returns is removed from the skipped column by {@link runInit}.
  */
 async function ensureAssistantMarker(
   assistantAssetsDir: string,
@@ -287,17 +300,40 @@ async function ensureAssistantMarker(
   if (current === undefined || !current.isFile()) {
     return [];
   }
-  const body = await readAssistantReadme(dest);
-  if (body === null || hasInitMarkerSignature(body)) {
+  const previous = await readExistingReadme(dest);
+  if (previous === null || hasInitMarkerSignature(decodeForDetection(previous.content))) {
     return [];
   }
-  const template = await readAssistantReadme(path.join(assistantAssetsDir, "README.md"));
+  const template = await readTemplateReadme(path.join(assistantAssetsDir, "README.md"));
   if (template === null) {
+    return [];
+  }
+  const merged = mergeAssistantReadme(template, previous.content);
+  // The marker is only a marker while the rule can read it, and the rule reads
+  // it under this same ceiling. Writing a merge that overshoots would report a
+  // repair while leaving the project exactly as unreadable as before — and the
+  // next `qfai init` would decline the oversized file too, so nothing would
+  // ever come back for it. Declining and saying so leaves the operator the one
+  // move that works.
+  if (merged.byteLength > ASSISTANT_README_MAX_BYTES) {
+    warn(
+      [
+        `WARN: ${dest} に qfai init のマーカーを書き込めません（既存の内容と結合すると ${String(ASSISTANT_README_MAX_BYTES)} bytes の上限を超えます）。`,
+        `      既存の内容は変更していません。プロジェクト固有の注記を別ファイルへ移して短くしてから qfai init を再実行してください。`,
+      ].join("\n"),
+    );
     return [];
   }
   if (!dryRun) {
     await mkdir(path.dirname(dest), { recursive: true });
-    await replaceViaSidecar(dest, mergeAssistantReadme(template, body));
+    if (!(await replaceViaSidecar(dest, merged, previous))) {
+      // Somebody else put a different file at the pathname while this ran.
+      // Theirs is the newer decision; overwriting it is not this repair's call.
+      warn(
+        `WARN: ${dest} は qfai init の実行中に別のプロセスが置き換えたため、マーカーの書き込みを見送りました。qfai init を再実行してください。`,
+      );
+      return [];
+    }
   }
   return [dest];
 }
@@ -313,30 +349,78 @@ const PRESERVED_BODY_NOTE = [
 /**
  * The template with the previous README filed below it.
  *
+ * **The previous body is carried as bytes.** It is somebody else's file: it
+ * may be Shift_JIS, or hold a sequence that is not UTF-8 at all, and a round
+ * trip through a string replaces every byte it cannot decode with U+FFFD —
+ * irreversibly, since this result is what goes back to the pathname. Only the
+ * text init contributes is encoded here; what was already there is spliced in
+ * untouched.
+ *
  * An empty previous body has nothing to keep, and appending a heading over
  * nothing only leaves the operator a section to delete.
  */
-function mergeAssistantReadme(template: string, previous: string): string {
-  const head = template.endsWith("\n") ? template : `${template}\n`;
-  if (previous.trim() === "") {
+function mergeAssistantReadme(template: string, previous: Buffer): Buffer {
+  const head = Buffer.from(template.endsWith("\n") ? template : `${template}\n`, "utf-8");
+  if (isBlankBytes(previous)) {
     return head;
   }
-  const tail = previous.endsWith("\n") ? previous : `${previous}\n`;
-  return `${head}\n---\n\n${PRESERVED_BODY_HEADING}\n\n${PRESERVED_BODY_NOTE}\n\n${tail}`;
+  const preamble = Buffer.from(
+    `\n---\n\n${PRESERVED_BODY_HEADING}\n\n${PRESERVED_BODY_NOTE}\n\n`,
+    "utf-8",
+  );
+  const parts = [head, preamble, previous];
+  if (previous[previous.length - 1] !== 0x0a) {
+    parts.push(Buffer.from("\n", "utf-8"));
+  }
+  return Buffer.concat(parts);
 }
 
 /**
- * Put `content` at `filePath` without writing through the entry already there.
+ * Whether these bytes are whitespace only.
+ *
+ * Asked of the bytes rather than of a decoded string: the encoding is unknown,
+ * and every encoding this could plausibly be agrees on space / tab / CR / LF.
+ * Any other byte counts as content worth keeping.
+ */
+function isBlankBytes(bytes: Buffer): boolean {
+  return bytes.every((byte) => byte === 0x20 || byte === 0x09 || byte === 0x0a || byte === 0x0d);
+}
+
+/**
+ * Put `content` at `filePath` without writing through the entry already there,
+ * and without discarding a file that arrived while this ran.
  *
  * The sidecar is created exclusively in the same directory — same filesystem,
  * so `rename` is the atomic swap and not a copy — and removed again if the
  * swap fails, so a failure leaves the original exactly as it was.
+ *
+ * Two things are carried over from the entry that was read: its **mode**, so a
+ * README a project keeps at `0600` does not come back world-readable under the
+ * umask `claimSidecar` created the sidecar with; and its **identity**, checked
+ * against the pathname immediately before the swap. `rename` replaces
+ * unconditionally, so an editor or a concurrent `qfai init` that put a new file
+ * there after the read would otherwise have had it deleted and replaced by a
+ * merge of content that is no longer at the path. The check does not close the
+ * window — that would take an exclusive claim on the pathname the platform does
+ * not offer for a replacement — but it turns the common case of it from a
+ * silent overwrite into a declined repair. Returns `false` when it declines.
  */
-async function replaceViaSidecar(filePath: string, content: string): Promise<void> {
+async function replaceViaSidecar(
+  filePath: string,
+  content: Buffer,
+  pinned: PinnedFileRead,
+): Promise<boolean> {
   const sidecar = await claimSidecar(filePath);
   try {
-    await writeFile(sidecar, content, "utf-8");
+    await writeFile(sidecar, content);
+    await chmod(sidecar, pinned.mode);
+    const current = await safeLstat(filePath);
+    if (current === undefined || !current.isFile() || !isSameEntry(current, pinned)) {
+      await rm(sidecar, { force: true }).catch(() => undefined);
+      return false;
+    }
     await rename(sidecar, filePath);
+    return true;
   } catch (err: unknown) {
     // Best-effort: the swap already failed, and a sidecar that cannot be
     // removed is a leftover to report through the original error, not a second
@@ -346,13 +430,40 @@ async function replaceViaSidecar(filePath: string, content: string): Promise<voi
   }
 }
 
-/** The README's text, or `null` when it is not a bounded regular file. */
-async function readAssistantReadme(filePath: string): Promise<string | null> {
+/**
+ * The bytes at `filePath`, or `null` when it is not a bounded regular file.
+ *
+ * Bytes, not text: what comes back is spliced into the replacement verbatim.
+ */
+async function readExistingReadme(filePath: string): Promise<PinnedFileRead | null> {
   try {
-    return await readPinnedRegularFile(filePath, ASSISTANT_README_MAX_BYTES);
+    return await readPinnedRegularFileBytes(filePath, ASSISTANT_README_MAX_BYTES);
   } catch (err: unknown) {
     // Removed between the `lstat` above and this read. Nothing to repair, and
     // the caller's other branches all mean "leave it alone" too.
+    if (isEnoent(err)) {
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * The signature test's view of a body whose encoding is unknown.
+ *
+ * Lossy on purpose, and safe to be: the decoded string is only ever asked
+ * whether init's ASCII heading and section are in it, and it is thrown away
+ * afterwards. Nothing this returns is written anywhere.
+ */
+function decodeForDetection(bytes: Buffer): string {
+  return bytes.toString("utf-8");
+}
+
+/** The shipped template's text, or `null` when it is not a bounded file. */
+async function readTemplateReadme(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, ASSISTANT_README_MAX_BYTES);
+  } catch (err: unknown) {
     if (isEnoent(err)) {
       return null;
     }
@@ -1898,17 +2009,39 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
   }
 }
 
+/** One bounded read of a regular file: its bytes, its mode, and its identity. */
+type PinnedFileRead = { content: Buffer; mode: number; dev: number; ino: number };
+
+/**
+ * Whether `stats` names the inode `pinned` was read from.
+ *
+ * `ino` is `0` on the filesystems that have no such number (and on a few
+ * Windows volumes). There is nothing to compare there, so the answer is "yes"
+ * — the check narrows a race where the platform lets it and never blocks a
+ * repair where it cannot.
+ */
+function isSameEntry(stats: Stats, pinned: PinnedFileRead): boolean {
+  if (pinned.ino === 0 || stats.ino === 0) {
+    return true;
+  }
+  return stats.dev === pinned.dev && stats.ino === pinned.ino;
+}
+
 /**
  * The same read, returning the bytes.
  *
  * The restore copy writes back what it read, and decoding as UTF-8 first
  * replaces every invalid sequence with U+FFFD — irreversibly, since the sidecar
  * is removed straight after.
+ *
+ * `dev` / `ino` come off the same handle as the content, so a caller that
+ * replaces the pathname afterwards can check that the entry it is about to
+ * replace is still the inode it read.
  */
 async function readPinnedRegularFileBytes(
   filePath: string,
   maxBytes: number,
-): Promise<{ content: Buffer; mode: number } | null> {
+): Promise<PinnedFileRead | null> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(filePath, OPEN_READ_FLAGS);
@@ -1926,7 +2059,12 @@ async function readPinnedRegularFileBytes(
     // pathname. Two operations could land on two inodes: content read from a
     // replacement that somebody made `0600` for a reason, restored under the
     // `0644` the old entry carried, and readable by everyone.
-    return { content: Buffer.from(buffer.subarray(0, filled)), mode: pinned.mode & 0o7777 };
+    return {
+      content: Buffer.from(buffer.subarray(0, filled)),
+      mode: pinned.mode & 0o7777,
+      dev: pinned.dev,
+      ino: pinned.ino,
+    };
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ENXIO" || code === "EISDIR") return null;
