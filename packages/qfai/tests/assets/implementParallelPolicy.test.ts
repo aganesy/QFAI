@@ -81,16 +81,45 @@ describe("qfai-implement states one parallelization policy", () => {
       const section = unwrap(await policy(tree));
       expect(section).toContain("## Role fan-out inside one row (build phase)");
       expect(section).toContain("exactly one non-empty `parallel_groups`");
-      expect(section).toContain("**One row, one `Owning module`.**");
+      expect(section).toContain("**One row, one `Owning module`, split between the roles.**");
       expect(section).toContain("**One evidence block per row.**");
       expect(section).toContain("**One GREEN, judged over both outputs.**");
       expect(section).toContain("**Seam reconciliation stays per row.**");
-      // The summary bullet must carry the same three answers, so a reader who
-      // never opens the reference is not left with the disclaimer alone.
+      // The summary bullet must carry the same answers, so a reader who never
+      // opens the reference is not left with the disclaimer alone.
       const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
-      expect(skill).toContain("fans out `frontend-engineer` and `backend-engineer` over **one**");
-      expect(skill).toContain("one `Owning module`, returns one per-item evidence block");
+      expect(skill).toContain(
+        "may fan out `frontend-engineer` and `backend-engineer` over **one**",
+      );
+      expect(skill).toContain("the row keeps one `Owning module`");
       expect(skill).toContain("one GREEN observation covering both roles' output");
+    });
+
+    it(`${tree}: the fan-out starts only the roles the row actually needs`, async () => {
+      // Both engineers are `conditional_agents` in `build`; a group is a
+      // permission to run them together, not an instruction to always do so.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("Both are `conditional_agents` in that phase");
+      expect(section).toContain(
+        "the two run concurrently only **when both roles apply to the row and the planner selects both**",
+      );
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "only when both roles apply to that row and the planner selects both",
+      );
+    });
+
+    it(`${tree}: the fan-out is not exempt from concurrent-write separation`, async () => {
+      // Two roles writing one module at once are two delegated agents writing
+      // concurrently, which the constitution binds whether or not a second
+      // ledger item was dispatched.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**No disjoint split, no fan-out.**");
+      expect(section).toContain("runs its roles **one at a time**");
+      expect(section).toContain("constitution/workflow.md#concurrency-stage-independent-mandatory");
+      expect(section).toContain("each is given a disjoint set of paths within it before either");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain("a row that cannot be split that way runs its roles one at a time");
     });
 
     it(`${tree}: the fan-out anchor cited from SKILL.md resolves to a heading`, async () => {

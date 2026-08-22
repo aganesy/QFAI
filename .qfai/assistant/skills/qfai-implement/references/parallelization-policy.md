@@ -16,19 +16,34 @@ carries the summary and the precedence statement.
 ## Role fan-out inside one row (build phase)
 
 The manifest ships exactly one non-empty `parallel_groups`:
-`qfai-implement`'s `build` phase runs `frontend-engineer` and
-`backend-engineer` concurrently. Do not read the empty lists elsewhere in
-`agent-routing.yml` as a statement that nothing ever runs concurrently.
+`qfai-implement`'s `build` phase groups `frontend-engineer` and
+`backend-engineer`. Both are `conditional_agents` in that phase, and Handoff
+Contract 1 assigns the row to the _appropriate_ implementation agent, so the
+group is a permission, not a roster: the two run concurrently only **when both
+roles apply to the row and the planner selects both**. A frontend-only or
+backend-only row routes one role — starting the other anyway hands it work
+another specialist owns, which is one of its own stop conditions. Do not read
+the empty lists elsewhere in `agent-routing.yml` as a statement that nothing
+ever runs concurrently.
 
-That fan-out dispatches no second item, so the gates below never apply to it —
-it is not an item-level parallel run and needs no `delivery-planner`
-authorization or user consent. What it does not get is an exemption from the
-row's own contract:
+That fan-out dispatches no second **item**, so the item-level gates below never
+apply to it: it needs no `delivery-planner` authorization and no user consent.
+What it does not get is an exemption from the row's own contract, nor from the
+constitution's concurrency rule:
 
-- **One row, one `Owning module`.** The fan-out does not widen the row's
-  declared seam. Both roles write inside that one module; work that will not
-  fit it is a second ledger row for `delivery-planner` to select, not a second
-  writer on this one.
+- **One row, one `Owning module`, split between the roles.** The fan-out does
+  not widen the row's declared seam. Both roles write inside that one module,
+  and each is given a disjoint set of paths within it before either starts;
+  work that will not fit the module is a second ledger row for
+  `delivery-planner` to select, not a second writer on this one.
+- **No disjoint split, no fan-out.** A row whose work cannot be divided into
+  non-overlapping write ranges runs its roles **one at a time** — the
+  item-level gate's DENY-to-serial outcome, applied inside the row. This is not
+  waivable: `constitution/workflow.md#concurrency-stage-independent-mandatory`
+  binds every set of delegated agents that write concurrently, and it requires
+  worktree separation whenever they do. In one checkout the second role
+  overwrites the first's edits; in separate worktrees the same module comes
+  back as a merge conflict.
 - **One evidence block per row.** The per-item evidence contract is satisfied
   once, by the orchestrator, from what the roles returned — never one block per
   role, and a row whose block is missing a field stays out of `done` exactly as
