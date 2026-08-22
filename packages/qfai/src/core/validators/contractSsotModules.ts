@@ -93,7 +93,8 @@ export function resolveWithinRoot(root: string, modulePath: string): string | nu
   if (relative.length === 0) {
     return null; // the root itself is not a module
   }
-  if (relative.startsWith("..") || path.isAbsolute(relative)) {
+  const firstSegment = relative.split(/[\\/]/)[0];
+  if (firstSegment === ".." || path.isAbsolute(relative)) {
     return null;
   }
   return resolved;
