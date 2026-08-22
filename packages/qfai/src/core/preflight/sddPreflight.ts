@@ -249,7 +249,10 @@ function collectTableReqIds(text: string): Set<string> {
 
   for (let index = 0; index + 1 < lines.length; index += 1) {
     const headers = parseTableCells(lines[index] ?? "");
-    const column = headers.findIndex((cell) => /^req[-_\s]?id$/i.test(cell));
+    const column = headers.findIndex((cell) => {
+      const normalized = cell.toLowerCase().replace(/[^a-z0-9-]/g, "");
+      return normalized === "req-id" || normalized === "reqid";
+    });
     if (column < 0 || !isTableSeparator(lines[index + 1] ?? "", headers.length)) {
       continue;
     }
