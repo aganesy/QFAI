@@ -18,7 +18,10 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 
 ## summary.json
 
-- `target.kind` must be `"discussion"`.
+- `target.kind` must be `"discussion"`. It is also what makes this stage's gate yours: that gate
+  judges `target.kind: "discussion"` packs only, so an SDD worker's in-flight spec pack never fails
+  a discussion cycle. A pack that declares no target at all is judged by both stages, since no other
+  gate would see it.
 - `revision_form: "content-hash"` and `revision` are written here too — the state these verdicts
   describe, as a git rev or `working-tree+<content hash>`
   (`../../qfai-implement/references/evidence-revision.md`). A pack without them raises

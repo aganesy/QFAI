@@ -32,9 +32,14 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
   (`../../qfai-implement/references/evidence-revision.md`). A pack written without them raises
   `QFAI-REVIEW-007` in this stage's own hard gate
   (`npx qfai validate --profile sdd --fail-on error`, `rcp_footer.md`) as well as in the repo-wide
-  `/qfai-verify --fail-on error`. Adding
-  `--spec <id>` narrows the check to the packs whose `summary.json` names that spec in
-  `target.path`, so a parallel worker never gates on a sibling's in-flight pack.
+  `/qfai-verify --fail-on error`.
+- That gate judges `target.kind: "spec"` packs only — a discussion cycle's pack is
+  `--profile discussion`'s business — and a pack that declares no target at all is judged by both,
+  since no other gate would see it.
+- Adding `--spec <id>` narrows the check to the packs attributed to that spec: by
+  `summary.json#target.path`, or by the paths `review_request.md` names when `summary.json` is
+  missing or unparseable. A parallel worker therefore never gates on a sibling's in-flight pack,
+  while its own pack that forgot `summary.json` is still caught.
 
 ## Guardrails
 

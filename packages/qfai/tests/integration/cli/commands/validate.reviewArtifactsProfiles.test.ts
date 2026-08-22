@@ -136,4 +136,89 @@ describe("a --spec slice gate does not import a sibling worker's in-flight pack"
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("still reports the scoped spec's own pack when its summary.json is missing", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-scope-own-"));
+    try {
+      await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "review_request.md"),
+        "# Review Request\n\n- target: `.qfai/specs/spec-0001`\n",
+        "utf-8",
+      );
+
+      await runValidate({ root, strict: false, profile: "sdd", specIds: ["0001"] });
+      const body = JSON.parse(
+        await readFile(path.join(root, ".qfai", "report", "validate.spec-0001.json"), "utf-8"),
+      ) as { issues: Finding[] };
+      const codes = body.issues.map((entry) => entry.code);
+      expect(codes).toContain("QFAI-REVIEW-004");
+      expect(codes).toContain("QFAI-REVIEW-005");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("each stage profile gates only the review packs it owns", () => {
+  async function seedPack(root: string, targetKind: string): Promise<void> {
+    await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify({ version: "2.0", target: { kind: targetKind, path: "x" } }, null, 2),
+      "utf-8",
+    );
+  }
+
+  it("keeps an incomplete spec pack out of the discussion gate and in the sdd one", async () => {
+    await withoutCiEnv(async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-"));
+      try {
+        await seedPack(root, "spec");
+
+        await runValidate({ root, strict: false, profile: "discussion" });
+        expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-REVIEW-005");
+
+        await runValidate({ root, strict: false, profile: "sdd" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-REVIEW-005");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("keeps an incomplete discussion pack out of the sdd gate and in the discussion one", async () => {
+    await withoutCiEnv(async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-"));
+      try {
+        await seedPack(root, "discussion");
+
+        await runValidate({ root, strict: false, profile: "sdd" });
+        expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-REVIEW-005");
+
+        await runValidate({ root, strict: false, profile: "discussion" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-REVIEW-005");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
+
+  it("the full scan still judges both", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-full-"));
+    try {
+      await seedPack(root, "spec");
+      await runValidate({ root, strict: false });
+      const all = await findings(root);
+      expect(all.filter((entry) => entry.code === "QFAI-REVIEW-005")).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

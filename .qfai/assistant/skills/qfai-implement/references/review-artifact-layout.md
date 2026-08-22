@@ -36,9 +36,16 @@ must be written to a review pack, not left in conversation. There is exactly **o
   so a malformed or missing `summary.json` still passes the implementation gate on its own. Run
   `npx qfai validate --profile verify --fail-on error` (or the default full scan,
   `npx qfai validate --fail-on error`, or `/qfai-verify`, which runs the same profile) to see them
-  alongside everything else. A `--spec <id>` run judges only the packs whose `summary.json` names
-  that spec in `target.path`; packs it cannot attribute — a sibling worker's, or one whose
-  `summary.json` is not written yet — are left to the unscoped run.
+  alongside everything else.
+- Each stage profile gates the packs it owns: `--profile sdd` judges `target.kind: "spec"` packs and
+  `--profile discussion` judges `target.kind: "discussion"` ones, so one stage's in-flight pack never
+  fails the other stage's gate. The full-scan profiles judge both.
+- A `--spec <id>` run judges only the packs attributed to that spec: by `summary.json#target.path`,
+  or — when `summary.json` is missing or unparseable — by the paths `review_request.md` names. A
+  pack that forgot its `summary.json` is therefore still caught by its own spec's gate, while a
+  sibling worker's in-flight pack stays out of it. A pack that names its target in neither file is
+  attributed to no one: `--spec` leaves it to the unscoped run, and both stage profiles judge it,
+  since no other gate would.
 - A directory under `.qfai/review/` whose name is not `review-<17-digit-timestamp>` is not a pack:
   its contents are never inspected, in any profile. `QFAI-REVIEW-010` (`info`) names each one so
   that a mis-named pack is visible rather than silently uninspected.

@@ -26,6 +26,8 @@ import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import {
+  DISCUSSION_PACK_KINDS,
+  SPEC_PACK_KINDS,
   validateReviewArtifacts,
   type ReviewArtifactsScope,
 } from "./validators/reviewArtifacts.js";
@@ -349,6 +351,10 @@ async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
   specScope?: SpecScope,
+  // Which review packs this run owns. The discussion profile is the gate for
+  // its own cycle only; `full` composes this runner and passes `"all"` so the
+  // repo-wide scan keeps judging every pack.
+  reviewPackKinds: ReviewPackKinds = DISCUSSION_PACK_KINDS,
 ): Promise<Issue[]> {
   return [
     ...(await validateDiscussionMermaid(root)),
@@ -360,24 +366,38 @@ async function runDiscussionValidators(
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
     // artifacts it prescribes, so an incomplete pack passed the gate silently.
-    ...(await validateReviewArtifacts(root, reviewArtifactsScope(root, config, specScope))),
+    ...(await validateReviewArtifacts(
+      root,
+      reviewArtifactsScope(root, config, specScope, reviewPackKinds),
+    )),
   ];
 }
+
+/** Which review packs a profile is the gate for, or `"all"` for a full scan. */
+type ReviewPackKinds = ReadonlySet<string> | "all";
 
 /**
  * Scope handed to `validateReviewArtifacts`.
  *
- * A review-pack finding names no spec, so `isFindingInSpecScope` keeps it in
- * every `--spec` run — which would let a sibling worker's half-written pack
- * fail the slice gate the SDD skill promises is independent of it. The
- * validator narrows itself instead, by the `target.path` each pack records.
+ * Two narrowings, both so that one owner's in-flight pack cannot fail another
+ * owner's gate. A review-pack finding names no spec, so `isFindingInSpecScope`
+ * keeps it in every `--spec` run — the validator narrows itself instead, by the
+ * target each pack records. And `sdd` / `discussion` are each the hard gate for
+ * their own review cycle, so each judges only the `target.kind` it owns; a pack
+ * that names no owner at all is still judged by both, since no one else would.
  */
 function reviewArtifactsScope(
   root: string,
   config: ConfigLoadResult["config"],
   specScope: SpecScope | undefined,
+  reviewPackKinds: ReviewPackKinds,
 ): ReviewArtifactsScope {
-  return { specScope, specsRoot: resolvePath(root, config, "specsDir") };
+  return {
+    specScope,
+    specsRoot: resolvePath(root, config, "specsDir"),
+    discussionRoot: resolvePath(root, config, "discussionDir"),
+    targetKinds: reviewPackKinds === "all" ? undefined : reviewPackKinds,
+  };
 }
 
 async function runSddValidators(
@@ -439,7 +459,10 @@ async function runSddValidators(
     // mandatory pack files and `qfai validate --profile sdd` as the gate — so
     // the gate has to be able to observe them.
     ...(includeReviewArtifacts
-      ? await validateReviewArtifacts(root, reviewArtifactsScope(root, config, specScope))
+      ? await validateReviewArtifacts(
+          root,
+          reviewArtifactsScope(root, config, specScope, SPEC_PACK_KINDS),
+        )
       : []),
   ];
 }
@@ -561,7 +584,9 @@ async function runFullValidators(
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await runDiscussionValidators(root, config, specScope)),
+    // `"all"`: the full scan owns every review pack, not only the discussion
+    // ones this runner gates inside its own profile.
+    ...(await runDiscussionValidators(root, config, specScope, "all")),
     // Review artifacts come in with the discussion profile above, so the sdd
     // profile opts out rather than reporting every QFAI-REVIEW-* twice.
     ...(await runSddValidators(root, config, true, false, specScope, false)),

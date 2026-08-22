@@ -36,7 +36,22 @@ const REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
 export type ReviewArtifactsScope = {
   specScope: SpecScope | undefined;
   specsRoot: string | undefined;
+  /**
+   * Absolute `discussionDir`, used to attribute a pack whose `summary.json`
+   * cannot be read. Optional: a caller that omits it simply loses that half of
+   * the fallback.
+   */
+  discussionRoot?: string | undefined;
+  /**
+   * The `target.kind`s the calling profile owns. `undefined` judges every pack,
+   * which is what the full-scan profiles want.
+   */
+  targetKinds?: ReadonlySet<string> | undefined;
 };
+
+/** The pack kinds each stage-scoped profile is the gate for. */
+export const SPEC_PACK_KINDS: ReadonlySet<string> = new Set(["spec"]);
+export const DISCUSSION_PACK_KINDS: ReadonlySet<string> = new Set(["discussion"]);
 
 export async function validateReviewArtifacts(
   root: string,
@@ -118,10 +133,13 @@ export async function validateReviewArtifacts(
   const specScope = scope?.specScope;
   const specsRoot = scope?.specsRoot;
   const isScopedRun = specScope !== undefined && specsRoot !== undefined;
-  const reviewPackDirs =
-    specScope !== undefined && specsRoot !== undefined
-      ? await packsInSpecScope(root, packs, specScope, specsRoot)
-      : packs;
+  const reviewPackDirs = await selectPacks(packs, {
+    root,
+    specsRoot,
+    discussionRoot: scope?.discussionRoot,
+    specScope: isScopedRun ? specScope : undefined,
+    targetKinds: scope?.targetKinds,
+  });
 
   // Both of the findings below describe `.qfai/review/` as a whole rather than
   // any one pack, so a `--spec` run — one worker's view of one slice — does not
@@ -562,58 +580,198 @@ async function listReviewPackDirs(
   return { packs: packs.map((name) => path.join(reviewRoot, name)), unrecognized };
 }
 
+/** What a pack says it is about: its stage, and the spec that owns it. */
+type PackAttribution = { kind: string | null; specNumber: string | null };
+
+type PackSelection = {
+  root: string;
+  specsRoot: string | undefined;
+  discussionRoot: string | undefined;
+  /** Present only for a `--spec` run. */
+  specScope: SpecScope | undefined;
+  targetKinds: ReadonlySet<string> | undefined;
+};
+
 /**
- * The packs a `--spec` run is entitled to judge.
+ * The packs this run is entitled to judge.
  *
- * `--spec` exists so that "a parallel worker gates on its own spec only and
- * does not import a sibling agent's in-flight failures" (`qfai-sdd/SKILL.md`),
- * and a review-pack finding is repo-level: its path names no spec, so
- * `isFindingInSpecScope` keeps it in every scope. One sibling that has written
- * `review_request.md` and not yet `summary.json` would therefore fail every
- * other worker's slice gate with `QFAI-REVIEW-004`.
+ * Two independent narrowings, and both exist so that one stage's gate does not
+ * fail on a pack another owner is still writing:
  *
- * A pack is attributed by the `target.path` it records — the field
- * `review-artifact-layout.md` requires for exactly this reason, since the
- * directory name carries only a timestamp. A pack that cannot be attributed at
- * all (no `summary.json`, unparseable, no `target.path`, or a target outside
- * the scoped specs) is left to the unscoped gate rather than charged to a slice
- * that does not own it — which is the in-flight case above.
+ * - **`--spec`** — "a parallel worker gates on its own spec only and does not
+ *   import a sibling agent's in-flight failures" (`qfai-sdd/SKILL.md`). A
+ *   review-pack finding is repo-level (its path names no spec), so
+ *   `isFindingInSpecScope` keeps it in every scope; the narrowing has to happen
+ *   here instead.
+ * - **`targetKinds`** — `--profile sdd` and `--profile discussion` are each the
+ *   hard gate for their own review cycle. A half-written spec pack must not
+ *   fail a discussion cycle's gate with `QFAI-REVIEW-004`, nor the reverse.
+ *
+ * A pack whose kind cannot be determined, or that declares a kind outside
+ * `ALLOWED_TARGET_KINDS`, is judged by **every** profile rather than dropped:
+ * it belongs to no other owner who would catch it, and letting it opt out of
+ * the kind filter is exactly how a pack with no `summary.json` would hide from
+ * the gate that mandates one. The `--spec` narrowing keeps the opposite
+ * default — an unattributable pack there is the sibling in-flight case, and the
+ * unscoped run still reports it.
  */
-async function packsInSpecScope(
-  root: string,
+async function selectPacks(
   packDirs: readonly string[],
-  specScope: SpecScope,
-  specsRoot: string,
+  selection: PackSelection,
 ): Promise<string[]> {
-  const inScope: string[] = [];
-  for (const packDir of packDirs) {
-    const owner = await packOwningSpec(packDir, root, specsRoot);
-    if (owner !== null && specScope.has(owner)) {
-      inScope.push(packDir);
-    }
+  if (selection.specScope === undefined && selection.targetKinds === undefined) {
+    return [...packDirs];
   }
-  return inScope;
+  const selected: string[] = [];
+  for (const packDir of packDirs) {
+    const attribution = await attributePack(packDir, selection);
+    if (!profileOwnsKind(selection.targetKinds, attribution.kind)) {
+      continue;
+    }
+    if (
+      selection.specScope !== undefined &&
+      (attribution.specNumber === null || !selection.specScope.has(attribution.specNumber))
+    ) {
+      continue;
+    }
+    selected.push(packDir);
+  }
+  return selected;
 }
 
-/** The spec a pack's `summary.json` names, or `null` when it names none. */
-async function packOwningSpec(
+/** See {@link selectPacks}: only a recognized foreign kind is filtered out. */
+function profileOwnsKind(
+  targetKinds: ReadonlySet<string> | undefined,
+  kind: string | null,
+): boolean {
+  if (targetKinds === undefined || kind === null || !ALLOWED_TARGET_KINDS.has(kind)) {
+    return true;
+  }
+  return targetKinds.has(kind);
+}
+
+/**
+ * What a pack is about, read from the pack itself.
+ *
+ * `summary.json#target` is the canonical answer — the field
+ * `review-artifact-layout.md` requires for exactly this reason, since the
+ * directory name carries only a timestamp. But it is also one of the files the
+ * gate exists to require, so attributing *only* by it made a pack that forgot
+ * it, or wrote broken JSON, unattributable — and therefore invisible to the
+ * very `--spec` gate that should have raised `QFAI-REVIEW-004` against it.
+ * `review_request.md` — mandated by the same RCP footer and written first in
+ * the cycle — is consulted for whatever `summary.json` could not supply, so a
+ * pack is only unattributable when it names its target nowhere at all.
+ */
+async function attributePack(packDir: string, selection: PackSelection): Promise<PackAttribution> {
+  const fromSummary = await attributionFromSummary(packDir, selection);
+  const kindSettled = selection.targetKinds === undefined || fromSummary.kind !== null;
+  const specSettled = selection.specScope === undefined || fromSummary.specNumber !== null;
+  if (kindSettled && specSettled) {
+    return fromSummary;
+  }
+  const fromRequest = await attributionFromRequest(packDir, selection);
+  return {
+    kind: fromSummary.kind ?? fromRequest.kind,
+    specNumber: fromSummary.specNumber ?? fromRequest.specNumber,
+  };
+}
+
+async function attributionFromSummary(
   packDir: string,
-  root: string,
-  specsRoot: string,
-): Promise<string | null> {
+  selection: PackSelection,
+): Promise<PackAttribution> {
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(path.join(packDir, "summary.json"), "utf-8"));
   } catch {
-    // Missing, half-written or malformed: unattributable, and the unscoped gate
-    // is where that gets reported.
-    return null;
+    // Missing, half-written or malformed: `review_request.md` gets the question.
+    return { kind: null, specNumber: null };
   }
-  const targetPath = readString(asRecord(asRecord(parsed)?.target)?.path);
-  if (targetPath === null) {
-    return null;
+  const target = asRecord(asRecord(parsed)?.target);
+  const targetPath = readString(target?.path);
+  const kind = readString(target?.kind)?.toLowerCase() ?? null;
+  const specNumber =
+    targetPath !== null && selection.specsRoot !== undefined
+      ? owningSpecNumber(targetPath, { root: selection.root, specsRoot: selection.specsRoot })
+      : null;
+  return { kind, specNumber };
+}
+
+/**
+ * The fallback attribution: the paths `review_request.md` names.
+ *
+ * The file has no schema — every producer writes prose — so the only stable
+ * signal in it is the target paths it quotes, which is what both skills'
+ * templates put there. A path under a `spec-NNNN` directory names a spec pack;
+ * one under `discussionDir` names a discussion pack. Two different specs, or
+ * both kinds at once, is not an attribution: the pack stays unattributed and
+ * the unscoped/full run keeps it.
+ */
+async function attributionFromRequest(
+  packDir: string,
+  selection: PackSelection,
+): Promise<PackAttribution> {
+  let content: string;
+  try {
+    content = await readFile(path.join(packDir, "review_request.md"), "utf-8");
+  } catch {
+    return { kind: null, specNumber: null };
   }
-  return owningSpecNumber(targetPath, { root, specsRoot });
+  const owners = new Set<string>();
+  let namesDiscussion = false;
+  for (const token of pathTokens(content)) {
+    if (selection.specsRoot !== undefined) {
+      const owner = owningSpecNumber(token, {
+        root: selection.root,
+        specsRoot: selection.specsRoot,
+      });
+      if (owner !== null) {
+        owners.add(owner);
+        continue;
+      }
+    }
+    if (isUnderDiscussionRoot(token, selection)) {
+      namesDiscussion = true;
+    }
+  }
+  if (owners.size > 0) {
+    return {
+      kind: namesDiscussion ? null : "spec",
+      specNumber: owners.size === 1 ? ([...owners][0] ?? null) : null,
+    };
+  }
+  return { kind: namesDiscussion ? "discussion" : null, specNumber: null };
+}
+
+/** True when `token` resolves inside the run's `discussionDir`. */
+function isUnderDiscussionRoot(token: string, selection: PackSelection): boolean {
+  const discussionRoot = selection.discussionRoot;
+  if (discussionRoot === undefined) {
+    return false;
+  }
+  const absolute = path.isAbsolute(token) ? token : path.resolve(selection.root, token);
+  const relative = path.relative(discussionRoot, absolute);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+/**
+ * Every path-shaped token in a markdown file: backticked spans, plus bare words
+ * that carry a separator. Both templates quote their targets in backticks; the
+ * bare form is there for producers that do not.
+ */
+function pathTokens(markdown: string): string[] {
+  const tokens = new Set<string>();
+  for (const match of markdown.matchAll(/`([^`\r\n]+)`/g)) {
+    const value = match[1]?.trim();
+    if (value !== undefined && value.length > 0) {
+      tokens.add(value);
+    }
+  }
+  for (const match of markdown.matchAll(/[\w.@~-]*(?:[\\/][\w.@~-]+)+/g)) {
+    tokens.add(match[0]);
+  }
+  return [...tokens];
 }
 
 async function listReviewerFiles(reviewPackDir: string): Promise<string[]> {
