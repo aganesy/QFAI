@@ -9,7 +9,7 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
-import { MAX_ITERATION_INDEX } from "../../src/core/prototyping/iteration.js";
+import { MAX_ITERATION_INDEX, MAX_ITERATIONS } from "../../src/core/prototyping/iteration.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -491,20 +491,39 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(files.length).toBeGreaterThan(0);
 
-    // Every free-text restatement of the last legal cycle must equal
-    // MAX_ITERATION_INDEX. Three divergent values once circulated here.
-    const cycleLiteral = /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi;
+    // Two families of free-text restatement drift independently, so both are
+    // scanned. Three divergent values once circulated here.
+    //   - terminal: the last legal cycle index ("cycles 1..9", "C1..9") — must
+    //     equal MAX_ITERATION_INDEX.
+    //   - total: the size of the budget ("up to 10 cycles", "up to 10
+    //     iterations", "fixed 10-cycle budget", "10 cycles reached") — must
+    //     equal MAX_ITERATIONS. These are the user-facing headline numbers;
+    //     without this arm a MAX_ITERATIONS change leaves them stale and green.
+    const literals: readonly { readonly re: RegExp; readonly expected: number }[] = [
+      { re: /(?:cycles?\s+1\.\.|\bC1\.\.|index\s*===\s*)(\d+)/gi, expected: MAX_ITERATION_INDEX },
+      {
+        re: /\b(\d+)(?:\s+(?:cycles|iterations)|-(?:cycle|iteration))\b/gi,
+        expected: MAX_ITERATIONS,
+      },
+    ];
     const mismatches: string[] = [];
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
-      for (const match of content.matchAll(cycleLiteral)) {
-        if (Number(match[1]) !== MAX_ITERATION_INDEX) {
-          mismatches.push(`${path.relative(repoRoot, filePath)}: ${match[0]}`);
+      const relPath = path.relative(repoRoot, filePath);
+      for (const { re, expected } of literals) {
+        for (const match of content.matchAll(re)) {
+          if (Number(match[1]) !== expected) {
+            mismatches.push(`${relPath}: ${match[0]} (expected ${expected})`);
+          }
         }
       }
     }
 
-    expect(mismatches, `cycle literals must equal ${MAX_ITERATION_INDEX}`).toEqual([]);
+    expect(
+      mismatches,
+      `cycle literals must equal MAX_ITERATION_INDEX (${MAX_ITERATION_INDEX}) ` +
+        `or MAX_ITERATIONS (${MAX_ITERATIONS})`,
+    ).toEqual([]);
   });
 
   it("keeps the prototyping iteration budget out of qfai-discussion surfaces", async () => {
