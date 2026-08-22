@@ -741,10 +741,12 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       for (const generatedPath of generated) {
         const content = await readFile(generatedPath, "utf-8");
-        // `packages/qfai/**` only exists inside the QFAI monorepo; a rule that
+        // `packages/qfai` only exists inside the QFAI monorepo; a rule that
         // names it is unresolvable in the consuming project it is written into.
+        // The bare directory name counts: `Inspect \`packages/qfai\` structure`
+        // is just as unresolvable as a path below it, so no trailing `/`.
         expect(content, `${generatedPath} names a QFAI monorepo path`).not.toMatch(
-          /packages\/qfai\//,
+          /packages\/qfai\b/,
         );
       }
     } finally {
