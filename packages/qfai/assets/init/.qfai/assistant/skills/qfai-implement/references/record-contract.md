@@ -110,7 +110,7 @@ stops at this file lets the old verdict stand for the new row.
   recomputed here, not read** — over the same inputs the producer hashed, in
   the manifest order `../../qfai-atdd/references/red-provenance.md` defines,
   and cleared only by a `Shared-artifact re-verify` entry that names this row
-  (`SKILL.md#per-item-evidence-contract-fresh-evidence-required`). Without the
+  (`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`). Without the
   recomputation a stale RED passes item 10 exactly as a fresh one does.
 
 ## One revision across the four observations, except item 3
