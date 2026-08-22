@@ -2128,6 +2128,33 @@ async function collectLedgerLayerCounts(specsRoot: string): Promise<{
   return { total, counts };
 }
 
+/**
+ * The scenario files of the specs that are still current.
+ *
+ * `collectScenarioFiles` maps every spec's `05_Examples`, retired ones
+ * included, and the strategy mix is a statement about the tests the repository
+ * is held to now. Filtering only the ledger fallback was not enough: a retired
+ * spec's scenarios were counted into the layer, size and E2E-ratio figures
+ * first, and — because one readable scenario is all it takes — kept the
+ * fallback from ever running, so the active layered specs' `Layer` columns went
+ * unread as well.
+ */
+async function activeScenarioFiles(
+  scenarioFiles: readonly string[],
+  specsRoot: string,
+): Promise<string[]> {
+  const retired = new Set<string>();
+  for (const entry of await collectSpecEntries(specsRoot)) {
+    if (entry.status !== undefined && entry.status !== "active") {
+      retired.add(path.resolve(entry.examplesPath));
+    }
+  }
+  if (retired.size === 0) {
+    return [...scenarioFiles];
+  }
+  return scenarioFiles.filter((file) => !retired.has(path.resolve(file)));
+}
+
 async function collectTestStrategy(
   scenarioFiles: string[],
   root: string,
@@ -2157,7 +2184,7 @@ async function collectTestStrategy(
   let totalScenarios = 0;
   let e2eCount = 0;
 
-  for (const file of scenarioFiles) {
+  for (const file of await activeScenarioFiles(scenarioFiles, specsRoot)) {
     const text = await readFile(file, "utf-8");
     const { document, errors } = parseScenarioDocument(text, file);
     if (!document || errors.length > 0) {

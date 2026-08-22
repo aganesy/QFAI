@@ -148,8 +148,16 @@ export type SpecLifecycle = {
   deprecatedAt?: string;
 };
 
-/** Start of the first `##`+ section — the end of the leading bullet block. */
-const HEADER_BLOCK_END_RE = /^#{2,6}\s/m;
+/**
+ * Start of the first `##`+ section — the end of the leading bullet block.
+ *
+ * Up to three leading spaces, as CommonMark allows on an ATX heading and as
+ * `parseHeadings` already accepts elsewhere in this repository. Anchored at
+ * column 0 the boundary missed `  ## Notes`, and every bullet quoted under such
+ * a heading stayed inside the header block — enough to retire a spec that never
+ * declared a lifecycle of its own.
+ */
+const HEADER_BLOCK_END_RE = /^ {0,3}#{2,6}\s/m;
 
 /**
  * The leading metadata block of `01_Spec.md`: everything before its first `##`

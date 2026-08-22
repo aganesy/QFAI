@@ -39,13 +39,13 @@ QFAI Skill Body (SSOT)
 
 ## Spec Auto-Discovery Protocol
 
-When no explicit argument is given, detect the candidate specs. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
+When no explicit argument is given, detect the candidate specs — **active specs only**. A spec whose `01_Spec.md` header block declares `Status: superseded`, `Status: deprecated` or `Status: removed` is retired: `/qfai-sdd` migrated its live rows to the successor before rewriting that bullet, `validate` demotes every remaining finding on its ledger to `info`, and the rows left behind are the historical record of what it delivered. Never let one supply a candidate row — an unfiltered scan picks the retired ledger's first `todo` / `review-fix` and re-implements a requirement nobody owes. Execution is constrained to one spec at a time. Auto-discovery MAY present several specs as a queue to be processed sequentially (see Volume Policy > Multi-spec queue); this protocol does NOT enable multi-spec parallel execution.
 
 ### User Selection Flow
 
 - Single spec: announce the detected spec; ask for confirmation when scope is ambiguous.
 - Multiple specs: display the candidates and require the user to choose one spec, or to confirm an ordered queue processed one spec at a time.
-- Zero specs: stop and ask the user to provide the target spec explicitly.
+- Zero specs: stop and ask the user to provide the target spec explicitly. **An explicitly named spec that is retired stops the same way** — the argument selects a spec, it does not waive the lifecycle check: report the `Status:` it declares and, for `superseded`, its `Superseded-by` successor, and ask the user to name a row in that successor's ledger instead.
 
 ## User Questions (AskUserQuestion Protocol)
 

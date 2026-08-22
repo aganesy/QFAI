@@ -174,6 +174,32 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/spec-NNNN:TDD-MMMM/);
   });
 
+  it("makes deprecation name an inheritor before the bullet is written", async () => {
+    // Only `superseded` carries one in the lifecycle schema; `deprecated` /
+    // `removed` require `Deprecated-at` and nothing else, yet `validate`
+    // demotes their ledger the moment the bullet lands. Without a named
+    // inheritor — or a ledger with nothing but `done` left — the work
+    // disappears from the gate with nowhere to have gone.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/inheritor/);
+    expect(ref).toMatch(/Deprecated-at/);
+    expect(ref).toMatch(/Rationale/);
+    expect(ref).toMatch(/UPDATE:REMOVE/);
+  });
+
+  it("resets a migrated in-progress row instead of copying its evidence", async () => {
+    // `Status` / `DR-ID` / `Evidence` describe a run against the retired spec's
+    // obligation and an older tree, and `spec-traceability-rules.md` gives all
+    // three to `/qfai-implement` — so SDD may neither copy them onto the
+    // inheritor's new TC/US nor rewrite them into a fresh claim.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/`Status: todo`/);
+    expect(ref).toMatch(/DR-ID/);
+    expect(ref).toMatch(/Evidence/);
+    expect(ref).toMatch(/CR-YYYYMMDD-NNNN/);
+    expect(ref).toMatch(/spec-traceability-rules\.md/);
+  });
+
   it("requires Superseded-by to name an active spec other than the source", async () => {
     // A missing, self- or already-retired successor inherits nothing, so the
     // source keeps gating — the operator has to know that before rewriting

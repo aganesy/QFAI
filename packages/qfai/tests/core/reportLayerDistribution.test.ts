@@ -125,6 +125,57 @@ describe("the layer distribution reads the artifact the templates produce", () =
     );
   });
 
+  it("leaves a retired spec's scenarios out of the distribution too", async () => {
+    // The scenario path runs first and one readable file suppresses the ledger
+    // fallback entirely, so counting a retired spec's `@layer-*` scenarios both
+    // mixed its history into the current test mix and stopped every active
+    // layered spec's `Layer` column from being read at all.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.testStrategy.totalScenarios).toBe(0);
+        expect(data.testStrategy.layer.e2e).toBe(0);
+        expect(data.testStrategy.layerSource).toBe("none");
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n",
+        examples: [
+          "Feature: retired",
+          "",
+          "  @layer-e2e @size-s",
+          "  Scenario: history",
+          "    Given a retired spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
+  it("still counts the scenarios of an active spec", async () => {
+    // The guard above must key on the lifecycle, not on the file.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.testStrategy.totalScenarios).toBe(1);
+        expect(data.testStrategy.layer.e2e).toBe(1);
+        expect(data.testStrategy.layerSource).toBe("scenario-tags");
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: active\n",
+        examples: [
+          "Feature: current",
+          "",
+          "  @layer-e2e @size-s",
+          "  Scenario: live",
+          "    Given an active spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
   it("says so when nothing could be read, instead of reporting zeros silently", async () => {
     await withProject(async (root) => {
       const data = await createReportData(root);

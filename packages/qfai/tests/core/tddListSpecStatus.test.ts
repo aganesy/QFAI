@@ -185,6 +185,26 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     );
   });
 
+  it("ends the header block at an indented heading too", async () => {
+    // 1-3 leading spaces is still an ATX heading in CommonMark, and this
+    // repository already treats one as a section boundary elsewhere. Anchored
+    // at column 0, the block ran on past `  ## Notes` and the illustration
+    // below it retired a spec that declared no lifecycle of its own.
+    await withSpecStatus(
+      [
+        "  ## Notes",
+        "",
+        "SUPERSEDE writes this pair into the source spec:",
+        "",
+        "- Status: deprecated",
+        "- Deprecated-at: 2026-01-01",
+      ],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
   it("does not retire a spec whose successor declares no readable lifecycle", async () => {
     // The successor directory exists, but its `01_Spec.md` has no `Status:` at
     // all — the same evidence `readSpecLifecycle` returns for a missing or
