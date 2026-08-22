@@ -155,20 +155,81 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
     });
   });
 
-  it("splits the reviewer-gate codes across the profiles that run each detector", async () => {
+  it("splits the reviewer-gate codes across the profiles that emit each one", async () => {
     await withoutCiEnv(async () => {
       await withProject(async (root) => {
         const sdd = await noticeFor(root, "sdd");
         // `detectMockHrefDrift` / `validateDesignMdPatchZone` are prototyping-
-        // only, so the sdd profile must not claim to have covered them.
-        expect(sdd?.message).toContain("R-MOCK-HREF-DRIFT");
-        expect(sdd?.message).toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
+        // only detectors, but `validateReviewerJustification` — which sdd runs
+        // — re-issues their codes, so sdd must not list them as unevaluated.
+        expect(sdd?.message).not.toContain("R-MOCK-HREF-DRIFT");
+        expect(sdd?.message).not.toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
         expect(sdd?.message).not.toContain("R-CERTIFY-VERIFY-CIRCULAR");
 
         const prototyping = await noticeFor(root, "prototyping");
         expect(prototyping?.message).not.toContain("R-MOCK-HREF-DRIFT");
         expect(prototyping?.message).not.toContain("R-DESIGN-MD-PATCH-OUT-OF-ZONE");
         expect(prototyping?.message).toContain("R-CERTIFY-VERIFY-CIRCULAR");
+
+        // Neither detector nor either profile runs these two, and only
+        // `validateReviewerJustification` can re-issue them inside `validate`.
+        expect(sdd?.message).not.toContain("R-PACK-LOCATION-DRIFT");
+        expect(sdd?.message).not.toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
+        expect(prototyping?.message).toContain("R-PACK-LOCATION-DRIFT");
+        expect(prototyping?.message).toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
+      });
+    });
+  });
+
+  it("does not list a reviewer code the sdd run re-issued from a review report", async () => {
+    // `validateReviewerJustification` reports an empty `justification:` under
+    // the original finding code, so an sdd run can emit a prototyping-detector
+    // code. Listing it as unevaluated in the same artifact contradicts it.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const reviewDir = path.join(root, ".qfai", "review", "review-20260101-000000");
+        await mkdir(reviewDir, { recursive: true });
+        await writeFile(
+          path.join(reviewDir, "report.json"),
+          JSON.stringify({
+            findings: [
+              { code: "R-MOCK-HREF-DRIFT", justification: "" },
+              { code: "R-PACK-LOCATION-DRIFT", justification: "   " },
+            ],
+          }),
+          "utf-8",
+        );
+
+        await runValidate({ root, strict: false, profile: "sdd" });
+        const all = await findings(root);
+        const emitted = all.map((entry) => entry.code);
+        expect(emitted).toContain("R-MOCK-HREF-DRIFT");
+        expect(emitted).toContain("R-PACK-LOCATION-DRIFT");
+
+        const notice = all.find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(notice?.message).not.toContain("R-MOCK-HREF-DRIFT");
+        expect(notice?.message).not.toContain("R-PACK-LOCATION-DRIFT");
+      });
+    });
+  });
+
+  it("points stage-only gates at their own profile, not at a full scan", async () => {
+    // `runFullValidators` disables `QFAI-DCON-019` and the upstream guard, so
+    // "run the full profile" is advice that cannot deliver either gate.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const prototyping = await noticeFor(root, "prototyping");
+        expect(prototyping?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
+        expect(prototyping?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
+        // Not folded into the "run full" list.
+        expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DCON-019");
+        expect(listedFamilies(prototyping?.message ?? "")).not.toContain("QFAI-DRIFT-*");
+
+        // Each owner evaluates its own, so neither names it at all.
+        const sdd = await noticeFor(root, "sdd");
+        expect(sdd?.message).not.toContain("QFAI-DCON-019");
+        const tdd = await noticeFor(root, "tdd");
+        expect(tdd?.message).not.toContain("QFAI-DRIFT-*");
       });
     });
   });

@@ -170,11 +170,18 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
-  it("emits no partial-profile notice for the full profile", async () => {
+  it("does not call the full profile partial, but still names what it skips", async () => {
+    // `runFullValidators` disables the two stage-ownership gates
+    // (`QFAI-DCON-019`, `QFAI-DRIFT-*`), so a silent full run would read as
+    // coverage of every gate in the tool. It is not a partial profile either.
     await withProject(async (root) => {
       await runValidate({ root, strict: false });
-      const codes = (await findings(root)).map((entry) => entry.code);
-      expect(codes).not.toContain("QFAI-PROFILE-001");
+      const notice = (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
+      expect(notice?.severity).toBe("info");
+      expect(notice?.message).not.toContain("is a partial profile");
+      expect(notice?.message).toContain("evaluated every gate a full scan covers");
+      expect(notice?.message).toContain("QFAI-DCON-019 (`--profile sdd`)");
+      expect(notice?.message).toContain("QFAI-DRIFT-* (`--profile tdd`)");
     });
   });
 

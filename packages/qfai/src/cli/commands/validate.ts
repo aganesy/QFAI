@@ -421,10 +421,17 @@ function buildDeprecationIssue(args: {
  *     handoff codes are prototyping-only and `QFAI-DCON-019` is sdd-only, so
  *     the family splits three ways. `QFAI-RESEARCH-*` / `UIX-VAL-*` are
  *     reached from both the discussion and the prototyping compositions.
- *   - The reviewer-gate `R-*` codes split by detector, not by prefix:
- *     `detectMockHrefDrift` and `validateDesignMdPatchZone` run only in
- *     prototyping, the rest only in sdd. The wildcard made `--profile sdd`
- *     claim coverage of two detectors it never ran.
+ *   - The reviewer-gate `R-*` codes split by emitter, not by prefix:
+ *     `detectMockHrefDrift`, `validateDesignMdPatchZone` and
+ *     `detectEvidenceMutationUnlogged` run only in prototyping, the rest only
+ *     in sdd. The wildcard made `--profile sdd` claim coverage of detectors it
+ *     never ran. Emitter, not detector, is the unit: `runSddValidators` also
+ *     calls `validateReviewerJustification`, which re-issues a
+ *     justification-catalog code verbatim when a JSON report anywhere under
+ *     `.qfai/review/` carries a finding with an empty `justification:` — so the three
+ *     prototyping-detector codes it can re-issue are shared, and the two
+ *     catalog codes with no `validate` detector (`R-PACK-LOCATION-DRIFT`,
+ *     `R-EXPLORATION-CERTIFY-ATTEMPT`) belong to sdd instead of to nothing.
  *
  * Shared work therefore gets its own group, listed by every profile that runs
  * it, and code-level entries are used wherever a family spans profiles.
@@ -547,29 +554,74 @@ const GATE_GROUP_FAMILIES = {
     "QFAI-CFG-LINK-*",
     "QFAI-UIUX-PERF",
   ],
-  // Reviewer-gate detectors wired into `runPrototypingValidators`.
-  "reviewer-gate-prototyping": [
+  // Detectors wired into `runPrototypingValidators` whose codes
+  // `validateReviewerJustification` re-emits from `runSddValidators`: an empty
+  // `justification:` on a `.qfai/review/**/*.json` finding is reported under
+  // the original code (`validators/reviewerJustification.ts`). Both stages can
+  // therefore emit them, so both list this group — filing it as
+  // prototyping-only made an sdd run name a code it had just emitted.
+  "reviewer-gate-shared": [
     "R-MOCK-HREF-DRIFT",
     "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
     "R-EVIDENCE-MUTATION-UNLOGGED",
   ],
+  // The two justification-catalog codes with no `validate` detector at all:
+  // `R-PACK-LOCATION-DRIFT` comes from the lint lane and
+  // `R-EXPLORATION-CERTIFY-ATTEMPT` from `qfai prototyping certify`. Inside
+  // `validate` they are reachable only through `validateReviewerJustification`,
+  // which sdd runs — so they belong to sdd rather than to no group at all.
+  "reviewer-justification-only": ["R-PACK-LOCATION-DRIFT", "R-EXPLORATION-CERTIFY-ATTEMPT"],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER", "D-SCAFFOLD-FOREIGN-HOME"],
   // `TDDLIST-001`..`TDDLIST-006` are deliberately absent: they are the waiver
   // rule ids for the `TDDLIST_*` findings (`core/ruleIds.ts`,
   // `validators/tddList.ts`), not codes any finding is ever emitted under.
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-DRIFT-*"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-001"],
+  // `validateUpstreamSsotGuard` — `runTddValidators` only. `full` opts out
+  // (`core/validate.ts#runFullValidators` passes `includeUpstreamGuard =
+  // false`) because it also runs the SDD profile, the legitimate owner of the
+  // files this guard polices. Stage-only: see `STAGE_ONLY_GATE_GROUPS`.
+  "upstream-ssot-guard": ["QFAI-DRIFT-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
 
 const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 
+/**
+ * Groups `full` / `verify` deliberately do NOT run, mapped to the profile that
+ * does run each one.
+ *
+ * `runFullValidators` disables both — `runSddValidators(..., false, ...)` drops
+ * `QFAI-DCON-019` and `runTddValidators(..., false, false)` drops the upstream
+ * guard — because a repo-wide audit also covers the stage that legitimately
+ * owns the files each gate polices, so firing them there would flag every
+ * lawful edit. Listing them under `full` made the notice tell a partial
+ * profile to run a scan that never evaluates them, while `full` itself,
+ * showing no notice, read as complete coverage. Both halves are fixed by
+ * excluding them from `full` and naming their owning profile in the notice.
+ */
+const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
+  "design-contract-readiness-sdd": "sdd",
+  "upstream-ssot-guard": "tdd",
+};
+
+function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
+  return Object.prototype.hasOwnProperty.call(STAGE_ONLY_GATE_GROUPS, group)
+    ? STAGE_ONLY_GATE_GROUPS[group]
+    : undefined;
+}
+
+/** Everything `runFullValidators` evaluates: every group but the stage-only ones. */
+const FULL_GATE_GROUPS: readonly GateGroup[] = ALL_GATE_GROUPS.filter(
+  (group) => stageOwnerOf(group) === undefined,
+);
+
 /** `runPrototypingValidators`, shared by the `prototyping` and `saas-package` profiles. */
 const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
-  "reviewer-gate-prototyping",
+  "reviewer-gate-shared",
   "design-contract-readiness",
   "design-contract-readiness-prototyping",
   "research-summary",
@@ -582,12 +634,15 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
  * so a new profile cannot be added without deciding what it evaluates.
  */
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
-  full: ALL_GATE_GROUPS,
-  verify: ALL_GATE_GROUPS,
+  full: FULL_GATE_GROUPS,
+  verify: FULL_GATE_GROUPS,
   discussion: ["discussion", "research-summary", "canonical-uix"],
   sdd: [
     "sdd",
     "reviewer-gate-sdd",
+    // `validateReviewerJustification` re-issues these codes from an sdd run.
+    "reviewer-gate-shared",
+    "reviewer-justification-only",
     "contracts",
     "contract-references",
     "traceability",
@@ -600,7 +655,14 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   // scaffold-placeholder gate that completes the atdd group. It also calls
   // `validateContracts` and `validateTraceability`, which sdd shares, plus the
   // tdd-only `validateTraceabilityIntegrity`.
-  tdd: ["tdd", "atdd-traceability", "contracts", "traceability", "traceability-integrity"],
+  tdd: [
+    "tdd",
+    "upstream-ssot-guard",
+    "atdd-traceability",
+    "contracts",
+    "traceability",
+    "traceability-integrity",
+  ],
   // `runSaasPackage` runs the prototyping composition, then narrows it via
   // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below).
   "saas-package": PROTOTYPING_GATE_GROUPS,
@@ -610,27 +672,45 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
   return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
 }
 
-/** Deduped, order-preserving families for the groups a profile does not run. */
-function unevaluatedFamilies(profile: string): string[] {
+/** Families a profile does not evaluate, split by where the reader must go. */
+type UnevaluatedGates = {
+  /** Deduped, order-preserving families a `full` scan would have covered. */
+  readonly fullCovered: readonly string[];
+  /** Families only one stage's own profile ever runs, with that profile. */
+  readonly stageOnly: readonly { readonly family: string; readonly profile: ValidationProfile }[];
+};
+
+function unevaluatedGates(profile: string): UnevaluatedGates {
   if (!isKnownProfile(profile)) {
-    return [];
+    return { fullCovered: [], stageOnly: [] };
   }
   const evaluated = new Set<GateGroup>(PROFILE_GATE_GROUPS[profile]);
-  const families: string[] = [];
-  const push = (family: string): void => {
-    if (!families.includes(family)) families.push(family);
+  const fullCovered: string[] = [];
+  const stageOnly: { family: string; profile: ValidationProfile }[] = [];
+  const pushFullCovered = (family: string): void => {
+    if (!fullCovered.includes(family)) fullCovered.push(family);
   };
-  for (const group of Object.keys(GATE_GROUP_FAMILIES) as GateGroup[]) {
+  for (const group of ALL_GATE_GROUPS) {
     if (evaluated.has(group)) continue;
-    for (const family of GATE_GROUP_FAMILIES[group]) push(family);
+    const owner = stageOwnerOf(group);
+    for (const family of GATE_GROUP_FAMILIES[group]) {
+      // A stage-only gate is not reachable from `full`, so pointing the reader
+      // at a full scan for it would be advice that cannot be followed.
+      if (owner === undefined) {
+        pushFullCovered(family);
+      } else if (!stageOnly.some((entry) => entry.family === family)) {
+        stageOnly.push({ family, profile: owner });
+      }
+    }
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
     // `SAAS_PACKAGE_SKIPPED_GATES` must reach the notice even if it belongs to
-    // a group the profile otherwise runs.
-    for (const family of saasPackageSkippedGateFamilies()) push(family);
+    // a group the profile otherwise runs. Every skipped family belongs to a
+    // group `full` runs, so a full scan is the accurate remedy for all of them.
+    for (const family of saasPackageSkippedGateFamilies()) pushFullCovered(family);
   }
-  return families;
+  return { fullCovered, stageOnly };
 }
 
 /**
@@ -643,6 +723,11 @@ function unevaluatedFamilies(profile: string): string[] {
  * When the CI profile guard blocked the run, no validator executed at all;
  * the normal per-profile wording would then imply the requested profile's own
  * gates had been observed, so that case gets its own message.
+ *
+ * `full` / `verify` get their own wording rather than silence: they evaluate
+ * every gate a full scan covers, but `runFullValidators` disables the two
+ * stage-ownership gates, and a run that says nothing at all reads as complete
+ * coverage of every gate in the tool.
  */
 function buildPartialProfileNotice(profile: string | undefined): Issue | null {
   if (!profile) {
@@ -650,18 +735,30 @@ function buildPartialProfileNotice(profile: string | undefined): Issue | null {
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile);
-  if (unevaluated.length === 0) {
+  const { fullCovered, stageOnly } = unevaluatedGates(profile);
+  if (fullCovered.length === 0 && stageOnly.length === 0) {
     return null;
   }
+  // A stage-only gate is unreachable from a full scan, so it is named with the
+  // profile that does run it instead of being folded into the "run full" list.
+  const stageOnlySentence =
+    stageOnly.length === 0
+      ? ""
+      : ` Stage-ownership gates no full scan runs: ${stageOnly
+          .map((entry) => `${entry.family} (\`--profile ${entry.profile}\`)`)
+          .join(", ")}.`;
+  const message =
+    fullCovered.length === 0
+      ? `profile="${profile}" evaluated every gate a full scan covers.` + stageOnlySentence
+      : `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
+        `${fullCovered.join(", ")}. A PASS here is not full-scan coverage — run ` +
+        "`qfai validate --fail-on error` (full profile) before declaring completion." +
+        stageOnlySentence;
   return {
     code: "QFAI-PROFILE-001",
     severity: "info",
     category: "canonical",
-    message:
-      `profile="${profile}" is a partial profile. Hard gates NOT evaluated in this run: ` +
-      `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
-      "`qfai validate --fail-on error` (full profile) before declaring completion.",
+    message,
     rule: "validate.partialProfileCoverage",
   };
 }
