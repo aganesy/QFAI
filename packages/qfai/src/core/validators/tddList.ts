@@ -379,7 +379,7 @@ function toPosixRel(value: string): string {
  * An absent directory is the common case (no anomaly has been recorded yet) and
  * an unreadable one must not fail the whole ledger check, so both yield an
  * empty list. Directories are dropped rather than named: a directory called
- * `DR-0270-envelope.md/` would otherwise satisfy the existence check that the
+ * `DR-<id>-<slug>.md/` would otherwise satisfy the existence check that the
  * Decision Record itself is supposed to satisfy. A symlink is resolved, so a
  * record kept elsewhere and linked in still counts.
  */
@@ -408,13 +408,14 @@ async function collectRecordFileNames(root: string): Promise<string[]> {
 /**
  * Whether a standalone record file declares the `DR-*` the ledger cites.
  *
- * The documented name is `DR-<id>-<slug>.md` and its grammar is ambiguous:
- * `DR-0270-2026-envelope.md` reads either as the policy-level `DR-0270` with
- * the slug `2026-envelope`, or as the spec-scoped `DR-0270-2026` with the slug
- * `envelope`. Parsing an id out of the filename has to pick one reading, and
- * picking the longest left the ledger's own `DR-0270` unresolved. Matching from
- * the cited id instead lets either reading resolve — the safe direction for a
- * warning whose subject is only whether the record exists.
+ * The documented name is `DR-<id>-<slug>.md`, whose grammar is ambiguous
+ * whenever the slug itself opens with four digits (a year, say): the name then
+ * reads either as a policy-level `DR-<id>` carrying that whole slug, or as a
+ * spec-scoped `DR-<spec>-<seq>` carrying the rest of it. Parsing an id out of
+ * the filename has to pick one reading, and picking the longest left the
+ * policy-level id the ledger actually cites unresolved. Matching from the cited
+ * id instead lets either reading resolve — the safe direction for a warning
+ * whose subject is only whether the record exists.
  *
  * The filename is what is read, never the body: a record that cites a
  * neighbouring decision in its prose must not thereby declare it.
@@ -431,8 +432,8 @@ function recordFileDeclares(fileName: string, drId: string): boolean {
  * `.qfai/decisions/` is shared by every spec, whereas `DR-<spec>-<seq>` is
  * spec-scoped by construction — before the directory joined the search set the
  * only spec-scoped source was the spec's own `07_Decisions.md`. Honouring the
- * scope keeps spec-0002 from resolving `DR-0001-0003` against spec-0001's
- * record; policy-level `DR-<id>` records stay shared by all of them.
+ * scope keeps one spec from resolving a `DR-<spec>-<seq>` another spec filed;
+ * policy-level `DR-<id>` records stay shared by all of them.
  */
 function isRecordInSpecScope(drId: string, specNumber: string): boolean {
   const scoped = DR_SPEC_SCOPED_ID.exec(drId);
