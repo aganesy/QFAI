@@ -165,6 +165,11 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).toContain(
       "that table drops an active `BR-ID` declared in `04_Business-Rules.md`",
     );
+    // A heading-only `04_Business-Rules.md` (no Rule Table) must still be
+    // reconciled, or dropping every heading-form rule reads as a clean table.
+    expect(skill).toContain(
+      "whether the declaration is a Rule Table row or a `BR-*` heading carrying no retiring `Status:`",
+    );
   });
 
   it("makes both gate statements read both tables, in one marker", async () => {
@@ -176,7 +181,7 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(skill).not.toContain("unjustified `X` cells");
     expect(skill).toContain(
-      "Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares `BR-*`, or contains unjustified ❌ cells in either table",
+      "Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares an active `BR-*`, or contains unjustified ❌ cells in either table",
     );
   });
 
