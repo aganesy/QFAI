@@ -24,17 +24,21 @@
  * shifted row change what a validator sees. Every other table in the spec pack,
  * the ledger files included, is prose a human reads: the shipped
  * `tdd/test-list.md` carries a `## Schema` table and fenced examples that no
- * reader indexes, so a stray pipe in one of those stays a `warning`. Deciding
- * severity from the file name alone would let such a table stop a consuming
- * repo's default `failOn: "error"` gate, and promoting a young rule code to
- * `error` across a whole spec pack is what floods that repo on its first
- * upgrade.
+ * reader indexes, so a stray pipe in one of those stays a `warning`. The path
+ * is scoped the same way: only a collected `SpecEntry`'s own ledger path
+ * counts, so an evacuated `archive/tdd/test-list.md` no reader opens stays a
+ * `warning` too. Deciding severity from the file name alone would let such a
+ * table stop a consuming repo's default `failOn: "error"` gate, and promoting a
+ * young rule code to `error` across a whole spec pack is what floods that repo
+ * on its first upgrade.
  */
 
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import {
   isTableSeparator,
   looksLikeTableRow,
@@ -50,11 +54,46 @@ export const TABLE_ARITY_RULE_ID = "QFAI-TABLE-001";
 
 const TDD_TEST_LIST_SUFFIX = "/tdd/test-list.md";
 
+/** The traceability ledger under the spec-pack layout, and under layered as well. */
+const LAYERED_TRACEABILITY_LEDGER_SUFFIX = "/16_traceability-ledger.md";
+/** The traceability ledger `traceabilityLedgerPath` names for a layered or legacy entry. */
+const LEGACY_TRACEABILITY_LEDGER_SUFFIX = "/traceability-matrix.md";
+
 /** The traceability ledger's name under the spec-pack, layered and legacy layouts. */
-const TRACEABILITY_LEDGER_SUFFIXES = ["/16_traceability-ledger.md", "/traceability-matrix.md"];
+const TRACEABILITY_LEDGER_SUFFIXES = [
+  LAYERED_TRACEABILITY_LEDGER_SUFFIX,
+  LEGACY_TRACEABILITY_LEDGER_SUFFIX,
+];
+
+/**
+ * The nine columns `specPackReport.ts#parseLedgerRows` and
+ * `specPack.ts#validateTraceabilityLedger` both require before they read a
+ * traceability ledger's rows. Restated rather than imported: both readers keep
+ * a private copy, and this one exists to answer "would a reader walk this
+ * table?", not to define the schema.
+ */
+const TRACEABILITY_LEDGER_REQUIRED_COLUMNS = [
+  "trace_id",
+  "obj_id",
+  "init_id",
+  "cap_id",
+  "flow_id",
+  "us_id",
+  "ac_id",
+  "ex_ids",
+  "tc_ids",
+] as const;
 
 function normalizeRel(rel: string): string {
   return rel.replace(/\\/g, "/").toLowerCase();
+}
+
+/** The header normalization both traceability-ledger readers apply. */
+function normalizeLedgerHeader(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_");
 }
 
 /**
@@ -64,8 +103,10 @@ function normalizeRel(rel: string): string {
  * traceability ledger is walked the same way, so a shifted row in one of those
  * tables changes what a validator sees rather than only how the table renders.
  *
- * Necessary but not sufficient: these files also hold documentation tables that
- * nothing indexes. {@link positionallyReadMismatchLines} is what decides.
+ * Necessary but not sufficient in two directions: the name has to sit at a
+ * collected spec entry's own ledger path ({@link collectLedgerRelPaths}), and
+ * these files also hold documentation tables that nothing indexes
+ * ({@link positionallyReadMismatchLines}).
  */
 export function isLedgerPath(rel: string): boolean {
   const normalized = normalizeRel(rel);
@@ -75,36 +116,117 @@ export function isLedgerPath(rel: string): boolean {
   );
 }
 
+/** The ledger files an entry's readers actually open, as absolute paths. */
+function ledgerPathsForEntry(entry: SpecEntry): string[] {
+  return [
+    // `validateTddList` opens exactly `<entry.dir>/tdd/test-list.md`.
+    path.join(entry.dir, "tdd", "test-list.md"),
+    // `traceabilityIntegrity` opens `<specDir>/16_Traceability-ledger.md`
+    // whatever the layout, while `specPackReport` opens the entry's own
+    // `traceabilityLedgerPath` — that same file for a spec-pack entry and
+    // `traceability-matrix.md` for a layered or legacy one.
+    path.join(entry.dir, "16_Traceability-ledger.md"),
+    entry.traceabilityLedgerPath,
+  ];
+}
+
+/**
+ * Ledger paths of the collected spec entries, relative to `root` and normalized.
+ *
+ * Name alone is not enough. `specsDir/**` is walked whole, so an evacuated copy
+ * at `spec-0001/archive/tdd/test-list.md` — or any nested directory carrying a
+ * ledger's file name — ends with the same suffix as the real thing while no
+ * reader ever opens it. Its rows are read by nobody, so its arity cannot stop a
+ * consumer's default `failOn: "error"` gate.
+ *
+ * Degrading to an empty set is deliberate: with no entries, every mismatch is a
+ * `warning`, which is the advisory side of the scoping this validator exists to
+ * keep.
+ */
+async function collectLedgerRelPaths(root: string, config: QfaiConfig): Promise<Set<string>> {
+  const specsRoot = resolvePath(root, config, "specsDir");
+  let entries: SpecEntry[];
+  try {
+    entries = await collectSpecEntries(specsRoot);
+  } catch {
+    return new Set();
+  }
+  const rels = new Set<string>();
+  for (const entry of entries) {
+    for (const ledger of ledgerPathsForEntry(entry)) {
+      rels.add(normalizeRel(path.relative(root, ledger)));
+    }
+  }
+  return rels;
+}
+
+/**
+ * Whether a traceability ledger's first table is one a reader would walk.
+ *
+ * The readers do not take every first table: `traceabilityIntegrity.ts` admits
+ * one only when it has at least three columns and one of them is
+ * `Implementation File`, and `specPackReport.ts#parseLedgerRows` /
+ * `specPack.ts#validateTraceabilityLedger` only when it carries all of
+ * {@link TRACEABILITY_LEDGER_REQUIRED_COLUMNS}. A table failing both is skipped
+ * with a `warning` and no row of it is ever resolved by position, so its arity
+ * must not be an `error` — a `16_Traceability-ledger.md` opening with a prose
+ * table would otherwise stop the gate over rows nobody reads.
+ *
+ * `Implementation File` counts only for `16_Traceability-ledger.md`:
+ * `traceabilityIntegrity.ts` opens that name alone.
+ */
+function isReadTraceabilityLedgerTable(normalizedRel: string, headers: readonly string[]): boolean {
+  const present = headers.filter((cell) => cell.length > 0);
+  const readsByImplementationFile =
+    normalizedRel.endsWith(LAYERED_TRACEABILITY_LEDGER_SUFFIX) &&
+    present.length >= 3 &&
+    present.some((cell) => /Implementation File/i.test(cell));
+  if (readsByImplementationFile) {
+    return true;
+  }
+  const normalized = new Set(present.map(normalizeLedgerHeader));
+  return TRACEABILITY_LEDGER_REQUIRED_COLUMNS.every((column) => normalized.has(column));
+}
+
 /**
  * Lines of `text` whose mismatching row belongs to the ledger table itself.
  *
  * Mirrors what the ledger readers admit, so severity follows the same rule as
- * "is this row read positionally?":
+ * "is this row read positionally?" — and each branch mirrors *its own* reader,
+ * because the two do not read alike:
  *
- * - **Non-spec regions are masked first.** `collectLedgerTables` and
- *   `validateTddList` both read `maskNonSpecRegions(content)`, so a fenced
- *   template or a commented-out old table is not the ledger and its arity is
- *   nobody's correctness problem. Masking blanks lines in place, so the line
- *   numbers still address the original file.
- * - **In `tdd/test-list.md`, the table must carry the ledger schema.**
- *   `collectLedgerTables` admits a table only when it holds all of
- *   {@link TDD_LEDGER_REQUIRED_COLUMNS} — which is exactly what keeps the
- *   template's own `## Schema` table (`Column | Description`) out — and every
- *   table it admits is scored, not only the first.
- * - **In the traceability ledger, the ledger is the first table.** Both readers
- *   take it with `parseFirstMarkdownTable`, and the shipped template says so:
- *   "any further table in this document is prose, never a ledger row".
+ * - **In `tdd/test-list.md`, non-spec regions are masked and the table must
+ *   carry the ledger schema.** `collectLedgerTables` and `validateTddList` both
+ *   read `maskNonSpecRegions(content)`, so a fenced template or a commented-out
+ *   old table is not the ledger and its arity is nobody's correctness problem.
+ *   Masking blanks lines in place, so the line numbers still address the
+ *   original file. `collectLedgerTables` then admits a table only when it holds
+ *   all of {@link TDD_LEDGER_REQUIRED_COLUMNS} — which is exactly what keeps
+ *   the template's own `## Schema` table (`Column | Description`) out — and
+ *   every table it admits is scored, not only the first.
+ * - **In the traceability ledger, the ledger is the first table of the
+ *   *unmasked* file, and only if a reader would admit its schema.**
+ *   `specPack.ts#validateTraceabilityLedger`,
+ *   `traceabilityIntegrity.ts#readLedgerTable` and
+ *   `specPackReport.ts#parseLedgerRows` all hand the raw content to
+ *   `parseFirstMarkdownTable`, so masking here would score a different table
+ *   than the one they position-read whenever a fenced example or a
+ *   commented-out table precedes the real one. {@link
+ *   isReadTraceabilityLedgerTable} then applies their admission condition.
  */
 export function positionallyReadMismatchLines(rel: string, text: string): Set<number> {
-  if (!isLedgerPath(rel)) {
+  const normalized = normalizeRel(rel);
+  if (!isLedgerPath(normalized)) {
     return new Set();
   }
-  const mismatches = findTableArityMismatches(maskNonSpecRegions(text));
-  const ledgerRows = normalizeRel(rel).endsWith(TDD_TEST_LIST_SUFFIX)
-    ? mismatches.filter((mismatch) =>
+  const ledgerRows = normalized.endsWith(TDD_TEST_LIST_SUFFIX)
+    ? findTableArityMismatches(maskNonSpecRegions(text)).filter((mismatch) =>
         TDD_LEDGER_REQUIRED_COLUMNS.every((column) => mismatch.headers.includes(column)),
       )
-    : mismatches.filter((mismatch) => mismatch.tableIndex === 0);
+    : findTableArityMismatches(text).filter(
+        (mismatch) =>
+          mismatch.tableIndex === 0 && isReadTraceabilityLedgerTable(normalized, mismatch.headers),
+      );
   return new Set(ledgerRows.map((mismatch) => mismatch.line));
 }
 
@@ -179,6 +301,8 @@ export async function validateMarkdownTableArity(
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
 
+  const ledgerRelPaths = await collectLedgerRelPaths(root, config);
+
   const issues: Issue[] = [];
   for (const file of files.sort()) {
     const text = await readSafe(file);
@@ -186,7 +310,11 @@ export async function validateMarkdownTableArity(
       continue;
     }
     const rel = path.relative(root, file).replace(/\\/g, "/");
-    const positionalLines = positionallyReadMismatchLines(rel, text);
+    // Only a collected entry's own ledger path is read positionally; a
+    // same-named copy in a nested directory is scored as documentation.
+    const positionalLines = ledgerRelPaths.has(normalizeRel(rel))
+      ? positionallyReadMismatchLines(rel, text)
+      : new Set<number>();
     for (const mismatch of findTableArityMismatches(text)) {
       const severity: IssueSeverity = positionalLines.has(mismatch.line) ? "error" : "warning";
       const direction =

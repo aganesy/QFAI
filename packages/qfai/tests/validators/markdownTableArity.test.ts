@@ -29,6 +29,11 @@ const LEDGER_HEADER =
   "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |";
 const LEDGER_SEPARATOR = "| --- | --- | --- | --- | --- | --- | --- | --- |";
 
+/** The nine columns `specPackReport#parseLedgerRows` requires before it reads rows. */
+const TRACE_LEDGER_HEADER =
+  "| trace_id | obj_id | init_id | cap_id | flow_id | us_id | ac_id | ex_ids | tc_ids |";
+const TRACE_LEDGER_SEPARATOR = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+
 const tempDirs: string[] = [];
 
 async function withSpec(files: Record<string, string>): Promise<string> {
@@ -251,13 +256,66 @@ describe("validateMarkdownTableArity", () => {
   });
 
   it("emits `error` on the traceability ledger in every layout's spelling", async () => {
+    // Each spelling is scored against the reader that opens *it*:
+    // `traceabilityIntegrity` opens `16_Traceability-ledger.md` and admits a
+    // table with an `Implementation File` column, while a legacy entry's
+    // `traceability-matrix.md` is only ever read by
+    // `specPackReport#parseLedgerRows`, which requires the nine trace columns.
     const root = await withSpec({
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
         "| BR/AC | Implementation File | Test File |",
         "| ----- | ------------------- | --------- |",
         "| AC-0001 | src/a.ts |",
       ].join("\n"),
+      ".qfai/specs/spec-0002/spec.md": "# spec-0002\n",
       ".qfai/specs/spec-0002/traceability-matrix.md": [
+        TRACE_LEDGER_HEADER,
+        TRACE_LEDGER_SEPARATOR,
+        "| TR-0001 | OBJ-0001 | INIT-0001 | CAP-0001 | FLOW-0001 | US-0001 | AC-0001 | EX-0001 |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues.map((found) => found.severity)).toEqual(["error", "error"]);
+  });
+
+  it("keeps `warning` when no reader admits the traceability ledger's first table", async () => {
+    // `traceabilityIntegrity` skips a first table without an
+    // `Implementation File` column with a format-mismatch `warning`, and
+    // `parseLedgerRows` returns no rows for want of the trace columns. Nothing
+    // is resolved by position, so the arity of these rows cannot stop a gate.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
+        "## How to read this ledger",
+        "",
+        "| Column | Rule |",
+        "| ------ | ---- |",
+        "| BR/AC | one ID | per row |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("warning");
+  });
+
+  it("scores the traceability table the readers take, fence and all", async () => {
+    // All three readers hand the *raw* content to `parseFirstMarkdownTable`,
+    // so a fenced example ahead of the real ledger is what they position-read.
+    // Masking here would score the table below it instead — the mismatch that
+    // shifts a validator's columns would drop to `warning` and one nobody
+    // reads would rise to `error`. (Should the readers ever mask, this branch
+    // must follow them.)
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
+        "```markdown",
+        "| BR/AC | Implementation File | Test File |",
+        "| ----- | ------------------- | --------- |",
+        "| AC-0001 | src/a.ts |",
+        "```",
+        "",
         "| BR/AC | Implementation File | Test File |",
         "| ----- | ------------------- | --------- |",
         "| AC-0002 | src/b.ts |",
@@ -266,7 +324,35 @@ describe("validateMarkdownTableArity", () => {
 
     const issues = await validateMarkdownTableArity(root, defaultConfig);
 
-    expect(issues.map((found) => found.severity)).toEqual(["error", "error"]);
+    expect(issues.map((found) => [found.loc?.line, found.severity])).toEqual([
+      [4, "error"],
+      [9, "warning"],
+    ]);
+  });
+
+  it("keeps `warning` on an evacuated ledger copy no reader opens", async () => {
+    // `validateTddList` opens exactly `<specDir>/tdd/test-list.md`; the arity
+    // validator walks `specsDir/**/*.md`, so a nested copy shares the suffix
+    // while its rows are read by nobody.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/tdd/test-list.md": [
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
+      ].join("\n"),
+      ".qfai/specs/spec-0001/archive/tdd/test-list.md": [
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues.map((found) => [found.file, found.severity])).toEqual([
+      [".qfai/specs/spec-0001/archive/tdd/test-list.md", "warning"],
+      [".qfai/specs/spec-0001/tdd/test-list.md", "error"],
+    ]);
   });
 
   it("keeps `warning` on a later table in the traceability ledger", async () => {
