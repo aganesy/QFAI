@@ -254,6 +254,87 @@ describe("validateCompetitiveReferences", () => {
     await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
   });
 
+  it("ignores a metadata table that follows the registry table", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        ...TABLE_HEADER,
+        ...TABLE_ROWS,
+        "",
+        "### Field Definitions",
+        "",
+        "| Field | Meaning |",
+        "| --- | --- |",
+        "| adopted_points | What is adopted from the reference. |",
+        "| rejected_points | What is deliberately not adopted. |",
+        "",
+      ]),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("counts table rows and reference blocks together", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([...TABLE_HEADER, ...TABLE_ROWS, "", referenceBlock("Notion")]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 4 }));
+    expect(issues).toEqual([]);
+  });
+
+  it("rejects a mandatory value whose placeholder carries Markdown decoration", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        referenceBlock("Linear", { adopted_points: "`TBD`" }),
+        referenceBlock("Stripe", { rejected_points: "**TODO**" }),
+        referenceBlock("Vercel", { local_translation: "*[How adopted points were adapted]*" }),
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(3);
+    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+  });
+
+  it("ends the registry at an indented following heading", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Competitive Reference Registry",
+        "",
+        "  ## Appendix",
+        "",
+        referenceBlock("Linear"),
+        referenceBlock("Stripe"),
+        referenceBlock("Vercel"),
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REFS-MIN"]);
+    expect(issues[0]?.message).toContain("found 0");
+  });
+
   it("rejects the bracketed placeholders shipped by the authoring template", async () => {
     const root = await newTempDir();
     await createPack(root, true);

@@ -11,7 +11,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
-import { maskNonSpecRegions, splitMarkdownRow } from "../../specPackParsers.js";
+import { maskNonSpecRegions, parseAllMarkdownTables } from "../../specPackParsers.js";
 import type { Issue } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
@@ -20,13 +20,26 @@ import { readSafe } from "../utils.js";
 export const DEFAULT_COMPETITIVE_REFS_MIN = 3;
 
 /**
+ * The H2 shape CommonMark accepts: up to three leading spaces, exactly two
+ * `#`, then whitespace. Both the registry heading matcher and the section
+ * terminator below are anchored on it, so the section that opens at an
+ * indented heading also closes at one — reading it off `trim()` at one end and
+ * the raw line at the other let a following section's references leak into the
+ * registry.
+ */
+const H2_PREFIX = String.raw`^ {0,3}##(?!#)`;
+
+/**
  * Registry heading matcher.
  *
  * Published packs decorate the heading (`## Competitive Reference Registry
  * (UI-bearing packs)`), so the trailing qualifier must be tolerated instead of
  * demanding an exact string match.
  */
-const REGISTRY_HEADING_RE = /^##\s+competitive reference registry\b/i;
+const REGISTRY_HEADING_RE = new RegExp(`${H2_PREFIX}\\s+competitive reference registry\\b`, "i");
+
+/** Any H2 — the line at which the registry section ends. */
+const H2_BOUNDARY_RE = new RegExp(`${H2_PREFIX}(?:\\s|$)`);
 
 /**
  * Heading that opens a reference block.
@@ -64,23 +77,44 @@ function competitiveIssue(code: string, message: string, suggestedAction: string
   };
 }
 
+/**
+ * Strip the inline Markdown decoration a value may carry before it is tested
+ * against the placeholder patterns.
+ *
+ * `` `TBD` `` and `**TODO**` render as the same placeholder a bare `TBD` does,
+ * but the raw cell text does not match {@link PLACEHOLDER_RE} — so a registry
+ * whose every mandatory field was a back-ticked `TBD` cleared the count gate.
+ * The normalised form is used for the placeholder decision only; the original
+ * value is what the author sees reported.
+ */
+function stripInlineMarkdown(value: string): string {
+  return value.replace(/[`*_~]/g, "").trim();
+}
+
 function isPopulated(value: string | undefined): boolean {
   const trimmed = value?.trim() ?? "";
+  if (trimmed.length === 0) {
+    return false;
+  }
+  const bare = stripInlineMarkdown(trimmed);
   return (
-    trimmed.length > 0 && !PLACEHOLDER_RE.test(trimmed) && !TEMPLATE_PLACEHOLDER_RE.test(trimmed)
+    bare.length > 0 &&
+    !PLACEHOLDER_RE.test(trimmed) &&
+    !PLACEHOLDER_RE.test(bare) &&
+    !TEMPLATE_PLACEHOLDER_RE.test(trimmed) &&
+    !TEMPLATE_PLACEHOLDER_RE.test(bare)
   );
 }
 
 function extractRegistrySection(content: string): string | null {
   const lines = content.split("\n");
-  const start = lines.findIndex((line) => REGISTRY_HEADING_RE.test(line.trim()));
+  const start = lines.findIndex((line) => REGISTRY_HEADING_RE.test(line));
   if (start === -1) {
     return null;
   }
   let end = lines.length;
   for (let index = start + 1; index < lines.length; index += 1) {
-    const line = lines[index] ?? "";
-    if (/^##\s+/.test(line) && !/^###/.test(line)) {
+    if (H2_BOUNDARY_RE.test(lines[index] ?? "")) {
       end = index;
       break;
     }
@@ -176,38 +210,49 @@ function columnIndexes(header: string[]): Map<string, number> | null {
   return indexes;
 }
 
-/** References written as a markdown table with the three mandatory columns. */
+/**
+ * References written as a markdown table with the three mandatory columns.
+ *
+ * Table boundaries come from {@link parseAllMarkdownTables} rather than from
+ * "every `|` line in the section". A registry table is routinely followed by a
+ * `### Field Definitions` or `### Validation Rules` table, and flattening the
+ * section into one table turned that second table's header and rows into
+ * competitive references missing every mandatory field. Only the body rows of
+ * tables that actually carry the mandatory columns are read.
+ */
 function parseTableReferences(section: string): CompetitiveReference[] {
-  const rows = section
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("|"))
-    .filter((line) => !/^\|[\s:|-]+\|?$/.test(line));
-  const header = rows.shift();
-  if (!header) {
-    return [];
+  const references: CompetitiveReference[] = [];
+  for (const table of parseAllMarkdownTables(section)) {
+    const indexes = columnIndexes(table.headers);
+    if (!indexes) {
+      continue;
+    }
+    table.rows.forEach((cells, position) => {
+      references.push({
+        label: cells[0] ?? `row ${position + 1}`,
+        missingFields: MANDATORY_FIELDS.filter(
+          (field) => !isPopulated(cells[indexes.get(field) ?? -1]),
+        ),
+      });
+    });
   }
-  const indexes = columnIndexes(splitMarkdownRow(header));
-  if (!indexes) {
-    return [];
-  }
-  return rows.map((row, position) => {
-    const cells = splitMarkdownRow(row);
-    return {
-      label: cells[0] ?? `row ${position + 1}`,
-      missingFields: MANDATORY_FIELDS.filter(
-        (field) => !isPopulated(cells[indexes.get(field) ?? -1]),
-      ),
-    };
-  });
+  return references;
 }
 
+/**
+ * Both registry shapes, aggregated.
+ *
+ * The two are not alternatives: a pack published with a table predates the
+ * `### Reference:` playbook, and the natural way to add a fourth reference to
+ * it is to append the block shape the playbook now prescribes. Preferring
+ * blocks whenever one exists discarded the three table rows already there and
+ * reported `found 1`.
+ */
 function parseReferences(section: string | null): CompetitiveReference[] {
   if (!section) {
     return [];
   }
-  const blocks = parseBlockReferences(section);
-  return blocks.length > 0 ? blocks : parseTableReferences(section);
+  return [...parseBlockReferences(section), ...parseTableReferences(section)];
 }
 
 function resolveMinimum(config: QfaiConfig): number {
