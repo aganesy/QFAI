@@ -15,7 +15,7 @@
  * considered progressed.
  */
 
-import { access, mkdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
@@ -516,25 +516,13 @@ export function scaffoldDestPath(
 }
 
 /**
- * Convenience guard reused by the CLI command: does the on-disk file
- * (if any) still match the placeholder shape?
- */
-export async function isFilePlaceholder(filePath: string, tcId: string): Promise<boolean> {
-  try {
-    await access(filePath);
-  } catch {
-    return false;
-  }
-  try {
-    const body = await readFile(filePath, "utf-8");
-    return isStillPlaceholder(body, tcId);
-  } catch {
-    return false;
-  }
-}
-
-/**
  * On-disk form of `isPristineSkeleton` — the predicate the CLI deletes on.
+ *
+ * There is deliberately no on-disk form of `isStillPlaceholder` beside it: the
+ * only caller that ever had one used it to decide a `rm`, and that predicate is
+ * too weak for that decision (see `isPristineSkeleton`). `isStillPlaceholder`
+ * stays for the read-only "has a real test landed?" judgements in
+ * `emitSkeleton` and `D-SCAFFOLD-PLACEHOLDER`.
  *
  * Fails CLOSED: an unreadable or missing file is reported as "not pristine",
  * so a read error can never be the reason a file is removed.
