@@ -189,10 +189,70 @@ describe("qfai-implement checkpoint verification contract", () => {
       // interrupted repair would strand it for every later invocation, so
       // preflight has to be the entry that re-selects it.
       expect(skill).toContain(
-        "**Resume every row left at `refactor`, before any other selection.**",
+        "**Resume every row left at `refactor` — after any named handoff, before any `todo` row.**",
       );
       expect(skill).toContain("This is the only entry that re-selects `refactor`");
       expect(reference).toContain("Preflight step 3");
+    }
+  });
+
+  // Resuming an unrelated `refactor` row ahead of a named handoff runs that
+  // row's full-suite checkpoint against the handoff's deliberate RED, so it
+  // FAILs on an obligation the resumed row does not own.
+  it("keeps a named handoff ahead of the refactor resume", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**A named handoff is processed first.**");
+      expect(skill).toContain(
+        "run Phase Red step 1 on those rows and come back here only once they are terminal",
+      );
+      expect(skill).toContain("FAILs on an obligation the row does not own");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("after any\n  named handoff");
+    }
+  });
+
+  // A T1 coherent group parks every member in `refactor` by design, so an
+  // interrupted run leaves several. Resuming them one by one would review each
+  // separately and break the one-ledger-write group transition.
+  it("resumes interrupted refactor rows by review unit, not row by row", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      // The old premise — "a fresh invocation holds no open T1 group" — is false.
+      expect(skill).not.toContain("no in-flight reviewer round and no open T1 group");
+      expect(skill).toContain(
+        "a T1 group left open, whose members park in `refactor` legally and by design",
+      );
+      expect(skill).toContain("**Resume by review unit, not row by row**");
+      expect(skill).toContain("every member transitioning in the same ledger write");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("as one reopened group when the row is a T1 member of one");
+    }
+  });
+
+  // The stale-PASS rule was scoped to the per-item boundary, so a spec-level
+  // repair could edit reviewed code and still declare completion on the PASSes
+  // that preceded it.
+  it("invalidates reviewer PASSes after a spec-level repair too", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("the stale-PASS rule below binds");
+      expect(reference).toContain("**The spec-level boundary is bound by that rule too.**");
+      expect(reference).toContain(
+        "**every item whose `Test file` or production scope it touched**",
+      );
+      expect(reference).toContain("only then re-run the per-spec command set");
     }
   });
 

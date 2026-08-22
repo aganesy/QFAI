@@ -93,7 +93,9 @@ and nowhere else**, in one branch per boundary:
   **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
   re-run passes would strand the row. Preflight step 3 (`../SKILL.md`, Phase: Stage 0 + Preflight)
   is what resumes it: the next invocation re-enters Phase: Refactor at step 4 for that row — routed
-  blocking reviewers, then the whole set again — before it selects any other row.
+  blocking reviewers, then the whole set again — before it selects any `todo` row, after any
+  named handoff, and as one reopened group when the row is a T1 member of one
+  (`volume-policy.md`).
 - **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
   set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
   obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
@@ -101,7 +103,8 @@ and nowhere else**, in one branch per boundary:
   the drift path (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
   per `#when-drift-is-detected` — STOP, Change Request, owner rerun — and resume on the approved
   reset (`change-request-reset.md`), then work the ledger back to terminal.
-  Spec-level completion is not declared until it passes.
+  Spec-level completion is not declared until it passes, and the stale-PASS rule below binds
+  this repair too.
 
 A partial run is not a pass.
 
@@ -113,6 +116,15 @@ scope it touches — and obtain a fresh PASS **before** re-running the command s
 commands alone would let an item reach `done` carrying code no reviewer ever saw, which the
 skill's own stale-evidence rule forbids. A fix that changes nothing a reviewer judged — re-running
 after a flaky external service, say — needs no re-review; record which case applied.
+
+**The spec-level boundary is bound by that rule too.** Every row is terminal by the time it runs,
+so each carries a `completion-reviewer` / `implementation-reviewer` PASS and an `Evidence`
+revision taken against the pre-fix tree. A spec-level repair that edits test or production code
+makes both stale for **every item whose `Test file` or production scope it touched** — name those
+items, re-submit each to the routed blocking reviewers it affects, refresh its evidence revision
+(`evidence-revision.md`), and only then re-run the per-spec command set. Skipping that declares
+spec-level completion over code no reviewer judged: the same defect the per-item rule forbids, one
+boundary later.
 
 ## Spec-level boundary on an already-complete ledger
 
