@@ -98,10 +98,13 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // and the `it` / `describe` equivalents. They put a `.` where the bare
     // form puts its `(`, so a pattern anchored straight onto the open paren
     // let an unconditionally skipped parameterized suite through unreported.
-    // The trailing character class accepts the tagged-template call form
-    // (`.each` followed by a template literal) as well as the parenthesised
-    // one.
-    pattern: /\b(it|test|describe)\.(todo|skip)\b(?:\.\w+)*\s*[(`]/g,
+    //
+    // The second branch is the tagged-template call (`.each` followed by a
+    // template literal). It demands a **non-empty** chain on purpose: this
+    // validator scans a repo's own test files, where prose routinely names
+    // the construct inside a markdown code span, and accepting a backtick
+    // straight after the bare form reports every such mention as a stub.
+    pattern: /\b(it|test|describe)\.(todo|skip)\b(?:(?:\.\w+)*\s*\(|(?:\.\w+)+\s*`)/g,
     runner: "vitest/jest",
     label: (match) => `${match[1]}.${match[2]}`,
     grade: (match) => (match[2] === "skip" ? SKIPPED_TEST_WARNING : STUB_ERROR),

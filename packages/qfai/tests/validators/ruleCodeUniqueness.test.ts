@@ -63,6 +63,12 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
   ],
   ["validators/requirementsContext.ts", new Map([["code", 1]])],
   ["validators/reviewerJustification.ts", new Map([["code", 1]])],
+  // One `issue()` call serves both stub rules: which one a match belongs to is
+  // a property of the matched construct (`.todo` -> QFAI-TEST-001,
+  // `.skip` -> QFAI-TEST-003), not of the call site. Both codes are declared
+  // as module-level `StubGrade` literals, so `OBJECT_LITERAL_CODE` still
+  // records this module as their sole owner.
+  ["validators/testTodoStubs.ts", new Map([["grade.code", 1]])],
 ]);
 
 /**
@@ -176,6 +182,7 @@ const DYNAMIC_SITE_CODES = new Map<string, readonly string[]>([
       "R-WORKLOG-DRIFT",
     ],
   ],
+  ["validators/testTodoStubs.ts", ["QFAI-TEST-001", "QFAI-TEST-002", "QFAI-TEST-003"]],
 ]);
 
 /** `const NAME = "CODE";` / `export const NAME: string = "CODE";` */

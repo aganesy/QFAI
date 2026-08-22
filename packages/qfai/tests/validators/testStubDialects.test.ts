@@ -265,6 +265,11 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
       {
         "tests/a.test.ts": 'describe("s", () => {\n  it("works", () => {});\n});\n',
         "tests/b.test.ts": "const rest = unit.skip(2);\n",
+        // Prose naming the construct inside a markdown code span. A repo's own
+        // test files are full of these, and `qfai validate` scans them, so a
+        // pattern that accepts a backtick straight after the bare form turns
+        // every mention into a reported stub.
+        "tests/c.test.ts": `// Excludes \`it${SKIP}\` / \`it${TODO}\` — they never run.\n`,
       },
       async (root) => {
         const codes = await stubCodes(root);
