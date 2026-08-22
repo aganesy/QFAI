@@ -25,7 +25,10 @@ import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
-import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
+import {
+  validateReviewArtifacts,
+  type ReviewArtifactsScope,
+} from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
@@ -315,7 +318,7 @@ async function runProfileValidators(
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
       case "discussion":
-        return runDiscussionValidators(root, config);
+        return runDiscussionValidators(root, config, specScope);
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
@@ -345,6 +348,7 @@ async function runSaasPackage(
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  specScope?: SpecScope,
 ): Promise<Issue[]> {
   return [
     ...(await validateDiscussionMermaid(root)),
@@ -356,8 +360,24 @@ async function runDiscussionValidators(
     // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
     // breath. Without this the command it prescribes could not see the
     // artifacts it prescribes, so an incomplete pack passed the gate silently.
-    ...(await validateReviewArtifacts(root)),
+    ...(await validateReviewArtifacts(root, reviewArtifactsScope(root, config, specScope))),
   ];
+}
+
+/**
+ * Scope handed to `validateReviewArtifacts`.
+ *
+ * A review-pack finding names no spec, so `isFindingInSpecScope` keeps it in
+ * every `--spec` run — which would let a sibling worker's half-written pack
+ * fail the slice gate the SDD skill promises is independent of it. The
+ * validator narrows itself instead, by the `target.path` each pack records.
+ */
+function reviewArtifactsScope(
+  root: string,
+  config: ConfigLoadResult["config"],
+  specScope: SpecScope | undefined,
+): ReviewArtifactsScope {
+  return { specScope, specsRoot: resolvePath(root, config, "specsDir") };
 }
 
 async function runSddValidators(
@@ -418,7 +438,9 @@ async function runSddValidators(
     // `rcp_footer.md` states both halves of the review-cycle contract — the
     // mandatory pack files and `qfai validate --profile sdd` as the gate — so
     // the gate has to be able to observe them.
-    ...(includeReviewArtifacts ? await validateReviewArtifacts(root) : []),
+    ...(includeReviewArtifacts
+      ? await validateReviewArtifacts(root, reviewArtifactsScope(root, config, specScope))
+      : []),
   ];
 }
 
@@ -539,7 +561,7 @@ async function runFullValidators(
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await runDiscussionValidators(root, config)),
+    ...(await runDiscussionValidators(root, config, specScope)),
     // Review artifacts come in with the discussion profile above, so the sdd
     // profile opts out rather than reporting every QFAI-REVIEW-* twice.
     ...(await runSddValidators(root, config, true, false, specScope, false)),

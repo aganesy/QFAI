@@ -36,7 +36,9 @@ must be written to a review pack, not left in conversation. There is exactly **o
   so a malformed or missing `summary.json` still passes the implementation gate on its own. Run
   `npx qfai validate --profile verify --fail-on error` (or the default full scan,
   `npx qfai validate --fail-on error`, or `/qfai-verify`, which runs the same profile) to see them
-  alongside everything else.
+  alongside everything else. A `--spec <id>` run judges only the packs whose `summary.json` names
+  that spec in `target.path`; packs it cannot attribute — a sibling worker's, or one whose
+  `summary.json` is not written yet — are left to the unscoped run.
 - A directory under `.qfai/review/` whose name is not `review-<17-digit-timestamp>` is not a pack:
   its contents are never inspected, in any profile. `QFAI-REVIEW-010` (`info`) names each one so
   that a mis-named pack is visible rather than silently uninspected.

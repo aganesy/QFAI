@@ -21,6 +21,8 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 - `target.kind` must be `"discussion"`.
 - `revision_form: "content-hash"` and `revision` are written here too — the state these verdicts
   describe, as a git rev or `working-tree+<content hash>`
-  (`../../qfai-implement/references/evidence-revision.md`). A pack without them fails the repo-wide
-  `/qfai-verify --fail-on error` even where the stage profile passed.
+  (`../../qfai-implement/references/evidence-revision.md`). A pack without them raises
+  `QFAI-REVIEW-007` in this stage's own hard gate
+  (`npx qfai validate --profile discussion --fail-on error`, `rcp_footer.md`) as well as in the
+  repo-wide `/qfai-verify --fail-on error`.
 - Keep rerun history append-only.

@@ -29,8 +29,12 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 - Accepted serialized reviewer statuses are `PASS`, `FAIL`, and `NA`.
 - `revision_form: "content-hash"` and `revision` are written like every other pack producer does:
   the state these verdicts describe, as a git rev or `working-tree+<content hash>`
-  (`../../qfai-implement/references/evidence-revision.md`). A pack written without them fails the
-  repo-wide `/qfai-verify --fail-on error` even where the per-item profile passed.
+  (`../../qfai-implement/references/evidence-revision.md`). A pack written without them raises
+  `QFAI-REVIEW-007` in this stage's own hard gate
+  (`npx qfai validate --profile sdd --fail-on error`, `rcp_footer.md`) as well as in the repo-wide
+  `/qfai-verify --fail-on error`. Adding
+  `--spec <id>` narrows the check to the packs whose `summary.json` names that spec in
+  `target.path`, so a parallel worker never gates on a sibling's in-flight pack.
 
 ## Guardrails
 

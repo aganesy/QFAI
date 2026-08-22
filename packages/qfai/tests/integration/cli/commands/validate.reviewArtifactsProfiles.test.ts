@@ -116,3 +116,24 @@ describe("the profiles whose RCP footer mandates a review pack can see it", () =
     });
   });
 });
+
+describe("a --spec slice gate does not import a sibling worker's in-flight pack", () => {
+  it("drops QFAI-REVIEW-* for packs the scoped spec does not own", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-scope-"));
+    try {
+      await seedEmptyReviewPack(root);
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+
+      await runValidate({ root, strict: false, profile: "sdd", specIds: ["0001"] });
+      const body = JSON.parse(
+        await readFile(path.join(root, ".qfai", "report", "validate.spec-0001.json"), "utf-8"),
+      ) as { issues: Finding[] };
+      const codes = body.issues.map((entry) => entry.code);
+      for (const rule of MANDATED_REVIEW_RULES) {
+        expect(codes).not.toContain(rule);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});

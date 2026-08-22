@@ -218,3 +218,89 @@ describe("validateReviewArtifacts — directories the pack pattern skips", () =>
     expect(codes).not.toContain("QFAI-REVIEW-010");
   });
 });
+
+describe("validateReviewArtifacts — a --spec run judges only its own packs", () => {
+  const specsRoot = (root: string): string => path.join(root, ".qfai", "specs");
+  const scopeFor = (root: string, ...specNumbers: string[]) => ({
+    specScope: new Set(specNumbers),
+    specsRoot: specsRoot(root),
+  });
+
+  it("ignores a sibling worker's pack that has no summary.json yet", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    // The in-flight shape: `review_request.md` written, `summary.json` not yet.
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+
+    const codes = (await validateReviewArtifacts(root, scopeFor(root, "0001"))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).not.toContain("QFAI-REVIEW-004");
+    expect(codes).not.toContain("QFAI-REVIEW-005");
+    // The unscoped gate is where an unattributable pack is still reported.
+    const unscoped = (await validateReviewArtifacts(root)).map((entry) => entry.code);
+    expect(unscoped).toContain("QFAI-REVIEW-004");
+  });
+
+  it("ignores a complete pack that targets another spec", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify(
+        makeV2Summary({ target: { kind: "spec", path: ".qfai/specs/spec-0002" } }),
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const codes = (await validateReviewArtifacts(root, scopeFor(root, "0001"))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).not.toContain("QFAI-REVIEW-003");
+    expect(codes).not.toContain("QFAI-REVIEW-005");
+  });
+
+  it("still judges the pack that names the scoped spec", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify(
+        makeV2Summary({ target: { kind: "spec", path: ".qfai/specs/spec-0001" } }),
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const codes = (await validateReviewArtifacts(root, scopeFor(root, "0001"))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).toContain("QFAI-REVIEW-003");
+    expect(codes).toContain("QFAI-REVIEW-005");
+  });
+
+  it("leaves the tree-wide findings to the unscoped gate", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await mkdir(path.join(root, ".qfai", "review", "2026-04-01-round-1"), { recursive: true });
+
+    const scoped = (await validateReviewArtifacts(root, scopeFor(root, "0001"))).map(
+      (entry) => entry.code,
+    );
+    expect(scoped).not.toContain("QFAI-REVIEW-002");
+    expect(scoped).not.toContain("QFAI-REVIEW-010");
+
+    const unscoped = (await validateReviewArtifacts(root)).map((entry) => entry.code);
+    expect(unscoped).toContain("QFAI-REVIEW-002");
+    expect(unscoped).toContain("QFAI-REVIEW-010");
+  });
+});

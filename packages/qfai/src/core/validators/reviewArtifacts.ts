@@ -3,6 +3,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "../fs/errno.js";
+import { owningSpecNumber, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } from "../gitignore.js";
@@ -25,7 +26,22 @@ const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
  */
 const REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
 
-export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
+/**
+ * What a `--spec` run is allowed to judge here.
+ *
+ * `specScope` is `undefined` for a repo-wide run, which is the whole review
+ * tree. `specsRoot` is the configured absolute `specsDir`, needed to read a
+ * pack's `target.path` as a spec.
+ */
+export type ReviewArtifactsScope = {
+  specScope: SpecScope | undefined;
+  specsRoot: string | undefined;
+};
+
+export async function validateReviewArtifacts(
+  root: string,
+  scope?: ReviewArtifactsScope,
+): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
@@ -98,13 +114,26 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     );
   }
 
-  const { packs: reviewPackDirs, unrecognized } = await listReviewPackDirs(reviewRoot);
+  const { packs, unrecognized } = await listReviewPackDirs(reviewRoot);
+  const specScope = scope?.specScope;
+  const specsRoot = scope?.specsRoot;
+  const isScopedRun = specScope !== undefined && specsRoot !== undefined;
+  const reviewPackDirs =
+    specScope !== undefined && specsRoot !== undefined
+      ? await packsInSpecScope(root, packs, specScope, specsRoot)
+      : packs;
+
+  // Both of the findings below describe `.qfai/review/` as a whole rather than
+  // any one pack, so a `--spec` run — one worker's view of one slice — does not
+  // raise them: "no pack" would only mean "no pack for this spec", and a
+  // mis-named directory is a fact about the tree the unscoped gate owns.
+  //
   // Reported before the presence check, so a tree whose only packs are
   // mis-named still says why nothing was inspected. Silence here was the worse
   // half of the same defect: a directory the pattern skips is never opened, so
   // a pack with no `review_request.md` and no `summary.json` produced no
   // finding in ANY profile — indistinguishable from a pack that is complete.
-  if (unrecognized.length > 0) {
+  if (!isScopedRun && unrecognized.length > 0) {
     issues.push(
       issue(
         "QFAI-REVIEW-010",
@@ -117,6 +146,9 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
         "review pack のディレクトリ名は `review-YYYYMMDDhhmmssSSS`（17桁）のみです。一致しないディレクトリは `review_request.md` / `summary.json` / `Rxx_*.md` の検査対象外となり、欠落があっても検出されません。`review-<timestamp>/` にリネームするか、`.qfai/review/` の外へ移動してください。",
       ),
     );
+  }
+  if (reviewPackDirs.length === 0 && isScopedRun) {
+    return issues;
   }
   if (reviewPackDirs.length === 0) {
     issues.push(
@@ -528,6 +560,60 @@ async function listReviewPackDirs(
     .filter((name) => !REVIEW_PACK_DIR_RE.test(name) && !name.startsWith("."))
     .sort((left, right) => left.localeCompare(right));
   return { packs: packs.map((name) => path.join(reviewRoot, name)), unrecognized };
+}
+
+/**
+ * The packs a `--spec` run is entitled to judge.
+ *
+ * `--spec` exists so that "a parallel worker gates on its own spec only and
+ * does not import a sibling agent's in-flight failures" (`qfai-sdd/SKILL.md`),
+ * and a review-pack finding is repo-level: its path names no spec, so
+ * `isFindingInSpecScope` keeps it in every scope. One sibling that has written
+ * `review_request.md` and not yet `summary.json` would therefore fail every
+ * other worker's slice gate with `QFAI-REVIEW-004`.
+ *
+ * A pack is attributed by the `target.path` it records — the field
+ * `review-artifact-layout.md` requires for exactly this reason, since the
+ * directory name carries only a timestamp. A pack that cannot be attributed at
+ * all (no `summary.json`, unparseable, no `target.path`, or a target outside
+ * the scoped specs) is left to the unscoped gate rather than charged to a slice
+ * that does not own it — which is the in-flight case above.
+ */
+async function packsInSpecScope(
+  root: string,
+  packDirs: readonly string[],
+  specScope: SpecScope,
+  specsRoot: string,
+): Promise<string[]> {
+  const inScope: string[] = [];
+  for (const packDir of packDirs) {
+    const owner = await packOwningSpec(packDir, root, specsRoot);
+    if (owner !== null && specScope.has(owner)) {
+      inScope.push(packDir);
+    }
+  }
+  return inScope;
+}
+
+/** The spec a pack's `summary.json` names, or `null` when it names none. */
+async function packOwningSpec(
+  packDir: string,
+  root: string,
+  specsRoot: string,
+): Promise<string | null> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(path.join(packDir, "summary.json"), "utf-8"));
+  } catch {
+    // Missing, half-written or malformed: unattributable, and the unscoped gate
+    // is where that gets reported.
+    return null;
+  }
+  const targetPath = readString(asRecord(asRecord(parsed)?.target)?.path);
+  if (targetPath === null) {
+    return null;
+  }
+  return owningSpecNumber(targetPath, { root, specsRoot });
 }
 
 async function listReviewerFiles(reviewPackDir: string): Promise<string[]> {
