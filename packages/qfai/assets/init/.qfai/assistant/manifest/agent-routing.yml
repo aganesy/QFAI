@@ -69,6 +69,31 @@ routing:
         parallel_groups: []
         blocking_agents: [delivery-planner]
         rerun_policy: failed-agents-only
+      # The one phase whose exit criterion is that the product *runs*
+      # (`skills/qfai-implement/references/walking-skeleton.md`). It had no
+      # routing entry at all: every other phase here is `per-ledger-item` and
+      # runs after a row is selected, while `SKILL.md`'s Orchestrator Protocol
+      # forbids the orchestrator writing code — so the entrypoint and the smoke
+      # script the phase requires had nobody permitted to author them, and a
+      # mandatory phase stalled on its first project.
+      # `per-invocation`, not `per-ledger-item`: it runs ahead of the rows, once
+      # per declared entrypoint that has no recorded pass.
+      - id: skeleton
+        iteration: per-invocation
+        # All conditional: a spec set with no runnable entrypoint records
+        # `Skeleton: not applicable` and routes nobody. When it does apply, the
+        # production owners author the entrypoint and the smoke script, and
+        # `devops-ci-engineer` owns the start command and the script's place in
+        # `catalog/tech.md#standard-commands-copy-paste`.
+        mandatory_agents: []
+        conditional_agents: [frontend-engineer, backend-engineer, devops-ci-engineer, qa-gatekeeper]
+        parallel_groups: []
+        # The exit criterion is the smoke script's exit status, and the
+        # gatekeeper is the only judge of execution evidence here. A skeleton
+        # whose own author declares that it started is the self-attestation the
+        # `red` gate exists to prevent.
+        blocking_agents: [qa-gatekeeper]
+        rerun_policy: changed-scope-dependents
       # The failing test exists and no production code does. This is the only
       # window in which "watch it fail" is a first-hand observation, so the
       # gatekeeper is mandatory AND blocking here: RED must be confirmed before

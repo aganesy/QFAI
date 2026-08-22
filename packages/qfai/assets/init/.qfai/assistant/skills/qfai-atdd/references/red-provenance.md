@@ -335,6 +335,20 @@ of a single-writer artifact. What the completion gate actually requires is
 which this stage does own
 (`../../qfai-implement/SKILL.md`, spec completion conditions).
 
+## A project whose program does not start yet
+
+Zero rows is not the only thing a fresh project has none of. On a first spec
+there is usually no entrypoint either, so the surface P2-P4 build cannot be
+started, P6 has no runtime evidence to capture, and every acceptance test
+raises a collection error — a **missing seam**, and the seam is the program.
+
+`/qfai-implement` owns that seam: invoke it for `Phase: Skeleton` **alone**,
+before P5, exactly as a branch-1 row's seam-only trip invokes Phase Red step 3a.
+It builds the entrypoint and the committed smoke script, records the run in
+`.qfai/evidence/skeleton.md`, and returns without selecting a row. Waiting for
+stage 6 instead cannot work: stage 6 is downstream of the gates that are
+failing (`../../qfai-implement/references/walking-skeleton.md`).
+
 ## A project without the `red` phase
 
 `npx qfai init --force` regenerates `assistant/skills/**` and

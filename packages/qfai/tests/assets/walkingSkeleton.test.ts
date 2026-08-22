@@ -20,6 +20,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -31,9 +32,28 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const SKELETON = "assistant/skills/qfai-implement/references/walking-skeleton.md";
 const ADMISSIBILITY = "assistant/skills/qfai-implement/references/red-admissibility.md";
+const ROUTING = "assistant/manifest/agent-routing.yml";
+const RED_PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+type Phase = {
+  id?: string;
+  iteration?: string;
+  mandatory_agents?: string[];
+  conditional_agents?: string[];
+  blocking_agents?: string[];
+};
+
+async function implementPhases(tree: string): Promise<Phase[]> {
+  const parsed = parseYaml(await read(tree, ROUTING)) as {
+    routing?: Array<{ skill?: string; phases?: Phase[] }>;
+  };
+  const route = parsed.routing?.find((r) => r.skill === "qfai-implement");
+  expect(route, `${tree} has no qfai-implement route`).toBeDefined();
+  return route?.phases ?? [];
+}
 
 /**
  * Collapse markdown soft wraps so assertions pin wording, not the column at
@@ -46,7 +66,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
     it(`${tree}: the phase exists and is ordered ahead of the first Red`, async () => {
       const skill = await read(tree, SKILL);
 
-      expect(skill).toContain("### Phase: Skeleton (Once Per Project, Before The First Red)");
+      expect(skill).toContain("### Phase: Skeleton (Once Per Entrypoint, Before The First Red)");
       // Ordering is the whole point: a phase placed after Red would be
       // unreachable for the rows that need it.
       const skeletonAt = skill.indexOf("### Phase: Skeleton");
@@ -63,12 +83,93 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
 
       for (const content of [skill, doc]) {
         expect(content).toContain("starts from a declared entrypoint");
-        expect(content).toContain("answered over a **real socket**");
+        // The transport is whatever the entrypoint declares. Pinning it to a
+        // socket left a correct CLI or worker — both inside Applicability, and
+        // both named by the smoke contract — unable to exit the phase at all.
+        expect(content).toContain(
+          "answered over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker",
+        );
         expect(content).toContain("committed smoke script that exits non-zero otherwise");
       }
       // A prose verdict is exactly what the phase replaces.
       expect(doc).toContain('"The skeleton is in place" is not an exit criterion');
       expect(doc).toContain("An already-passing smoke script satisfies the phase");
+      expect(doc).toContain(
+        "a CLI that opens no socket satisfies the criterion over stdio, and a worker over its queue",
+      );
+    });
+
+    it(`${tree}: the unit of execution is one entrypoint, not one project`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      // `catalog/structure.md` records several entrypoints, so "once per
+      // project" verified the first one and let a second service reach Red
+      // having never been started.
+      expect(doc).toContain(
+        "The phase runs once per **declared entrypoint that has no recorded pass**, not once per project",
+      );
+      expect(doc).toContain("catalog/structure.md#key-packages--entrypoints");
+      expect(skill).toContain("The Skeleton phase runs once per **declared entrypoint**");
+      expect(skill).toContain("a queued spec that reaches a new entrypoint runs it for that one");
+    });
+
+    it(`${tree}: the phase evidence has a named home and is re-read`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      // The ledger's `Evidence` cell is a pointer from an existing row, and
+      // this phase runs before any row is selected — so "record it in the
+      // ledger evidence" named no writable location at all.
+      for (const content of [skill, doc]) {
+        expect(content).toContain(".qfai/evidence/skeleton.md");
+      }
+      expect(doc).toContain("One `## <entrypoint>` section per declared entrypoint");
+      expect(doc).toContain("**On every later invocation, read this file first.**");
+    });
+
+    it(`${tree}: the smoke script stops what it started`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("**Stops what it started, on every exit path**");
+      expect(doc).toContain("success, failure and timeout alike");
+      expect(doc).toContain("no child it launched is still running");
+      // Both halves of the damage a leaked process does.
+      expect(doc).toContain("EADDRINUSE");
+      expect(doc).toContain("answers the next cycle's smoke request from the **stale** process");
+    });
+
+    it(`${tree}: the skeleton has a routed owner that is not the orchestrator`, async () => {
+      const phases = await implementPhases(tree);
+      const skeleton = phases.find((p) => p.id === "skeleton");
+
+      // Without a phase of its own, the entrypoint and the smoke script had
+      // nobody permitted to write them: every other phase is per-row and the
+      // orchestrator may not write code.
+      expect(skeleton, "qfai-implement has no `skeleton` routing phase").toBeDefined();
+      expect(skeleton?.iteration).toBe("per-invocation");
+      for (const agent of ["frontend-engineer", "backend-engineer", "devops-ci-engineer"]) {
+        expect(skeleton?.conditional_agents ?? []).toContain(agent);
+      }
+      // The exit criterion is an execution result, so it is judged, not
+      // self-attested.
+      expect(skeleton?.blocking_agents ?? []).toContain("qa-gatekeeper");
+
+      // Ordered ahead of the first per-row phase, like the skill's own text.
+      const ids = phases.map((p) => p.id);
+      expect(ids.indexOf("skeleton")).toBeGreaterThan(-1);
+      expect(ids.indexOf("skeleton")).toBeLessThan(ids.indexOf("red"));
+    });
+
+    it(`${tree}: ATDD can reach the phase before its own runtime gate`, async () => {
+      const provenance = unwrap(await read(tree, RED_PROVENANCE));
+
+      // Stage 5 runs before stage 6, so a fresh project's acceptance tests hit
+      // P5-P7 against a program that does not exist yet.
+      expect(provenance).toContain("## A project whose program does not start yet");
+      expect(provenance).toContain("invoke it for `Phase: Skeleton` **alone**, before P5");
+      expect(provenance).toContain("walking-skeleton.md");
+      expect(unwrap(await read(tree, SKELETON))).toContain("## Reached from `/qfai-atdd`");
     });
 
     it(`${tree}: both bounds that stop it becoming a TDD bypass are blocking`, async () => {
@@ -84,23 +185,43 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(skill).toContain("A predicate authored in this phase is a **blocking** finding");
       expect(doc).toContain("**A predicate authored in this phase is a blocking finding**");
 
-      // Bound 2 — seam debt is visible to the ledger.
-      expect(skill).toContain(
-        "**Write the seam debt back as `todo` rows in the same commit** — also **blocking**",
-      );
+      // Bound 2 — seam debt is visible to the ledger, but written back through
+      // the ledger's owner: a `todo` **row** is upstream SSOT and this skill's
+      // carve-out is the Status / DR-ID / Evidence cells of existing rows, so
+      // adding one here would be the Drift Protocol violation the bound is
+      // supposed to prevent.
+      expect(skill).toContain("**Write the seam debt back in the same commit**");
+      expect(skill).toContain("**through the ledger's owner**");
+      expect(skill).toContain("raise the missing rows as a Change Request for `/qfai-sdd`");
+      expect(skill).toContain("Adding a row here would be drift");
       expect(skill).toContain("The skeleton may be shallow; it may not be invisible to the ledger");
+      expect(doc).toContain("**Written back through the ledger's owner, not into the ledger.**");
+      expect(doc).toContain("constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist");
       expect(doc).toContain("**it may not be invisible to the ledger.**");
+      // And the CR that carries them is the scoped halt, so it does not park
+      // the whole run behind an approval.
+      expect(doc).toContain("**The rest of `Phase: Red` continues**");
     });
 
-    it(`${tree}: the budget halts instead of refining rows`, async () => {
+    it(`${tree}: the budget halts, and classifies before it raises a Change Request`, async () => {
       const skill = unwrap(await read(tree, SKILL));
       const doc = unwrap(await read(tree, SKELETON));
 
-      expect(skill).toContain("**Budget 3 cycles, then halt with a Change Request**");
+      expect(skill).toContain("**Budget 3 cycles, then halt and classify**");
       expect(skill).toContain("deliberately the opposite of the row-level policy");
-      expect(doc).toContain("On the third failure, **halt and raise a Change Request**");
+      expect(doc).toContain("On the third failure, **halt**");
+      expect(doc).toContain("**classify the failure before raising anything**");
       expect(doc).toContain("change-request-reset.md");
       expect(doc).toContain("Do not continue to `Phase: Red`");
+
+      // A port conflict has no upstream artifact to change, so it cannot
+      // produce an approvable CR — and an open CR blocks completion.
+      expect(skill).toContain("the **Change Request is not**");
+      for (const cls of ["**Environment**", "**Code**", "**Steering**", "**Upstream**"]) {
+        expect(doc).toContain(cls);
+      }
+      expect(doc).toContain("Only the last row produces a Change Request");
+      expect(doc).toContain("The halt itself is not conditional on the class");
     });
 
     it(`${tree}: applicability is recorded, never silently skipped`, async () => {
