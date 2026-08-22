@@ -1422,6 +1422,59 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): CRLF is not drift
+  it("TC-0003-0022 (TDD-0022): re-init does not report drift for a CRLF copy of an unedited seed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      // What core.autocrlf=true (or a Windows editor) leaves behind: the same
+      // body, every LF rewritten as CRLF.
+      for (const target of [readmePath, templatePath]) {
+        const body = await readFile(target, "utf-8");
+        await writeFile(target, body.replace(/\n/g, "\r\n"), "utf-8");
+      }
+
+      const crlfRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
+      expect(crlfRun).not.toContain("could not be compared");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): an uncomparable seed path is reported
+  it("TC-0003-0022 (TDD-0022): re-init reports a steering seed path it cannot compare", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022e-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      // A directory where the seed file belongs: occupied, so create-only skips
+      // it, but there is no body to compare — that must not read as "current".
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      await rm(readmePath, { force: true });
+      await mkdir(readmePath, { recursive: true });
+
+      const blockedRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(blockedRun).toContain(
+        ".qfai/steering/README.md could not be compared against the seed this qfai release generates",
+      );
+      expect(blockedRun).toContain("whether it is current is unknown");
+      // The unaffected sibling stays silent, and the run still succeeds.
+      expect(blockedRun).not.toContain(".qfai/steering/_templates/entry.md could not be compared");
+      const dirStat = await lstat(readmePath);
+      expect(dirStat.isDirectory()).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
