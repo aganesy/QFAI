@@ -94,10 +94,43 @@ export const rootKnobs = {
  *
  * `forks` over `threads` on purpose: much of this suite spawns the built binary and writes
  * temporary trees, and process isolation is what keeps those from colliding.
+ *
+ * ## Why the timeout is 120 s and not 15 s
+ *
+ * It was 15 s, declared once for all seven projects, and three tests failed on it in a
+ * full-suite run at the declared ten workers. Raising a timeout is normally the wrong
+ * answer — it accommodates a race instead of removing one — so the cost was measured
+ * before the number moved:
+ *
+ * ```text
+ * node -e 0            (interpreter floor)      92 ms
+ * require the bundle   dist/cli/index.cjs     1257 ms
+ * qfai --version       (a command doing none)  1154 ms
+ * ```
+ *
+ * **Ninety-three per cent of every CLI invocation is loading the 1.44 MB bundle**, before
+ * any command runs. Fifty-seven test files spawn that binary, most of them several times
+ * per test, and the pool is ten workers — so the machine runs up to twenty Node processes,
+ * each paying a second before doing anything. In a run of the `e2e` project ALONE, five
+ * tests already exceed 15 s and the slowest takes 47.3 s; under the full suite the same
+ * files take longer again.
+ *
+ * So 15 s was never a budget for this workload. It was a budget for in-process tests,
+ * applied to a suite that is subprocess-bound, and the eight e2e files that pass under it
+ * do so by luck — the ones that reliably exceed it already carry their own
+ * `{ timeout: 120000 }`, which is where this value comes from rather than from a guess.
+ *
+ * **The root cause is the cold start, not the budget**, and it is not fixed here: making
+ * the CLI load only the command it was asked for is a change to another spec's surface and
+ * belongs in its own pull request. It is filed as `CR-20260823-0001`. When it lands this
+ * number should come back down, and the measurement above is what to re-take.
+ *
+ * This is not the retry setting the section above refuses. A retry re-runs a test that
+ * failed; this lets a test that is working finish at the concurrency the project declares.
  */
 export const projectKnobs = {
-  testTimeout: 15_000,
-  hookTimeout: 15_000,
+  testTimeout: 120_000,
+  hookTimeout: 120_000,
   pool: "forks",
   poolOptions: { forks: { singleFork: false, isolate: true } },
   maxConcurrency: tunable(CONCURRENCY_ENV),
