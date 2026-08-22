@@ -664,6 +664,58 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("treats git's other true spellings of core.symlinks as already enabled", async () => {
+    // Git accepts `yes` / `on` / `1` / a valueless key as true, so a raw string
+    // comparison against "true" would announce a change that is not one and
+    // then rewrite a setting that was already in effect.
+    for (const spelling of ["yes", "on", "1"]) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+      try {
+        await execFile("git", ["init"], { cwd: root });
+        await execFile("git", ["config", "--local", "core.symlinks", spelling], { cwd: root });
+
+        const output = await captureStdout(async () => {
+          await runInit({ dir: root, force: false, dryRun: true, yes: true });
+        });
+
+        expect(output).toContain("git config: core.symlinks already true");
+        expect(output).not.toContain("would set: git config --local core.symlinks true");
+        const { stdout: stored } = await execFile(
+          "git",
+          ["config", "--local", "--get", "core.symlinks"],
+          { cwd: root },
+        );
+        expect(stored.trim()).toBe(spelling);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("discloses the core.symlinks write before the steps that can fail after it", async () => {
+    // The note used to be held back until after the report summary, so any
+    // throw in between (an EPERM from symlink creation on Windows without
+    // Developer Mode, say) lost the disclosure of a change that had already
+    // been persisted outside the working tree.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await execFile("git", ["init"], { cwd: root });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: root });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      const noteIndex = output.indexOf("git config: core.symlinks=true");
+      const summaryIndex = output.indexOf("qfai init:");
+      expect(noteIndex).toBeGreaterThanOrEqual(0);
+      expect(summaryIndex).toBeGreaterThanOrEqual(0);
+      expect(noteIndex).toBeLessThan(summaryIndex);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("still pins core.symlinks locally when only the global config enables it", async () => {
     // The skip decision has to read the same scope the write targets. An
     // unscoped read also sees global/system config, so a `true` inherited from

@@ -141,9 +141,13 @@ export async function runInit(options: InitOptions): Promise<void> {
   });
 
   // git config core.symlinks true（symlink 生成の前提条件）
-  // 唯一のワーキングツリー外への変更なので、報告行を受け取って report() の
-  // 直後に出力する（dry-run でもプレビュー行を出す）。
-  const gitConfigNotes = await configureGitSymlinks(destRoot, options.dryRun);
+  // 唯一のワーキングツリー外への変更なので、書き込み直後にその場で報告する
+  // （dry-run でもプレビュー行を出す）。report() まで保留すると、後続の
+  // syncIntegrationWrappers などが throw した場合（Windows で Developer Mode
+  // が無効なときの EPERM など）に、既に永続化された設定の開示だけが失われる。
+  for (const note of await configureGitSymlinks(destRoot, options.dryRun)) {
+    info(note);
+  }
 
   // symlink ベースの統合生成（旧ラッパー prune + symlink 作成 + README/copilot-instructions 生成）
   const wrappersResult = await syncIntegrationWrappers(assistantAssets, destRoot, {
@@ -209,10 +213,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     "init",
     destRoot,
   );
-
-  for (const note of gitConfigNotes) {
-    info(note);
-  }
 
   for (const note of upgradeResult.preservedNotes) {
     info(note);
@@ -1068,16 +1068,19 @@ async function pathExists(target: string): Promise<boolean> {
  * `subdir`; naming the resolved file in the report makes that visible.
  *
  * The common git dir is what matters, not the per-worktree one: inside a
- * linked worktree `--absolute-git-dir` answers `.git/worktrees/<name>`, which
+ * linked worktree the per-worktree git dir is `.git/worktrees/<name>`, which
  * holds no `config` file at all, while the local-scope write lands in the
- * common `.git/config`. Older git without `--path-format` falls back to the
- * per-worktree answer, which is still correct for a non-worktree checkout.
+ * common `.git/config`. Every fallback therefore stays on `--git-common-dir`
+ * until the option itself runs out: git old enough to lack it is also old
+ * enough to lack linked worktrees, so `--git-dir` is the common dir there.
+ * All three forms may answer relative to `destRoot`, so resolve the answer.
  */
 async function resolveGitConfigPath(destRoot: string): Promise<string | null> {
   const gitDir =
     (await runGitRevParse("git rev-parse --path-format=absolute --git-common-dir", destRoot)) ??
-    (await runGitRevParse("git rev-parse --absolute-git-dir", destRoot));
-  return gitDir === null ? null : path.join(gitDir, "config");
+    (await runGitRevParse("git rev-parse --git-common-dir", destRoot)) ??
+    (await runGitRevParse("git rev-parse --git-dir", destRoot));
+  return gitDir === null ? null : path.join(path.resolve(destRoot, gitDir), "config");
 }
 
 /** Runs one `git rev-parse` form, answering null when it fails or is empty. */
@@ -1097,12 +1100,16 @@ async function runGitRevParse(command: string, destRoot: string): Promise<string
  * no-op. The read is scope-matched to the write: an unscoped read also sees
  * global and system config, so a `true` inherited from there would suppress
  * the local pin and leave the repository dependent on a setting that can be
- * removed outside it.
+ * removed outside it. `--bool` canonicalises the stored spelling, so the
+ * values git itself accepts as true (`yes`, `on`, `1`, a valueless key) are
+ * recognised instead of being rewritten as if they were unset.
  */
 async function gitSymlinksAlreadyEnabled(destRoot: string): Promise<boolean> {
   try {
-    const { stdout } = await execAsync("git config --local --get core.symlinks", { cwd: destRoot });
-    return stdout.trim().toLowerCase() === "true";
+    const { stdout } = await execAsync("git config --local --bool --get core.symlinks", {
+      cwd: destRoot,
+    });
+    return stdout.trim() === "true";
   } catch {
     // Exit 1 = unset. Any other failure is treated the same: write and let the
     // write's own error reporting speak.
