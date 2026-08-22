@@ -14,6 +14,7 @@ import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
 } from "../../core/validators/layerCoverage.js";
+import { TDD_LIST_SEED_SHAPE_CODES } from "../../core/validators/tddList.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -426,16 +427,11 @@ const GATE_GROUP_FAMILIES = {
   // The half of the ledger validator that describes what `/qfai-sdd` Phase 2b
   // wrote. Both `sdd` and `tdd` run it, so it is its own group: folding it into
   // `tdd` would tell an `sdd` reader these codes went unevaluated.
-  "tdd-ledger-seed": [
-    "TDDLIST_TABLE_MISSING",
-    "TDDLIST_REQUIRED_COLUMN_MISSING",
-    "TDDLIST_DUPLICATE_ID",
-    "TDDLIST_INVALID_ID",
-    "TDDLIST_INVALID_STATUS",
-    "TDDLIST_UNKNOWN_LAYER",
-    "TDDLIST_UNKNOWN_LEVEL",
-    "TDDLIST_TC_NOT_COVERED",
-  ],
+  //
+  // Read from the same constant `validateTddListSeedShape` filters on rather
+  // than re-spelled here: a code in one list and absent from the other makes
+  // the notice lie in whichever direction the two drifted.
+  "tdd-ledger-seed": [...TDD_LIST_SEED_SHAPE_CODES],
   // The remaining `TDDLIST_*` codes report execution state that only exists
   // after `/qfai-implement` has driven rows, so only its profile evaluates them.
   tdd: ["TDDLIST_* (execution state)", "QFAI-TEST-001", "QFAI-TRACE-*"],

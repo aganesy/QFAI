@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { isSpecInScope, type SpecScope } from "../specScope.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
@@ -539,12 +540,34 @@ function tcNotCoveredWithoutLedger(
   ];
 }
 
-export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
+/**
+ * Options shared by {@link validateTddList} and {@link validateTddListSeedShape}.
+ */
+export type TddListValidateOptions = {
+  /**
+   * Restricts the walk to the named specs.
+   *
+   * Every finding this validator raises is filed against a path inside the
+   * spec that owns it, so the run-level `--spec` filter already drops the rest
+   * — but only *after* each out-of-scope ledger has been read and each of its
+   * completed rows `stat`-ed. `/qfai-sdd` gates every slice with its own
+   * `--spec` run, so an unscoped walk turns that loop quadratic in spec count.
+   * Narrowing the enumeration keeps the output identical and the I/O linear.
+   */
+  specScope?: SpecScope;
+};
+
+export async function validateTddList(
+  root: string,
+  config: QfaiConfig,
+  options: TddListValidateOptions = {},
+): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   const issues: Issue[] = [];
 
   for (const entry of entries) {
+    if (!isSpecInScope(entry.specNumber, options.specScope)) continue;
     const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
     issues.push(...specIssues);
   }
@@ -570,6 +593,13 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   "TDDLIST_UNKNOWN_LAYER",
   "TDDLIST_UNKNOWN_LEVEL",
   "TDDLIST_TC_NOT_COVERED",
+  // `Owning module` is filled at ledger-authoring time — Phase 2b, from the
+  // TC's parent `BR` (`qfai-implement/references/execution-ledger.md`) — so a
+  // cell naming two modules is damage the seed owns, not execution state.
+  // Leaving it out held the row to the `tdd` profile alone, i.e. the writer
+  // passed its own gate and the reader inherited an `error` it is forbidden to
+  // fix by restructuring the ledger.
+  "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
 ]);
 
 /**
@@ -585,8 +615,12 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
  * execution state the SDD stage has not reached yet — so the writing stage is
  * held to the shape it wrote, and nothing more.
  */
-export async function validateTddListSeedShape(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const issues = await validateTddList(root, config);
+export async function validateTddListSeedShape(
+  root: string,
+  config: QfaiConfig,
+  options: TddListValidateOptions = {},
+): Promise<Issue[]> {
+  const issues = await validateTddList(root, config, options);
   return issues.filter((entry) => TDD_LIST_SEED_SHAPE_CODES.has(entry.code));
 }
 

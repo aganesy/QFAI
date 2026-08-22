@@ -373,7 +373,12 @@ async function runSddValidators(
     // the shape it just wrote. Only the seed-shape half: the rest of
     // `validateTddList` reports execution state that exists after
     // `/qfai-implement`, which the SDD stage cannot clear.
-    ...(includeTddListSeedShape ? await validateTddListSeedShape(root, config) : []),
+    // The scope is passed, not left to the run-level `--spec` filter: every
+    // `/qfai-sdd` slice gate is a `--spec` run, so an unscoped walk would read
+    // and `stat` every sibling ledger once per slice.
+    ...(includeTddListSeedShape
+      ? await validateTddListSeedShape(root, config, specScope ? { specScope } : {})
+      : []),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),
     // The catalog wins over the in-code required-file sets, so a divergence

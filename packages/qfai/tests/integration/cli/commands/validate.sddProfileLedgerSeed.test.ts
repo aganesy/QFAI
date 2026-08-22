@@ -18,6 +18,8 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../../../src/cli/commands/validate.js";
+import { defaultConfig } from "../../../../src/core/config.js";
+import { validateTddListSeedShape } from "../../../../src/core/validators/tddList.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -42,8 +44,8 @@ function ledger(rows: readonly string[]): string {
 }
 
 /** A spec whose single TC is a coverage target, with an optional ledger. */
-async function seedSpec(root: string, testList?: string): Promise<void> {
-  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+async function seedSpec(root: string, testList?: string, specId = "spec-0001"): Promise<void> {
+  const specDir = path.join(root, ".qfai", "specs", specId);
   await mkdir(specDir, { recursive: true });
   for (const [name, body] of [
     ["01_Spec.md", "# 01 Spec\n"],
@@ -105,6 +107,21 @@ describe("--profile sdd observes the ledger seed shape it wrote", () => {
     expect(await codesFor("sdd", ledger([row, row]))).toContain("TDDLIST_DUPLICATE_ID");
   });
 
+  it("raises TDDLIST_OWNING_MODULE_NOT_SINGULAR on a seed-authored seam", async () => {
+    // `Owning module` is filled at Phase 2b from the TC's parent `BR`, so a
+    // cell naming two modules is damage the seed owns — holding it to the
+    // `tdd` profile alone let the writing stage pass its own gate.
+    const seam = [
+      "# TDD Execution Ledger",
+      "",
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | Owning module |",
+      "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------------- |",
+      "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | todo | - | - | src/a.ts, src/b.ts |",
+      "",
+    ].join("\n");
+    expect(await codesFor("sdd", seam)).toContain("TDDLIST_OWNING_MODULE_NOT_SINGULAR");
+  });
+
   it("leaves the execution-state codes to --profile tdd", async () => {
     const done = ledger([
       "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | done | - | - |",
@@ -122,11 +139,45 @@ describe("--profile sdd observes the ledger seed shape it wrote", () => {
   });
 });
 
+describe("the seed-shape walk honours --spec", () => {
+  /**
+   * `/qfai-sdd` gates every slice with its own `--spec` run. The run-level
+   * scope filter would drop a sibling spec's findings anyway, but only after
+   * its ledger had been read and its rows `stat`-ed — quadratic I/O over the
+   * spec count. The scope is therefore applied at enumeration, which this
+   * asserts against the validator directly, below the CLI's finding filter.
+   */
+  it("enumerates only the specs in scope", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-ledger-scope-"));
+    try {
+      await seedSpec(root, undefined, "spec-0001");
+      await seedSpec(root, undefined, "spec-0002");
+      const scoped = await validateTddListSeedShape(root, defaultConfig, {
+        specScope: new Set(["0001"]),
+      });
+      const files = scoped.map((entry) => entry.file ?? "");
+      expect(scoped.map((entry) => entry.code)).toContain("TDDLIST_TC_NOT_COVERED");
+      expect(files.some((file) => file.includes("spec-0002"))).toBe(false);
+      // Unscoped, both specs are still walked.
+      const all = await validateTddListSeedShape(root, defaultConfig);
+      expect(all.map((entry) => entry.file ?? "").some((file) => file.includes("spec-0002"))).toBe(
+        true,
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the partial-profile notice tracks the split", () => {
   it("stops listing the seed-shape codes as unevaluated under sdd", async () => {
     const message = await partialProfileNotice("sdd");
     expect(message).toContain('profile="sdd" is a partial profile');
-    for (const code of ["TDDLIST_TC_NOT_COVERED", "TDDLIST_DUPLICATE_ID"]) {
+    for (const code of [
+      "TDDLIST_TC_NOT_COVERED",
+      "TDDLIST_DUPLICATE_ID",
+      "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+    ]) {
       expect(message).not.toContain(code);
     }
     // The half sdd still does not evaluate stays on the list.
