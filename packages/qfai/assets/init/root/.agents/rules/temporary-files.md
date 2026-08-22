@@ -10,7 +10,11 @@ be placed under the repository-root `tmp/` directory.
    directory.
 2. Use `tmp/` (repository root) as the sole staging area. Create subdirectories
    as needed (e.g. `tmp/build/`, `tmp/notes/`).
-3. Keep `tmp/` listed in `.gitignore` — temporary files must never be committed.
+3. Make sure `tmp/` is ignored by version control before writing anything into
+   it. `npx qfai init` does not add the entry, so on a fresh repository check
+   `.gitignore` and add `/tmp/` yourself if nothing covers it — otherwise the
+   scratch files this rule asks for sit untracked and a `git add .` commits
+   them. Once the entry is there, keep it.
 4. Clean up `tmp/` when the task that created the files is complete.
 5. If a temporary file is found outside `tmp/`, treat it as a defect and move or
    delete it immediately.

@@ -13,18 +13,25 @@ maintain a second hand-written list of shipped paths — the two drift.
 
 ## Forbidden in the Distributed Surface
 
-| Category                      | Why it must not ship                                                                                         |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| Internal spec / ticket IDs    | Meaningless outside this repository; they look like a contract to the consumer.                              |
-| Internal decision / trace IDs | Same — they point at documents the consumer cannot open.                                                     |
-| Internal version markers      | Any version number other than the released package version invents a second, unmaintained versioning scheme. |
-| Internal schema markers       | A private schema field in a shipped artifact becomes a compatibility promise nobody agreed to.               |
-| Absolute local paths          | They leak the author's machine layout and never resolve for the consumer.                                    |
+| Category                      | Why it must not ship                                                                                                          |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Internal spec / ticket IDs    | Meaningless outside this repository; they look like a contract to the consumer.                                               |
+| Internal decision / trace IDs | Same — they point at documents the consumer cannot open.                                                                      |
+| Private version markers       | A version counter this project invented for itself, next to the released one, is a second and unmaintained versioning scheme. |
+| Private schema markers        | A schema field of this project's own making, in a shipped artifact, becomes a compatibility promise nobody agreed to.         |
+| Absolute local paths          | They leak the author's machine layout and never resolve for the consumer.                                                     |
+
+**Version numbers that belong to something else are not covered by this rule
+and must never be stripped.** Dependency ranges and engine constraints in the
+shipped manifest, the language / runtime / tool versions the shipped docs name,
+and the version of a third-party API, protocol or published specification this
+project implements are all legitimate metadata about that other thing. Only a
+version marker this project minted for itself is forbidden.
 
 ## Canonical Version Source
 
-Exactly one version number may appear in shipped files: the released package
-version recorded in the packaging manifest. Do not invent a private
+Exactly one version number _of this project_ may appear in shipped files: the
+released version recorded in the packaging manifest. Do not invent a private
 schema-version counter alongside it. Express a breaking change by raising the
 released version, not by adding a marker.
 
