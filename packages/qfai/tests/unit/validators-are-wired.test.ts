@@ -236,12 +236,26 @@ const VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators");
  */
 const ATDD_GATE_MODULE = path.resolve(VALIDATORS_DIR, "atddCodeTraceability.ts");
 
+/** The exported entry point every `qfai validate` profile runs through. */
+const VALIDATE_ENTRY = "validateProject";
+
 const ATDD_CODE_PATTERN = /^QFAI-ATDD-\d+$/;
 /** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
 const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']/g;
 
 function parse(fileName: string, body: string): ts.SourceFile {
   return ts.createSourceFile(fileName, body, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+}
+
+/** Every string literal in a module, `code` constants included. Comments are not literals. */
+function collectStringLiterals(fileName: string, body: string): string[] {
+  const literals: string[] = [];
+  const visit = (node: ts.Node): void => {
+    if (ts.isStringLiteralLike(node)) literals.push(node.text);
+    ts.forEachChild(node, visit);
+  };
+  visit(parse(fileName, body));
+  return literals;
 }
 
 /**
@@ -304,24 +318,84 @@ function collectExportedValidatorNames(fileName: string, body: string): string[]
   return names;
 }
 
-/**
- * True only for a *call site* — `name(` — never for a mention. This is what
- * separates real wiring from a barrel re-export: `export { validateX } from
- * "./x.js"` and `import { validateX } from "./x.js"` name the symbol but never
- * follow it with `(`, so re-exporting a validator from validators/index.ts can
- * no longer disguise it as invoked.
- */
-function isCalledIn(name: string, text: string): boolean {
-  return new RegExp(String.raw`\b${name}\s*\(`).test(text);
+// ---------------------------------------------------------------------------
+// Function-level call graph
+//
+// Module-level reachability is not wiring. A text (or even AST) hit anywhere in
+// an importable module says nothing about whether that code ever runs: the call
+// may sit in a helper nobody invokes, or in a comment. Reachability is
+// therefore computed over *functions* — who calls whom — rooted at the
+// `validateProject` entry point plus the top level of every module the entry
+// imports (top-level statements do run on import).
+// ---------------------------------------------------------------------------
+
+/** Owner id for statements outside any function; importing the module runs them. */
+function moduleTopLevelOwner(file: string): string {
+  return `#top:${file}`;
+}
+
+function calleeName(expression: ts.Expression): string | undefined {
+  if (ts.isIdentifier(expression)) return expression.text;
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
+  return undefined;
+}
+
+/** `const validateX = async () => {}` / `{ validateX: () => {} }` name their function. */
+function boundName(node: ts.Node): string | undefined {
+  const parent: ts.Node | undefined = node.parent;
+  if (parent === undefined) return undefined;
+  if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
+  if (ts.isPropertyAssignment(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
+  return undefined;
+}
+
+/** Add every `caller -> callee` edge in one module to the shared graph. */
+function collectCallEdges(fileName: string, body: string, edges: Map<string, Set<string>>): void {
+  const walk = (node: ts.Node, owner: string): void => {
+    let nextOwner = owner;
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      nextOwner = node.name.text;
+    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
+      nextOwner = node.name.text;
+    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
+      nextOwner = boundName(node) ?? owner;
+    }
+
+    if (ts.isCallExpression(node)) {
+      const callee = calleeName(node.expression);
+      if (callee !== undefined) {
+        const targets = edges.get(owner) ?? new Set<string>();
+        targets.add(callee);
+        edges.set(owner, targets);
+      }
+    }
+    ts.forEachChild(node, (child) => walk(child, nextOwner));
+  };
+  walk(parse(fileName, body), moduleTopLevelOwner(fileName));
+}
+
+/** Names transitively invoked starting from `roots`. */
+function reachableFrom(edges: ReadonlyMap<string, Set<string>>, roots: string[]): Set<string> {
+  const seen = new Set<string>(roots);
+  const queue = [...roots];
+  while (queue.length > 0) {
+    const current = queue.shift();
+    if (current === undefined) break;
+    for (const callee of edges.get(current) ?? []) {
+      if (seen.has(callee)) continue;
+      seen.add(callee);
+      queue.push(callee);
+    }
+  }
+  return seen;
 }
 
 /**
  * Every module transitively reachable from validate.ts through relative
- * specifiers, keyed by resolved `.ts` path. The barrel (`validators/index.ts`)
- * is traversed like any other module, but because reachability is decided by
- * `isCalledIn` its re-export lines contribute no call sites.
+ * specifiers, keyed by resolved `.ts` path. This is the *file* set the call
+ * graph is built from — it decides which functions exist, not which run.
  */
-async function buildValidateCallGraph(): Promise<Map<string, string>> {
+async function buildImportedModules(): Promise<Map<string, string>> {
   const modules = new Map<string, string>();
   const queue: string[] = [VALIDATE_TS];
   const seen = new Set<string>(queue);
@@ -334,7 +408,7 @@ async function buildValidateCallGraph(): Promise<Map<string, string>> {
       body = await readFile(file, "utf-8");
     } catch {
       // Unresolved specifier (directory index, type-only module) — best-effort
-      // traversal, the guard degrades to "not a call site" for it.
+      // traversal, the guard degrades to "contributes no functions" for it.
       continue;
     }
     modules.set(file, body);
@@ -353,21 +427,15 @@ async function buildValidateCallGraph(): Promise<Map<string, string>> {
   return modules;
 }
 
-/**
- * Is `name` invoked anywhere in the validate.ts call graph other than the
- * module that declares it? Excluding the declaring module keeps its own
- * `export async function name(` header from counting as a call.
- */
-function isInvokedFromCallGraph(
-  name: string,
-  callGraph: ReadonlyMap<string, string>,
-  declaringFile: string,
-): boolean {
-  for (const [file, body] of callGraph) {
-    if (file === declaringFile) continue;
-    if (isCalledIn(name, body)) return true;
+/** Function names that actually run when `qfai validate` executes. */
+async function buildExecutedFunctionNames(): Promise<Set<string>> {
+  const modules = await buildImportedModules();
+  const edges = new Map<string, Set<string>>();
+  for (const [file, body] of modules) {
+    collectCallEdges(file, body, edges);
   }
-  return false;
+  const roots = [VALIDATE_ENTRY, ...[...modules.keys()].map(moduleTopLevelOwner)];
+  return reachableFrom(edges, roots);
 }
 
 type AtddModule = { file: string; codes: string[]; exports: string[] };
@@ -389,14 +457,47 @@ async function collectAtddEmittingModules(): Promise<AtddModule[]> {
 }
 
 describe("meta-test: ATDD validators are reachable from the production graph", () => {
-  it("a barrel re-export is not mistaken for a call site", () => {
-    const barrelOnly =
-      'export { validateAtddSample } from "./atddSample.js";\n' +
-      'import { validateAtddSample } from "./atddSample.js";\n';
-    expect(isCalledIn("validateAtddSample", barrelOnly)).toBe(false);
-    expect(isCalledIn("validateAtddSample", "...(await validateAtddSample(root, config)),")).toBe(
-      true,
+  it("neither a barrel re-export nor a commented-out call is a call site", () => {
+    const edges = new Map<string, Set<string>>();
+    collectCallEdges(
+      "barrel.ts",
+      [
+        'export { validateAtddSample } from "./atddSample.js";',
+        'import { validateAtddSample } from "./atddSample.js";',
+        "async function runAtddValidators() {",
+        "  // return [...(await validateAtddSample(root, config))];",
+        "  return [];",
+        "}",
+      ].join("\n"),
+      edges,
     );
+    expect(reachableFrom(edges, ["runAtddValidators"]).has("validateAtddSample")).toBe(false);
+
+    const live = new Map<string, Set<string>>();
+    collectCallEdges(
+      "live.ts",
+      "async function runAtddValidators() {\n  return [...(await validateAtddSample())];\n}",
+      live,
+    );
+    expect(reachableFrom(live, ["runAtddValidators"]).has("validateAtddSample")).toBe(true);
+  });
+
+  it("a call inside a function nobody invokes is not reachable", () => {
+    const edges = new Map<string, Set<string>>();
+    collectCallEdges(
+      "orphanHelper.ts",
+      [
+        "async function runAtddValidators() {",
+        "  return [];",
+        "}",
+        "async function unusedHelper() {",
+        "  return validateAtddSample();",
+        "}",
+      ].join("\n"),
+      edges,
+    );
+    expect(reachableFrom(edges, ["runAtddValidators"]).has("validateAtddSample")).toBe(false);
+    expect(reachableFrom(edges, ["unusedHelper"]).has("validateAtddSample")).toBe(true);
   });
 
   it("prose that merely names an ATDD code does not make a module an emitter", () => {
@@ -428,9 +529,15 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     );
   });
 
-  it("every exported validator of an ATDD-emitting module is invoked from the validate.ts call graph", async () => {
+  it("every exported validator of an ATDD-emitting module runs when validate does", async () => {
     const modules = await collectAtddEmittingModules();
-    const callGraph = await buildValidateCallGraph();
+    const executed = await buildExecutedFunctionNames();
+
+    expect(
+      executed.has("runAtddValidators"),
+      "runAtddValidators must itself be reachable from validateProject, or the check below " +
+        "measures nothing.",
+    ).toBe(true);
 
     const unwired: string[] = [];
     for (const { file, exports, codes } of modules) {
@@ -442,17 +549,17 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       // Per validator, not per module: a module that co-locates a wired
       // `validateA` with an unwired `validateB` must still fail on B.
       for (const name of exports) {
-        if (!isInvokedFromCallGraph(name, callGraph, file)) unwired.push(`${rel}#${name}`);
+        if (!executed.has(name)) unwired.push(`${rel}#${name}`);
       }
     }
 
     expect(
       unwired,
-      "Each ATDD validator must actually be *called* from the validate.ts call graph " +
-        "(runAtddValidators, or an orchestrator it reaches). Re-exporting it from " +
-        "validators/index.ts is not wiring, and a wired sibling in the same module does not " +
-        "cover it: an uninvoked validator ships issue codes that can never appear in " +
-        "validate.json — exactly the dead-validator state QFAI-ATDD-001 was in.",
+      "Each ATDD validator must be invoked on a path that actually executes — runAtddValidators, " +
+        "or an orchestrator reached from validateProject. Being importable is not wiring: " +
+        "a re-export from validators/index.ts, a commented-out call, and a call inside a helper " +
+        "nobody invokes all leave the validator's issue codes unable to appear in validate.json — " +
+        "exactly the dead-validator state QFAI-ATDD-001 was in.",
     ).toEqual([]);
   });
 
@@ -476,11 +583,16 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
   });
 
   it("QFAI-ATDD-001 stays retired", async () => {
-    const files = await listTsFiles(VALIDATORS_DIR);
+    // Every string literal under src/, not just a quoted hit under validators/:
+    // re-declaring the code as `const ATDD_LEDGER_MISSING = "QFAI-ATDD-001"`
+    // elsewhere and passing the constant to `issue()` would revive the finding
+    // while leaving no matching literal in the validators directory.
+    const files = await listTsFiles(SRC_ROOT);
     const emitters: string[] = [];
     for (const file of files) {
       const body = await readFile(file, "utf-8");
-      if (body.includes('"QFAI-ATDD-001"')) {
+      if (!body.includes("QFAI-ATDD-001")) continue;
+      if (collectStringLiterals(file, body).includes("QFAI-ATDD-001")) {
         emitters.push(path.relative(SRC_ROOT, file));
       }
     }
