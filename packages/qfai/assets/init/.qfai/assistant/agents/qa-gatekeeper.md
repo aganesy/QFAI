@@ -90,7 +90,13 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   show the row's `Selector` **executing and passing**. REVISE when the diff is
   absent, when it touches production source, an expected-value fixture or the
   `Selector` itself, or when the run collected nothing, filtered to zero tests
-  or reports the selector skipped. A build or collection error in the stripped
+  or reports the selector skipped. **REVISE too when the diff removes more
+  than the assertions' verdicts** — emptying the selector's body deletes the
+  call under test with them while touching nothing outside the `Test file`,
+  keeping the `Selector` named and still reporting it passed, so it satisfies
+  every other condition here; require the call under test, its arguments and
+  the control flow before the assertions to be still standing in the diff. A
+  build or collection error in the stripped
   run is a botched strip, not a criterion-4 failure: send it back to be
   re-taken in the compilable form, do not accept the build error as the result.
   **Do not require the selector by name where the runner does not print it on
@@ -102,12 +108,19 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   observed before this field existed cannot produce the run — the production
   code is already in the tree — so `references/round-evidence.md` grandfathers
   it. Accept it **only** on a round that already holds a complete GREEN pair
-  **and** whose `RED revision` is a commit shown to be an ancestor of the
-  commit that added this field; a GREEN pair alone is equally true of a round
-  that took its RED after the update and skipped the strip, and a
+  **and** whose `RED revision` is a commit shown to be a **strict** ancestor
+  of the commit that added this field — `--is-ancestor` holds and the two
+  revisions differ, since a RED taken on the field commit itself was taken on
+  a tree that already carried the field. A GREEN pair alone is equally true of
+  a round that took its RED after the update and skipped the strip, and a
   `working-tree+<content hash>` revision orders against nothing. On a RED
   routed here at phase `red` it is a REVISE: that submission is the moment the
-  stripped run is takeable.
+  stripped run is takeable. Where no such warrant can exist — the project does
+  not track `.qfai`, or the revision is `working-tree+<content hash>` — the
+  row is not stranded and `pre-contract` is still refused: it takes the
+  **evidence-migration round** of `references/round-evidence.md`, which you
+  judge as an ordinary round, with a real RED pair and a real strip and no
+  absence to admit.
 
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite

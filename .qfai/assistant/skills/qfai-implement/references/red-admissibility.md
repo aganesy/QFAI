@@ -113,7 +113,13 @@ prints the same passing output, and the gatekeeper adjudicates after the
 restore. So record it while it exists: the diff of the stripped tree against the
 tree the `RED result` was taken on, limited to the row's `Test file` and the
 test-owned artifacts it reads. A diff that reaches anything else — production
-source, an expected-value fixture, the `Selector` name — is not a strip. The
+source, an expected-value fixture, the `Selector` name — is not a strip.
+**Nor is one that removes more than the assertions' verdicts.** Emptying the
+selector's body takes the call under test out along with them, yet reaches
+nothing outside the `Test file`, leaves the `Selector` named and prints the
+same passing line — so the diff must leave the call under test, its arguments
+and the control flow preceding the assertions standing, exactly as
+**A neutralization that still compiles** requires. The
 recorded output must also show the row's `Selector` **executing and passing**:
 a run that collected nothing, filtered to zero tests or reports the selector
 skipped proves nothing about assertions that never ran, exactly as a load error

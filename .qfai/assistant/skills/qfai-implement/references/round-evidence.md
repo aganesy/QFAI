@@ -40,7 +40,9 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 Round 1 is the original RED/GREEN cycle. Each blocking reviewer `REVISE` that
 requires new production behaviour adds a round. A `REVISE` that needs none
 (naming, duplication, comments) opens no round and is verified by a refreshed
-`Refactor verify` pair instead. Rounds are numbered and repeatable, not appended
+`Refactor verify` pair instead. One further round is opened by no reviewer at
+all — the **evidence-migration round** below, whose trigger is a
+canonical-skills update. Rounds are numbered and repeatable, not appended
 as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
@@ -85,13 +87,26 @@ round willing to write four characters. So the warrant is the round's
 - `<git rev>` is a commit — never `working-tree+<content hash>`. A content hash
   has no position in history, so it cannot show the RED came first.
 - `<field commit>` is the commit that introduced
-  `RED assertion-stripped result` into this project's `.qfai` tree, from
-  `git log --diff-filter=A -S'RED assertion-stripped result' -- <this file>`.
-  `git merge-base --is-ancestor <git rev> <field commit>` must hold: that, and
-  only that, is the "before" this value asserts.
+  `RED assertion-stripped result` into this project's `.qfai` tree — the
+  **oldest** commit that changed its occurrence count in this file:
+  `git log --reverse --format=%H -S'RED assertion-stripped result' -- <this file>`,
+  first line. **Do not filter that log to added files.** A project that
+  already had a `.qfai` tree receives the field as a _modification_ of this
+  file, so `--diff-filter=A` matches nothing there and would make
+  `pre-contract` unavailable on every project that was ever updated rather
+  than initialized after the field.
+- The ancestry must be **strict**: `<git rev>` is an ancestor of
+  `<field commit>` **and** the two revisions differ —
+  `git merge-base --is-ancestor <git rev> <field commit>` plus
+  `<git rev> != <field commit>`. `--is-ancestor` alone also holds when the RED
+  was taken **on** `<field commit>`, a tree that already carries the field and
+  on which the stripped run was therefore takeable. That, and only that, is
+  the "before" this value asserts.
 - Where the project does not track `.qfai`, there is no such commit and
   `pre-contract` is **unavailable** — nothing in the tree orders the RED
-  against the update.
+  against the update. So is a round whose `RED revision` is
+  `working-tree+<content hash>`. Neither is stranded by that: both take the
+  **evidence-migration round** below.
 - The round must already hold a complete GREEN pair. A round still at RED can
   take the stripped run now and therefore must — so `pre-contract` on a RED
   being submitted for `red`-phase review is a REVISE, whatever the row's
@@ -102,6 +117,32 @@ REVISE. The way back is a fresh observation, not a weaker warrant: the rework
 opens round N+1, whose RED and stripped run are both taken on its own tree. It
 grandfathers an observation that has already happened; it is not a value a
 round may choose.
+
+## The evidence-migration round
+
+`pre-contract` being unavailable does not make the row unfinishable, and no
+reviewer `REVISE` is needed to reopen it. A round whose warrant cannot exist —
+the project does not track `.qfai`, or the round's `RED revision` is
+`working-tree+<content hash>` — opens one **evidence-migration round**, the
+only round whose trigger is the canonical-skills update itself rather than a
+finding:
+
+1. Take the row's production behaviour back out of the tree: check out the
+   parent of the commit that made the row GREEN, or revert the row's own
+   production change on a scratch tree. The row's `Test file` stays as it is,
+   so the failure is the row's assertions again.
+2. Observe the RED there and take its stripped run on that same tree, both
+   exactly as `red-admissibility.md` requires, and record that tree as this
+   round's `RED revision`.
+3. Restore the production code and re-run to take this round's GREEN pair.
+4. Record the trigger on `Round N: reviewer verdict` as "evidence migration —
+   `RED assertion-stripped result` added by the canonical-skills update; round
+   N-1 could not warrant `pre-contract`".
+
+It needs no gate of its own and is no bypass: it costs a real RED observation
+and a real stripped run, which is the whole of what the field asks for. So
+`pre-contract` is **not** available on a migration round — the round exists to
+produce the very run it would excuse — and a row takes at most one per field.
 
 ## Where the rounds happen
 

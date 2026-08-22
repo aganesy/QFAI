@@ -125,6 +125,21 @@ describe.each(TREES)("%s", (tree) => {
     const gate = await read(tree, GATEKEEPER);
     expect(gate).toContain("**Judge the strip, not only its exit code.**");
     expect(gate).toContain("REVISE when the diff is absent, when it touches production source");
+    // Emptying the selector's body reaches nothing outside the `Test file`,
+    // keeps the `Selector` named and still reports it passing, so every
+    // condition phrased as "what the diff may reach" admits it.
+    expect(doc).toContain("**Nor is one that removes more than the assertions' verdicts.**");
+    expect(doc).toContain(
+      "the diff must leave the call under test, its arguments and the control flow " +
+        "preceding the assertions standing",
+    );
+    expect(gate).toContain(
+      "**REVISE too when the diff removes more than the assertions' verdicts**",
+    );
+    expect(gate).toContain(
+      "require the call under test, its arguments and the control flow before the " +
+        "assertions to be still standing in the diff",
+    );
     expect(gate).toContain(
       "**Do not require the selector by name where the runner does not print it on success**",
     );
@@ -185,15 +200,55 @@ describe.each(TREES)("%s", (tree) => {
       "`<git rev>` is a commit — never `working-tree+<content hash>`. A content hash has no " +
         "position in history, so it cannot show the RED came first.",
     );
-    expect(doc).toContain("`git merge-base --is-ancestor <git rev> <field commit>` must hold");
+    // Strict ancestry: `--is-ancestor` alone is also true when the RED was
+    // taken *on* the field commit — a tree that already carried the field, so
+    // the stripped run was takeable there.
+    expect(doc).toContain("The ancestry must be **strict**");
+    expect(doc).toContain(
+      "`git merge-base --is-ancestor <git rev> <field commit>` plus `<git rev> != <field commit>`",
+    );
     // And there has to be a stated way back, or the tightening strands a row.
     expect(doc).toContain(
       "The way back is a fresh observation, not a weaker warrant: the rework opens round N+1",
     );
     const gate = await read(tree, GATEKEEPER);
     expect(gate).toContain(
-      "**and** whose `RED revision` is a commit shown to be an ancestor of the commit that " +
-        "added this field",
+      "**and** whose `RED revision` is a commit shown to be a **strict** ancestor of the " +
+        "commit that added this field",
+    );
+  });
+
+  it("finds the field commit on a project that was updated, not initialized", async () => {
+    // An existing project receives the field as a *modification* of the
+    // reference file, so `--diff-filter=A` matches no commit there and
+    // `pre-contract` would be unavailable on every updated project.
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).not.toContain("git log --diff-filter=A");
+    expect(doc).toContain(
+      "`git log --reverse --format=%H -S'RED assertion-stripped result' -- <this file>`",
+    );
+    expect(doc).toContain("**Do not filter that log to added files.**");
+  });
+
+  it("gives an unwarrantable round a migration path instead of a dead end", async () => {
+    // Where the project does not track `.qfai`, or the round's RED revision is
+    // `working-tree+<content hash>`, no warrant can exist — and "What opens a
+    // round" lets only a REVISE needing new production behaviour open the next
+    // round, so a missing strip trail alone could open none.
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).toContain("## The evidence-migration round");
+    expect(doc).toContain("One further round is opened by no reviewer at all");
+    expect(doc).toContain(
+      "Neither is stranded by that: both take the **evidence-migration round**",
+    );
+    // It re-takes the RED on a tree the production behaviour is out of, so it
+    // produces the field rather than excusing it.
+    expect(doc).toContain("check out the parent of the commit that made the row GREEN");
+    expect(doc).toContain("`pre-contract` is **not** available on a migration round");
+    const gate = await read(tree, GATEKEEPER);
+    expect(gate).toContain(
+      "the row is not stranded and `pre-contract` is still refused: it takes the " +
+        "**evidence-migration round**",
     );
   });
 
