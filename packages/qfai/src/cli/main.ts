@@ -270,6 +270,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
+      // 未知のトップレベルコマンドも usage エラー。usage() の "Exit codes"
+      // 表と一致させ、CLI を自動実行するスクリプトがコマンド名の誤記を
+      // 成功 (0) と誤判定しないようにする。
+      process.exitCode = options.invalidExitCode;
       return;
   }
 }
@@ -342,10 +346,15 @@ Options:
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
   -h, --help      ヘルプ表示
 
-Exit codes:
-  0  成功
-  1  gate 失敗（validate/report/guardrails などの検査が不合格）
-  2  usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
+Exit codes（全コマンド共通）:
+  0   成功
+  1   gate 失敗（validate/report/guardrails などの検査が不合格）
+  2   usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
+
+  prototyping 系は canonical exit-code matrix に従い、上記に加えて次を返す:
+  64  iterate: 収束して停止（正常終了） / certify: review.json coverage 不足
+  65  iterate: 反復上限に到達して停止
+  66  iterate: license 検証に失敗して停止
 `;
 }
 

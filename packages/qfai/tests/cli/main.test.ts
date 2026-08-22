@@ -56,6 +56,19 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
+  it("sets exitCode=2 for an unknown top-level command", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(["typo"], cwd);
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
   it("sets exitCode=2 when guardrails args are invalid", async () => {
     const cwd = process.cwd();
 
