@@ -25,14 +25,14 @@ const DEFERRAL_MARKERS: readonly RegExp[] = [
   /scheduled for v\d+\.\d+\.\d+/i,
 ];
 
-async function collectMarkdownFiles(dir: string): Promise<string[]> {
+async function collectFiles(dir: string, extension: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const files: string[] = [];
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      files.push(...(await collectMarkdownFiles(full)));
-    } else if (entry.isFile() && entry.name.endsWith(".md")) {
+      files.push(...(await collectFiles(full, extension)));
+    } else if (entry.isFile() && entry.name.endsWith(extension)) {
       files.push(full);
     }
   }
@@ -41,7 +41,7 @@ async function collectMarkdownFiles(dir: string): Promise<string[]> {
 
 describe("CLI contracts do not defer behaviour to a version number", () => {
   it("no contract carries a version-pinned deferral note", async () => {
-    const files = await collectMarkdownFiles(CONTRACTS_DIR);
+    const files = await collectFiles(CONTRACTS_DIR, ".md");
     expect(files.length).toBeGreaterThan(0);
 
     const offenders: string[] = [];
@@ -96,5 +96,74 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
     // statement; covered behaviourally by tests/cli/init.test.ts
     // ("leaves non-top-level migrations segments in catalog/").
     expect(source).toMatch(/return \{ layer: "catalog", subpath: posix \};/);
+  });
+
+  // The `catalog/` fallback only reaches files the helper actually walks, and
+  // the pre-recut `manifest/` surface is deliberately not one of them (its path
+  // is unchanged by the recut). A contract that promises "any legacy path" is
+  // wrong for exactly the surface whose rationale it quotes.
+  it("scopes the relocation to the surfaces runUpgradeAssistantTree walks", async () => {
+    const contract = await readFile(contractPath, "utf-8");
+    const source = await readFile(initSourcePath, "utf-8");
+
+    expect(contract).toMatch(/`\.qfai\/assistant\/manifest\/\*` is \*\*not\*\* walked/);
+    expect(source).toMatch(
+      /const legacySurfaces: Array<\{ name: "steering" \| "instructions"; dir: string \}>/,
+    );
+  });
+
+  // `report` prints copies as a count and enumerates paths only for skipped /
+  // removed, so a contract cannot send the operator to a "copied-path list".
+  it("does not point the operator at a copied-path list the run never prints", async () => {
+    const contract = await readFile(contractPath, "utf-8");
+    const source = await readFile(initSourcePath, "utf-8");
+
+    expect(contract).not.toMatch(/copied-path list/);
+    expect(contract).toMatch(/git status --short \.qfai\/assistant\//);
+
+    expect(source).toMatch(/info\(`\s+created: \$\{copied\.length\}`\)/);
+    expect(source).not.toMatch(/copied paths:/);
+  });
+
+  // `--upgrade-assistant-tree` falls through into the ordinary init flow, which
+  // rewrites the managed `.gitignore` block in place and (with `--force`, which
+  // is not rejected alongside it) regenerates and deletes files. The contract
+  // must scope "additive" to the migration step rather than to the invocation.
+  it("separates the additive migration step from the init flow that follows it", async () => {
+    const contract = await readFile(contractPath, "utf-8");
+    const source = await readFile(initSourcePath, "utf-8");
+
+    expect(contract).toMatch(/`ensureRootGitignoreEntries`/);
+    expect(contract).toMatch(/`--force` is not rejected alongside `--upgrade-assistant-tree`/);
+
+    // The non-additive step the contract now names really is on this path.
+    expect(source).toMatch(/await ensureRootGitignoreEntries\(destRoot, options\.dryRun\)/);
+  });
+});
+
+/**
+ * A finding code documented with no emitter is the same failure mode as a
+ * version-pinned deferral: the contract promises behaviour, nothing produces
+ * it, and no mechanism notices. `E-WORKLOG-SECRET` sat in the delta table as a
+ * security hard block that no validator raises, so the table is now checked
+ * against the source that would have to emit each code.
+ */
+describe("qfai-validate.md documents only finding codes the source can emit", () => {
+  it("every code in the delta table appears somewhere under src/", async () => {
+    const contract = await readFile(path.join(CONTRACTS_DIR, "cli", "qfai-validate.md"), "utf-8");
+    const section = contract.split("## New finding codes (this delta)")[1] ?? "";
+    const table = section.split(/^## /m)[0] ?? "";
+
+    const codes = [...table.matchAll(/^\|\s*`([A-Z]-[A-Z0-9-]+)`/gm)]
+      .map((match) => match[1] ?? "")
+      .filter((code) => code.length > 0);
+    expect(codes.length).toBeGreaterThan(5);
+
+    const sourceFiles = await collectFiles(path.join(ROOT, "packages", "qfai", "src"), ".ts");
+    const bodies = await Promise.all(sourceFiles.map((file) => readFile(file, "utf-8")));
+    const haystack = bodies.join("\n");
+
+    const orphans = codes.filter((code) => !haystack.includes(code));
+    expect(orphans).toEqual([]);
   });
 });
