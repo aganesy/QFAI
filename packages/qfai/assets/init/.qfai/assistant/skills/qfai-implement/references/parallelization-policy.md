@@ -170,7 +170,8 @@ So:
 - Each worker returns, per item it processed: `TDD-ID`, final `Status`, its
   `DR-ID` where the item's status requires one, and the `Evidence` payload
   carrying **every** field of
-  `SKILL.md#per-item-evidence-contract-fresh-evidence-required`. That contract is
+  `../SKILL.md#per-item-evidence-contract-fresh-evidence-required` — the parent
+  directory, because this file lives in `references/`. That contract is
   the only statement of the field list — `Status` and `DR-ID` are ledger cells
   rather than contract fields, which is why they are named here and the fields
   are not. Do not restate the list in this file: an enumeration maintained in two
@@ -193,14 +194,30 @@ unchanged. Two consequences are specific to dispatch:
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
   the missing fields first, and the row stays out of `done` until it has them.
-- Two contract fields are **not** obtainable that way, so the worker takes them
-  before the revert, in its own worktree, and returns them with the block.
-  `Falsifiability revision` addresses the mutated tree that Phase Red step 3c
-  destroys when it reverts, and `Oracle proof` is a production mutation run —
-  the orchestrator may not write code, and the slice's worktree is gone once it
-  has merged, so neither is reachable from the trunk afterwards. A block missing
-  either one sends the row back to the worker that produced it, not to the
-  orchestrator's recovery path.
+- Some contract fields are **not** obtainable that way. Each names a tree that
+  no longer exists after the merge, so the worker takes it while that tree is
+  still there — before the revert, in its own worktree — and returns it with the
+  block. **Which one is required is decided by the row's branch**: demanding the
+  other branch's field rejects a conforming block just as surely as accepting a
+  missing one lets an unprovable row through.
+  - A row **with a RED pair** returns `RED revision` in every round block. A RED
+    is observed before the code that makes it pass exists, so on an uncommitted
+    tree Phase Green moves the content address by construction and the merged
+    trunk no longer holds the tree the RED named. This is the ordinary
+    `observed-red` row, not a special case (`evidence-revision.md`).
+  - A **`falsifiability`** row returns `Falsifiability revision` **in place of**
+    it: its observation is the mutation run that Phase Red step 3c reverts. An
+    `observed-red` row has no such field, so requiring it there sends back a row
+    that is already complete.
+  - `Oracle proof` is a production mutation run, and the orchestrator may not
+    write code, so it cannot be re-taken from the trunk once the slice's
+    worktree is gone. The exception is the same one the contract states: a row
+    on the _RED not observable_ path satisfies `Oracle proof` with its
+    falsifiability fields, so no separate entry is owed there
+    (`oracle-strength.md`).
+
+  A block missing the field **its own branch** requires goes back to the worker
+  that produced it, not to the orchestrator's recovery path.
 
 ## Failed integration verify
 

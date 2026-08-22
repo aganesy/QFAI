@@ -85,21 +85,35 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // carry **every** one, so a conforming worker returned a block the very
     // next bullet rejects at gate item 10.
     const policy = await read(tree, POLICY);
-    expect(policy).toContain("`SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
+    // The pointer resolves from `references/`, so it must name the parent
+    // directory: a bare `SKILL.md` here points at a file that does not exist.
+    expect(policy).toContain("`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
     expect(policy).not.toContain("RED command and result, GREEN command and result");
     expect(policy).toContain("Item 10 of the 12-point gate");
     expect(policy).not.toContain("11-point gate");
   });
 
   it("makes the worker take the fields the orchestrator cannot recover", async () => {
-    // `Falsifiability revision` addresses a tree Phase Red step 3c reverts and
-    // `Oracle proof` is a production mutation run — neither is reachable from
-    // the trunk after the slice merged, so "obtains the missing fields first"
-    // is not a remedy for them.
+    // Each of these names a tree that is gone after the merge, so "obtains the
+    // missing fields first" is not a remedy for any of them.
     const policy = await read(tree, POLICY);
+    expect(policy).toContain("`RED revision` in every round block");
     expect(policy).toContain("`Falsifiability revision`");
     expect(policy).toContain("`Oracle proof`");
     expect(policy).toContain("before the revert, in its own worktree");
+  });
+
+  it("requires the revision field the row's own branch defines, not both", async () => {
+    // `Falsifiability revision` is a `falsifiability`-row field and
+    // `Oracle proof` is satisfied by the falsifiability fields on the _RED not
+    // observable_ path, so demanding either unconditionally sends a conforming
+    // block back to the worker.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("decided by the row's branch");
+    expect(policy).toContain("`Falsifiability revision` **in place of**");
+    expect(policy).toContain("`observed-red` row has no such field");
+    expect(policy).toMatch(/satisfies `Oracle proof` with its\s+falsifiability fields/);
+    expect(policy).toContain("A block missing the field **its own branch** requires");
   });
 
   it("reconciles the merged ledger before integration verify, and fails on a stale row", async () => {

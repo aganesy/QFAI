@@ -137,15 +137,26 @@ describe("qfai-implement states one parallelization policy", () => {
       for (const cell of ["`TDD-ID`", "final `Status`", "`DR-ID`"]) {
         expect(section).toContain(cell);
       }
-      expect(section).toContain("`SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
+      expect(section).toContain("`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`");
       expect(section).not.toContain("RED command and result");
       expect(section).not.toContain("Refactor verify command and result");
       expect(section).toContain("A block missing any contract field does not satisfy item 10");
     });
 
-    it(`${tree}: the cited contract anchor resolves in SKILL.md`, async () => {
-      // A pointer is only better than a copy while it lands somewhere.
-      const skill = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+    it(`${tree}: the cited contract pointer resolves from the policy's own directory`, async () => {
+      // A pointer is only better than a copy while it lands somewhere. Resolve
+      // it the way a worker would — relative to `references/` — rather than
+      // reading a separately known path and calling that a check.
+      const raw = await policy(tree);
+      const cited = /`([^`]*SKILL\.md)#per-item-evidence-contract-fresh-evidence-required`/.exec(
+        raw,
+      );
+      expect(cited).not.toBeNull();
+      const target = path.resolve(
+        path.dirname(path.join(repoRoot, tree, REFERENCE)),
+        cited?.[1] ?? "",
+      );
+      const skill = await readFile(target, "utf-8");
       expect(skill).toContain("### Per-item evidence contract (fresh evidence required)");
     });
   }
