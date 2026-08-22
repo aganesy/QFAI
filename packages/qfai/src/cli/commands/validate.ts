@@ -767,7 +767,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-DPACK-010":
     "Legacy discussion naming is deprecated; canonical naming should be used for new outputs.",
   "QFAI-IMPLITE-001":
-    "A project that has spec packs also has a traceable input source: a `.qfai/discussion/discussion-*/06_REQ.md`, or an `.qfai/evidence/import-lite-*.md`.",
+    "A project that has spec packs also has a traceable input source: a `discussion-*/06_REQ.md` under the configured discussion directory, or an `.qfai/evidence/import-lite-*.md`.",
   "QFAI-HYG-001": "Legacy directory aliases are forbidden and must be migrated to canonical names.",
   "QFAI-HYG-002": "Template/sample artifacts should not remain under `.qfai/specs/**`.",
   "QFAI-REVIEW-001":

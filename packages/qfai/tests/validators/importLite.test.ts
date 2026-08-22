@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { resolveIssueExpected, runValidate } from "../../src/cli/commands/validate.js";
 import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import { findImportLiteEvidence } from "../../src/core/preflight/importLiteEvidence.js";
 import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateImportLiteEvidencePresence } from "../../src/core/validators/importLite.js";
@@ -201,6 +202,54 @@ describe("QFAI-IMPLITE-001 input-source shape", () => {
     await seedEvidence(root, "import-lite-20260401000000000.md");
     expect(await run(root)).toEqual([]);
   });
+
+  // A REQ index inside a legacy or misnamed pack is still something the specs
+  // can be traced back to; it is an input source to REPAIR (`QFAI-DPACK-005` /
+  // `QFAI-DPACK-006`), not one that is absent. Reporting "no input source" here
+  // too would offer remedies that are not the rename those rules want.
+  it("accepts a 06_REQ.md inside a legacy discussion pack", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    const legacyPack = path.join(root, ".qfai", "discussion", "discussion-0001");
+    await mkdir(legacyPack, { recursive: true });
+    await writeFile(path.join(legacyPack, "06_REQ.md"), "# REQ\n", "utf-8");
+    expect(await run(root)).toEqual([]);
+  });
+
+  // The check inspects the CONFIGURED discussion directory, so a remedy naming
+  // the default sent a relocated project to a path the validator never looks
+  // at: creating the file it printed did not clear the warning.
+  it("names the configured discussion directory in the remedy", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      ["paths:", "  discussionDir: requirements/discussion", ""].join("\n"),
+      "utf-8",
+    );
+    const [found] = await run(root);
+    expect(found?.suggested_action).toContain("requirements/discussion/discussion-*/06_REQ.md");
+    expect(found?.suggested_action).not.toContain(".qfai/discussion/");
+  });
+});
+
+describe("import-lite evidence filenames", () => {
+  // `isFile()` succeeds for a real entry whose name carries surrounding
+  // whitespace, but trimming it for the match and then joining the trimmed form
+  // returned a path that does not exist: the validator and the full/verify gate
+  // passed the project while the preflight summary pointed at an unreadable
+  // file.
+  it("returns the real filename when it carries surrounding whitespace", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, " import-lite.md");
+
+    const selected = await findImportLiteEvidence(root);
+
+    expect(selected).not.toBeNull();
+    expect(path.basename(selected ?? "")).toBe(" import-lite.md");
+    await expect(readFile(selected ?? "", "utf-8")).resolves.toContain("import-lite");
+  });
 });
 
 describe("runSddPreflight import-lite entrypoint", () => {
@@ -291,6 +340,44 @@ describe("import-lite entrypoint eligibility", () => {
 
     expect(result.status).toBe("blocked");
     expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+  });
+
+  // `collectSpecEntries` returns an entry for an unknown or empty spec
+  // directory too, so it could keep the missing-fileset diagnostics
+  // deterministic. Counting entries therefore did not mean "specs exist": an
+  // empty directory plus an evidence file flipped a brand-new project to
+  // `ready` and suppressed `QFAI-DPACK-001` with it.
+  it("does not apply when the only spec directory is empty", async () => {
+    const root = await newRoot();
+    await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.source).toBe("discussion-pack");
+
+    const validated = await validateProject(root, undefined, { profile: "full" });
+    expect(validated.issues.map((found) => found.code)).toContain("QFAI-DPACK-001");
+  });
+
+  // `findPacks` swallows every error and returns `[]`, which reads exactly like
+  // "no pack at all". A discussion path that exists but cannot be enumerated is
+  // an uninspectable input source, not an absent one, so the fallback must not
+  // declare the project ready over it.
+  it("does not apply when the discussion directory cannot be enumerated", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    // A plain file where the directory belongs: `readdir` fails with ENOTDIR,
+    // which is an enumeration failure rather than ENOENT, on every platform.
+    await writeFile(path.join(root, ".qfai", "discussion"), "not a directory\n", "utf-8");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.source).toBe("discussion-pack");
   });
 
   // The shipped template is a pointer artifact, explicitly "not

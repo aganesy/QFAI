@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { findPacks } from "../packLocator.js";
-import { findImportLiteEvidence } from "../preflight/importLiteEvidence.js";
+import { toRelativePath } from "../paths.js";
+import {
+  IMPORT_LITE_EVIDENCE_DIR_REL,
+  findImportLiteEvidence,
+} from "../preflight/importLiteEvidence.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -39,20 +43,32 @@ export async function validateImportLiteEvidencePresence(
       "change",
       [
         "次のいずれかを実施してください:",
-        "- `.qfai/discussion/discussion-*/06_REQ.md` を用意する",
-        "- `.qfai/evidence/import-lite-<ts>.md` を生成する",
+        // The discussion root is configurable (`paths.discussionDir`), and the
+        // check above inspects the configured one. Naming the default here sent
+        // a relocated project to a path the validator never looks at, so
+        // following the remedy left the warning standing. Evidence, by
+        // contrast, is canonical by design — see IMPORT_LITE_EVIDENCE_DIR_REL.
+        `- \`${toRelativePath(root, discussionRoot)}/discussion-*/06_REQ.md\` を用意する`,
+        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<ts>.md\` を生成する`,
       ].join("\n"),
     ),
   ];
 }
 
 /**
- * The catalogue requires the REQ index at `discussion-<ts>/06_REQ.md`, so the
- * input source must be a `06_REQ.md` sitting directly inside a discussion pack
- * directory. Matching on the basename anywhere under `discussionDir`
+ * The input source must be a `06_REQ.md` sitting directly inside a discussion
+ * pack directory. Matching on the basename anywhere under `discussionDir`
  * accepted a parked copy (`archive/06_REQ.md`) or a loose file at the
  * discussion root, both of which cleared the warning without the project
  * having the input source the catalogue asks for.
+ *
+ * Every directory `findPacks` recognises counts, canonical or not. This rule
+ * asks whether the specs can be traced back to something, and a REQ index
+ * inside a legacy (`discussion-NNNN`) or misnamed pack is such a thing — it is
+ * an input source that has to be REPAIRED, which is what `QFAI-DPACK-005` /
+ * `QFAI-DPACK-006` are for. Firing this warning as well would report "no input
+ * source" about a project that has one, and its remedies (author a REQ,
+ * write evidence) are not the rename those rules actually want.
  */
 async function hasDiscussionPackReq(discussionRoot: string): Promise<boolean> {
   const packs = await findPacks(discussionRoot, "discussion");
