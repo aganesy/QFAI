@@ -23,4 +23,6 @@
 
 ## Empty State
 
-- Add shared-scope decisions only when a cross-spec change requires tracking.
+- Add a shared-scope row only when the change is not owned by one spec: it is
+  cross-spec, or its subject belongs to no spec at all (a contract no spec
+  references). A change one spec owns is tracked in that spec's `09_delta.md`.

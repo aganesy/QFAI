@@ -274,7 +274,7 @@ describe("a Change Request is a defined artifact", () => {
     });
 
     it(`${tree}: a contract decision is minted at the layer its blast radius reaches`, async () => {
-      // `_policies/08_Decisions.md` is reserved for cross-spec decisions, so a
+      // The policy Decisions file is for decisions no single spec owns, so a
       // contract that only one spec references must not have its decision
       // promoted to shared SSOT (and a whole-project rerun) to record it.
       const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
@@ -284,8 +284,46 @@ describe("a Change Request is a defined artifact", () => {
           "when more than one does or none does",
       );
       expect(drift).toContain(
-        "Sending a single-spec decision to the policy layer promotes it to shared " +
-          "SSOT the policy template reserves for cross-spec decisions",
+        "The misuse runs the other way — sending a single-spec decision to the " +
+          "policy layer promotes to shared SSOT a record the owning spec already " +
+          "has a home for",
+      );
+    });
+
+    it(`${tree}: an unreferenced contract's decision has a policy home the templates admit`, async () => {
+      // The destination table sends a contract CR with zero referencing specs
+      // to `_policies/`. If those templates only admitted cross-spec entries,
+      // the owner skill would have to break either the Drift Protocol or the
+      // template, so both layers must state the same rule.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain(
+        "Zero referencing specs still lands in the policy layer: there is no " +
+          "spec-level `07_Decisions.md` for such a decision to live in, so the " +
+          "policy templates admit a decision no single spec owns and not only a " +
+          "cross-spec one.",
+      );
+
+      const policyDecisions = flat(
+        await read(tree, "assistant/skills/qfai-sdd/templates/specs/_policies/08_Decisions.md"),
+      );
+      expect(policyDecisions).toContain(
+        "Add an entry only when the decision is not spec-local: it genuinely " +
+          "crosses specs, or its subject belongs to no spec at all — a decision on " +
+          "a contract that no spec references has no `07_Decisions.md` to live in " +
+          "and is recorded here.",
+      );
+      expect(policyDecisions).toContain(
+        "Shared Decision Records: decisions no single spec owns — one that crosses " +
+          "specs, and one whose subject no spec owns at all.",
+      );
+
+      const policyDelta = flat(
+        await read(tree, "assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md"),
+      );
+      expect(policyDelta).toContain(
+        "Add a shared-scope row only when the change is not owned by one spec: it " +
+          "is cross-spec, or its subject belongs to no spec at all (a contract no " +
+          "spec references).",
       );
     });
 

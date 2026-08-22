@@ -212,9 +212,13 @@ ratifies a comparison the author knew was fabricated.
      lies — `spec-*/07_Decisions.md` when exactly one spec references the
      contract, `_policies/08_Decisions.md` when more than one does or none
      does — by rerunning that artifact's own row of this table, not by widening
-     the contract rerun. Sending a single-spec decision to the policy layer
-     promotes it to shared SSOT the policy template reserves for cross-spec
-     decisions, and costs a full `/qfai-sdd` rerun to record.
+     the contract rerun. Zero referencing specs still lands in the policy
+     layer: there is no spec-level `07_Decisions.md` for such a decision to
+     live in, so the policy templates admit a decision no single spec owns and
+     not only a cross-spec one. The misuse runs the other way — sending a
+     single-spec decision to the policy layer promotes to shared SSOT a record
+     the owning spec already has a home for, and costs a full `/qfai-sdd`
+     rerun to record.
 
    Mode — the CR's "approved actions" field MUST name one:
    - **`confirm-only`** — re-read the artifact and confirm it already satisfies
