@@ -6,6 +6,30 @@
 
 ### Added
 
+- **`qfai init` ships a layered CI workflow.** `.github/workflows/qfai-tests.yml` is new in the
+  template tree: layer-separated test lanes, a `detect` job that classifies the changed-path list so
+  four lanes run only when they need to, and a `ci-pass` verdict derived by iterating
+  `${{ toJSON(needs) }}` rather than by a hand-written condition over job names — so adding a lane
+  cannot leave the verdict silently agreeing. The diff runs with `--no-renames`, because rename
+  detection reports only a move's destination and `git mv src/x.ts docs/x.md` otherwise skipped every
+  test lane. `qfai-validate.yml` is reworked alongside it; the two are the only workflows the template
+  root ships, and both are pinned by content in this repository's own tests.
+- **`qfai doctor` gains a `workflows.integrity` check.** It compares each shipped workflow present in
+  an adopter's `.github/workflows/` against the copy in the installed package and reports `ok`,
+  `modified`, or `skipped_unresolved` when the packaged copy cannot be located. `modified` names the
+  files. The check distinguishes "every recorded shipped workflow was removed by this repository, so
+  there is nothing to compare" from "nothing was ever installed", because the two want different
+  advice.
+- **`qfai init` records what it installed, in `.qfai/install-provenance.json`.** Per shipped workflow:
+  the sha256 of exactly the bytes written, the package version that wrote them, and when. That record
+  is what lets a later `init` tell an adopter's own file from one QFAI installed — the states are
+  `absent`, `adopter-owned`, `installed`, `modified` and `declined` — so an edited file is left alone
+  and a retired one is pruned only when the record says QFAI wrote it and the digest still matches.
+  A file QFAI never installed is never deleted.
+- **A reference on credential reuse across parallel workers**, shipped under the `qfai-atdd` skill:
+  acceptance tests that need an authenticated actor pay for the sign-in once per worker rather than
+  once per test. It is prose guidance and adds no validator, finding code, test layer or annotation
+  token.
 - **`QFAI-LINK-001` (error) — the assistant integration surface is checked.**
   `qfai init` builds `.claude/skills`, `.agents/skills`, `.codex/skills`,
   `.github/skills`, `.claude/agents` and `.github/agents` entirely out of
