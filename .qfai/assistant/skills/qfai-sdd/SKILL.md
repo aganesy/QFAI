@@ -254,12 +254,15 @@ Not owed by every run. Leaving one out is a valid outcome, so neither this skill
 completion reviewer treats an absent entry as unfinished work.
 
 - `spec-*/16_Traceability-ledger.md` — opt in per spec when its `BR-*` / `AC-*` should be held to
-  implementation drift (`QFAI-TRACE-001`, `error`, fires when a changed BR/AC's linked
-  implementation file did not change). A spec without one is valid: `QFAI-TRACE-002` (`warning`)
-  records the opt-out and the integrity check is skipped for that spec. Both findings belong to the
-  `tdd` gate group, so neither appears under the `--profile sdd` run this skill stops on. Create it
-  from `templates/specs/spec/16_Traceability-ledger.md` in the same change as the BR/AC it links.
-  See `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
+  implementation drift. The check is per spec, not per row: once the spec's
+  `03_Acceptance-Criteria.md` or `04_Business-Rules.md` changed on the branch, `QFAI-TRACE-001`
+  (`error`) fires for every ledger row whose linked implementation file is unchanged — not only the
+  rows whose BR/AC you edited. A spec without one is valid: `QFAI-TRACE-002` (`warning`) records the
+  opt-out and the integrity check is skipped for that spec. Both findings belong to the `tdd` gate
+  group, so neither appears under the `--profile sdd` run this skill stops on. Create it from
+  `templates/specs/spec/16_Traceability-ledger.md`, and refresh an existing one — rows added,
+  removed, renumbered — in the same change as the BR/AC it links: a BR/AC with no row is never
+  checked. See `references/spec-traceability-rules.md#traceability-ledger-16_traceability-ledgermd`.
 
 ## Phase 0 DESIGN.md Freeze (UI-bearing only)
 

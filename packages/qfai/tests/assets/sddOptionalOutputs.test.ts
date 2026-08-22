@@ -70,6 +70,27 @@ describe.each(TREES)("%s", (tree) => {
     expect(optional).toMatch(/QFAI-TRACE-002[^.]*warning/);
   });
 
+  it("states that QFAI-TRACE-001 is checked per spec, not per changed BR/AC row", async () => {
+    // `validateTraceabilityIntegrity` keys off the spec directory: a diff in
+    // `03_Acceptance-Criteria.md` / `04_Business-Rules.md` makes it walk *every*
+    // ledger row, so a reader who updates only the implementation behind the
+    // BR/AC they edited still gets errors for the untouched rows.
+    const optional = section(await read(tree, SKILL), "Optional Outputs");
+    expect(optional).toContain("per spec, not per row");
+    expect(optional).toContain("`03_Acceptance-Criteria.md` or `04_Business-Rules.md` changed");
+    expect(optional).toContain("every ledger row whose linked implementation file is unchanged");
+  });
+
+  it("keeps the refresh obligation for a ledger the spec already opted in to", async () => {
+    // Rows absent from the ledger are never checked, so an added / renumbered
+    // BR/AC silently leaves QFAI-TRACE-001's reach unless the ledger moves with
+    // it. The reference states the same obligation ("Authored and refreshed").
+    const optional = section(await read(tree, SKILL), "Optional Outputs");
+    expect(optional).toContain("refresh an existing one");
+    expect(optional).toContain("in the same change as the BR/AC it links");
+    expect(flat(await read(tree, RULES))).toContain("Authored and refreshed by `/qfai-sdd`");
+  });
+
   it("points at the shipped template and the reference that owns the rule", async () => {
     const optional = section(await read(tree, SKILL), "Optional Outputs");
     expect(optional).toContain(`templates/specs/spec/${LEDGER}`);
