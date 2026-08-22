@@ -126,20 +126,55 @@ and `SKILL.md` skips `done` rows on re-execution. Stated without the rest of thi
 failure would have no legal repair path at all.
 
 **A per-spec FAIL is not a ledger event.** Fix it in place and leave every `Status` where it is: no
-row's obligation moved, its test is unchanged and still green, so no TDD cycle restarts and no reset
-is owed. What _is_ owed is the reviewer PASS. The fix changes production code the affected rows'
-routed blocking reviewers already passed, so re-submit it to every one of them whose scope it
-touches, record the fresh verdicts under a new `Revision` in each affected row's evidence entry, and
-only then re-run the **whole** per-spec set. Spec-level completion is declared from that re-run,
-never from the failed one.
+row's obligation moved, its test asserts what it always asserted and still passes, so no TDD cycle
+restarts and no reset is owed. What _is_ owed is the affected rows' **per-item evidence**. The fix
+moves the tree, so every observation those rows took against the old `Revision` — the GREEN of gate
+item 5, the reviewer verdicts of items 7-9, the per-item checkpoint of item 12 — now describes a
+tree that no longer exists, which `evidence-revision.md#what-makes-evidence-stale` calls stale.
+Re-taking the verdicts alone would leave items 5 and 12 pinned to the old revision and item 10's
+same-`Revision` requirement unsatisfiable, on rows that are `done` and therefore skipped by the item
+loop: the repair would strand exactly the evidence it invalidated.
 
-Two findings leave that path. When the fix cannot be made without changing a row's own test or the
-obligation behind it, the obligation itself moved — that is a Change Request, and the row re-enters
-through the approved reset (`change-request-reset.md`), which is the legal reopen precisely because
-something upstream changed. When the finding has no spec owner — the `.qfai/contracts/**` and
-un-owned `QFAI-TRACE-*` findings step 4 describes — it is not repaired from here at all: record it
-with its owning artifact as step 4 requires, and the boundary stays unpassed until its owner clears
-it.
+**Re-verify each affected row in place.** For every row whose production code or test the fix
+touched, re-take at the new `Revision`, in this order:
+
+- **First, the row's own test** — the per-item step 1 command, plus the GREEN re-observed by
+  `qa-gatekeeper` with the `Oracle proof` item 5 requires and the post-refactor re-confirmation of
+  item 6.
+- **Then a fresh verdict from every _required_ reviewer whose scope the fix touches.** "Required" is
+  wider than `blocking_agents`, exactly as it is at the 12-point gate: `implementation-reviewer` and
+  `completion-reviewer` always, and `product-surface-reviewer` on a UI-affecting row, which
+  `agent-routing.yml` lists only under `conditional_agents` while item 9 still requires its
+  prototype parity PASS. A repair that changes display logic to satisfy a linter or the type checker
+  is that case, and re-running the blocking list alone would carry the pre-fix surface verdict onto
+  a display it never saw.
+- **Last, the row's `Checkpoint verification command` / `result` / `seal`**, re-recorded from a
+  re-run of the **per-item** set, so item 12's seal is taken over the revision the row actually
+  landed at.
+
+Append all of it as a fresh evidence entry under the new `Revision`; nothing from the pre-fix
+revision is reused. Item 3 is not re-taken — it names its own `RED revision`, judged against the
+tree the RED was observed on. This is a re-observation, not a re-execution: the row never leaves
+`done`, the `done`-row skip in `SKILL.md` governs the item loop and does not reach a boundary-owned
+re-observation, and no `Status` moves. Only once every affected row is re-verified do you re-run the
+**whole** per-spec set. Spec-level completion is declared from that re-run, never from the failed
+one.
+
+**A test edit alone is not a Change Request.** A formatter rewrap, an unused import, a type
+annotation or a rename inside a `done` row's test file changes the file without changing what the
+test asserts, so the obligation is exactly where it was and the re-verification above — whose step 1
+re-runs that very test — is the whole of what is owed. Routing it to the approved reset instead
+would demand a CR that `change-request-reset.md` cannot legitimately issue: that reset exists for an
+approved **upstream** change invalidating rows, and here nothing upstream moved, so the row would be
+left holding a static gate it may not clear.
+
+Two findings do leave the in-place path. When the fix cannot be made without changing **what the
+row's test asserts** — its predicate, its expected value, the obligation behind it — the obligation
+itself moved: that is a Change Request, and the row re-enters through the approved reset
+(`change-request-reset.md`), which is the legal reopen precisely because something upstream changed.
+When the finding has no spec owner — the `.qfai/contracts/**` and un-owned `QFAI-TRACE-*` findings
+step 4 describes — it is not repaired from here at all: record it with its owning artifact as step 4
+requires, and the boundary stays unpassed until its owner clears it.
 
 ## Spec-level boundary on an already-complete ledger
 

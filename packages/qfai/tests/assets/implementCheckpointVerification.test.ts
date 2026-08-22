@@ -228,6 +228,76 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // The repair moves the tree, so the affected rows' GREEN (item 5) and per-item
+  // checkpoint (item 12) go stale with the verdicts. Re-taking only the verdicts
+  // left items 5 and 12 pinned to the old revision — item 10 wants one `Revision`
+  // across 5, 7 and 8 — on rows the item loop skips, so nothing could restore them.
+  it("re-verifies the whole per-item evidence of every row the repair touched", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("**Re-verify each affected row in place.**");
+      // Named, so the repair cannot stop at the reviewer verdicts.
+      expect(criteria).toContain("the GREEN of gate item 5");
+      expect(criteria).toContain("the per-item checkpoint of item 12");
+      expect(criteria).toContain("evidence-revision.md#what-makes-evidence-stale");
+      expect(criteria).toContain("re-run of the **per-item** set");
+      // The re-observation is legal on a `done` row precisely because it is not a
+      // re-execution: no status moves and the loop's `done`-row skip never applies.
+      expect(criteria).toContain("This is a re-observation, not a re-execution");
+      expect(criteria).toContain("the row never leaves `done`");
+      // Item 3 keeps its own revision — folding it in would make a correct row stale.
+      expect(criteria).toContain("Item 3 is not re-taken");
+    }
+  });
+
+  // `product-surface-reviewer` sits in `conditional_agents`, never in
+  // `blocking_agents`, yet gate item 9 requires its PASS on a UI-affecting row.
+  // Re-running the blocking list alone carries a pre-fix surface verdict onto
+  // display logic that was changed to satisfy a linter or the type checker.
+  it("re-runs every required reviewer after a repair, not just the blocking list", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("every _required_ reviewer whose scope the fix touches");
+      expect(criteria).toContain('"Required" is wider than `blocking_agents`');
+      expect(criteria).toContain("`product-surface-reviewer` on a UI-affecting row");
+      expect(criteria).toContain("lists only under `conditional_agents`");
+      expect(criteria).toContain("item 9 still requires its prototype parity PASS");
+    }
+  });
+
+  // A formatter/linter/type fix inside a `done` row's test file changes the test
+  // without moving its obligation. Treating that as a Change Request demanded a
+  // reset `change-request-reset.md` may only grant for an approved *upstream*
+  // change, so the row was left holding a static gate it could never clear.
+  it("keeps an obligation-preserving test fix out of the approved reset", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("**A test edit alone is not a Change Request.**");
+      expect(criteria).toContain("without changing what the test asserts");
+      expect(criteria).toContain("approved **upstream** change invalidating rows");
+      // The reset is reserved for the edit that does move the obligation.
+      expect(criteria).toContain("without changing **what the row's test asserts**");
+    }
+  });
+
   it("launches the CLI through npx, which is how a project dependency resolves", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
