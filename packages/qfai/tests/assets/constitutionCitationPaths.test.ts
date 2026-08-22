@@ -30,8 +30,16 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const BASELINE = "assistant/constitution/shared-skill-operating-baseline.md";
 const CANONICAL_PREFIX = ".qfai/assistant/constitution/";
 
-/** Inline-code spans that name a markdown file, with an optional anchor. */
-const CITATION = /`([^`\s]+\.md)(#[^`\s]*)?`/g;
+/**
+ * Any path expression naming a markdown file, with an optional anchor.
+ *
+ * Deliberately not restricted to inline-code spans. A citation inside a fenced
+ * work-order template, an HTML comment, a YAML comment or a bare sentence
+ * routes an agent exactly the same way, and those forms are copied into
+ * generated work orders and Change Requests verbatim. Scanning only backticked
+ * spans left four base-less citations standing while this test passed.
+ */
+const CITATION = /(?:[\w.-]+\/)*[\w.-]+\.md(?:#[\w.-]*)?/g;
 
 interface Citation {
   readonly location: string;
@@ -47,6 +55,10 @@ async function constitutionFilenames(tree: string): Promise<ReadonlySet<string>>
 /**
  * Every citation of a constitution document found under `assistant/`.
  *
+ * The manifest YAML is scanned alongside the markdown: `agent-catalog.yml`
+ * carries whole agent cards as its `developer_instructions`, so a citation
+ * there reaches an agent just as directly as one in the card itself.
+ *
  * Filtering by basename is what keeps runtime artifact paths (`test-list.md`,
  * `.qfai/evidence/implement-<spec-id>.md`) out — those correctly do not exist
  * in the shipped tree.
@@ -54,7 +66,7 @@ async function constitutionFilenames(tree: string): Promise<ReadonlySet<string>>
 async function collectCitations(tree: string): Promise<readonly Citation[]> {
   const names = await constitutionFilenames(tree);
   const assistant = path.join(repoRoot, tree, "assistant");
-  const files = await fg(["**/*.md"], { cwd: assistant, absolute: false });
+  const files = await fg(["**/*.md", "**/*.yml", "**/*.yaml"], { cwd: assistant, absolute: false });
   const found: Citation[] = [];
   for (const relative of files.sort()) {
     const text = await readFile(path.join(assistant, relative), "utf-8");
@@ -63,8 +75,9 @@ async function collectCitations(tree: string): Promise<readonly Citation[]> {
       const line = lines[i];
       if (line === undefined) continue;
       for (const match of line.matchAll(CITATION)) {
-        const cited = `${match[1]}${match[2] ?? ""}`;
-        if (!names.has(path.posix.basename(match[1] ?? ""))) continue;
+        const cited = match[0];
+        const withoutAnchor = cited.split("#")[0] ?? "";
+        if (!names.has(path.posix.basename(withoutAnchor))) continue;
         found.push({ location: `${tree}/assistant/${relative}:${i + 1}`, cited });
       }
     }

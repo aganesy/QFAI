@@ -257,7 +257,7 @@ Use the shared schema (per-row `Status (PASS/REVISE/PENDING)` column, reviewer r
 ### Reviewer Gate (MUST)
 
 - Delegate final completion gate to an independent Reviewer.
-- Reviewer response must include `Result: PASS | REVISE` (matching shared-skill-delegation-baseline.md#reviewer-response-template).
+- Reviewer response must include `Result: PASS | REVISE` (matching `.qfai/assistant/constitution/shared-skill-delegation-baseline.md#reviewer-response-template`).
 - Reviewer checks Drift Protocol compliance and alignment with `.qfai/assistant/catalog/test-layers.md`.
 - Test volume floors/ratios are not gates; they are signals.
 - Do not declare DONE until Reviewer returns `PASS`; otherwise apply `REVISE`.

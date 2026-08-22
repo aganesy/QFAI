@@ -53,7 +53,7 @@ describe("the work order template bans upstream patching unconditionally", () =>
       const block = flat(workOrderBlock(await read(tree, DELEGATION)));
 
       expect(block).toContain(
-        "every upstream change requires STOP + Change Request + owner rerun per constitution/drift-protocol.md",
+        "every upstream change requires STOP + Change Request + owner rerun per .qfai/assistant/constitution/drift-protocol.md",
       );
     });
 
@@ -62,7 +62,7 @@ describe("the work order template bans upstream patching unconditionally", () =>
       // memory; the work order hands it the list.
       const block = workOrderBlock(await read(tree, DELEGATION));
 
-      expect(block).toContain("constitution/drift-protocol.md#core-rule");
+      expect(block).toContain(".qfai/assistant/constitution/drift-protocol.md#core-rule");
     });
 
     it(`${tree}: the drift protocol removes the judgement the qualifier implied`, async () => {

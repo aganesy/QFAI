@@ -12,7 +12,7 @@ while an unresolved CR exists, so `Status` must be a real, checkable field.
 - Title: `<one-line summary>`
 - Raised by: `<skill or agent>`
 - Raised at: `YYYY-MM-DDThh:mm:ssZ`
-- Class: `intent` <!-- intent | defect; see constitution/drift-protocol.md#drift-classes -->
+- Class: `intent` <!-- intent | defect; see .qfai/assistant/constitution/drift-protocol.md#drift-classes -->
 - Status: `open` <!-- open | approved | rejected | superseded -->
 - Approved by: `-` <!-- required whenever Status leaves `open` (approved / rejected / superseded) -->
 - Approved at: `-` <!-- YYYY-MM-DDThh:mm:ssZ -->
