@@ -136,25 +136,38 @@ describe("report", { timeout: 15000 }, () => {
       // `discussion` is a representative narrow profile rejected in CI.
       // (`sdd` joined the CI allow-list with PR #206 review LW-G; see
       // packages/qfai/src/core/phasePolicy.ts for the rationale.)
-      await runReport({
+      const exitCode = await runReport({
         root,
         format: "md",
         outPath: reportPath,
         runValidate: true,
         profile: "discussion",
+        // `never` isolates the narrow-profile contract from the fixture's own
+        // findings: a bare `qfai init` tree has no discussion pack, so this
+        // run also carries an unrelated QFAI-DPACK-001 error. Under `never`
+        // the only way to come back non-zero is a hard-coded narrow-profile
+        // failure — exactly the #397 regression.
+        failOn: "never",
       });
 
       const validationRaw = await readFile(validatePath, "utf-8");
       const validation = JSON.parse(validationRaw) as {
-        issues?: Array<{ code?: string }>;
+        issues?: Array<{ code?: string; severity?: string }>;
       };
       // The finding is appended to a real run. Exiting non-zero here made
       // every stage gate that names a narrow profile unreachable in CI, and
       // `qfai-discussion` names exactly this one as its only gate.
-      expect(process.exitCode).not.toBe(1);
-      expect((validation.issues ?? []).some((item) => item.code === "QFAI-VALIDATE-017")).toBe(
-        true,
+      // Asserted on the RETURN VALUE: `runReport` no longer touches
+      // `process.exitCode`, so the old `process.exitCode` assertion passed
+      // even if this contract regressed.
+      expect(exitCode).toBe(0);
+      const narrowProfileIssue = (validation.issues ?? []).find(
+        (item) => item.code === "QFAI-VALIDATE-017",
       );
+      expect(narrowProfileIssue).toBeDefined();
+      // Severity is the other half of the contract: a warning can never fail
+      // an `--fail-on error` run, so the stage gate stays reachable in CI.
+      expect(narrowProfileIssue?.severity).toBe("warning");
     } finally {
       process.exitCode = previousExitCode;
       if (previousCi === undefined) {
@@ -420,5 +433,79 @@ describe("report exit code", { timeout: 15000 }, () => {
 
     expect(exitCode).toBe(1);
     await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
+  });
+});
+
+describe("report --run-validate shares the validate migration gate", { timeout: 30000 }, () => {
+  /**
+   * `report --run-validate` is the documented single-step CI usage, so it owes
+   * the operator the same legacy-path migration gate `qfai validate` applies.
+   * Before the gate was shared it ran `validateProject` alone: the
+   * `D-DEPRECATED-PATH` finding never reached the report, and the writer
+   * re-created the deprecated `.qfai/output/validate.json` that validate
+   * refuses post-sunset.
+   */
+  async function seedLegacyConfig(root: string): Promise<void> {
+    const yaml = ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n");
+    await writeFile(path.join(root, "qfai.config.yaml"), yaml, "utf-8");
+  }
+
+  it("AT sunset: refuses the legacy write and carries D-DEPRECATED-PATH as an error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedLegacyConfig(root);
+      const outPath = path.join(root, ".qfai", "report", "report.json");
+
+      const exitCode = await runReport({
+        root,
+        format: "json",
+        outPath,
+        runValidate: true,
+        failOn: "error",
+        toolVersionOverride: "1.10.0",
+      });
+
+      expect(exitCode).toBe(1);
+      // The writer refused: the deprecated path must not be re-created.
+      await expect(
+        readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
+      ).rejects.toThrow();
+      const report = JSON.parse(await readFile(outPath, "utf-8")) as {
+        issues: Array<{ code: string; severity: string; message: string }>;
+      };
+      const deprecation = report.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
+      expect(deprecation?.severity).toBe("error");
+      expect(deprecation?.message).toContain("REFUSED");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("PRE sunset: writes the configured legacy path and warns instead of erroring", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedLegacyConfig(root);
+
+      const exitCode = await runReport({
+        root,
+        format: "md",
+        runValidate: true,
+        // `never` isolates the gate from the fixture's unrelated
+        // QFAI-DPACK-001 error; the deprecation severity is asserted below.
+        failOn: "never",
+        toolVersionOverride: "1.9.1",
+      });
+
+      expect(exitCode).toBe(0);
+      const written = JSON.parse(
+        await readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
+      ) as { issues: Array<{ code: string; severity: string }> };
+      const deprecation = written.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
+      expect(deprecation?.severity).toBe("warning");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

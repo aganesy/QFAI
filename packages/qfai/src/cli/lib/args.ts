@@ -417,6 +417,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
+        } else {
+          // A typo (`--fail-on warn`) used to be dropped silently, leaving
+          // `failOn` unset so the run fell back to the configured default.
+          // A CI step that meant to gate on warnings then exited 0 on a
+          // warning-only run. Unknown values are a usage error.
+          markInvalid();
         }
         i += 1;
         break;

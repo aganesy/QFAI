@@ -1,7 +1,7 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { FailOn } from "../../core/config.js";
+import type { ConfigLoadResult, FailOn } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
@@ -13,6 +13,7 @@ import { validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
+import { appendIssue, evaluateLegacyValidateJsonGate } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -24,6 +25,12 @@ export type ReportOptions = {
   profile?: ValidationProfile;
   failOn?: FailOn;
   strict?: boolean;
+  /**
+   * Override the tool version observed by the legacy-path deprecation gate
+   * under `--run-validate`. Tests use it to pin either side of the sunset;
+   * production reads `packages/qfai/package.json#version`.
+   */
+  toolVersionOverride?: string;
 };
 
 /**
@@ -39,23 +46,9 @@ export async function runReport(options: ReportOptions): Promise<number> {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const ciProfileIssue = buildCiProfileIssue(options.profile);
-    const validated = await validateProject(
-      root,
-      configResult,
-      options.profile ? { profile: options.profile } : {},
-    );
-    const result = ciProfileIssue
-      ? {
-          ...validated,
-          issues: [...validated.issues, ciProfileIssue],
-          counts: { ...validated.counts, warning: validated.counts.warning + 1 },
-        }
-      : validated;
-    ranNarrowProfileInCi = ciProfileIssue !== null;
-    const normalized = normalizeValidationResult(root, result);
-    await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
-    validation = normalized;
+    const ran = await runValidateForReport(root, configResult, options);
+    ranNarrowProfileInCi = ran.ranNarrowProfileInCi;
+    validation = ran.validation;
   } else {
     const input = options.inputPath ?? configResult.config.output.validateJsonPath;
     const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
@@ -117,6 +110,46 @@ export async function runReport(options: ReportOptions): Promise<number> {
   );
   info(`wrote report: ${outPath}`);
   return shouldFail(validation, failOn) ? 1 : 0;
+}
+
+/**
+ * `--run-validate`: run the same validators `qfai validate` runs, apply the
+ * same post-processing, and write the same `output.validateJsonPath`.
+ *
+ * The post-processing is shared, not re-implemented: `report --run-validate`
+ * is documented as the single-step CI usage, so a finding `validate` raises
+ * (here the legacy-path `D-DEPRECATED-PATH` migration gate) must reach this
+ * exit code too, and a write `validate` refuses must be refused here as well.
+ * Otherwise a project whose `output.validateJsonPath` still names the legacy
+ * SSOT sees `qfai validate` exit 1 and refuse the write while `qfai report
+ * --run-validate` re-creates the deprecated file and exits 0.
+ */
+async function runValidateForReport(
+  root: string,
+  configResult: ConfigLoadResult,
+  options: ReportOptions,
+): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
+  const ciProfileIssue = buildCiProfileIssue(options.profile);
+  const validated = await validateProject(
+    root,
+    configResult,
+    options.profile ? { profile: options.profile } : {},
+  );
+  const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
+  const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
+  const legacyGate = await evaluateLegacyValidateJsonGate({
+    root,
+    configuredValidateJsonPath,
+    ...(options.toolVersionOverride !== undefined
+      ? { toolVersionOverride: options.toolVersionOverride }
+      : {}),
+  });
+  const gated = legacyGate.issue ? appendIssue(withCiIssue, legacyGate.issue) : withCiIssue;
+  const normalized = normalizeValidationResult(root, gated);
+  if (!legacyGate.refuseConfiguredLegacyWrite) {
+    await writeValidationResult(root, configuredValidateJsonPath, normalized);
+  }
+  return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
 
 function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {

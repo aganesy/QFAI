@@ -316,3 +316,28 @@ describe("parseArgs", () => {
     });
   });
 });
+
+describe("parseArgs --fail-on", () => {
+  it.each(["never", "warning", "error"] as const)("accepts %s", (value) => {
+    const parsed = parseArgs(["report", "--fail-on", value], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.failOn).toBe(value);
+  });
+
+  it("rejects an unknown value instead of silently falling back to the config default", () => {
+    // `--fail-on warn` used to leave `failOn` unset, so the run fell back to
+    // the configured default (`error`) and a CI step that meant to gate on
+    // warnings exited 0 on a warning-only run.
+    const parsed = parseArgs(["report", "--fail-on", "warn"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("does not consume the next option when --fail-on has no value", () => {
+    const parsed = parseArgs(["validate", "--fail-on", "--strict"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.strict).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+});
