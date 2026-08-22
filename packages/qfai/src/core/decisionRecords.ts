@@ -29,6 +29,18 @@ import { exists, readSafe } from "./validators/utils.js";
  */
 export const DR_ID_FORMAT = /^DR-\d{4}(?:-\d{4})?$/;
 
+/**
+ * The spec-scoped half of that class: `DR-NNNN-MMMM`.
+ *
+ * A re-open record is declared in the spec's own Decisions file, and the ID
+ * scheme both templates state reserves the short `DR-NNNN` for
+ * `_policies/08_Decisions.md` ("an ID declared twice has two owners"). Accepting
+ * the short form for a spec-local record lets a bare `### DR-NNNN` sit in a
+ * spec while the same id names a policy decision, and nothing then says which
+ * one the delta's `Re-opened by:` reached.
+ */
+export const DR_SPEC_SCOPED_ID_FORMAT = /^DR-\d{4}-\d{4}$/;
+
 /** Files a `DR-*` may be declared in, relative to the spec dir / specs root. */
 export const DR_DECLARATION_FILES = ["07_Decisions.md"];
 export const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
@@ -58,6 +70,13 @@ export type DecisionRecordEntry = {
  * layered spec but `14_Decisions.md` in a `spec-pack`. Resolving against the
  * layered name alone reported every `spec-pack` record as undeclared, so the
  * caller passes the path its layout actually resolved.
+ *
+ * When the caller passes one, it is the **only** spec-local source. Adding the
+ * default names on top of it made a migration leftover authoritative: a
+ * `spec-pack` that already resolved `14_Decisions.md` still had a stale
+ * `07_Decisions.md` read, so a `Re-opens:` naming a record that survives only in
+ * the leftover resolved and `QFAI-DECISION-002` never fired. The default names
+ * are the fallback for a caller that has not resolved a layout at all.
  */
 function declarationFiles(
   specDir: string,
@@ -65,8 +84,11 @@ function declarationFiles(
   decisionsPath?: string | null,
 ): string[] {
   const files = new Set<string>();
-  if (decisionsPath) files.add(path.normalize(decisionsPath));
-  for (const name of DR_DECLARATION_FILES) files.add(path.normalize(path.join(specDir, name)));
+  if (decisionsPath) {
+    files.add(path.normalize(decisionsPath));
+  } else {
+    for (const name of DR_DECLARATION_FILES) files.add(path.normalize(path.join(specDir, name)));
+  }
   files.add(path.normalize(path.join(specsRoot, DR_POLICY_DECLARATION_FILE)));
   return [...files];
 }
@@ -130,8 +152,33 @@ export function isPlaceholderValue(value: string | null | undefined): boolean {
   if (trimmed.length === 0) return true;
   if (/^[-–—]+$/.test(trimmed)) return true;
   if (/^<.*>$/.test(trimmed)) return true;
+  if (TEMPLATE_FIELD_PROMPTS.has(normalizePrompt(trimmed))) return true;
   return /^(tbd|todo|n\/a|none|未定)$/i.test(trimmed);
 }
+
+/** Compare a field value with a template prompt ignoring case and dash style. */
+function normalizePrompt(value: string): string {
+  return value.toLowerCase().replace(/[–—]/g, "-").replace(/\s+/g, " ").trim();
+}
+
+/**
+ * The prompts the shipped `07_Decisions.md` sample block carries in its own
+ * fields.
+ *
+ * The sample ships the prompt as bare prose, so a copy that fills `Status:`,
+ * `Re-opens:` and the approval but never rewrites `Decision:` reads as a filled
+ * value and clears `QFAI-DECISION-005` without ever saying what changed since
+ * the rejection. The template now wraps these in `<...>`; the sentences stay
+ * listed here because every spec pack generated before that still carries the
+ * bare form.
+ */
+const TEMPLATE_FIELD_PROMPTS = new Set(
+  [
+    "what forced the decision - the constraint, conflict or anomaly",
+    "what was decided, in the imperative",
+    "what this costs and what it forecloses",
+  ].map(normalizePrompt),
+);
 
 /** The `Approved at:` instant both templates define: `YYYY-MM-DDThh:mm:ssZ`. */
 export const APPROVED_AT_FORMAT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
@@ -167,10 +214,26 @@ function normalizeKey(raw: string): string {
   return raw.trim().toLowerCase().replace(/\s+/g, "-");
 }
 
-const HEADING_RE = /^#{2,6}\s+(DR-[A-Za-z0-9][A-Za-z0-9-]*)\s*[:：]?/;
-const ANY_HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
-const FIELD_RE = /^\s*[-*]\s*([A-Za-z][A-Za-z -]*?)\s*[:：]\s*(.*)$/;
-const FENCE_OPEN_RE = /^\s*(`{3,}|~{3,})[^\r\n]*$/;
+/**
+ * The 0-3 leading spaces CommonMark permits before a block, shared by the
+ * heading and field patterns.
+ *
+ * The two must agree: with `### DR-*` anchored at column zero while
+ * {@link ANY_HEADING_RE} accepted the indent, a CommonMark-valid
+ * `   ### DR-NNNN-MMMM` closed the previous record without opening its own, so a
+ * document whose delta back-references were all correct reported
+ * `QFAI-DECISION-004` against a record the parser had dropped.
+ *
+ * Four spaces (or a tab) is where an indented code block starts, so the same
+ * limit is what keeps a fenceless code sample out of the fields: an indented
+ * `- Approved by:` / `- Approved at:` pair is an example, and reading it as the
+ * record's own approval cleared `QFAI-DECISION-003` on an approval nobody gave.
+ */
+const BLOCK_INDENT = " {0,3}";
+const HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{2,6}\\s+(DR-[A-Za-z0-9][A-Za-z0-9-]*)\\s*[:：]?`);
+const ANY_HEADING_RE = new RegExp(`^${BLOCK_INDENT}#{1,6}(?:\\s|$)`);
+const FIELD_RE = new RegExp(`^${BLOCK_INDENT}[-*]\\s*([A-Za-z][A-Za-z -]*?)\\s*[:：]\\s*(.*)$`);
+const FENCE_OPEN_RE = /^ {0,3}(`{3,}|~{3,})[^\r\n]*$/;
 
 /**
  * The regex that closes a fence opened by `token`.
@@ -183,7 +246,7 @@ const FENCE_OPEN_RE = /^\s*(`{3,}|~{3,})[^\r\n]*$/;
 function closeFenceRe(token: string): RegExp | null {
   const fenceChar = token[0];
   if (!fenceChar) return null;
-  return new RegExp(`^\\s*${escapeRegExp(fenceChar)}{${token.length},}\\s*$`);
+  return new RegExp(`^${BLOCK_INDENT}${escapeRegExp(fenceChar)}{${token.length},}[ \\t]*$`);
 }
 
 /**

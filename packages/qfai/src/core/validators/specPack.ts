@@ -7,6 +7,8 @@ import { buildContractIndex } from "../contractIndex.js";
 import {
   collectDeclaredDrHeadingIds,
   DR_ID_FORMAT,
+  DR_POLICY_DECLARATION_FILE,
+  DR_SPEC_SCOPED_ID_FORMAT,
   isAuditableInstant,
   isPlaceholderValue,
   parseDecisionRecordEntries,
@@ -1521,7 +1523,11 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
     decisionsPath: entry.decisionsPath,
     decisionsName,
   };
-  const issues: Issue[] = [...readopted, ...validateUniqueDecisionIds(records, context)];
+  const issues: Issue[] = [
+    ...readopted,
+    ...validateUniqueDecisionIds(records, context),
+    ...(await validatePolicyDecisionIds(specsRoot, reOpens)),
+  ];
   for (const record of reOpens) {
     issues.push(...validateReOpenRecord(record, context));
   }
@@ -1538,12 +1544,25 @@ type RejectedCandidate = { name: string; reOpenedBy: string[] };
 const CANDIDATE_LINE = /^\s*[-*]\s*candidate\s*[:：]\s*(.*)$/i;
 const ADOPTED_LINE = /^\s*[-*]\s*adopted\s*[:：]\s*(.*)$/i;
 
-/** Strip the decoration a delta field carries around a candidate name. */
+const TRAILING_PUNCTUATION = /[.,;。、]+\s*$/;
+const SURROUNDING_QUOTES = /^\s*["'“”「『]+|["'“”」』]+\s*$/g;
+
+/**
+ * Strip the decoration a delta field carries around a candidate name.
+ *
+ * Punctuation is stripped on both sides of the quotes, not only inside them:
+ * `- Candidate: "in-process cache".` is ordinary prose, and removing the quotes
+ * first leaves the sentence period between the name and the end of the string,
+ * so the closing quote survives normalisation and the key no longer equals the
+ * `- Adopted: in-process cache` it names. The same candidate could then be
+ * re-adopted with no `Re-opened by:` and `QFAI-DECISION-006` stayed silent.
+ */
 function candidateKey(raw: string): string {
   return raw
     .replace(/`/g, "")
-    .replace(/^\s*["'“”「『]+|["'“”」』]+\s*$/g, "")
-    .replace(/[.,;。、]+\s*$/, "")
+    .replace(TRAILING_PUNCTUATION, "")
+    .replace(SURROUNDING_QUOTES, "")
+    .replace(TRAILING_PUNCTUATION, "")
     .trim()
     .toLowerCase()
     .replace(/\s+/g, " ");
@@ -1609,13 +1628,21 @@ function validateReadoptedCandidates(
   return issues;
 }
 
+/**
+ * The lines of every section named `heading`, joined.
+ *
+ * All of them, not the first: a second `## Rejected` is where a candidate hides
+ * from a reader that stops at the first one.
+ */
+function sectionLines(text: string, heading: string): string[] {
+  return extractMarkdownSections(text, heading).join("\n").replace(/\r\n/g, "\n").split("\n");
+}
+
 /** The `- Candidate:` blocks of a delta's `## Rejected`, in document order. */
 function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
   const candidates: RejectedCandidate[] = [];
   let current: RejectedCandidate | null = null;
-  for (const line of extractMarkdownSection(deltaText, "Rejected")
-    .replace(/\r\n/g, "\n")
-    .split("\n")) {
+  for (const line of sectionLines(deltaText, "Rejected")) {
     const candidate = CANDIDATE_LINE.exec(line);
     if (candidate) {
       current = { name: cleanFieldValue(candidate[1] ?? ""), reOpenedBy: [] };
@@ -1633,9 +1660,7 @@ function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
 /** The normalised `- Adopted:` names of a delta's `## Adopted`. */
 function collectAdoptedCandidateKeys(deltaText: string): Set<string> {
   const adopted = new Set<string>();
-  for (const line of extractMarkdownSection(deltaText, "Adopted")
-    .replace(/\r\n/g, "\n")
-    .split("\n")) {
+  for (const line of sectionLines(deltaText, "Adopted")) {
     const match = ADOPTED_LINE.exec(line);
     if (!match) continue;
     const value = cleanFieldValue(match[1] ?? "");
@@ -1660,13 +1685,8 @@ function validateUniqueDecisionIds(
   records: DecisionRecordEntry[],
   context: ReOpenContext,
 ): Issue[] {
-  const counts = new Map<string, number>();
-  for (const record of records) {
-    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
-  }
   const issues: Issue[] = [];
-  for (const [id, count] of counts) {
-    if (count < 2) continue;
+  for (const [id, count] of duplicateDecisionIds(records)) {
     issues.push(
       issue(
         "QFAI-DECISION-007",
@@ -1677,6 +1697,71 @@ function validateUniqueDecisionIds(
         [id],
         "canonical",
         "重複した Decision Record のいずれかに別の `DR-NNNN-MMMM` を割り当てるか、1 件に統合してください。delta の `Re-opened by:` も残した ID に合わせます。",
+      ),
+    );
+  }
+  return issues;
+}
+
+/** The ids a Decisions file declares more than once, with their count. */
+function duplicateDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+  }
+  for (const [id, count] of counts) {
+    if (count < 2) counts.delete(id);
+  }
+  return counts;
+}
+
+/** How `_policies/08_Decisions.md` is written in a message, on every platform. */
+const POLICY_DECISIONS_LABEL = "_policies/08_Decisions.md";
+
+/**
+ * The shared policy file declares a `DR-*` this spec's re-opens reconsider more
+ * than once.
+ *
+ * The spec-local uniqueness check cannot see it: it reads the spec's own
+ * Decisions file, while `collectDeclaredDrHeadingIds` folds every declaration —
+ * policy ones included — into a `Set`. A `DR-NNNN` declared twice in
+ * `_policies/08_Decisions.md` therefore resolves a `Re-opens:` successfully and
+ * `QFAI-DECISION-007` stayed silent, leaving no answer to which of the two
+ * policy decisions was reconsidered.
+ *
+ * Only the ids the current re-opens actually name are reported, so an unrelated
+ * duplicate elsewhere in the policy file is not this spec's failure.
+ */
+async function validatePolicyDecisionIds(
+  specsRoot: string,
+  reOpens: DecisionRecordEntry[],
+): Promise<Issue[]> {
+  const referenced = new Set<string>();
+  for (const record of reOpens) {
+    const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+    if (prior.length > 0) referenced.add(prior.toUpperCase());
+  }
+  if (referenced.size === 0) {
+    return [];
+  }
+  const policyPath = path.join(specsRoot, DR_POLICY_DECLARATION_FILE);
+  const policyText = await readSafe(policyPath);
+  if (policyText.length === 0) {
+    return [];
+  }
+  const issues: Issue[] = [];
+  for (const [id, count] of duplicateDecisionIds(parseDecisionRecordEntries(policyText))) {
+    if (!referenced.has(id)) continue;
+    issues.push(
+      issue(
+        "QFAI-DECISION-007",
+        `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${count} 件あります。この spec の \`Re-opens: ${id}\` がどちらの決定を再考したのか一意に定まりません。`,
+        "error",
+        policyPath,
+        RE_OPEN_RULE,
+        [id],
+        "canonical",
+        `${POLICY_DECISIONS_LABEL} の重複した Decision Record のいずれかに別の \`DR-NNNN\` を割り当てるか、1 件に統合してください。`,
       ),
     );
   }
@@ -1736,21 +1821,27 @@ function validateReOpenRecord(record: DecisionRecordEntry, context: ReOpenContex
 }
 
 /**
- * The record's own id obeys the `DR-*` scheme.
+ * The record's own id obeys the **spec-scoped** `DR-NNNN-MMMM` scheme.
  *
  * The heading pattern is deliberately loose so a mistyped id still surfaces as
  * a record rather than vanishing; without this check `### DR-fake` would carry
  * a correct prior DR and approval past every other gate, and a delta could
  * point back at it by the same off-scheme id.
+ *
+ * The short `DR-NNNN` is not enough either. This record is declared in the
+ * spec's own Decisions file, and the ID scheme both templates state reserves the
+ * short form for `_policies/08_Decisions.md`; a bare `### DR-NNNN` here has
+ * the same id as a policy decision, so nothing says which one a `Re-opens:` or a
+ * delta's `Re-opened by:` reached.
  */
 function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
-  if (DR_ID_FORMAT.test(record.id)) {
+  if (DR_SPEC_SCOPED_ID_FORMAT.test(record.id)) {
     return [];
   }
   return [
     issue(
       "QFAI-DECISION-001",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が DR-NNNN / DR-NNNN-MMMM の形式ではありません。`,
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。`,
       "error",
       context.decisionsPath,
       RE_OPEN_RULE,
@@ -1932,9 +2023,8 @@ function extractReOpenedByRefs(deltaText: string): string[] {
   if (deltaText.length === 0) {
     return [];
   }
-  const rejected = extractMarkdownSection(deltaText, "Rejected");
   const refs: string[] = [];
-  for (const line of rejected.replace(/\r\n/g, "\n").split("\n")) {
+  for (const line of sectionLines(deltaText, "Rejected")) {
     const match = RE_OPENED_BY_LINE.exec(line);
     if (!match) continue;
     refs.push(...splitReOpenedByRefs(match[1] ?? ""));
@@ -2484,44 +2574,54 @@ function normalizeHeading(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
+const HEADING_LINE = /^(#{1,6})\s*(.+?)\s*$/;
+
 function extractMarkdownSection(text: string, heading: string): string {
+  return extractMarkdownSections(text, heading)[0] ?? "";
+}
+
+/**
+ * **Every** section carrying `heading`, in document order.
+ *
+ * A document may repeat a heading, and taking only the first is a way past the
+ * checks that read a named section: with two `## Rejected` blocks, the first
+ * satisfying the structural `DO NOT` / `Temptation` requirement and the second
+ * holding the `- Candidate:` that was re-adopted, the candidate was never
+ * collected — `extractH2Headings` folds the duplicate into a `Set`, so no
+ * structural error fired either, and `QFAI-DECISION-006` could not see the
+ * reintroduction it exists to report.
+ */
+function extractMarkdownSections(text: string, heading: string): string[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
   const target = heading.trim().toLowerCase();
-  let start = -1;
-  let level = 0;
+  const sections: string[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
+    const match = HEADING_LINE.exec(lines[index] ?? "");
     if (!match) {
       continue;
     }
-    const name = (match[2] ?? "").trim().toLowerCase();
-    if (name !== target) {
+    if ((match[2] ?? "").trim().toLowerCase() !== target) {
       continue;
     }
-    start = index;
-    level = (match[1] ?? "").length;
-    break;
-  }
-
-  if (start < 0) {
-    return "";
-  }
-
-  let end = lines.length;
-  for (let index = start + 1; index < lines.length; index += 1) {
-    const match = /^(#{1,6})\s*(.+?)\s*$/.exec(lines[index] ?? "");
-    if (!match) {
-      continue;
+    const level = (match[1] ?? "").length;
+    let end = lines.length;
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const next = HEADING_LINE.exec(lines[cursor] ?? "");
+      if (!next) {
+        continue;
+      }
+      if ((next[1] ?? "").length <= level) {
+        end = cursor;
+        break;
+      }
     }
-    const nextLevel = (match[1] ?? "").length;
-    if (nextLevel <= level) {
-      end = index;
-      break;
-    }
+    sections.push(lines.slice(index, end).join("\n"));
+    // Resume at the section's own end so a nested repeat is not re-collected.
+    index = end - 1;
   }
 
-  return lines.slice(start, end).join("\n");
+  return sections;
 }
 
 async function readSafe(filePath: string): Promise<string> {

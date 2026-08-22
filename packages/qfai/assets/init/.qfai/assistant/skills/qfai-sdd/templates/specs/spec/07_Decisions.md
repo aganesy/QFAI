@@ -25,9 +25,9 @@ raises `TDDLIST_EXCEPTION_UNRESOLVED_DR`.
 ### DR-NNNN-MMMM: one-line title
 
 - Status: proposed | accepted | superseded | rejected | re-open
-- Context: what forced the decision — the constraint, conflict or anomaly
-- Decision: what was decided, in the imperative
-- Consequences: what this costs and what it forecloses
+- Context: <what forced the decision — the constraint, conflict or anomaly>
+- Decision: <what was decided, in the imperative>
+- Consequences: <what this costs and what it forecloses>
 - Related: the `AC-*` / `BR-*` / `TC-*` / `TDD-*` / `CR-*` this decision binds, or `-`
 - Re-opens: `-` <!-- the prior `DR-*` this re-adopts; required when Status is `re-open` -->
 - Approved by: `-` <!-- who approved the re-open; required when Status is `re-open` -->
@@ -46,7 +46,8 @@ A re-open entry carries three things beyond a normal decision:
   and it cannot be the entry's own nor a re-open that points back at it: a pair
   citing each other has no prior decision anywhere in the loop.
 - `Decision:` — what changed since the rejection. A re-open that repeats the
-  original argument is the reintroduction the guard exists to stop.
+  original argument is the reintroduction the guard exists to stop, and the
+  sample block's own `<...>` prompt counts as unwritten.
 - `Approved by:` / `Approved at:` — the explicit approval, the time as
   `YYYY-MM-DDThh:mm:ssZ`. Until both are filled, the entry stays
   `Status: proposed`.

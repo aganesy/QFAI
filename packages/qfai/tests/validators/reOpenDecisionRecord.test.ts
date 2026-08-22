@@ -23,6 +23,7 @@ import { defaultConfig } from "../../src/core/config.js";
 import {
   collectDeclaredDrHeadingIds,
   collectReOpenEntries,
+  isPlaceholderValue,
 } from "../../src/core/decisionRecords.js";
 import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
@@ -86,16 +87,22 @@ function reOpen(fields: string[], options: { id?: string; decision?: string | nu
 }
 
 async function withSpec<T>(
-  files: { decisions?: string; delta?: string },
+  files: { decisions?: string; delta?: string; policy?: string },
   fn: (root: string) => Promise<T>,
 ): Promise<T> {
   const root = path.join(
     os.tmpdir(),
     `qfai-reopen-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   );
-  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  const specsRoot = path.join(root, ".qfai", "specs");
+  const specDir = path.join(specsRoot, "spec-0001");
   await mkdir(specDir, { recursive: true });
   try {
+    if (files.policy !== undefined) {
+      const policyDir = path.join(specsRoot, "_policies");
+      await mkdir(policyDir, { recursive: true });
+      await writeFile(path.join(policyDir, "08_Decisions.md"), files.policy, "utf-8");
+    }
     for (const [name, body] of [
       ["01_Spec.md", "# Spec\n\n- Status: active\n"],
       ["02_User-stories.md", "# US\n"],
@@ -169,6 +176,46 @@ describe("the re-open record has a parsed shape", () => {
       "- Status: re-open",
     ].join("\n");
     expect(collectReOpenEntries(text).map((entry) => entry.id)).toEqual(["DR-0001-0002"]);
+  });
+
+  it("reads a CommonMark-indented `### DR-*` heading as a record", () => {
+    const text = [
+      "## Decisions",
+      "",
+      "   ### DR-0001-0002: the indented record",
+      "",
+      "- Status: re-open",
+      "- Re-opens: DR-0001-0001",
+    ].join("\n");
+    // Three leading spaces are a heading, not code: without this the heading
+    // closed the previous record and opened none, so a delta with a correct
+    // back-reference reported `QFAI-DECISION-004` against a dropped record.
+    expect(collectReOpenEntries(text).map((entry) => entry.id)).toEqual(["DR-0001-0002"]);
+  });
+
+  it("does not read an indented code sample's approval as the record's own", () => {
+    const text = [
+      "### DR-0001-0002: the real record",
+      "",
+      "- Status: re-open",
+      "- Re-opens: DR-0001-0001",
+      "",
+      "        - Approved by: ops-lead",
+      "        - Approved at: 2026-01-02T03:04:05Z",
+    ].join("\n");
+    const entries = collectReOpenEntries(text);
+    expect(entries).toHaveLength(1);
+    expect(entries[0]?.approvedBy).toBeNull();
+    expect(entries[0]?.approvedAt).toBeNull();
+  });
+
+  it("does not read the template's own `Decision:` prompt as a written decision", () => {
+    const entries = collectReOpenEntries(
+      reOpen(["- Re-opens: DR-0001-0001", APPROVED], {
+        decision: "what was decided, in the imperative",
+      }),
+    );
+    expect(isPlaceholderValue(entries[0]?.decision)).toBe(true);
   });
 
   it("resolves declarations against the layout's own Decisions file", async () => {
@@ -474,5 +521,135 @@ describe("QFAI-DECISION-007 rejects a duplicated Decision Record id", () => {
         expect(await codes(root)).not.toContain("QFAI-DECISION-007");
       },
     );
+  });
+});
+
+describe("the ways past the gate the second review found", () => {
+  it("reports a spec-local re-open declared under the policy-level short id", async () => {
+    // `DR-0001` belongs to `_policies/08_Decisions.md`; declared here it has
+    // two owners, and nothing says which one the back-reference reached.
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED], { id: "DR-0001" }),
+        delta: deltaFor("DR-0001"),
+      },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-001");
+      },
+    );
+  });
+
+  it("reports a re-open whose `Decision:` is still the template prompt", async () => {
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED], {
+          decision: "what was decided, in the imperative",
+        }),
+        delta: deltaFor(RE_OPEN_ID),
+      },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-005");
+      },
+    );
+  });
+
+  it("reports a prior DR the policy file declares twice", async () => {
+    const policy = [
+      "# 08 Decisions",
+      "",
+      "### DR-0001: cache policy",
+      "",
+      "- Status: rejected",
+      "",
+      "### DR-0001: cache policy, again",
+      "",
+      "- Status: accepted",
+      "",
+    ].join("\n");
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001", APPROVED]),
+        delta: deltaFor(RE_OPEN_ID),
+        policy,
+      },
+      async (root) => {
+        // The spec-local uniqueness check cannot see it: the declaration
+        // collector folds both policy blocks into one `Set` entry.
+        expect(await codes(root)).toContain("QFAI-DECISION-007");
+      },
+    );
+  });
+
+  it("collects a candidate parked in a second `## Rejected` section", async () => {
+    const delta = [
+      DELTA_BASE.replace("- Candidate: in-process cache", "- Candidate: a bounded LRU").replace(
+        "## Adopted\n",
+        "## Adopted\n\n- Adopted: in-process cache\n",
+      ),
+      "",
+      "## Rejected",
+      "",
+      "- Candidate: in-process cache",
+      "- Reason: unbounded growth",
+      "",
+    ].join("\n");
+    await withSpec({ delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("matches a quoted candidate that ends in a sentence period", async () => {
+    const delta = DELTA_BASE.replace(
+      "- Candidate: in-process cache",
+      '- Candidate: "in-process cache".',
+    ).replace("## Adopted\n", "## Adopted\n\n- Adopted: in-process cache\n");
+    await withSpec({ delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("keeps a fenced example fenced when a line inside it carries an info string", async () => {
+    const delta = [
+      DELTA_BASE,
+      "",
+      "```markdown",
+      "```js",
+      `- Re-opened by: ${RE_OPEN_ID}`,
+      "```",
+      "",
+    ].join("\n");
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        // A closing fence carries no info string, so ```js is sample content
+        // and the back-reference under it is not the delta's.
+        expect(await codes(root)).toContain("QFAI-DECISION-004");
+      },
+    );
+  });
+
+  it("does not resolve a prior DR through a leftover Decisions file", async () => {
+    const root = path.join(
+      os.tmpdir(),
+      `qfai-reopen-leftover-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    );
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    try {
+      const decisionsPath = path.join(specDir, "14_Decisions.md");
+      await writeFile(decisionsPath, "### DR-0001-0002: the live record\n", "utf-8");
+      // A migration leftover the layout no longer resolves.
+      await writeFile(
+        path.join(specDir, "07_Decisions.md"),
+        "### DR-0001-0009: a record only the leftover has\n",
+        "utf-8",
+      );
+      const declared = await collectDeclaredDrHeadingIds(specDir, specsRoot, decisionsPath);
+      expect([...declared]).toContain("DR-0001-0002");
+      expect([...declared]).not.toContain("DR-0001-0009");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
