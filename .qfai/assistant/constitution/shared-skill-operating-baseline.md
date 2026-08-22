@@ -36,10 +36,13 @@ the rule. A skill approaching it is a signal to move a section out.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- Clarifying questions are budgeted: **at most 5 per skill invocation**, after
-  which the skill proceeds with labelled assumptions instead of asking.
-  Mandatory approval questions are exempt from the budget and MUST still be
-  asked. See `constitution.md` Article VI.
+- Clarifying questions are budgeted: **at most 5 per skill invocation**, counted
+  per question item rather than per AskUserQuestion call, after which the skill
+  proceeds with labelled assumptions instead of asking.
+  Mandatory approval questions and `hard-required` inputs are exempt from the
+  budget: approvals MUST still be asked, and a missing `hard-required` input
+  MUST be asked for rather than assumed — if it stays missing, stop instead of
+  guessing. See `constitution.md` Article VI.
 
 ## Canonical qfai Launcher (Mandatory)
 

@@ -39,7 +39,9 @@ Skill-specific examples:
 Both examples are clarifications and count against the Article VI budget: at
 most 5 per invocation of this skill, after which the remaining choices are taken
 as labelled assumptions and recorded in the config diff — see
-`.qfai/assistant/constitution/constitution.md` Article VI.
+`.qfai/assistant/constitution/constitution.md` Article VI. The `hard-required`
+inputs in Default Autopilot Policy are the exception: they are never assumed,
+and a missing one blocks the run until it is provided.
 
 ## FORMAT SSOT (Mandatory)
 

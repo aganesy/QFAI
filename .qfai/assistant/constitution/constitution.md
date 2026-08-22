@@ -96,7 +96,10 @@ Default policy:
   agent that received the invocation, starts at zero when the invocation starts,
   and does **not** reset between stages of that invocation. A delegated subagent
   spends its caller's budget; it does not receive one of its own.
-- One AskUserQuestion call is one question, however many options it offers.
+- **One question item is one question**, however many options it offers. An
+  AskUserQuestion call that bundles N question items spends N, not 1 — bundling
+  is a presentation choice, not a discount. The plain-text fallback uses the
+  same unit: one numbered choice set is one question.
 
 ### What does not count (MUST)
 
@@ -107,18 +110,29 @@ Default policy:
   clarification. Such questions are unbounded and MUST still be asked after the
   budget is exhausted. Skipping a mandatory approval to stay under the budget
   violates this article; it is not compliance with it.
+- **`hard-required` inputs are exempt.** An input a skill's
+  `Default Autopilot Policy` lists under `hard-required` — `companyName` and
+  brand intent in `/qfai-configure`, a missing `primarySpecId` — has no default
+  and MUST NOT be guessed once the budget is exhausted. Ask for it; if it is
+  still missing, stop and name what is blocked. Assumptions cover
+  clarifications, never inputs the skill declares undefaultable.
 
 ### Exhaustion (MUST)
 
-Exhaustion stops the questions, not the work. Both stop conditions below mean
-the same thing: for the remainder of the invocation the agent enters `--auto`
-behaviour — ask no further clarifying questions, proceed with explicit
-assumptions, and label every assumption in the outputs.
+Exhaustion stops the questions, not the work: for the remainder of the
+invocation the agent enters `--auto` behaviour — ask no further clarifying
+questions, proceed with explicit assumptions, and label every assumption in the
+outputs. The exemptions above survive exhaustion unchanged.
+
+An explicit **“stop” is not exhaustion** and MUST NOT be read as `--auto`. It
+ends the invocation: ask nothing further, do no further work, make no further
+file changes, and report what was completed and what remains.
 
 Stop conditions:
 
-- User says “stop / proceed / done”.
-- Question budget is exhausted.
+- User says “stop” → abort the invocation; no further work or file changes.
+- User says “proceed / done” → `--auto` behaviour for the rest of the invocation.
+- Question budget is exhausted → `--auto` behaviour for the rest of the invocation.
 
 ---
 

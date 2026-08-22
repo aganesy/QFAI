@@ -43,17 +43,31 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "does **not** reset between stages");
       // Without this a delegating skill multiplies its own budget by fan-out.
       expectPhrase(content, "spends its caller's budget; it does not receive one of its own");
-      expectPhrase(content, "One AskUserQuestion call is one question");
+      // Per item, not per call: AskUserQuestion can bundle several items into
+      // one call, so counting calls would let 5 calls carry far more questions.
+      expectPhrase(content, "**One question item is one question**");
+      expectPhrase(content, "bundles N question items spends N, not 1");
+      expectPhrase(content, "one numbered choice set is one question");
     });
 
     it(`${tree}: Article VI says what exhaustion does`, async () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "### Exhaustion (MUST)");
       // "Stop condition" must not be readable as "abort the run".
-      expectPhrase(content, "Exhaustion stops the questions, not the work.");
+      expectPhrase(content, "Exhaustion stops the questions, not the work");
       expectPhrase(content, "the agent enters `--auto`\nbehaviour");
       expectPhrase(content, "label every assumption in the outputs");
-      expectPhrase(content, "Question budget is exhausted.");
+      expectPhrase(content, "Question budget is exhausted → `--auto` behaviour");
+    });
+
+    it(`${tree}: Article VI keeps an explicit "stop" out of --auto`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      // Exhaustion continues the work; a user "stop" must end it instead.
+      expectPhrase(content, "**“stop” is not exhaustion**");
+      expectPhrase(content, "MUST NOT be read as `--auto`");
+      expectPhrase(content, "make no further\nfile changes");
+      expectPhrase(content, "User says “stop” → abort the invocation");
+      expectPhrase(content, "User says “proceed / done” → `--auto` behaviour");
     });
 
     it(`${tree}: Article VI decides whether approval questions count`, async () => {
@@ -66,11 +80,25 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "Skipping a mandatory approval to stay under the budget\n  violates");
     });
 
+    it(`${tree}: Article VI never lets exhaustion assume a hard-required input`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      // Otherwise the budget contradicts every skill's `hard-required` bucket.
+      expectPhrase(content, "**`hard-required` inputs are exempt.**");
+      expectPhrase(
+        content,
+        "has no default\n  and MUST NOT be guessed once the budget is exhausted",
+      );
+      expectPhrase(content, "if it is\n  still missing, stop and name what is blocked");
+      expectPhrase(content, "never inputs the skill declares undefaultable");
+    });
+
     it(`${tree}: the shared baseline restates the budget for every skill`, async () => {
       const content = await read(tree, OPERATING);
       expectPhrase(content, "**at most 5 per skill invocation**");
+      expectPhrase(content, "counted\n  per question item rather than per AskUserQuestion call");
       expectPhrase(content, "proceeds with labelled assumptions instead of asking");
-      expectPhrase(content, "Mandatory approval questions are exempt");
+      expectPhrase(content, "Mandatory approval questions and `hard-required` inputs are exempt");
+      expectPhrase(content, "if it stays missing, stop instead of\n  guessing");
       expectPhrase(content, "See `constitution.md` Article VI.");
     });
 
@@ -86,6 +114,11 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "count against the Article VI budget");
       expectPhrase(content, "at\nmost 5 per invocation of this skill");
       expectPhrase(content, "taken\nas labelled assumptions");
+      expectPhrase(
+        content,
+        "The `hard-required`\ninputs in Default Autopilot Policy are the exception",
+      );
+      expectPhrase(content, "a missing one blocks\nthe run until it is provided");
       expectPhrase(content, "`.qfai/assistant/constitution/constitution.md` Article VI");
     });
   }
