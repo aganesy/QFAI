@@ -143,20 +143,45 @@ passes**:
    (`git diff --name-only <base>..<slice-head> -- <source root>`, substituting
    `<source root>` from that field rather than assuming `src/`; a repo may
    keep production code under `app/`, `lib/`, `internal/`, `cmd/` or
-   `packages/*/src`). A zero-path result is not by itself evidence of a clean
-   seam, and it is not automatically a mis-read root either. It is legitimate
-   only when the slice's own evidence accounts for it — every item on the slice
-   took the falsifiability path, which adds no production code and reverts its
-   mutation (`references/red-not-observable.md`). Confirm that from the slice's
-   evidence blocks; if even one item claims production code, treat the empty
-   diff as a mis-read root, re-read `catalog/structure.md`, correct the roots
-   and re-run before continuing.
-2. Compare that list against the slice's declared `Owning module`.
-3. Report every touched path that no slice declared, and every path touched by
+   `packages/*/src`).
+   **A catalog written before that field existed carries no `Production roots`
+   line.** `assistant/catalog/**` is create-only, so upgrading the tool and
+   re-running `npx qfai init --force` refreshes `assistant/skills/**` and leaves
+   an installed project's catalog untouched: the policy arrives, the field does
+   not. Do not fall back to a literal `src/` — derive the roots once from that
+   catalog's `Core modules` and `CLI / service entry` values checked against the
+   repository listing, **write the derived `Production roots` line back into
+   `catalog/structure.md` in the same pass**, and reconcile against it. Every
+   later run then reads the field like any other.
+2. Drop test and fixture paths from that list before comparing. The pathspec
+   above is positive only, so a repo that colocates tests with production code
+   — `app/foo.test.ts` beside `app/foo.ts`, Go's `_test.go` in the package it
+   tests — lists them as touched production paths, and step 5 would report each
+   one as a breach. Exclude them in the same command, e.g.
+   `git diff --name-only <base>..<slice-head> -- <source root> ':(exclude)**/*.test.*' ':(exclude)**/*_test.go' ':(exclude)**/__tests__/**' ':(exclude)**/testdata/**'`,
+   extending the exclusions to whatever this repo's test and fixture naming
+   actually is. `Production roots` alone cannot do this: the excluded files sit
+   **inside** a declared root.
+3. A zero-path result is not by itself evidence of a clean seam, and it is not
+   automatically a mis-read root either. It is legitimate only when the slice's
+   **whole** change record accounts for it, not just its RED route: every item
+   on the slice took the falsifiability path, which adds no production code and
+   reverts its mutation (`references/red-not-observable.md`), **and** the
+   slice's Refactor step and every review-fix round on it left production files
+   untouched. Refactor edits shipped code by design, and an
+   `implementation-reviewer` REVISE for naming or duplication takes the no-round
+   path — both change production code with no RED of their own, so a
+   falsifiability-only RED does not on its own imply an empty production diff.
+   Confirm both from the slice's evidence blocks, Refactor verify and
+   review-fix rounds included; if even one item claims production code, treat
+   the empty diff as a mis-read root, re-read `catalog/structure.md`, correct
+   the roots and re-run before continuing.
+4. Compare the remaining list against the slice's declared `Owning module`.
+5. Report every touched path that no slice declared, and every path touched by
    more than one slice, as a **deny-condition breach**. It is a breach whether
    or not anything broke: the gate was passed on a claim that turned out to be
    false, so the next authorization is being made on the same basis.
-4. A breach does not automatically roll back a green merge. It does require the
+6. A breach does not automatically roll back a green merge. It does require the
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 

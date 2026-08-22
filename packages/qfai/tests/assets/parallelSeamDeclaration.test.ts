@@ -138,6 +138,56 @@ describe("declared seam", () => {
       );
     });
 
+    it(`${tree}: an empty diff is judged on the whole change record, not the RED route`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Refactor and a no-round REVISE edit production code with no RED of
+      // their own, so falsifiability-only RED does not imply an empty diff.
+      expect(policy).toContain(
+        "It is legitimate only when the slice's **whole** change record accounts for it, not just its RED route",
+      );
+      expect(policy).toContain(
+        "**and** the slice's Refactor step and every review-fix round on it left production files untouched",
+      );
+      expect(policy).toContain(
+        "falsifiability-only RED does not on its own imply an empty production diff",
+      );
+      expect(policy).toContain(
+        "Confirm both from the slice's evidence blocks, Refactor verify and review-fix rounds included",
+      );
+    });
+
+    it(`${tree}: a catalog predating the field gets a derivation, not a src/ fallback`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // `assistant/catalog/**` is create-only, so --force never adds the field
+      // to an already-initialized project.
+      expect(policy).toContain(
+        "**A catalog written before that field existed carries no `Production roots` line.**",
+      );
+      expect(policy).toContain("`assistant/catalog/**` is create-only");
+      expect(policy).toContain("Do not fall back to a literal `src/`");
+      expect(policy).toContain(
+        "**write the derived `Production roots` line back into `catalog/structure.md` in the same pass**",
+      );
+    });
+
+    it(`${tree}: colocated tests are excluded before the ownership comparison`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // A positive-only pathspec lists `app/foo.test.ts` as a production path.
+      expect(policy).toContain("Drop test and fixture paths from that list before comparing");
+      expect(policy).toContain("The pathspec above is positive only");
+      expect(policy).toContain("Go's `_test.go` in the package it tests");
+      expect(policy).toContain("':(exclude)**/*.test.*'");
+      expect(policy).toContain("':(exclude)**/*_test.go'");
+      // `Production roots` cannot express this: the tests live inside a root.
+      expect(policy).toContain(
+        "`Production roots` alone cannot do this: the excluded files sit **inside** a declared root",
+      );
+      expect(policy).toContain("Compare the remaining list against the slice's declared");
+    });
+
     it(`${tree}: the SKILL carries both the gate note and the reconcile step`, async () => {
       const skill = flat(await read(tree, SKILL));
 
