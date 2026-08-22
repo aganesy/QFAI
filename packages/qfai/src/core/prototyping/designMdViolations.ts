@@ -19,8 +19,10 @@
  * trusted (the recomputed list drives the stop decision only; it is not
  * written back into `prototyping.json`); a `max-iterations` stop skips
  * that re-scan and simply ends the loop. `prototypingCertify` then exits
- * 2 on any violation found in the final HTML, unconditionally, so no
- * certificate is ISSUED over a violation. The one path that does not
+ * 2 on any violation found in the accepted iteration's captured HTML,
+ * unconditionally, so no certificate is ISSUED over a violation the
+ * capture evidence shows — the authoring tree (`.qfai/prototypes/`) is
+ * never opened by certify and is outside that guarantee. The one path that does not
  * re-scan is `certify --upgrade-scope full`, which is not an issuing
  * path: it re-gates an already-sealed scope-limited certificate against
  * the validate-side gate signal and rewrites the scope marker in place

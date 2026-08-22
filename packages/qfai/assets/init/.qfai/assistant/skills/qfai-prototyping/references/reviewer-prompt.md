@@ -44,9 +44,11 @@ type Review = {
 `[]` unless the runtime injects pre-computed violations. You cannot
 waive a finding by writing `[]` yourself: on a convergence stop the
 accepted iteration's HTML is re-scanned and the re-scan result wins,
-and `npx qfai prototyping certify` re-scans every final HTML file
-before it seals, so no certificate is **issued** over a violation. One
-carve-out: `npx qfai prototyping certify --upgrade-scope full` is not
+and `npx qfai prototyping certify` re-scans the accepted iteration's
+captured HTML before it seals, so no certificate is **issued** over a
+violation the capture evidence shows (certify reads
+`.qfai/evidence/prototyping/iter-NN/` only — it never opens the
+authoring `prototypes/` tree). One carve-out: `npx qfai prototyping certify --upgrade-scope full` is not
 an issuing path — it re-gates an already-sealed scope-limited
 certificate without re-scanning HTML, so a promotion to full is only
 as trustworthy as the seal it inherits. If the final HTML moved after

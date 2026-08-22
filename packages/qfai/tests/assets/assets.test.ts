@@ -451,7 +451,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
-      expect(generatorRef).toMatch(/certify` re-scans every final HTML file\s+unconditionally/);
+      expect(generatorRef).toMatch(
+        /certify` re-scans every captured HTML file of\s+the accepted iteration unconditionally/,
+      );
+      // `findIterationHtmlFiles(evidenceRoot, …)` is certify's only scan
+      // input, so the guarantee covers the CAPTURE tree and not the
+      // authoring `prototypes/` tree the operator actually ships. An
+      // unqualified "no certificate is issued over a violation" would
+      // over-promise for a literal CAPTURE never rendered.
+      expect(generatorRef).toMatch(/the capture evidence\s+shows\*\*/);
+      expect(generatorRef).toMatch(/never opens the\s+authoring tree/);
       // No scanner injects `designMdViolations` into an ordinary cycle's
       // review — `recomputeFinalIterDesignMdViolations` runs only on the
       // convergence stop and its result is never written back. The prompt
@@ -476,6 +485,8 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       // "certify re-scans unconditionally" here would tell a Reviewer that
       // promoting a scope-limited certificate re-checks HTML it never
       // reads. `--check` is the named recovery on both sides.
+      expect(reviewerRef).toMatch(/captured HTML before it seals/);
+      expect(reviewerRef).toMatch(/never opens the\s+authoring `prototypes\/` tree/);
       expect(reviewerRef).toMatch(/certify --upgrade-scope full` is not\s+an issuing path/);
       expect(reviewerRef).toMatch(/without re-scanning HTML/);
       expect(reviewerRef).toMatch(/certify --check`/);
@@ -498,6 +509,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
         /restart the loop with\s+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`/,
       );
       expect(generatorRef).toMatch(/`--force` is not optional here/);
+      // The cycle-0 `--force` backup in `prototypingIterate` renames
+      // `PROTOTYPING_EVIDENCE_REL/iter-00` only; `.qfai/prototypes/iter-00`
+      // is left in place and the next cycle-0 write clobbers it. The
+      // prompt must name the tree that is backed up and the one that is
+      // not, or "iter-00 is renamed" promises recoverability it lacks.
+      expect(generatorRef).toMatch(
+        /`\.qfai\/evidence\/prototyping\/iter-00` is renamed to\s+`iter-00\.backup-<ISO>`/,
+      );
+      expect(generatorRef).toMatch(/Only the \*\*evidence\*\* tree is\s+backed up/);
+      expect(generatorRef).toMatch(/copy that\s+directory aside yourself/);
     }
   });
 
@@ -528,6 +549,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(scannerProse).toContain("CONVERGENCE stop");
     expect(scannerProse).toContain("`max-iterations` stop skips that re-scan");
     expect(scannerProse).toContain("unconditionally");
+    // And the same capture-tree scoping both prompts now carry.
+    expect(scannerProse).toContain("accepted iteration's captured HTML");
+    expect(scannerProse).toContain("the capture evidence shows");
     // And the same two carve-outs the prompt now carries: no per-cycle
     // injection, and `--upgrade-scope full` does not re-scan.
     expect(scannerProse).toContain("stays `[]`");

@@ -63,9 +63,15 @@ hand-written `[]` in the Reviewer report is discarded and the loop
 keeps iterating (the re-scan drives that decision only; it is not
 written back into the review). A **max-iterations** stop skips that re-scan —
 it reports an exhausted budget, not a clean bill of health — but
-`npx qfai prototyping certify` re-scans every final HTML file
-unconditionally and exits 2 on any finding, so no certificate is
-**issued** over a violation. One carve-out:
+`npx qfai prototyping certify` re-scans every captured HTML file of
+the accepted iteration unconditionally and exits 2 on any finding, so
+no certificate is **issued** over a violation **the capture evidence
+shows**. That is the whole guarantee: certify reads
+`.qfai/evidence/prototyping/iter-NN/` only and never opens the
+authoring tree (see _Output layout_), so a literal that survives in
+`.qfai/prototypes/iter-NN/index.html` but is not rendered into the
+capture — a stale `--target-url` build, a branch CAPTURE never
+exercised — is outside it. Keep the two trees in step. One carve-out:
 `npx qfai prototyping certify --upgrade-scope full` is not an issuing
 path — it re-gates an already-sealed scope-limited certificate against
 the validate-side gate signal and rewrites the scope marker without
@@ -82,8 +88,13 @@ hash mismatch. A genuine brand change is a separate operation:
 refreeze the lock via `/qfai-sdd`, then restart the loop with
 `npx qfai prototyping iterate --cycle 0 --target-url <url> --force`.
 `--force` is not optional here — the prior loop's `iter-00` is still on
-disk and cycle 0 refuses to overwrite it without one; with it, `iter-00`
-is renamed to `iter-00.backup-<ISO>` before the reset.
+disk and cycle 0 refuses to overwrite it without one; with it,
+`.qfai/evidence/prototyping/iter-00` is renamed to
+`iter-00.backup-<ISO>` before the reset. Only the **evidence** tree is
+backed up: `.qfai/prototypes/iter-00/` is left in place and your next
+cycle-0 `index.html` overwrites it with no backup, so copy that
+directory aside yourself first if the prior loop's authoring artifact
+still matters.
 
 ### 1. color literal ban
 
