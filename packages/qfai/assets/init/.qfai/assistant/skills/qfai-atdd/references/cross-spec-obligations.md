@@ -69,12 +69,18 @@ source answered.
    `traceability.contracts.idToSpecs`. It is a generated report artifact, not a
    sibling spec pack, so reading it widens no read set. It is built from the
    `QFAI-CONTRACT-REF:` lines in each spec's `01_Spec.md`, so a spec that binds
-   its contracts only in the rule table does not appear there — which is what
-   step 2 is for.
-2. **The sibling specs' `Contract-Refs` column**, when the map is unavailable or
-   answers `(none)` for an ID some spec's rule table does bind. Read the
-   `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — the
-   documented per-spec contract binding. This is the one narrow exception to
+   its contracts only in the rule table is missing from that ID's line. The map
+   is therefore incomplete per ID, not merely empty per ID — which is why step 2
+   is not a fallback.
+2. **The rule tables' `Contract-Refs` column — always, not only when step 1 is
+   unavailable or answers `(none)`.** Read the `Contract-Refs` column of
+   `.qfai/specs/*/04_Business-Rules.md` — the documented per-spec contract
+   binding — and **merge** its owners into the map's answer for that ID. A
+   non-empty map line proves one owner; it never proves it found them all, so a
+   partly-filled map is exactly the case this step exists for. **Your own
+   spec's rule table is inside that merge**: if it binds the ID, the contract is
+   this run's own however many siblings the map names beside you, and it FAILs
+   here rather than becoming residue. This is the one narrow exception to
    Default Mode: that column only, no other content of a sibling pack, and
    nothing is written back.
 
@@ -83,10 +89,12 @@ contract index — short ID, file, purpose — and has no spec column at all.
 
 What the answer means:
 
-- **One spec** — that spec is `Owning spec`.
+- **One spec** — that spec is `Owning spec`, unless it is this spec: then the
+  contract is this run's own and it FAILs, with no row here.
 - **Several specs** — every one of them owns it. Name them all; the contract is
   closed by whichever of those runs covers it first, and none of them may record
-  it as another's.
+  it as another's. This spec being one of the several is the same FAIL as above:
+  a co-owner discharges its own contracts, it does not hand them to a co-owner.
 - **No spec** — the contract is an orphan, declared under `.qfai/contracts/**`
   and referenced by no spec. That is not attributable residue: it is this run's
   finding to carry, it FAILs, and the fix is a `/qfai-sdd` triage of the orphan,

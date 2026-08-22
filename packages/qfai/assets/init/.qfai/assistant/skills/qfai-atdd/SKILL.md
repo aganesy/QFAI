@@ -75,7 +75,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
-- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report`), falling back to the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
+- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report`) **and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
 
 ## Sub-agent Delegation (MANDATORY)
 

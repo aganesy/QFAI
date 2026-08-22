@@ -271,9 +271,33 @@ describe.each(TREES)("%s", (tree) => {
     expect(obligations).toContain("**Several specs** — every one of them owns it");
     expect(obligations).toContain("**No spec** — the contract is an orphan");
 
+    // The rule-table read is a merge, not a fallback. A contract declared by a
+    // sibling in `01_Spec.md` and by *this* spec only in its rule table gives a
+    // non-empty map line, so a fallback gated on `(none)` never fires and the
+    // run records its own contract as the sibling's residue.
+    expect(obligations).toContain(
+      "always, not only when step 1 is unavailable or answers `(none)`",
+    );
+    expect(obligations).toContain("**merge** its owners into the map's answer");
+    expect(obligations).toContain("it never proves it found them all");
+    expect(obligations).toContain("**Your own spec's rule table is inside that merge**");
+    expect(obligations).toContain("it FAILs here rather than becoming residue");
+    // …and self-ownership is a FAIL on both the one-owner and co-owner answers.
+    expect(obligations).toContain(
+      "unless it is this spec: then the contract is this run's own and it FAILs",
+    );
+    expect(obligations).toContain(
+      "a co-owner discharges its own contracts, it does not hand them to a co-owner",
+    );
+
     // …and the Read Set Contract admits the read, or the procedure is one the
     // skill's own mandatory read set forbids.
     const atdd = flat(await read(tree, ATDD));
+    // The read-set exception has to describe the same merge, or the mandatory
+    // read set licenses only the fallback that misses the partly-filled map.
+    expect(atdd).toContain(
+      "**and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`",
+    );
     expect(atdd).toContain(
       "Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`",
     );
