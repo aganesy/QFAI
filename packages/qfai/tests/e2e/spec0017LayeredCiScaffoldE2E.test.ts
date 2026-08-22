@@ -41,7 +41,17 @@
  * spec's own integration slice was pushed past its timeout by exactly that shape.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm, stat, access, writeFile } from "node:fs/promises";
+import {
+  mkdtemp,
+  readFile,
+  readdir,
+  lstat,
+  realpath,
+  rm,
+  stat,
+  access,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -60,6 +70,7 @@ import {
   INIT_INSTRUCTION_TREES,
   ALLOWED_INIT_CONTENT,
   ALLOWED_INIT_PATHS,
+  ALLOWED_INIT_ROOT_ASSETS,
   ALLOWED_WORKFLOW_SHAPE,
   ALLOWED_JOB_SHAPE,
   ALLOWED_SHELLS,
@@ -564,10 +575,26 @@ describe(
           // agent's skills directory is a link into `.qfai/assistant/skills/`. So a link is RESOLVED
           // rather than refused: one pointing at a directory is covered where that directory is walked,
           // and one pointing at a file is judged on the file's kind, because what runs is the target.
+          //
+          // **"Covered where that directory is walked" is true only INSIDE the walked root**, and the
+          // comment asserted it without the walk enforcing it: `stat` follows a link wherever it goes,
+          // so a directory link pointing out of the tree was skipped and its contents read by nothing.
+          // All seventy resolve inside today — measured — which is exactly why the claim needs the
+          // check rather than the reader's trust.
           if (!entry.isFile()) {
             const target = await stat(full).catch(() => undefined);
             if (target === undefined) {
               notFiles.push(`${relative}: a link that resolves to nothing`);
+              continue;
+            }
+            // Against the RESOLVED root: `mkdtemp` hands back a path that is itself a link on
+            // every platform this runs on (a Windows 8.3 short name here, `/private/var` on
+            // macOS), so comparing a resolved target with an unresolved root called all seventy
+            // legitimate links escapes. The first version of this check did exactly that.
+            const resolved = await realpath(full).catch(() => undefined);
+            const inside = await realpath(root);
+            if (resolved === undefined || path.relative(inside, resolved).startsWith("..")) {
+              notFiles.push(`${relative}: a link whose target is outside the tree`);
               continue;
             }
             if (target.isDirectory()) continue;
@@ -624,6 +651,60 @@ describe(
       expect
         .soft(contentDrift, "a reviewed init file whose content is not the reviewed content")
         .toEqual([]);
+    });
+
+    it("ships nothing from the template root but the two workflows", async () => {
+      // **The pin one level upstream of the three above**, and the round that made it necessary shipped
+      // two payloads through the gap: `.agents/qfai-bootstrap`, extensionless and mode 0644 with a BOM
+      // in front of its shebang, and a `.claude/settings.json` carrying a `hooks` command string. Both
+      // arrived in the adopter tree with the path pin, the content pin and the kind rule all green,
+      // because all three exclude the eight instruction trees.
+      //
+      // What had caught an earlier attempt was a seven-name list in `tests/assets/assets.test.ts` —
+      // another spec's file, written before `.agents/` existed. A defence that works because of when a
+      // list was written is not a defence; this is the same question asked where the answer is two
+      // files, and it is asked over the SOURCE because the template root is copied first and with
+      // `force: false`, so a file planted here also pre-empts the real one at the same adopter path.
+      const rootAssets = path.resolve(
+        process.cwd(),
+        "..",
+        "..",
+        "packages",
+        "qfai",
+        "assets",
+        "init",
+        "root",
+      );
+      const found: string[] = [];
+      const flagged: string[] = [];
+      const walk = async (dir: string): Promise<void> => {
+        for (const entry of await readdir(dir, { withFileTypes: true })) {
+          const full = path.join(dir, entry.name);
+          if (entry.isDirectory()) {
+            await walk(full);
+            continue;
+          }
+          const rel = path.relative(rootAssets, full).split(path.sep).join("/");
+          found.push(rel);
+          // Asked here too: a file may be enumerated and still be a script, and the enumeration is a
+          // list of names while this is a question about what the bytes are.
+          const why = initMustNotShip(rel, await readFile(full), (await lstat(full)).mode);
+          if (why !== undefined) flagged.push(`${rel}: ${why}`);
+        }
+      };
+      await walk(rootAssets);
+
+      expect(
+        found.filter((rel) => !ALLOWED_INIT_ROOT_ASSETS.has(rel)).sort(),
+        "a file in the template root that no one enumerated — it is copied verbatim into every " +
+          "adopter tree, and first, so it also shadows whatever else would land at that path",
+      ).toEqual([]);
+      expect(
+        [...ALLOWED_INIT_ROOT_ASSETS].filter((rel) => !found.includes(rel)).sort(),
+        "an enumerated template-root asset that is no longer there — the list is the claim, so a " +
+          "stale entry is a claim about a file that does not exist",
+      ).toEqual([]);
+      expect(flagged, "a template-root asset that something would run").toEqual([]);
     });
 
     it("ships no lane that runs its own bundler build", async () => {

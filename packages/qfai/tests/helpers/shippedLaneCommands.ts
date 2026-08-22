@@ -242,7 +242,10 @@ export function commandsOf(body: string): string[] {
       i = here.afterDelimiter - 1;
       continue;
     }
-    if ((ch === "<" || ch === ">") && body[i + 1] === "(" && quote !== "'") {
+    // A process substitution is a substitution only OUTSIDE quotes. Inside double quotes bash
+    // performs none — `"<(cmd)"` is literal text — so `quote !== "'"` admitted a construct
+    // bash never runs. `quote === ""` is the whole rule, in both walks.
+    if ((ch === "<" || ch === ">") && body[i + 1] === "(" && quote === "") {
       const close = matchingParen(body, i + 1);
       out.push(...commandsOf(body.slice(i + 2, close)));
       current += SUBSTITUTION;
@@ -417,7 +420,39 @@ function codeMask(body: string): boolean[] {
   const mask = new Array<boolean>(body.length).fill(true);
   let quote = "";
   let inComment = false;
+  // Here-document data regions opened on a line already walked. The walk JUMPS them rather than
+  // walking them masked, because a quote inside data that is not code still drove the state machine.
+  const pendingData: HereDoc[] = [];
   for (let i = 0; i < body.length; i += 1) {
+    const here = pendingData.find((region) => region.dataStart === i);
+    if (here !== undefined) {
+      for (let j = here.dataStart; j < here.dataEnd && j < body.length; j += 1) mask[j] = false;
+      // An UNQUOTED delimiter leaves the data's substitutions live, and their contents ARE code —
+      // one scan, the way `commandsOf` reads the same region, so `$(…)` and a backtick cannot both
+      // claim the same bytes.
+      if (!here.quoted) {
+        const data = body.slice(here.dataStart, here.dataEnd);
+        for (let d = 0; d < data.length; d += 1) {
+          const opensAt =
+            data[d] === "$" && data[d + 1] === "(" ? d + 2 : data[d] === "`" ? d + 1 : -1;
+          if (opensAt === -1) continue;
+          const closesAt =
+            opensAt === d + 2
+              ? matchingParen(data, d + 1)
+              : (() => {
+                  const found = data.indexOf("`", d + 1);
+                  return found === -1 ? data.length : found;
+                })();
+          const inner = codeMask(data.slice(opensAt, closesAt));
+          for (let j = 0; j < inner.length; j += 1) {
+            mask[here.dataStart + opensAt + j] = inner[j] ?? true;
+          }
+          d = closesAt;
+        }
+      }
+      i = Math.max(i, here.dataEnd - 1);
+      continue;
+    }
     const ch = body[i] ?? "";
     if (inComment) {
       // The newline that ENDS a comment is a command separator and stays code. Marking it with the
@@ -439,19 +474,35 @@ function codeMask(body: string): boolean[] {
     //
     // `commandsOf` has always entered substitutions on their own terms; this is the same repair in the
     // other walk, and the disagreement between the two is what the finding was.
-    // A here-document's data is not code, and this walk had no model of one while `commandsOf`
-    // has since round 15. The differential test below found them disagreeing on its first run.
+    // A here-document's data is not code, and this walk had no model of one while `commandsOf` has had
+    // since round 15. The differential test found them disagreeing on its first run.
+    //
+    // **Marking the data was not enough: the walk kept going THROUGH it**, so a quote character in the
+    // data still drove the state machine. Round 19 executed the consequence — a lone `"` on a data line
+    // masks every separator after the here-document, `isAlternation` then reaches a `)` and reads a real
+    // pipe as a case arm, and `echo a | npx tsup ")"` collapses to one `echo`. `commandsOf` jumps past
+    // the data and does not have the bug, so the two walks disagreed again INSIDE the reader they were
+    // given to share. Sharing the reader was not sharing the reading.
+    //
+    // And `here.quoted` decides what the data IS, which only `commandsOf` was consuming: a quoted
+    // delimiter makes the data literal, an unquoted one leaves its substitutions live. The mask says so
+    // now, which is what makes the answer for an unquoted here-document a rule rather than a side effect
+    // of the bug above.
     if (quote === "") {
       const here = hereDocAt(body, i);
       if (here !== undefined) {
         for (let j = i; j < here.afterDelimiter; j += 1) mask[j] = false;
-        for (let j = here.dataStart; j < here.dataEnd && j < body.length; j += 1) mask[j] = false;
-        // The rest of the operator's LINE is still code; only the data is not.
+        pendingData.push(here);
         i = here.afterDelimiter - 1;
         continue;
       }
     }
-    if (quote !== "'" && ((ch === "$" && body[i + 1] === "(") || ch === "<" || ch === ">")) {
+    // `$( … )` still expands inside double quotes; a process substitution does not. Splitting the
+    // two conditions is what the previous single `quote !== "'"` collapsed.
+    if (
+      (quote !== "'" && ch === "$" && body[i + 1] === "(") ||
+      (quote === "" && (ch === "<" || ch === ">"))
+    ) {
       const opensAt = ch === "$" ? i + 1 : i + 1;
       if (body[opensAt] === "(") {
         const close = matchingParen(body, opensAt);
@@ -1113,6 +1164,32 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
 
+/**
+ * Every file in the template ROOT — the source `qfai init` copies verbatim, before anything else.
+ *
+ * `ALLOWED_INIT_PATHS` pins the initialised OUTPUT and excludes the eight instruction trees, because
+ * they hold two hundred files that belong to other specs. Round 19 walked in through that exclusion
+ * twice: a payload at `.agents/qfai-bootstrap` (extensionless, mode 0644, a BOM in front of its
+ * shebang) and a `.claude/settings.json` carrying a `hooks` command string. Both reached an adopter
+ * tree with all three pins green.
+ *
+ * What had stopped an earlier attempt was a seven-name list in another spec's asset test, written
+ * before `.agents/` existed — so the defence was the date the list was written, not a rule.
+ *
+ * This is the same pin one level upstream, where the tree is **two files instead of two hundred**.
+ * Two properties make that the right place for it: the template root is copied FIRST and with
+ * `force: false`, so a file placed here also pre-empts the real one at the same adopter path — the
+ * shadow route — and it is the only part of the init source that is not itself mirrored from
+ * somewhere with a guard of its own. Short enough to stay honest, and it closes both routes with one
+ * list.
+ */
+export const ALLOWED_INIT_ROOT_ASSETS: ReadonlySet<string> = new Set([
+  ".github/workflows/qfai-tests.yml",
+  ".github/workflows/qfai-validate.yml",
+  "DESIGN.md",
+  "qfai.config.yaml",
+]);
+
 /** The eight trees excluded from the PATH pin, and excluded from nothing else — the kind rule reads them. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
   ".qfai/",
@@ -1143,6 +1220,56 @@ export const INIT_MUST_NOT_SHIP =
   /(?:^|\/)(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pnpm-workspace\.yaml|\.npmrc|\.yarnrc(?:\.yml)?|\.pnpmfile\.(?:c?js))$|\.(?:c?js|mjs|sh|bash|ps1|bat|cmd|py|rb|pl)$|(?:^|\/)(?:\.git\/)?hooks\//;
 
 /**
+ * The byte-order marks an editor may write in front of a file's first real byte, with the encoding
+ * each one announces.
+ *
+ * Round 19 shipped `EF BB BF #!/bin/sh` into an adopter tree and ran it. The question that was meant
+ * to stop it read `contents.subarray(0, 2)` as `latin1` and got `EF BB` — **the reader was two bytes
+ * wide, at a fixed offset.** Adding a UTF-8 BOM to that comparison would have been the same mistake
+ * one encoding later, so the marks are enumerated and the text is decoded before anything looks for
+ * `#!` in it.
+ */
+const BYTE_ORDER_MARKS: ReadonlyArray<{
+  readonly mark: Buffer;
+  readonly encoding: BufferEncoding;
+  readonly swap: boolean;
+}> = [
+  { mark: Buffer.from([0xef, 0xbb, 0xbf]), encoding: "utf8", swap: false },
+  { mark: Buffer.from([0xff, 0xfe]), encoding: "utf16le", swap: false },
+  { mark: Buffer.from([0xfe, 0xff]), encoding: "utf16le", swap: true },
+];
+
+/**
+ * True when a shell would read this file as a script.
+ *
+ * Not "byte 0 is `#`": what made the round-19 payload run was `sh <file>`, which consults no bit and
+ * no offset. The shebang is evidence of INTENT, so it is looked for where a human would see it — as
+ * the first non-blank text, after any byte-order mark, in whatever encoding the mark announces.
+ *
+ * Bounded to the first kilobyte: a shebang is on line 1 or it is not a shebang, and the walk runs
+ * over every file `qfai init` writes.
+ */
+function carriesShebang(contents: Buffer): boolean {
+  const head = contents.subarray(0, 1024);
+  for (const { mark, encoding, swap } of BYTE_ORDER_MARKS) {
+    if (!head.subarray(0, mark.length).equals(mark)) continue;
+    const rest = head.subarray(mark.length);
+    // `swap16` needs an even length and mutates, so it gets its own copy; an odd tail is not
+    // decodable UTF-16 and the untouched bytes answer the question just as well.
+    let decoded: string;
+    try {
+      decoded = (swap ? Buffer.from(rest.subarray(0, rest.length & ~1)).swap16() : rest).toString(
+        encoding,
+      );
+    } catch {
+      decoded = rest.toString("latin1");
+    }
+    return decoded.trimStart().startsWith("#!");
+  }
+  return head.toString("latin1").trimStart().startsWith("#!");
+}
+
+/**
  * Why this file would run, or the empty string if nothing would run it.
  *
  * Three questions, because there are three answers to "who runs this": a kernel reads a shebang, a
@@ -1154,8 +1281,20 @@ export function initMustNotShip(
   contents: Buffer,
   mode: number,
 ): string | undefined {
-  if (contents.subarray(0, 2).toString("latin1") === "#!") return "carries a shebang";
+  if (carriesShebang(contents)) return "carries a shebang";
   // The owner-execute bit. Git records only this one, so it is the only one an adopter can receive.
+  //
+  // **It cannot fire on Windows, and round 19 found that round 18's evidence that it fires was an
+  // artifact of the instrument.** Node reports `0o666` for every file on this platform, so
+  // `mode & 0o100` is always 0; the `-rwxr-xr-x` that was read as proof came from Git Bash's `ls`,
+  // which infers the `x` column from the shebang. Measured both ways: a `chmod 644` file WITH a
+  // shebang lists as `-rwxr-xr-x`, and a `chmod 755` file without one lists as `-rw-r--r--` — the
+  // opposite of the bit in both cases. So the check was confirmed by an oracle that was reading
+  // question 1's answer and reporting it as question 2's.
+  //
+  // The question stays, because CI runs `ubuntu-latest`, where git restores the mode and the bit is
+  // real. What changed is the claim: on a developer's Windows machine this line is inert, and the
+  // shebang question is the one carrying the load. Do not cite a local run as evidence it works.
   if ((mode & 0o100) !== 0) return "arrives executable";
   if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
   return undefined;

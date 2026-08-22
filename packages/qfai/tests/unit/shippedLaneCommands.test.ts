@@ -403,6 +403,12 @@ describe("the shipped-lane allowlist", () => {
     // refuse it, and if the mask says it is not, the scan must not be asked to.** That ties the two
     // instruments together rather than leaving each to be checked against a corpus of the last round's
     // spellings, and a walk that diverges from the mask fails here whatever the spelling.
+    //
+    // **Every entry below is a claim about bash, and the obligation is to have RUN it.** Round 19
+    // found the reason this matters: a wrong `inert` entry passes precisely when the mask is also
+    // wrong, so a misfiled row would have this test certifying an escape rather than catching one.
+    // `.qfai/evidence/atdd-spec-0017.md` records the marker output for each. Do not add a row here
+    // from reading; add it from a run.
     const BUILD = "npx tsup";
     // Decorations that put a build at a CODE position in bash, one per construct this file has been
     // wrong about. Each `%s` is where the build goes.
@@ -428,17 +434,61 @@ describe("the shipped-lane allowlist", () => {
       "build_once() { %s; }",
       "( %s )",
       "read v <<EOF\n$(%s)\nEOF",
+      // Round 19. The delimiter scan breaks on `<`/`>`/`(`, and nothing asserted it: reverting that
+      // one character class passed the whole file.
+      "read v <<EOF>/dev/null\ndata\nEOF\n%s",
+      // …and the eleventh spelling, found by executing with a fake bundler on PATH. `codeMask` marked
+      // a here-document's data non-code and then kept WALKING it, so the `"` on the data line drove
+      // the quote state for everything after: the separators vanished, the alternation lookahead
+      // reached the `)`, and a real pipe read as a `case` arm. One character of DATA disarmed the
+      // scan for the rest of the body.
+      'read v <<E\n"\nE\necho a | %s ")"',
+      'read v <<E\n"\nE\n%s',
+      "read v <<EOF\n`%s`\nEOF",
     ];
-    // …and decorations that put it where bash never runs it. The scan may refuse these — fail-closed is
-    // allowed — but the mask must agree that they are not code, or the mask is the thing that is wrong.
-    const inert = ["echo '%s'", 'echo "%s"', "# %s", "echo a # %s", "read v <<'EOF'\n%s\nEOF"];
+    // …and decorations that put it where bash never runs it. The mask must agree that they are not
+    // code, and — round 19 — the scan must not refuse them either. Fail-closed used to be allowed
+    // here as an unstated blanket, which left the OTHER walk unasserted at exactly these positions:
+    // reverting `commandsOf`'s half of the process-substitution fix passed the entire file. It is
+    // enumerated now, like everything else this file decides, and the list is empty.
+    const inert = [
+      "echo '%s'",
+      'echo "%s"',
+      "# %s",
+      "echo a # %s",
+      "read v <<'EOF'\n%s\nEOF",
+      // Round 19. A QUOTED delimiter makes its data literal, so a substitution inside it never runs.
+      // Only `commandsOf` read `quoted`; `codeMask` did not, and called this data code.
+      "read v <<'EOF'\n$(%s)\nEOF",
+      // `<<\EOF` is bash's third spelling of a quoted delimiter. The subject said so and nothing
+      // checked it: dropping `quoted = true` from the backslash branch passed the whole file.
+      "read v <<\\EOF\n$(%s)\nEOF",
+      // bash performs NO process substitution inside double quotes — `"<(cmd)"` is literal text.
+      // Both walks guarded on `quote !== "'"`, which admitted it.
+      'echo "<(%s)"',
+      'echo ">(%s)"',
+    ];
+    // A shape may not hide a second build: `indexOf` measures the FIRST, so "here it is dead, here it
+    // is live" would be scored at the wrong one, silently.
+    const ambiguous = live
+      .concat(inert)
+      .filter((shape) => shape.indexOf("%s") !== shape.lastIndexOf("%s"));
+    expect(ambiguous, "a decoration with two build sites is measured at only one of them").toEqual(
+      [],
+    );
 
     const missed: string[] = [];
     const misread: string[] = [];
+    const overRefused: string[] = [];
+    // Every position of the token, not just its first character: `codeMask` changes state mid-token
+    // in several of the branches this file has been wrong about, and a divergence that starts at the
+    // `p` of `npx` was invisible while the test sampled only the `n`.
+    const spans = (body: string, at: number): boolean[] =>
+      maskOf(body).slice(at, at + BUILD.length);
     for (const shape of live) {
       const body = shape.replace("%s", BUILD);
       const at = body.indexOf(BUILD);
-      if (maskOf(body)[at] !== true) {
+      if (spans(body, at).some((bit) => bit !== true)) {
         misread.push(`live but masked: ${JSON.stringify(shape)}`);
         continue;
       }
@@ -447,7 +497,10 @@ describe("the shipped-lane allowlist", () => {
     for (const shape of inert) {
       const body = shape.replace("%s", BUILD);
       const at = body.indexOf(BUILD);
-      if (maskOf(body)[at] === true) misread.push(`inert but code: ${JSON.stringify(shape)}`);
+      if (spans(body, at).some((bit) => bit === true)) {
+        misread.push(`inert but code: ${JSON.stringify(shape)}`);
+      }
+      if (refusals(body).length > 0) overRefused.push(JSON.stringify(shape));
     }
 
     expect(
@@ -458,6 +511,11 @@ describe("the shipped-lane allowlist", () => {
       missed,
       "a build at a position the mask calls code, which the scan did not refuse. Every escape found " +
         "in rounds 15 to 18 had this signature, and each was a second walk disagreeing with the mask",
+    ).toEqual([]);
+    expect(
+      overRefused,
+      "a position bash never runs, which the scan refused anyway. Harmless to an adopter and fatal " +
+        "to this test's other half: it is the only assertion `commandsOf` gets at these positions",
     ).toEqual([]);
   });
 
