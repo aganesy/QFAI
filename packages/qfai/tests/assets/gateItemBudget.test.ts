@@ -31,8 +31,16 @@ const flat = (s: string): string => s.replace(/\s+/g, " ");
 /**
  * The body of each numbered item in the 12-point gate, keyed by its number.
  *
- * The section ends at the next `###` heading, so the sequencing note that
- * follows item 12 is excluded — it is prose about the gate, not an item.
+ * An item's body is its numbered line **plus every continuation line** up to
+ * the next numbered item. Reading only the numbered line would let the budget
+ * be satisfied by wrapping item 10 the way ordinary Markdown wraps a list
+ * item: a short first line and the rest of the text in continuation lines,
+ * uncounted, with the gate no lighter to read than before.
+ *
+ * The list ends where Markdown ends it — a blank line followed by an
+ * unindented line — so the sequencing note after item 12 is excluded: it is
+ * prose about the gate, not part of item 12. An indented block after a blank
+ * line is still the item's own, and counts.
  */
 function gateItems(skill: string): Map<number, string> {
   const start = skill.indexOf("### Item completion checklist (12-point gate)");
@@ -42,15 +50,66 @@ function gateItems(skill: string): Map<number, string> {
   const section = end === -1 ? rest : rest.slice(0, end);
 
   const items = new Map<number, string>();
+  let current: number | undefined;
+  let afterBlank = false;
+
   for (const line of section.split(/\r?\n/)) {
     const match = /^(\d{1,2})\.\s+(.*)$/.exec(line);
-    if (!match) continue;
-    const [, number, body] = match;
-    if (number === undefined || body === undefined) continue;
-    items.set(Number(number), body.trim());
+    if (match) {
+      const [, number, body] = match;
+      if (number === undefined || body === undefined) continue;
+      current = Number(number);
+      items.set(current, body.trim());
+      afterBlank = false;
+      continue;
+    }
+    if (current === undefined) continue;
+    if (line.trim() === "") {
+      afterBlank = true;
+      continue;
+    }
+    if (afterBlank && !/^\s/.test(line)) {
+      current = undefined;
+      continue;
+    }
+    items.set(current, `${items.get(current) ?? ""} ${line.trim()}`.trim());
+    afterBlank = false;
   }
   return items;
 }
+
+describe("gateItems (what the budget counts)", () => {
+  const section = [
+    "### Item completion checklist (12-point gate)",
+    "",
+    "1. first item",
+    "2. short head",
+    "   wrapped tail that carries the weight",
+    "",
+    "   an indented second paragraph, still item 2",
+    "",
+    "Sequencing note: prose about the gate, not an item.",
+    "",
+    "### Next section",
+    "",
+    "3. not part of the gate",
+  ].join("\n");
+
+  it("counts an item's continuation lines as its body", () => {
+    // Without this, moving item 10's text below its numbered line hides it
+    // from the ratio the budget is expressed as.
+    const items = gateItems(section);
+    expect(items.get(2)).toBe(
+      "short head wrapped tail that carries the weight an indented second paragraph, still item 2",
+    );
+  });
+
+  it("stops at the prose that follows the list and at the next heading", () => {
+    const items = gateItems(section);
+    expect(items.get(2)).not.toContain("Sequencing note");
+    expect([...items.keys()]).toEqual([1, 2]);
+  });
+});
 
 describe.each(TREES)("%s (the gate's attention budget)", (tree) => {
   it("keeps the record item from dominating the gate", async () => {
@@ -100,6 +159,21 @@ describe.each(TREES)("%s (the gate's attention budget)", (tree) => {
     expect(record).toContain(
       "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
     );
+  });
+
+  it("routes the auditor to item 10's checks that are stated elsewhere", async () => {
+    // Three of item 10's checks are written beside the fields they constrain,
+    // not here. Claiming this file was the whole rule meant an audit that read
+    // it never ran them, and each guards a swap the revision cannot see.
+    const record = flat(await read(tree, RECORD));
+
+    expect(record).not.toContain("this file is the whole rule");
+    expect(record).toContain("## The item 10 checks written elsewhere");
+    expect(record).toContain(
+      "constitution/shared-skill-delegation-baseline.md#reviewer-response-template",
+    );
+    expect(record).toContain("SKILL.md#per-item-evidence-contract-fresh-evidence-required");
+    expect(record).toContain("`DR-ID` the row currently carries");
   });
 
   it("dates the one-off migration instead of leaving it in the gate", async () => {

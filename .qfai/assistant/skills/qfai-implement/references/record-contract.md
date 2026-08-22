@@ -2,7 +2,10 @@
 
 Gate item 10 is the record check. It asks one question — can the next reader
 trust this row's record? — and nothing it reports means the software is wrong.
-The gate states it in one sentence and points here; this file is the whole rule.
+The gate states it in one sentence and points here; this file carries the rule
+the gate line moved out, and names item 10's remaining checks where they
+already stand (`#the-item-10-checks-written-elsewhere`). Read both, or the
+checks that are stated at the place they constrain go unrun.
 
 It is addressed to whoever audits a record or writes the validator that reports
 on it. An agent building a row does not need to read it to build the row: that
@@ -81,6 +84,34 @@ Each reviewer verdict's `Audited evidence hash` is **recomputed** here over the
 entry's phase-authored fields: the revision excludes `.qfai/evidence/**`, so
 this is the only thing that tells a verdict passed on the evidence as read from
 one passed on evidence edited afterwards.
+
+## The item 10 checks written elsewhere
+
+These are item 10's as much as the rules above, and they are normative where
+they stand — each is stated beside the field it constrains, so do not restate
+it here, follow the pointer. All three guard the same substitution: the ledger
+and `.qfai/evidence/**` are both excluded from the revision, so a row's
+identity, its obligation, its `DR-ID` and its handed-over test can all be
+swapped after a PASS with every hash and revision unmoved, and an audit that
+stops at this file lets the old verdict stand for the new row.
+
+- **Row identity and the obligation reference are checked against the ledger,
+  not merely hashed**: item 10 reads `TDD-ID`, `Layer`, `Test file`, `Selector`
+  and the obligation reference the row's `Layer` selects (`TC-Refs` /
+  `US-Refs` / `CON-API-Refs`) from `test-list.md` and requires them to equal
+  the copy the verdict hashed
+  (`../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`).
+- **An `exception` row's `DR-ID` and obligation are checked the same way**: the
+  verdict must name the `DR-ID` the row currently carries, and its obligation
+  reference is checked against the ledger too (branch 3 of that same
+  reference). There is no RED and no GREEN on that branch, so the DR is the
+  whole evidence and a swapped pointer is the whole forgery.
+- **A handed-over `E2E` / `API` / `Integration` row's `RED test hash` is
+  recomputed here, not read** — over the same inputs the producer hashed, in
+  the manifest order `../../qfai-atdd/references/red-provenance.md` defines,
+  and cleared only by a `Shared-artifact re-verify` entry that names this row
+  (`SKILL.md#per-item-evidence-contract-fresh-evidence-required`). Without the
+  recomputation a stale RED passes item 10 exactly as a fresh one does.
 
 ## One revision across the four observations, except item 3
 
