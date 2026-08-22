@@ -36,8 +36,9 @@ const STEERING_CATALOG_FILES = ["manifest.md", "product.md", "structure.md", "te
  * inside it to match as the next token and fail a finished catalog under
  * `--strict`; whole comment spans are blanked by
  * {@link stripHtmlComments} before any line is scanned. Autolinks and mail
- * addresses are filtered in {@link isPlaceholderToken} rather than in the
- * pattern, so the reason each exclusion exists stays readable. Known
+ * addresses are filtered in {@link isPlaceholderToken}, and bracketed link
+ * destinations in {@link isLinkDestination}, rather than in the pattern, so
+ * the reason each exclusion exists stays readable. Known
  * limitation: a genuine inline HTML tag written into a steering file
  * (`<br>`) still matches — these four files are prose templates, and the
  * alternative (a keyword allow-list) would miss the placeholders the
@@ -61,14 +62,34 @@ const URI_AUTOLINK_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*$/;
 /** A CommonMark email autolink body, e.g. `<team@example.com>`. */
 const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+/**
+ * What may follow a pointy-bracket link destination: an optional title, `)`.
+ *
+ * `[設計書](<docs/System Design.md>)` is a *written* link whose destination is
+ * bracketed because it carries a space — the one CommonMark shape that needs
+ * the brackets. Its inner text is neither an autolink nor a mail address, so
+ * it was counted as an unfilled slot and failed a finished catalog under
+ * `--strict`. The token alone cannot tell the two apart; only the `](` before
+ * it and the closing `)` after can, which is why the context is matched here.
+ */
+const LINK_DESTINATION_TAIL_PATTERN = /^\s*(?:"[^"]*"|'[^']*'|\([^()]*\))?\s*\)/;
+
 /** A level-2 heading, which is the unit `/qfai-configure` fills section by section. */
 const SECTION_HEADING_PATTERN = /^##\s+(.*\S)\s*$/;
 
 /** Text before the first `## ` heading — the title and the "replace this" note. */
 const PREAMBLE_SECTION = "(preamble)";
 
-/** `- Key: value` / `- value`, with the bullet and any `Key:` label stripped. */
-const BULLET_VALUE_PATTERN = /^\s*[-*]\s+(?:[^:`]{1,60}:\s*)?(.*)$/;
+/**
+ * `- Key: value` / `- value`, with the bullet and any `Key:` label stripped.
+ *
+ * Every CommonMark list marker is accepted, not just `-` and `*`: a catalog
+ * written with `+ TBD` or `1. TBD` left the whole line as the candidate value,
+ * where the leading marker kept the bare-keyword test from ever matching and
+ * an unfinished section passed `--strict`. Ordered markers are 1-9 digits
+ * followed by `.` or `)`, as CommonMark defines them.
+ */
+const BULLET_VALUE_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+(?:[^:`]{1,60}:\s*)?(.*)$/;
 
 /** A markdown table row: `| a | b |`. Its cells carry values of their own. */
 const TABLE_ROW_PATTERN = /^\s*\|.*\|\s*$/;
@@ -330,14 +351,37 @@ function collectSteeringPlaceholders(content: string): SteeringPlaceholderSectio
  */
 function countUnfilledMarkers(line: string): number {
   let count = 0;
-  const withoutSlots = line.replace(PLACEHOLDER_TOKEN_PATTERN, (match: string, inner: unknown) => {
-    if (typeof inner === "string" && isPlaceholderToken(inner)) {
-      count += 1;
-      return "";
-    }
-    return match;
-  });
+  const withoutSlots = line.replace(
+    PLACEHOLDER_TOKEN_PATTERN,
+    (match: string, inner: unknown, offset: unknown) => {
+      const at = typeof offset === "number" ? offset : -1;
+      if (
+        typeof inner === "string" &&
+        !isLinkDestination(line, at, match.length) &&
+        isPlaceholderToken(inner)
+      ) {
+        count += 1;
+        return "";
+      }
+      return match;
+    },
+  );
   return count + countBareTodoValues(withoutSlots);
+}
+
+/**
+ * Whether this `<...>` token is the destination half of `[text](<dest>)`.
+ *
+ * Read off the surrounding line rather than the token, because the token is
+ * identical either way: `<docs/System Design.md>` is a filled-in destination
+ * only when a `](` opens it and a `)` — optionally after a link title —
+ * closes it.
+ */
+function isLinkDestination(line: string, offset: number, length: number): boolean {
+  if (offset < 2 || line.slice(offset - 2, offset) !== "](") {
+    return false;
+  }
+  return LINK_DESTINATION_TAIL_PATTERN.test(line.slice(offset + length));
 }
 
 function isPlaceholderToken(inner: string): boolean {

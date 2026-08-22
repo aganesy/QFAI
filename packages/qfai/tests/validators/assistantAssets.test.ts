@@ -243,6 +243,75 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(await steeringFindings(root)).toHaveLength(0);
   });
 
+  it("flags a bare TBD under a `+` bullet and an ordered list marker", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        "+ TBD",
+        "+ Beta: TBD",
+        "1. TBD",
+        "2) Launch: TODO",
+        "+ GA: 2026-09-01",
+        "3. Retro: scheduled",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Milestones (4)");
+  });
+
+  it("accepts a bracketed markdown link destination as a filled value", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## References",
+        "",
+        "- 設計書: [設計書](<docs/System Design.md>)",
+        '- 規約: [規約](<docs/Coding Standard.md> "社内規約")',
+        "- ADR: [ADR](docs/adr.md)",
+        "",
+      ].join("\n"),
+    );
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
+  it("still counts a slot that only looks like a link destination", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## References",
+        "",
+        // No `](` in front: an ordinary unfilled slot that happens to sit
+        // beside a parenthesis.
+        "- 設計書: <design doc path> (未定)",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("References (1)");
+  });
+
   it("does not report a steering file that is absent", async () => {
     const root = await newRoot();
 
