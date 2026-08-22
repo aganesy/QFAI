@@ -2525,25 +2525,60 @@ a kind rule and was an extension list, so a `#!/bin/sh` hook with no extension a
 into an adopter tree with the whole suite green. A name is not a kind: the rule now asks the three
 questions that decide whether something runs — a shebang, an executable bit, a name a tool knows.
 
-**And the four record guards failed for the third consecutive round**, three of them in round 17's shape
-verbatim and the fourth in the shape round 17's own repair introduced: told that each guard read a wider
-region than its claim, the corpus-count repair narrowed the NEEDLE instead and lost a spelling the
-version before it caught. The region and the needle are two problems.
+**And the four record guards failed for the fourth consecutive round.** Round 18's four were three in
+round 17's shape verbatim plus one in the shape round 17's own repair introduced: told that each guard
+read a wider region than its claim, the corpus-count repair narrowed the NEEDLE instead and lost a
+spelling the version before it caught.
 
-**What eighteen rounds have established, stated once here rather than re-derived each round:**
+**Round 19 broke all four again with 36 plants, and every one of its findings is a NEEDLE defect over a region that is now correct** — 17 plants green that should have reddened, 7 true records reported
+wrong. An indented fence is still a fence and defeated the Delta tie both ways; the corpus needle was a
+closed enumeration of four phrasings that missed five wrong sizes, including this record's own
+spelled-out house style, while falsely accusing two true sentences; class C's roster passed round 18's
+own swapped-reasons plant verbatim; and the depth-score pin admitted four more markers while reddening
+a blockquoted quotation that its sibling guard pins as exempt by design. The repairs widen the needles
+and enumerate the exceptions, which is the shape every other allowlist in this stage's work has.
+
+**What nineteen rounds have established, stated once here rather than re-derived each round.** Round 19
+read this list against what actually happened and found two of the five false as written and one
+misdirecting the repairs it exists to inform — so each now carries the evidence for it and, where the
+evidence cuts the other way, the counter-example.
 
 1. **A boundary drawn at a reading is a boundary at the reader's limits.** Every escape in rounds 15 to
-   18 was a place where what the scan read was narrower than what bash, YAML or the filesystem does.
-   Each repair moved the boundary outward — bodies, keys, values, shapes, bytes, the whole init tree —
-   and each time the next round found what lay one step beyond it.
+   19 was a place where what the scan read was narrower than what bash, YAML or the filesystem does.
+   **The correction does not always move outward, and believing it does is itself a defect**: the earlier
+   version of this line said each repair moved the boundary out, two paragraphs below a sentence
+   recording the delimiter scan turning the shipped `$GITHUB_OUTPUT` idiom into a false refusal — a
+   boundary that had to move IN. Round 19 found four more of those: two false accusations in the
+   corpus-count needle and two true records reddened by the depth-score pin. A rule stated
+   one-directionally produces the repair that breaks in the other direction.
 2. **Two copies of a rule diverge, and the one nobody is looking at is the one that is wrong.** Three
    quote walks, two comment rules, two fence strippers, two roster directions: every one of these was
-   found as a disagreement rather than as an error.
-3. **A guard's region is part of its claim.** Four guards, four rounds, one cause.
-4. **Correcting a record in place costs following the correction to whatever cites it**, and twice the
-   next round paid that cost instead of the stage.
-5. **"I cannot settle this" needs the evidence any other claim needs.** The one time this record recorded
-   an open question rather than an answer, the contract that settled it was three directories away.
+   found as a disagreement rather than as an error. **This is the lesson with the best evidence and the
+   worst record of being applied.** The commit that first wrote it repaired a bare-dash anchor in
+   `coverageDepthMatrix.test.ts` and left the identical anchor fifteen lines above it, and made a
+   blockquoted line an assertion in that guard while `retractedClaims.test.ts` pins it as a quotation in
+   the other. Both were round 19 findings. Writing a lesson down is not applying it, and the check that
+   applies it is: after fixing a rule, grep for the rule.
+3. **A guard's region and its needle are two claims, and a repair to one is not a repair to the other.**
+   The earlier version of this line named the region alone — "four guards, four rounds, one cause" —
+   and it was wrong on its own evidence: of round 18's four findings, two were region defects, one was a
+   needle defect in a region that round explicitly called an improvement, and one was an anchor in a
+   region nobody faulted. The consequence is on the page. The repair pass that followed fixed every
+   region, and round 19's four guard findings are **all needle defects with correct regions**. Naming one
+   of two causes as the cause is how a fifth attempt reproduces a fourth attempt's failures.
+4. **Correcting a record in place costs following the correction to whatever cites it**, and the next
+   round has paid that cost instead of the stage more than once — the `revision_form` repair, the
+   `--profile full` figure, option 2's third ground, and round 19's finding that the integration+unit
+   move was attributed to the wrong commit. The earlier version of this line said "twice", which was
+   already wrong when written: a numeral nothing derives, inside the list written so that numerals stop
+   being re-derived.
+5. **"I cannot settle this" needs the evidence any other claim needs.** Recorded because this stage once
+   called a question unsettleable while the contract that settles it sat three directories away,
+   unlooked-for. The earlier version said "the one time", which is false and reads as condemning a
+   practice this record also endorses: it records an open question rather than an answer in at least four
+   places — `TC-0017-0016`, the disagreement that stands whatever is approved, the second timeout left to
+   its owner, and option 2's live disposition — and each of those is a deferral WITH its evidence, which
+   is the thing this lesson asks for rather than the thing it warns against.
 
 ### The full profile
 
