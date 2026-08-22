@@ -58,7 +58,9 @@ UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, 
 8. Generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** for UI-bearing targets per `references/design-dna-intake.md`. Required when UI-bearing; skip otherwise.
 10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
-11. Request review and record the Reviewer result.
+11. Request review and record the Reviewer result. Open `references/review-cycle-playbook.md`
+    first and follow it: it owns the per-cycle pack layout and the write paths under
+    `.qfai/review/review-YYYYMMDDhhmmssSSS/`, which is the only tree `npx qfai validate` reads.
 
 For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars. Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
@@ -91,6 +93,8 @@ Before declaring completion, you MUST:
 
 Reviewer checks must confirm:
 
+- the cycle's review pack was written per `references/review-cycle-playbook.md`, i.e. the three
+  required artifacts exist under a `.qfai/review/review-YYYYMMDDhhmmssSSS/` directory;
 - the 15-file discussion pack is complete; `Disposition: open` count is zero in `11_OQ-Register.md`;
 - the UI-bearing sidecar family is complete when the pack is UI-bearing;
 - discussion stayed planner-first and did not choose a single visual winner;
