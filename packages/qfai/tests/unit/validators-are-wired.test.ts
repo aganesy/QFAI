@@ -17,9 +17,10 @@
  *   3. Build a "reachable text" set by walking the *symbol* graph out of
  *      validate.ts: follow relative imports transitively, and resolve imports
  *      that go through a barrel (`index.ts`) to the modules that actually
- *      supply the imported names. Barrel bodies, comments and the validator
- *      declarations themselves are stripped, so a bare re-export or a mention
- *      in prose never counts as wiring.
+ *      supply the imported names. Barrel bodies, comments, import declarations
+ *      and the validator declarations themselves are stripped, so a bare
+ *      re-export, an unused import or a mention in prose never counts as
+ *      wiring — only a call or a registry reference does.
  *   4. Assert each validator name appears in the reachable text, OR is on the
  *      dated PENDING_WIRING allowlist (existing dead code that requires a
  *      follow-up wiring effort).
@@ -63,8 +64,9 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
  * individually — wire it into a runXxxValidators path, or delete it and retire
  * its finding code — and the entry removed in the same change.
  *
- * This list MUST shrink over time and MUST never grow. `PENDING_WIRING_BASELINE`
- * plus the staleness tripwires below keep both directions honest.
+ * This list MUST shrink over time and MUST never grow.
+ * `PENDING_WIRING_INITIAL_KEYS` plus the staleness tripwires below keep both
+ * directions honest.
  */
 const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validateAtddCoverageLedgers", "2026-08-22 — validators/atddLedger.ts, see #402"],
@@ -90,8 +92,57 @@ const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validateTrendScan", "2026-08-22 — validators/uix/trendScan.ts, see #403"],
 ]);
 
-/** Census size at the moment the guard was widened. MUST only ever decrease. */
-const PENDING_WIRING_BASELINE = 18;
+/**
+ * The exact keys recorded when the census was taken. `PENDING_WIRING` MUST
+ * stay a subset of this set: resolving one entry frees no slot for a new one,
+ * so the allowlist can only shrink. A size-only check would let a fresh
+ * unwired validator take a retired entry's place.
+ */
+const PENDING_WIRING_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
+  "validateAtddCoverageLedgers",
+  "validateBusinessFlowHasMermaid",
+  "validateConvergenceDoc",
+  "validateImportLiteEvidencePresence",
+  "validateIntegrationSurface",
+  "validateMermaidFenceUsage",
+  "validateDelegationMapIssues",
+  "validateRequireIndexShape",
+  "validateRequirementsContext",
+  "validateRequirePackReadiness",
+  "validatePhaseOrdering",
+  "validateSidecarFlowOrdering",
+  "validateAntiPreference",
+  "validateDesignSystemPresence",
+  "validateStrategyStrong",
+  "validateTasteInterview",
+  "validateTasteReflection",
+  "validateTrendScan",
+]);
+
+/**
+ * Validators reachable from validate.ts through a direct module import rather
+ * than through `validators/index.ts`. P4 requires the barrel re-export, so the
+ * check below covers the whole tree; these names were already exempt when that
+ * check was widened (2026-08-22) and are grandfathered. Like `PENDING_WIRING`
+ * this set may only shrink — a newly added validator must be barrel-exported.
+ */
+const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
+  "validateAssistantAssets",
+  "validateContractConsistency",
+  "validateContracts",
+  "validateDbContractExecutability",
+  "validateDiscussionMermaid",
+  "validateDefinedIds",
+  "validateSkillsIntegrity",
+  "validateSpecPacks",
+  "validateSpecStatus",
+  "validateCreateRowCapabilityRefs",
+  "validateTriageSection",
+  "validateClassification",
+  "validateExplorationArtifacts",
+  "validateSidecarMissing",
+  "validateOqClosure",
+]);
 
 const DATED_ENTRY_RE = /^\d{4}-\d{2}-\d{2}\s/;
 
@@ -161,16 +212,20 @@ function clauseNames(clause: string, side: "local" | "public"): string[] {
 }
 
 /**
- * Remove text that mentions a validator without invoking it: comments, the
- * validator's own `export function` declaration head, and `export { … } from`
- * re-export statements. Without this, a declaration or a barrel line makes a
- * dead validator look reachable — which is exactly how `validateDelegationMapIssues`
- * passed the old guard.
+ * Remove text that mentions a validator without invoking it: comments,
+ * `import … from` declarations, the validator's own `export function`
+ * declaration head, and `export { … } from` re-export statements. Without
+ * this, a declaration, an import line or a barrel line makes a dead validator
+ * look reachable — which is exactly how `validateDelegationMapIssues` passed
+ * the old guard, and how an orchestrator that imports a new validator but
+ * forgets to call it would still pass this one.
  */
 function stripNonInvokingText(body: string): string {
   return body
     .replace(/\/\*[\s\S]*?\*\//g, "")
     .replace(/^\s*\/\/.*$/gm, "")
+    .replace(/^import\s+[^;]*?\sfrom\s*["'][^"']+["']\s*;?/gm, "")
+    .replace(/^import\s*["'][^"']+["']\s*;?/gm, "")
     .replace(/export\s+(?:type\s+)?\{[^}]*\}\s*from\s+["'][^"']+["'];?/g, "")
     .replace(/^export\s+(?:async\s+)?function\s+validate\w+\s*\(/gm, "function __declared__(");
 }
@@ -285,13 +340,14 @@ describe("meta-test: validators are wired into the pipeline", () => {
     expect(dirs.has("prototyping")).toBe(true);
   });
 
-  it("validators/index.ts re-exports every public prototyping validator (excluding pending-wiring)", async () => {
-    const validators = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
+  it("validators/index.ts re-exports every public validator under validators/ (excluding pending-wiring and grandfathered exemptions)", async () => {
+    const validators = await collectPublicValidators(VALIDATORS_ROOT);
     const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
 
     const missingExports: string[] = [];
     for (const { name } of validators) {
       if (PENDING_WIRING.has(name)) continue;
+      if (BARREL_EXPORT_EXEMPT.has(name)) continue;
       if (!indexBody.includes(name)) {
         missingExports.push(name);
       }
@@ -299,15 +355,57 @@ describe("meta-test: validators are wired into the pipeline", () => {
 
     expect(
       missingExports,
-      `validators/index.ts must re-export every public prototyping validator. Missing: ${missingExports.join(", ")}`,
+      `validators/index.ts must re-export every public validator under validators/ (design-principles.md P4). Missing: ${missingExports.join(", ")}`,
     ).toEqual([]);
   });
 
-  it("a prose mention alone does not count as wiring (QFAI-PROT-310)", async () => {
-    // `validateExecutionPlanIssues` no longer exists anywhere in src/ — its
-    // single remaining occurrence is a JSDoc mention in
+  it("BARREL_EXPORT_EXEMPT has no stale entries (re-exported or deleted validators must be removed)", async () => {
+    const validators = await collectPublicValidators(VALIDATORS_ROOT);
+    const declared = new Set(validators.map((v) => v.name));
+    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+
+    const stale = [...BARREL_EXPORT_EXEMPT].filter(
+      (name) => !declared.has(name) || indexBody.includes(name),
+    );
+    expect(
+      stale,
+      `These names no longer need an exemption — drop them from BARREL_EXPORT_EXEMPT: ${stale.join(", ")}`,
+    ).toEqual([]);
+  });
+
+  it("stripNonInvokingText keeps only text that can invoke a validator", () => {
+    // Regression fixture for the reachability tightening itself: every shape
+    // below mentions a validator without calling it. If any of them survives,
+    // an unwired validator counts as wired.
+    const fixture = [
+      "/**",
+      " * QFAI-PROT-310 was produced by validateBlockCommentOnly.",
+      " */",
+      'import { validateImportedButNeverCalled } from "./neverCalled.js";',
+      'import type { Issue } from "../types.js";',
+      'export { validateBarrelOnly } from "./barrelOnly.js";',
+      "// TODO: call validateLineCommentOnly here one day",
+      "export function validateDeclaredHere(input: string): Issue[] {",
+      "  return validateActuallyCalled(input);",
+      "}",
+    ].join("\n");
+
+    const stripped = stripNonInvokingText(fixture);
+
+    expect(stripped).not.toContain("validateBlockCommentOnly");
+    expect(stripped).not.toContain("validateLineCommentOnly");
+    expect(stripped).not.toContain("validateImportedButNeverCalled");
+    expect(stripped).not.toContain("validateBarrelOnly");
+    expect(stripped).not.toContain("validateDeclaredHere");
+    expect(stripped).toContain("validateActuallyCalled");
+  });
+
+  it("the retired QFAI-PROT-310 producer is absent from the reachable graph", async () => {
+    // End-to-end backstop: `validateExecutionPlanIssues` no longer exists
+    // anywhere in src/ — its single remaining occurrence is a JSDoc mention in
     // prototyping/delegationMap.ts. The old guard asserted this name was
-    // "wired" and went green on that comment alone.
+    // "wired" and went green on that comment alone. The strip-level regression
+    // protection lives in the fixture test above.
     const reachable = await buildReachableText();
     expect(reachable.includes("validateExecutionPlanIssues")).toBe(false);
   });
@@ -323,7 +421,14 @@ describe("meta-test: validators are wired into the pipeline", () => {
   });
 
   it("PENDING_WIRING never grows and carries a date per entry", () => {
-    expect(PENDING_WIRING.size).toBeLessThanOrEqual(PENDING_WIRING_BASELINE);
+    const added = [...PENDING_WIRING.keys()].filter(
+      (name) => !PENDING_WIRING_INITIAL_KEYS.has(name),
+    );
+    expect(
+      added,
+      `PENDING_WIRING may only shrink — a resolved entry frees no slot. New names: ${added.join(", ")}`,
+    ).toEqual([]);
+    expect(PENDING_WIRING.size).toBeLessThanOrEqual(PENDING_WIRING_INITIAL_KEYS.size);
     const undated = [...PENDING_WIRING.entries()]
       .filter(([, note]) => !DATED_ENTRY_RE.test(note))
       .map(([name]) => name);
