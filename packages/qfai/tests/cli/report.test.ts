@@ -366,6 +366,113 @@ describe("report", { timeout: 15000 }, () => {
     }
   });
 
+  it("writes validate-<profile>.json on the --run-validate path too (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    process.env.CI = "false";
+    delete process.env.GITHUB_ACTIONS;
+
+    try {
+      const reportDir = path.join(root, ".qfai", "report");
+      await runReport({
+        root,
+        format: "json",
+        outPath: path.join(reportDir, "report.json"),
+        runValidate: true,
+        profile: "sdd",
+      });
+
+      const suffixed = JSON.parse(
+        await readFile(path.join(reportDir, "validate-sdd.json"), "utf-8"),
+      ) as { profile?: string; counts?: ValidationCounts };
+      const latest = JSON.parse(await readFile(path.join(reportDir, "validate.json"), "utf-8")) as {
+        profile?: string;
+        counts?: ValidationCounts;
+      };
+      expect(suffixed.profile).toBe("sdd");
+      expect(suffixed.counts).toEqual(latest.counts);
+
+      // 接尾辞付きを書いたので、後続の読み取り経路が同じ結果を再利用できる。
+      const followUpPath = path.join(reportDir, "report-follow-up.json");
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await runReport({ root, format: "json", outPath: followUpPath, profile: "sdd" });
+        expect(process.exitCode).toBeUndefined();
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+      const followUp = JSON.parse(await readFile(followUpPath, "utf-8")) as {
+        profile?: string;
+      };
+      expect(followUp.profile).toBe("sdd");
+    } finally {
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
+  });
+
+  it("bases the CI narrow-profile warning on the loaded profile (#667)", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const reportDir = path.join(root, ".qfai", "report");
+    const narrowInput = path.join(reportDir, "validate-prototyping.json");
+    const fullInput = path.join(reportDir, "validate-full.json");
+    await writeValidationFixture(narrowInput, "prototyping", { info: 0, warning: 0, error: 0 });
+    await writeValidationFixture(fullInput, "full", { info: 0, warning: 0, error: 0 });
+
+    const previousCi = process.env.CI;
+    const previousGithubActions = process.env.GITHUB_ACTIONS;
+    process.env.CI = "true";
+    delete process.env.GITHUB_ACTIONS;
+    const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      // --profile は allow-list 上だが、実際に読むのは narrow profile の成果物。
+      await runReport({
+        root,
+        format: "json",
+        outPath: path.join(reportDir, "report-narrow.json"),
+        inputPath: path.relative(root, narrowInput),
+        profile: "sdd",
+      });
+      expect(stdout.mock.calls.map(([chunk]) => String(chunk)).join("")).toContain("full-scan");
+
+      // 逆向き: --profile は narrow だが、読むのは full-scan の成果物。
+      stdout.mockClear();
+      await runReport({
+        root,
+        format: "json",
+        outPath: path.join(reportDir, "report-full.json"),
+        inputPath: path.relative(root, fullInput),
+        profile: "discussion",
+      });
+      expect(stdout.mock.calls.map(([chunk]) => String(chunk)).join("")).not.toContain("full-scan");
+    } finally {
+      stdout.mockRestore();
+      if (previousCi === undefined) {
+        delete process.env.CI;
+      } else {
+        process.env.CI = previousCi;
+      }
+      if (previousGithubActions === undefined) {
+        delete process.env.GITHUB_ACTIONS;
+      } else {
+        process.env.GITHUB_ACTIONS = previousGithubActions;
+      }
+    }
+  });
+
   it("links file paths with --base-url", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });

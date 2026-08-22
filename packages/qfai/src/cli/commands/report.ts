@@ -47,7 +47,12 @@ export async function runReport(options: ReportOptions): Promise<void> {
       : validated;
     ranNarrowProfileInCi = ciProfileIssue !== null;
     const normalized = normalizeValidationResult(root, result);
-    await writeValidationResult(root, configResult.config.output.validateJsonPath, normalized);
+    await writeValidationResults(
+      root,
+      configResult.config.output.validateJsonPath,
+      normalized,
+      options.profile,
+    );
     validation = normalized;
   } else {
     const inputPath = resolveInputPath(
@@ -56,16 +61,21 @@ export async function runReport(options: ReportOptions): Promise<void> {
       options.inputPath,
       options.profile,
     );
-    // --run-validate 側と同じく、CI で narrow profile を使ったことを報告する。
-    // ここでは finding を足さない: 読み込んだ validate 出力には、それを書いた
-    // validate 実行が既に QFAI-VALIDATE-017 を載せている。
-    ranNarrowProfileInCi = buildCiProfileIssue(options.profile) !== null;
     const loaded = await loadValidationResult(inputPath, options.profile);
     if (loaded === null) {
       process.exitCode = 2;
       return;
     }
     warnOnProfileMismatch(inputPath, loaded, options.profile);
+    // --run-validate 側と同じく、CI で narrow profile を使ったことを報告する。
+    // ここでは finding を足さない: 読み込んだ validate 出力には、それを書いた
+    // validate 実行が既に QFAI-VALIDATE-017 を載せている。
+    //
+    // 判定は「指定した profile」ではなく「実際にレポートへ採用した profile」で
+    // 行う。明示 `--in` は不一致でも優先されるので、`--profile sdd --in
+    // validate-prototyping.json` のような組み合わせでは成果物側の profile が
+    // 実態を表す。profile 未記録の旧形式のときだけ指定値へフォールバックする。
+    ranNarrowProfileInCi = buildCiProfileIssue(loaded.profile ?? options.profile) !== null;
     validation = loaded;
   }
 
@@ -253,6 +263,31 @@ function isValidationResult(value: unknown): value is ValidationResult {
   }
 
   return true;
+}
+
+/**
+ * `--run-validate` の検証結果を、通常の `qfai validate` と同じ 2 か所に書く:
+ * 常に最新のポインタ (`validate.json`) と profile 接尾辞付きファイル
+ * (`validate-<profile>.json`)。
+ *
+ * 読み取り側 (`resolveInputPath`) は `--profile` 指定時に必ず接尾辞付き
+ * ファイルを見るので、ここで接尾辞付きを更新しないと、後続の
+ * `qfai report --profile X` が「ファイルが無い」で exit 2 になるか、
+ * 古い実行結果からレポートを作ってしまう。
+ */
+async function writeValidationResults(
+  root: string,
+  configuredPath: string,
+  result: ValidationResult,
+  requestedProfile: ValidationProfile | undefined,
+): Promise<void> {
+  await writeValidationResult(root, configuredPath, result);
+  const profileLabel = result.profile ?? requestedProfile ?? "full";
+  await writeValidationResult(
+    root,
+    profileSuffixedReportPath(configuredPath, profileLabel),
+    result,
+  );
 }
 
 async function writeValidationResult(
