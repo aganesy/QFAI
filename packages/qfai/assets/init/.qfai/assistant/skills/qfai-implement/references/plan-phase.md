@@ -14,6 +14,13 @@ cannot be planned (missing ledger, unresolved Change Request) is reported as blo
 first row of the first spec moves, rather than at its own turn. Planning only the head of the queue
 would leave every later spec with no reset, no tier, no group and no dispatch decision.
 
+**This does not loosen the cross-spec bar.** "One spec at a time, always"
+(`parallelization-policy.md#scope-of-this-policy`) forbids two specs being **in flight together**; it
+is a concurrency rule, not a count of how many ledgers one framing pass may read. A confirmed queue
+is still walked one spec at a time — Phase Red never holds rows from two `spec-id`s at once — which
+is why the boundary rule is stated as "at a time" and not "per invocation" in both places that carry
+it.
+
 It is not Phase Red step 1 moved earlier. Step 1 picks **which row runs next** — walking the order
 this phase returned — and repeats per row; this phase fixes the frame that selection happens inside,
 and does not repeat. That is the whole distinction the `iteration` key exists to record.
@@ -60,17 +67,24 @@ invocation is not going to write to at all.
 
 Receives the same ledgers and each row's `Layer`, and — **listed independently of which rows exist**
 — each queued spec's whole obligation set: `06_Test-Cases.md` for `TC-*`, `02_User-stories.md` for
-`US-*`, and `.qfai/contracts/api/**` for `CON-API-*`. Deriving the inputs from the rows instead hides
-the gap this role is here for: a ledger holding no `E2E` / `API` row cites no `US-*` or `CON-API-*`
-source at all, so the missing-row check below would have nothing to compare against in exactly the
-case where an obligation is most likely to have been dropped.
+`US-*`, and `.qfai/contracts/api/**` for `CON-API-*`. Deriving the `TC-*` set from the rows instead
+hides the gap this role is here for: a coverage-target `TC-*` whose row was dropped is cited by
+nothing, so a check that starts from the rows can never see it. `US-*` and `CON-API-*` are read for
+the **layer-ownership** check below — which obligation an `E2E` / `API` row may cite — not as a row
+census.
 
 Returns **coverage and layer-ownership findings**:
 
 - a row citing an obligation its `Layer` does not own — an `E2E` row hanging off a `TC-*`, an
   `Integration` row hanging off a `US-*`;
-- an in-scope obligation with no row at all, which is the gap `ledger-preconditions.md` separates
-  from a truthfully empty ledger;
+- an in-scope **coverage-target `TC-*`** with no row at all, which is the gap
+  `ledger-preconditions.md` separates from a truthfully empty ledger. **`US-*` and `CON-API-*` are
+  not row-producing obligations** — `/qfai-sdd` Phase 2b seeds one row per coverage-target `TC-*`
+  only — so a ledger holding **zero** `E2E` / `API` rows is normal on a first run and is never a
+  missing-row finding; those two are discharged by the acceptance tests' annotations and checked by
+  `QFAI-ATDD-111` / `113`
+  (`../../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`). Raising them here
+  produces a handoff to `/qfai-sdd` or `/qfai-atdd` that neither skill may satisfy;
 - a `Selector` accumulating unrelated boundaries, which invalidates the row's RED before it is taken
   (`selector-granularity.md`, enforced per row by Phase Red step 5).
 
@@ -96,3 +110,20 @@ which changes what the analyst read, so re-running the planner alone would leave
 standing over a ledger that no longer exists. The ATDD scope gate carries this policy for the same
 reason. A repair that touches nothing the analyst read — a re-tiering, a regrouping, a dispatch or
 order change — re-runs the planner only, which is what "dependents" already scopes it to.
+
+**An installed project may still route the old policy — check before relying on it.**
+`npx qfai init --force` regenerates `assistant/skills/**` and `assistant/agents/**` but leaves
+`assistant/manifest/**` alone (those are `qfai-configure`'s artifacts), so a project can take this
+file without taking the routing change that goes with it and keep `rerun_policy: failed-agents-only`
+on the `plan` phase. Under that policy a `delivery-planner` scope REVISE re-runs the planner alone
+and the analyst's PASS stands over a ledger that no longer exists — the stale verdict this policy
+exists to prevent. So **read this phase's `rerun_policy` out of the project's own
+`assistant/manifest/agent-routing.yml`** when the phase starts, and when it reads
+`failed-agents-only`: re-run `test-design-analyst` by hand after every scope repair, and record in
+`.qfai/evidence/implement-<spec-id>.md` that the routing predates this contract, so its verdict is
+read as the hand-routed one it is. Routing it by hand is the stopgap, not the fix — bringing
+`agent-routing.yml` and `agent-catalog.yml` forward is the same merge
+`../../qfai-atdd/references/stale-manifest.md` sets out (diff the project's copies against
+`node_modules/qfai/assets/init/.qfai/assistant/manifest/**` and merge the shipped contracts in,
+keeping the project's own routing choices). There is no migration command to invoke; do not wait for
+one.

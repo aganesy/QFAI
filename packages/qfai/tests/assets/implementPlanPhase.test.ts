@@ -128,6 +128,45 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     expect(missing, "routed with no task definition in the skill body").toEqual([]);
   });
 
+  it("scopes the analyst's missing-row check to the row-producing class", async () => {
+    // `/qfai-sdd` Phase 2b seeds a row per coverage-target `TC-*` only, so a
+    // first-run ledger holds zero `E2E` / `API` rows legitimately. Comparing
+    // `US-*` / `CON-API-*` against rows would turn that normal state into a
+    // dropped-obligation finding and a handoff neither upstream skill can
+    // satisfy — they are discharged by the acceptance tests' annotations.
+    const reference = rel.replace(/SKILL\.md$/, "references/plan-phase.md");
+    const detail = await readFile(path.join(repoRoot, reference), "utf-8");
+    expect(detail).toContain("coverage-target `TC-*`");
+    expect(detail).toContain("not row-producing obligations");
+    expect(detail).toContain("QFAI-ATDD-111");
+  });
+
+  it("routes around a preserved `failed-agents-only` manifest", async () => {
+    // `init --force` keeps `assistant/manifest/**`, so an installed project can
+    // take this file without the routing change it documents. The phase has to
+    // read the project's own policy and name the merge that repairs it.
+    const reference = rel.replace(/SKILL\.md$/, "references/plan-phase.md");
+    const detail = await readFile(path.join(repoRoot, reference), "utf-8");
+    expect(detail).toContain("failed-agents-only");
+    expect(detail).toContain("stale-manifest.md");
+  });
+
+  it("states the cross-spec bar as one spec at a time, not per invocation", async () => {
+    // The `plan` phase is per-queue; "one spec per invocation" read literally
+    // contradicted that. The bar is about concurrency, so both carriers of it
+    // say "at a time" and the queue is explicitly not a breach.
+    const parallel = rel.replace(/SKILL\.md$/, "references/parallelization-policy.md");
+    for (const target of [rel, parallel]) {
+      const text = await readFile(path.join(repoRoot, target), "utf-8");
+      expect(text, `${target} keeps the non-goal`).toContain("Cross-spec parallelism is barred");
+      expect(text, `${target} still says "per invocation"`).not.toContain(
+        "One spec per invocation",
+      );
+      expect(text).toContain("One spec **at a time**");
+      expect(text).toContain("multi-spec-queue");
+    }
+  });
+
   it("counts `plan` among the routed phases in the Formal Sub-agent Roster", async () => {
     const body = skillBody(await readFile(path.join(repoRoot, rel), "utf-8"));
     const roster = body.slice(body.indexOf("### Formal Sub-agent Roster"));

@@ -64,8 +64,9 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
 - .qfai/contracts/api/\*\* (CON-API)
 
 Read `06_Test-Cases.md`, `02_User-stories.md` and `.qfai/contracts/api/\*\*` as the obligation set in full — `TC-*`, `US-*` and
-`CON-API-*` — independently of whichever rows an execution ledger happens to hold: an obligation with no row at all is invisible
-to a check that starts from the rows.
+`CON-API-*` — independently of whichever rows an execution ledger happens to hold: a coverage-target `TC-*` whose row was dropped
+is invisible to a check that starts from the rows. `US-*` and `CON-API-*` seed no ledger rows, so their absence from one is never
+a missing-row finding — they are read for layer ownership, and discharged by the acceptance tests' annotations.
 
 ## Deliverables
 
