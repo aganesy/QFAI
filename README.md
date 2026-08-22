@@ -27,8 +27,12 @@ The agent reads the repository, produces the required artifacts, and iterates un
   66 license-verify failure / 2 input or lock drift). The full set of
   UI-bearing specs is frozen at cycle 0 as `frozenSurfaceUnion` and is read
   only to detect surface drift on later cycles: secondary specs are **not**
-  evaluated by that run, so drive the loop once per spec until the per-spec
-  iteration layout lands.
+  evaluated by that run. Only one primary spec can therefore be evolved per
+  project: re-running cycle 0 for a second spec is refused without `--force`,
+  and with `--force` it re-seeds `prototyping.json` (`runId`, `specsCovered`,
+  `frozenSpecsCovered`) around the new single spec, so the earlier spec's
+  iterations do not survive as a valid loop. Iterating a second UI-bearing
+  spec has to wait for the per-spec iteration layout.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iter evidence is a single `<screen>.review.json` per declared spec ×
   screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
