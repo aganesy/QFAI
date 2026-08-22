@@ -193,6 +193,7 @@ describe("assistant asset provenance", () => {
             "../../outside-victim.json": hashAssistantAssetText(outsideBody),
             "catalog/../../../escape.md": "deadbeef",
             "catalog/nested/deep.md": "deadbeef",
+            "catalog/test-layers.md.": "deadbeef",
           },
         },
         null,
@@ -204,7 +205,12 @@ describe("assistant asset provenance", () => {
     const parsed = await readAssistantAssetsLock(assistantDir);
     expect(parsed?.files["../../outside-victim.json"]).toBeUndefined();
     expect(parsed?.files["catalog/../../../escape.md"]).toBeUndefined();
-    expect(parsed?.files["catalog/nested/deep.md"]).toBeUndefined();
+    // Windows drops a trailing dot, so this key opens the shipped
+    // `test-layers.md` while recording under a key that is not the shipped one.
+    expect(parsed?.files["catalog/test-layers.md."]).toBeUndefined();
+    // A governed layer is `catalog/**`, so a nested key is one qfai could have
+    // written and is kept.
+    expect(parsed?.files["catalog/nested/deep.md"]).toBe("deadbeef");
 
     // The retire pass deletes any recorded path whose content still matches
     // its recorded hash: an honoured traversal key would take this file with it.
@@ -426,5 +432,93 @@ describe("assistant asset provenance", () => {
       shipped["constitution/drift-protocol.md"],
     );
     expect(ASSISTANT_ASSETS_LOCK_BASENAME).toBe(".assets.lock.json");
+  }, 120000);
+
+  it("reports a normative file added inside a governed subdirectory", async () => {
+    const root = await makeProject();
+    const nested = path.join(root, ".qfai", "assistant", "constitution", "custom");
+    await mkdir(nested, { recursive: true });
+    await writeFile(path.join(nested, "rule.md"), "# project rule\n", "utf-8");
+    // The overlay stays exempt at any depth.
+    await writeFile(path.join(nested, "note.local.md"), "# overlay\n", "utf-8");
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    expect(unshipped).toHaveLength(1);
+    expect(unshipped[0]?.file).toContain("rule.md");
+  });
+
+  it("never retires a shipped rule through a case-variant lock key", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const governed = path.join(assistantDir, "catalog", "test-layers.md");
+    const body = await readFile(governed, "utf-8");
+    const lock = await readAssistantAssetsLock(assistantDir);
+    // On a case-insensitive filesystem this key opens the shipped file itself,
+    // so retiring it as "withdrawn" would delete a rule the release still ships.
+    await writeAssistantAssetsLock(assistantDir, {
+      files: { ...(lock?.files ?? {}), "catalog/TEST-LAYERS.MD": hashAssistantAssetText(body) },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(governed, "utf-8")).toBe(body);
+    const refreshed = await readAssistantAssetsLock(assistantDir);
+    expect(refreshed?.files["catalog/TEST-LAYERS.MD"]).toBeUndefined();
+    expect(refreshed?.files["catalog/test-layers.md"]).toBe(hashAssistantAssetText(body));
+  }, 120000);
+
+  it("hashes a governed file in chunks, agreeing with the whole-string form", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-large-"));
+    tempRoots.push(root);
+    const chunk = 64 * 1024;
+
+    // The `\r\n` straddles the read boundary: the `\r` is the last byte of one
+    // chunk and the `\n` the first byte of the next.
+    const straddling = `${"a".repeat(chunk - 1)}\r\n${"b".repeat(chunk)}\r\n`;
+    const straddlingPath = path.join(root, "straddling.md");
+    await writeFile(straddlingPath, straddling, "utf-8");
+    expect(await hashAssistantAssetFile(straddlingPath)).toBe(hashAssistantAssetText(straddling));
+
+    // A lone `\r` at the same boundary, and another at EOF, must survive: only
+    // a `\r` that opens a `\r\n` pair is dropped.
+    const lone = `${"a".repeat(chunk - 1)}\rx\r`;
+    const lonePath = path.join(root, "lone.md");
+    await writeFile(lonePath, lone, "utf-8");
+    expect(await hashAssistantAssetFile(lonePath)).toBe(hashAssistantAssetText(lone));
+  }, 30000);
+
+  it("never writes or retires through a governed layer that leaves the project", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const outside = path.join(root, "outside-catalog");
+    await mkdir(outside, { recursive: true });
+    const refreshVictim = path.join(outside, "test-layers.md");
+    const refreshVictimBody = "# not qfai's\n";
+    await writeFile(refreshVictim, refreshVictimBody, "utf-8");
+    const retireVictimBody = "# also not qfai's\n";
+    const retireVictim = path.join(outside, "withdrawn.md");
+    await writeFile(retireVictim, retireVictimBody, "utf-8");
+
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
+    // `junction` is ignored off Windows, where a plain directory symlink is made.
+    await symlink(outside, path.join(assistantDir, "catalog"), "junction");
+    await writeAssistantAssetsLock(assistantDir, {
+      files: {
+        ...(lock?.files ?? {}),
+        "catalog/withdrawn.md": hashAssistantAssetText(retireVictimBody),
+      },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    // `rename` and `rm` replace the entry they are given, but the entry itself
+    // was already outside the project: only the parent check keeps them out.
+    expect(await readFile(refreshVictim, "utf-8")).toBe(refreshVictimBody);
+    expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
+    const refreshed = await readAssistantAssetsLock(assistantDir);
+    expect(refreshed?.files["catalog/test-layers.md"]).toBeUndefined();
+    expect(refreshed?.files["catalog/withdrawn.md"]).toBeUndefined();
   }, 120000);
 });

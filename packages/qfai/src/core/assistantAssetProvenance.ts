@@ -1,7 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent } from "node:fs";
-import { open, readdir, rename, rm, writeFile } from "node:fs/promises";
+import { lstat, open, readdir, rename, rm, writeFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
@@ -98,8 +98,8 @@ function isUngovernedManagementFile(basename: string): boolean {
 }
 
 /**
- * True when `key` is a lock key qfai could itself have written: exactly
- * `<governed layer>/<basename>`, with no traversal and no nesting.
+ * True when `key` is a lock key qfai could itself have written: a governed
+ * layer followed by one or more ordinary path segments, with no traversal.
  *
  * The lock is checked in with the project, so its keys are attacker- or
  * accident-supplied input, not qfai's own output. A key of
@@ -108,26 +108,105 @@ function isUngovernedManagementFile(basename: string): boolean {
  * recorded path whose content still matches its recorded hash. Keys are
  * therefore validated at the parse boundary, so neither `init` nor `validate`
  * can be handed a path to act on that qfai does not own.
+ *
+ * Nesting is accepted because the governed layers are `constitution/**` and
+ * `catalog/**`: a project that adds `constitution/custom/rule.md` is adding a
+ * normative file, and a key shape that stopped at one level put that file
+ * outside the record — and outside `QFAI-ASSETS-005` with it.
  */
 export function isGovernedAssistantLockKey(key: string): boolean {
-  const segments = key.split("/");
-  if (segments.length !== 2) {
-    return false;
-  }
-  const [layer, basename] = segments;
-  if (layer === undefined || basename === undefined) {
+  const [layer, ...rest] = key.split("/");
+  if (layer === undefined || rest.length === 0) {
     return false;
   }
   const layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS;
   if (!layers.includes(layer)) {
     return false;
   }
-  if (basename.length === 0 || basename === "." || basename === "..") {
+  return rest.every(isGovernedPathSegment);
+}
+
+function isGovernedPathSegment(segment: string): boolean {
+  if (segment.length === 0 || segment === "." || segment === "..") {
     return false;
   }
   // `\` is a separator on Windows, and `\0` truncates a path at the syscall
   // boundary on POSIX. Neither can appear in a name qfai ships.
-  return !/[\\/\0]/.test(basename);
+  if (/[\\/\0]/.test(segment)) {
+    return false;
+  }
+  // Windows strips trailing dots and whitespace from a path component, so
+  // `test-layers.md.` opens the very file `test-layers.md` names while
+  // recording under a key that is not the shipped one — which made the real
+  // rule read as withdrawn and had `--force` delete it.
+  return !/[.\s]$/u.test(segment);
+}
+
+/**
+ * True when `key` is not a shipped path but folds onto one under the
+ * case-insensitive comparison a default Windows or macOS filesystem applies.
+ *
+ * A lock is project-supplied, so a key of `catalog/TEST-LAYERS.MD` paired with
+ * the real file's hash passes every structural check while being a different
+ * key from the shipped `catalog/test-layers.md`. `retireWithdrawnGovernedAssets`
+ * then reads it as a rule the release withdrew, finds the content still
+ * matching, and `qfai init --force` deletes the shipped file the alias
+ * actually named. Such a key is dropped rather than acted on — on every
+ * platform, so a lock committed from Windows behaves the same on Linux.
+ */
+export function aliasesShippedGovernedAsset(
+  key: string,
+  shipped: Readonly<Record<string, string>>,
+): boolean {
+  if (Object.hasOwn(shipped, key)) {
+    return false;
+  }
+  const folded = key.toLowerCase();
+  return Object.keys(shipped).some((candidate) => candidate.toLowerCase() === folded);
+}
+
+/**
+ * True when every directory from `assistantRoot` down to the parent of
+ * `relative` is a real directory in the project — never a symlink, junction or
+ * other reparse point.
+ *
+ * Only the final entry of a governed path was checked before, so a checkout
+ * that left `constitution/` or `catalog/` itself pointing at a directory
+ * outside the repository put every write and every `--force` retire inside
+ * that directory: `rename` replaces the entry it is given, but the entry was
+ * already out of the tree. Each parent is therefore inspected with `lstat`,
+ * which reports a link as a link instead of resolving through it.
+ *
+ * An absent directory answers true: `init` creates the governed layers itself,
+ * and creating one is not a way out of the tree. A parent that cannot be
+ * inspected at all answers false — what cannot be checked must not be written
+ * into.
+ */
+export async function hasRealGovernedAssistantParents(
+  assistantRoot: string,
+  relative: string,
+): Promise<boolean> {
+  const segments = relative.split("/");
+  segments.pop();
+  let current = assistantRoot;
+  if (!(await isRealDirectoryOrAbsent(current))) {
+    return false;
+  }
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    if (!(await isRealDirectoryOrAbsent(current))) {
+      return false;
+    }
+  }
+  return true;
+}
+
+async function isRealDirectoryOrAbsent(target: string): Promise<boolean> {
+  try {
+    return (await lstat(target)).isDirectory();
+  } catch (error: unknown) {
+    return isEnoent(error);
+  }
 }
 
 /**
@@ -153,6 +232,14 @@ export function hashAssistantAssetText(text: string): string {
  * with no diagnostic; a directory or a device node is not a governed asset
  * either. A symlink to a regular file is still followed — reading through one
  * is harmless, and the write paths are what must never do it.
+ *
+ * The content is hashed in fixed-size chunks rather than buffered whole.
+ * Refusing special files caps nothing about a regular one, so a checkout that
+ * left a multi-gigabyte file at a governed path made `qfai validate` and
+ * `qfai init` allocate it as a single string and die of it. A size ceiling
+ * would have answered `null` instead — reporting a real, readable file as
+ * missing — so the read streams and the newline normalisation carries a
+ * one-byte `\r` across the chunk boundary.
  */
 export async function hashAssistantAssetFile(filePath: string): Promise<string | null> {
   let handle: FileHandle | undefined;
@@ -162,7 +249,7 @@ export async function hashAssistantAssetFile(filePath: string): Promise<string |
     if (!pinned.isFile()) {
       return null;
     }
-    return hashAssistantAssetText(await handle.readFile("utf-8"));
+    return await hashHandleWithNormalisedNewlines(handle);
   } catch {
     return null;
   } finally {
@@ -172,6 +259,60 @@ export async function hashAssistantAssetFile(filePath: string): Promise<string |
       // The hash is already decided; a close fault must not replace it.
     }
   }
+}
+
+const HASH_CHUNK_BYTES = 64 * 1024;
+const CARRIAGE_RETURN = 0x0d;
+const LINE_FEED = 0x0a;
+const CARRIAGE_RETURN_BYTES = Buffer.from([CARRIAGE_RETURN]);
+
+/**
+ * Streaming equivalent of `hashAssistantAssetText`: sha256 over the content
+ * with every `\r\n` collapsed to `\n`.
+ *
+ * The two agree byte for byte on UTF-8 content, which is what these layers
+ * hold — `\r` and `\n` cannot appear inside a multi-byte UTF-8 sequence, so
+ * dropping the `\r` of a `\r\n` pair on the byte stream is the same edit the
+ * string form makes. A `\r` that lands on the last byte of a chunk is held
+ * back until the next chunk says whether an `\n` follows it.
+ */
+async function hashHandleWithNormalisedNewlines(handle: FileHandle): Promise<string> {
+  const digest = createHash("sha256");
+  const buffer = Buffer.allocUnsafe(HASH_CHUNK_BYTES);
+  let pendingCarriageReturn = false;
+  for (;;) {
+    const { bytesRead } = await handle.read(buffer, 0, buffer.length, null);
+    if (bytesRead === 0) {
+      break;
+    }
+    const chunk = buffer.subarray(0, bytesRead);
+    if (pendingCarriageReturn) {
+      pendingCarriageReturn = false;
+      if (chunk[0] !== LINE_FEED) {
+        digest.update(CARRIAGE_RETURN_BYTES);
+      }
+    }
+    // A trailing `\r` is deferred: only the next chunk knows whether it opens
+    // a `\r\n` pair or stands on its own.
+    const end = chunk[bytesRead - 1] === CARRIAGE_RETURN ? bytesRead - 1 : bytesRead;
+    pendingCarriageReturn = end !== bytesRead;
+    let start = 0;
+    for (
+      let at = chunk.indexOf(CARRIAGE_RETURN);
+      at !== -1 && at < end;
+      at = chunk.indexOf(CARRIAGE_RETURN, at + 1)
+    ) {
+      if (chunk[at + 1] === LINE_FEED) {
+        digest.update(chunk.subarray(start, at));
+        start = at + 1;
+      }
+    }
+    digest.update(chunk.subarray(start, end));
+  }
+  if (pendingCarriageReturn) {
+    digest.update(CARRIAGE_RETURN_BYTES);
+  }
+  return digest.digest("hex");
 }
 
 /**
@@ -187,6 +328,15 @@ const OPEN_READ_FLAGS =
 /**
  * POSIX paths, relative to the assistant root, of every governed file under
  * `assistantRoot`. Overlays are excluded: they are project property.
+ *
+ * The walk descends: the governed layers are `constitution/**` and
+ * `catalog/**`, so a project that puts a normative file in
+ * `constitution/custom/rule.md` has added one. Skipping subdirectories left
+ * that file out of the record and out of `QFAI-ASSETS-005` — a directory was
+ * all it took to add an unreported rule beside the ones qfai owns.
+ *
+ * Only real directories are descended into. A symlinked directory is not part
+ * of the governed tree, and following one would walk out of the project.
  */
 export async function collectGovernedAssistantFiles(
   assistantRoot: string,
@@ -194,27 +344,44 @@ export async function collectGovernedAssistantFiles(
 ): Promise<string[]> {
   const found: string[] = [];
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
-    const layerDir = path.join(assistantRoot, layer);
-    let entries: Dirent[];
-    try {
-      entries = await readdir(layerDir, { withFileTypes: true });
-    } catch (error: unknown) {
-      if (isEnoent(error) && options.requireLayers !== true) {
-        continue;
-      }
-      throw error;
-    }
-    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
-      if (entry.isDirectory()) {
-        continue;
-      }
-      if (isUngovernedManagementFile(entry.name) || isLocalAssistantOverlay(entry.name)) {
-        continue;
-      }
-      found.push(`${layer}/${entry.name}`);
-    }
+    await collectGovernedFilesUnder(
+      path.join(assistantRoot, layer),
+      layer,
+      options.requireLayers === true,
+      found,
+    );
   }
   return found;
+}
+
+async function collectGovernedFilesUnder(
+  directory: string,
+  prefix: string,
+  required: boolean,
+  found: string[],
+): Promise<void> {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(directory, { withFileTypes: true });
+  } catch (error: unknown) {
+    if (isEnoent(error) && !required) {
+      return;
+    }
+    throw error;
+  }
+  for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+    const relative = `${prefix}/${entry.name}`;
+    if (entry.isDirectory()) {
+      // Nested layers are never `requireLayers`: the directory was just listed,
+      // so an ENOENT below is a concurrent removal, not a broken install.
+      await collectGovernedFilesUnder(path.join(directory, entry.name), relative, false, found);
+      continue;
+    }
+    if (isUngovernedManagementFile(entry.name) || isLocalAssistantOverlay(entry.name)) {
+      continue;
+    }
+    found.push(relative);
+  }
 }
 
 /**

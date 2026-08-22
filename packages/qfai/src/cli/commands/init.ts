@@ -24,8 +24,11 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import {
+  ASSISTANT_ASSETS_LOCK_BASENAME,
   ASSISTANT_STAGING_PREFIX,
+  aliasesShippedGovernedAsset,
   buildShippedAssistantHashes,
+  hasRealGovernedAssistantParents,
   hashAssistantAssetFile,
   readAssistantAssetsLock,
   writeAssistantAssetsLock,
@@ -43,6 +46,7 @@ import {
   negationsOutrankLaterIgnores,
 } from "../../core/gitignore.js";
 import {
+  ASSISTANT_DIR,
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
@@ -148,7 +152,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destQfai, {
+  const governedResult = await syncGovernedAssistantAssets(assistantAssets, destRoot, {
     force: options.force,
     dryRun: options.dryRun,
   });
@@ -285,10 +289,14 @@ type GovernedAssetsResult = {
  */
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
-  destQfai: string,
+  destRoot: string,
   options: { force: boolean; dryRun: boolean },
 ): Promise<GovernedAssetsResult> {
-  const destAssistant = path.join(destQfai, "assistant");
+  // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree segments
+  // come from `assistantPaths.ts` in init and in validate alike, so a future
+  // move of `ASSISTANT_DIR` cannot leave the provenance record, the refresh and
+  // the retire pass operating on a tree the validators no longer read.
+  const destAssistant = path.join(destRoot, ...ASSISTANT_DIR.split("/"));
   const copied: string[] = [];
   const skipped: string[] = [];
   const removed: string[] = [];
@@ -312,10 +320,16 @@ async function syncGovernedAssistantAssets(
 
   const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
   const recorded: Record<string, string> = {};
+  const isContained = makeGovernedContainmentGuard(destAssistant);
 
   for (const [relative, shippedHash] of Object.entries(shipped)) {
     const source = path.join(assistantAssets, ...relative.split("/"));
     const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      skipped.push(dest);
+      manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
     const currentHash = await hashAssistantAssetFile(dest);
     const previousHash = previous[relative];
 
@@ -354,18 +368,56 @@ async function syncGovernedAssistantAssets(
     }
   }
 
-  await retireWithdrawnGovernedAssets(destAssistant, shipped, previous, recorded, options, {
-    removed,
-    skipped,
-    manualMergeNotes,
-  });
+  await retireWithdrawnGovernedAssets(
+    destAssistant,
+    shipped,
+    previous,
+    recorded,
+    options,
+    isContained,
+    { removed, skipped, manualMergeNotes },
+  );
 
-  if (!options.dryRun) {
+  // The record itself is a governed write: an assistant root that is a symlink
+  // out of the project would take the lock — and every later decision made from
+  // it — with it.
+  if (!options.dryRun && (await isContained(ASSISTANT_ASSETS_LOCK_BASENAME))) {
     await mkdir(destAssistant, { recursive: true });
     await writeAssistantAssetsLock(destAssistant, { files: recorded });
   }
 
   return { copied, skipped, removed, manualMergeNotes };
+}
+
+/**
+ * Answers, once per containing directory, whether a governed relative path sits
+ * inside the project's own assistant tree.
+ *
+ * `rename` and `rm` act on the entry they are given, which makes the *final*
+ * component safe on its own — but not the directories above it. A checkout that
+ * left `constitution/` (or the assistant root itself) as a symlink to somewhere
+ * outside the repository pointed every governed write and every `--force`
+ * retire into that directory instead. The answer is cached because both passes
+ * walk the same handful of directories for every file in them.
+ */
+function makeGovernedContainmentGuard(
+  destAssistant: string,
+): (relative: string) => Promise<boolean> {
+  const answers = new Map<string, Promise<boolean>>();
+  return (relative: string) => {
+    const container = relative.slice(0, relative.lastIndexOf("/") + 1);
+    const cached = answers.get(container);
+    if (cached !== undefined) {
+      return cached;
+    }
+    const answer = hasRealGovernedAssistantParents(destAssistant, relative);
+    answers.set(container, answer);
+    return answer;
+  };
+}
+
+function escapedGovernedPathNote(dest: string): string {
+  return `NOTE: ${dest} の親ディレクトリが実ディレクトリではない（symlink / junction 等でプロジェクト外を指している可能性があります）ため、この規範ファイルは同期・削除の対象外にしました。`;
 }
 
 /**
@@ -481,13 +533,25 @@ async function retireWithdrawnGovernedAssets(
   previous: Record<string, string>,
   recorded: Record<string, string>,
   options: { force: boolean; dryRun: boolean },
+  isContained: (relative: string) => Promise<boolean>,
   out: { removed: string[]; skipped: string[]; manualMergeNotes: string[] },
 ): Promise<void> {
   for (const [relative, previousHash] of Object.entries(previous)) {
     if (relative in shipped) {
       continue;
     }
+    if (aliasesShippedGovernedAsset(relative, shipped)) {
+      // A case variant of a path the release still ships. On a case-insensitive
+      // filesystem it names that very file, so retiring it would delete a rule
+      // qfai ships. The entry is dropped from the record instead of acted on.
+      continue;
+    }
     const dest = path.join(destAssistant, ...relative.split("/"));
+    if (!(await isContained(relative))) {
+      out.skipped.push(dest);
+      out.manualMergeNotes.push(escapedGovernedPathNote(dest));
+      continue;
+    }
     const currentHash = await hashAssistantAssetFile(dest);
     if (currentHash === null) {
       // Already gone (or never a readable regular file): nothing to retire,
