@@ -10,26 +10,27 @@
  * for a function that no longer exists in `src/` at all.
  *
  * The primitives here reduce a TypeScript source file to the text that can
- * actually execute, then look for a call expression rather than a bare
- * identifier:
+ * actually execute:
  *
  *   1. {@link stripCommentsAndLiterals} deletes comments, string literals,
  *      template literals and regex literals.
- *   2. {@link stripDeclarationHeaders} deletes `function name(` headers so a
- *      function's own definition never counts as a call to itself.
- *   3. {@link isInvoked} requires `name(` — which an `import`/`export`
- *      statement can never produce.
+ *   2. {@link stripModuleBindingStatements} deletes `import` / `export … from`
+ *      / `export { … };` statements, which publish a binding without running
+ *      anything.
+ *   3. {@link stripDeclarationHeaders} deletes `function name(` headers so a
+ *      function's own definition never counts as a use of itself.
  *
  * On top of those, {@link buildWiringGraph} answers the question the guard
  * really asks: is the *caller* itself reachable? Concatenating every module the
  * entry file transitively imports is not enough, because `validators/index.ts`
  * is a barrel that re-exports every validator: a dead validator calling another
  * dead validator would make the second one look wired. The graph therefore
- * splits each module into its top-level function bodies plus the module-level
- * residue, seeds reachability with the entry module and every loaded module's
- * residue (top-level code does run on import), and admits a function body only
- * once already-reachable code uses that function — calling it, calling it under
- * an `import { x as y }` alias, or handing it to a dispatch table.
+ * splits each module into its top-level function bodies (parameter list
+ * included — defaults run per call) plus the module-level residue, seeds
+ * reachability with the entry module and every loaded module's residue (top-
+ * level code does run on import), and admits a function body only once
+ * already-reachable code names that function — calling it, naming it under an
+ * `import { x as y }` alias, or handing it to a dispatch table.
  *
  * Known limitations, all of which err towards a *loud* verdict rather than a
  * silent one:
@@ -37,7 +38,9 @@
  *     dispatched) is stripped with the literal and will not be seen;
  *   - a body assigned to something other than a `function` declaration or an
  *     arrow/function-expression `const` (an object-literal method, say) stays
- *     in the residue and is therefore treated as always reachable.
+ *     in the residue and is therefore treated as always reachable;
+ *   - a name mentioned in a type position that survives stripping (`typeof
+ *     validateFoo`) reads as a use; `import type` bindings do not.
  */
 
 /**
@@ -170,29 +173,14 @@ export function stripCommentsAndLiterals(source: string): string {
  */
 export function stripDeclarationHeaders(code: string): string {
   return code.replace(
-    /\b(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*[A-Za-z_$][\w$]*\s*\(/g,
+    /\b(?:export\s+)?(?:default\s+)?(?:async\s+)?function\s*\*?\s*[A-Za-z_$][\w$]*\s*(?:<[^<>()]*(?:<[^<>]*>[^<>()]*)*>)?\s*\(/g,
     "function (",
   );
 }
 
-/** Reduces a source file to the text a call expression can be searched in. */
+/** Reduces a source file to the text a name can be looked for in. */
 export function toExecutableCode(source: string): string {
-  return stripDeclarationHeaders(stripCommentsAndLiterals(source));
-}
-
-function escapeRegExp(literal: string): string {
-  return literal.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-
-/**
- * True when `code` contains a call expression for `name`.
- *
- * `code` must already have gone through {@link toExecutableCode}. A member call
- * (`validators.validateFoo(...)`) counts; a bare identifier in an `import` /
- * `export` statement cannot, because those never place a `(` after the name.
- */
-export function isInvoked(name: string, code: string): boolean {
-  return new RegExp(String.raw`(?<![\w$])${escapeRegExp(name)}\s*\(`).test(code);
+  return stripDeclarationHeaders(stripModuleBindingStatements(stripCommentsAndLiterals(source)));
 }
 
 /**
@@ -203,39 +191,53 @@ export function isInvoked(name: string, code: string): boolean {
 const MODULE_SPECIFIER_STATEMENT_RE = /\b(?:import|export)\b[^;]*?\bfrom\b[^;]*?;/g;
 
 /**
- * Removes `import` / `export ... from` statements so a binding that is only
- * imported or re-exported never reads as a use of the function.
+ * `export { name };` — a local re-export, the `from`-less spelling of a barrel
+ * line. It publishes a binding without executing anything.
+ */
+const LOCAL_REEXPORT_STATEMENT_RE = /\bexport\s*\{[^}]*\}\s*;/g;
+
+/**
+ * Removes `import` / `export ... from` / `export { ... };` statements, so a
+ * binding that is only imported or re-exported never reads as a use of the
+ * function it names.
  */
 export function stripModuleBindingStatements(code: string): string {
-  return code.replace(MODULE_SPECIFIER_STATEMENT_RE, " ");
-}
-
-/** Matches `name` standing alone, not as part of a longer identifier. */
-function identifierRe(name: string): RegExp {
-  return new RegExp(String.raw`(?<![\w$.])${escapeRegExp(name)}(?![\w$])`);
+  return code.replace(MODULE_SPECIFIER_STATEMENT_RE, " ").replace(LOCAL_REEXPORT_STATEMENT_RE, " ");
 }
 
 /**
- * True when `name` is used as a value in `code` — either called outright or
- * handed to something else (`[validateFoo]`, `run(validateFoo)`), which is how
- * a validator registered in a table is dispatched.
+ * Every identifier token in executable code.
  *
- * `code` must already have gone through {@link stripModuleBindingStatements},
- * otherwise the barrel line `export { validateFoo } from "./foo.js"` counts.
+ * Property names count (`registry.push(validators.validateFoo)` yields both
+ * `validators` and `validateFoo`): a validator handed to a dispatch table
+ * through a namespace import is wired, and treating the member name as a use
+ * keeps the guard from failing CI over that legitimate shape.
  */
-export function isUsedAsValue(name: string, code: string): boolean {
-  return identifierRe(name).test(code);
+export function identifiersIn(code: string): Set<string> {
+  const out = new Set<string>();
+  const re = /[A-Za-z_$][\w$]*/g;
+  let match: RegExpExecArray | null;
+  while ((match = re.exec(code)) !== null) out.add(match[0]);
+  return out;
 }
 
-/** Collects `import { a as b }` bindings as `alias -> original`. */
+/**
+ * Collects value `import { a as b }` bindings as `alias -> original`.
+ *
+ * `import type { … }` clauses and `type`-prefixed specifiers are skipped: a
+ * type-only binding is erased at compile time, so a later mention of it is a
+ * type reference and never evidence that the validator runs.
+ */
 export function collectImportAliases(code: string): Map<string, string> {
   const aliases = new Map<string, string>();
-  const clauseRe = /\bimport\s+(?:type\s+)?\{([^}]*)\}/g;
+  const clauseRe = /\bimport\s+\{([^}]*)\}/g;
   let clause: RegExpExecArray | null;
   while ((clause = clauseRe.exec(code)) !== null) {
     for (const specifier of (clause[1] ?? "").split(",")) {
-      const parts = specifier.trim().split(/\s+as\s+/);
-      const original = parts[0]?.replace(/^type\s+/, "").trim();
+      const trimmed = specifier.trim();
+      if (trimmed === "" || /^type\s/.test(trimmed)) continue;
+      const parts = trimmed.split(/\s+as\s+/);
+      const original = parts[0]?.trim();
       const alias = parts[1]?.trim();
       if (original !== undefined && original !== "" && alias !== undefined && alias !== "") {
         aliases.set(alias, original);
@@ -297,9 +299,13 @@ function findBlockBody(code: string, from: number): { start: number; end: number
   return undefined;
 }
 
-/** `function name(` — the header of a top-level function declaration. */
+/**
+ * `function name(` — the header of a top-level function declaration, with the
+ * optional type-parameter list of a generic (`function name<T extends X>(`)
+ * consumed so a generic helper's body is carved out like any other.
+ */
 const FUNCTION_DECLARATION_RE =
-  /(?:\bexport\s+)?(?:\bdefault\s+)?(?:\basync\s+)?\bfunction\s*\*?\s*([A-Za-z_$][\w$]*)\s*\(/g;
+  /(?:\bexport\s+)?(?:\bdefault\s+)?(?:\basync\s+)?\bfunction\s*\*?\s*([A-Za-z_$][\w$]*)\s*(?:<[^<>()]*(?:<[^<>]*>[^<>()]*)*>)?\s*\(/g;
 
 /** `const name =` — a candidate arrow / function-expression binding. */
 const VALUE_DECLARATION_RE =
@@ -380,6 +386,12 @@ function findValueBody(
  * Splits executable code (already comment- and literal-free) into its top-level
  * function bodies and the module-level residue. Nested declarations stay inside
  * the enclosing body: a closure runs only when its parent does.
+ *
+ * The parameter list travels with the body, not with the residue: a default
+ * argument (`function unused(value = validateFoo()) {}`) is evaluated per call,
+ * so it must not make `validateFoo` reachable while `unused` itself is dead.
+ * The declared name is left out of both, so a definition is never a use of
+ * itself.
  */
 export function sliceFunctions(code: string): ModuleSlices {
   const functions: FunctionBody[] = [];
@@ -387,21 +399,18 @@ export function sliceFunctions(code: string): ModuleSlices {
   let cursor = 0;
   for (const candidate of collectCandidates(code)) {
     if (candidate.index < cursor) continue;
+    // For a declaration headerEnd sits just past the `(`, so step back onto it:
+    // the parameter list is then skipped whole when the body block is located,
+    // and a destructured parameter cannot be mistaken for that block.
+    const chunkStart =
+      candidate.kind === "function" ? candidate.headerEnd - 1 : candidate.headerEnd;
     const body =
       candidate.kind === "function"
-        ? // headerEnd sits just past the `(`, so step back onto it: the
-          // parameter list is skipped whole and a destructured parameter
-          // cannot be mistaken for the body block.
-          findBlockBody(code, candidate.headerEnd - 1)
-        : findValueBody(code, candidate.headerEnd);
+        ? findBlockBody(code, chunkStart)
+        : findValueBody(code, chunkStart);
     if (body === undefined) continue;
-    functions.push({ name: candidate.name, code: code.slice(body.start, body.end) });
-    // The header stays in the residue (a parameter default does run on every
-    // call) but the declared name is blanked out: `const validateFoo = () =>`
-    // is a definition, not a use of `validateFoo`.
-    residue +=
-      code.slice(cursor, candidate.index) +
-      code.slice(candidate.index, body.start).replace(identifierRe(candidate.name), " ");
+    functions.push({ name: candidate.name, code: code.slice(chunkStart, body.end) });
+    residue += code.slice(cursor, candidate.index);
     cursor = body.end;
   }
   residue += code.slice(cursor);
@@ -418,8 +427,8 @@ export interface WiringModule {
 export interface WiringGraph {
   /** True when `name` is used from code reachable from the entry module. */
   isCalled(name: string): boolean;
-  /** Every function body proved reachable, joined — for diagnostics. */
-  reachableCode: string;
+  /** Every name used by reachable code — for diagnostics. */
+  usedNames: ReadonlySet<string>;
 }
 
 function prepare(source: string): { slices: ModuleSlices; aliases: Map<string, string> } {
@@ -440,61 +449,60 @@ function prepare(source: string): { slices: ModuleSlices; aliases: Map<string, s
 }
 
 /**
- * Builds the set of code reachable from `entry`.
+ * Builds the set of names reachable from `entry`.
  *
  * `entry` is the pipeline's entry module: all of it counts as reachable. Every
- * module in `imported` contributes its module-level residue immediately, but
- * each of its function bodies only once reachable code uses that function's
- * name — so a validator whose body is never called cannot lend reachability to
- * the validators it calls.
+ * module in `imported` contributes its module-level residue immediately (that
+ * code runs on import), but each of its function bodies only once reachable
+ * code names that function — so a validator whose body is never called cannot
+ * lend reachability to the validators it calls.
+ *
+ * The walk is a worklist over chunks rather than a rescan of a growing corpus:
+ * each chunk is tokenised once, which keeps a whole `src/` graph linear.
  */
 export function buildWiringGraph(entry: WiringModule, imported: WiringModule[]): WiringGraph {
   const entryPrepared = prepare(entry.source);
-  const reachable: string[] = [
+  const aliasToOriginal = new Map<string, string>(entryPrepared.aliases);
+  const queue: string[] = [
     entryPrepared.slices.residue,
     ...entryPrepared.slices.functions.map((fn) => fn.code),
   ];
-  const aliasesOf = new Map<string, Set<string>>();
-  const register = (aliases: Map<string, string>): void => {
-    for (const [alias, original] of aliases) {
-      const known = aliasesOf.get(original) ?? new Set<string>();
-      known.add(alias);
-      aliasesOf.set(original, known);
-    }
-  };
-  register(entryPrepared.aliases);
 
-  const pending: FunctionBody[] = [];
+  /** Function bodies waiting for something reachable to name them. */
+  const pending = new Map<string, string[]>();
   for (const module of imported) {
     const prepared = prepare(module.source);
-    register(prepared.aliases);
-    reachable.push(prepared.slices.residue);
-    pending.push(...prepared.slices.functions);
-  }
-
-  const namesFor = (name: string): string[] => [name, ...(aliasesOf.get(name) ?? [])];
-  /** A name counts as used when it is called, aliased-and-called, or passed on. */
-  const usedIn = (name: string, code: string): boolean =>
-    namesFor(name).some(
-      (candidate) => isInvoked(candidate, code) || isUsedAsValue(candidate, code),
-    );
-
-  let changed = true;
-  while (changed) {
-    changed = false;
-    const corpus = reachable.join("\n");
-    for (let i = pending.length - 1; i >= 0; i -= 1) {
-      const fn = pending[i];
-      if (fn === undefined || !usedIn(fn.name, corpus)) continue;
-      reachable.push(fn.code);
-      pending.splice(i, 1);
-      changed = true;
+    for (const [alias, original] of prepared.aliases) aliasToOriginal.set(alias, original);
+    queue.push(prepared.slices.residue);
+    for (const fn of prepared.slices.functions) {
+      const bodies = pending.get(fn.name) ?? [];
+      bodies.push(fn.code);
+      pending.set(fn.name, bodies);
     }
   }
 
-  const corpus = reachable.join("\n");
+  const used = new Set<string>();
+  const markUsed = (name: string): void => {
+    if (used.has(name)) return;
+    used.add(name);
+    // `import { validateFoo as runFoo }` — using the alias uses the real one.
+    const original = aliasToOriginal.get(name);
+    if (original !== undefined) markUsed(original);
+    const bodies = pending.get(name);
+    if (bodies !== undefined) {
+      pending.delete(name);
+      queue.push(...bodies);
+    }
+  };
+
+  while (queue.length > 0) {
+    const chunk = queue.pop();
+    if (chunk === undefined) continue;
+    for (const name of identifiersIn(chunk)) markUsed(name);
+  }
+
   return {
-    reachableCode: corpus,
-    isCalled: (name: string): boolean => usedIn(name, corpus),
+    usedNames: used,
+    isCalled: (name: string): boolean => used.has(name),
   };
 }

@@ -161,10 +161,10 @@ function localImportSpecifiers(body: string): string[] {
 }
 
 /**
- * Build the call graph rooted at validate.ts: validate.ts plus every file it
- * imports under `./validators/`, `./prototyping/` or `./uiux/`, and their
- * imports in turn (2-hop). Orchestrators that wrap multiple sibling validators
- * are detected this way.
+ * Build the call graph rooted at validate.ts: validate.ts plus every local file
+ * it imports, and their local imports in turn, to a fixed point. Orchestrators
+ * that wrap multiple sibling validators are detected this way, however many
+ * modules deep the delegation runs.
  *
  * Being *in* that module graph is not wiring. `validators/index.ts` is a barrel
  * that re-exports every prototyping validator, so every one of those files is
@@ -175,23 +175,26 @@ function localImportSpecifiers(body: string): string[] {
  */
 async function buildValidateWiringGraph(): Promise<WiringGraph> {
   const validateBody = await readFile(VALIDATE_TS, "utf-8");
-  const visited = new Set<string>();
+  const visited = new Set<string>([VALIDATE_TS]);
+  const frontier: Array<{ file: string; source: string }> = [
+    { file: VALIDATE_TS, source: validateBody },
+  ];
   const imported: WiringModule[] = [];
 
-  for (const rel of localImportSpecifiers(validateBody)) {
-    const resolved = resolveLocalImport(VALIDATE_TS, rel);
-    if (resolved === undefined || visited.has(resolved)) continue;
-    visited.add(resolved);
-    const body = await readSourceOrUndefined(resolved);
-    if (body === undefined) continue;
-    imported.push({ file: resolved, source: body });
-
-    for (const innerRel of localImportSpecifiers(body)) {
-      const innerResolved = resolveLocalImport(resolved, innerRel);
-      if (innerResolved === undefined || visited.has(innerResolved)) continue;
-      visited.add(innerResolved);
-      const innerBody = await readSourceOrUndefined(innerResolved);
-      if (innerBody !== undefined) imported.push({ file: innerResolved, source: innerBody });
+  // Fixed point, not a fixed depth: an orchestrator reached through the barrel
+  // may itself delegate through a helper module, and stopping at two hops would
+  // report the validator that helper calls as unwired.
+  while (frontier.length > 0) {
+    const current = frontier.pop();
+    if (current === undefined) continue;
+    for (const rel of localImportSpecifiers(current.source)) {
+      const resolved = resolveLocalImport(current.file, rel);
+      if (resolved === undefined || visited.has(resolved)) continue;
+      visited.add(resolved);
+      const source = await readSourceOrUndefined(resolved);
+      if (source === undefined) continue;
+      imported.push({ file: resolved, source });
+      frontier.push({ file: resolved, source });
     }
   }
   return buildWiringGraph({ file: VALIDATE_TS, source: validateBody }, imported);

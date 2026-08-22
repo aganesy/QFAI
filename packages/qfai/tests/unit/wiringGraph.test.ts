@@ -15,7 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildWiringGraph,
-  isInvoked,
+  identifiersIn,
   stripCommentsAndLiterals,
   stripDeclarationHeaders,
   toExecutableCode,
@@ -82,53 +82,61 @@ describe("stripDeclarationHeaders", () => {
   });
 });
 
-describe("isInvoked", () => {
-  it("is false for a name that only appears in a doc comment", () => {
-    const code = toExecutableCode(
+/** The names an executable-code fragment uses, as the graph reads them. */
+const namesUsedIn = (source: string): Set<string> => identifiersIn(toExecutableCode(source));
+
+describe("identifiersIn over executable code", () => {
+  it("does not see a name that only appears in a doc comment", () => {
+    const names = namesUsedIn(
       ["/**", " * `validateFoo` (QFAI-PROT-310) covers that case.", " */", "const x = 1;"].join(
         "\n",
       ),
     );
-    expect(isInvoked("validateFoo", code)).toBe(false);
+    expect(names.has("validateFoo")).toBe(false);
   });
 
-  it("is false for a barrel re-export", () => {
-    const code = toExecutableCode('export { validateFoo } from "./prototyping/foo.js";');
-    expect(isInvoked("validateFoo", code)).toBe(false);
+  it("does not see a name that only appears in a string literal", () => {
+    expect(namesUsedIn('const label = "validateFoo(root)";').has("validateFoo")).toBe(false);
   });
 
-  it("is false for an import statement", () => {
-    const code = toExecutableCode('import { validateFoo } from "./prototyping/foo.js";');
-    expect(isInvoked("validateFoo", code)).toBe(false);
+  it("does not see a barrel re-export", () => {
+    expect(
+      namesUsedIn('export { validateFoo } from "./prototyping/foo.js";').has("validateFoo"),
+    ).toBe(false);
   });
 
-  it("is false for the function's own definition", () => {
-    expect(isInvoked("validateFoo", toExecutableCode(DEFINITION))).toBe(false);
+  it("does not see the from-less spelling of a barrel re-export", () => {
+    const names = namesUsedIn(
+      ['import { validateFoo } from "./prototyping/foo.js";', "export { validateFoo };"].join("\n"),
+    );
+    expect(names.has("validateFoo")).toBe(false);
   });
 
-  it("is false for a longer name that merely ends with the searched one", () => {
-    const code = toExecutableCode("revalidateFoo(root, config);");
-    expect(isInvoked("validateFoo", code)).toBe(false);
+  it("does not see an import statement", () => {
+    expect(
+      namesUsedIn('import { validateFoo } from "./prototyping/foo.js";').has("validateFoo"),
+    ).toBe(false);
   });
 
-  it("is true for a direct call", () => {
-    const code = toExecutableCode("const issues = [...(await validateFoo(root, config))];");
-    expect(isInvoked("validateFoo", code)).toBe(true);
+  it("does not see the function's own declaration header", () => {
+    expect(namesUsedIn(DEFINITION).has("validateFoo")).toBe(false);
   });
 
-  it("is true for a call written across a line break", () => {
-    const code = toExecutableCode("validateFoo (\n  root,\n  config,\n);");
-    expect(isInvoked("validateFoo", code)).toBe(true);
+  it("does not confuse a longer name that merely ends with the searched one", () => {
+    const names = namesUsedIn("revalidateFoo(root, config);");
+    expect(names.has("revalidateFoo")).toBe(true);
+    expect(names.has("validateFoo")).toBe(false);
   });
 
-  it("is true for a namespaced call", () => {
-    const code = toExecutableCode("validators.validateFoo(root, config);");
-    expect(isInvoked("validateFoo", code)).toBe(true);
+  it("sees a direct call", () => {
+    expect(
+      namesUsedIn("const issues = [...(await validateFoo(root, config))];").has("validateFoo"),
+    ).toBe(true);
   });
 
-  it("is true when the definition file also calls the function", () => {
-    const code = toExecutableCode([DEFINITION, "const out = validateFoo(root);"].join("\n"));
-    expect(isInvoked("validateFoo", code)).toBe(true);
+  it("sees a namespaced call and a namespaced reference", () => {
+    expect(namesUsedIn("validators.validateFoo(root, config);").has("validateFoo")).toBe(true);
+    expect(namesUsedIn("const registry = [validators.validateFoo];").has("validateFoo")).toBe(true);
   });
 });
 
@@ -240,6 +248,73 @@ describe("buildWiringGraph", () => {
       ),
     ]);
     expect(graph.isCalled("validateBar")).toBe(false);
+  });
+
+  it("does not count a call inside an unused generic helper", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_(
+        "/src/core/validators/generic.ts",
+        "export function unused<T extends object>(input: T): T {\n  validateFoo(input);\n  return input;\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("does not count a default argument of a function nothing calls", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_(
+        "/src/core/validators/defaults.ts",
+        "export function unused(value = validateFoo(root)) {\n  return value;\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("counts a default argument once the function itself is reachable", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return used();\n}"), [
+      module_(
+        "/src/core/validators/defaults.ts",
+        "export function used(value = validateFoo(root)) {\n  return value;\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+
+  it("does not treat a type-only alias as a runtime use", () => {
+    const graph = buildWiringGraph(
+      entry(
+        'import type { validateFoo as FooValidator } from "./validators/index.js";\ntype Slot = FooValidator;\nexport function run(): Slot | undefined {\n  return undefined;\n}',
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("does not count a local re-export as wiring", () => {
+    const graph = buildWiringGraph(
+      entry(
+        'import { validateFoo } from "./prototyping/foo.js";\nexport { validateFoo };\nexport function run() {\n  return [];\n}',
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("follows a delegation chain more than two modules deep", () => {
+    const graph = buildWiringGraph(
+      entry("export function run() {\n  return orchestrate(root);\n}"),
+      [
+        module_(
+          "/src/core/validators/orchestrator.ts",
+          "export function orchestrate(root) {\n  return helper(root);\n}",
+        ),
+        module_(
+          "/src/core/validators/helper.ts",
+          "export function helper(root) {\n  return validateFoo(root);\n}",
+        ),
+      ],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(true);
   });
 
   it("carries reachability through an arrow-function orchestrator", () => {
