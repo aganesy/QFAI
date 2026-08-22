@@ -627,9 +627,157 @@ function phaseAuthoredEvidence(section: string, tddId: string): string {
   return normalizeAuditArtifact(`### ${tddId}\n${kept.join("\n")}`);
 }
 
-function completedEvidenceAuditHash(evidenceFile: string, section: string, tddId: string): string {
-  const artifactHash = sha256(phaseAuthoredEvidence(section, tddId));
-  return sha256(`${evidenceFile}\0${artifactHash}`);
+/** The stage artifact that carries a spec's Coverage Depth Matrix. */
+function coverageDepthMatrixPath(specNumber: string): string {
+  return `.qfai/evidence/coverage-depth-spec-${specNumber}.md`;
+}
+
+/**
+ * The part of `.qfai/evidence/coverage-depth-spec-NNNN.md` that belongs to one
+ * row's obligation — the matrix rows whose obligation cell equals it and the
+ * justification paragraphs whose first line names it.
+ *
+ * `constitution/shared-skill-delegation-baseline.md` (audit subject, step 3)
+ * puts this slice in the completion review's subject as a **second** artifact
+ * record. Hashing only the evidence section left the reviewer's own judgement
+ * about coverage depth outside every hash: a `❌` cell could be flipped to `✅`
+ * and its justification rewritten after the PASS, and both recorded hashes
+ * still recomputed.
+ *
+ * Not the file whole, and matched **exactly**: the matrix is one document per
+ * spec that a later `/qfai-atdd` run recomputes, so hashing all of it would
+ * stale every existing verdict when an unrelated obligation's cell moved.
+ * `TC-0001` does not match `TC-00011`, a row may carry several obligations
+ * (`TC-0001, TC-0002`), and a row whose obligation appears nowhere in the
+ * matrix contributes nothing.
+ */
+function coverageDepthObligationSlice(content: string, obligationValue: string): string {
+  const normalized = content.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
+  const kept: string[] = [];
+  for (const id of obligationValue
+    .split(",")
+    .map((token) => token.trim())
+    .filter((token) => token.length > 0)) {
+    const names = new RegExp(
+      `(?<![0-9A-Za-z-])${id.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}(?![0-9A-Za-z-])`,
+    );
+    let index = 0;
+    while (index < visibleLines.length) {
+      const visible = visibleLines[index] ?? "";
+      if (visible.trim().length === 0) {
+        index += 1;
+        continue;
+      }
+      if (/^\s*\|/.test(visible)) {
+        const obligationCell = (splitMarkdownRow(visible)[0] ?? "")
+          .replace(/^\*\*|\*\*$/g, "")
+          .trim();
+        if (obligationCell === id) kept.push(originalLines[index] ?? "");
+        index += 1;
+        continue;
+      }
+      let end = index;
+      while (end < visibleLines.length) {
+        const line = visibleLines[end] ?? "";
+        if (line.trim().length === 0 || /^\s*\|/.test(line)) break;
+        end += 1;
+      }
+      // The paragraph's **first** line decides. A justification that names no
+      // obligation belongs to none of them; "everything after the table" was
+      // the other reading, and two readers taking one each computed different
+      // hashes from one file.
+      if (names.test(visible)) kept.push(...originalLines.slice(index, end));
+      index = end;
+    }
+  }
+  return kept.join("\n");
+}
+
+/**
+ * The Coverage Depth Matrix record for a row's obligation, or `null` when the
+ * subject has none — an absent matrix file, or an obligation with no cell and
+ * no justification in it.
+ */
+function coverageDepthAuditRecord(
+  specNumber: string,
+  obligationValue: string,
+  matrix: string | null,
+): string | null {
+  if (matrix === null) return null;
+  const slice = coverageDepthObligationSlice(matrix, obligationValue);
+  if (slice.trim().length === 0) return null;
+  return `${coverageDepthMatrixPath(specNumber)}\0${sha256(normalizeAuditArtifact(slice))}`;
+}
+
+function completedEvidenceAuditHash(
+  evidenceFile: string,
+  section: string,
+  tddId: string,
+  matrixRecord: string | null,
+): string {
+  const records = [`${evidenceFile}\0${sha256(phaseAuthoredEvidence(section, tddId))}`];
+  if (matrixRecord !== null) records.push(matrixRecord);
+  records.sort();
+  return sha256(records.join("\n"));
+}
+
+/**
+ * Per-run state for the completed-evidence checks: the two roots they resolve
+ * against, and one cache per artifact they may read more than once — a spec's
+ * Coverage Depth Matrix, and the ledger of whichever spec owns an entry that
+ * claims to have re-verified a shared artifact.
+ */
+interface CompletedEvidenceContext {
+  root: string;
+  specsRoot: string;
+  matrices: Map<string, string | null>;
+  ledgers: Map<string, LedgerTable[]>;
+}
+
+function completedEvidenceContext(root: string, specsRoot: string): CompletedEvidenceContext {
+  return { root, specsRoot, matrices: new Map(), ledgers: new Map() };
+}
+
+async function coverageDepthMatrix(
+  context: CompletedEvidenceContext,
+  specNumber: string,
+): Promise<string | null> {
+  const cached = context.matrices.get(specNumber);
+  if (cached !== undefined) return cached;
+  const filePath = path.join(context.root, ...coverageDepthMatrixPath(specNumber).split("/"));
+  const content = (await exists(filePath)) ? await readSafe(filePath) : null;
+  context.matrices.set(specNumber, content);
+  return content;
+}
+
+/** The ledger tables of `spec-NNNN`, or none when that spec has no ledger. */
+async function specLedgerTables(
+  context: CompletedEvidenceContext,
+  specNumber: string,
+): Promise<LedgerTable[]> {
+  const cached = context.ledgers.get(specNumber);
+  if (cached !== undefined) return cached;
+  const filePath = path.join(context.specsRoot, `spec-${specNumber}`, TDD_LIST_REL_PATH);
+  const tables = (await exists(filePath)) ? collectLedgerTables(await readSafe(filePath)) : [];
+  context.ledgers.set(specNumber, tables);
+  return tables;
+}
+
+async function expectedAuditHash(
+  context: CompletedEvidenceContext,
+  evidenceFile: string,
+  section: string,
+  expected: CompletedEvidenceExpectation,
+): Promise<string> {
+  const matrix = await coverageDepthMatrix(context, expected.specNumber);
+  return completedEvidenceAuditHash(
+    evidenceFile,
+    section,
+    expected.tddId,
+    coverageDepthAuditRecord(expected.specNumber, expected.obligationValue, matrix),
+  );
 }
 
 function checkpointEvidenceSeal(revision: string, command: string, result: string): string {
@@ -840,28 +988,95 @@ const ITEM_EVIDENCE_FILE_NAME = /^(?:implement|atdd)-spec-\d{4}\.md$/i;
 const STAGE_EVIDENCE_FILE_NAME = /^coverage-depth-spec-\d{4}\.md$/i;
 
 /**
- * True when a `Shared-artifact re-verify` record inside `section` is covered by
- * the audit its item declares.
+ * The ledger row an evidence entry belongs to, when that entry is a completed
+ * item of a real spec.
+ *
+ * `.qfai/evidence/<owner>-spec-NNNN.md` names the spec, so the ledger to look
+ * in is `spec-NNNN`'s. The row must be the one the entry claims (`TDD-ID`), be
+ * `done`, and point its own `Evidence` cell back at this entry — a self-styled
+ * `### TDD-9999` section in an evidence file is otherwise an item nobody
+ * scheduled and no gate ever reads.
+ */
+async function completedLedgerExpectation(
+  context: CompletedEvidenceContext,
+  evidenceFile: string,
+  tddId: string,
+): Promise<CompletedEvidenceExpectation | null> {
+  const specNumber = /-spec-(\d{4})\.md$/i.exec(evidenceFile)?.[1];
+  if (specNumber === undefined) return null;
+  for (const ref of checkedLedgerRows(await specLedgerTables(context, specNumber))) {
+    if (cell(ref, "TDD-ID") !== tddId) continue;
+    if (cell(ref, "Status").toLowerCase() !== "done") return null;
+    const evidence = cell(ref, "Evidence");
+    const fragment = tddId.toLowerCase();
+    const anchored = collectEvidenceAnchors(evidence).some(
+      (anchor) => anchor.file === evidenceFile && anchor.fragment === fragment,
+    );
+    if (!anchored) return null;
+    const layer = cell(ref, "Layer");
+    const normalizedLayer = layer.toLowerCase();
+    const obligationField =
+      normalizedLayer === "e2e" ? "US-ref" : normalizedLayer === "api" ? "CON-API-ref" : "TC-ref";
+    const obligationColumn =
+      normalizedLayer === "e2e"
+        ? "US-Refs"
+        : normalizedLayer === "api"
+          ? "CON-API-Refs"
+          : "TC-Refs";
+    return {
+      specNumber,
+      tddId,
+      layer,
+      testFile: cell(ref, "Test file"),
+      selector: cell(ref, "Selector"),
+      obligationField,
+      obligationValue: cell(ref, obligationColumn),
+      preSplit: usesPreSplitEvidence(layer, evidence),
+    } satisfies CompletedEvidenceExpectation;
+  }
+  return null;
+}
+
+/**
+ * True when `section` is an editing item whose own completion is evidence —
+ * so a `Shared-artifact re-verify` record inside it carries a reviewer's word.
  *
  * The record is only evidence because the editing item's reviewers hashed it.
- * That is true exactly when it sits in the phase-authored region — the part
- * `completedEvidenceAuditHash` addresses — of an entry whose recorded audit
- * hashes still recompute to that value. Without the check, an independent block
- * appended anywhere under `.qfai/evidence/` cleared a stale RED hash while no
- * reviewer had ever seen it.
+ * Recomputing the two audit hashes proves the record is inside what they read;
+ * it does **not** prove they accepted it. An entry stopped at
+ * `Spec review: REVISE` records the blocking reviewer's own hash over the same
+ * subject, so the hashes agreed and an unfinished item's record cleared another
+ * row's stale manifest. The entry has to clear the whole completed-evidence
+ * contract it is being trusted for: a real `done` ledger row that points back
+ * at it, both reviews PASS, and every revision, pack seal and checkpoint seal
+ * this module recomputes.
+ *
+ * It is checked **without** the shared-artifact fallback: an item that needs
+ * another item's re-verify record to explain its own stale manifest has not
+ * finished the check it is being offered as evidence for, and letting the two
+ * clear each other is a cycle, not a provenance chain.
  */
-function itemAuditCoversAuthoredEvidence(
+async function isAuditedCompletedEntry(
+  context: CompletedEvidenceContext,
   evidenceFile: string,
   section: string,
   tddId: string,
-): boolean {
-  const expectedHash = completedEvidenceAuditHash(evidenceFile, section, tddId);
-  return (["Spec", "Code quality"] as const).every((prefix) => {
+): Promise<boolean> {
+  const expected = await completedLedgerExpectation(context, evidenceFile, tddId);
+  if (expected === null) return false;
+  const expectedHash = await expectedAuditHash(context, evidenceFile, section, expected);
+  const hashesRecompute = (["Spec", "Code quality"] as const).every((prefix) => {
     const recorded = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
     return (
       recorded !== null && SHA256_VALUE.test(recorded) && bareSha256(recorded) === expectedHash
     );
   });
+  if (!hashesRecompute) return false;
+  if (missingCompletedEvidenceFields(section, expected).length > 0) return false;
+  return (
+    (await invalidCompletedEvidenceArtifacts(context, evidenceFile, section, expected, false))
+      .length === 0
+  );
 }
 
 /**
@@ -871,9 +1086,21 @@ function itemAuditCoversAuthoredEvidence(
  * A zero-row stage owns no item entry, so there is no audit hash to hang its
  * re-verify record on; `qfai-atdd/SKILL.md` puts a `Review pack` and
  * `Review pack seal` in `## Final status` for exactly that case and asks the
- * completion gate to recompute the seal over the recorded path. As with the
- * per-item packs, a pack that is simply absent (a fresh clone: packs are
- * local-only) is not a failure — a present pack that no longer seals is.
+ * completion gate to recompute the seal over the recorded path.
+ *
+ * **An absent pack does not seal.** Elsewhere a missing pack is tolerated
+ * because the committed entry still carries what the gate re-derives — the
+ * audited hashes over committed evidence and the reviewers' PASS. A stage has
+ * none of that: `## Final status` records only a path and a digest, so with the
+ * directory gone nothing in the repository can contradict them. Accepting
+ * `ENOENT` let a canonical-looking path, any 64 hex digits and a hand-written
+ * re-verify block clear a `done` row's stale RED hash on a fresh clone, which
+ * is every clone but the author's. `qfai-atdd/references/shared-test-artifacts.md`
+ * reads a stage block "only when that file's `## Final status` names its
+ * `Review pack` and a `Review pack seal` that **still recomputes** from it";
+ * where it cannot be recomputed, the block is not readable evidence. The
+ * editing-row home stays portable, and closing the stage gap for a fresh clone
+ * needs committed stage provenance the contract does not define yet.
  */
 async function hasSealedStageStatus(root: string, content: string): Promise<boolean> {
   const section = markdownEvidenceIndex(content).sections.get("final-status");
@@ -892,8 +1119,8 @@ async function hasSealedStageStatus(root: string, content: string): Promise<bool
   if (safePack === null) return false;
   try {
     await lstat(path.join(root, ...safePack.split("/")));
-  } catch (error) {
-    return (error as NodeJS.ErrnoException).code === "ENOENT";
+  } catch {
+    return false;
   }
   const files = await collectReviewPackFiles(root, pack);
   return files !== null && reviewPackSeal(files) === bareSha256(seal);
@@ -962,17 +1189,19 @@ async function isCurrentReverifyRecord(
  * - **the editing item's entry** in `implement-`/`atdd-spec-NNNN.md`, inside
  *   the phase-authored region its `Spec` and `Code quality audited evidence
  *   hash` address — so editing the record invalidates the verdicts that closed
- *   that item. An item cannot re-verify itself: the consumer is `done` and has
- *   no edge on which to observe anything.
+ *   that item — and only when that entry is itself a completed, ledger-backed
+ *   item (`isAuditedCompletedEntry`). An item cannot re-verify itself: the
+ *   consumer is `done` and has no edge on which to observe anything.
  * - **a zero-row stage's `coverage-depth-spec-NNNN.md`**, which owns no item
  *   entry, where `## Final status` must carry the stage `Review pack` and a
  *   `Review pack seal` that still recomputes from it.
  */
 async function hasCurrentSharedArtifactReverify(
-  root: string,
+  context: CompletedEvidenceContext,
   evidenceFile: string,
   expected: CompletedEvidenceExpectation,
 ): Promise<boolean> {
+  const root = context.root;
   const evidenceDir = path.join(root, ".qfai", "evidence");
   let entries: Dirent[];
   try {
@@ -1003,7 +1232,7 @@ async function hasCurrentSharedArtifactReverify(
       if (!/^tdd-\d{4}$/.test(anchor)) continue;
       const ownerTddId = anchor.toUpperCase();
       if (ownerFile === evidenceFile && ownerTddId === expected.tddId) continue;
-      if (!itemAuditCoversAuthoredEvidence(ownerFile, ownerSection, ownerTddId)) continue;
+      if (!(await isAuditedCompletedEntry(context, ownerFile, ownerSection, ownerTddId))) continue;
       const audited = phaseAuthoredEvidence(ownerSection, ownerTddId);
       for (const section of sharedArtifactReverifySections(audited, target)) {
         if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
@@ -1013,11 +1242,88 @@ async function hasCurrentSharedArtifactReverify(
   return false;
 }
 
+/**
+ * What an `Oracle proof` still owes, on a row whose branch requires one.
+ *
+ * Presence was the whole check, so `Oracle proof: PASS`, `skipped`, or a
+ * sentence planning a mutation cleared the one field that separates a
+ * discriminating test from a vacuous one. `qfai-implement/references/oracle-strength.md`
+ * defines exactly two admissible shapes:
+ *
+ * - the mutation **run**: the command the row's selector was executed under and
+ *   the failing output it produced — an intention is not the proof, and the
+ *   reference rejects a load failure or another selector for the same reason;
+ * - `equivalent-mutant`, **naming the contract clause** weaker than the
+ *   obligation. The bare token is the claim without the reason, and that route
+ *   exists precisely so the gap gets raised upstream.
+ *
+ * The command/output pair is checked with the same two predicates every other
+ * recorded run uses, over the whole value — the field is normally a fenced
+ * block holding the mutation, its command and its output together.
+ */
+function oracleProofDefects(value: string | null): string[] {
+  if (value === null) return ["Oracle proof"];
+  const equivalentMutant = /^equivalent-mutant\b(.*)$/is.exec(value.trim());
+  if (equivalentMutant !== null) {
+    return (equivalentMutant[1] ?? "").replace(/^[\s:—–-]+/, "").trim().length === 0
+      ? ["Oracle proof: equivalent-mutant naming the weaker contract clause"]
+      : [];
+  }
+  const defects: string[] = [];
+  if (!isExecutedEvidenceCommand(value)) {
+    defects.push("Oracle proof: the command the mutation was run under");
+  }
+  if (!isFailingEvidenceResult(value)) {
+    defects.push("Oracle proof: the failing output that mutation produced");
+  }
+  return defects;
+}
+
+/**
+ * The entry's **own** fields — its `Shared-artifact re-verify` blocks removed.
+ *
+ * Such a block is a record about *another* row: it repeats that row's
+ * `Selector`, `Revision`, `RED test manifest` and `RED test hash`. Field reads
+ * take the last occurrence in the entry, so an editing item that carried one
+ * had the consumer's `Selector` read as its own and failed the identity check
+ * against its own ledger row. The block still belongs to the audit subject and
+ * to the review/checkpoint ordering check, which both read the whole section.
+ */
+function entryOwnFields(section: string): string {
+  const normalized = section.replace(/\r\n/g, "\n");
+  const originalLines = normalized.split("\n");
+  const visibleLines = maskEvidenceRegions(normalized).split("\n");
+  const kept: string[] = [];
+  let blockLevel: number | null = null;
+  for (const [index, visible] of visibleLines.entries()) {
+    const heading = /^\s*(#{1,6})\s+(.+?)\s*$/.exec(visible);
+    const level = heading?.[1]?.length ?? null;
+    // A block ends at the next heading no deeper than its own, and — because
+    // the contract puts it in the phase-authored region, where no such heading
+    // need follow — at the first review or checkpoint field as well.
+    if (
+      blockLevel !== null &&
+      ((level !== null && level <= blockLevel) || GATE_COMPLETED_EVIDENCE_FIELD.test(visible))
+    ) {
+      blockLevel = null;
+    }
+    if (
+      level !== null &&
+      (heading?.[2] ?? "").trim().toLowerCase() === "shared-artifact re-verify"
+    ) {
+      blockLevel = level;
+    }
+    if (blockLevel === null) kept.push(originalLines[index] ?? "");
+  }
+  return kept.join("\n");
+}
+
 /** Minimum phase and review evidence required once a row reaches `done`. */
 function missingCompletedEvidenceFields(
-  section: string,
+  entrySection: string,
   expected: CompletedEvidenceExpectation,
 ): string[] {
+  const section = entryOwnFields(entrySection);
   const normalizedLayer = expected.layer.toLowerCase();
   const requiredRowFields = [
     "TDD-ID",
@@ -1085,12 +1391,13 @@ function missingCompletedEvidenceFields(
   if (rounds.some((round, index) => round !== index + 1)) {
     missing.push("continuous evidence rounds starting at Round 1");
   }
-  if (hasPhaseAuthoredFieldAfterGate(section)) {
+  if (hasPhaseAuthoredFieldAfterGate(entrySection)) {
     missing.push("all phase-authored fields before review and checkpoint fields");
   }
 
   const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
   let latestRevision: string | null = null;
+  let oracleProofOwed = false;
   for (const round of rounds) {
     const revision = roundEvidenceFieldValue(section, round, "Revision");
     const greenCommand = roundEvidenceFieldValue(section, round, "GREEN command");
@@ -1191,9 +1498,7 @@ function missingCompletedEvidenceFields(
         missing.push(`Round ${round}: valid RED test hash`);
       }
     }
-    if (!validFalsifiability && rowEvidenceFieldValue(section, "Oracle proof") === null) {
-      missing.push("Oracle proof");
-    }
+    if (!validFalsifiability) oracleProofOwed = true;
     if (round < (rounds.at(-1) ?? round)) {
       const verdict = roundEvidenceFieldValue(section, round, "reviewer verdict");
       if (verdict === null || !/^REVISE\b/i.test(verdict)) {
@@ -1202,6 +1507,8 @@ function missingCompletedEvidenceFields(
     }
     latestRevision = revision;
   }
+  if (oracleProofOwed)
+    missing.push(...oracleProofDefects(rowEvidenceFieldValue(section, "Oracle proof")));
 
   const refactorCommand = rowEvidenceFieldValue(section, "Refactor verify command");
   const refactorResult = rowEvidenceFieldValue(section, "Refactor verify result");
@@ -1254,12 +1561,21 @@ function missingCompletedEvidenceFields(
   return missing;
 }
 
+/**
+ * `allowSharedArtifactReverify` is false while an entry is being judged as
+ * *another* row's re-verify source: an entry that needs someone else's record
+ * to explain its own stale manifest has not finished the check it would be
+ * vouching for, and two such entries clearing each other is a cycle.
+ */
 async function invalidCompletedEvidenceArtifacts(
-  root: string,
+  context: CompletedEvidenceContext,
   evidenceFile: string,
-  section: string,
+  entrySection: string,
   expected: CompletedEvidenceExpectation,
+  allowSharedArtifactReverify = true,
 ): Promise<string[]> {
+  const root = context.root;
+  const section = entryOwnFields(entrySection);
   const invalid: string[] = [];
   const rounds = evidenceRoundNumbers(section);
   if (ATDD_OWNED_LAYERS.has(expected.layer.toLowerCase()) && !expected.preSplit) {
@@ -1279,7 +1595,10 @@ async function invalidCompletedEvidenceArtifacts(
           invalid.push(`Round ${round}: valid RED test manifest including ${expected.testFile}`);
         } else if (
           bareSha256(recorded) !== computed &&
-          !(await hasCurrentSharedArtifactReverify(root, evidenceFile, expected))
+          !(
+            allowSharedArtifactReverify &&
+            (await hasCurrentSharedArtifactReverify(context, evidenceFile, expected))
+          )
         ) {
           invalid.push(`Round ${round}: RED test hash matching its manifest`);
         }
@@ -1287,7 +1606,7 @@ async function invalidCompletedEvidenceArtifacts(
     }
   }
 
-  const expectedAuditHash = completedEvidenceAuditHash(evidenceFile, section, expected.tddId);
+  const auditHash = await expectedAuditHash(context, evidenceFile, entrySection, expected);
   const latestRound = rounds.at(-1);
   const revision =
     latestRound === undefined ? null : roundEvidenceFieldValue(section, latestRound, "Revision");
@@ -1297,8 +1616,10 @@ async function invalidCompletedEvidenceArtifacts(
     const packPath = rowEvidenceFieldValue(section, `${prefix} review pack`);
     const packSeal = rowEvidenceFieldValue(section, `${prefix} review pack seal`);
     if (auditedHash !== null && SHA256_VALUE.test(auditedHash)) {
-      if (bareSha256(auditedHash) !== expectedAuditHash) {
-        invalid.push(`${prefix} audited evidence hash matching phase-authored evidence`);
+      if (bareSha256(auditedHash) !== auditHash) {
+        invalid.push(
+          `${prefix} audited evidence hash matching phase-authored evidence and Coverage Depth Matrix`,
+        );
       }
     }
     if (packPath === null || packSeal === null || !SHA256_VALUE.test(packSeal)) continue;
@@ -2437,6 +2758,7 @@ async function validateSpecTddList(
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
+  const evidenceContext = completedEvidenceContext(root, specsRoot);
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
     if (!EVIDENCE_CHECK_STATUSES.has(status)) continue;
@@ -2541,7 +2863,12 @@ async function validateSpecTddList(
         } satisfies CompletedEvidenceExpectation;
         const missing = [
           ...missingCompletedEvidenceFields(section, expectation),
-          ...(await invalidCompletedEvidenceArtifacts(root, anchor.file, section, expectation)),
+          ...(await invalidCompletedEvidenceArtifacts(
+            evidenceContext,
+            anchor.file,
+            section,
+            expectation,
+          )),
         ];
         if (missing.length > 0) {
           anchorFailure = `${anchor.file}#${anchor.fragment} is missing completed evidence fields: ${missing.join(", ")}`;

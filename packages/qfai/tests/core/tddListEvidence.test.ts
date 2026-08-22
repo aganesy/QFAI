@@ -67,7 +67,59 @@ function withoutReviewerVerdicts(text: string): string {
   return kept.join("\n");
 }
 
-function phaseAuditHash(evidenceFile: string, content: string, tddId = "TDD-0001"): string {
+const COVERAGE_DEPTH_PATH = ".qfai/evidence/coverage-depth-spec-0001.md";
+
+/**
+ * The Coverage Depth Matrix record the completion subject carries beside the
+ * evidence section: the matrix rows whose obligation cell equals the row's
+ * obligation, and the justification paragraphs whose first line names it.
+ */
+function coverageDepthRecord(matrix: string | undefined, obligation = "TC-0001"): string | null {
+  if (matrix === undefined) return null;
+  const lines = matrix.replace(/\r\n/g, "\n").split("\n");
+  const names = new RegExp(`(?<![0-9A-Za-z-])${obligation}(?![0-9A-Za-z-])`);
+  const kept: string[] = [];
+  let index = 0;
+  while (index < lines.length) {
+    const line = lines[index] ?? "";
+    if (line.trim().length === 0) {
+      index += 1;
+      continue;
+    }
+    if (line.trimStart().startsWith("|")) {
+      if (
+        line
+          .replace(/^\s*\|/, "")
+          .split("|")[0]
+          ?.trim() === obligation
+      )
+        kept.push(line);
+      index += 1;
+      continue;
+    }
+    let end = index;
+    while (
+      end < lines.length &&
+      (lines[end] ?? "").trim().length > 0 &&
+      !(lines[end] ?? "").trimStart().startsWith("|")
+    ) {
+      end += 1;
+    }
+    if (names.test(line)) kept.push(...lines.slice(index, end));
+    index = end;
+  }
+  const slice = kept.join("\n");
+  return slice.trim().length === 0
+    ? null
+    : `${COVERAGE_DEPTH_PATH}\0${digest(normalizeArtifact(slice))}`;
+}
+
+function phaseAuditHash(
+  evidenceFile: string,
+  content: string,
+  tddId = "TDD-0001",
+  matrixRecord: string | null = null,
+): string {
   const after = content.split(new RegExp(`^### ${tddId}\\s*$`, "m"))[1] ?? "";
   // Stop at the next entry heading, so a file that carries an editing item
   // beside the consumer hashes each entry over its own lines.
@@ -77,7 +129,10 @@ function phaseAuditHash(evidenceFile: string, content: string, tddId = "TDD-0001
       /^\s*(?:\|\s*)?(?:- )?(?:Spec review|Spec audited|Code quality review|Code quality audited|Prototype parity|Checkpoint verification)/m,
     )[0] ?? "";
   const artifact = normalizeArtifact(withoutReviewerVerdicts(`### ${tddId}\n${authored}`));
-  return digest(`${evidenceFile}\0${digest(artifact)}`);
+  const records = [`${evidenceFile}\0${digest(artifact)}`];
+  if (matrixRecord !== null) records.push(matrixRecord);
+  records.sort();
+  return digest(records.join("\n"));
 }
 
 function checkpointSeal(revision: string, command: string, result: string): string {
@@ -119,7 +174,21 @@ interface EvidenceOptions {
   /** Write this role's blocking `REVISE` where the gate used to miss it. */
   hiddenVerdictRole?: string;
   hiddenVerdictWrapper?: "fence" | "comment" | "duplicate";
+  /**
+   * The Coverage Depth Matrix the reviewers audited, when the entry's hashes
+   * are meant to cover it. Omit it to hash the evidence section alone — which
+   * is what a matrix added or edited after the PASS looks like.
+   */
+  coverageDepthMatrix?: string;
+  /**
+   * The stage review pack a zero-row `coverage-depth-spec-NNNN.md` seals.
+   * `"absent"` records a seal over a pack that is then removed: the fresh-clone
+   * shape, where nothing in the repository can contradict the recorded digest.
+   */
+  stagePack?: "present" | "absent";
 }
+
+const STAGE_PACK_PATH = ".qfai/review/review-20260811000000005";
 
 /**
  * A reviewer response body.
@@ -155,10 +224,11 @@ async function materializeEvidence(
     `${TEST_FILE}\0file\0${(metadata.mode & 0o777).toString(8).padStart(3, "0")}\0${testBlob}`,
   );
   let content = rawContent.replaceAll("{{RED_TEST_HASH}}", redHash);
-  const auditHash = phaseAuditHash(evidenceFile, content);
+  const matrixRecord = coverageDepthRecord(options.coverageDepthMatrix);
+  const auditHash = phaseAuditHash(evidenceFile, content, "TDD-0001", matrixRecord);
   content = content.replaceAll(
     "{{EDITING_AUDIT_HASH}}",
-    phaseAuditHash(evidenceFile, content, "TDD-0002"),
+    phaseAuditHash(evidenceFile, content, "TDD-0002", matrixRecord),
   );
   content = content.replaceAll("{{AUDIT_HASH}}", auditHash);
 
@@ -200,6 +270,9 @@ async function materializeEvidence(
       "utf8",
     );
     content = content.replaceAll(placeholder, await packSeal(root, packPath));
+  }
+  if (options.stagePack !== undefined) {
+    content = content.replaceAll("{{STAGE_PACK_SEAL}}", await packSeal(root, STAGE_PACK_PATH));
   }
   return content.replaceAll("{{CHECKPOINT_SEAL}}", checkpointSeal(revision, "npm test", "PASS"));
 }
@@ -257,6 +330,15 @@ async function runOn(
   evidenceFiles: Readonly<Record<string, string>> = {},
   options: EvidenceOptions = {},
 ): Promise<string[]> {
+  return (await runIssuesOn(root, testList, evidenceFiles, options)).map((issue) => issue.code);
+}
+
+async function runIssuesOn(
+  root: string,
+  testList: string,
+  evidenceFiles: Readonly<Record<string, string>> = {},
+  options: EvidenceOptions = {},
+): Promise<Array<{ code: string; message: string }>> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
@@ -272,6 +354,14 @@ async function runOn(
   const testPath = path.join(root, TEST_FILE);
   await mkdir(path.dirname(testPath), { recursive: true });
   await writeFile(testPath, "// test\n", "utf-8");
+  if (options.stagePack !== undefined) {
+    await mkdir(path.join(root, STAGE_PACK_PATH), { recursive: true });
+    await writeFile(
+      path.join(root, STAGE_PACK_PATH, "summary.json"),
+      `${JSON.stringify({ overall_status: "PASS" }, null, 2)}\n`,
+      "utf-8",
+    );
+  }
   for (const [relativePath, content] of Object.entries(evidenceFiles)) {
     const evidencePath = path.join(root, relativePath);
     await mkdir(path.dirname(evidencePath), { recursive: true });
@@ -284,9 +374,12 @@ async function runOn(
   if (options.omitReviewPacks === true) {
     await rm(path.join(root, ".qfai", "review"), { recursive: true, force: true });
   }
+  if (options.stagePack === "absent") {
+    await rm(path.join(root, STAGE_PACK_PATH), { recursive: true, force: true });
+  }
 
   const issues = await validateTddList(root, defaultConfig);
-  return issues.map((i) => i.code);
+  return issues.map((i) => ({ code: i.code, message: i.message }));
 }
 
 describe("TDDLIST_EVIDENCE_EMPTY", () => {
@@ -472,7 +565,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 - Round 1: GREEN result: 1 passed
 - Refactor verify command: npm test
 - Refactor verify result: 1 passed
-- Oracle proof: equivalent-mutant
+- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result
 - qa-gatekeeper: PASS
 - Spec review: PASS
 - Spec reviewed revision: abc1230000000000000000000000000000000000
@@ -946,34 +1039,68 @@ REVISE — needs new production behaviour
 - RED test manifest: tests/unit/sample.test.ts
 - RED test hash: {{RED_TEST_HASH}}`;
 
+  const EDITING_POINTER =
+    "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0002`";
+
+  /**
+   * The consumer row and the editing row, both real ledger rows.
+   *
+   * The editing entry is only evidence because a reviewer closed *it*, so the
+   * gate resolves it back to a `done` ledger row that points at that entry.
+   * A second row is what makes that resolvable at all.
+   */
+  function reverifyLedger(): string {
+    return ledger([
+      { status: "done", evidence: ATDD_POINTER, layer: "Integration" },
+      {
+        status: "done",
+        evidence: EDITING_POINTER,
+        layer: "Integration",
+        tddId: "TDD-0002",
+        selector: "shared-fixture",
+      },
+    ]);
+  }
+
   /**
    * The entry of the row that edited the shared artifact.
    *
    * The re-verify record sits in its **phase-authored** region — before the
    * gate fields — so the audit hash its reviewers recorded addresses those
    * bytes. That is what makes the record evidence rather than an assertion
-   * anyone can append, and the validator now requires it.
+   * anyone can append. The entry is otherwise a *complete* one: recomputing the
+   * two hashes proves the record is inside what the reviewers read, not that
+   * they accepted it, so the gate requires the whole completed-evidence
+   * contract of the item it is trusting. Its review packs are deliberately
+   * paths that do not exist — local-only packs are absent on a fresh clone, and
+   * the committed provenance is what carries the entry there.
    */
-  function editingEntry(options: { proofResult?: string; auditHash?: string } = {}): string {
-    return `
-### TDD-0002
-
-- TDD-ID: TDD-0002
-- Layer: Integration
-- Test file: tests/unit/sample.test.ts
-- Selector: shared-fixture
-- TC-ref: TC-0001
-- Round 1: Revision: abc1230000000000000000000000000000000000
-
-#### Shared-artifact re-verify
+  function editingEntry(
+    options: { proofResult?: string; auditHash?: string; specVerdict?: string } = {},
+  ): string {
+    const record = `#### Shared-artifact re-verify
 
 ##### spec-0001/TDD-0001
 
 ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")}
 
-- Spec audited evidence hash: ${options.auditHash ?? "{{EDITING_AUDIT_HASH}}"}
-- Code quality audited evidence hash: ${options.auditHash ?? "{{EDITING_AUDIT_HASH}}"}
-`;
+- Spec review: ${options.specVerdict ?? "PASS"}`;
+    return completeEntry("Integration")
+      .replace("# Evidence\n\n", "\n")
+      .replaceAll("TDD-0001", "TDD-0002")
+      .replace("- Selector: sample", "- Selector: shared-fixture")
+      .replace(
+        "- Spec review pack: .qfai/review/review-20260811000000001",
+        "- Spec review pack: .qfai/review/review-20260811000000003",
+      )
+      .replace(
+        "- Code quality review pack: .qfai/review/review-20260811000000002",
+        "- Code quality review pack: .qfai/review/review-20260811000000004",
+      )
+      .replace("{{SPEC_PACK_SEAL}}", "a".repeat(64))
+      .replace("{{CODE_PACK_SEAL}}", "b".repeat(64))
+      .replaceAll("{{AUDIT_HASH}}", options.auditHash ?? "{{EDITING_AUDIT_HASH}}")
+      .replace("- Spec review: PASS", record);
   }
 
   function staleConsumerEntry(): string {
@@ -982,26 +1109,63 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")
 
   it("accepts a shared-artifact re-verify recorded in the editing item's audited entry", async () => {
     await withProject(async (root) => {
-      const codes = await runOn(
+      const codes = await runOn(root, reverifyLedger(), {
+        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()),
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // Recomputing the editing item's two audit hashes proves the record is
+  // inside what its reviewers read — not that they accepted it. An entry
+  // stopped at `REVISE` records the blocking reviewer's own hash over the same
+  // subject, so the hashes agreed and an unfinished item cleared another row's
+  // stale manifest.
+  it("rejects a shared-artifact re-verify from an editing item stopped at REVISE", async () => {
+    await withProject(async (root) => {
+      const issues = await runIssuesOn(root, reverifyLedger(), {
+        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
+          editingEntry({ specVerdict: "REVISE — tighten the assertion" }),
+        ),
+      });
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" &&
+            message.includes("TDD-0001") &&
+            message.includes("RED test hash matching its manifest"),
+        ),
+      ).toBe(true);
+    });
+  });
+
+  // The same entry, complete, but no ledger row owns it: a `### TDD-0002`
+  // section nobody scheduled is an item no gate ever reads.
+  it("rejects a shared-artifact re-verify from an entry no ledger row owns", async () => {
+    await withProject(async (root) => {
+      const issues = await runIssuesOn(
         root,
         ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
         { ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()) },
       );
-      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(
+        issues.some(
+          ({ code, message }) =>
+            code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" &&
+            message.includes("TDD-0001") &&
+            message.includes("RED test hash matching its manifest"),
+        ),
+      ).toBe(true);
     });
   });
 
   it("rejects a shared-artifact re-verify whose proof does not fail", async () => {
     await withProject(async (root) => {
-      const codes = await runOn(
-        root,
-        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
-        {
-          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
-            editingEntry({ proofResult: "PASS" }),
-          ),
-        },
-      );
+      const codes = await runOn(root, reverifyLedger(), {
+        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
+          editingEntry({ proofResult: "PASS" }),
+        ),
+      });
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
@@ -1028,15 +1192,11 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
 
   it("rejects a shared-artifact re-verify the editing item's audit hash no longer matches", async () => {
     await withProject(async (root) => {
-      const codes = await runOn(
-        root,
-        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
-        {
-          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
-            editingEntry({ auditHash: "e".repeat(64) }),
-          ),
-        },
-      );
+      const codes = await runOn(root, reverifyLedger(), {
+        ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
+          editingEntry({ auditHash: "e".repeat(64) }),
+        ),
+      });
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
@@ -1061,6 +1221,151 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
         },
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  /**
+   * A zero-row ATDD stage owns no item entry, so its `## Final status` seal is
+   * what stands in for one. `qfai-atdd/references/shared-test-artifacts.md`
+   * reads the block only while that seal "still recomputes" from the pack.
+   */
+  function stageEvidence(): string {
+    return `# Coverage depth
+
+## Shared-artifact re-verify
+
+### spec-0001/TDD-0001
+
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
+
+## Final status
+
+- Review pack: ${STAGE_PACK_PATH}
+- Review pack seal: {{STAGE_PACK_SEAL}}
+`;
+  }
+
+  it("accepts a shared-artifact re-verify a sealed stage status carries", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          [COVERAGE_DEPTH_PATH]: stageEvidence(),
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+        },
+        { stagePack: "present" },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // A stage records only a path and a digest — no committed hash over committed
+  // evidence, the way an item entry does. With the pack gone, nothing in the
+  // repository can contradict either, so a canonical-looking path, any 64 hex
+  // digits and a hand-written block cleared a stale RED hash on every clone but
+  // the author's.
+  it("rejects a stage re-verify whose recorded review pack is absent", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          [COVERAGE_DEPTH_PATH]: stageEvidence(),
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+        },
+        { stagePack: "absent" },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  const MATRIX = `# Coverage Depth Matrix
+
+| US/TC ID | Normal path | Oracle strength | Status |
+| -------- | ----------- | --------------- | ------ |
+| TC-0001 | ✅ | ⚠️ | — |
+
+TC-0001 partial oracle strength: the upstream contract permits any non-empty
+result, so the assertion cannot be tightened without drift.
+`;
+
+  it("accepts a completed row whose audit hash covers its Coverage Depth Matrix rows", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        {
+          [COVERAGE_DEPTH_PATH]: MATRIX,
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+        },
+        { coverageDepthMatrix: MATRIX },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // The hole: with only the evidence section hashed, a `⚠️` could be flipped to
+  // `✅` and its justification rewritten after the PASS and both recorded
+  // hashes still recomputed.
+  it("rejects a completed row whose Coverage Depth Matrix moved after the PASS", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        {
+          [COVERAGE_DEPTH_PATH]: MATRIX,
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+        },
+        { coverageDepthMatrix: MATRIX.replace("| ⚠️ |", "| ✅ |") },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // Exactly matched: the matrix is one document per spec that a later
+  // `/qfai-atdd` run recomputes, so an unrelated obligation's cell moving must
+  // not stale a verdict no re-review can clear.
+  it("leaves the audit hash alone when the matrix names no cell for the obligation", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        [COVERAGE_DEPTH_PATH]: MATRIX.replaceAll("TC-0001", "TC-00011"),
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  for (const [label, proof] of [
+    ["a bare verdict", "PASS"],
+    ["a skip", "skipped"],
+    ["a plan with no run", "will break the parser and re-run the selector"],
+    ["equivalent-mutant with no clause named", "equivalent-mutant"],
+  ] as const) {
+    it(`rejects an Oracle proof that is ${label}`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          /- Oracle proof: .*/,
+          `- Oracle proof: ${proof}`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  it("accepts an Oracle proof recording the mutation run and its failing output", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        /- Oracle proof: .*/,
+        "- Oracle proof: returned null from parseSample; npm test -- sample → 1 failed; reverted",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
 
@@ -1118,7 +1423,10 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
           evidence = evidence
             .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
             .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
-            .replace("- Oracle proof: equivalent-mutant\n", "")
+            .replace(
+              "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result\n",
+              "",
+            )
             .replace(
               "- Refactor verify command: npm test",
               `- Round 1: Satisfied-by: existing-test
@@ -1172,7 +1480,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")
         .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
-        .replace("- Oracle proof: equivalent-mutant\n", "")
+        .replace("- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result\n", "")
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: Satisfied-by: existing-test
@@ -1254,7 +1562,7 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
       const evidence = completeEntry("Unit")
         .replace(/- Round 1: RED (?:command|result|revision):.*\n/g, "")
         .replace("- RED failure mode: assertion", "- RED failure mode: falsifiability")
-        .replace("- Oracle proof: equivalent-mutant\n", "")
+        .replace("- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result\n", "")
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: Satisfied-by: existing-test
