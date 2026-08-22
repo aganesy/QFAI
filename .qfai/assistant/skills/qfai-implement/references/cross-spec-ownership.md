@@ -57,6 +57,18 @@ such a file does not require permission — it requires a record and a re-review
      restriction, not a clearance — the same reading `execution-ledger.md` gives
      it for parallel dispatch. Detection never passes silently just because the
      column is absent.
+   - **A shared test artifact is reached through the test graph.** A fixture,
+     assertion helper or setup module another spec's tests import is named in no
+     `Test file` cell of its own, and the walk above is over the **production**
+     import graph (`relevant-test-suite.md`), which holds no edge that reaches
+     it: the closure comes back **empty** rather than short, so nothing is left
+     unresolved and the widening below never fires either — a weakened helper
+     passed detection with no row matched. So when the file being edited is a
+     test artifact, walk the **test** import graph backwards as well — the test
+     modules that import it, direct and indirect, tests importing tests
+     included — and look those paths up in `Test file`. When no test import
+     graph can be resolved, that is an unresolvable edge like any other: widen
+     to the package fallback below instead of concluding no row is affected.
    - **When the walk cannot be completed, widen.** Dynamic imports, DI or
      container wiring, reflection, generated code, or no import-graph tool at
      hand all leave the closure short of the tests that really reach the file.
@@ -79,6 +91,22 @@ such a file does not require permission — it requires a record and a re-review
    dotted module up with a path** — `shirube.domain.notification` and
    `src/shirube/domain/notification.ts` are the same module and must match.
 
+   **Strip the source root before comparing that alias.** The two forms are
+   rooted differently: a dotted module path starts at a **source root**, a
+   repo-relative path starts at the repository. Extension removal and separator
+   conversion alone leave `shirube/domain/notification` against
+   `src/shirube/domain/notification`, which never match though the example above
+   declares them the same module — and a row missed that way is invisible to the
+   dependency walk too whenever its test sits outside the edited file's package,
+   so the package fallback does not recover it either. Drop the path's
+   source-root prefix — `src/`, `lib/`, `app/`, or whatever the project's build
+   config declares — and compare **whole segments**. Where the source roots are
+   not knowable, take the same rule as a suffix test: the alias matches when the
+   path's segment sequence **ends with** the dotted one, on a segment boundary
+   (`notifications/x` never matches `...notification.x`). A suffix test can
+   over-reach — a vendored copy sharing the same tail matches too — and that is
+   the direction to err in here, for the same reason the walk widens above.
+
 2. **Record.** Add a `## Cross-spec obligations` entry to this spec's evidence
    file (fields below).
 3. **Re-run, then re-review.** First re-run each `Blocked TDD-ID`'s `Selector`
@@ -91,6 +119,20 @@ such a file does not require permission — it requires a record and a re-review
    helper or setup breaks that selector without changing a line the reviewer
    reads. The reviewer is still the party that says whether the obligation
    holds; the re-run is what gives it something current to say it about.
+
+   **A passing selector is not enough on a blocked row that carries a proof.**
+   Weakening an assertion helper, a snapshot or an expected-value fixture leaves
+   that row's selector passing while making it tautological, so a fresh GREEN
+   re-approves a test that has lost its discriminating power. For each blocked
+   row that has one, also re-run its **original** mutation — the one its
+   `Oracle proof` plan or `Satisfied-by` names — against the changed artifact,
+   capture the failure, revert, and re-run for the restored GREEN; record both
+   under `Obligation at risk` and hand them to the reviewer with the selector
+   result. A mutation that no longer fails the test is the tautology this
+   catches, and the row is not re-approved until it is repaired. Same rule, same
+   reason as `../../qfai-atdd/references/shared-test-artifacts.md`, which
+   imposes it on the stage-level side of the identical edit.
+
 4. **Do not close over it.** An open entry is a completion prohibition
    (`qfai-implement/SKILL.md#completion-prohibition-conditions`).
 

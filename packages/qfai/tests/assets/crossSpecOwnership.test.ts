@@ -68,6 +68,20 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
   });
 
+  it("reaches a shared test artifact through the test import graph", async () => {
+    // A fixture or assertion helper is in no `Test file` cell and no production
+    // module imports it, so the production-graph walk returns an *empty*
+    // closure — nothing unresolved, so the package fallback never fires either
+    // and a weakened helper passed detection with no row matched.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**A shared test artifact is reached through the test graph.**");
+    expect(reference).toContain("the closure comes back **empty** rather than short");
+    expect(reference).toContain(
+      "walk the **test** import graph backwards as well — the test modules that import it",
+    );
+    expect(reference).toContain("When no test import graph can be resolved");
+  });
+
   it("widens to the package when the reverse walk cannot complete", async () => {
     // Dynamic imports, DI wiring and generated code leave the closure short,
     // and `relevant-test-suite.md` already answers that with a package
@@ -134,6 +148,56 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
     const skill = await read(tree, SKILL);
     expect(skill).toContain("matched on the normalized form so a dotted module path counts");
+  });
+
+  it("strips the source root so the dotted alias actually lines up", async () => {
+    // Extension removal and separator conversion alone leave
+    // `shirube/domain/notification` against `src/shirube/domain/notification`,
+    // so the pair the paragraph declares identical never matched.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("**Strip the source root before comparing that alias.**");
+    expect(reference).toContain(
+      "a dotted module path starts at a **source root**, a repo-relative path starts at the repository",
+    );
+    expect(reference).toContain(
+      "Drop the path's source-root prefix — `src/`, `lib/`, `app/`, or whatever the project's build config declares",
+    );
+    // Unknowable source roots must widen, not silently miss the row.
+    expect(reference).toContain(
+      "the alias matches when the path's segment sequence **ends with** the dotted one, on a segment boundary",
+    );
+  });
+
+  it("re-runs the blocked row's own mutation, not just its selector", async () => {
+    // A weakened helper, snapshot or expected-value fixture keeps the selector
+    // passing while making it tautological, so a fresh GREEN alone re-approves
+    // a test that has lost its discriminating power.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "**A passing selector is not enough on a blocked row that carries a proof.**",
+    );
+    expect(reference).toContain(
+      "also re-run its **original** mutation — the one its `Oracle proof` plan or `Satisfied-by` names",
+    );
+    expect(reference).toContain("capture the failure, revert, and re-run for the restored GREEN");
+    // The identical rule already binds the stage-level side of this edit.
+    expect(reference).toContain("`../../qfai-atdd/references/shared-test-artifacts.md`");
+  });
+
+  it("does not demand an owner rerun for every shared-file edit", async () => {
+    // The upstream list's blanket "every artifact requires an owner rerun"
+    // contradicted the same file's code/test bullet, which routes through
+    // record-and-re-review and escalates only when the obligation breaks.
+    const drift = await read(tree, DRIFT);
+    expect(drift).toContain(
+      "**Every artifact in this list requires an owner rerun by definition — except the code and test artifacts of the last bullet, which carry their own route in that bullet.**",
+    );
+    expect(drift).toContain(
+      "the record and re-review of `cross-spec-ownership.md` are the whole route",
+    );
+    expect(drift).toContain(
+      "the owner rerun is owed exactly when the edit becomes drift in the full sense",
+    );
   });
 
   it("keys detection on the only column that holds a production path", async () => {

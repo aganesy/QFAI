@@ -31,7 +31,16 @@ One file inside `.qfai/specs/**` is carved out of that last line:
 cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
 what each covers — remain upstream.
 
-**Every artifact in this list requires an owner rerun by definition.** There is
+**Every artifact in this list requires an owner rerun by definition — except
+the code and test artifacts of the last bullet, which carry their own route in
+that bullet.** They are the one entry whose prohibition is conditional, because
+the codebase is not partitioned: while the other spec's obligation still holds,
+the record and re-review of `cross-spec-ownership.md` are the whole route, and
+the owner rerun is owed exactly when the edit becomes drift in the full sense
+(that bullet's last sentence). Reading the blanket rule over them instead
+demanded an owner rerun for every shared-file edit, which the cross-spec
+procedure does not perform and the mandated duplication removal cannot pay for.
+For every other entry there is
 no downstream test for "is an owner rerun required here?" — being on this list
 is the answer, and the rerun is a _consequence_ of the artifact being upstream
 SSOT, never a precondition for the prohibition. A downstream phase that finds
