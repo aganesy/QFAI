@@ -58,18 +58,46 @@ a **different** entrypoint runs the phase for that one before its first row.
 
 ## Exit criterion
 
-> The system starts from a declared entrypoint and one declared `US-*` is answered over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker — proven by a committed smoke script that exits non-zero otherwise.
+> The system starts from a declared entrypoint and the surface one declared `US-*` names is **reached** over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker — proven by a committed smoke script that exits non-zero otherwise.
 
 Executable, not prose. "The skeleton is in place" is not an exit criterion; the
 script's exit status is.
+
+**Reached, not satisfied — this is a boot obligation.** The entrypoint starts,
+the request the `US-*` names arrives at the surface it names, and the started
+process answers it with the non-contracted sentinel of Bound 1 (`501`, or any
+status no row owns). That is the whole criterion. Nothing here asserts the
+`US-*`'s outcome.
+
+Requiring the outcome would make this criterion and Bound 1 unsatisfiable
+together on every project whose `US-*` set is authorization, calculation or
+persistence — which is most of them. A sentinel leaves such a `US-*` unanswered
+and the smoke script red; a constant shaped like the expected result implements
+that `US-*` ahead of its row and is a blocking finding. The phase would have no
+legal exit. So the script asserts reachability only — process started, transport
+spoke, sentinel returned — and asserts nothing about correctness. The
+correctness of that `US-*` belongs to the row that owns it, and is taken there
+as an ordinary RED.
 
 The transport clause is what the entrypoint declares, not a socket in every
 case: a CLI that opens no socket satisfies the criterion over stdio, and a
 worker over its queue. Requiring a socket of them would leave a correct CLI
 unable to exit the phase with a passing smoke script.
 
+**`qa-gatekeeper` judges the exit, not the author.** Whenever the verdict is
+`applicable`, the phase's routing entry (`manifest/agent-routing.yml`, phase
+`skeleton`) lists the gatekeeper **mandatory** and blocking, and its `PASS` on
+the recorded run is required before `Phase: Red` starts — recorded in
+`Skeleton gatekeeper` (`#evidence`). Conditional was not enough: a blocking
+list only stops the REVISE of an agent the orchestrator already chose, so a
+gatekeeper never routed left the phase passing on its author's own account of
+the smoke run, which is the self-attestation the `red` gate exists to prevent.
+`not applicable` is the one verdict that routes nobody — there is no run to
+judge — and it is still written down.
+
 An already-passing smoke script satisfies the phase. Run it, record the run,
-continue — do not rebuild what already starts.
+continue — do not rebuild what already starts. It is the **re-run** that
+satisfies it, though, never the stored record: see `#evidence`.
 
 ## The smoke-script contract
 
@@ -80,12 +108,15 @@ continue — do not rebuild what already starts.
    user or a deployment would run, not a test harness that constructs the
    application object in-process. Constructing it in-process is exactly the
    evasion the 577-green-tests-and-no-entrypoint case was made of.
-3. **Exercises one declared `US-*` over the real transport the entrypoint
-   speaks** — a socket for a service, stdio for a CLI, the queue for a worker.
+3. **Reaches the surface one declared `US-*` names, over the real transport the
+   entrypoint speaks** — a socket for a service, stdio for a CLI, the queue for
+   a worker — and asserts that reachability alone: the request was served by the
+   process the entrypoint started. It asserts nothing about that `US-*`'s
+   outcome; asserting the outcome would need the predicate Bound 1 forbids.
 4. **Exits non-zero on any failure**, including a start-up timeout. A script
    that reports a failure on stdout and exits 0 proves nothing.
-5. **Names the `US-*` it answers**, so the phase's evidence points at an
-   obligation rather than at "it booted".
+5. **Names the `US-*` whose surface it reaches**, so the phase's evidence points
+   at an obligation rather than at "it booted".
 6. **Stops what it started, on every exit path** — success, failure and
    timeout alike, via `trap` / `finally` or the runtime's equivalent, and the
    script asserts before it returns that no child it launched is still running.
@@ -196,30 +227,54 @@ phase has no row to hang off, since it runs before the first row is selected.
 `.qfai/evidence/**` is append/update for this skill under
 `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`.
 
+**This file is tracked, not ignored.** `npx qfai init`'s managed `.gitignore` block
+ignores `.qfai/evidence/*` and then negates this one path
+(`!.qfai/evidence/skeleton.md`), for the same reason it negates the decision
+records: Bound 2 requires the debt to be written back **in the skeleton's own
+commit**, and a record that never enters a commit reaches no other clone, no CI
+run and no other author. The cross-invocation check below would then hold only
+inside the working directory that happened to run the phase. A project whose
+`.gitignore` predates that negation adds it before the first run.
+
 One `## <entrypoint>` section per declared entrypoint, written before the first
 row is selected, each carrying:
 
-| Field                 | Content                                                           |
-| --------------------- | ----------------------------------------------------------------- |
-| `Skeleton verdict`    | `applicable` or `not applicable` plus the reason                  |
-| `Skeleton entrypoint` | the declared entrypoint, as a command                             |
-| `Skeleton US`         | the `US-*` the smoke script answers                               |
-| `Skeleton command`    | the smoke-script invocation, verbatim                             |
-| `Skeleton result`     | its output and **exit status**, verbatim                          |
-| `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows |
-| `Skeleton cycles`     | cycles used, of 3                                                 |
+| Field                 | Content                                                                   |
+| --------------------- | ------------------------------------------------------------------------- |
+| `Skeleton verdict`    | `applicable` or `not applicable` plus the reason                          |
+| `Skeleton entrypoint` | the declared entrypoint, as a command                                     |
+| `Skeleton US`         | the `US-*` whose surface the smoke script reaches                         |
+| `Skeleton command`    | the smoke-script invocation, verbatim                                     |
+| `Skeleton result`     | its output and **exit status**, verbatim                                  |
+| `Skeleton gatekeeper` | the `qa-gatekeeper` verdict on that run — `PASS` required when applicable |
+| `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows         |
+| `Skeleton cycles`     | cycles used, of 3                                                         |
 
 `Skeleton result` follows the same rule as every other gate result in this
 skill: the command and its real output, never a prose verdict
 (`../SKILL.md#evidence-hard-rules`). A `Skeleton verdict` of `not applicable`
 leaves the remaining fields empty and needs no smoke script.
 
-**On every later invocation, read this file first.** An entrypoint with a
-section whose `Skeleton result` records exit status 0 is already proven: re-run
-its `Skeleton command`, append the new run under that section, and continue. An
-entrypoint with no section — or one whose recorded result is non-zero — runs the
-phase. That read is what makes "once per entrypoint" checkable across
-invocations instead of a memory of what a previous session did.
+**On every later invocation, read this file first.** An entrypoint with no
+section runs the phase. An entrypoint whose latest recorded `Skeleton result` is
+non-zero runs the phase. An entrypoint whose latest recorded `Skeleton result`
+is exit status 0 re-runs its `Skeleton command` and appends that run under the
+section — and **the appended run's own exit status decides, not the recorded
+one**:
+
+- exit 0 — the entrypoint is proven for this invocation; continue to
+  `Phase: Red`.
+- non-zero — the entrypoint is **unproven again**, exactly as if it had no
+  section: it re-enters this phase's 3-cycle budget and, if the budget runs out,
+  its halt and classification. `Phase: Red` does not start for it.
+
+A past pass says the entrypoint started once, not that it still starts: any
+later change can break it, and continuing on the stale record re-admits the
+collection errors this phase exists to remove. Append the failing run either
+way — the record of what broke is what the classification is made from.
+
+That read is what makes "once per entrypoint" checkable across invocations
+instead of a memory of what a previous session did.
 
 ## Reached from `/qfai-atdd`
 
@@ -234,5 +289,12 @@ It therefore invokes `/qfai-implement` for **this phase alone**, exactly as it
 already invokes `Phase: Red` step 3a for a seam alone: build the skeleton,
 record the evidence, return. No row is selected, no row's status is written, and
 the invocation does not continue to `Phase: Red`. The later full invocation
-reads `.qfai/evidence/skeleton.md`, finds the entrypoint proven, re-runs the
-recorded command and moves on.
+reads `.qfai/evidence/skeleton.md`, re-runs the recorded command and — while
+that re-run exits 0 — moves on.
+
+That invocation belongs to **stage gate P1a**, ahead of P1b, not merely
+somewhere before P5: `/qfai-atdd` takes its first branch-1 RED at P1c, before
+P2-P4 build any surface, so a skeleton scheduled only "before P5" arrives after
+the RED it was supposed to make admissible
+(`../../qfai-atdd/SKILL.md`, Stage Gates;
+`../../qfai-atdd/references/red-provenance.md#a-project-whose-program-does-not-start-yet`).

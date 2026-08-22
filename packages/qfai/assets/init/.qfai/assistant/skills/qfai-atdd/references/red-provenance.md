@@ -342,12 +342,20 @@ there is usually no entrypoint either, so the surface P2-P4 build cannot be
 started, P6 has no runtime evidence to capture, and every acceptance test
 raises a collection error — a **missing seam**, and the seam is the program.
 
-`/qfai-implement` owns that seam: invoke it for `Phase: Skeleton` **alone**,
-before P5, exactly as a branch-1 row's seam-only trip invokes Phase Red step 3a.
-It builds the entrypoint and the committed smoke script, records the run in
-`.qfai/evidence/skeleton.md`, and returns without selecting a row. Waiting for
-stage 6 instead cannot work: stage 6 is downstream of the gates that are
-failing (`../../qfai-implement/references/walking-skeleton.md`).
+`/qfai-implement` owns that seam: invoke it for `Phase: Skeleton` **alone**, at
+stage gate **P1a** — before P1b, and so before any RED is taken — exactly as a
+branch-1 row's seam-only trip invokes Phase Red step 3a. It builds the
+entrypoint and the committed smoke script, records the run in
+`.qfai/evidence/skeleton.md`, and returns without selecting a row.
+
+**Before P1b, not merely before P5.** P1b chooses a branch for every row and
+P1c discharges the first branch-1 row — its RED included — before P2-P4 build
+any surface. Against a program that does not start, that RED is a collection
+error, which `../../qfai-implement/references/red-admissibility.md` rules a
+missing seam rather than a RED, so a skeleton scheduled anywhere in P1b-P4
+arrives after the failure it exists to prevent. Waiting for stage 6 is worse
+still: stage 6 is downstream of the gates that are already failing
+(`../../qfai-implement/references/walking-skeleton.md`).
 
 ## A project without the `red` phase
 

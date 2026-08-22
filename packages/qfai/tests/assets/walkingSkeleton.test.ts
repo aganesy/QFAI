@@ -34,6 +34,7 @@ const SKELETON = "assistant/skills/qfai-implement/references/walking-skeleton.md
 const ADMISSIBILITY = "assistant/skills/qfai-implement/references/red-admissibility.md";
 const ROUTING = "assistant/manifest/agent-routing.yml";
 const RED_PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
+const ATDD_SKILL = "assistant/skills/qfai-atdd/SKILL.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -87,7 +88,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
         // socket left a correct CLI or worker — both inside Applicability, and
         // both named by the smoke contract — unable to exit the phase at all.
         expect(content).toContain(
-          "answered over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker",
+          "**reached** over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker",
         );
         expect(content).toContain("committed smoke script that exits non-zero otherwise");
       }
@@ -97,6 +98,77 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain(
         "a CLI that opens no socket satisfies the criterion over stdio, and a worker over its queue",
       );
+    });
+
+    it(`${tree}: the criterion is reachability, so Bound 1 stays satisfiable`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      // "one declared `US-*` is answered" and "write no predicate" cannot both
+      // hold on a project whose obligations are authorization, calculation or
+      // persistence: a sentinel leaves the US unanswered and the smoke script
+      // red, and a constant shaped like the expected result implements that
+      // US ahead of its row — a blocking finding under Bound 1. The phase then
+      // had no legal exit at all.
+      expect(doc).toContain("**Reached, not satisfied — this is a boot obligation.**");
+      expect(doc).toContain("Nothing here asserts the `US-*`'s outcome");
+      expect(doc).toContain("would make this criterion and Bound 1 unsatisfiable together");
+      expect(doc).toContain("The phase would have no legal exit");
+      expect(skill).toContain("**Reached, not satisfied**");
+      expect(skill).toContain("would contradict item 2");
+      // And the smoke contract asserts the same thing the criterion does.
+      expect(doc).toContain("asserts that reachability alone");
+      expect(doc).toContain("asserting the outcome would need the predicate Bound 1 forbids");
+    });
+
+    it(`${tree}: a stale pass does not carry a broken entrypoint into Red`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      // Re-running the recorded command and appending the result regardless of
+      // its exit status walked a since-broken entrypoint straight into
+      // `Phase: Red`, which is the collection error this phase removes.
+      expect(doc).toContain("**the appended run's own exit status decides, not the recorded one**");
+      expect(doc).toContain(
+        "the entrypoint is **unproven again**, exactly as if it had no section",
+      );
+      expect(doc).toContain("re-enters this phase's 3-cycle budget");
+      expect(doc).toContain("`Phase: Red` does not start for it");
+      expect(doc).toContain(
+        "A past pass says the entrypoint started once, not that it still starts",
+      );
+      expect(skill).toContain("continue only while **it** exits 0");
+      expect(skill).toContain("puts it back through this phase's cycle budget");
+    });
+
+    it(`${tree}: the smoke run is judged, not self-attested`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+      const skeleton = (await implementPhases(tree)).find((p) => p.id === "skeleton");
+
+      // `blocking_agents` only stops the REVISE of an agent that was routed,
+      // so a merely-conditional gatekeeper could go unselected and the phase
+      // passed on its own author's account of the smoke run.
+      expect(skeleton?.mandatory_agents ?? []).toContain("qa-gatekeeper");
+      expect(doc).toContain("**`qa-gatekeeper` judges the exit, not the author.**");
+      expect(doc).toContain("lists the gatekeeper **mandatory** and blocking");
+      expect(doc).toContain("`Skeleton gatekeeper`");
+      expect(skill).toContain("`qa-gatekeeper` is **mandatory and blocking** here");
+      // `not applicable` is the one verdict with no run to judge.
+      expect(doc).toContain("`not applicable` is the one verdict that routes nobody");
+    });
+
+    it(`${tree}: the skeleton record reaches a commit`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      // `.qfai/evidence/*` is ignored by the managed block, so without an
+      // explicit negation the pass and the `Skeleton debt` never left the
+      // working directory that produced them — and Bound 2 requires them in
+      // the skeleton's own commit.
+      expect(doc).toContain("**This file is tracked, not ignored.**");
+      expect(doc).toContain("!.qfai/evidence/skeleton.md");
+      expect(skill).toContain("git-tracked through the managed `.gitignore` negation");
     });
 
     it(`${tree}: the unit of execution is one entrypoint, not one project`, async () => {
@@ -151,6 +223,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       for (const agent of ["frontend-engineer", "backend-engineer", "devops-ci-engineer"]) {
         expect(skeleton?.conditional_agents ?? []).toContain(agent);
       }
+      expect(skeleton?.mandatory_agents ?? []).toContain("qa-gatekeeper");
       // The exit criterion is an execution result, so it is judged, not
       // self-attested.
       expect(skeleton?.blocking_agents ?? []).toContain("qa-gatekeeper");
@@ -167,9 +240,29 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       // Stage 5 runs before stage 6, so a fresh project's acceptance tests hit
       // P5-P7 against a program that does not exist yet.
       expect(provenance).toContain("## A project whose program does not start yet");
-      expect(provenance).toContain("invoke it for `Phase: Skeleton` **alone**, before P5");
+      expect(provenance).toContain(
+        "invoke it for `Phase: Skeleton` **alone**, at stage gate **P1a**",
+      );
       expect(provenance).toContain("walking-skeleton.md");
       expect(unwrap(await read(tree, SKELETON))).toContain("## Reached from `/qfai-atdd`");
+    });
+
+    it(`${tree}: the skeleton is a stage gate ahead of ATDD's first RED`, async () => {
+      const atddSkill = await read(tree, ATDD_SKILL);
+      const provenance = unwrap(await read(tree, RED_PROVENANCE));
+
+      // "before P5" did not bind: P1c takes the first branch-1 RED before
+      // P2-P4 build any surface, so a skeleton scheduled anywhere in P1b-P4
+      // lands after the collection error it exists to prevent.
+      expect(atddSkill).toContain(
+        "- P1a: **`Phase: Skeleton` is discharged before any RED is taken.**",
+      );
+      expect(atddSkill.indexOf("- P1a:")).toBeLessThan(atddSkill.indexOf("- P1b:"));
+      expect(atddSkill.indexOf("- P1a:")).toBeLessThan(atddSkill.indexOf("- P1c:"));
+      expect(provenance).toContain("**Before P1b, not merely before P5.**");
+      expect(unwrap(await read(tree, SKELETON))).toContain(
+        "That invocation belongs to **stage gate P1a**, ahead of P1b, not merely somewhere before P5",
+      );
     });
 
     it(`${tree}: both bounds that stop it becoming a TDD bypass are blocking`, async () => {
@@ -261,7 +354,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       expect(doc).toContain("**Starts the system the way the entrypoint declares it**");
       expect(doc).toContain("not a test harness that constructs the application object in-process");
       expect(doc).toContain("**Exits non-zero on any failure**, including a start-up timeout");
-      expect(doc).toContain("**Names the `US-*` it answers**");
+      expect(doc).toContain("**Names the `US-*` whose surface it reaches**");
     });
 
     it(`${tree}: the phase leaves recordable evidence`, async () => {
@@ -273,6 +366,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
         "`Skeleton US`",
         "`Skeleton command`",
         "`Skeleton result`",
+        "`Skeleton gatekeeper`",
         "`Skeleton debt`",
         "`Skeleton cycles`",
       ]) {
