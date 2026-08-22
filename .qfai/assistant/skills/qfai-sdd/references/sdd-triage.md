@@ -30,9 +30,11 @@ Concretely, before persisting any Triage row:
    state. See `_policies/11_Slice-Policy.md` step 4.
 4. Only when no active spec's scope can absorb the requirement, AND the
    underlying capability is itself new, propose **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
-   the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
-   validator otherwise.
+   `CAP-NNNN` row to `_policies/03_Capabilities.md` _first_ and fill its
+   `Spec` cell with the next unused `spec-NNNN` (never reuse a retired
+   one), then cite the CAP in the Triage row's Rationale column.
+   `QFAI-TRIAGE-006` will fail the validator otherwise, and a row left
+   with an empty `Spec` cell fails `QFAI-SPLIT-106` at the final gate.
 
 The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
 append-first fallback: when the REQ's capability does not match exactly,

@@ -20,6 +20,15 @@ const TRIAGE_REFERENCES = [
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
   ".qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
 ];
+// Every shipped CREATE procedure. Each one has to name the `Spec` cell, or an
+// agent follows it, leaves the cell blank, clears QFAI-TRIAGE-006, and only
+// then trips QFAI-SPLIT-106 at the final gate with no instruction to fall back on.
+const CREATE_PROCEDURES = [
+  ...TRIAGE_REFERENCES,
+  ...SLICE_TEMPLATES,
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/SKILL.md",
+  ".qfai/assistant/skills/qfai-sdd/SKILL.md",
+];
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -81,6 +90,25 @@ describe("the CAP catalog declares the spec mapping the gap policy depends on", 
         "DELETE removes the spec directory entirely and drops the capability's row from `_policies/03_Capabilities.md`",
       );
       expect(content).toContain("QFAI-SPLIT-103");
+    });
+  }
+
+  for (const relativePath of SLICE_TEMPLATES) {
+    it(`${relativePath}: no rule still promises sequential directory names`, async () => {
+      const content = unwrap(await read(relativePath));
+      // The gap policy legalises `spec-0001` + `spec-0003`; a surviving
+      // "sequential directory names" claim would justify renumbering them back.
+      expect(content).not.toContain("sequential directory names");
+      expect(content).toContain("each CAP row declares exactly one directory in the `Spec` column");
+      expect(content).toContain("never a row-order sequence");
+    });
+  }
+
+  for (const relativePath of CREATE_PROCEDURES) {
+    it(`${relativePath}: the CREATE step fills the Spec cell too`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).toContain("fill its `Spec` cell with the next unused `spec-NNNN`");
+      expect(content).toContain("QFAI-SPLIT-106");
     });
   }
 });

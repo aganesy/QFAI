@@ -8,9 +8,11 @@ import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const CAP_ID_CELL_RE = /\bCAP-\d{4}\b/;
-const SPEC_ID_CELL_RE = /\bspec-\d{4}\b/i;
+const SPEC_ID_CELL_RE = /\bspec-\d{4}\b/gi;
 const CAP_HEADER_RE = /^cap(\s*id)?$/i;
 const SPEC_HEADER_RE = /^spec(\s*(id|dir|directory))?$/i;
+/** A GFM alignment cell (`---`, `:---`, `---:`, `:---:`). */
+const DELIMITER_CELL_RE = /^:?-+:?$/;
 
 /** Splits a markdown table row into trimmed cells; `[]` when the line is not a row. */
 function tableCells(line: string): string[] {
@@ -27,66 +29,116 @@ function tableCells(line: string): string[] {
 
 interface CatalogRow {
   readonly capId: string;
-  /** The declared spec directory, or `null` when the row left the cell empty. */
-  readonly specId: string | null;
+  /** Every spec directory the row's `Spec` cell named, in cell order. */
+  readonly specIds: readonly string[];
 }
 
 interface DeclaredCatalog {
   /** Every CAP row of the catalog table, in declaration order. */
   readonly rows: readonly CatalogRow[];
-  /** The first directory each CAP declared; a CAP with only blank cells is absent. */
+  /**
+   * The directory each CAP declared. A CAP is absent when no row of its own
+   * named exactly one directory — a blank cell and a cell listing several are
+   * both unresolved, and each draws its own `QFAI-SPLIT-106`.
+   */
   readonly byCap: ReadonlyMap<string, string>;
 }
 
+/** True for a GFM alignment row (`| --- | :--- |`), which closes the header. */
+function isDelimiterRow(cells: string[]): boolean {
+  return cells.length > 0 && cells.every((cell) => DELIMITER_CELL_RE.test(cell));
+}
+
 /**
- * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
+ * Reads the contiguous body rows of the catalog table starting at `start`.
  *
- * Declared mode is decided by the presence of the spec column, not by how many
- * cells are filled in: a catalog that adds the column and leaves every cell
- * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
- * rather than silently falling back to the positional derivation. Returns
- * `null` only when the table carries no spec column at all.
+ * The table ends at the first line that is not a row, so a later table that
+ * happens to reuse the same column positions (a change log, for instance) is
+ * never folded into the catalog.
  */
-function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
+function readCatalogBody(
+  lines: readonly string[],
+  start: number,
+  capColumn: number,
+  specColumn: number,
+): DeclaredCatalog {
   const rows: CatalogRow[] = [];
-  let capColumn = -1;
-  let specColumn = -1;
-  for (const line of capabilityText.split(/\r?\n/)) {
-    const cells = tableCells(line);
+  for (let index = start; index < lines.length; index += 1) {
+    const cells = tableCells(lines[index] ?? "");
     if (cells.length === 0) {
-      continue;
-    }
-    if (capColumn < 0 || specColumn < 0) {
-      const capIndex = cells.findIndex((cell) => CAP_HEADER_RE.test(cell));
-      const specIndex = cells.findIndex((cell) => SPEC_HEADER_RE.test(cell));
-      if (capIndex >= 0 && specIndex >= 0) {
-        capColumn = capIndex;
-        specColumn = specIndex;
-      }
-      continue;
+      break;
     }
     const capId = cells[capColumn]?.match(CAP_ID_CELL_RE)?.[0];
     if (!capId) {
       continue;
     }
-    const specCell = cells[specColumn]?.match(SPEC_ID_CELL_RE)?.[0];
-    rows.push({ capId, specId: specCell ? specCell.toLowerCase() : null });
-  }
-  if (capColumn < 0 || specColumn < 0) {
-    return null;
+    const specCell = cells[specColumn] ?? "";
+    const specIds = Array.from(specCell.matchAll(SPEC_ID_CELL_RE), (match) =>
+      match[0].toLowerCase(),
+    );
+    rows.push({ capId, specIds });
   }
   const byCap = new Map<string, string>();
   for (const row of rows) {
-    if (row.specId !== null && !byCap.has(row.capId)) {
-      byCap.set(row.capId, row.specId);
+    const [only] = row.specIds;
+    if (row.specIds.length === 1 && only !== undefined && !byCap.has(row.capId)) {
+      byCap.set(row.capId, only);
     }
   }
   return { rows, byCap };
 }
 
-/** CAP ids whose catalog row declares no spec directory. */
-function undeclaredCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
+/**
+ * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
+ *
+ * Only the first well-formed markdown table that carries both headers is
+ * parsed — header row, alignment row, then its own consecutive body rows.
+ * Declared mode is decided by the presence of the spec column, not by how many
+ * cells are filled in: a catalog that adds the column and leaves every cell
+ * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
+ * rather than silently falling back to the positional derivation. Returns
+ * `null` only when no such table carries a spec column at all.
+ */
+function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
+  const lines = capabilityText.split(/\r?\n/);
+  for (let index = 0; index < lines.length; index += 1) {
+    const header = tableCells(lines[index] ?? "");
+    if (header.length === 0) {
+      continue;
+    }
+    const capColumn = header.findIndex((cell) => CAP_HEADER_RE.test(cell));
+    const specColumn = header.findIndex((cell) => SPEC_HEADER_RE.test(cell));
+    if (capColumn < 0 || specColumn < 0) {
+      continue;
+    }
+    if (!isDelimiterRow(tableCells(lines[index + 1] ?? ""))) {
+      continue;
+    }
+    return readCatalogBody(lines, index + 2, capColumn, specColumn);
+  }
+  return null;
+}
+
+/** CAP ids whose catalog row names more than one spec directory. */
+function ambiguousCapIds(catalog: DeclaredCatalog): string[] {
+  const ambiguous: string[] = [];
+  for (const row of catalog.rows) {
+    if (row.specIds.length > 1 && !ambiguous.includes(row.capId)) {
+      ambiguous.push(row.capId);
+    }
+  }
+  return ambiguous;
+}
+
+/** CAP ids the declared mapping cannot resolve to a single spec directory. */
+function unresolvedCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
   return capIds.filter((capId) => !catalog.byCap.has(capId));
+}
+
+/** CAP ids whose catalog row declares no spec directory at all. */
+function undeclaredCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
+  const ambiguous = new Set(ambiguousCapIds(catalog));
+  return unresolvedCapIds(catalog, capIds).filter((capId) => !ambiguous.has(capId));
 }
 
 /** CAP ids that occupy more than one catalog row. */
@@ -133,6 +185,19 @@ function declaredMappingIssues(
         capabilitiesPath,
         "specSplitByCapability.declaredMapping",
         undeclared,
+      ),
+    );
+  }
+  const ambiguous = ambiguousCapIds(catalog);
+  if (ambiguous.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `Spec 列に複数の spec ディレクトリを宣言している CAP があります: ${ambiguous.join(", ")}`,
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        ambiguous,
       ),
     );
   }
@@ -268,7 +333,7 @@ export async function validateSpecSplitByCapability(
   // it does, that declaration is the SSOT and ID gaps left by an approved
   // DELETE stay legal; otherwise the pairing stays positional.
   const catalog = parseDeclaredCatalog(capabilityText);
-  const undeclared = catalog ? undeclaredCapIds(catalog, capIds) : [];
+  const unresolved = catalog ? unresolvedCapIds(catalog, capIds) : [];
   if (catalog) {
     issues.push(...declaredMappingIssues(catalog, capIds, capabilitiesPath));
   }
@@ -295,11 +360,11 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  // While a CAP row is still undeclared, an unnamed directory may well be the
-  // one that row owns, so 104 ("no CAP owns this directory") cannot be trusted
-  // until QFAI-SPLIT-106 is cleared.
+  // While a CAP row is still unresolved — blank cell, or several directories in
+  // one cell — an unnamed directory may well be the one that row owns, so 104
+  // ("no CAP owns this directory") cannot be trusted until 106 is cleared.
   const extraSpecIds =
-    undeclared.length > 0
+    unresolved.length > 0
       ? []
       : Array.from(actualSpecIds).filter((specId) => !expectedSpecIds.includes(specId));
   if (extraSpecIds.length > 0) {

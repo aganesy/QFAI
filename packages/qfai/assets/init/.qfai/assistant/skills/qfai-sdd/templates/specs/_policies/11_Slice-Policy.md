@@ -90,10 +90,12 @@ stop at step 2.
      reasoned non-split, because there is nothing to split into.
 
    > A count-driven SPLIT of a single-capability spec is **illegal**.
-   > `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN` per spec
-   > with sequential directory names, so it raises `QFAI-SPLIT-102` and
-   > `QFAI-SPLIT-104` at `error` severity. The SPLIT trigger is capability
-   > ownership (line 64 of this file, and `sdd-triage.md`), never a count.
+   > `validateSpecSplitByCapability` hard-enforces one `CAP-NNNN` per spec —
+   > each CAP row declares exactly one directory in the `Spec` column of
+   > `_policies/03_Capabilities.md`, never a row-order sequence — so it raises
+   > `QFAI-SPLIT-102` and `QFAI-SPLIT-104` at `error` severity. The SPLIT
+   > trigger is capability ownership (line 64 of this file, and
+   > `sdd-triage.md`), never a count.
 
    > An **obligation-conserving re-granulation** — the same obligations
    > expressed as finer cells, zero added and zero removed — never triggers
@@ -112,9 +114,12 @@ stop at step 2.
    meaningful nouns.
 6. Only when **no active spec shares any token** with the REQ AND the
    underlying capability is genuinely new → **CREATE**. Add the new
-   `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it
-   in the Triage row's Rationale column. `QFAI-TRIAGE-006` will reject
-   any CREATE row that omits or references an unregistered CAP.
+   `CAP-NNNN` row to `_policies/03_Capabilities.md` _first_ and fill its
+   `Spec` cell with the next unused `spec-NNNN` (never a retired one),
+   then cite the CAP in the Triage row's Rationale column.
+   `QFAI-TRIAGE-006` will reject any CREATE row that omits or references
+   an unregistered CAP, and a row left with an empty `Spec` cell fails
+   `QFAI-SPLIT-106` at the final gate.
 7. If the REQ removes existing items from a spec → **UPDATE:REMOVE**.
 8. If the spec's subject is gone from the product → **DELETE**.
 9. If the responsibilities move to a new spec while the old ID must

@@ -182,6 +182,52 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("reports a Spec cell that declares more than one directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // Taking only the first match would let `spec-0001 / spec-0002` pass as
+      // long as spec-0001 exists, even though a row declares exactly one.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], ["spec-0001 / spec-0002", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0001"]);
+      expect(issues[0]?.message).toContain("複数の spec ディレクトリ");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("stops at the end of the catalog table instead of reading a later one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A change-log table that reuses the same column positions must not be
+      // folded in as a second catalog row for CAP-0001.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        ["spec-0001", "spec-0002"],
+        [
+          "## Change log",
+          "",
+          "| CAP ID | Spec | Change |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0002 | moved before the split |",
+          "",
+        ].join("\n"),
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the positional derivation when the catalog declares no Spec column", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -258,11 +304,13 @@ describe("v1.4.36 layered validators", () => {
  * Seeds `_policies`. Pass `declaredSpecIds` to emit the `Spec` column that
  * declares the CAP -> spec directory mapping; `null` leaves a row's cell empty.
  * Omit it to get the legacy catalog with no `Spec` column at all.
+ * `trailingMarkdown` is appended after the catalog table.
  */
 async function seedPolicies(
   root: string,
   capIds: string[],
   declaredSpecIds?: (string | null)[],
+  trailingMarkdown = "",
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -282,7 +330,7 @@ async function seedPolicies(
     .join("\n");
   await writeFile(
     path.join(policiesDir, "03_Capabilities.md"),
-    ["# 03 Capabilities", "", ...header, capLines, ""].join("\n"),
+    ["# 03 Capabilities", "", ...header, capLines, "", trailingMarkdown].join("\n"),
     "utf-8",
   );
 
