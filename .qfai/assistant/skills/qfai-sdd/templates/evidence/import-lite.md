@@ -3,7 +3,9 @@
 Written by `/qfai-sdd` Stage 0 when specs exist and no discussion pack does. Copy this file to
 `.qfai/evidence/import-lite-<ts>.md` — the `-<ts>` run stamp is required, because the preflight
 check behind `QFAI-IMPLITE-001` matches `import-lite-*.md` by basename and does not see a copy
-kept under this template's own name.
+kept under this template's own name. Stamp `<ts>` to the second (`YYYYMMDDTHHmmss`) so a re-run
+never lands on an earlier file; if `qfai.config.yaml` overrides `paths.discussionDir`, write into
+that directory's `evidence/` sibling instead.
 
 ## Metadata
 

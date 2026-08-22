@@ -36,46 +36,56 @@ const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
 /**
- * Every `import-lite-…md` path a shipped document prints, `<ts>` placeholder
- * included. Glob forms (`import-lite-*.md`) are the detector's own pattern
- * quoted back at the reader, not a path to write, so they are excluded.
+ * Every `import-lite-…md` path a shipped document prints — the directory it
+ * names included, `<ts>` placeholder included. The directory is half of the
+ * instruction: a document that sent the file to `.qfai/report/` would leave
+ * `QFAI-IMPLITE-001` firing, so the path is kept whole and written where it
+ * says. Glob forms (`import-lite-*.md`) are the detector's own pattern quoted
+ * back at the reader, not a path to write, so they are excluded.
  */
 function documentedEvidencePaths(source: string): string[] {
-  return [...source.matchAll(/import-lite-[^\s`"']*\.md/gi)]
+  return [...source.matchAll(/(?:[\w.@-]+\/)*import-lite-[^\s`"'()]*\.md/gi)]
     .map((match) => match[0])
     .filter((candidate) => !candidate.includes("*"));
 }
 
 /** Resolve the doc's `<ts>` placeholder to a concrete run stamp. */
-const materialize = (documented: string): string => documented.replace(/<ts>/gi, "20260822T0900");
+const materialize = (documented: string): string => documented.replace(/<ts>/gi, "20260822T090000");
+
+/** A spec set with no discussion pack — the state QFAI-IMPLITE-001 covers. */
+async function seedSpecSet(): Promise<string> {
+  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-import-lite-"));
+  const specDir = path.join(dir, ".qfai/specs/spec-0001");
+  await mkdir(specDir, { recursive: true });
+  await writeFile(path.join(specDir, "01_spec.md"), "# Spec\n", "utf-8");
+  await writeFile(path.join(specDir, "02_User-Stories.md"), "# User Stories\n", "utf-8");
+  await mkdir(path.join(dir, ".qfai/evidence"), { recursive: true });
+  return dir;
+}
 
 let root: string;
 
 beforeEach(async () => {
-  root = await mkdtemp(path.join(os.tmpdir(), "qfai-import-lite-"));
-  // A spec set with no discussion pack — the state QFAI-IMPLITE-001 covers.
-  const specDir = path.join(root, ".qfai/specs/spec-0001");
-  await mkdir(specDir, { recursive: true });
-  await writeFile(path.join(specDir, "01_spec.md"), "# Spec\n", "utf-8");
-  await writeFile(path.join(specDir, "02_User-Stories.md"), "# User Stories\n", "utf-8");
-  await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
+  root = await seedSpecSet();
 });
 
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-async function importLiteCodes(evidenceFileName: string | null): Promise<string[]> {
-  if (evidenceFileName !== null) {
-    await writeFile(
-      path.join(root, ".qfai/evidence", evidenceFileName),
-      "# Evidence: import-lite\n",
-      "utf-8",
-    );
+/** Write the evidence at the exact relative path given, then run the detector. */
+async function importLiteCodesAt(relativePath: string | null): Promise<string[]> {
+  if (relativePath !== null) {
+    const target = path.join(root, relativePath);
+    await mkdir(path.dirname(target), { recursive: true });
+    await writeFile(target, "# Evidence: import-lite\n", "utf-8");
   }
   const issues = await validateImportLiteEvidencePresence(root, defaultConfig);
   return issues.map((issue) => issue.code);
 }
+
+const importLiteCodes = (evidenceFileName: string | null): Promise<string[]> =>
+  importLiteCodesAt(evidenceFileName === null ? null : `.qfai/evidence/${evidenceFileName}`);
 
 describe("qfai-sdd documents who produces import-lite evidence", () => {
   for (const tree of QFAI_TREES) {
@@ -109,13 +119,15 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       expect(documented.length, "no import-lite output path is documented").toBeGreaterThan(0);
 
       for (const documentedPath of documented) {
-        const fileName = path.basename(materialize(documentedPath));
-        // Fresh evidence dir per path so one accepted name cannot mask another.
-        await rm(path.join(root, ".qfai/evidence"), { recursive: true, force: true });
-        await mkdir(path.join(root, ".qfai/evidence"), { recursive: true });
-        expect(await importLiteCodes(fileName), `${documentedPath} is not detected`).not.toContain(
-          "QFAI-IMPLITE-001",
-        );
+        const relativePath = materialize(documentedPath);
+        expect(relativePath, `${documentedPath} names no output directory`).toContain("/");
+        // Fresh spec set per path so one accepted location cannot mask another.
+        await rm(root, { recursive: true, force: true });
+        root = await seedSpecSet();
+        expect(
+          await importLiteCodesAt(relativePath),
+          `${documentedPath} is not detected where it is documented`,
+        ).not.toContain("QFAI-IMPLITE-001");
       }
     });
   }
@@ -124,6 +136,14 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
     // The reason the docs must print the `-<ts>` form: copying the template
     // as-named yields a file the detector does not see.
     expect(await importLiteCodes("import-lite.md")).toContain("QFAI-IMPLITE-001");
+  });
+
+  it("still fires for a correctly named file written outside the evidence directory", async () => {
+    // The reason the documented directory is kept and honoured above: the name
+    // alone is not enough, so a doc that printed the wrong directory must fail.
+    expect(await importLiteCodesAt(".qfai/report/import-lite-20260822T090000.md")).toContain(
+      "QFAI-IMPLITE-001",
+    );
   });
 
   it("fires when the evidence directory holds nothing at all", async () => {
