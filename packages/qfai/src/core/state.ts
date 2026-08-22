@@ -1,4 +1,5 @@
 import { createHash, randomUUID } from "node:crypto";
+import type { Stats } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
 import { mkdir, open, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
@@ -147,6 +148,68 @@ async function readLockOwner(lockPath: string): Promise<LockOwner | null> {
 }
 
 /**
+ * What one lock file looked like at one instant: enough to judge it
+ * AND to prove later that the file on that path is still that same
+ * file. `ino`/`dev` are 0 on filesystems that do not report them
+ * (notably some Windows volumes), so the owner token and the mtime
+ * carry the identity check there.
+ */
+interface LockSnapshot {
+  readonly mtimeMs: number;
+  readonly ino: number;
+  readonly dev: number;
+  readonly owner: LockOwner | null;
+}
+
+/** Snapshot the lock file, or `null` when it is gone / unreadable. */
+async function readLockSnapshot(lockPath: string): Promise<LockSnapshot | null> {
+  let info: Stats;
+  try {
+    info = await stat(lockPath);
+  } catch {
+    return null;
+  }
+  return {
+    mtimeMs: info.mtimeMs,
+    ino: info.ino,
+    dev: info.dev,
+    owner: await readLockOwner(lockPath),
+  };
+}
+
+/** Do two snapshots describe the same lock file, taken by the same holder? */
+function isSameLock(before: LockSnapshot, after: LockSnapshot): boolean {
+  if (before.ino !== 0 && after.ino !== 0) {
+    if (before.ino !== after.ino || before.dev !== after.dev) return false;
+  }
+  if (before.mtimeMs !== after.mtimeMs) return false;
+  return before.owner?.token === after.owner?.token;
+}
+
+/**
+ * Unlink the lock only while it is still the file `before` describes.
+ *
+ * Deletion is by path, and between the decision to delete and the
+ * `rm` another waiter can reap the same lock and take a fresh one on
+ * that path. Removing it then would drop the NEW holder's lock while
+ * that holder keeps writing through its unlinked handle — two
+ * `updateState` calls inside the critical section at once, which is
+ * the exact race this module exists to close. Re-reading the file and
+ * requiring the same identity (inode/device when reported, mtime,
+ * owner token) keeps a replaced lock alive; the loser simply waits
+ * one more retry.
+ */
+async function removeLockIfUnchanged(lockPath: string, before: LockSnapshot): Promise<void> {
+  const after = await readLockSnapshot(lockPath);
+  if (after === null || !isSameLock(before, after)) return;
+  try {
+    await rm(lockPath, { force: true });
+  } catch {
+    // The lock vanished or is unreadable — the next acquire attempt decides.
+  }
+}
+
+/**
  * Remove a lock whose holder is gone.
  *
  * An old mtime is not evidence of death: a holder stalled on slow I/O
@@ -157,20 +220,26 @@ async function readLockOwner(lockPath: string): Promise<LockOwner | null> {
  * inside it is no longer running. `LOCK_ABANDON_MS` is the backstop for
  * the cases where that pid check cannot be trusted — a recycled pid, or
  * a lock leaked by this very process.
+ *
+ * A lock whose stamped owner is provably dead is reaped IMMEDIATELY,
+ * with no age gate: `LOCK_STALE_MS` is longer than `LOCK_TIMEOUT_MS`,
+ * so gating the dead-owner case on age would make every run that
+ * starts within the stale window after a holder crashed time out and
+ * fail (`qfai atdd scaffold`, `qfai discussion use`) even though the
+ * lock is known to be free. The age gate still governs the locks whose
+ * owner cannot be read — a lock created microseconds ago but not yet
+ * stamped must not be mistaken for an abandoned one.
  */
 async function reapStaleLock(lockPath: string): Promise<void> {
-  try {
-    const info = await stat(lockPath);
-    const age = Date.now() - info.mtimeMs;
+  const before = await readLockSnapshot(lockPath);
+  if (before === null) return;
+  const ownerAlive = before.owner !== null && isProcessAlive(before.owner.pid);
+  if (before.owner === null || ownerAlive) {
+    const age = Date.now() - before.mtimeMs;
     if (age < LOCK_STALE_MS) return;
-    if (age < LOCK_ABANDON_MS) {
-      const owner = await readLockOwner(lockPath);
-      if (owner !== null && isProcessAlive(owner.pid)) return;
-    }
-    await rm(lockPath, { force: true });
-  } catch {
-    // The lock vanished or is unreadable — the next acquire attempt decides.
+    if (age < LOCK_ABANDON_MS && ownerAlive) return;
   }
+  await removeLockIfUnchanged(lockPath, before);
 }
 
 /**
@@ -232,13 +301,16 @@ async function releaseStateLock(lockPath: string, lock: StateLock): Promise<void
     // Already closed; the unlink below is what matters.
   }
   try {
-    const owner = await readLockOwner(lockPath);
-    if (owner !== null && owner.token !== lock.owner.token) {
+    const snapshot = await readLockSnapshot(lockPath);
+    if (snapshot === null) return;
+    if (snapshot.owner !== null && snapshot.owner.token !== lock.owner.token) {
       // Our lock was reaped as abandoned and the path re-taken by
       // someone else: removing it now would drop *their* lock, not ours.
       return;
     }
-    await rm(lockPath, { force: true });
+    // Same identity check as the reaper: the path can be re-taken
+    // between the read above and the unlink below.
+    await removeLockIfUnchanged(lockPath, snapshot);
   } catch {
     // Best effort — a leftover lock is reaped as abandoned by the next writer.
   }

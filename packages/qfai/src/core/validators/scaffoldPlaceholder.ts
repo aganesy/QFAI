@@ -208,6 +208,16 @@ export async function validateScaffoldPlaceholder(
   // Track every (spec, TC) we observed as placeholder this pass so we
   // can reset stale counters at the end.
   const observedKeys = new Set<string>();
+  // One state-write failure disables every later counter write in this
+  // pass. `updateState` waits up to its full lock budget before giving
+  // up, so retrying per TC turns a single lock held by a concurrent CLI
+  // run into one wait PER placeholder — a repo with 100 unfilled
+  // skeletons would stall for minutes before continuing fail-soft with
+  // exactly the same findings. The other failure classes (read-only FS,
+  // ENOSPC, EACCES) do not clear mid-pass either, so nothing is lost by
+  // stopping after the first one; the findings still surface, with the
+  // "counter unavailable" note.
+  let counterWritesDisabled = false;
   for (const file of files) {
     let body: string;
     try {
@@ -331,6 +341,11 @@ export async function validateScaffoldPlaceholder(
     if (specId !== null) {
       for (const tcId of tcIds) {
         observedKeys.add(`${specId}:${tcId}`);
+        // A counter write already failed this pass — see
+        // `counterWritesDisabled`. The key is still observed above so
+        // the reset sweep does not mistake this placeholder for a
+        // filled one.
+        if (counterWritesDisabled) continue;
         try {
           const next = await recordValidateCycle(root, specId, tcId);
           counterAvailable = true;
@@ -348,6 +363,7 @@ export async function validateScaffoldPlaceholder(
           // programming bug (TypeError / RangeError) is not silently
           // swallowed alongside the expected ENOENT/EACCES/ENOSPC
           // class. Codex r3338412192.
+          counterWritesDisabled = true;
           logFailSoft("recordValidateCycle", specId, tcId, err);
         }
       }
@@ -439,9 +455,14 @@ export async function validateScaffoldPlaceholder(
         }
       }
       if (!observedKeys.has(`${specId}:${tcId}`)) {
+        // Same fail-fast rule as the increment loop: once a state
+        // write has failed this pass, the remaining resets would only
+        // repeat the same wait per tracked key.
+        if (counterWritesDisabled) break;
         try {
           await resetValidateCycle(root, specId, tcId);
         } catch (err) {
+          counterWritesDisabled = true;
           logFailSoft("resetValidateCycle", specId, tcId, err);
         }
       }

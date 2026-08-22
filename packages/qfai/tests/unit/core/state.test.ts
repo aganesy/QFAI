@@ -180,6 +180,19 @@ describe("TC-0010-0012: updateState lock ownership", () => {
     }
   });
 
+  it("reaps a lock whose owner is already dead before the stale window opens", async () => {
+    // A holder that crashes right after taking the lock leaves a lock
+    // younger than LOCK_STALE_MS (10s) but with a dead pid stamped in
+    // it. The acquire budget is only LOCK_TIMEOUT_MS (5s), so gating
+    // this case on age would fail every run started in that window.
+    const lockPath = await plantLock(root, 2_147_483_646, 0);
+    try {
+      await expect(bumpCounter(root)).resolves.toBe(1);
+    } finally {
+      await rm(lockPath, { force: true });
+    }
+  });
+
   it("reaps a lock abandoned past the backstop even when its pid is live", async () => {
     // Past LOCK_ABANDON_MS (60s): a pid this old is either recycled or
     // ours and leaked, so the mtime backstop takes over.
