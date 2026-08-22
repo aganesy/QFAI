@@ -10,22 +10,28 @@ a per-spec count with a repository-wide one would let an unrelated spec move
 this spec's `Signal`, and the spec-to-spec comparison the column exists for
 would stop holding.
 
-- `#US` — required `US-*` declared by this spec.
-- `#CON` — the `CON-API-*` **this spec references**: the API obligations its
-  `tdd/test-list.md` carries in `CON-API-Refs`, which are the contracts this
-  spec's `tests/api/**` must cover. `.qfai/contracts/**` has no spec owner in
-  the model (see `SKILL.md`, CRITICAL CONSTRAINTS), so the repository-wide
-  declared set is **not** this number. A declared contract no spec references is
-  a repo-level obligation for the end-of-stage run — name it in `Notes`, do not
-  count it here.
-- `#TC` — required `TC-*` of this spec that route to `tests/integration/**`:
-  declared `Level` `L3`/`Integration`, or no declared `Level`. `L1`/`L2` owe
-  nothing to this skill, so they are excluded from `#TC` and from `total`; a
-  `TC-*` declaring `L4`/`L5` is counted in the row its `Level` routes it to
-  (`#CON` for `L4`/API, `#US` for `L5`/E2E), never in `#TC`. Counting every
-  `TC-*` instead would report an Integration share for obligations this skill
-  does not own — a spec of one `US-*` and nine `L1` TCs would read `INT_s` 90
-  with no integration obligation at all.
+Each of the three is **one row's numerator**, not a count of one ID type: a
+`TC-*` that declares `L4` or `L5` is an API or E2E obligation and belongs to
+that row. Every obligation is counted in exactly one row, so the three never
+double-count and `total` is their sum.
+
+- `#US` — the E2E row: required `US-*` declared by this spec, **plus** this
+  spec's required `TC-*` declaring `Level` `L5`/`E2E`.
+- `#CON` — the API row: the `CON-API-*` **this spec references** — the API
+  obligations its `tdd/test-list.md` carries in `CON-API-Refs`, which are the
+  contracts this spec's `tests/api/**` must cover — **plus** this spec's
+  required `TC-*` declaring `Level` `L4`/`API`. `.qfai/contracts/**` has no spec
+  owner in the model (see `SKILL.md`, CRITICAL CONSTRAINTS), so the
+  repository-wide declared set is **not** this number. A declared contract no
+  spec references is a repo-level obligation for the end-of-stage run — name it
+  in `Notes`, do not count it here.
+- `#TC` — the Integration row: required `TC-*` of this spec that route to
+  `tests/integration/**`, i.e. declared `Level` `L3`/`Integration`, or no
+  declared `Level`. `L1`/`L2` owe nothing to this skill, so they are excluded
+  from `#TC` and from `total`, and `L4`/`L5` sit in the two rows above.
+  Counting every `TC-*` in `#TC` instead would report an Integration share for
+  obligations this skill does not own — a spec of one `US-*` and nine `L1` TCs
+  would read `INT_s` 90 with no integration obligation at all.
 
 ## The formula
 
@@ -38,9 +44,15 @@ API_s = round(100 * #CON / total)
 INT_s = round(100 * #TC  / total)
 ```
 
+`round` here is **half-up**: a share of exactly `.5` rounds up, so `#US` 1 of a
+`total` of 8 gives `E2E_s` 13, never 12. Fixing the tie-break is what keeps one
+spec's `Signal` reproducible across runs and comparable with another's.
+
 The three sum to 100 up to rounding. When `total` is 0 there is nothing to take
-a share of: write `-` in all three `Signal` cells and say in `Notes` that the
-spec declares no obligations.
+a share of: write `-` in all three `Signal` cells and say in `Notes` that this
+spec declares no **ATDD-owned** obligations. That is a statement about this
+table's scope only — a spec whose `TC-*` are all `L1`/`L2` reaches `total` 0
+while still owing real work, which `/qfai-implement` carries.
 
 `Raw count` already carries the volume, so `Signal` carries only the
 distribution — the part that is comparable between two specs, and between two
