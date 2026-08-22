@@ -252,3 +252,92 @@ describe.each(TREES)("%s (`blocked` is reachable after the cycle starts)", (tree
     expect(gatekeeper).toContain("Check it against the **retained round block** rather than a");
   });
 });
+
+describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tree) => {
+  it("keeps an approved Change Request on the sanctioned reset, not on the resumption", async () => {
+    // `green` / `refactor` -> `blocked` made "unresolved Change Request" a
+    // mid-cycle blocker. If that CR is then approved it moves the obligation,
+    // and taking `blocked` -> `todo` on its "nothing upstream changed" gloss
+    // would re-use the withdrawn implementation while skipping the DR-ID
+    // record and the downstream sweep `drift-protocol.md` step 5 requires.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("(the blocker cleared **with this row's obligation intact**)");
+    expect(ledger).toContain("**An approved Change Request is not this edge.**");
+    expect(ledger).toContain("rejected, withdrawn or superseded");
+    expect(ledger).toContain(
+      "**When the CR is approved and changes the obligation the row leaves `blocked` by the upstream reset below**",
+    );
+    // And the section an agent actually reads when a row is blocked says which
+    // of the two exits applies.
+    expect(ledger).toContain("**How it is left depends on how the blocker resolved.**");
+    expect(ledger).toContain("only the first lets it re-use its retained rounds");
+  });
+
+  it("persists the block and its departure status in round evidence", async () => {
+    // `Blocked-By` is a ledger column held only while the row is `blocked`, so
+    // after the resumption nothing distinguished a resumed row from one an
+    // approved reset returned to `todo` — and the self-reference was gated on
+    // a retained GREEN both of them have.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain("- `Round N: Resumed-from-blocked`");
+    expect(rounds).toContain("copied out of `Blocked-By` before that transition clears it");
+    // The field list declares itself complete, so the new field has to be in it.
+    expect(rounds).toContain(
+      "the reviewer verdict, and `Resumed-from-blocked` on a round a resumption wrote into",
+    );
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("records `Resumed-from-blocked` on the round it writes into");
+  });
+
+  it("carries an interrupted round to completion instead of stranding it", async () => {
+    // A block taken at `red` leaves a round with a RED pair and no GREEN pair.
+    // "The resumed cycle is the next round" would leave that one permanently
+    // short of the GREEN pair "one block per RED/GREEN cycle" requires.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain("**Blocked at `red`**");
+    expect(rounds).toContain("**continues that unfinished round**");
+    expect(rounds).toContain("**Blocked at `green` or `refactor`**");
+    expect(rounds).toContain("The resumed cycle is the **next round**");
+    expect(rounds).toContain("**Blocked at `todo`**");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**Which round it writes into depends on where the block happened**");
+  });
+
+  it("gates the self-reference on the resumption record, not on a retained GREEN", async () => {
+    const reference = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(reference).toContain("**The retained round is necessary and not sufficient**");
+    expect(reference).toContain(
+      "**Only a row whose resumed round carries `Resumed-from-blocked`**",
+    );
+    // The reviewer that judges the form has to apply the same condition.
+    const gatekeeper = flat(await read(tree, "assistant/agents/qa-gatekeeper.md"));
+    expect(gatekeeper).toContain("**The retained round alone does not qualify the row**");
+    expect(gatekeeper).toContain(
+      "require `Round N: Resumed-from-blocked` on the round the resumption wrote into",
+    );
+  });
+
+  it("stops step 3b from replaying a consumed handover on a resumed ATDD row", async () => {
+    // A resumed `E2E` / `API` / `Integration` row is at `todo`, so step 3b
+    // claimed it by branch, consumed the original `/qfai-atdd` provenance and
+    // skipped steps 4 and 5 — the row reached `red` on a RED observed before
+    // the blocker moved the tree and never took the fresh one it owes.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain("**Neither does a row resumed from `blocked`**");
+    expect(skill).toContain("steps 4 and 5 apply to it as they do to a `Unit` row");
+    // Step 2 hands that row its transition instead, since 3b no longer will.
+    expect(skill).toContain("**Unless that row was resumed from `blocked`**");
+    const reference = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(reference).toContain(
+      "**On an `E2E` / `API` / `Integration` row the resumption reaches this procedure through steps 4 and 5, not through the handover.**",
+    );
+  });
+});

@@ -22,7 +22,10 @@ run.
   code **this row already wrote**. **Not an anomaly** and does **not** go to
   `exception`: without this case the edge the ledger deliberately widened would
   have no legal way back to `done`. Same procedure, and `Satisfied-by` takes
-  this row's own row id and the round that satisfied it (step 1).
+  this row's own row id and the round that satisfied it (step 1). **Only a row
+  whose resumed round carries `Resumed-from-blocked`** (`round-evidence.md`)
+  qualifies — a row that reached `todo` by an approved upstream reset has its
+  retained GREEN withdrawn, not resumed, and takes the ordinary classification.
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -61,6 +64,24 @@ for the natural RED and let the row proceed to `green` and `done`:
    A row carrying no such round was never resumed from `blocked`, and this form
    is not open to it — which is why it does not reopen the "no production
    change and no sibling" hole the paragraph above closes.
+
+   **The retained round is necessary and not sufficient**: it proves the row was
+   once GREEN, not that it arrived at `todo` by a resumption. An approved
+   upstream reset leaves the same retained round while **withdrawing** the work
+   it records, so the qualifying evidence is `Round N: Resumed-from-blocked` on
+   the round the resumption wrote into — the blocker and the departure status,
+   persisted there precisely because `Blocked-By` is cleared by
+   `blocked` -> `todo` (`round-evidence.md`). A reviewer reads that field, not
+   the retained GREEN alone; absent it, a reset row claiming this form is
+   REVISEd and takes the ordinary classification above.
+
+   **On an `E2E` / `API` / `Integration` row the resumption reaches this
+   procedure through steps 4 and 5, not through the handover.**
+   `qfai-implement/SKILL.md` Phase Red step 3b consumes the `/qfai-atdd`
+   provenance of a `todo` row and skips steps 4 and 5 — replaying it here would
+   re-assert a RED observed on the pre-block tree and never take the fresh one
+   the resumption owes, so 3b excludes a row carrying
+   `Resumed-from-blocked` and sends it down the ordinary path.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

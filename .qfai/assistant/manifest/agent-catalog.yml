@@ -1496,7 +1496,14 @@ agents:
       `blocked` -> `todo` restarts a cycle this row had already implemented. Check it
       against the **retained round block** rather than a sibling, and treat the
       predicate that round's GREEN wrote as the owned code for the Oracle Strength
-      Check. See
+      Check. **The retained round alone does not qualify the row** — it proves the
+      row was once GREEN, not that it resumed: require
+      `Round N: Resumed-from-blocked` on the round the resumption wrote into, and
+      REVISE the self-reference without it. A row reset to `todo` by an approved
+      Change Request carries the same retained GREEN while that approval **withdrew**
+      the work it records, so accepting the retained round on its own readmits the
+      "no production change and no sibling" path this exception is narrowed against.
+      See
       `.qfai/assistant/skills/qfai-implement/references/red-not-observable.md` and
       `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md`.
 

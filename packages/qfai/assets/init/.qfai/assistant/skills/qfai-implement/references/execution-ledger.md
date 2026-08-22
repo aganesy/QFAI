@@ -196,19 +196,39 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   by definition does not exist yet, and leaving the row at `green` throws away
   the `Blocked-By` this status exists to hold and re-derives the determination
   on every pass.
-- `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a
-  backward transition**: nothing upstream changed, so nothing is being undone.
+- `blocked` -> `todo` (the blocker cleared **with this row's obligation
+  intact**). This is a **resumption, not a backward transition**: nothing
+  upstream changed, so nothing is being undone. **An approved Change Request is
+  not this edge.** A row blocked on an unresolved `CR-*` may take it only when
+  that CR resolved **without moving what the row owes** — rejected, withdrawn or
+  superseded, an upstream defect fixed inside the same obligation, a cross-spec
+  row finished. **When the CR is approved and changes the obligation the row
+  leaves `blocked` by the upstream reset below**, not here: `any status` ->
+  `todo` with the approving `CR-*`/`DR-*` recorded in `DR-ID` and cited in
+  `Evidence`, and the downstream sweep `constitution/drift-protocol.md` step 5
+  requires. Reading "nothing upstream changed" as unconditional is how a row
+  re-uses, as a mere resumption, the implementation and evidence that approval
+  withdrew — and skips both the record of why and the sweep of the rows that
+  moved with it.
   The row **restarts its cycle from `todo`** and owes a fresh RED — a blocker
   that stopped a row mid-cycle has almost always moved the tree its earlier RED
   was observed on. Its rounds so far are **retained, not discarded**: the round
-  blocks already written stay in the evidence file, and the resumed cycle opens
-  the next round under `round-evidence.md`'s numbering. **When the block
+  blocks already written stay in the evidence file, and the resumed cycle
+  records `Resumed-from-blocked` on the round it writes into
+  (`round-evidence.md`) — the blocker copied out of `Blocked-By`, which this
+  transition clears, plus the status the row was blocked at. **Which round it
+  writes into depends on where the block happened**: a block taken at `red`
+  interrupted a round that never got its GREEN pair, so the resumed cycle
+  **continues that round**; a block taken at `green` or `refactor` left a closed
+  round behind, so the resumed cycle opens **the next round** under
+  `round-evidence.md`'s numbering. **When the block
   happened at `green` or `refactor` this row's own implementation is still
   there, so that fresh RED passes on its first run — that is the
   falsifiability path of `red-not-observable.md`, not `exception`.**
   `Satisfied-by` names this row's own retained round, the one case where it
-  names the row itself; the round block left behind is the audit trail a
-  sibling row id provides in the ordinary case. Weakening the correct test
+  names the row itself; the `Resumed-from-blocked` field and the round block
+  left behind are the audit trail a sibling row id provides in the ordinary
+  case. Weakening the correct test
   until it fails is forbidden here as everywhere.
 - `todo` -> `red` (write a failing test)
 - `red` -> `green` (make the test pass with minimal code)
@@ -366,6 +386,12 @@ after its surface passes on the first run. So:
 - It is **not** `exception`. `exception` is scoped to an anomaly, requires a
   `DR-*`, and satisfies spec completion — filing a blocked row there would
   silently close the obligation.
+- **How it is left depends on how the blocker resolved.** `blocked` -> `todo`
+  is the resumption and requires the row's obligation to be unchanged; a
+  `CR-*` that was **approved** and moved the obligation takes the row out by
+  the approved `any status` -> `todo` upstream reset instead, with the CR/DR
+  recorded and the downstream sweep run. Both land the row at `todo`, and only
+  the first lets it re-use its retained rounds.
 - `npx qfai report` counts it inside `open` but prints it separately
   (`open: N (blocked: M)`), so "not started" and "cannot start" are readable
   apart without changing what completion means.
