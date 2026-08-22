@@ -135,11 +135,17 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = options.invalidExitCode;
           return;
         }
-        const resolvedRoot = await resolveRoot(options);
+        // `--format json` の stdout は machine-readable として README が案内
+        // している。root 探索の警告は stderr へ送り、JSON 本体だけを流す。
+        const resolvedRoot = await resolveRoot(
+          options,
+          options.sddFormat === "json" ? error : warn,
+        );
         process.exitCode = await runSddPreflightCommand({
           root: resolvedRoot,
           ...(options.sddFormat ? { format: options.sddFormat } : {}),
           ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
+          ...(options.sddAssumptions.length > 0 ? { assumptions: options.sddAssumptions } : {}),
         });
       }
       return;
@@ -304,7 +310,7 @@ Commands:
   discussion use <id>          active discussion session pointer を設定
   audit log [filters]          .qfai/evidence/decisions/ の決定ログを一覧 (--scope/--operator/--clause + --format table|json)
   handoff upgrade <legacy>     legacy handoff ファイルを canonical .qfai/handoff.yaml に変換 (CLI-HANDOFF)
-  sdd preflight                /qfai-sdd Stage 0 ゲート（discussion-pack 選択 / REQ 件数 / blocker 判定）を実行し .qfai/report/preflight_summary.md を生成
+  sdd preflight                /qfai-sdd Stage 0 ゲート（active discussion-pack 選択 / REQ 件数 / blocker 判定）を実行し .qfai/report/preflight_summary.md を生成
   atdd scaffold --spec <id>    spec の Test-Cases から per-TC test skeleton を生成（idempotent + N-cycle escalation）
   prototyping preflight        prototyping 実行前提（spec/ui/design contracts/roles/browser/targetUrl）を診断
   prototyping iterate          single-thread evolution loop の cycle 確定
@@ -356,6 +362,7 @@ Options:
   --clause <substring>          audit log: envelopeContractClause で substring filter
   --clean                       doctor: TTL 超過 review pack を _archive/ へ退避 (--dry-run 併用可)
   --autoremediate               doctor: install + clean + config-fill をまとめて実行
+  --assume <text>               sdd preflight: carry-over の open question / 前提を summary に記録 (複数指定可)
   --spec <id>                   atdd scaffold: 対象 spec (例: spec-0006)
   --spec <id>                   validate: 対象 spec に限定 (複数指定可; 例: --spec 0003 --spec spec-0004)
                                  指定 spec 外の spec-owned findings と specs-coverage レポート出力を除外する
@@ -363,14 +370,17 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  warnSink: (message: string) => void = warn,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(
+    warnSink(
       `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
     );
   }

@@ -147,6 +147,8 @@ export type ParsedArgs = {
     sddAction?: "preflight";
     /** --format <text|json> for `qfai sdd preflight`. */
     sddFormat?: "text" | "json";
+    /** Repeatable `--assume <text>` for `qfai sdd preflight` (carry-over open questions). */
+    sddAssumptions: string[];
     /** Subcommand for `qfai atdd <scaffold>`. */
     atddAction?: "scaffold";
     /** `--spec <id>` value for `qfai atdd scaffold`. */
@@ -174,6 +176,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     strict: false,
     guardrailsPaths: [],
     validateSpecIds: [],
+    sddAssumptions: [],
     help: false,
     invalidExitCode: 1,
   };
@@ -441,8 +444,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
+        // 不正値を黙って捨てると、`--fail-on neve` のような typo が
+        // 「既定の失敗閾値」として通り、利用者に説明のないまま CI が落ちる。
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
+        } else {
+          markInvalid();
         }
         i += 1;
         break;
@@ -692,6 +699,22 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else if (command === "validate") {
           // Repeatable: `--spec 0003 --spec 0004` scopes the run to both.
           options.validateSpecIds.push(next);
+        } else {
+          markInvalid();
+        }
+        i += 1;
+        break;
+      }
+      case "--assume": {
+        const next = readOptionValue(args, i);
+        if (next === null) {
+          markInvalid();
+          break;
+        }
+        if (command === "sdd") {
+          // Repeatable: `--assume A --assume B` は preflight summary の
+          // `Open Questions (Carry-over)` にそのまま並ぶ。
+          options.sddAssumptions.push(next);
         } else {
           markInvalid();
         }

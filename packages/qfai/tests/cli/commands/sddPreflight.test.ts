@@ -15,6 +15,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { runSddPreflightCommand } from "../../../src/cli/commands/sddPreflight.js";
+import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 
 const DISCUSSION_PACK_FILES = [
   "01_Context.md",
@@ -133,6 +134,134 @@ describe("qfai sdd preflight", () => {
     expect(payload["source"]).toBe("discussion-pack");
     expect(Array.isArray(payload["blockers"])).toBe(true);
     expect(payload["nextCommands"]).toEqual(["/qfai-discussion"]);
+  });
+
+  it("does not send a ready result back to /qfai-discussion", async () => {
+    // `nextCommands` is the blocker recovery route. Emitting it on a ready
+    // result pushes an operator who should enter Stage 1 Triage back into
+    // requirement authoring — in the text render and in the JSON payload.
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    const sinks = newSinks();
+
+    const exitCode = await runSddPreflightCommand({
+      root,
+      format: "json",
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(0);
+    const parsed: unknown = JSON.parse(sinks.out.join("\n"));
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("qfai sdd preflight --format json did not emit an object");
+    }
+    const payload: Record<string, unknown> = { ...parsed };
+    expect(payload["status"]).toBe("ready");
+    expect(payload["nextCommands"]).toEqual([]);
+
+    const textSinks = newSinks();
+    await runSddPreflightCommand({
+      root,
+      write: textSinks.write,
+      writeErr: textSinks.writeErr,
+    });
+    expect(textSinks.out.join("\n")).not.toContain("/qfai-discussion");
+  });
+
+  it("gates the pack the active pointer selects, not the newest one", async () => {
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    // Newest pack on disk, but incomplete: only an active pointer at the
+    // older pack should keep Stage 0 green.
+    await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260316010102003"), {
+      recursive: true,
+    });
+    await writeDiscussionCurrentId(root, "discussion-20260216010102003");
+
+    const sinks = newSinks();
+    const exitCode = await runSddPreflightCommand({
+      root,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(0);
+    const stdout = sinks.out.join("\n");
+    expect(stdout).toContain("status: ready");
+    expect(stdout).toContain("discussion-20260216010102003");
+    expect(stdout).not.toContain("discussion-20260316010102003");
+  });
+
+  it("stops on an active pointer that matches no pack and keeps the summary intact", async () => {
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+    await mkdir(path.dirname(summaryPath), { recursive: true });
+    await writeFile(summaryPath, "# Preflight Summary\n\n- keep me\n", "utf-8");
+    await writeDiscussionCurrentId(root, "discussion-20990101010101001");
+
+    const sinks = newSinks();
+    const exitCode = await runSddPreflightCommand({
+      root,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    const stderr = sinks.err.join("\n");
+    expect(stderr).toContain("discussion-20990101010101001");
+    expect(stderr).toContain("qfai discussion use");
+    expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain("keep me");
+  });
+
+  it("stops instead of falling back to defaults when qfai.config.yaml is broken", async () => {
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    await writeFile(path.join(root, "qfai.config.yaml"), "paths: [not, a, mapping\n", "utf-8");
+
+    const sinks = newSinks();
+    const exitCode = await runSddPreflightCommand({
+      root,
+      write: sinks.write,
+      writeErr: sinks.writeErr,
+    });
+
+    expect(exitCode).toBe(1);
+    expect(sinks.err.join("\n")).toContain("qfai.config.yaml");
+    expect(sinks.out).toEqual([]);
+    await expect(
+      readFile(path.join(root, ".qfai", "report", "preflight_summary.md"), { encoding: "utf-8" }),
+    ).rejects.toThrow();
+  });
+
+  it("records --assume carry-over and preserves it on the Stage 1 re-run", async () => {
+    const root = await newTempRoot();
+    await seedDiscussionPack(root, "20260216010102003");
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+
+    const first = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        assumptions: ["OQ-0001 は次フェーズへ持ち越し"],
+        write: first.write,
+        writeErr: first.writeErr,
+      }),
+    ).toBe(0);
+    expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain(
+      "- OQ-0001 は次フェーズへ持ち越し",
+    );
+
+    // Required Process step 3 re-runs the command with no flags; the
+    // carry-over recorded in Stage 0 must not become `- none`.
+    const second = newSinks();
+    expect(
+      await runSddPreflightCommand({ root, write: second.write, writeErr: second.writeErr }),
+    ).toBe(0);
+    const summary = await readFile(summaryPath, { encoding: "utf-8" });
+    expect(summary).toContain("- OQ-0001 は次フェーズへ持ち越し");
+    expect(summary).not.toContain("- none");
   });
 
   it("reports the blockers without failing under --fail-on never", async () => {

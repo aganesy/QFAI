@@ -119,9 +119,14 @@ npx qfai report
     `reviewerSignoff.status="pending"`, and no `terminationReason`; `status="completed"` requires `terminationReason`,
     a non-pending `finalDecision`, and a terminal `reviewerSignoff`.
 - `npx qfai sdd preflight`
-  - Runs the Stage 0 gate of `/qfai-sdd`: selects the latest discussion pack, counts the imported `REQ-*`,
+  - Runs the Stage 0 gate of `/qfai-sdd`: selects the active discussion pack, counts the imported `REQ-*`,
     resolves the blockers, and writes `.qfai/report/preflight_summary.md`. Exits 1 when the result is `blocked`
-    (use `--fail-on never` to report without failing); `--format json` emits the machine-readable result.
+    (use `--fail-on never` to report without failing); `--format json` emits the machine-readable result on stdout.
+  - The pack is the one `npx qfai discussion use <id>` pinned (`.qfai/state.json#discussion.currentId`); the
+    newest pack is used only when no pointer is set. A pointer that matches no pack on disk stops the run with
+    the candidate list instead of silently gating a different pack.
+  - `--assume <text>` (repeatable) records carry-over open questions / assumptions in the summary. Without it
+    the carry-over list already present in `preflight_summary.md` is preserved, not overwritten.
 
 ## ATDD annotation hard gate
 

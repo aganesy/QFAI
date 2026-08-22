@@ -347,4 +347,37 @@ describe("parseArgs: qfai sdd <subcommand>", () => {
     expect(parsed.invalid).toBe(true);
     expect(parsed.options.sddFormat).toBeUndefined();
   });
+
+  it("rejects an unsupported --fail-on value instead of silently dropping it", () => {
+    // `--fail-on neve` used to fall through as `undefined`, so a run meant to
+    // report-only exited 1 on blockers with nothing explaining the typo.
+    const cwd = process.cwd();
+    const parsed = parseArgs(["sdd", "preflight", "--fail-on", "neve"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("rejects an unsupported --fail-on value for validate as well", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--fail-on", "errors"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("collects repeatable --assume values for sdd preflight", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(
+      ["sdd", "preflight", "--assume", "OQ-0001 は次フェーズ", "--assume", "W-PENDING-PROMOTION"],
+      cwd,
+    );
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.sddAssumptions).toEqual(["OQ-0001 は次フェーズ", "W-PENDING-PROMOTION"]);
+  });
+
+  it("rejects --assume outside `sdd preflight`", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["validate", "--assume", "x"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.sddAssumptions).toEqual([]);
+  });
 });

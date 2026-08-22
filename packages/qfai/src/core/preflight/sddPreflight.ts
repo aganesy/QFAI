@@ -12,6 +12,12 @@ export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
   assumptions?: string[];
+  /**
+   * Pack to judge. Defaults to the newest pack under the discussion root;
+   * callers that honor `.qfai/state.json#discussion.currentId` pass the
+   * pointed-at pack so an explicitly pinned (older) pack is the one gated.
+   */
+  packDir?: string;
 };
 
 export type SddPreflightResult = {
@@ -36,7 +42,10 @@ export async function runSddPreflight(
 
   await mkdir(reportRoot, { recursive: true });
 
-  const readiness = await inspectLatestDiscussionPack(discussionRoot);
+  const readiness = await inspectLatestDiscussionPack(
+    discussionRoot,
+    options.packDir === undefined ? {} : { selectedPackDir: options.packDir },
+  );
   const nextCommands = ["/qfai-discussion"];
   const carryOverOpenQuestions = normalizeTextList(options.assumptions);
   const blockers = resolvePreflightBlockers(readiness);
