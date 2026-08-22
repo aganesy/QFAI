@@ -46,7 +46,7 @@ As a QFAI maintainer, I want a single canonical cross-skill handoff schema (`pac
 
 ## US-0015-0012: New Reviewer-Gate finding-code catalog
 
-As a Reviewer-Gate consumer, I want the eight new second-wave finding codes registered as a catalog (all severity error, each carrying a mandatory non-empty `justification:`), so that Capabilities across the pack are tied to Reviewer-Gate enforcement under the single justification-text contract (REQ-0168, TC-71 advisory-failing posture).
+As a Reviewer-Gate consumer, I want the eight new second-wave finding codes registered as a catalog (membership only — the catalog declares no per-code severity column, each code keeping the severity its own detector emits — with every code carrying a mandatory non-empty `justification:` whose empty / whitespace-only value is rejected at severity error), so that Capabilities across the pack are tied to Reviewer-Gate enforcement under the single justification-text contract (REQ-0168, TC-71 advisory-failing posture).
 
 ## US-0015-0013: `qfai audit log` CLI surface
 
