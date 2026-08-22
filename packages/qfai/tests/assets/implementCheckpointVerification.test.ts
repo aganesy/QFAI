@@ -202,6 +202,13 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(provenance).toContain(
         "../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries",
       );
+      // Nor may it re-derive one. "The last row a run completes is always a
+      // boundary" is false for the single-row handoff P1c makes while other
+      // `todo` rows are still open, and reading it that way puts every
+      // ATDD-driven run back on one full suite per row.
+      expect(provenance, "red-provenance.md must state no cadence condition").toContain(
+        "this file states no condition of its own",
+      );
     }
   });
 
