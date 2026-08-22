@@ -41,28 +41,60 @@ export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
 ] as const;
 
 /**
- * Issue codes that MUST stay hard error under exploration mode. This
- * set is the explicit, narrow allowlist of the structural / schema /
- * path gates referenced by the spec. Used by the unit test to assert
- * disjointness; the runtime relaxation does not consult this list
- * (anything not in `RELAXABLE` is left alone).
+ * Issue codes that MUST stay hard error under exploration mode. Used
+ * by the unit test to assert disjointness with `RELAXABLE`; the
+ * runtime relaxation does not consult this list (anything not in
+ * `RELAXABLE` is left alone).
  *
- * Every entry MUST be a code some validator under `core/validators/`
- * actually emits — the unit test asserts that, so a placeholder can no
- * longer satisfy the disjointness check vacuously. Listing a code no
- * emitter produces tells an auditor a gate survives exploration when
- * nothing backs the claim.
+ * This is NOT a hand-picked sample. It is the COMPLETE set of codes
+ * the prototyping structural-validator family emits at `error`
+ * severity, where "family" means exactly two source locations:
  *
- * The license gate is deliberately NOT listed. `licenseVerify` produces
- * no `Issue`: its failure is an exit-66 hard stop raised in
- * `cli/commands/prototypingIterate.ts` before any `Issue[]` exists, so
- * it is structurally out of reach of this post-filter and cannot be
- * expressed as a code allowlist entry.
+ *   - `core/validators/prototypingEvidence.ts`
+ *   - `core/validators/prototyping/**`
+ *
+ * The unit test derives that set from the sources and asserts SET
+ * EQUALITY with this list, in both directions. Completeness is what
+ * makes the list an audit surface rather than an anecdote, and it is
+ * what makes the disjointness assertion bite: moving any of these
+ * gates into `EXPLORATION_RELAXABLE_CODES` fails disjointness, and
+ * deleting it from here to dodge that fails the equality check while
+ * its emitter still exists. A newly added structural gate likewise
+ * fails equality until it is listed, forcing the hard-vs-relaxable
+ * call to be made explicitly.
+ *
+ * Two structural non-entries, both by construction rather than by
+ * omission:
+ *
+ *   - `QFAI-PROT-010` (screen-id casing) is emitted at `warning`, so
+ *     it is not a hard-error gate and there is nothing for the
+ *     relaxation to downgrade.
+ *   - The license gate has no code at all. `licenseVerify` produces no
+ *     `Issue`: its failure is an exit-66 hard stop raised in
+ *     `cli/commands/prototypingIterate.ts` before any `Issue[]`
+ *     exists, so it is out of reach of this post-filter and cannot be
+ *     expressed as an allowlist entry.
+ *
+ * Gates outside the family (e.g. `QFAI-DCON-0xx` reviewer gates other
+ * than the relaxable drift codes) also stay hard error at runtime —
+ * the post-filter only ever touches `RELAXABLE`. They are simply not
+ * part of this enumerated surface, which is scoped to the structural /
+ * schema / path family the spec names.
  */
 export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
+  "QFAI-PROT-001", // prototyping.json missing / unparseable / not an object
   "QFAI-PROT-002", // schema / required-field gate
+  "QFAI-PROT-003", // iterations[] must exist and contain at least iter-00
   "QFAI-PROT-004", // iter layout: iterations[i].index contiguity
+  "QFAI-PROT-005", // stopReason presence / enum / consistency
+  "QFAI-PROT-006", // iterations.length exceeds MAX_ITERATIONS
+  "QFAI-PROT-007", // acceptedIterationIndex === iterations.length - 1
+  "QFAI-PROT-008", // specsCovered[] spec-id format / missing spec
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
+  "QFAI-PROT-311", // prototyping delegation map integrity
+  "QFAI-PROT-335", // completion certificate: required evidence
+  "QFAI-PROT-336", // completion certificate: completion claimed without seal
+  "R-EXPLORATION-CERTIFY-ATTEMPT", // certify refuses a loop containing exploration iters
 ] as const;
 
 /**
