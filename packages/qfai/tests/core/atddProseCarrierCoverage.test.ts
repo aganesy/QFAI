@@ -279,6 +279,32 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("keeps reading code past a regex literal, whatever quoting it contains", async () => {
+    // Blanking literals must not blank code: a backtick inside a regex would
+    // open a template literal and swallow every line up to the next one,
+    // turning a genuinely executable suite into a carrier-only finding.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "const fence = /^\\s*```/;",
+            'it("serves the story", () => {',
+            '  expect(fence.test(1 / 2 + "```")).toBe(false);',
+            "});",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
+      },
+    );
+  });
+
   it("does not count a Gherkin Background as a scenario, because no runner collects it", async () => {
     // `Background:` is the preamble every scenario runs, so a feature holding
     // only one has nothing to execute the annotation against.

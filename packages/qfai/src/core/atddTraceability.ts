@@ -1271,13 +1271,21 @@ function blankSpan(span: string): string {
  * shebang, and quoted spans cover the string literals. Single- and
  * double-quoted spans stop at end of line, so an apostrophe in prose costs at
  * most the rest of its own line; triple quotes are matched first so a Python
- * docstring is blanked whole. A regex literal is not tracked — `/test\s*\(/`
- * in a source file still reads as a declaration, which errs toward calling a
- * carrier executable, the direction that reports nothing.
+ * docstring is blanked whole.
+ *
+ * Regex literals are tracked for one reason: a backtick inside one (`/^\s*```/`
+ * is real code in this repository) would otherwise open a template literal and
+ * blank every line up to the next backtick, taking a genuine declaration with
+ * it. Whether a `/` opens a literal or divides is decided by the preceding
+ * token, which is the standard heuristic and the reason `lastValue` is tracked
+ * across the loop.
  */
 function stripCommentsAndLiterals(text: string): string {
   let out = "";
   let index = 0;
+  // True when the last code token could end a value, so a following `/` is
+  // division rather than the start of a regex literal.
+  let lastValue = false;
   while (index < text.length) {
     const rest = text.slice(index);
     const block = /^\/\*[\s\S]*?(?:\*\/|$)/.exec(rest);
@@ -1296,15 +1304,30 @@ function stripCommentsAndLiterals(text: string): string {
     if (triple) {
       out += blankSpan(triple[0]);
       index += triple[0].length;
+      lastValue = true;
       continue;
     }
     const quoted = /^(?:"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?)/.exec(rest);
     if (quoted && quoted[0].length > 0) {
       out += blankSpan(quoted[0]);
       index += quoted[0].length;
+      lastValue = true;
       continue;
     }
-    out += text.charAt(index);
+    if (!lastValue) {
+      const regex = /^\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/.exec(rest);
+      if (regex) {
+        out += blankSpan(regex[0]);
+        index += regex[0].length;
+        lastValue = true;
+        continue;
+      }
+    }
+    const char = text.charAt(index);
+    if (!/\s/.test(char)) {
+      lastValue = /[\w$)\]]/.test(char);
+    }
+    out += char;
     index += 1;
   }
   return out;
