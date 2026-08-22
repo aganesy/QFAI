@@ -6,15 +6,12 @@
       "code": "QFAI-ATDD-112",
       "severity": "error",
       "category": "change",
-      "message": "宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0033, SPEC-0017:TC-0017-0034, SPEC-0017:TC-0017-0035, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070",
-      "suggested_action": "各 TC の宣言 Level が指すディレクトリに `QFAI:SPEC-XXXX:TC-YYYY` 注釈を追加してください（L3/Integration -> tests/integration/**、L4/API -> tests/api/**、L5/E2E -> tests/e2e/**、Level 未宣言は tests/integration/**）: tests/integration/**: SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0033, SPEC-0017:TC-0017-0034, SPEC-0017:TC-0017-0035, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070",
+      "message": "宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070",
+      "suggested_action": "各 TC の宣言 Level が指すディレクトリに `QFAI:SPEC-XXXX:TC-YYYY` 注釈を追加してください（L3/Integration -> tests/integration/**、L4/API -> tests/api/**、L5/E2E -> tests/e2e/**、Level 未宣言は tests/integration/**）: tests/integration/**: SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070",
       "file": ".qfai/specs/spec-0017",
       "rule": "atddCodeTraceability.coverage.tcToDeclaredLayer",
       "refs": [
         "SPEC-0017:TC-0017-0032",
-        "SPEC-0017:TC-0017-0033",
-        "SPEC-0017:TC-0017-0034",
-        "SPEC-0017:TC-0017-0035",
         "SPEC-0017:TC-0017-0069",
         "SPEC-0017:TC-0017-0070"
       ]
@@ -85,7 +82,7 @@
         "**/.next/**",
         "**/out/**"
       ],
-      "matchedFileCount": 476,
+      "matchedFileCount": 477,
       "truncated": false,
       "limit": 20000
     }
