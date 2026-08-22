@@ -304,7 +304,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 12 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 13 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -368,7 +368,7 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 12 passed (12), exit 0
+  -> Tests 13 passed (13), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
       confirmed executing, added with the repairs that close them. The 12th is
       the digest collision found by attacking the new gate rather than by a
@@ -2051,7 +2051,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 14: the e2e figure is 1446 and the integration+unit figure 1219. Round 12 re-measured them at
+round 14: the e2e figure is 1446 and the integration+unit figure 1220. Round 12 re-measured them at
 1443 and 1216 and round 14 moved both again — the e2e figure by exactly the arithmetic the rule below
 predicts, 1443 + (881 - 879) = 1445, since this round added two callsites: the derived check over the
 mechanism corpus's own size.
@@ -2093,7 +2093,7 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
 pnpm -C packages/qfai test:e2e                  1446 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1219 passed / 19 skipped, exit 0
+vitest --project integration --project unit     1220 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0

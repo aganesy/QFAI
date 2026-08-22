@@ -72,6 +72,84 @@ const OPAQUE_AFTER = new Set(["-e", "--eval", "-c", "--command", "-p", "--print"
  * invocation) with their own quote state (so the payload inside them stays opaque). The substitution is
  * then removed from the surrounding word, because what it contributes there is its output, not a command.
  */
+/**
+ * The here-document opening at `at`, if one does, read once for every walk that needs it.
+ *
+ * `commandsOf` has read this since round 15 and `codeMask` never did, so the two disagreed about
+ * whether a here-document's body is code — the differential test below found it on its first run,
+ * which is the sixth "two walks, one question" finding on this file and the first one caught by a test
+ * rather than by a reviewer. One reader, so there is nothing left to diverge.
+ *
+ * `quoted` decides what the DATA is: a quoted delimiter makes it literal, an unquoted one leaves it
+ * subject to expansion, so a substitution inside it is a command that runs.
+ */
+interface HereDoc {
+  readonly delimiter: string;
+  readonly quoted: boolean;
+  /** The index just past the delimiter word: the rest of the operator's line starts here. */
+  readonly afterDelimiter: number;
+  /** The data region, `[start, end)`, empty when the closer is missing. */
+  readonly dataStart: number;
+  readonly dataEnd: number;
+  /** True when no closing delimiter line exists, which is a refusal rather than a licence. */
+  readonly unterminated: boolean;
+}
+
+function hereDocAt(body: string, at: number): HereDoc | undefined {
+  // `body[at - 1] !== "<"` because this matched the SECOND `<` of a here-STRING: `done <<< "$changed"`
+  // then read `$changed` as a delimiter, and once a missing closer became a refusal the shipped tree
+  // refused its own line. A here-string is one operator.
+  if (body[at] !== "<" || body[at + 1] !== "<" || body[at + 2] === "<" || body[at - 1] === "<") {
+    return undefined;
+  }
+  let k = at + 2;
+  if (body[k] === "-") k += 1;
+  while (k < body.length && /[ \t]/.test(body[k] ?? "")) k += 1;
+  let delimiter = "";
+  let delimiterQuote = "";
+  let quoted = false;
+  for (; k < body.length; k += 1) {
+    const next = body[k] ?? "";
+    if (delimiterQuote !== "") {
+      if (next === delimiterQuote) delimiterQuote = "";
+      else delimiter += next;
+      continue;
+    }
+    if (next === '"' || next === "'") {
+      delimiterQuote = next;
+      quoted = true;
+      continue;
+    }
+    // `<<\EOF` is bash's THIRD spelling of a quoted delimiter, and the delimiter it names is `EOF`.
+    if (next === "\\") {
+      delimiter += body[k + 1] ?? "";
+      quoted = true;
+      k += 1;
+      continue;
+    }
+    // `<`, `>` and `(` end the word too, or the scanner and bash name different delimiters:
+    // `cat <<EOF>>"$GITHUB_OUTPUT"` read the delimiter as `EOF>>$GITHUB_OUTPUT`.
+    if (/[\s;&|)<>(]/.test(next)) break;
+    delimiter += next;
+  }
+  if (delimiter === "") return undefined;
+  const lineEnd = body.indexOf("\n", k);
+  if (lineEnd === -1) return undefined;
+  const rest = body.slice(lineEnd + 1);
+  // Every regex metacharacter escaped. Round 16 found this class written so that the escape for `]`
+  // closed the class instead, by extracting it from this file's own bytes: reading the line looks right.
+  const pattern = delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const closer = new RegExp(`^[ \\t]*${pattern}[ \\t]*$`, "m").exec(rest);
+  return {
+    delimiter,
+    quoted,
+    afterDelimiter: k,
+    dataStart: lineEnd + 1,
+    dataEnd: closer === null ? body.length : lineEnd + 1 + closer.index + closer[0].length,
+    unterminated: closer === null,
+  };
+}
+
 export function commandsOf(body: string): string[] {
   const mask = codeMask(body);
   const out: string[] = [];
@@ -128,104 +206,41 @@ export function commandsOf(body: string): string[] {
     // nobody can act on because there is nothing there to fix. The delimiter is consumed with the
     // operator so the `<<` still reaches `redirectionsOf` and the stdin rule still fires.
     //
-    // **Only the DATA is skipped.** The first version of this jumped from the operator to the end of the
-    // here-document, discarding the rest of the operator's own line with it — so `read x <<EOF && npx
-    // tsup` executed the build and `read x <<EOF > evil.cjs` created the file, both reporting nothing.
-    // `cat <<EOF >> "$GITHUB_OUTPUT"` is GitHub's documented multiline-output idiom, so a lane reaching
-    // for it is ordinary rather than adversarial. The skip is deferred to the newline instead.
-    // `body[i - 1] !== "<"` because this matched the SECOND `<` of a here-STRING: `done <<< "$changed"`
-    // then read `$changed` as a here-document delimiter, and once a missing closer became a refusal
-    // rather than a licence, the shipped tree refused its own line. A here-string is one operator.
-    if (
-      ch === "<" &&
-      body[i + 1] === "<" &&
-      body[i + 2] !== "<" &&
-      body[i - 1] !== "<" &&
-      quote === ""
-    ) {
-      let k = i + 2;
-      if (body[k] === "-") k += 1;
-      while (k < body.length && /[ \t]/.test(body[k] ?? "")) k += 1;
-      let delimiter = "";
-      let delimiterQuote = "";
-      // Whether the delimiter was quoted AT ALL, in any of bash's three spellings. It decides what the
-      // DATA is: a quoted delimiter makes the here-document literal, and an unquoted one leaves it
-      // subject to expansion — so `read v <<EOF` with `$(npx tsup)` in its body RUNS the build, while
-      // the same body under `<<'EOF'` does not. The first version of this repair treated all data as
-      // inert and its own comment cited only the quoted case, which is the reading that was wrong.
-      let quotedDelimiter = false;
-      for (; k < body.length; k += 1) {
-        const next = body[k] ?? "";
-        if (delimiterQuote !== "") {
-          if (next === delimiterQuote) delimiterQuote = "";
-          else delimiter += next;
-          continue;
-        }
-        if (next === '"' || next === "'") {
-          delimiterQuote = next;
-          quotedDelimiter = true;
-          continue;
-        }
-        // `<<\\EOF` is bash's THIRD spelling of a quoted delimiter, beside `<<'EOF'` and `<<""EOF""`,
-        // and the delimiter it names is `EOF`. This walk kept the backslash, so the closer it built
-        // never matched — and the rule below then treated the whole rest of the body as data.
-        if (next === "\\") {
-          delimiter += body[k + 1] ?? "";
-          quotedDelimiter = true;
-          k += 1;
-          continue;
-        }
-        // `<`, `>` and `(` end the word too. Without them the scanner and bash named different
-        // delimiters: `cat <<EOF>>"$GITHUB_OUTPUT"` — the shipped idiom with one space removed — read
-        // the delimiter as `EOF>>$GITHUB_OUTPUT`, so the closer never matched, the data region ran past
-        // real commands, and the line was refused for a delimiter that does not exist.
-        if (/[\s;&|)<>(]/.test(next)) break;
-        delimiter += next;
-      }
-      if (delimiter !== "") {
-        const lineEnd = body.indexOf("\n", k);
-        if (lineEnd !== -1) {
-          const rest = body.slice(lineEnd + 1);
-          // Every regex metacharacter, escaped. The first version wrote this class as
-          // `[.*+?^${}()|[\\]\\\\]`, where the `\\]` closes the class rather than escaping a bracket —
-          // so it escaped nothing, and a delimiter carrying `+` or `$` made the closer never match and
-          // swallowed the rest of the body. Round 16 measured it by extracting the class from this
-          // file's own bytes, which is the only way to see it: reading the line looks right.
-          const quoted = delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-          const closer = new RegExp(`^[ \\t]*${quoted}[ \\t]*$`, "m");
-          const at = closer.exec(rest);
-          // **A missing closer is a refusal, not a licence.** The first version answered one by
-          // discarding everything after the operator as data — so any construct that stopped the
-          // closer matching hid the whole rest of the body, which is fail-open in the one place this
-          // file exists to be fail-closed. A delimiter the scanner cannot pair is a delimiter it
-          // cannot read.
-          if (at === null) out.push(`unterminated-here-document ${delimiter}`);
-          // An UNQUOTED delimiter leaves the data subject to expansion, so a substitution inside it is
-          // a command that runs. The data is not read as commands — it is data — but every `$( … )` and
-          // backtick in it is, which is the distinction the first version of this repair missed while
-          // its comment cited only the quoted case.
-          if (!quotedDelimiter) {
-            const data = at === null ? rest : rest.slice(0, at.index);
-            for (let d = 0; d < data.length; d += 1) {
-              if (data[d] === "$" && data[d + 1] === "(") {
-                const close = matchingParen(data, d + 1);
-                out.push(...commandsOf(data.slice(d + 2, close)));
-                d = close;
-                continue;
-              }
-              if (data[d] === "`") {
-                const close = data.indexOf("`", d + 1);
-                out.push(...commandsOf(data.slice(d + 1, close === -1 ? data.length : close)));
-                d = close === -1 ? data.length : close;
-              }
-            }
+    // Only the DATA is skipped, and the skip is deferred to the newline: the first version jumped from
+    // the operator to the end of the here-document and discarded the rest of the operator's own line
+    // with it, so `read x <<EOF && npx tsup` executed and `read x <<EOF > evil.cjs` created the file.
+    //
+    // `hereDocAt` is shared with `codeMask`, which had no model of this at all until the differential
+    // test found the two walks disagreeing about whether a here-document's body is code.
+    const here = quote === "" ? hereDocAt(body, i) : undefined;
+    if (here !== undefined) {
+      // **A missing closer is a refusal, not a licence.** Answering one by discarding everything after
+      // the operator as data means any construct that stops the closer matching hides the rest of the
+      // body — fail-open in the one place this file exists to be fail-closed.
+      if (here.unterminated) out.push(`unterminated-here-document ${here.delimiter}`);
+      // An UNQUOTED delimiter leaves the data subject to expansion, so a substitution inside it is a
+      // command that runs. The data is not read as commands — it is data — but every `$( … )` and
+      // backtick in it is.
+      if (!here.quoted) {
+        const data = body.slice(here.dataStart, here.dataEnd);
+        for (let d = 0; d < data.length; d += 1) {
+          if (data[d] === "$" && data[d + 1] === "(") {
+            const close = matchingParen(data, d + 1);
+            out.push(...commandsOf(data.slice(d + 2, close)));
+            d = close;
+            continue;
           }
-          current += body.slice(i, k);
-          heredocEnd = lineEnd + (at === null ? rest.length : at.index + at[0].length);
-          i = k - 1;
-          continue;
+          if (data[d] === "`") {
+            const close = data.indexOf("`", d + 1);
+            out.push(...commandsOf(data.slice(d + 1, close === -1 ? data.length : close)));
+            d = close === -1 ? data.length : close;
+          }
         }
       }
+      current += body.slice(i, here.afterDelimiter);
+      heredocEnd = here.dataEnd;
+      i = here.afterDelimiter - 1;
+      continue;
     }
     if ((ch === "<" || ch === ">") && body[i + 1] === "(" && quote !== "'") {
       const close = matchingParen(body, i + 1);
@@ -389,6 +404,15 @@ export function commandsOf(body: string): string[] {
  * inside a string literal or a trailing `#` comment was read as a case-arm close and the pipe before it
  * stopped splitting. Two copies of the lexer is the two-copies-of-an-allowlist defect one size smaller.
  */
+/**
+ * Which characters of a body are CODE, exported so a test can hold the mask and the verdict to each
+ * other. Every escape found in rounds 15 to 18 was a build at a position this function calls code
+ * that `refusals()` did not refuse, because some other walk disagreed with it about quotes.
+ */
+export function maskOf(body: string): boolean[] {
+  return codeMask(body);
+}
+
 function codeMask(body: string): boolean[] {
   const mask = new Array<boolean>(body.length).fill(true);
   let quote = "";
@@ -415,6 +439,18 @@ function codeMask(body: string): boolean[] {
     //
     // `commandsOf` has always entered substitutions on their own terms; this is the same repair in the
     // other walk, and the disagreement between the two is what the finding was.
+    // A here-document's data is not code, and this walk had no model of one while `commandsOf`
+    // has since round 15. The differential test below found them disagreeing on its first run.
+    if (quote === "") {
+      const here = hereDocAt(body, i);
+      if (here !== undefined) {
+        for (let j = i; j < here.afterDelimiter; j += 1) mask[j] = false;
+        for (let j = here.dataStart; j < here.dataEnd && j < body.length; j += 1) mask[j] = false;
+        // The rest of the operator's LINE is still code; only the data is not.
+        i = here.afterDelimiter - 1;
+        continue;
+      }
+    }
     if (quote !== "'" && ((ch === "$" && body[i + 1] === "(") || ch === "<" || ch === ">")) {
       const opensAt = ch === "$" ? i + 1 : i + 1;
       if (body[opensAt] === "(") {

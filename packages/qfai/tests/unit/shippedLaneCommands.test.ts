@@ -32,6 +32,7 @@ import {
   HARMLESS_PROGRAMS,
   invocationOf,
   invocationsOf,
+  maskOf,
   payloadDigest,
   refusals,
   NOTHING,
@@ -387,6 +388,77 @@ describe("the shipped-lane allowlist", () => {
       if (payloadDigest(left) === payloadDigest(right)) survived.push(`payloadDigest: ${why}`);
     }
     expect(survived, "two inputs that behave differently must not share a digest").toEqual([]);
+  });
+
+  it("refuses a build wherever the mask says the text is code", () => {
+    // **The differential test the last four rounds were doing by hand.**
+    //
+    // Every escape found in rounds 15 to 18 has the same signature: a build command sat at a position
+    // `codeMask` calls CODE, and `refusals()` returned `[]` anyway — because some other walk in this
+    // file disagreed with the mask about quotes, escapes, comments or here-documents. Three quote
+    // walks, two comment rules, two fence strippers: each was found as a disagreement, and each was
+    // found by a reviewer generating decorations by hand and running them.
+    //
+    // So the property is stated once and generated: **if the mask says a build is code, the scan must
+    // refuse it, and if the mask says it is not, the scan must not be asked to.** That ties the two
+    // instruments together rather than leaving each to be checked against a corpus of the last round's
+    // spellings, and a walk that diverges from the mask fails here whatever the spelling.
+    const BUILD = "npx tsup";
+    // Decorations that put a build at a CODE position in bash, one per construct this file has been
+    // wrong about. Each `%s` is where the build goes.
+    const live = [
+      "%s",
+      "echo a && %s",
+      "echo a ; %s",
+      "echo a | %s",
+      "echo a\n%s",
+      'echo "quoted" && %s',
+      "echo 'quoted' && %s",
+      "echo a\\> | %s",
+      "echo a\\>| %s",
+      "echo $'a\\'' && %s",
+      'echo "$(echo \\")" ; %s',
+      "echo x <\\ #y & %s",
+      'echo x > "$GITHUB_OUTPUT" | %s',
+      "read v <<EOF\ndata\nEOF\n%s",
+      "read v <<'EOF'\ndata\nEOF\n%s",
+      "read v <<\\EOF\ndata\nEOF\n%s",
+      "case $x in *) %s ;; esac",
+      "if [ -f package.json ]; then %s; fi",
+      "build_once() { %s; }",
+      "( %s )",
+      "read v <<EOF\n$(%s)\nEOF",
+    ];
+    // …and decorations that put it where bash never runs it. The scan may refuse these — fail-closed is
+    // allowed — but the mask must agree that they are not code, or the mask is the thing that is wrong.
+    const inert = ["echo '%s'", 'echo "%s"', "# %s", "echo a # %s", "read v <<'EOF'\n%s\nEOF"];
+
+    const missed: string[] = [];
+    const misread: string[] = [];
+    for (const shape of live) {
+      const body = shape.replace("%s", BUILD);
+      const at = body.indexOf(BUILD);
+      if (maskOf(body)[at] !== true) {
+        misread.push(`live but masked: ${JSON.stringify(shape)}`);
+        continue;
+      }
+      if (refusals(body).length === 0) missed.push(JSON.stringify(shape));
+    }
+    for (const shape of inert) {
+      const body = shape.replace("%s", BUILD);
+      const at = body.indexOf(BUILD);
+      if (maskOf(body)[at] === true) misread.push(`inert but code: ${JSON.stringify(shape)}`);
+    }
+
+    expect(
+      misread,
+      "the mask and bash disagree about whether this position runs — the mask is the thing to fix",
+    ).toEqual([]);
+    expect(
+      missed,
+      "a build at a position the mask calls code, which the scan did not refuse. Every escape found " +
+        "in rounds 15 to 18 had this signature, and each was a second walk disagreeing with the mask",
+    ).toEqual([]);
   });
 
   it("accepts the shapes the shipped tree actually contains", () => {
