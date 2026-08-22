@@ -77,7 +77,7 @@
 // QFAI:SPEC-0017:US-0017-0007
 
 import { spawnSync } from "node:child_process";
-import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import process from "node:process";
@@ -85,13 +85,14 @@ import process from "node:process";
 import { afterAll, describe, expect, it } from "vitest";
 
 import { CONCURRENCY_ENV, DECLARED_START, WORKERS_ENV, tunable } from "../../vitest.knobs.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const temporary: string[] = [];
 
 afterAll(async () => {
   for (const dir of temporary) {
-    await rm(dir, { recursive: true, force: true });
+    await removeTempTree(dir);
   }
 });
 

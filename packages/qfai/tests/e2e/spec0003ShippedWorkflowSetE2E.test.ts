@@ -24,7 +24,7 @@
  * work, and this repository has already pushed a slice past its timeout with that shape.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -40,6 +40,7 @@ import {
   parseHeaderTable,
 } from "../helpers/shippedWorkflowFixtures.js";
 import { captureStdout } from "../helpers/stdout.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/e2e/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -62,7 +63,7 @@ function project(): Promise<string> {
 afterAll(async () => {
   if (projectPromise === undefined) return;
   const dir = await projectPromise;
-  await rm(dir, { recursive: true, force: true });
+  await removeTempTree(dir);
 });
 
 async function workflowsDir(): Promise<string> {
@@ -167,7 +168,7 @@ async function runStep(body: string, cwd: string, env: NodeJS.ProcessEnv = {}): 
       skipped: false,
     };
   } finally {
-    await rm(stage, { recursive: true, force: true });
+    await removeTempTree(stage);
   }
 }
 
@@ -213,7 +214,7 @@ async function gitRepoWithCommits(trees: ReadonlyArray<Record<string, string>>):
 
 const gitRepos: string[] = [];
 afterAll(async () => {
-  await Promise.allSettled(gitRepos.map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.allSettled(gitRepos.map((dir) => removeTempTree(dir)));
 });
 
 async function scratchRepo(trees: ReadonlyArray<Record<string, string>>): Promise<{
@@ -467,7 +468,7 @@ describe(
         expect(broken.status).toBe(0);
         expect(broken.outputs["scripts"]).toBe("[]");
       } finally {
-        await rm(cwd, { recursive: true, force: true });
+        await removeTempTree(cwd);
       }
     });
 
@@ -590,7 +591,7 @@ describe(
         });
         expect(cancelled.status).toBe(1);
       } finally {
-        await rm(cwd, { recursive: true, force: true });
+        await removeTempTree(cwd);
       }
     });
   },
@@ -668,7 +669,7 @@ describe(
         expect(primary.status).toBe(0);
         expect(primary.outputs["version"]).toBe("20.19.4");
       } finally {
-        await rm(cwd, { recursive: true, force: true });
+        await removeTempTree(cwd);
       }
     });
 
@@ -707,7 +708,7 @@ describe(
         expect(resolvable.status).toBe(0);
         expect(resolvable.stdout).toContain("pnpm@9.12.3");
       } finally {
-        await rm(cwd, { recursive: true, force: true });
+        await removeTempTree(cwd);
       }
     });
 
@@ -767,7 +768,7 @@ describe(
           VALIDATE,
         ]);
       } finally {
-        await rm(dir, { recursive: true, force: true });
+        await removeTempTree(dir);
       }
     });
 
@@ -785,7 +786,7 @@ describe(
         await captureStdout(() => runInit({ dir, force: true, dryRun: false, yes: true }));
         expect(await readFile(target, "utf-8")).toBe(edited);
       } finally {
-        await rm(dir, { recursive: true, force: true });
+        await removeTempTree(dir);
       }
     });
   },
@@ -859,7 +860,7 @@ describe(
           "the drift finding does not carry the value the shape declares",
         ).toMatch(/full/);
       } finally {
-        await rm(stage, { recursive: true, force: true });
+        await removeTempTree(stage);
       }
     });
   },

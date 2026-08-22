@@ -16,7 +16,7 @@
  * every sibling suite reads.
  */
 import { spawnSync } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -26,6 +26,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/core/config.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import type { Issue } from "../../src/core/types.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/e2e/<this file> -> tests -> packages/qfai -> packages -> repo root
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -58,7 +59,7 @@ beforeEach(async () => {
 
 afterEach(async () => {
   const dirs = scratch.splice(0, scratch.length);
-  await Promise.allSettled([root, ...dirs].map((dir) => rm(dir, { recursive: true, force: true })));
+  await Promise.allSettled([root, ...dirs].map((dir) => removeTempTree(dir)));
 });
 
 /** Both trees the lane's rules cover, staged under one root so the plant is disposable. */

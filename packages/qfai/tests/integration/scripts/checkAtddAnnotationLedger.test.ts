@@ -14,7 +14,7 @@
  * in one atomic commit. The script is now here, and these are its tests.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -24,6 +24,7 @@ import {
   checkLedger,
   collectTestSources,
 } from "../../../../../scripts/check-atdd-annotation-ledger.mjs";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 /**
  * Build an annotation token from parts, so this file contains no live one.
@@ -46,7 +47,7 @@ async function temp(): Promise<string> {
 }
 
 afterAll(async () => {
-  for (const dir of temps) await rm(dir, { recursive: true, force: true });
+  for (const dir of temps) await removeTempTree(dir);
 });
 
 describe("checkLedger", () => {
