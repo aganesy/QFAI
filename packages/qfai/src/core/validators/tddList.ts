@@ -546,6 +546,13 @@ function tcNotCoveredWithoutLedger(
 }
 
 /**
+ * The spec ids the steering surface accounts for, or `null` when the surface
+ * could not be walked. `null` is not "no entry exists" — the check has no
+ * answer and stays silent rather than reporting every stopped spec.
+ */
+type StoppedSpecIndex = ReadonlySet<string> | null;
+
+/**
  * The finding a spec owes when its ledger stopped and `.qfai/steering/` holds
  * no record of why.
  *
@@ -557,8 +564,9 @@ function blockedWithoutWorklog(
   blockedRowLabels: readonly string[],
   specNumber: string,
   relPath: string,
-  stoppedSpecIds: ReadonlySet<string>,
+  stoppedSpecIds: StoppedSpecIndex,
 ): Issue[] {
+  if (stoppedSpecIds === null) return [];
   const specId = `spec-${specNumber}`;
   if (blockedRowLabels.length === 0 || stoppedSpecIds.has(specId)) return [];
   const kinds = WORKLOG_STOP_KINDS.map((kind) => `\`kind: ${kind}\``).join(" or ");
@@ -583,7 +591,31 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
   // Read once for the whole run: the steering surface is project-wide, and one
   // walk per spec would re-read every entry for every ledger.
-  const stoppedSpecIds = collectStoppedSpecIds(await collectWorklogEntries(root));
+  //
+  // A walk that fails on something other than "the surface is absent" (EACCES,
+  // a regular file where the directory belongs, an unreadable nested folder)
+  // must not take the ledger validation with it: this profile is the implement
+  // stage's completion gate, and before this check existed it did not read the
+  // steering surface at all. The failure becomes its own finding and the stop
+  // check abstains.
+  let stoppedSpecIds: StoppedSpecIndex = null;
+  try {
+    stoppedSpecIds = collectStoppedSpecIds(await collectWorklogEntries(root));
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    issues.push(
+      issue(
+        "TDDLIST_WORKLOG_UNREADABLE",
+        `\`${PROJECT_STEERING_DIR}/\` could not be read — ${detail}. Ledger validation continued, but no spec was checked for a work-log entry accounting for its blocked rows`,
+        "warning",
+        PROJECT_STEERING_DIR,
+        "tddList.blockedWorklog.unreadable",
+        undefined,
+        "change",
+        `\`${PROJECT_STEERING_DIR}/\` を走査できる状態にしてください（ディレクトリであること、読み取り権限があること）。復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。`,
+      ),
+    );
+  }
 
   for (const entry of entries) {
     const specIssues = await validateSpecTddList(
@@ -604,7 +636,7 @@ async function validateSpecTddList(
   specDir: string,
   specNumber: string,
   specsRoot: string,
-  stoppedSpecIds: ReadonlySet<string>,
+  stoppedSpecIds: StoppedSpecIndex,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);

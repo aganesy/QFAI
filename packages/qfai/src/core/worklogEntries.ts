@@ -5,7 +5,11 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import { isEnoent } from "./fs/errno.js";
-import { PROJECT_STEERING_DIR, PROJECT_STEERING_TEMPLATES_SUBDIR } from "./paths/assistantPaths.js";
+import {
+  PROJECT_STEERING_DIR,
+  PROJECT_STEERING_TEMPLATES_SUBDIR,
+  WORKLOG_ENTRY_STATUSES,
+} from "./paths/assistantPaths.js";
 
 /**
  * The reader for the `.qfai/steering/` work-log surface.
@@ -58,17 +62,34 @@ export async function collectWorklogEntries(root: string): Promise<WorklogEntry[
 }
 
 /**
- * The spec ids that a `blocker` / `handoff` entry accounts for.
+ * The `status` values whose entry still accounts for a stop that is in force.
  *
- * Both association routes count: `scope: spec-NNNN` names the one spec the
- * entry applies to, and a `links[]` element resolves a `global` entry — a
- * handoff spanning several specs is written once with the specs in `links`,
- * and requiring `scope` would ask the author to duplicate it per spec.
+ * `archived` is excluded: it is the closed state, so a resolved blocker from
+ * three months ago must not stand in for the entry a stop today owes. Leaving
+ * it in would let one spec's first blocker silence the check forever.
+ */
+const OPEN_WORKLOG_STATUSES: readonly string[] = WORKLOG_ENTRY_STATUSES.filter(
+  (status) => status !== "archived",
+);
+
+/**
+ * The spec ids that an open `blocker` / `handoff` entry accounts for.
  *
- * `status` is deliberately not filtered. An `archived` blocker beside a still
- * `blocked` row is a contradiction worth reporting, but it is a different
- * finding from "nothing was ever written", and treating it as this one would
- * mean re-opening entries to silence a validator.
+ * Both association routes count, but they are not symmetric:
+ *
+ * - `scope: spec-NNNN` names the one spec the entry applies to.
+ * - `links[]` resolves the spec set of a `scope: global` entry only — a handoff
+ *   spanning several specs is written once with the specs in `links`, and
+ *   requiring `scope` would ask the author to duplicate it per spec. On a
+ *   `scope: spec-NNNN` entry `links` is a plain cross-reference, and the specs
+ *   it names never read the entry (implementation skills filter on
+ *   `scope ∈ {global, current-spec}`), so it cannot account for their stop.
+ *
+ * An entry is counted only when its frontmatter has the shape the work-log
+ * contract requires. `--profile tdd` does not run `validateWorklogSurface`, so
+ * without this gate a file carrying nothing but `kind:` and `scope:` — never a
+ * work-log by the schema, and never reported under that profile — would
+ * suppress the finding.
  */
 export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<string> {
   const specIds = new Set<string>();
@@ -76,9 +97,13 @@ export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<str
     const fm = entry.frontmatter;
     if (fm === null) continue;
     if (typeof fm.kind !== "string" || !WORKLOG_STOP_KINDS.includes(fm.kind)) continue;
-    if (typeof fm.scope === "string" && SPEC_ID.test(fm.scope.trim())) {
-      specIds.add(fm.scope.trim());
+    if (!hasStopRecordShape(fm)) continue;
+    const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
+    if (SPEC_ID.test(scope)) {
+      specIds.add(scope);
+      continue;
     }
+    if (scope !== "global") continue;
     if (!Array.isArray(fm.links)) continue;
     for (const link of fm.links) {
       if (typeof link !== "string") continue;
@@ -89,7 +114,31 @@ export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<str
   return specIds;
 }
 
+/**
+ * Whether the frontmatter carries the required fields of
+ * `worklog-entry.schema.md` in the required shapes.
+ *
+ * Shape only — `worklogSurface` stays the authority on the values (calendar
+ * validity of the dates, `id`-to-filename agreement, link resolution) and is
+ * the validator that reports them. This asks the narrower question the stop
+ * check needs an answer to: is this file a work-log entry at all?
+ */
+function hasStopRecordShape(fm: WorklogFrontmatter): boolean {
+  if (typeof fm.id !== "string" || fm.id.length === 0) return false;
+  if (typeof fm.status !== "string" || !OPEN_WORKLOG_STATUSES.includes(fm.status)) return false;
+  if (typeof fm.blocking !== "boolean") return false;
+  if (!Array.isArray(fm.links)) return false;
+  const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
+  if (scope !== "global" && !SPEC_ID.test(scope)) return false;
+  for (const field of ["created", "updated"] as const) {
+    const value = fm[field];
+    if (typeof value !== "string" || !ISO_DATE.test(value.trim())) return false;
+  }
+  return true;
+}
+
 const SPEC_ID = /^spec-\d{4}$/;
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function collectFrom(dir: string, baseRoot: string): Promise<WorklogEntry[]> {
   // baseRoot is the project root (NOT `dir`) so that nested entries still

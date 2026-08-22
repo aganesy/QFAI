@@ -38,6 +38,7 @@ type SteeringSeed = Readonly<Record<string, string>>;
 async function run(
   ledger: string,
   steering: SteeringSeed = {},
+  opts: { readonly steeringIsRegularFile?: boolean } = {},
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
   const root = path.join(
     os.tmpdir(),
@@ -55,6 +56,13 @@ async function run(
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
     await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
+    if (opts.steeringIsRegularFile === true) {
+      // A regular file where the surface belongs: `readdir` fails with
+      // ENOTDIR, which is the portable stand-in for the EACCES / unreadable
+      // nested folder cases that a unit test cannot create on every OS.
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      await writeFile(path.join(root, ".qfai", "steering"), "not a directory\n", "utf-8");
+    }
     const steeringNames = Object.keys(steering);
     if (steeringNames.length > 0) {
       const steeringDir = path.join(root, ".qfai", "steering");
@@ -250,5 +258,58 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
       `${NINE_COL}\n| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | todo | - | - |  |\n`,
     );
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+  });
+
+  it("is not satisfied by an archived entry", async () => {
+    // The closed state. A blocker resolved months ago must not stand in for
+    // the record today's stop owes, or the spec's first blocker would silence
+    // the check for the life of the project.
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "2026-05-01-old.md": entry({
+        id: "2026-05-01-old",
+        kind: "blocker",
+        status: "archived",
+        scope: "spec-0001",
+      }),
+    });
+    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+  });
+
+  it("is not satisfied by a file that is not a schema-shaped entry", async () => {
+    // `--profile tdd` never runs `validateWorklogSurface`, so a stub carrying
+    // only `kind:` and `scope:` would otherwise suppress the finding with
+    // nothing else reporting it.
+    const stub = ["---", "kind: blocker", "scope: spec-0001", "---", "", "stuck", ""].join("\n");
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, { "stub.md": stub });
+    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+  });
+
+  it("is not satisfied by another spec's entry that merely links this spec", async () => {
+    // `scope: spec-0002` applies to spec-0002 alone; `links` is a
+    // cross-reference. spec-0001's implementation skill filters on
+    // `scope ∈ {global, spec-0001}` and never reads this entry.
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "2026-08-22-other.md": entry({
+        id: "2026-08-22-other",
+        kind: "blocker",
+        scope: "spec-0002",
+        links: ["spec-0001"],
+      }),
+    });
+    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+  });
+
+  it("reports an unwalkable steering surface without aborting the ledger run", async () => {
+    // The row also has an empty `Blocked-By`, so a ledger check unrelated to
+    // the steering surface must still be reported.
+    const noRef = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - |  |`;
+    const issues = await run(`${NINE_COL}\n${noRef}\n`, {}, { steeringIsRegularFile: true });
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("TDDLIST_WORKLOG_UNREADABLE");
+    // The surface gave no answer, so the stop check abstains rather than
+    // accusing every blocked spec of an omission it cannot see.
+    expect(codes).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    // And the rest of the ledger was still validated.
+    expect(codes).toContain("TDDLIST_BLOCKED_MISSING_REF");
   });
 });
