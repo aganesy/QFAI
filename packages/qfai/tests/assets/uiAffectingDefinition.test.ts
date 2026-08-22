@@ -31,6 +31,7 @@ const POLICY = `${IMPLEMENT}/references/parallelization-policy.md`;
 const VOLUME = `${IMPLEMENT}/references/volume-policy.md`;
 const STRUCTURE = "assistant/catalog/structure.md";
 const ROUTING = "assistant/manifest/agent-routing.yml";
+const REVIEWER = "assistant/agents/product-surface-reviewer.md";
 
 /** How every site names the definition. One string, checked everywhere. */
 const REFERENCE = "references/ui-affecting.md";
@@ -234,6 +235,52 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // predicate lives in the skill; the manifest must say where.
       expect(implement).toContain("conditional_agents: [product-surface-reviewer]");
       expect(implement).toContain(`skills/qfai-implement/${REFERENCE}`);
+    });
+
+    it(`${tree}: the routed review reads the contract set the clause fired on`, async () => {
+      const skill = await read(tree, SKILL);
+      const reviewer = await read(tree, REVIEWER);
+
+      // The trigger resolves `paths.contractsDir`, recursion and `.yml`; the
+      // review inputs used to be pinned to `.qfai/contracts/ui/*.yaml`. A row
+      // routed by clause 3 on a `.yml` contract, a per-spec subdirectory or a
+      // repointed contractsDir could then PASS without the reviewer ever
+      // reading the contract that routed it.
+      const readOrder = skill
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("- Read spec + contract inputs first"));
+      expect(readOrder).toBeDefined();
+      expect(readOrder).toContain("#the-two-inputs");
+      expect(readOrder).toContain("`<contractsDir>/ui/**`");
+      expect(readOrder).toContain("`paths.contractsDir`");
+      expect(readOrder).not.toContain("`.qfai/contracts/ui/*.yaml`");
+
+      // Same resolver on the agent that performs the review.
+      expect(reviewer).not.toContain("UI contract files under `.qfai/contracts/ui/`");
+      expect(reviewer).toContain("`<contractsDir>/ui/**`");
+      expect(reviewer).toContain("`paths.contractsDir`");
+      expect(reviewer).toContain("walked recursively");
+      expect(reviewer).toContain(REFERENCE);
+    });
+
+    it(`${tree}: a dotted Owning module is normalised before the glob match`, async () => {
+      const definition = await read(tree, DEFINITION);
+      const structure = await read(tree, STRUCTURE);
+
+      // `execution-ledger.md` allows `Owning module` to be a dotted module
+      // path, but declared UI paths are POSIX globs: untranslated,
+      // `src.components.Button` misses `src/components/**` and the row answers
+      // `n/a` on a technicality. One rule, no judgement in it.
+      expect(definition).toContain("### Normalising `Owning module`");
+      expect(definition).toContain("the cell contains `/`");
+      expect(definition).toContain("replace **every** `.` with `/`");
+      expect(definition).toContain("`src.components.Button` → `src/components/Button`");
+      // The two branches must be stated as disjoint, or the rule is not unique.
+      expect(definition).toContain("disjoint by construction");
+
+      // And the declaration side points at that rule, since its own matching
+      // rule only covers path cells.
+      expect(structure).toContain("#normalising-owning-module");
     });
   }
 });

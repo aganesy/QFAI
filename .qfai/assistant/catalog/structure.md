@@ -34,7 +34,10 @@ the same row differently.
 
 Syntax, so the reader is mechanical: one repo-root-relative POSIX glob per
 bullet, backticked, nothing else on the line. A path cell matches when any glob
-matches it after normalising separators to `/`. Write the single bullet `none`
+matches it after normalising separators to `/` — a ledger cell that may also
+hold a dotted module path is normalised first
+(`.qfai/assistant/skills/qfai-implement/references/ui-affecting.md#normalising-owning-module`).
+Write the single bullet `none`
 when the project has no UI surface at all — that is a statement the reader
 accepts, not a gap.
 

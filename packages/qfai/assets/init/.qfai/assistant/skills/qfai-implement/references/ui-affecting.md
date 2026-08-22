@@ -35,8 +35,8 @@ Both are declarations the project already owns. The test reads them and nothing 
 Evaluate the clauses against the row **as the ledger declares it**, in order, and stop at the first
 that holds. An item is **UI-affecting** when any of the following holds:
 
-1. Its `Owning module` matches a declared UI path. Evaluated **only when the ledger declares one**:
-   that column is optional
+1. Its `Owning module`, **normalised** (below), matches a declared UI path. Evaluated
+   **only when the ledger declares one**: that column is optional
    (`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`) and `-`
    means "not declared", so a rule keyed on it alone would be unevaluable on the ledgers that omit
    it.
@@ -47,6 +47,27 @@ that holds. An item is **UI-affecting** when any of the following holds:
    because an `API` row carries `-` in `TC-Refs` by contract
    (`execution-ledger.md#obligation-columns-optional-required-by-layer`) and stores its obligation
    there instead: a response body a screen renders is reachable through no other clause.
+
+### Normalising `Owning module`
+
+`Owning module` is declared **either** as a repo-relative path **or** as a dotted module path
+(`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`), while
+`structure.md`'s globs match POSIX paths only — so an untranslated `src.components.Button` misses a
+declared `src/components/**` and the row answers `n/a` on a technicality. Clause 1 therefore matches
+the **normalised** value, under one rule with no judgement in it:
+
+- the cell contains `/` → it is already a repo-relative path; match it verbatim.
+- otherwise → it is a dotted module path; replace **every** `.` with `/`
+  (`src.components.Button` → `src/components/Button`) and match that.
+
+The branches are disjoint by construction: a dotted module path carries no `/`, and a repo-relative
+path of more than one segment always does. A single-segment cell contains neither, so both branches
+leave it unchanged.
+
+A normalised dotted module names a module, not a file, so it cannot match a glob that ends in a file
+extension (`src/ui/**/*.tsx`). A project whose ledgers use the dotted form declares its UI surfaces
+as directory globs (`src/ui/**`) — the syntax that section already shows. Clause 2 is unaffected
+either way: `Test file` is required and always a path.
 
 ### What "linked" means
 
