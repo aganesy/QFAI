@@ -320,7 +320,7 @@ Required sections: the template below is the list. Three of them carry a contrac
 
 - **Ledger rows advanced** — an index table plus one `### TDD-NNNN` section per row. Exactly one form per row, never both and never neither; the cell is an anchor and the payload goes in the section (`references/red-provenance.md#evidence-shape`).
 - **Coverage Depth Matrix** — a link to `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals. The matrix and its per-`❌` justifications live in that committed file; restating them here would lose them.
-- **Shared-artifact re-verify** — every completed row whose shared test artifact this stage edited (`references/shared-test-artifacts.md`). `/qfai-implement`'s `RED test hash` gate reads it in **this** file, so a block written into the Coverage Depth Matrix file instead is never consulted and a correctly re-verified `done` row stays mismatched with nothing able to clear it. `None` when this stage edited no such artifact.
+- **Shared-artifact re-verify** — the home for a re-verify no row can carry: this stage edited a shared test artifact a completed row reads and owns no ATDD row of its own. Where an editing row exists the record is that row's entry and this section is `None` — one re-verify, one place, so two copies can never disagree (`references/shared-test-artifacts.md`). `/qfai-implement`'s `RED test hash` gate reads this block in **this** file, so one written into the Coverage Depth Matrix file instead is never consulted and a correctly re-verified `done` row stays mismatched with nothing able to clear it.
 
 Template:
 
@@ -358,8 +358,8 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 ## Shared-artifact re-verify
 
-<!-- One entry per affected row — spec and `TDD-ID` together, the re-run, the re-taken proof, the artifact's new manifest and hash
-     (`references/shared-test-artifacts.md`). `None` when this stage edited no shared test artifact a completed row reads. -->
+<!-- Only where this stage owns no ATDD row to carry it: one entry per affected row — spec and `TDD-ID` together, the re-run, the re-taken
+     proof, the artifact's new manifest and hash (`references/shared-test-artifacts.md`). `None` otherwise — the editing row's entry is the copy. -->
 
 ## Final status (PASS/FAIL) + who confirmed
 ```

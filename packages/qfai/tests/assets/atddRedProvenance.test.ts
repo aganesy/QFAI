@@ -2267,9 +2267,32 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const flatAtdd = flat(atdd);
     expect(flatAtdd).toContain("Three of them carry a contract the heading cannot");
     expect(flatAtdd).toContain(
-      "`/qfai-implement`'s `RED test hash` gate reads it in **this** file",
+      "`/qfai-implement`'s `RED test hash` gate reads this block in **this** file",
     );
-    expect(flatAtdd).toContain("`None` when this stage edited no shared test artifact");
+  });
+
+  it("keeps the stage block to what no row can carry, so one re-verify has one copy", async () => {
+    // `references/shared-test-artifacts.md` gives the ordinary case to the
+    // editing row's own entry and the stage block only to a stage with no row
+    // of its own. A template that asked every edited row for a stage-level copy
+    // too would make two originals of one record, and the consumer clears a
+    // mismatch from either place with no precedence between them.
+    const flatAtdd = flat(await read(tree, ATDD));
+    expect(flatAtdd).toContain(
+      "this stage edited a shared test artifact a completed row reads and owns no ATDD row of its own",
+    );
+    expect(flatAtdd).toContain(
+      "Where an editing row exists the record is that row's entry and this section is `None`",
+    );
+    expect(flatAtdd).toContain("Only where this stage owns no ATDD row to carry it");
+    expect(flatAtdd).toContain("`None` otherwise — the editing row's entry is the copy.");
+
+    // And the consumer says the same, so its two read points cannot disagree.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**Exactly one of the two holds it for any one edit**");
+    expect(implement).toContain(
+      "the editing row's entry where the moving stage owns a row, the stage block where it owns none",
+    );
   });
 
   it("reads the validate evidence from the configured output paths", async () => {
