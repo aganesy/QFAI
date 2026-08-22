@@ -17,6 +17,8 @@
 Storage slot for the `research_summary` output of
 `.qfai/assistant/constitution/research-first-protocol.md`. Replace every placeholder with the actual
 protocol run; `npx qfai validate --profile discussion` reports `QFAI-RESEARCH-*` while they remain.
+Never delete this heading to silence the gate: the current pack's `04_Sources.md` is required to
+carry it, and its absence is reported as `QFAI-RESEARCH-014`.
 
 ```yaml
 research_summary:

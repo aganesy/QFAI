@@ -94,10 +94,34 @@ async function seedPack(
   packName = "discussion-20260101000000000",
 ): Promise<string> {
   const root = await newTempDir();
+  await addPack(root, packName, template);
+  return root;
+}
+
+/** Adds one more pack to an existing throwaway root. */
+async function addPack(root: string, packName: string, template: string): Promise<string> {
   const packDir = path.join(root, ".qfai", "discussion", packName);
   await mkdir(packDir, { recursive: true });
   await writeFile(path.join(packDir, "04_Sources.md"), template, "utf-8");
-  return root;
+  return packDir;
+}
+
+/** Pins `.qfai/state.json#discussion.currentId` — the active-pack SSOT. */
+async function usePack(root: string, packName: string): Promise<void> {
+  await writeFile(
+    path.join(root, ".qfai", "state.json"),
+    JSON.stringify({ discussion: { currentId: packName } }, null, 2),
+    "utf-8",
+  );
+}
+
+/** Drops the whole `## Research Summary` section, heading included. */
+function deleteStorageSlot(template: string): string {
+  const lines = template.split(/\r?\n/);
+  const start = lines.findIndex((line) => /^#{1,3}\s+Research\s+Summary/.test(line));
+  const rest = lines.slice(start + 1);
+  const end = rest.findIndex((line) => /^#{1,3}\s+\S/.test(line));
+  return [...lines.slice(0, start), ...(end === -1 ? [] : rest.slice(end))].join("\n");
 }
 
 /** The `04_Sources.md` template as shipped from the assets SSOT tree. */
@@ -249,6 +273,53 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
 
     expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-013");
+  });
+
+  it("reports a pack whose Research Summary section was deleted", async () => {
+    // Shipping the heading only helps while it survives: a pack that dropped
+    // the section used to be skipped by the per-file loop and passed the gate
+    // with no research at all.
+    const stripped = deleteStorageSlot(await readShippedTemplate());
+    expect(stripped).not.toMatch(RESEARCH_SUMMARY_HEADING_RE);
+
+    const issues = await validateResearchSummary(await seedPack(stripped), defaultConfig);
+    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
+
+    expect(slotMissing?.severity).toBe("error");
+    expect(slotMissing?.file).toContain("04_Sources.md");
+  });
+
+  it("gates the pack .qfai/state.json points at, not the newest one", async () => {
+    // `qfai discussion use <id>` can pin an older pack. Validating the newest
+    // one instead would pass an unfilled current pack whenever some later pack
+    // happens to be complete.
+    const template = await readShippedTemplate();
+    const root = await seedPack(template, "discussion-20260101000000000");
+    await addPack(root, "discussion-20260202000000000", fillEveryPlaceholder(template));
+
+    await usePack(root, "discussion-20260101000000000");
+    const onOlder = await validateResearchSummary(root, defaultConfig);
+    expect(onOlder.map((item) => item.code)).toContain("QFAI-RESEARCH-012");
+
+    await usePack(root, "discussion-20260202000000000");
+    const onNewer = await validateResearchSummary(root, defaultConfig);
+    expect(onNewer.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("requires action and reason on every reflection entry, not just one", async () => {
+    // A list whose first entry is complete must not vouch for the rest.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "      reason: Recorded by the research-first protocol run",
+      "      reason: Recorded by the research-first protocol run\n    - source_id: SRC-0001\n      finding: Second entry left unfinished",
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+    const codes = issues.map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-009");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+    expect(issues.find((item) => item.code === "QFAI-RESEARCH-009")?.message).toContain(
+      "reflection[1]",
+    );
   });
 
   it("ignores an abandoned older pack once a newer one exists", async () => {
