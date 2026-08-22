@@ -2375,10 +2375,12 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
 
   it("lets one pack cover a whole T1 coherent group", async () => {
     // The pack rule read "One pack per review round for one `TDD-ID`" while
-    // `volume-policy.md#batched-review` makes a T1 group one reviewer turn over
+    // `volume-policy.md#batched-review` makes a T1 group one review round over
     // several rows, so the batched round had no legal artifact: one pack per
     // member asserts rounds that never happened, one pack naming every member
-    // contradicted the layout as written.
+    // contradicted the layout as written. The round is one turn *per required
+    // reviewer*, not one turn in total — reading it as a single agent call
+    // leaves gate items 3/5/7/8 without their verdicts.
     const layout = flat(
       await read(tree, "assistant/skills/qfai-implement/references/review-artifact-layout.md"),
     );
@@ -2387,12 +2389,20 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(layout).toContain("name the round's `TDD-ID`s in `review_request.md` as a **list**");
     expect(layout).toContain(
-      "A T1 group review is **one** reviewer turn, so it produces **one** pack.",
+      "A T1 group review is **one round**, not one turn per member — and not one turn in total.",
+    );
+    expect(layout).toContain(
+      "Each required reviewer (`qa-gatekeeper`, `completion-reviewer`, `implementation-reviewer`) takes **one** turn over the whole group",
+    );
+    expect(layout).toContain(
+      "Those turns share **one** pack: one `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in `summary.json`.",
     );
     expect(layout).toContain(
       "Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the same `review-<timestamp>/` directory.",
     );
     expect(layout).not.toContain("One pack per review round for one `TDD-ID`");
+    // A group round is not a single agent call.
+    expect(layout).not.toContain("is **one** reviewer turn");
   });
 
   it("gives the implementation reviewer the subject it hashes", async () => {

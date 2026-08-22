@@ -22,10 +22,14 @@ must be written to a review pack, not left in conversation. There is exactly **o
   membership for a T1 coherent group, written as the single block `volume-policy.md#batched-review`
   already requires of the evidence file. The verdict then carries one `Audited evidence hash` per
   listed id (`shared-skill-delegation-baseline.md#reviewer-response-template`).
-- A T1 group review is **one** reviewer turn, so it produces **one** pack. Do not write a pack per
-  member: N packs assert N rounds, N-1 of which never happened, each holding a copy of the same
-  verdict. Every member row's `Review pack seal` at gate item 10 is therefore the same seal over the
-  same `review-<timestamp>/` directory.
+- A T1 group review is **one round**, not one turn per member — and not one turn in total. Each
+  required reviewer (`qa-gatekeeper`, `completion-reviewer`, `implementation-reviewer`) takes
+  **one** turn over the whole group, as `volume-policy.md#batched-review` requires, so that gate
+  items 3, 5, 7 and 8 all have their verdict. Those turns share **one** pack: one
+  `R0N_<reviewer-id>.md` per reviewer inside it, and one `reviewers[]` entry each in
+  `summary.json`. Do not write a pack per member: N packs assert N rounds, N-1 of which never
+  happened, each holding a copy of the same verdict. Every member row's `Review pack seal` at gate
+  item 10 is therefore the same seal over the same `review-<timestamp>/` directory.
 - Minimum `summary.json` shape (`version: "2.0"`):
   `version`, `created_at`, `target.{kind,path}`, `routing_profile`, `overall_status` (`PASS|FAIL`),
   `reviewers[]` where each entry is `{ reviewer, status: PASS|FAIL|NA, feedback_count }`,
