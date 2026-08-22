@@ -715,8 +715,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // nothing derives goes stale on schedule.
     //
     // Two of the three are mechanically derivable and are derived here. The verdict split is not:
-    // reviewers do not write their verdict in one parseable form (two of twenty-nine use
-    // `**Verdict: REVISE**`), so inventing a marker now would only pin the reports written after it.
+    // reviewers do not write their verdict in one parseable form. Measured over this stage's 17 closed
+    // packs and their 50 reports — 5 carry `**Verdict: X**`, 14 carry `Verdict: **X**`, and 46 carry a
+    // line holding both the word and a token. The figure that stood here, "two of twenty-nine", was
+    // wrong in numerator and denominator; round 18 filed it and it was not applied. Inventing a marker
+    // now would only pin the reports written after it.
     // What IS pinnable is the arithmetic — the split must SUM to the derived response count — and that
     // is exactly the failure mode all five findings had: a round landed, the total moved, and the
     // split stayed where it was.

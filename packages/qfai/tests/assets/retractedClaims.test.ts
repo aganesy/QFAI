@@ -85,10 +85,13 @@ const GOVERNANCE = [
   // round happened to be looking at rather than the files this stage wrote, which is the same
   // shape as the scoping it replaced, one size smaller.
   // NOT this file, and the reason round 16 gave for that was wrong. It said scanning here "would
-  // report every needle against its own entry"; round 17 measured 118 of 124 occurrences already
-  // reading as quoted, and six that do not. Those six are this file's own commentary ABOUT the
-  // retracted claims and about past pack counts — and two of the instruments that would read them
-  // cannot be satisfied by quoting at all, because `COUNTED_CLAIMS` has no quotation model. The
+  // report every needle against its own entry". Round 18 refuted the figures that replaced it and the
+  // correction was never applied; round 19 found them standing. Re-measured by running this file's own
+  // `occurrences()` over this file: **126 occurrences, 112 already reading as quoted, 14 that do not,
+  // across six distinct claims** — not the "118 of 124 … and six" that stood here, which counted
+  // distinct claims and raw occurrences as though they were the same quantity.
+  // All six are `RETRACTED`'s own `claim:` fields and this file's commentary about them, so they cannot
+  // be satisfied by quoting: a needle quoted inside the array that defines it is still the needle. The
   // exclusion stands on that, measured, rather than on the sentence it stood on before.
   "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
   "packages/qfai/tests/unit/buildCommand.test.ts",

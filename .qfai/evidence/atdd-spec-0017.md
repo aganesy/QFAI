@@ -500,8 +500,8 @@ files — a number derived once and then described as derived.**
 - **A3.** `## Final status` certifies with "**ten** rounds, **29** reviewer responses, **28 REVISE and
   one PASS**". Correct when checked, derived by nothing, and with a correctness lifetime of exactly one
   round — rounds 4, 5, 6, 7 and 10 each found this sentence a round behind, five findings of one shape.
-  Two of the three are now derived from the packs on disk. The verdict split is not derivable (two of
-  two of thirty-five reports state a verdict in a parseable form), so what is pinned is the arithmetic: the
+  Two of the three are now derived from the packs on disk. The verdict split is not derivable, so what is
+  pinned is the arithmetic: the
   split must SUM to the derived response count, which is exactly how all five findings failed. Falsified
   six ways, all reddening, including the sentence being unbolded or deleted.
 - **A4.** The scope fix above.
@@ -2054,16 +2054,38 @@ currency both times.** Round 3 found the first version written at `16f611c7` bef
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
 round 19: the e2e figure is 1447 and the integration+unit figure 1222.
 
-**And the integration+unit figure moved without this stage touching it.** A concurrent session pushed
-`b0f9d443` onto this branch — provenance, doctor and workflow-hygiene work, with two new integration
-tests — and the total this record states went stale between one commit and the next. The e2e figure is
-guarded by the callsite rule and reddened nothing because the new tests are not in that project; the
-integration+unit figure is guarded by nothing and is the one that drifted. It is the asymmetry this
-section has recorded since round 9, now demonstrated by someone else's commit rather than by this
-stage's: **a total that nothing derives goes stale when ANYONE commits.** Round 12 re-measured them at
-1443 and 1216 and round 14 moved both again — the e2e figure by exactly the arithmetic the rule below
-predicts, 1443 + (881 - 879) = 1445, since this round added two callsites: the derived check over the
-mechanism corpus's own size.
+**And the integration+unit figure moved — but not for the reason this paragraph gave for a round, and
+the figure it replaced had been wrong since round 15.** A concurrent session pushed `b0f9d443` onto this
+branch, and the first version of this paragraph attributed the whole move to it: *"the integration+unit
+figure moved without this stage touching it."* Round 19's `completion-reviewer` measured the window
+commit by commit and the attribution is false. Re-derived here with the guard's own `CALLSITE` rule,
+extracted from its bytes and run over `tests/{integration,unit}/**/*.test.ts` at each revision:
+
+```text
+683f16ab  1120   round 15
+20121003  1120   round 18's record commit — the record stated 1220 passed
+b0f9d443  1122   +checkPublishDryRun 6->7, +shippedWorkflowOwnership 25->26   (the other session)
+7b7a50ea  1123   +tests/unit/shippedLaneCommands.test.ts 12->13                (THIS STAGE)
+7fbac2d3  1123   the record stated 1222 passed
+```
+
+`7b7a50ea` is "test(atdd): tie the mask to the verdict" — **the differential test this round exists to
+review**, in the `unit` project, which is inside this very total. The window's delta is `+3`, not `+2`,
+and one of the three is this stage's own. The sentence that says the figure moved without this stage
+touching it was written one commit after this stage moved it.
+
+**And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — 99
+against passed, 118 against passed-plus-skipped — which holds at round 12's `1216` / `1117` and at
+today's `1222` / `1123`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
+the record said **1220**: one high for the whole of rounds 15 to 18, in the block whose first sentence is
+"re-run after the last artifact changed". The re-measurement that replaced it did not detect that,
+because it measured the endpoint and narrated the cause.
+
+That is this record's most-repeated error in a new place: **a correction that measures where it landed
+and then explains the move without checking the commits in between**, in the section that says it
+re-derives "from `git show` at each revision rather than from memory". The moral the paragraph drew is
+still right — a total nothing derives goes stale when anyone commits — and this stage was one of the
+people who committed.
 
 Round 14's `completion-reviewer` found this block certifying `test:e2e … exit 0` while three of the
 stage's own guards were red in that project, at a revision that had opened a review pack and changed
@@ -2447,9 +2469,12 @@ value collapse onto one `null`, a non-mapping step is invisible to `isRecord`, n
 two files that differ can serialize the same. The boundary is the bytes now, and the shapes say which part
 moved.
 
-**Three of round 16's guard repairs failed again, all in one shape** — the check reads a wider region than
+**Four of round 16's guard repairs failed again, all in one shape** — the check reads a wider region than
 the claim it makes. The corpus count searched the whole file for a numeral three words from the word; class
-C's roster built its named-cell set from the whole matrix; the Delta tie read any pipe-line in the section.
+C's roster built its named-cell set from the whole matrix; the Delta tie read any pipe-line in the section;
+and the depth-score pin read only the FIRST bullet, so a second one contradicting the table passed. This
+sentence said "three" while the commit that wrote it enumerated four bullets beneath it — round 18 filed
+the discrepancy, `19c33aa1` applied the rest of that round and left this, and round 19 found it standing.
 That shape is now the stated failure mode of the family, and each repair is scoped to the region its claim
 is about.
 
