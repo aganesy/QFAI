@@ -46,9 +46,11 @@ operator 向けに CLI が出力する文字列は **英語** で書く。`<CODE
 `error()` / `info()` 呼び出しの大多数が既に英語であり、単一言語に揃えることで
 log grep / alert rule / runbook が言語を場合分けせずに済む。
 
-> **Known gap:** `src/core/validators/**` には英語化が済んでいない
-> finding message が残っている。既存メッセージの移行は段階的に行うが、
-> 新規追加は上記の規定に従う。移行途中のファイルは meta-test の
+> **Known gap:** `src/core/**` には英語化が済んでいない finding message が
+> 残っている。大半は `validators/**` だが、`config.ts` の
+> `QFAI_CONFIG_INVALID` や `waivers.ts` / `report.ts` のように validator 外の
+> `Issue` producer も含む。既存メッセージの移行は段階的に行うが、新規追加は
+> 上記の規定に従う。移行途中のファイルは `src/**` 全体を走査する meta-test の
 > baseline で ratchet されており、baseline を超える追加は CI で落ちる。
 
 ## Severity Decision Matrix
