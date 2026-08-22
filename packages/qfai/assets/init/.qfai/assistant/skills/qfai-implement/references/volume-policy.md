@@ -131,7 +131,12 @@ once, then after each ledger:
    conditions or report the blockers. `exception` rows do not stop the queue;
    they are reported with their DR-IDs and carried into the final summary.
 2. Look at the remaining queue. **Empty -> exit.** Otherwise announce the next
-   `spec-id`, load its `test-list.md`, and restart at Phase: Red.
+   `spec-id`, load its `test-list.md`, and restart at Phase: Red — **inside the
+   plan already fixed for that spec**. The `plan` phase is `per-invocation`: it
+   reset and planned every queued ledger in one pass before the first row moved
+   (`plan-phase.md`), so this transition re-enters neither Stage 0 nor `plan`,
+   and the tiers, groups, dispatch decision and row order this spec runs under
+   are the ones that pass returned.
 3. "Report and exit" in CRITICAL CONSTRAINTS applies per ledger, not per run: a
    ledger whose rows are all `done` yields "nothing to do" **for that spec** and
    the queue advances past it rather than ending the run.
@@ -140,7 +145,9 @@ once, then after each ledger:
 
 A queue entry is never skipped silently: a spec that cannot be started (missing
 ledger, unresolved Change Request) is reported as blocked and the queue moves
-on to the next entry.
+on to the next entry. That determination is made in the `plan` phase, which
+read every queued ledger, so it is surfaced up front rather than discovered
+when the queue reaches the entry.
 
 ## Cost visibility
 

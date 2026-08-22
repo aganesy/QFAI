@@ -33,6 +33,14 @@ From the ATDD stage onward:
 - Produce the Coverage Depth Matrix as a required deliverable. Flag any ❌ cells as gaps.
 - Test cases covering only normal (happy) paths are INCOMPLETE. Return REVISE with specific missing scenarios.
 
+Exception — `qfai-implement`'s `plan` phase:
+
+- The input there is an execution ledger (`.qfai/specs/spec-\*/tdd/test-list.md`), not a spec's test cases, so a matrix produced
+  against it would describe neither. Report coverage and layer-ownership findings only.
+- Do NOT produce, re-derive or supersede the Coverage Depth Matrix, and do NOT return REVISE because it is absent or incomplete:
+  it stays owned from the ATDD stage, and every gap it names is repaired upstream in `/qfai-sdd` or `/qfai-atdd`.
+- Reference: `.qfai/assistant/skills/qfai-implement/references/plan-phase.md`
+
 During SDD:
 
 - Require normal path plus error/boundary coverage per AC, read directly from `06_Test-Cases.md`.
@@ -48,10 +56,16 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
 - .qfai/assistant/{manifest,catalog}/\*\*
 - .qfai/assistant/catalog/test-layers.md
 - .qfai/specs/spec-\*/09_delta.md
+- .qfai/specs/spec-\*/02_User-stories.md
 - .qfai/specs/spec-\*/03_Acceptance-Criteria.md
 - .qfai/specs/spec-\*/04_Business-Rules.md
 - .qfai/specs/spec-\*/05_Examples.md
 - .qfai/specs/spec-\*/06_Test-Cases.md
+- .qfai/contracts/api/\*\* (CON-API)
+
+Read `06_Test-Cases.md`, `02_User-stories.md` and `.qfai/contracts/api/\*\*` as the obligation set in full — `TC-*`, `US-*` and
+`CON-API-*` — independently of whichever rows an execution ledger happens to hold: an obligation with no row at all is invisible
+to a check that starts from the rows.
 
 ## Deliverables
 
@@ -62,7 +76,8 @@ At both stages: when business rules (BR-\*) exist, verify each BR has at least o
   file, because that path is committed while the rest of `.qfai/evidence/**` is ignored, and the
   justification behind each `❌` is the input `qa-gatekeeper` reads. During SDD there is
   no evidence artifact that holds it, so report depth gaps as findings instead of producing the
-  matrix format.
+  matrix format, and in `qfai-implement`'s `plan` phase it is not produced at all — see the
+  exception above.
 - Volume estimate and risk notes
 - Scope-boundary decisions for tests
 
