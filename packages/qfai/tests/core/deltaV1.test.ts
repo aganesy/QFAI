@@ -3,8 +3,19 @@ import { describe, expect, it } from "vitest";
 import {
   hasLegacyMigrationNotes,
   hasMigrationBullets,
+  isPlaceholderDeltaMeta,
   parseDeltaV1,
 } from "../../src/core/deltaV1.js";
+
+const FILLED_META = {
+  id: "DL-0001",
+  date: "2026-08-22",
+  primary: "Initial",
+  tags: ["@docs"],
+  compat: "Improvement",
+  scope: ["src/core/report.ts"],
+  notes: "shipped the delta template the parser reads",
+};
 
 describe("deltaV1 parser", () => {
   it("detects migration section and non-empty bullet list", () => {
@@ -103,6 +114,25 @@ describe("deltaV1 parser", () => {
     for (const title of ["# 09 Decisions", "# 10 Plan", "# 09"]) {
       expect(parseDeltaV1(`${title}\n`).hasDeltaHeading, title).toBe(false);
     }
+  });
+
+  it("tells an unfilled skeleton apart from a decision", () => {
+    // The template ships real `primary` / `tags` / `compat` so the first copy
+    // teaches the counted vocabulary; `date` / `scope` / `notes` are the only
+    // evidence that somebody actually wrote something (#545).
+    expect(isPlaceholderDeltaMeta(FILLED_META)).toBe(false);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, date: "YYYY-MM-DD" })).toBe(true);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "<one line of context>" })).toBe(true);
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "" })).toBe(true);
+    expect(
+      isPlaceholderDeltaMeta({ ...FILLED_META, scope: ["<file / module this decision touches>"] }),
+    ).toBe(true);
+    // A scope that is only partly filled in is still somebody's work.
+    expect(
+      isPlaceholderDeltaMeta({ ...FILLED_META, scope: ["<placeholder>", "src/core/report.ts"] }),
+    ).toBe(false);
+    // An angle-bracketed value is a placeholder; a comparison is not.
+    expect(isPlaceholderDeltaMeta({ ...FILLED_META, notes: "p95 < 200ms" })).toBe(false);
   });
 
   it("treats migration section without bullets as empty", () => {

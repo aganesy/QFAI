@@ -19,10 +19,12 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import {
+  isPlaceholderDeltaMeta,
   normalizeCompat,
   normalizePrimary,
   parseDeltaV1,
   REQUIRED_DELTA_META_KEYS,
+  toDeltaMeta,
 } from "../../src/core/deltaV1.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -87,6 +89,25 @@ describe("the shipped spec delta template parses as a delta", () => {
           const compat = typeof meta.compat === "string" ? meta.compat : null;
           expect(normalizePrimary(primary), `${name}: primary "${primary ?? ""}"`).not.toBeNull();
           expect(normalizeCompat(compat), `${name}: compat "${compat ?? ""}"`).not.toBeNull();
+        }
+      }
+    });
+
+    it(`${tree}: the template's entry reads as a skeleton, not as a decision`, async () => {
+      // It parses on purpose, so an author who copies it gets a file the report
+      // can read. It must still not be counted: an untouched copy would publish
+      // `Initial 1 / @docs 1 / Improvement 1` for a spec that decided nothing,
+      // and that fabricated 1 also hides the "nothing was counted" disclosure.
+      for (const name of await listDeltaTemplates(tree)) {
+        const text = await readFile(path.join(repoRoot, tree, SPEC_TEMPLATES, name), "utf-8");
+        for (const entry of parseDeltaV1(text).entries) {
+          if (!entry.meta) {
+            continue;
+          }
+          expect(
+            isPlaceholderDeltaMeta(toDeltaMeta(entry.meta)),
+            `${name}: ${entry.heading} reads as a filled-in decision`,
+          ).toBe(true);
         }
       }
     });

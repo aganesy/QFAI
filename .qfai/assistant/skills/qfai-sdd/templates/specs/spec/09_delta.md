@@ -32,6 +32,9 @@
 > One `### DL-NNNN` entry per decision, each carrying a `#### Meta` YAML block
 > with all seven keys. A delta recorded anywhere else is invisible to the
 > tooling and reports as zero decision entries.
+> The entry below is a skeleton, not a decision: while `date`, `scope` and
+> `notes` still hold their placeholders the report skips it and names this file
+> as uncounted, rather than publishing a change nobody made.
 
 ### DL-0001
 

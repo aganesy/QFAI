@@ -20,6 +20,7 @@ import { classifyLayer, classifySize } from "./testStrategyTags.js";
 import { toRelativePath } from "./paths.js";
 import { PROTOTYPING_JSON_REL } from "./prototyping/paths.js";
 import {
+  isPlaceholderDeltaMeta,
   normalizeCompat,
   normalizePrimary,
   REQUIRED_DELTA_META_KEYS,
@@ -147,6 +148,20 @@ export type ReportGuardrails = {
   scanErrors: Array<{ path: string; message: string }>;
 };
 
+/** A delta file that was read and contributed nothing to the counters. */
+export type ReportDeltaScanGap = {
+  /** Root-relative path of the delta file. */
+  file: string;
+  /**
+   * `unparsed` — no `### DL-` entry carried a complete `#### Meta` block, so
+   * the file is invisible to the parser.
+   * `placeholder` — entries parsed, but every one is still the shipped
+   * skeleton (see {@link isPlaceholderDeltaMeta}), so counting them would
+   * publish decisions nobody made.
+   */
+  reason: "unparsed" | "placeholder";
+};
+
 export type ReportChangeTypeSummary = {
   /**
    * How many delta files were opened. `totalEntries: 0` means "nothing parsed"
@@ -154,6 +169,15 @@ export type ReportChangeTypeSummary = {
    * the two are the same report.
    */
   deltaFilesScanned: number;
+  /**
+   * The delta files that produced no counted entry, one per file.
+   *
+   * Tracked per file rather than inferred from `totalEntries === 0`: as soon as
+   * a single spec adopts the current template the total goes positive, and a
+   * whole-tree test would then call the run clean while every other delta stays
+   * silently uncounted.
+   */
+  uncountedDeltaFiles: ReportDeltaScanGap[];
   totalEntries: number;
   primary: Record<"Initial" | "Behavior" | "Structural" | "Ops" | "unknown", number>;
   tags: Record<"@api" | "@db" | "@nfr" | "@docs" | "@test", number>;
@@ -178,7 +202,15 @@ export type ReportRuleFinding = {
 
 export type ReportDeltaCoverage = {
   missingUpdateIssues: number;
-  status: "ok" | "missing-delta-update";
+  /**
+   * How many delta files were read without yielding a counted decision entry.
+   *
+   * Part of the coverage verdict, not only of the Markdown prose: a tree whose
+   * deltas cannot be counted has no delta coverage, and a dashboard that still
+   * says `OK` under it reports a defect as a clean run.
+   */
+  uncountedDeltaFiles: number;
+  status: "ok" | "missing-delta-update" | "delta-not-counted";
 };
 
 export type ReportChangeType = {
@@ -455,7 +487,14 @@ export async function createReportData(
     path: toRelativePath(resolvedRoot, item.path),
     message: item.message,
   }));
-  const changeTypeSummary = await collectChangeTypeSummary(specsRoot);
+  const changeTypeSummary = await collectChangeTypeSummary(resolvedRoot, specsRoot);
+  const deltaScanIssues = buildDeltaScanIssues(changeTypeSummary.uncountedDeltaFiles);
+  const reportIssues = [...normalizedValidation.issues, ...deltaScanIssues];
+  const reportCounts: ValidationCounts = {
+    info: normalizedValidation.counts.info,
+    warning: normalizedValidation.counts.warning + deltaScanIssues.length,
+    error: normalizedValidation.counts.error,
+  };
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -530,7 +569,7 @@ export async function createReportData(
         db: dbFiles.length,
         thema: themaFiles.length,
       },
-      counts: normalizedValidation.counts,
+      counts: reportCounts,
     },
     ids: {
       spec: idsByPrefix.SPEC,
@@ -600,7 +639,11 @@ export async function createReportData(
       verificationFindings,
       deltaCoverage: {
         missingUpdateIssues: missingDeltaUpdateIssues,
-        status: missingDeltaUpdateIssues > 0 ? "missing-delta-update" : "ok",
+        uncountedDeltaFiles: changeTypeSummary.uncountedDeltaFiles.length,
+        status: resolveDeltaCoverageStatus(
+          missingDeltaUpdateIssues,
+          changeTypeSummary.uncountedDeltaFiles.length,
+        ),
       },
     },
     waivers: {
@@ -616,8 +659,54 @@ export async function createReportData(
       },
       expired: expiredWaivers,
     },
-    issues: normalizedValidation.issues,
+    issues: reportIssues,
   };
+}
+
+/**
+ * The rule id for "a delta file was read and counted for nothing".
+ *
+ * Raised here rather than in `validate.ts` because the delta scan itself lives
+ * here: `report` is the only caller of `parseDeltaV1`, and this is the number
+ * whose silence the finding is about.
+ */
+const DELTA_SCAN_ISSUE_CODE = "QFAI-CTYPE-004";
+
+/**
+ * Turns each uncounted delta file into a finding the machine-readable outputs
+ * carry.
+ *
+ * A Markdown NOTE alone leaves `issues`, `summary.counts` and
+ * `deltaCoverage.status` untouched, so `report --format json` shows no finding
+ * and the Dashboard still prints `fail-on=warning: PASS` — a defect reported as
+ * a clean run for every consumer that reads anything but the prose.
+ */
+function buildDeltaScanIssues(gaps: readonly ReportDeltaScanGap[]): Issue[] {
+  return gaps.map((gap) => ({
+    code: DELTA_SCAN_ISSUE_CODE,
+    severity: "warning",
+    category: "change",
+    rule: "CTYPE-004",
+    file: gap.file,
+    message:
+      gap.reason === "placeholder"
+        ? "delta ファイルの `### DL-` entry がテンプレートの未入力値（date / scope / notes）のままのため、Change Type の集計対象になりません。"
+        : "delta ファイルから `#### Meta` の 7 キーが揃った `### DL-` entry を 1 件も読み取れないため、Change Type の集計対象になりません。",
+    suggested_action:
+      gap.reason === "placeholder"
+        ? "決定を記録した上で `date` / `scope` / `notes` を実際の値に置き換えてください。まだ決定がないなら、この delta ファイルは未記入のままで構いません（この warning は未記入である事実の通知です）。"
+        : "`## Decision Log` -> `### DL-NNNN` -> `#### Meta` (id / date / primary / tags / compat / scope / notes) の構造に揃えてください。テンプレート: `assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md`。",
+  }));
+}
+
+function resolveDeltaCoverageStatus(
+  missingUpdateIssues: number,
+  uncountedDeltaFiles: number,
+): ReportDeltaCoverage["status"] {
+  if (missingUpdateIssues > 0) {
+    return "missing-delta-update";
+  }
+  return uncountedDeltaFiles > 0 ? "delta-not-counted" : "ok";
 }
 
 type ReportMarkdownOptions = {
@@ -717,7 +806,7 @@ export function formatReportMarkdown(
     `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
   );
   lines.push(
-    `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues})`,
+    `- delta coverage: ${data.changeType.deltaCoverage.status === "ok" ? "OK" : "NG"} (missing update issues: ${data.changeType.deltaCoverage.missingUpdateIssues} / uncounted delta files: ${data.changeType.deltaCoverage.uncountedDeltaFiles})`,
   );
   lines.push(
     `- waivers: active ${data.waivers.active.length} / suppressed ${data.waivers.suppressed.total} / expired ${data.waivers.expired.length}`,
@@ -973,7 +1062,7 @@ export function formatReportMarkdown(
   lines.push("");
   lines.push("### Summary");
   lines.push("");
-  lines.push(...formatDeltaScanLines(data.changeType.summary));
+  lines.push(...formatDeltaScanLines(data.changeType.summary, baseUrl));
   lines.push(
     `- primary: Initial ${data.changeType.summary.primary.Initial} / Behavior ${data.changeType.summary.primary.Behavior} / Structural ${data.changeType.summary.primary.Structural} / Ops ${data.changeType.summary.primary.Ops} / unknown ${data.changeType.summary.primary.unknown}`,
   );
@@ -993,7 +1082,7 @@ export function formatReportMarkdown(
     `- verification findings: info ${verificationFindingCounts.info} / warning ${verificationFindingCounts.warning} / error ${verificationFindingCounts.error}`,
   );
   lines.push(
-    `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues})`,
+    `- delta coverage: ${data.changeType.deltaCoverage.status} (issues=${data.changeType.deltaCoverage.missingUpdateIssues}, uncounted=${data.changeType.deltaCoverage.uncountedDeltaFiles})`,
   );
   lines.push("");
 
@@ -1651,9 +1740,13 @@ type SpecContractRefEntry = {
   ids: Set<string>;
 };
 
-async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChangeTypeSummary> {
+async function collectChangeTypeSummary(
+  root: string,
+  specsRoot: string,
+): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
     deltaFilesScanned: 0,
+    uncountedDeltaFiles: [],
     totalEntries: 0,
     primary: {
       Initial: 0,
@@ -1684,6 +1777,8 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
   for (const deltaFile of deltaFiles) {
     const text = await readFile(deltaFile, "utf-8");
     const parsed = parseDeltaV1(text);
+    let countedInFile = 0;
+    let placeholdersInFile = 0;
     for (const entry of parsed.entries) {
       if (!entry.meta) {
         continue;
@@ -1696,6 +1791,11 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
       }
 
       const meta = toDeltaMeta(entry.meta);
+      if (isPlaceholderDeltaMeta(meta)) {
+        placeholdersInFile += 1;
+        continue;
+      }
+      countedInFile += 1;
       summary.totalEntries += 1;
 
       const primary = normalizePrimary(meta.primary) ?? "unknown";
@@ -1711,6 +1811,12 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
         }
         summary.tags[normalized] += 1;
       }
+    }
+    if (countedInFile === 0) {
+      summary.uncountedDeltaFiles.push({
+        file: toRelativePath(root, deltaFile),
+        reason: placeholdersInFile > 0 ? "placeholder" : "unparsed",
+      });
     }
   }
 
@@ -1912,22 +2018,42 @@ function buildIdPattern(ids: string[]): RegExp {
   return new RegExp(`\\b(${escaped.join("|")})\\b`);
 }
 
+/** How many uncounted delta files the NOTE names before it summarises the rest. */
+const REPORT_DELTA_SCAN_GAP_MAX = 10;
+
 /**
  * Names the input the Change Type counters were computed from.
  *
- * `decision entries: 0` alone reads as "no change was classified", which is the
- * same output as "delta files were read and none of them could be parsed" — the
- * second is a defect in the files, and it must not report as a clean run.
+ * `decision entries: N` alone reads as "this is what the tree classified",
+ * which is the same output as "some deltas were read and counted for nothing" —
+ * the second is a defect in the files, and it must not report as a clean run.
+ * Driven by the per-file list, not by `totalEntries === 0`: one spec adopting
+ * the current template is enough to take the total positive while every other
+ * delta stays silently uncounted.
  */
-function formatDeltaScanLines(summary: ReportChangeTypeSummary): string[] {
+function formatDeltaScanLines(summary: ReportChangeTypeSummary, baseUrl?: string): string[] {
   const lines = [
     `- delta files scanned: ${summary.deltaFilesScanned}`,
     `- decision entries: ${summary.totalEntries}`,
   ];
-  if (summary.deltaFilesScanned > 0 && summary.totalEntries === 0) {
-    lines.push(
-      "- NOTE: delta files were read but none yielded a `## Decision Log` entry with a complete `#### Meta` block. The counters below are empty because nothing parsed, not because nothing is wrong.",
-    );
+  const gaps = summary.uncountedDeltaFiles;
+  if (gaps.length === 0) {
+    return lines;
+  }
+  lines.push(
+    `- NOTE: ${gaps.length} of ${summary.deltaFilesScanned} delta file(s) yielded no counted decision entry. ` +
+      "The counters below cover the rest of the tree only — they are not evidence that nothing changed. " +
+      `See [${DELTA_SCAN_ISSUE_CODE}](#change-issues).`,
+  );
+  for (const gap of gaps.slice(0, REPORT_DELTA_SCAN_GAP_MAX)) {
+    const reason =
+      gap.reason === "placeholder"
+        ? "entries are still the unfilled template (`date` / `scope` / `notes`)"
+        : "no `### DL-` entry with a complete `#### Meta` block";
+    lines.push(`  - ${formatPathLink(gap.file, baseUrl)}: ${reason}`);
+  }
+  if (gaps.length > REPORT_DELTA_SCAN_GAP_MAX) {
+    lines.push(`  - ... and ${gaps.length - REPORT_DELTA_SCAN_GAP_MAX} more`);
   }
   return lines;
 }
