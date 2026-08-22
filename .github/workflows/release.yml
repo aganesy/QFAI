@@ -138,6 +138,14 @@ jobs:
         with:
           persist-credentials: false
           ref: ${{ needs.verify.outputs.sha }}
+          # Full history, because the gate is not a self-contained check.
+          # `pnpm ci:gate` runs `scripts/check-prompt-scanner-pair.mjs`, which
+          # takes a three-dot diff between `origin/main` and `HEAD`. At the
+          # default depth of 1 the tag and the branch share no reachable merge
+          # base, the script exits 2, and the re-publish path this workflow
+          # opens with — re-running a failed publish for an older tag — could
+          # never get past this job.
+          fetch-depth: 0
       - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
         run: corepack enable
         shell: bash

@@ -986,8 +986,8 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-tests.yml", "581608a7e1dbbb7249768d414018b495175d978ff3f0175398154a937b53f9ee"],
-  ["qfai-validate.yml", "08e79f77a91b59c60b15d3e517341dcf18561b09397f804564f3a58c9bd1c7f6"],
+  ["qfai-tests.yml", "468e7cd9676c7d9d051036b1b3f1f87db4976e4c57478b2874d0306aaeb38d33"],
+  ["qfai-validate.yml", "2ed38d4d08dcfccb9537a0bd12329a79b13e7a3dc028aa28048f082ef6e5d87a"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1107,7 +1107,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}"},"shell":"bash","run":"<body 1c69b8c2bf4a16c4a82e8f737b0bfd6e6122a76cc96bc2426e8b6583a474e5a7>"}',
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}"},"shell":"bash","run":"<body 0da681ff21deeea78a4c7af1735097bbccccdd4cca5fa22f2472a4aa41fd67f5>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1115,27 +1115,27 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#unit",
-    '{"name":"unit lane placeholder","run":"<body 09b8ac75ee3ef6fe71dbc5e38e2bebc7207b7d1a358bec40bc1229fd2dea8523>"}',
+    '{"name":"unit lane placeholder","run":"<body 80ddf0eabd4949e55790dc261767cc41ce6a96f6dcd292977fbef1bb70af34f6>"}',
   ],
   [
     "qfai-tests.yml#component",
-    '{"name":"component lane placeholder","run":"<body c6497f24366cb07fac4e65f2fd95bb95926520a7894adb96c92643f719f5d9f9>"}',
+    '{"name":"component lane placeholder","run":"<body 8a14724fe711d2daed40f27f79952a694a954f3fccb67c4fe3cbd646c33edce5>"}',
   ],
   [
     "qfai-tests.yml#integration",
-    '{"name":"integration lane placeholder","run":"<body 4defbb1b5a2ede5b36495e4747fc1220739ffd9a16957add74b1cdc887e786df>"}',
+    '{"name":"integration lane placeholder","run":"<body f32bed20d2e09b1d95f9840c5ea03bf777cbafd21a14c8b09bfb875f46f1c292>"}',
   ],
   [
     "qfai-tests.yml#api",
-    '{"name":"api lane placeholder","run":"<body 3af03c5087ed07f3066fb114d17f61d850449cf9073dc78dc98617cf668944ea>"}',
+    '{"name":"api lane placeholder","run":"<body 9f27850887734772352bf11156187445f61960ccab31678fc6d63d1ee807c21b>"}',
   ],
   [
     "qfai-tests.yml#e2e",
-    '{"name":"e2e lane placeholder","run":"<body b2382d77e17d5940626aa1e9c306fb74570955930472497aa4a473aa57e3bc93>"}',
+    '{"name":"e2e lane placeholder","run":"<body a9bf316460124eabe53fa90651283d3ec5a4766b167cbccd721a363a7aa55001>"}',
   ],
   [
     "qfai-tests.yml#verdict",
-    '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 8122e6678fcbb6ab8f6e4002e484b41249958de894690ded4cc8258f36692d20>"}',
+    '{"name":"Aggregate lane results (green on skip)","env":{"QFAI_NEEDS_JSON":"${{ toJSON(needs) }}"},"shell":"bash","run":"<body 7ee82953e37be82d81440045826adfa89282355c973d6e7dacf80bc0ed381fe8>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1143,7 +1143,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 0978110b439e141fb9fcf5b90c35de8ebbcfdf50da6181c2f74c1435702f4bbf>"}',
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 6de23da12b4070cd576b03c96aaeb17d5addd5a60953e4c12107809a3db0e8cc>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1339,7 +1339,11 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
   ["yarn", new Set(["--version"])],
   ["npx qfai", new Set(["--profile", "--fail-on"])],
   ["node", new Set(["-e"])],
-  ["git diff", new Set(["--name-only"])],
+  // `--no-renames` joins `--name-only` because the shipped detection lane needs both: with rename
+  // detection ON git reports only the DESTINATION of a move, so `src/x.ts` -> `docs/x.md` arrives as
+  // one documentation path and the source half selects no lane. It is a reporting flag — it cannot
+  // reach a build — and the own CI tree already carries it for the same reason.
+  ["git diff", new Set(["--name-only", "--no-renames"])],
   ["git rev-parse", new Set(["--is-shallow-repository", "--verify", "--quiet"])],
 ]);
 

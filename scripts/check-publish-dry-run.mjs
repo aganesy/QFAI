@@ -31,6 +31,19 @@ const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/
 const ALREADY_PUBLISHED = /cannot publish over the previously published versions/i;
 
 /**
+ * Evidence that the tarball was actually built and listed.
+ *
+ * The tolerated case above rests on "the pack itself built and listed", and the phrase alone does
+ * not establish that. `prepublishOnly` and `prepack` run BEFORE npm packs anything, so a lifecycle
+ * script that prints the registry's sentence and exits non-zero reproduces the whole tolerated
+ * signature with no tarball in existence — and the required `build` context then goes green over a
+ * pack that never ran. So the tolerance needs a second, independent observation: npm's own tarball
+ * summary, which only the packing step emits. Both spellings are matched — npm printed
+ * `=== Tarball Details ===` for years and dropped the rules later.
+ */
+const TARBALL_BUILT = /npm notice\s+=*\s*Tarball (?:Details|Contents)|npm notice\s+total files:/i;
+
+/**
  * Decide whether a dry-run result is acceptable, with no side effects, so both directions are
  * testable without a registry.
  *
@@ -50,7 +63,7 @@ export function classifyDryRun(result) {
   if (result.status !== 0) {
     // The one tolerated failure, and only when the registry named it. Any other non-zero status is
     // a real failure — a broken pack, a network error, a missing file — and stays fatal.
-    if (ALREADY_PUBLISHED.test(combined)) {
+    if (ALREADY_PUBLISHED.test(combined) && TARBALL_BUILT.test(combined)) {
       return {
         ok: warnings.length === 0,
         reason:
@@ -60,7 +73,13 @@ export function classifyDryRun(result) {
         warnings,
       };
     }
-    return { ok: false, reason: "npm publish --dry-run exited with non-zero status", warnings };
+    return {
+      ok: false,
+      reason: ALREADY_PUBLISHED.test(combined)
+        ? "npm publish --dry-run reported the version as already published, but printed no tarball summary — the pack did not run"
+        : "npm publish --dry-run exited with non-zero status",
+      warnings,
+    };
   }
 
   return {

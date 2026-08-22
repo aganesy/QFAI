@@ -138,14 +138,36 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
       'no workflows-directory pruneMatchingEntries call site may use a startsWith("qfai-") prefix-glob predicate',
     ).toEqual([]);
 
-    // The predicate must be name-set membership over the retired-name list.
-    const membershipSites = workflowsSites.filter((site) =>
-      site.includes("RETIRED_WORKFLOW_NAMES"),
+    // The predicate must be name-set membership over the retired-name list —
+    // either the list itself, or a set DERIVED from it by the ownership
+    // resolver below. What is forbidden is a predicate whose selector is
+    // anything other than that list.
+    const membershipSites = workflowsSites.filter(
+      (site) => site.includes("RETIRED_WORKFLOW_NAMES") || site.includes("prunableRetiredNames"),
     );
     expect(
       membershipSites.length,
-      "expected a pruneMatchingEntries call site targeting the workflows directory whose predicate tests RETIRED_WORKFLOW_NAMES membership",
+      "expected a pruneMatchingEntries call site targeting the workflows directory whose predicate tests retired-name membership",
     ).toBeGreaterThanOrEqual(1);
+  });
+
+  it("the retired-name selector is narrowed by provenance before anything is removed", async () => {
+    const source = await readInitSource();
+
+    // Membership in the retired list is a NECESSARY condition for removal, not
+    // a sufficient one: the acceptance criteria require provenance to be
+    // consulted before every overwrite and every prune, and a name the adopter
+    // authored themselves carries no entry. So the set handed to the predicate
+    // is resolved from the record, and the resolver has to read both halves —
+    // the retired list and the recorded entry.
+    const resolver = source.slice(source.indexOf("async function resolvePrunableRetiredWorkflows"));
+    expect(
+      resolver,
+      "init.ts must resolve the prunable retired names from the provenance record",
+    ).not.toBe("");
+    const body = resolver.slice(0, resolver.indexOf("\n}\n") + 3);
+    expect(body).toContain("RETIRED_WORKFLOW_NAMES");
+    expect(body).toContain("record.workflows[name]");
   });
 
   it("no parallel removal helper: one pruneMatchingEntries definition and no second removal-flavoured export", async () => {
@@ -331,10 +353,18 @@ describe(
         // Fail-safe direction: an unreadable record means every file on
         // disk is adopter-owned, so QFAI leaves everything alone. A throw
         // here would fail this resolves-assertion, not crash the test.
-        await expect(
-          readInstallProvenance(dir),
-          `[record ${state}] reader must resolve to an empty record`,
-        ).resolves.toEqual({ workflows: {} });
+        //
+        // The claim is about `workflows`, which is the field every ownership
+        // decision reads, and NOT about the whole object. The reader also
+        // carries unknown top-level namespaces through so that this version
+        // cannot delete a later version's artifact kind on the next write —
+        // the `no-workflows-key` fixture plants exactly such a key, so an
+        // object-identity assertion here would forbid that round-trip.
+        const record = await readInstallProvenance(dir);
+        expect(
+          record.workflows,
+          `[record ${state}] reader must resolve to an empty workflows map`,
+        ).toEqual({});
       }
     });
 

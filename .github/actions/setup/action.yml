@@ -30,7 +30,19 @@ runs:
     # cosmetic: with the steps reversed the cache key cannot be derived and the
     # setup step fails.
     - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-      run: corepack enable
+      # Corepack is BUNDLED with the Node line this repository floors at, and it
+      # stopped being bundled from Node 25 on. `engines.node` is `>=20.19.0` with
+      # no ceiling, and step 2 resolves "latest satisfying the range", so the day
+      # the runner image ships a Node past that boundary this command becomes
+      # `corepack: command not found` — and every job that consumes this action
+      # (lint, type checks, tests, the required build) stops being runnable at
+      # once. Installing it when it is absent keeps the resolution rule as it is
+      # instead of pinning the range down to whatever still bundles it.
+      run: |
+        if ! command -v corepack > /dev/null 2>&1; then
+          npm install --global corepack
+        fi
+        corepack enable
       shell: bash
 
     # ── 2. Node, from a FILE ──────────────────────────────────────────────────
@@ -67,7 +79,14 @@ runs:
     # a no-op — which is why the four-step ORDER is pinned by a test and not just
     # the membership.
     - name: Re-shim pnpm against toolcache Node
-      run: corepack prepare pnpm@9.12.3 --activate
+      # The availability guard is repeated rather than shared: the global install
+      # in step 1 landed in the RUNNER Node's global prefix, and step 2 has since
+      # put a different Node ahead of it, so the same absence can recur here.
+      run: |
+        if ! command -v corepack > /dev/null 2>&1; then
+          npm install --global corepack
+        fi
+        corepack prepare pnpm@9.12.3 --activate
       shell: bash
 
     # ── 4. Install ────────────────────────────────────────────────────────────

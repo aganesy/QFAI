@@ -6,9 +6,22 @@
  * and is tracked — deliberately NOT part of the managed gitignore block —
  * because a deliberately deleted (declined) file is only recognizable as
  * declined while the record survives a fresh clone.
+ *
+ * ## Hostile-tree posture
+ *
+ * The record path is adopter-controlled and QFAI opens it in a repository
+ * it did not create. Both ends therefore refuse to FOLLOW that path:
+ *
+ * - the reader `lstat`s first and reads only a regular file below a size
+ *   ceiling, so a symlink to `/dev/zero`, a FIFO, or a multi-gigabyte file
+ *   resolves to the empty record instead of hanging the process;
+ * - the writer never opens the record path for writing at all. It writes a
+ *   fresh temp file beside it and `rename`s over the name, which REPLACES a
+ *   symlink sitting there rather than truncating whatever it points at, and
+ *   which leaves the previous record intact when the write fails partway.
  */
-import { createHash } from "node:crypto";
-import { mkdir, readFile, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { lstat, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type WorkflowProvenanceEntry = {
@@ -22,6 +35,17 @@ export type WorkflowProvenanceEntry = {
 
 export type InstallProvenanceRecord = {
   workflows: Record<string, WorkflowProvenanceEntry>;
+  /**
+   * Top-level keys other than `workflows`, carried through read → write
+   * verbatim.
+   *
+   * The contract namespaces the top level by artifact kind so a later kind
+   * is additive. Projecting the parsed file onto `{ workflows }` alone and
+   * writing that back would make an OLDER package silently delete a NEWER
+   * one's ownership data on the first `qfai init` that records anything.
+   * Unknown keys are never inspected, only preserved.
+   */
+  otherNamespaces?: Record<string, unknown>;
 };
 
 /**
@@ -34,25 +58,49 @@ export type WorkflowFileState = "absent" | "adopter-owned" | "installed" | "modi
 const PROVENANCE_SEGMENTS = [".qfai", "install-provenance.json"] as const;
 
 /**
+ * Read ceiling for the record. The record holds a handful of filenames and
+ * three short strings each; anything past this is not a record QFAI wrote,
+ * and reading it is the denial-of-service the `lstat` guard exists to stop.
+ */
+const MAX_RECORD_BYTES = 1_048_576;
+
+/** A 64-character lowercase hex sha256 digest, and nothing else. */
+const SHA256_HEX_PATTERN = /^[0-9a-f]{64}$/;
+
+/**
+ * ISO 8601 instant with a timezone designator — the shape `toISOString`
+ * produces, which is what the writer stamps.
+ */
+const ISO_TIMESTAMP_PATTERN =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/;
+
+/**
  * Reads the install-provenance record from the adopter tree rooted at
  * `rootDir`.
  *
- * Fail-safe by contract: a missing or unreadable file, malformed JSON, or
- * a missing/invalid `workflows` key all resolve to an EMPTY record —
- * never a throw. An empty record means every file on disk is treated as
- * adopter-owned, which is the direction in which QFAI touches nothing.
- * Entries that do not carry the full string shape are dropped rather than
- * surfaced partially.
+ * Fail-safe by contract: a missing or unreadable file, a path that is not a
+ * regular file, an oversized file, malformed JSON, or a missing/invalid
+ * `workflows` key all resolve to an EMPTY record — never a throw. An empty
+ * record means every file on disk is treated as adopter-owned, which is the
+ * direction in which QFAI touches nothing. Entries that do not carry the
+ * full string shape — a 64-hex digest, a non-empty version and a parseable
+ * ISO 8601 instant — are dropped rather than surfaced partially.
  */
 export async function readInstallProvenance(rootDir: string): Promise<InstallProvenanceRecord> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
 
   let raw: string;
   try {
+    // lstat, not stat, and BEFORE the open: a symlink here would otherwise be
+    // followed to a device or a FIFO and the read would never return.
+    const stats = await lstat(recordPath);
+    if (!stats.isFile() || stats.size > MAX_RECORD_BYTES) {
+      return emptyRecord();
+    }
     raw = await readFile(recordPath, "utf-8");
   } catch {
-    // Absent or unreadable: empty record (fail-safe).
-    return { workflows: {} };
+    // Absent, not a regular file, or unreadable: empty record (fail-safe).
+    return emptyRecord();
   }
 
   let parsed: unknown;
@@ -60,10 +108,13 @@ export async function readInstallProvenance(rootDir: string): Promise<InstallPro
     parsed = JSON.parse(raw);
   } catch {
     // Malformed JSON: empty record (fail-safe).
-    return { workflows: {} };
+    return emptyRecord();
   }
 
-  return { workflows: extractWorkflows(parsed) };
+  const otherNamespaces = extractOtherNamespaces(parsed);
+  return otherNamespaces === undefined
+    ? { workflows: extractWorkflows(parsed) }
+    : { workflows: extractWorkflows(parsed), otherNamespaces };
 }
 
 /**
@@ -102,14 +153,36 @@ export function resolveWorkflowFileState(
  * `rootDir`, creating the parent directory when needed. This is the single
  * writer for the record file; the serialized form is the pretty-printed
  * JSON shape `readInstallProvenance` round-trips, with a trailing newline.
+ *
+ * Write-then-rename, for two reasons that are one mechanism:
+ *
+ * - **Atomicity.** A truncating write that dies partway leaves invalid JSON,
+ *   which the reader turns into the EMPTY record — losing every ownership
+ *   and declined marker at once, so the next `init` recreates files the
+ *   adopter removed. The temp file absorbs the partial write instead.
+ * - **No link following.** `rename` replaces the NAME. If the record path is
+ *   a symlink pointing anywhere the user can write, this replaces the link;
+ *   opening the path for writing would have truncated its target.
  */
 export async function writeInstallProvenance(
   rootDir: string,
   record: InstallProvenanceRecord,
 ): Promise<void> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
-  await mkdir(path.dirname(recordPath), { recursive: true });
-  await writeFile(recordPath, `${JSON.stringify(record, null, 2)}\n`, "utf-8");
+  const recordDir = path.dirname(recordPath);
+  await mkdir(recordDir, { recursive: true });
+
+  const serialized = `${JSON.stringify(serializeRecord(record), null, 2)}\n`;
+  // Same directory as the target, or the rename would cross a filesystem
+  // boundary and stop being atomic. `wx` refuses to reuse an existing name.
+  const tempPath = path.join(recordDir, `.install-provenance.${randomUUID()}.tmp`);
+  try {
+    await writeFile(tempPath, serialized, { encoding: "utf-8", flag: "wx" });
+    await rename(tempPath, recordPath);
+  } catch (error) {
+    await unlink(tempPath).catch(() => undefined);
+    throw error;
+  }
 }
 
 /**
@@ -129,6 +202,19 @@ export function createWorkflowProvenanceEntry(
     installedByVersion,
     installedAt,
   };
+}
+
+function emptyRecord(): InstallProvenanceRecord {
+  return { workflows: {} };
+}
+
+/**
+ * The JSON body: `workflows` first, then every unknown top-level namespace
+ * the reader carried through. Unknown keys can never shadow `workflows`,
+ * because the reader excludes that name from them.
+ */
+function serializeRecord(record: InstallProvenanceRecord): Record<string, unknown> {
+  return { workflows: record.workflows, ...(record.otherNamespaces ?? {}) };
 }
 
 function isRecordObject(value: unknown): value is Record<string, unknown> {
@@ -153,6 +239,23 @@ function extractWorkflows(parsed: unknown): Record<string, WorkflowProvenanceEnt
   return workflows;
 }
 
+/** Every top-level key except `workflows`, verbatim, or `undefined` when there is none. */
+function extractOtherNamespaces(parsed: unknown): Record<string, unknown> | undefined {
+  if (!isRecordObject(parsed)) {
+    return undefined;
+  }
+  const other: Record<string, unknown> = {};
+  let seen = false;
+  for (const [key, value] of Object.entries(parsed)) {
+    if (key === "workflows") {
+      continue;
+    }
+    other[key] = value;
+    seen = true;
+  }
+  return seen ? other : undefined;
+}
+
 function toWorkflowEntry(value: unknown): WorkflowProvenanceEntry | undefined {
   if (!isRecordObject(value)) {
     return undefined;
@@ -167,5 +270,21 @@ function toWorkflowEntry(value: unknown): WorkflowProvenanceEntry | undefined {
   ) {
     return undefined;
   }
+  // The field TYPES are not the shape. An entry of three empty strings is a
+  // well-typed record that claims ownership, and `resolveWorkflowFileState`
+  // reads a claimed name with no file as `declined` — which stops `qfai init`
+  // from ever writing the workflow again. A corrupt entry must be DROPPED so
+  // the name falls back to `absent`, the state that installs.
+  if (
+    !SHA256_HEX_PATTERN.test(sha256) ||
+    installedByVersion.length === 0 ||
+    !isIsoTimestamp(installedAt)
+  ) {
+    return undefined;
+  }
   return { sha256, installedByVersion, installedAt };
+}
+
+function isIsoTimestamp(value: string): boolean {
+  return ISO_TIMESTAMP_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
 }

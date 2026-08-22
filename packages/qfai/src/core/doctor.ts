@@ -486,7 +486,16 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
       id: "workflows.integrity",
       severity: "ok",
       title: WORKFLOWS_INTEGRITY_TITLE,
-      message: "installed shipped workflow(s) match the packaged copy",
+      // Two messages, because ONE of them would be false on one of the two
+      // trees that reach this arm. A tree whose every recorded name was
+      // deliberately removed has NO installed workflow at all, so claiming its
+      // installed files match a packaged copy states something QFAI never
+      // observed — the check is still `ok` (a declined name is never reported
+      // again), but the prose has to say what was actually established.
+      message:
+        workflowsDiff.declined.length === workflowsDiff.comparedCount
+          ? "every recorded shipped workflow was removed by this repository; nothing to compare"
+          : "installed shipped workflow(s) match the packaged copy",
       details: { workflowsDir: workflowsDiff.workflowsDir },
     });
   } else if (workflowsDiff.status === "skipped_unresolved") {

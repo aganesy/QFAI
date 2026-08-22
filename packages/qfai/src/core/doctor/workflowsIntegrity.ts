@@ -88,7 +88,7 @@
  * clean check.
  */
 import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
+import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
@@ -217,6 +217,12 @@ export type WorkflowsIntegrityDiff = {
    * not a count of matches and not a count of drifted files. Zero means this
    * reader examined nothing.
    *
+   * It counts the recorded names this reader ACCEPTED as operands, which is
+   * `recordedNames.length` minus any key the record carries that is not a
+   * plain filename inside the workflows directory. A rejected key was never
+   * opened, so counting it would let a record of nothing but traversal keys
+   * report a positive comparison set.
+   *
    * It exists because `status: "ok"` alone cannot carry that distinction, and a
    * caller that emits on `ok` alone reports a match on a tree where nothing
    * was looked at. The record is empty for a missing, unreadable or malformed
@@ -296,8 +302,26 @@ function errorCode(error: unknown): string | undefined {
   return typeof code === "string" ? code : undefined;
 }
 
+/**
+ * Read ceiling for one workflow file. A shipped workflow is a few kilobytes;
+ * anything past this is not one, and reading it is the resource exhaustion the
+ * `lstat` guard below exists to stop.
+ */
+const MAX_WORKFLOW_BYTES = 1_048_576;
+
 async function digestFile(filePath: string): Promise<FileDigest> {
   try {
+    // lstat BEFORE the read, and never `stat`: a recorded name whose file the
+    // adopter replaced with a symlink to `/dev/zero` or a FIFO would otherwise
+    // be followed, and the read would never return — `qfai doctor` would hang
+    // or exhaust memory on a tree it is only supposed to inspect. A symlink,
+    // a device, a FIFO and an oversized file are all `unreadable`: present,
+    // state not establishable, which is the bucket the conservative direction
+    // already puts an unreadable file in.
+    const stats = await lstat(filePath);
+    if (!stats.isFile() || stats.size > MAX_WORKFLOW_BYTES) {
+      return { kind: "unreadable" };
+    }
     return { kind: "digest", value: digestNormalizedText(await readFile(filePath, "utf-8")) };
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
@@ -305,6 +329,33 @@ async function digestFile(filePath: string): Promise<FileDigest> {
     }
     return { kind: "unreadable" };
   }
+}
+
+/**
+ * Whether a name read out of the provenance record may be joined onto a
+ * directory path.
+ *
+ * The record is a TRACKED, adopter-editable file, so its keys are untrusted
+ * input to `path.join`. A key like `../../package.json` — or one with enough
+ * `..` segments to reach `/dev/zero` — would otherwise make the reader digest
+ * a file outside the workflows directory and report it as drift, or block on a
+ * device node. The test is a plain basename with no separator, no drive
+ * letter, no `.`/`..`, restricted to the characters a shipped workflow
+ * filename uses; the caller re-checks the JOINED path for good measure.
+ */
+function isSafeProvenanceName(name: string): boolean {
+  if (name.length === 0 || name === "." || name === "..") {
+    return false;
+  }
+  if (!/^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name)) {
+    return false;
+  }
+  return path.basename(name) === name && !path.isAbsolute(name);
+}
+
+/** Whether `child` resolves to a direct entry of `dir`. */
+function resolvesInside(dir: string, child: string): boolean {
+  return path.dirname(path.resolve(dir, child)) === path.resolve(dir);
 }
 
 /**
@@ -348,7 +399,15 @@ export async function diffInstalledShippedWorkflows(
   packagedWorkflowsDirOverride?: string,
 ): Promise<WorkflowsIntegrityDiff> {
   const packagedDir = packagedWorkflowsDirOverride ?? resolvePackagedWorkflowsDir();
-  if (packagedDir === undefined) {
+  // The packaged operand has to be resolvable AND actually be a readable
+  // directory. Resolving the path alone is not the same claim: a partially
+  // extracted or damaged package can leave the assets sentinel in place while
+  // the workflows directory itself is gone, and then EVERY packaged file reads
+  // as absent — which the per-file rule treats as "the package no longer ships
+  // the name" and excludes from drift. That renders exactly the package damage
+  // repair is needed for as a clean check, so the whole-tree case is decided
+  // here, before any name is compared.
+  if (packagedDir === undefined || !(await isReadableDirectory(packagedDir))) {
     return {
       status: "skipped_unresolved",
       workflowsDir: WORKFLOWS_DIR_RELATIVE,
@@ -362,12 +421,21 @@ export async function diffInstalledShippedWorkflows(
   const installedDir = path.join(root, ...WORKFLOWS_DIR_SEGMENTS);
   const modified: string[] = [];
   const declined: string[] = [];
+  let examinedCount = 0;
   // The recorded names, and nothing else. A name with no entry is never
   // visited, which is what makes `adopter-owned` and `absent` unreachable
   // here instead of filtered. Only presence is consumed — `entry.sha256` has
   // a different digest basis and is deliberately not read.
   const recordedNames = Object.keys((await readInstallProvenance(root)).workflows);
   for (const name of recordedNames) {
+    // Untrusted key, checked before it becomes a path. A record entry named
+    // `../../package.json` is not a workflow this reader owns; skipping it is
+    // the only outcome that neither reports an unrelated file as drift nor
+    // opens whatever the traversal lands on.
+    if (!isSafeProvenanceName(name) || !resolvesInside(installedDir, name)) {
+      continue;
+    }
+    examinedCount += 1;
     const installedPath = path.join(installedDir, name);
 
     // The `declined` split happens BEFORE the drift comparison, and it has to:
@@ -407,6 +475,15 @@ export async function diffInstalledShippedWorkflows(
     packagedDir,
     modified,
     declined,
-    comparedCount: recordedNames.length,
+    comparedCount: examinedCount,
   };
+}
+
+/** Whether `dir` exists and is a directory (following the packaged path is fine: it is ours). */
+async function isReadableDirectory(dir: string): Promise<boolean> {
+  try {
+    return (await stat(dir)).isDirectory();
+  } catch {
+    return false;
+  }
 }

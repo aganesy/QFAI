@@ -61,8 +61,16 @@ jobs:
           # documentation path and the source change skips every test lane. Turning
           # detection off makes both halves visible, and the source half classifies as
           # source. Measured: the default reports one path, `--no-renames` reports two.
+          # The STATUS is captured and handed on, not just the output. Git can
+          # write part of the list and then fail — a missing object, an I/O
+          # error — and a partial list that happens to hold only documentation
+          # paths would otherwise be classified as a complete, docs-only change.
+          # A non-zero status is "no path list was produced", whatever landed on
+          # stdout, and the classifier fails open on it.
           git diff --name-only --no-renames "${BASE_SHA}" "${HEAD_SHA}" \
-            > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" || true
+            > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" \
+            && diff_status=0 || diff_status=$?
+          printf '%s\n' "${diff_status}" > "${RUNNER_TEMP}/diff-status.txt"
           cat > "${RUNNER_TEMP}/detect.mjs" <<'NODE'
           // Change detection: classify the pull request's changed paths against two
           // ENUMERATED lists and select either the full lane set or the
@@ -114,6 +122,15 @@ jobs:
           // than merely left out, so the exclusion is enforced instead of incidental:
           // what lives there changes validate output, which is why the catalog is
           // loaded and not merely shipped.
+          //
+          // The agent-integration mirrors are NOT here, and that is a recorded hazard
+          // rather than an oversight: BR-0017-0010 requires them in the
+          // documentation-only set with an explicit MUST, while
+          // `packages/qfai/tests/codex/agents.test.ts` and
+          // `.../tests/integration/agentsRulesSurface.test.ts` guard those same paths
+          // from inside the `test` job a documentation-only classification skips.
+          // CR-20260820-0004 carries that measurement and is open on which side moves.
+          // Adding a member here would decide it against the rule's own wording.
           const NEVER_DOCUMENTATION = [".qfai/assistant/"];
 
           // The documentation-only set (BR-0017-0010). Small, and measured rather than
@@ -189,11 +206,31 @@ jobs:
           }
 
           function main() {
-            const [, , pathsFile, diffErrorFile] = process.argv;
+            const [, , pathsFile, diffErrorFile, diffStatusFile] = process.argv;
             const paths = (read(pathsFile) ?? "")
               .split("\n")
               .map((line) => line.trim())
               .filter((line) => line.length > 0);
+
+            // A non-zero diff status is decisive on its own, BEFORE the list is
+            // read. Git writes to stdout as it walks, so a run that dies partway
+            // leaves a list that is syntactically fine and semantically short —
+            // and a short list holding only documentation paths selects no lane.
+            // An absent status file means the caller did not report one, which is
+            // the pre-existing shape and is treated as success.
+            const diffStatus = (read(diffStatusFile) ?? "0").trim();
+            if (diffStatus !== "" && diffStatus !== "0") {
+              const why = oneLine(read(diffErrorFile) ?? "") || "git exited " + diffStatus;
+              process.stdout.write(
+                "::warning title=change detection failed open::the changed-path list is incomplete (git exited " +
+                  diffStatus +
+                  "), so the full lane set is selected: " +
+                  why +
+                  "\n",
+              );
+              emit(true, "diff failed: " + why);
+              return;
+            }
 
             // An EMPTY list is a failure to compute, never "nothing changed". A pull
             // request always changes something, so an empty diff means the diff did not
@@ -216,7 +253,7 @@ jobs:
 
           main();
           NODE
-          node "${RUNNER_TEMP}/detect.mjs" "${RUNNER_TEMP}/changed.txt" "${RUNNER_TEMP}/diff-err.txt"
+          node "${RUNNER_TEMP}/detect.mjs" "${RUNNER_TEMP}/changed.txt" "${RUNNER_TEMP}/diff-err.txt" "${RUNNER_TEMP}/diff-status.txt"
 
   # ── 1. Lint & format checks ──────────────────────────────────────
   # TODO(QFAI-PR206-followup): add a windows-latest matrix entry that runs

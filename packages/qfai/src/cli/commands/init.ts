@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createHash } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -155,6 +156,22 @@ export async function runInit(options: InitOptions): Promise<void> {
     protect: ["DESIGN.md"],
     exclude: declinedWorkflowExcludes,
   });
+
+  // Record provenance for the shipped workflow files this copy actually
+  // wrote, IMMEDIATELY after the copy that wrote them (no-op on dry-run and
+  // when nothing new was written). Nothing unrelated may run in between: a
+  // permission or disk error in the `.qfai` or skills copy below would
+  // otherwise leave the workflow on disk with no entry, which the next run
+  // reads as `adopter-owned` — unrecordable forever, and invisible to
+  // doctor's drift detection from then on.
+  await recordInstalledWorkflows(
+    destRoot,
+    workflowPreInit,
+    rootResult.copied,
+    toolVersion,
+    options.dryRun,
+  );
+
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -166,10 +183,6 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
   });
-
-  // Record provenance for the shipped workflow files this run actually
-  // wrote (no-op on dry-run and when nothing new was written).
-  await recordInstalledWorkflows(destRoot, workflowPreInit, toolVersion, options.dryRun);
 
   // git config core.symlinks true（symlink 生成の前提条件）
   await configureGitSymlinks(destRoot, options.dryRun);
@@ -188,15 +201,23 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
 
-  // Retired shipped workflows: prune by retired-name-set membership ONLY.
-  // The adopter's `.github/workflows/` directory is adopter-authored; the
-  // `qfai-` filename prefix is a reservation notice, never a deletion
-  // selector, so a prefix predicate is forbidden here (shipped-workflows
-  // contract) — an adopter-created `qfai-*.yml` must stay untouched.
+  // Retired shipped workflows: retired-name-set membership AND recorded
+  // QFAI ownership, both. The adopter's `.github/workflows/` directory is
+  // adopter-authored; the `qfai-` filename prefix is a reservation notice,
+  // never a deletion selector, so a prefix predicate is forbidden here
+  // (shipped-workflows contract) — an adopter-created `qfai-*.yml` must stay
+  // untouched. Name membership alone is not the ownership test either: an
+  // adopter who authored a file under a name QFAI later retires has no
+  // provenance entry, and the acceptance criteria require provenance to be
+  // consulted before every overwrite and every prune.
   const removedRetiredWorkflows: string[] = [];
+  const prunableRetiredNames = await resolvePrunableRetiredWorkflows(
+    destRoot,
+    workflowPreInit.record,
+  );
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "workflows"),
-    (entry) => entry.isFile() && RETIRED_WORKFLOW_NAMES.has(entry.name),
+    (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),
     removedRetiredWorkflows,
     options.dryRun,
   );
@@ -2075,28 +2096,80 @@ async function captureShippedWorkflowPreInitState(
 }
 
 /**
+ * The retired names this run may remove: the file on disk carries a
+ * provenance entry AND still holds exactly the bytes QFAI recorded writing.
+ *
+ * Both conjuncts protect an adopter file from a name-set membership test:
+ * no entry means the adopter authored the file themselves (the
+ * `adopter-owned` row, never pruned), and a digest that no longer matches
+ * means they edited what QFAI wrote (the `modified` row, never pruned).
+ * A name that fails either test is left on disk untouched — a stale file is
+ * recoverable, a deleted one is not.
+ */
+async function resolvePrunableRetiredWorkflows(
+  destRoot: string,
+  record: InstallProvenanceRecord,
+): Promise<Set<string>> {
+  const prunable = new Set<string>();
+  for (const name of RETIRED_WORKFLOW_NAMES) {
+    const entry = record.workflows[name];
+    if (entry === undefined) {
+      continue;
+    }
+    const bytes = await readFile(path.join(destRoot, ".github", "workflows", name)).catch(
+      () => undefined,
+    );
+    if (bytes === undefined) {
+      continue;
+    }
+    if (createHash("sha256").update(bytes).digest("hex") === entry.sha256) {
+      prunable.add(name);
+    }
+  }
+  return prunable;
+}
+
+/**
  * Records provenance entries for the shipped workflow files this run
- * actually wrote: only names whose pre-run state was absent qualify, and
- * each entry's sha256 digests the bytes just written. The record file is
- * untouched when nothing new was written (idempotent re-runs, declined
- * names) and on --dry-run.
+ * actually wrote: a name qualifies only when its pre-run state was absent
+ * AND the copy primitive reported writing it, and each entry's sha256
+ * digests the bytes just written. The record file is untouched when nothing
+ * new was written (idempotent re-runs, declined names) and on --dry-run.
+ *
+ * `copiedPaths` is the copy primitive's own `copied` list, and it is the
+ * ONLY evidence of a write accepted here. Reading the destination back is
+ * not evidence: a create-only copy skips a path that appeared between the
+ * pre-run snapshot and the copy (another process, or a dangling symlink the
+ * snapshot saw as absent and whose target a later copy filled in), and the
+ * read-back would then claim QFAI wrote a file it never touched — which
+ * makes doctor report drift on an adopter-owned file forever.
  */
 async function recordInstalledWorkflows(
   destRoot: string,
   preInit: ShippedWorkflowPreInitState,
+  copiedPaths: readonly string[],
   toolVersion: string,
   dryRun: boolean,
 ): Promise<void> {
   if (dryRun) {
     return;
   }
+  const workflowsDir = path.join(destRoot, ".github", "workflows");
+  const copiedNames = new Set(
+    copiedPaths
+      .filter((copied) => path.dirname(path.resolve(copied)) === path.resolve(workflowsDir))
+      .map((copied) => path.basename(copied)),
+  );
   const installedAt = new Date().toISOString();
   const added: Record<string, WorkflowProvenanceEntry> = {};
   for (const name of preInit.absentNames) {
-    const writtenPath = path.join(destRoot, ".github", "workflows", name);
+    if (!copiedNames.has(name)) {
+      continue; // the copy skipped it: a skipped file produces no entry
+    }
+    const writtenPath = path.join(workflowsDir, name);
     const writtenBytes = await readFile(writtenPath).catch(() => undefined);
     if (writtenBytes === undefined) {
-      continue; // not written after all: a skipped file produces no entry
+      continue; // unreadable after the write: nothing to digest, so no entry
     }
     added[name] = createWorkflowProvenanceEntry(writtenBytes, toolVersion, installedAt);
   }
@@ -2104,6 +2177,7 @@ async function recordInstalledWorkflows(
     return;
   }
   await writeInstallProvenance(destRoot, {
+    ...preInit.record,
     workflows: { ...preInit.record.workflows, ...added },
   });
 }

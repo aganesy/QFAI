@@ -207,6 +207,30 @@ async function shippedWorkflowFiles(): Promise<string[]> {
   return files;
 }
 
+/**
+ * Physical lines folded into logical commands, the way bash reads them.
+ *
+ * A trailing backslash continues the line, so `pnpm \` + `build` is ONE command. Classifying the
+ * two halves separately answers `none` for each, which is how a lane that really does build slips
+ * past a per-line scan. An even number of trailing backslashes is an escaped backslash and does
+ * NOT continue.
+ */
+export function joinContinuations(lines: readonly string[]): string[] {
+  const joined: string[] = [];
+  let pending: string | undefined;
+  for (const line of lines) {
+    const continues = /(?:^|[^\\])(\\\\)*\\$/.test(line);
+    const body = continues ? line.slice(0, -1) : line;
+    pending = pending === undefined ? body : `${pending}${body}`;
+    if (!continues) {
+      joined.push(pending);
+      pending = undefined;
+    }
+  }
+  if (pending !== undefined) joined.push(pending);
+  return joined;
+}
+
 async function shippedJobs(): Promise<Record<string, unknown>> {
   const files = await shippedWorkflowFiles();
   const out: Record<string, unknown> = {};
@@ -630,7 +654,12 @@ describe(
         for (const step of steps) {
           const run = isRecord(step) ? step["run"] : undefined;
           if (typeof run !== "string") continue;
-          for (const line of run.split(/\r?\n/)) {
+          // Line continuations are JOINED before anything is classified. A physical split is not a
+          // command boundary: `pnpm \` followed by `build` is one command to bash, and classifying
+          // the two halves separately answers `none` for both — so the regression guard reports a
+          // clean shipped set over a lane that builds. Only a backslash at end-of-line continues;
+          // an escaped backslash (`\\`) ends the line.
+          for (const line of joinContinuations(run.split(/\r?\n/))) {
             // Comments are not commands, trailing ones included — round 2 found that whole-line
             // stripping alone read `pnpm check-types   # runs tsc -b` as a build.
             const command = line.replace(/#.*$/, "").trim();

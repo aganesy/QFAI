@@ -93,8 +93,20 @@ const ACTIONS_DIR = path.join(REPO_ROOT, ".github", "actions");
  *
  * So this is an extension with a cited authorization, not a relaxation. CLAIM 2 below —
  * no workflow-level default — is what the rule actually guards, and it is untouched.
+ *
+ * Four, and the fourth is `release.yml::gate`, on the same "legitimately needs it" clause.
+ * The gate runs `pnpm ci:gate`, which runs `scripts/check-prompt-scanner-pair.mjs`, which
+ * takes a three-dot diff between `origin/main` and `HEAD`. At the default depth of 1 the
+ * tag being published and the branch share no reachable merge base, so the script exits 2
+ * and the workflow's own stated use — re-running a failed publish for an older tag — could
+ * never clear this job. The need is structural, not incidental.
  */
-const FULL_HISTORY_JOBS = ["ci.yml::detect", "ci.yml::lint", "release.yml::verify"];
+const FULL_HISTORY_JOBS = [
+  "ci.yml::detect",
+  "ci.yml::lint",
+  "release.yml::verify",
+  "release.yml::gate",
+];
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);

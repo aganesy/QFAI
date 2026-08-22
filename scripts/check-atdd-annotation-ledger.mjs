@@ -52,13 +52,24 @@ const ANNOTATION = /\bQFAI:SPEC-(\d{4}):(US-\d{4}(?:-\d{4})?)\b/g;
 /**
  * Suffixes that can carry an annotation in a test tree.
  *
- * Deliberately broader than the scanner's own `DEFAULT_TEST_FILE_GLOB`, and narrower than "any file":
- * a claim is backed when SOME test source names it, and a file the scanner would not execute still
- * tells a reader the story was written about. `.md` and `.feature` are excluded — a markdown file
- * naming an annotation is a ledger or a document, not a test, and treating one as backing would
- * reintroduce exactly the substitution this guard exists to stop.
+ * `.md` and `.feature` are excluded — a markdown file naming an annotation is a ledger or a
+ * document, not a test, and treating one as backing would reintroduce exactly the substitution
+ * this guard exists to stop.
  */
 const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
+
+/**
+ * And the file has to be one the RUNNER executes.
+ *
+ * The E2E project's include is `tests/e2e/**\/*.test.ts`, so a `helpers.ts` or a `fixture.js`
+ * sitting beside the suites is read by nobody unless a suite imports it. An earlier revision
+ * counted those as backing on the argument that "a file the scanner would not execute still
+ * tells a reader the story was written about" — but this guard's whole job is to refuse a
+ * ledger claim with no EXECUTING test behind it, and under that rule deleting the real
+ * `*.test.ts` while leaving the annotation in a helper kept the ledger green. The corpus is
+ * therefore the runner's own file shape.
+ */
+const TEST_FILE_PATTERN = /\.test\.[a-z]+$/;
 
 /**
  * Compare the claims a ledger makes against the annotations tests carry.
@@ -165,6 +176,7 @@ async function readDirectoryInto(current, sources) {
       continue;
     }
     if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
+    if (!TEST_FILE_PATTERN.test(entry.name)) continue;
     try {
       sources.set(full, await readFile(full, "utf8"));
     } catch (error) {

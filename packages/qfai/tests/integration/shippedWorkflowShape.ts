@@ -444,6 +444,40 @@ function parseDeclaredInvocation(invocation: string): ParsedInvocation {
   return { subcommand: match[1] ?? "", profile: match[2] ?? "", failOn: match[3] ?? "" };
 }
 
+/**
+ * Whether the exit status of the invocation on this line still decides the
+ * step's own, and what defeats it when it does not.
+ *
+ * Reading the three declared tokens out of the line and ignoring everything
+ * around them makes `npx qfai validate --profile full --fail-on error || true`
+ * an exact match for the declared shape, while the adopter's `qfai validate`
+ * check goes green on every validation error there is. `--fail-on error` is
+ * only a threshold while the failure reaches the runner, so the surrounding
+ * shell is part of what dimension 5 pins.
+ *
+ * `&&` is deliberately absent: a failing left-hand command still fails the
+ * step, so chaining a follow-up onto success suppresses nothing.
+ */
+function failureSuppression(line: string): string | undefined {
+  const trimmed = line.trim();
+  if (/\|\|/.test(trimmed)) {
+    return "`||` — the fallback swallows a non-zero exit";
+  }
+  if (/[^|]\|[^|]/.test(trimmed)) {
+    return "`|` — a pipeline reports the LAST command's exit status";
+  }
+  if (/;\s*\S/.test(trimmed)) {
+    return "`;` — a later command on the same line decides the exit status";
+  }
+  if (/(?:^|[^&])&\s*$/.test(trimmed)) {
+    return "`&` — a backgrounded command's exit status is never waited on";
+  }
+  return undefined;
+}
+
+/** An unconditional `exit 0` — everything after it in the same body is dead code. */
+const UNCONDITIONAL_EXIT_ZERO = /^\s*exit\s+0\s*$/;
+
 /** What a job's run bodies actually invoke, or undefined when nothing does. */
 function observedInvocation(job: Record<string, unknown>): ParsedInvocation | undefined {
   for (const step of collectJobSteps(job)) {
@@ -451,15 +485,26 @@ function observedInvocation(job: Record<string, unknown>): ParsedInvocation | un
     if (typeof run !== "string") {
       continue;
     }
+    let deadCode = false;
     for (const line of executableLines(run)) {
+      if (UNCONDITIONAL_EXIT_ZERO.test(line)) {
+        deadCode = true;
+        continue;
+      }
       const command = QFAI_INVOCATION_RE.exec(line);
       if (command === null) {
         continue;
       }
+      const suppressed = deadCode
+        ? "an unconditional `exit 0` earlier in the same body — the invocation never runs"
+        : failureSuppression(line);
       return {
         subcommand: command[1] ?? "",
         profile: /--profile[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)",
-        failOn: /--fail-on[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)",
+        failOn:
+          suppressed === undefined
+            ? (/--fail-on[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)")
+            : `(failure not propagated: ${suppressed})`,
       };
     }
   }

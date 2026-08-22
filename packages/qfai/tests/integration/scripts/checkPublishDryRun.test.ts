@@ -84,6 +84,22 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     expect.soft(verdict.warnings.length, "and is reported").toBe(1);
   });
 
+  it("refuses the already-published message when no tarball summary was printed", () => {
+    // The phrase alone is not evidence that the pack ran. `prepublishOnly` and `prepack` execute
+    // BEFORE npm packs anything, so a lifecycle script printing the registry's sentence and exiting
+    // non-zero reproduces the whole tolerated signature with no tarball in existence — and the
+    // required `build` context would then go green over a pack that never happened.
+    const verdict = classifyDryRun({
+      status: 1,
+      stdout: "",
+      stderr: "npm error You cannot publish over the previously published versions: 1.10.0.\n",
+    });
+    expect.soft(verdict.ok, "the phrase without a pack must not be tolerated").toBe(false);
+    expect
+      .soft(verdict.reason, "and the reason must name the missing evidence")
+      .toMatch(/no tarball summary/i);
+  });
+
   it("passes a clean run", () => {
     const verdict = classifyDryRun({
       status: 0,
