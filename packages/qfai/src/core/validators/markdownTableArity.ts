@@ -17,42 +17,95 @@
  * place the two counts are compared, so a project no longer has to restate
  * "keep every row at exactly N columns" per work order and verify it by hand.
  *
- * Severity is scoped rather than blanket. The ledger tables — the TDD test list
- * and the traceability ledger — are the ones other validators index by column
- * position, so a mismatch there is a correctness defect and is reported as
- * `error`, which the default `failOn: "error"` gate can actually stop on.
- * Everywhere else in the spec pack the table is prose a human reads, so the
- * mismatch stays a `warning`: promoting a young rule code to `error` across a
- * whole spec pack is what floods a consuming repo on its first upgrade.
+ * Severity is scoped rather than blanket, and scoped per *table* rather than
+ * per file. A mismatch is `error` only where a downstream validator resolves
+ * that very table by column position — the ledger table of `tdd/test-list.md`
+ * and the ledger table of the traceability ledger — because only there does a
+ * shifted row change what a validator sees. Every other table in the spec pack,
+ * the ledger files included, is prose a human reads: the shipped
+ * `tdd/test-list.md` carries a `## Schema` table and fenced examples that no
+ * reader indexes, so a stray pipe in one of those stays a `warning`. Deciding
+ * severity from the file name alone would let such a table stop a consuming
+ * repo's default `failOn: "error"` gate, and promoting a young rule code to
+ * `error` across a whole spec pack is what floods that repo on its first
+ * upgrade.
  */
 
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  maskNonSpecRegions,
+  splitMarkdownRow,
+} from "../specPackParsers.js";
+import { TDD_LEDGER_REQUIRED_COLUMNS } from "../tddHelpers.js";
 import type { Issue, IssueSeverity } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
 /** Waivable as `QFAI-TABLE-001`; `TABLE-001` also resolves (`waivers.ts#resolveRuleKeys`). */
 export const TABLE_ARITY_RULE_ID = "QFAI-TABLE-001";
 
+const TDD_TEST_LIST_SUFFIX = "/tdd/test-list.md";
+
+/** The traceability ledger's name under the spec-pack, layered and legacy layouts. */
+const TRACEABILITY_LEDGER_SUFFIXES = ["/16_traceability-ledger.md", "/traceability-matrix.md"];
+
+function normalizeRel(rel: string): string {
+  return rel.replace(/\\/g, "/").toLowerCase();
+}
+
 /**
- * Files whose tables downstream validators read by column position.
+ * Files that *hold* a table downstream validators read by column position.
  *
  * `tddList` resolves `Status` / `TC-Refs` with `headers.indexOf(name)` and the
- * traceability ledger is walked the same way, so a shifted row there changes
- * what a validator sees rather than only how the table renders. The three
- * names are the ledger paths `specLayout` assigns across the spec-pack,
- * layered and legacy layouts.
+ * traceability ledger is walked the same way, so a shifted row in one of those
+ * tables changes what a validator sees rather than only how the table renders.
+ *
+ * Necessary but not sufficient: these files also hold documentation tables that
+ * nothing indexes. {@link positionallyReadMismatchLines} is what decides.
  */
-export function isPositionallyReadTable(rel: string): boolean {
-  const normalized = rel.replace(/\\/g, "/").toLowerCase();
+export function isLedgerPath(rel: string): boolean {
+  const normalized = normalizeRel(rel);
   return (
-    normalized.endsWith("/tdd/test-list.md") ||
-    normalized.endsWith("/16_traceability-ledger.md") ||
-    normalized.endsWith("/traceability-matrix.md")
+    normalized.endsWith(TDD_TEST_LIST_SUFFIX) ||
+    TRACEABILITY_LEDGER_SUFFIXES.some((suffix) => normalized.endsWith(suffix))
   );
+}
+
+/**
+ * Lines of `text` whose mismatching row belongs to the ledger table itself.
+ *
+ * Mirrors what the ledger readers admit, so severity follows the same rule as
+ * "is this row read positionally?":
+ *
+ * - **Non-spec regions are masked first.** `collectLedgerTables` and
+ *   `validateTddList` both read `maskNonSpecRegions(content)`, so a fenced
+ *   template or a commented-out old table is not the ledger and its arity is
+ *   nobody's correctness problem. Masking blanks lines in place, so the line
+ *   numbers still address the original file.
+ * - **In `tdd/test-list.md`, the table must carry the ledger schema.**
+ *   `collectLedgerTables` admits a table only when it holds all of
+ *   {@link TDD_LEDGER_REQUIRED_COLUMNS} — which is exactly what keeps the
+ *   template's own `## Schema` table (`Column | Description`) out — and every
+ *   table it admits is scored, not only the first.
+ * - **In the traceability ledger, the ledger is the first table.** Both readers
+ *   take it with `parseFirstMarkdownTable`, and the shipped template says so:
+ *   "any further table in this document is prose, never a ledger row".
+ */
+export function positionallyReadMismatchLines(rel: string, text: string): Set<number> {
+  if (!isLedgerPath(rel)) {
+    return new Set();
+  }
+  const mismatches = findTableArityMismatches(maskNonSpecRegions(text));
+  const ledgerRows = normalizeRel(rel).endsWith(TDD_TEST_LIST_SUFFIX)
+    ? mismatches.filter((mismatch) =>
+        TDD_LEDGER_REQUIRED_COLUMNS.every((column) => mismatch.headers.includes(column)),
+      )
+    : mismatches.filter((mismatch) => mismatch.tableIndex === 0);
+  return new Set(ledgerRows.map((mismatch) => mismatch.line));
 }
 
 export type TableArityMismatch = {
@@ -60,6 +113,10 @@ export type TableArityMismatch = {
   line: number;
   /** First header cell, so the reader can find the table in a long file. */
   tableLabel: string;
+  /** Trimmed header cells of the table the row sits in, so its schema is testable. */
+  headers: readonly string[];
+  /** 0-based position of that table in the text, so a "first table" reader is expressible. */
+  tableIndex: number;
   headerCount: number;
   rowCount: number;
 };
@@ -74,6 +131,7 @@ export type TableArityMismatch = {
 export function findTableArityMismatches(text: string): TableArityMismatch[] {
   const lines = text.split(/\r?\n/);
   const mismatches: TableArityMismatch[] = [];
+  let tableIndex = -1;
 
   for (let index = 0; index < lines.length; index += 1) {
     const headerLine = lines[index] ?? "";
@@ -84,6 +142,7 @@ export function findTableArityMismatches(text: string): TableArityMismatch[] {
 
     const headers = splitMarkdownRow(headerLine);
     const tableLabel = headers[0] ?? "";
+    tableIndex += 1;
     let cursor = index + 2;
     for (; cursor < lines.length; cursor += 1) {
       const rowLine = lines[cursor] ?? "";
@@ -95,6 +154,8 @@ export function findTableArityMismatches(text: string): TableArityMismatch[] {
         mismatches.push({
           line: cursor + 1,
           tableLabel,
+          headers,
+          tableIndex,
           headerCount: headers.length,
           rowCount: cells.length,
         });
@@ -125,8 +186,9 @@ export async function validateMarkdownTableArity(
       continue;
     }
     const rel = path.relative(root, file).replace(/\\/g, "/");
-    const severity: IssueSeverity = isPositionallyReadTable(rel) ? "error" : "warning";
+    const positionalLines = positionallyReadMismatchLines(rel, text);
     for (const mismatch of findTableArityMismatches(text)) {
+      const severity: IssueSeverity = positionalLines.has(mismatch.line) ? "error" : "warning";
       const direction =
         mismatch.rowCount > mismatch.headerCount
           ? `${mismatch.rowCount - mismatch.headerCount} cell(s) are discarded`

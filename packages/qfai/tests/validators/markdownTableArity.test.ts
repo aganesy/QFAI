@@ -20,9 +20,14 @@ import { describe, expect, it, afterEach } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import {
   findTableArityMismatches,
-  isPositionallyReadTable,
+  isLedgerPath,
   validateMarkdownTableArity,
 } from "../../src/core/validators/markdownTableArity.js";
+
+/** The eight columns `collectLedgerTables` requires before it reads a table's rows. */
+const LEDGER_HEADER =
+  "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |";
+const LEDGER_SEPARATOR = "| --- | --- | --- | --- | --- | --- | --- | --- |";
 
 const tempDirs: string[] = [];
 
@@ -122,18 +127,18 @@ describe("findTableArityMismatches", () => {
   });
 });
 
-describe("isPositionallyReadTable", () => {
+describe("isLedgerPath", () => {
   it("matches the ledger paths of every spec layout, case-insensitively", () => {
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/tdd/test-list.md")).toBe(true);
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/16_Traceability-ledger.md")).toBe(true);
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/traceability-matrix.md")).toBe(true);
-    expect(isPositionallyReadTable(".qfai\\specs\\spec-0001\\tdd\\test-list.md")).toBe(true);
+    expect(isLedgerPath(".qfai/specs/spec-0001/tdd/test-list.md")).toBe(true);
+    expect(isLedgerPath(".qfai/specs/spec-0001/16_Traceability-ledger.md")).toBe(true);
+    expect(isLedgerPath(".qfai/specs/spec-0001/traceability-matrix.md")).toBe(true);
+    expect(isLedgerPath(".qfai\\specs\\spec-0001\\tdd\\test-list.md")).toBe(true);
   });
 
   it("does not match a look-alike name outside the ledger set", () => {
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/test-list.md")).toBe(false);
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/06_Test-Cases.md")).toBe(false);
-    expect(isPositionallyReadTable(".qfai/specs/spec-0001/tdd/test-list-archive.md")).toBe(false);
+    expect(isLedgerPath(".qfai/specs/spec-0001/test-list.md")).toBe(false);
+    expect(isLedgerPath(".qfai/specs/spec-0001/06_Test-Cases.md")).toBe(false);
+    expect(isLedgerPath(".qfai/specs/spec-0001/tdd/test-list-archive.md")).toBe(false);
   });
 });
 
@@ -162,12 +167,12 @@ describe("validateMarkdownTableArity", () => {
   // Severity is pinned here on purpose. It decides whether the finding can stop
   // a gate: every shipped invocation passes `--fail-on error`, and the config
   // default is `error`, so a `warning` is advisory-only by construction.
-  it("emits `error` on the TDD test list, which validators read by column position", async () => {
+  it("emits `error` on the TDD ledger table, which validators read by column position", async () => {
     const root = await withSpec({
       ".qfai/specs/spec-0001/tdd/test-list.md": [
-        "| TDD-ID | TC-Refs | Status |",
-        "| ------ | ------- | ------ |",
-        "| TDD-0001 | TC-0001 |",
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
       ].join("\n"),
     });
 
@@ -177,23 +182,116 @@ describe("validateMarkdownTableArity", () => {
     expect(issues[0]?.severity).toBe("error");
   });
 
+  it("emits `error` on every schema-complete ledger table, not only the first", async () => {
+    // `collectLedgerTables` scores an appended `## CHG-…` table too, so a row
+    // shifted there is read positionally exactly like one in the first table.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/tdd/test-list.md": [
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - | RED/GREEN |",
+        "",
+        "## CHG-0001",
+        "",
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0002 | TC-0002 | Unit | tests/b.test.ts | b | todo | - |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc).toEqual({ line: 9 });
+    expect(issues[0]?.severity).toBe("error");
+  });
+
+  it("keeps `warning` on a documentation table inside the TDD test list", async () => {
+    // The shipped template's own `## Schema` table. Nothing resolves it by
+    // column position, and `collectLedgerTables` drops it for want of the
+    // ledger schema, so a stray pipe there must not stop a consumer's gate.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/tdd/test-list.md": [
+        "## Ledger",
+        "",
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "",
+        "## Schema",
+        "",
+        "| Column | Description |",
+        "| ------ | ----------- |",
+        "| Status | `todo` | `done` |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("warning");
+  });
+
+  it("keeps `warning` on a fenced example ledger table", async () => {
+    // `validateTddList` and `collectLedgerTables` both read
+    // `maskNonSpecRegions(content)`: a fenced sample is not the ledger.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/tdd/test-list.md": [
+        "```markdown",
+        LEDGER_HEADER,
+        LEDGER_SEPARATOR,
+        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
+        "```",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.severity).toBe("warning");
+  });
+
   it("emits `error` on the traceability ledger in every layout's spelling", async () => {
     const root = await withSpec({
       ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
-        "| REQ | Spec | Code |",
-        "| --- | ---- | ---- |",
-        "| REQ-0001 | 01_Spec.md |",
+        "| BR/AC | Implementation File | Test File |",
+        "| ----- | ------------------- | --------- |",
+        "| AC-0001 | src/a.ts |",
       ].join("\n"),
       ".qfai/specs/spec-0002/traceability-matrix.md": [
-        "| REQ | Spec | Code |",
-        "| --- | ---- | ---- |",
-        "| REQ-0002 | spec.md |",
+        "| BR/AC | Implementation File | Test File |",
+        "| ----- | ------------------- | --------- |",
+        "| AC-0002 | src/b.ts |",
       ].join("\n"),
     });
 
     const issues = await validateMarkdownTableArity(root, defaultConfig);
 
     expect(issues.map((found) => found.severity)).toEqual(["error", "error"]);
+  });
+
+  it("keeps `warning` on a later table in the traceability ledger", async () => {
+    // Only the first table is the ledger — the template says any further table
+    // in that file is prose, and both readers take it with
+    // `parseFirstMarkdownTable`.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": [
+        "| BR/AC | Implementation File | Test File |",
+        "| ----- | ------------------- | --------- |",
+        "| AC-0001 | src/a.ts | tests/a.test.ts |",
+        "",
+        "### Column rules",
+        "",
+        "| Column | Rule |",
+        "| ------ | ---- |",
+        "| BR/AC | one ID | per row |",
+      ].join("\n"),
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc).toEqual({ line: 9 });
+    expect(issues[0]?.severity).toBe("warning");
   });
 
   it("keeps `warning` on a spec-pack table no validator indexes positionally", async () => {
