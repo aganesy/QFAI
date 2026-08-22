@@ -1,5 +1,6 @@
 import {
   access,
+  link,
   lstat,
   mkdtemp,
   mkdir,
@@ -1843,7 +1844,13 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      const rewritten = await readFile(marker, "utf-8");
+      expect(hasInitMarkerSignature(rewritten)).toBe(true);
+      // And the text that was there is kept: this repair runs on a plain
+      // `qfai init`, and `.qfai/**` is create-only, so a project may well have
+      // annotated the README an older init wrote.
+      expect(rewritten).toContain("This folder contains AI assistance assets.");
+      expect(rewritten).toContain("- `agents/` : subagent definitions (general job roles)");
 
       // And the surface it is evidence for is reported once it is deleted.
       for (const dir of INTEGRATION_SURFACE_DIRS) {
@@ -1870,6 +1877,33 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
       expect(await readFile(marker, "utf-8")).toBe(annotated);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not write the marker through a hard link to a file outside the project", async () => {
+    // The rewrite replaces the directory entry, it does not write through it.
+    // `writeFile` on the checked path would have written the template into
+    // every other name sharing that inode — the same breakage a symlink swapped
+    // in between the check and the write causes.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-marker-"));
+    const outside = path.join(root, "outside.md");
+    try {
+      await writeFile(outside, LEGACY_ASSISTANT_README, "utf-8");
+      const marker = path.join(root, "project", ".qfai", "assistant", "README.md");
+      await mkdir(path.dirname(marker), { recursive: true });
+      try {
+        await link(outside, marker);
+      } catch {
+        // No hard links on this filesystem — nothing for this case to assert.
+        return;
+      }
+
+      await runInit({ dir: path.join(root, "project"), force: false, dryRun: false, yes: true });
+
+      expect(hasInitMarkerSignature(await readFile(marker, "utf-8"))).toBe(true);
+      expect(await readFile(outside, "utf-8")).toBe(LEGACY_ASSISTANT_README);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

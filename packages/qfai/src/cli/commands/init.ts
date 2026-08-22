@@ -259,6 +259,21 @@ const ASSISTANT_README_MAX_BYTES = 64 * 1024;
  * anything else at that path — a directory, a symlink, a document too large to
  * be init's — is somebody else's to remove, not init's.
  *
+ * The rewrite **keeps** what was there. Every `.qfai/**` path is create-only,
+ * so a project could reasonably annotate the README an older init wrote, and
+ * this repair runs on a plain `qfai init` — without `--force`. Discarding those
+ * notes to gain a marker is not a trade init gets to make on the project's
+ * behalf, so the previous text is filed below the template under
+ * {@link PRESERVED_BODY_HEADING} instead. A second run then sees the signature
+ * and leaves the file alone, so nothing accumulates.
+ *
+ * The replacement claims the pathname rather than writing through it: a sidecar
+ * in the same directory, then `rename`. `writeFile` on the checked path follows
+ * whatever the entry resolves to — a symlink another process put there between
+ * the check and the write, or a hard link the README already shared with a file
+ * outside the project — and would have written the template into it. `rename`
+ * replaces the directory entry, so the other name keeps its inode.
+ *
  * Absence is not this function's case: the template copy that runs before it
  * creates the file, and reporting the same path twice would double-count it.
  */
@@ -282,9 +297,53 @@ async function ensureAssistantMarker(
   }
   if (!dryRun) {
     await mkdir(path.dirname(dest), { recursive: true });
-    await writeFile(dest, template, "utf-8");
+    await replaceViaSidecar(dest, mergeAssistantReadme(template, body));
   }
   return [dest];
+}
+
+/** Heading the previous README's text is filed under. */
+const PRESERVED_BODY_HEADING = "## qfai init が置き換える前の README";
+
+const PRESERVED_BODY_NOTE = [
+  "以下は `qfai init` がこのファイルにマーカーを書き込む前からあった内容です。",
+  "プロジェクト固有の注記が含まれている可能性があるため保持しています。不要であれば削除してください。",
+].join("\n");
+
+/**
+ * The template with the previous README filed below it.
+ *
+ * An empty previous body has nothing to keep, and appending a heading over
+ * nothing only leaves the operator a section to delete.
+ */
+function mergeAssistantReadme(template: string, previous: string): string {
+  const head = template.endsWith("\n") ? template : `${template}\n`;
+  if (previous.trim() === "") {
+    return head;
+  }
+  const tail = previous.endsWith("\n") ? previous : `${previous}\n`;
+  return `${head}\n---\n\n${PRESERVED_BODY_HEADING}\n\n${PRESERVED_BODY_NOTE}\n\n${tail}`;
+}
+
+/**
+ * Put `content` at `filePath` without writing through the entry already there.
+ *
+ * The sidecar is created exclusively in the same directory — same filesystem,
+ * so `rename` is the atomic swap and not a copy — and removed again if the
+ * swap fails, so a failure leaves the original exactly as it was.
+ */
+async function replaceViaSidecar(filePath: string, content: string): Promise<void> {
+  const sidecar = await claimSidecar(filePath);
+  try {
+    await writeFile(sidecar, content, "utf-8");
+    await rename(sidecar, filePath);
+  } catch (err: unknown) {
+    // Best-effort: the swap already failed, and a sidecar that cannot be
+    // removed is a leftover to report through the original error, not a second
+    // failure to raise in its place.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw err;
+  }
 }
 
 /** The README's text, or `null` when it is not a bounded regular file. */
