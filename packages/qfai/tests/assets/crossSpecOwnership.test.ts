@@ -35,8 +35,29 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("detects the collision where it happens — before the edit, in Refactor", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("**Before editing a production file**");
+    expect(skill).toContain("**Before editing a production file or a test file**");
     expect(skill).toContain("another spec's `tdd/test-list.md` names it in `Owning module`");
+  });
+
+  it("triggers the check on test-file edits too, not only production ones", async () => {
+    // `Test file` is the column that covers a shared test, so a trigger scoped
+    // to production files alone left that branch unreachable.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("Before editing a production file **or a test file** in Refactor");
+  });
+
+  it("matches a dotted `Owning module` against the file being edited", async () => {
+    // `execution-ledger.md` allows either form in that column, so a literal
+    // string compare missed every ledger that used the dotted one.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "compare the two on a normalized form rather than as literal strings",
+    );
+    expect(reference).toContain(
+      "`shirube.domain.notification` and `src/shirube/domain/notification.ts` are the same module",
+    );
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain("matched on the normalized form so a dotted module path counts");
   });
 
   it("keys detection on the only column that holds a production path", async () => {
@@ -66,8 +87,20 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "a ledger that declares no `Owning module` falls back to the repo-wide search",
+      "every row that declares no `Owning module` falls back to the repo-wide search",
     );
+  });
+
+  it("applies the fallback per row, not per ledger", async () => {
+    // `-` is legal row by row, so a ledger that mixes declared and undeclared
+    // rows is not "a ledger with no production path" — scoping the fallback to
+    // the whole ledger left its undeclared rows undetected again.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("`-` is legal **per row**");
+    expect(reference).toContain(
+      "Every row that did not match directly and declares no module must fall back to a repo-wide search",
+    );
+    expect(reference).toContain("A ledger's declared rows never clear its undeclared ones");
   });
 
   it("gives the evidence file a place to record it", async () => {

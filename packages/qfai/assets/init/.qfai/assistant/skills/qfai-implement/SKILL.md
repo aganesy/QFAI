@@ -139,7 +139,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Phase: Refactor
 
-1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file**, check whether another spec's `tdd/test-list.md` names it in `Owning module` — the only column that holds a production path — or, when the file is itself a test, in `Test file`; a ledger that declares no `Owning module` falls back to the repo-wide search in `references/cross-spec-ownership.md` rather than passing silently. If it is named, the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
+1. Improve code quality (naming, structure, duplication removal) while keeping all tests green. **Before editing a production file or a test file**, check whether another spec's `tdd/test-list.md` names it in `Owning module` — the only column that holds a production path, matched on the normalized form so a dotted module path counts — or, when the file is itself a test, in `Test file`; every row that declares no `Owning module` falls back to the repo-wide search in `references/cross-spec-ownership.md` rather than passing silently. If it is named, the edit is cross-spec — record it in this item's evidence and re-run `completion-reviewer` against that spec's obligations too (`references/cross-spec-ownership.md`).
 2. Run the **relevant test suite** to confirm nothing broke. "Relevant" means the
    smallest selector that covers the module you touched **plus its reverse
    dependency closure** — walk the production import graph backwards, not just the
