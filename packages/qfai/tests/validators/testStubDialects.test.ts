@@ -260,11 +260,37 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
+  it(`also matches a ${SKIP} sitting behind a leading modifier`, async () => {
+    // `test.concurrent` + `.skip` is a valid Jest spelling — the token is
+    // split in the fixture below for the same reason the constants at the top
+    // of this file are. The modifier pushes `skip` off the root identifier, so
+    // a pattern demanding the token directly after `test` reported nothing for
+    // an unconditionally skipped concurrent test.
+    const modified = [
+      `test.concurrent${SKIP}("concurrent skip", async () => {});`,
+      `test.concurrent${SKIP}.each([[1]])("concurrent skip each %i", async (n) => {});`,
+      `it.failing${SKIP}("failing skip", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": modified }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1, 2, 3]);
+      // The label stays root + token, as it already did for the trailing
+      // `.each` chain, so `refs` does not fragment once per modifier.
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+    });
+  });
+
   it("leaves a plain it()/describe() call alone", async () => {
     await withTests(
       {
         "tests/a.test.ts": 'describe("s", () => {\n  it("works", () => {});\n});\n',
         "tests/b.test.ts": "const rest = unit.skip(2);\n",
+        // A modifier chain carrying no skip/todo token at all: the widened
+        // leading-modifier match must not turn every chained call into a stub.
+        "tests/d.test.ts": 'test.concurrent.each([[1]])("runs", async (n) => {});\n',
         // Prose naming the construct inside a markdown code span. A repo's own
         // test files are full of these, and `qfai validate` scans them, so a
         // pattern that accepts a backtick straight after the bare form turns

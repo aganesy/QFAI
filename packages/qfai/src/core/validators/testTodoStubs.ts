@@ -94,18 +94,31 @@ const SKIPPED_TEST_WARNING: StubGrade = { code: "QFAI-TEST-003", severity: "warn
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
     extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"],
-    // `(?:\.\w+)*` covers the chained spellings — `test` + `.skip` + `.each`
-    // and the `it` / `describe` equivalents. They put a `.` where the bare
-    // form puts its `(`, so a pattern anchored straight onto the open paren
-    // let an unconditionally skipped parameterized suite through unreported.
+    // A modifier chain may sit on **either** side of the `todo` / `skip`
+    // token, and both sides are optional:
+    //
+    // - leading (`(?:\.\w+)*?` before the token) — the `test.concurrent` and
+    //   `it.failing` spellings of skip. The modifier pushes `skip` off the
+    //   root identifier, so a pattern demanding it directly after `test` let
+    //   an unconditionally skipped concurrent test through unreported.
+    // - trailing (the `(?:\.\w+)*` inside the first branch) — `test.skip.each`
+    //   and the `it` / `describe` equivalents put a `.` where the bare form
+    //   puts its `(`, so a pattern anchored straight onto the open paren let
+    //   an unconditionally skipped parameterized suite through unreported.
     //
     // The second branch is the tagged-template call (`.each` followed by a
-    // template literal). It demands a **non-empty** chain on purpose: this
-    // validator scans a repo's own test files, where prose routinely names
-    // the construct inside a markdown code span, and accepting a backtick
-    // straight after the bare form reports every such mention as a stub.
-    pattern: /\b(it|test|describe)\.(todo|skip)\b(?:(?:\.\w+)*\s*\(|(?:\.\w+)+\s*`)/g,
+    // template literal). It demands a **non-empty** trailing chain on purpose:
+    // this validator scans a repo's own test files, where prose routinely
+    // names the construct inside a markdown code span, and accepting a
+    // backtick straight after the bare form reports every such mention as a
+    // stub.
+    pattern: /\b(it|test|describe)(?:\.\w+)*?\.(todo|skip)\b(?:(?:\.\w+)*\s*\(|(?:\.\w+)+\s*`)/g,
     runner: "vitest/jest",
+    // Deliberately the root + the token, dropping any modifier on either side:
+    // a concurrent skipped `.each` suite labels as `test.skip`, exactly as the
+    // plain `test.skip.each` chain already did. `refs` is what waivers and report
+    // grouping key on, so the vocabulary stays the six root×token spellings
+    // instead of fragmenting once per modifier combination.
     label: (match) => `${match[1]}.${match[2]}`,
     grade: (match) => (match[2] === "skip" ? SKIPPED_TEST_WARNING : STUB_ERROR),
   },
