@@ -215,7 +215,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
    — one row per coverage-target TC, `Status = todo`; copy
    `templates/specs/spec/tdd/test-list.md` when absent. Without it
-   `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
+   `/qfai-implement` starts with zero selectable items. **A matrix-shaped TC
+   takes more than one row**: many rejection reasons, a status-code matrix or
+   several independent state transitions are split here into one row per
+   independently observable boundary, each carrying that `TC-*` in `TC-Refs`.
+   This phase owns the rows, so a shape left un-split here reaches RED where
+   nobody may fix it (`references/sdd-phase-checklists.md`). **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs append at `todo`, and changed / removed TCs are reset or retired
    under the upstream-reset rule (`references/sdd-phase-checklists.md`).

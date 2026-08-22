@@ -43,7 +43,10 @@ describe.each(TREES)("%s", (tree) => {
     expect(end).toBeGreaterThan(start);
     const whitelist = drift.slice(start, end);
     expect(whitelist).toContain("`.qfai/specs/<spec-id>/tdd/test-list.md`");
-    expect(whitelist).toContain("`Status`, `DR-ID` and `Evidence` cells only");
+    // `Blocked-By` joined the three in #597: `todo -> blocked` is an edge the
+    // skill owns and `TDDLIST_BLOCKED_MISSING_REF` errors without the cell, so
+    // the three-cell form made an owned transition unwritable.
+    expect(whitelist).toContain("`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells only");
   });
 
   it("keeps the rows upstream, so the carve-out is not a licence over the file", async () => {
@@ -70,7 +73,7 @@ describe.each(TREES)("%s", (tree) => {
     // Gate item 10 requires the Evidence column and the hard rules forbid the
     // status-only substitute, so a status-scoped permission is unusable.
     const drift = await read(tree, DRIFT);
-    expect(drift).toContain("`Evidence` cells only");
+    expect(drift).toContain("`Evidence` and `Blocked-By` cells only");
   });
 
   it("stops the skill contradicting itself in Non-goals", async () => {

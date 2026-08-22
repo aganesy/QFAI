@@ -61,6 +61,13 @@ what distinguishes a parked `exception` from a row that never started, and
 overloading it would merge the two states the `blocked` status exists to
 separate.
 
+The column is **seeded by `/qfai-sdd` Phase 2b** with the rest of the ledger
+(`templates/specs/spec/tdd/test-list.md` ships it), and its cell is the fourth
+this skill may write: `todo -> blocked` is an edge this skill owns and
+`TDDLIST_BLOCKED_MISSING_REF` errors on a `blocked` row with no blocker named,
+so blocking a row fills a cell and never adds a column
+(`../../qfai-sdd/references/spec-traceability-rules.md` **Ownership split**).
+
 `test-layers.md` forbids `TC-*` annotations in `tests/e2e/**` and `tests/api/**`,
 so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
 `TC-Refs` and record their obligation in `US-Refs` / `CON-API-Refs` instead.

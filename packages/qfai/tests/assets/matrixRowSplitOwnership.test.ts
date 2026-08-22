@@ -31,6 +31,10 @@ const TRACE = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const SELECTOR = "assistant/skills/qfai-implement/references/selector-granularity.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
+const SDD_SKILL = "assistant/skills/qfai-sdd/SKILL.md";
+const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md";
+const SUITE = "assistant/skills/qfai-implement/references/relevant-test-suite.md";
+const DRIFT = "assistant/constitution/drift-protocol.md";
 
 /** The prose wraps differently per file, so compare on collapsed whitespace. */
 const flat = (value: string): string => value.replace(/\s+/g, " ");
@@ -76,7 +80,70 @@ describe.each(TREES)("%s", (tree) => {
     );
 
     expect(phase2b).toContain("only one that may add, remove or re-scope a row");
-    expect(phase2b).toContain("`Status`, `DR-ID` and `Evidence` cells and nothing else");
+    expect(phase2b).toContain(
+      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells and nothing else",
+    );
+  });
+
+  it("seeds the split criterion on the two surfaces Phase 2b actually follows", async () => {
+    // The checklist reference is the detailed guide; the numbered process in
+    // SKILL.md and the copied template are what a Phase 2b run reads first, and
+    // both said "one row per coverage-target TC" with no split criterion — so a
+    // matrix TC still reached RED as a single row by construction.
+    const skill = await read(tree, SDD_SKILL);
+    expect(skill).toContain("**A matrix-shaped TC takes more than one row**");
+    expect(skill).toContain("one row per independently observable boundary");
+
+    const template = await read(tree, TEMPLATE);
+    expect(template).toContain("**matrix-shaped TC takes more than one row**");
+    expect(template).toContain("row per independently observable boundary");
+    // The rows are still one-per-TC in the common case; the split is the addition.
+    expect(template).toContain("**one row per coverage-target TC**");
+  });
+
+  it("defines what happens to a matrix row that has already progressed", async () => {
+    // The delta rule keeps an unchanged TC's cells, so without this a `done`
+    // matrix row could neither be split (delta) nor reach the residual CR path
+    // (Phase Red never re-selects it).
+    const phase2b = section(
+      await read(tree, CHECKLISTS),
+      "## Phase 2b: Seed `tdd/test-list.md`",
+      "## Phase 2c",
+    );
+
+    expect(phase2b).toContain("already past `todo` is the delta rule's exception");
+    expect(phase2b).toContain("and `done` included");
+    expect(phase2b).toContain("the one boundary its recorded RED observed");
+    expect(phase2b).toContain("one new `todo` row is appended per remaining boundary");
+  });
+
+  it("keeps every downstream row-creation path upstream too", async () => {
+    // Phase 2b claims to be the only row author, so the two paths that used to
+    // open rows downstream have to hand off, or the claim is false where an
+    // agent actually reads it.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain("this skill does not open it");
+    expect(skill).not.toContain("A newly discovered scope gap opens a **new** `test-list.md` row");
+
+    const suite = await read(tree, SUITE);
+    expect(suite).toContain("**filed upstream, not here**");
+    expect(suite).toContain("This skill owns cells, never rows.");
+  });
+
+  it("makes the blocked row writable by the skill the whitelist binds", async () => {
+    // `Status = blocked` with no blocker is `TDDLIST_BLOCKED_MISSING_REF`, and
+    // the seeded ledger carried no `Blocked-By` column, so the residual path
+    // asked for a write no shipped rule allowed.
+    const drift = await read(tree, DRIFT);
+    expect(drift).toContain("`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells only");
+    expect(await read(tree, TRACE)).toContain(
+      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells and nothing else",
+    );
+
+    const template = await read(tree, TEMPLATE);
+    // Seeded by the row owner, so blocking a row fills a cell, never adds a column.
+    expect(template).toContain("| Status | DR-ID | Evidence | Blocked-By |");
+    expect(template).toContain("`Blocked-By` is an **optional** column, seeded here");
   });
 
   it("stops Phase Red ordering the split it has no authority to write", async () => {
@@ -99,11 +166,48 @@ describe.each(TREES)("%s", (tree) => {
       "### Phase: Green",
     );
 
-    expect(red).toContain("#when-drift-is-detected");
-    // `todo -> blocked` is the only inbound edge `blocked` has, so the shape has
-    // to be judged before step 2 writes `todo -> red`.
-    expect(red).toContain("while the row is still `todo`");
+    // Fully qualified: `#when-drift-is-detected` is not a heading of SKILL.md,
+    // so a bare fragment resolves to nothing and drops the template, the wait
+    // for approval and the owner rerun.
+    expect(red).toContain(
+      "`.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected`",
+    );
+    expect(red).toContain("wait for explicit user approval");
     expect(red).toContain("write `todo -> blocked` with that `CR-*` in `Blocked-By`");
+  });
+
+  it("judges the shape at selection, ahead of the `todo -> red` write", async () => {
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    // A matrix selector normally fails as expected on its first assert, so a
+    // judgement placed under step 5 ("if the test unexpectedly passes") never
+    // runs and the row reaches Green on an invalidated RED.
+    const judgement = red.indexOf("Judge the selected row's selector shape here");
+    const toRed = red.indexOf("2. Transition status to `red`");
+    expect(judgement).toBeGreaterThanOrEqual(0);
+    expect(toRed).toBeGreaterThan(judgement);
+    expect(red).toContain("while it is still `todo` and before step 2 writes `todo -> red`");
+    expect(red).toContain("**A matrix selector is judged in step 1, not here.**");
+    expect(await read(tree, SELECTOR)).toContain("Phase Red **step 1** stops such a row");
+  });
+
+  it("keeps a named-row invocation inside the ids it was handed", async () => {
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    // Blocking a named row must not fall back to open selection: `/qfai-atdd`
+    // hands over an ordered id list and nothing else may be processed.
+    expect(red).toContain(
+      "take only the remaining named ids in the order given and return to the caller when that queue is empty",
+    );
+    expect(red).toContain("never an unnamed `todo` row");
   });
 
   it("names the owner in the references Phase Red sends the agent to", async () => {

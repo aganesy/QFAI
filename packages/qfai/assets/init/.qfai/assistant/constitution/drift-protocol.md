@@ -24,8 +24,8 @@ Upstream artifacts include, at minimum:
   obligation no longer holds rather than merely moving.
 
 One file inside `.qfai/specs/**` is carved out of that last line:
-`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
+`<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence` /
+`Blocked-By` cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
 what each covers — remain upstream.
 
 **Every artifact in this list requires an owner rerun by definition.** There is
@@ -39,9 +39,14 @@ case required reading the agent roster and reasoning backwards from it.
 ## Allowed exceptions (minimal whitelist)
 
 - `.qfai/evidence/**` append/update
-- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells only, append/update by `/qfai-implement`. Every other column
-  of that file, and every other file under `.qfai/specs/**`, stays upstream
+- `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID`, `Evidence`
+  and `Blocked-By` cells only, append/update by `/qfai-implement`. `Blocked-By`
+  is on the list because `todo -> blocked` is an edge that skill owns and
+  `TDDLIST_BLOCKED_MISSING_REF` errors on a `blocked` row that names no blocker,
+  so the three-cell form made an owned transition unwritable; the column itself
+  is seeded upstream by `/qfai-sdd` Phase 2b, and naming a blocker therefore
+  fills a cell rather than adding a column. Every other column of that file, and
+  every other file under `.qfai/specs/**`, stays upstream
   SSOT: adding, removing or re-scoping a row is an upstream change and takes the
   `#when-drift-is-detected` path.
 - **creating** a governance record under `.qfai/decisions/` — a Change Request

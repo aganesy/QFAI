@@ -41,6 +41,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Status",
         "DR-ID",
         "Evidence",
+        // Optional, but seeded by the row owner: `/qfai-implement` may fill a
+        // `blocked` row's blocker and may not add a column to do it.
+        "Blocked-By",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
     });

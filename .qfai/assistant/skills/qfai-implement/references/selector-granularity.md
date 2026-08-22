@@ -25,8 +25,9 @@ _conflate_:
   function can fail only once, so if one selector entry carries an entire obligation matrix, "the
   expected reason" is whichever assert happens to execute first — every assertion after it is
   unobserved on every RED run, and a non-deterministic assertion placed early silently disables
-  everything below it. `../SKILL.md` Phase Red step 5 stops such a row rather than proceeding to
-  Green on it.
+  everything below it. `../SKILL.md` Phase Red **step 1** stops such a row at selection, while it is
+  still `todo`, rather than proceeding to Green on it — the row normally fails as expected on its
+  first assert, so a check placed after the test run would never fire.
 - **Precedence, when the two rules seem to disagree:** the row-splitting rule wins. If you cannot
   name the single boundary that every selector entry on a row observes, the row is carrying more
   than one and must be split.
