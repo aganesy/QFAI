@@ -322,6 +322,104 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     );
   });
 
+  it("reports a Research Summary heading left over an empty body", async () => {
+    // Keeping the heading and deleting the body used to leave the section
+    // unparsed and the pack unvalidated.
+    const template = await readShippedTemplate();
+    const emptied = template.replace(
+      /(^#{1,3}\s+Research\s+Summary\s*$)[\s\S]*?(?=^## Trend Scan)/m,
+      "$1\n\n",
+    );
+    expect(emptied).toMatch(RESEARCH_SUMMARY_HEADING_RE);
+    expect(emptied).not.toContain("research_summary:");
+
+    const issues = await validateResearchSummary(await seedPack(emptied), defaultConfig);
+
+    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-014");
+  });
+
+  it("reports a current-pack pointer that resolves to nothing", async () => {
+    // A broken SSOT must not silently fall through to some other pack that
+    // happens to be complete.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    await usePack(root, "discussion-20250101000000000");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const broken = issues.find((item) => item.code === "QFAI-RESEARCH-018");
+
+    expect(broken?.severity).toBe("error");
+    expect(broken?.message).toContain("discussion-20250101000000000");
+  });
+
+  it("validates only 04_Sources.md inside a pack", async () => {
+    // The Storage contract names one file. A sibling pack file that merely
+    // mentions the heading must not be held to the whole Output Schema.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template));
+    await writeFile(
+      path.join(root, ".qfai", "discussion", "discussion-20260101000000000", "01_Context.md"),
+      [
+        "# 01 Context",
+        "",
+        "## Research Summary",
+        "",
+        "See 04_Sources.md for the stored run.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.file}`)).toEqual([]);
+  });
+
+  it("rejects a source entry that dropped its id", async () => {
+    // Splitting on `- id:` absorbed such an entry into its predecessor, so the
+    // missing id went unreported and the leftover fields covered for it.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "  best_practices:",
+      [
+        "    - title: Second source with no id",
+        "      url: https://example.com/second",
+        `      published: ${today()}`,
+        "  best_practices:",
+      ].join("\n"),
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+    const missingId = issues.find((item) => item.code === "QFAI-RESEARCH-015");
+
+    expect(missingId?.message).toContain("sources[1]");
+  });
+
+  it("requires every field of each best_practices / anti_patterns entry", async () => {
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "  anti_patterns:",
+      "    - id: BP-0002\n      title: Second practice with no category\n  anti_patterns:",
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-016");
+
+    expect(incomplete?.message).toContain("best_practices[1]");
+    for (const field of ["category", "description", "source_id"]) {
+      expect(incomplete?.message, `missing field "${field}" is not reported`).toContain(field);
+    }
+  });
+
+  it("requires source_id and finding on every reflection entry", async () => {
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "```\n\n- Every",
+      "    - action: defer\n      reason: Second entry without source_id or finding\n```\n\n- Every",
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+    const incomplete = issues.find((item) => item.code === "QFAI-RESEARCH-017");
+
+    expect(incomplete?.message).toContain("reflection[1]");
+    expect(incomplete?.message).toContain("source_id");
+    expect(incomplete?.message).toContain("finding");
+  });
+
   it("ignores an abandoned older pack once a newer one exists", async () => {
     // Every generated pack ships the slot, so a pack the team walked away from
     // must not keep `--profile discussion` red forever.

@@ -4,38 +4,44 @@ import path from "node:path";
 import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
-import { findLatestDiscussionPackDir, resolveActiveDiscussionPack } from "../discussionPack.js";
+import {
+  findLatestDiscussionPackDir,
+  ResolveActiveDiscussionPackError,
+  resolveActiveDiscussionPack,
+} from "../discussionPack.js";
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
+import { readDiscussionCurrentId } from "../state.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
-const SOURCE_ENTRY_RE = /^\s*-\s*id:\s*(\S+)/gm;
-const REFLECTION_APPLY_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*apply\b/im;
-/** `action:` carrying one of the three decisions the protocol allows. */
-const REFLECTION_ACTION_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*(?:apply|reject|defer)\b/im;
-/** `reason:` with something after the colon. */
-const REFLECTION_REASON_RE = /^[ \t]*(?:-[ \t]*)?reason:[ \t]*\S/im;
-/** The `source_id` / `id` a reflection entry is named by in a finding message. */
-const REFLECTION_REF_RE = /^[ \t]*(?:-[ \t]*)?(?:source_id|id):[ \t]*(\S+)/im;
-const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
-/** The required pack file that holds the `## Research Summary` storage slot. */
-const RESEARCH_SUMMARY_FILE = "04_Sources.md";
+const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 /** ```yaml fence inside the stored section — the prose around it is not data. */
 const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
 /** `key: [fill me in]` — a shipped template placeholder that was never replaced. */
 const PLACEHOLDER_FIELD_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*\[[^\]]*\][ \t]*$/gm;
 /** `source_id:` reference carried by best_practices / anti_patterns / reflection entries. */
 const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(\S+)[ \t]*$/gm;
+/** `id:` of a list entry — anchored so `source_id:` is not mistaken for it. */
+const ENTRY_ID_RE = /^[ \t]*(?:-[ \t]*)?id:[ \t]*(\S+)/im;
+const REFLECTION_APPLY_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*apply\b/im;
+/** `action:` carrying one of the three decisions the protocol allows. */
+const REFLECTION_ACTION_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*(?:apply|reject|defer)\b/im;
+/** The required pack file that holds the `## Research Summary` storage slot. */
+const RESEARCH_SUMMARY_FILE = "04_Sources.md";
+/** Output Schema fields every `best_practices[]` / `anti_patterns[]` entry carries. */
+const PRACTICE_FIELDS = ["id", "category", "title", "description", "source_id"] as const;
+/** Output Schema fields a `reflection[]` entry carries besides action / reason. */
+const REFLECTION_FIELDS = ["source_id", "finding"] as const;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
   const target = await resolveResearchSummaryScanTarget(root, config);
-  const files = await collectMarkdownFiles(target.scanRoot);
+  issues.push(...describeBrokenPointer(root, target));
   issues.push(...(await checkStorageSlotPresence(root, target.activePackDir)));
 
-  for (const filePath of files) {
+  for (const filePath of target.files) {
     let content: string;
     try {
       content = await readFile(filePath, "utf-8");
@@ -47,6 +53,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const section = extractResearchSummarySection(content);
+    // An empty section on the storage file is QFAI-RESEARCH-014's finding
+    // (reported above); elsewhere there is nothing to validate.
     if (!section) continue;
 
     // Only the fenced YAML payload is data. The prose that the shipped template
@@ -54,9 +62,10 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // action: apply") and must never be able to satisfy them.
     const yaml = extractYamlPayload(section);
 
-    // Validate only entries under sources:, not other lists that may also use "- id:".
-    const sourceEntries = extractSourceEntries(yaml);
-    const sourceIds = sourceEntries.map((entry) => entry.id);
+    const sourceEntries = splitYamlListEntries(yaml, "sources");
+    const sourceIds = sourceEntries
+      .map((entry) => ENTRY_ID_RE.exec(entry)?.[1] ?? "")
+      .filter((id) => id.length > 0);
     if (sourceEntries.length === 0) {
       issues.push(
         issue(
@@ -70,35 +79,47 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
 
     for (let i = 0; i < sourceEntries.length; i++) {
-      const block = sourceEntries[i]?.block ?? "";
+      const entry = sourceEntries[i] ?? "";
+      const label = describeEntry("sources", entry, i);
 
-      if (!/^\s+title:\s*.+/m.test(block)) {
+      if (!hasNonEmptyField(entry, "id")) {
+        issues.push(
+          issue(
+            "QFAI-RESEARCH-015",
+            `Source entry missing required field "id": ${label}`,
+            "error",
+            rel,
+            "researchSummary.sourceId",
+          ),
+        );
+      }
+      if (!hasNonEmptyField(entry, "title")) {
         issues.push(
           issue(
             "QFAI-RESEARCH-004",
-            `Source entry missing required field "title": ${sourceIds[i] ?? "(unknown)"}`,
+            `Source entry missing required field "title": ${label}`,
             "error",
             rel,
             "researchSummary.sourceTitle",
           ),
         );
       }
-      if (!/^\s+url:\s*.+/m.test(block)) {
+      if (!hasNonEmptyField(entry, "url")) {
         issues.push(
           issue(
             "QFAI-RESEARCH-005",
-            `Source entry missing required field "url": ${sourceIds[i] ?? "(unknown)"}`,
+            `Source entry missing required field "url": ${label}`,
             "error",
             rel,
             "researchSummary.sourceUrl",
           ),
         );
       }
-      if (!FULL_DATE_RE.test(block)) {
+      if (!FULL_DATE_RE.test(entry)) {
         issues.push(
           issue(
             "QFAI-RESEARCH-006",
-            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${sourceIds[i] ?? "(unknown)"}`,
+            `Source entry missing or invalid "published" date (YYYY-MM-DD): ${label}`,
             "error",
             rel,
             "researchSummary.sourcePublished",
@@ -111,7 +132,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     const referenceNow = resolveFreshnessReferenceNow();
     const twoYearsMs = 1000 * 60 * 60 * 24 * 365 * 2;
     const publishedDates = sourceEntries
-      .map((entry) => FULL_DATE_RE.exec(entry.block)?.[1] ?? "")
+      .map((entry) => FULL_DATE_RE.exec(entry)?.[1] ?? "")
       .map((dateText) => Date.parse(dateText))
       .filter((ts) => Number.isFinite(ts));
 
@@ -156,8 +177,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    const bestPracticesCount = countYamlListItems(yaml, "best_practices");
-    if (bestPracticesCount === 0) {
+    const bestPractices = splitYamlListEntries(yaml, "best_practices");
+    if (bestPractices.length === 0) {
       issues.push(
         issue(
           "QFAI-RESEARCH-007",
@@ -168,9 +189,10 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
+    issues.push(...checkPracticeEntries(rel, "best_practices", bestPractices));
 
-    const antiPatternsCount = countYamlListItems(yaml, "anti_patterns");
-    if (antiPatternsCount === 0) {
+    const antiPatterns = splitYamlListEntries(yaml, "anti_patterns");
+    if (antiPatterns.length === 0) {
       issues.push(
         issue(
           "QFAI-RESEARCH-008",
@@ -181,14 +203,14 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
+    issues.push(...checkPracticeEntries(rel, "anti_patterns", antiPatterns));
 
     // Check reflection.apply presence — inside the reflection list only, and
     // entry by entry: a single complete entry must not satisfy the required
     // fields on behalf of its siblings.
     const reflectionEntries = splitYamlListEntries(yaml, "reflection");
     const hasApply = reflectionEntries.some((entry) => REFLECTION_APPLY_RE.test(entry));
-    const reflectionCount = reflectionEntries.length;
-    if (reflectionCount === 0) {
+    if (reflectionEntries.length === 0) {
       issues.push(
         issue(
           "QFAI-RESEARCH-011",
@@ -210,79 +232,145 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    for (let i = 0; i < reflectionEntries.length; i++) {
-      const entry = reflectionEntries[i] ?? "";
-      const label = describeReflectionEntry(entry, i);
-
-      if (!REFLECTION_ACTION_RE.test(entry)) {
-        issues.push(
-          issue(
-            "QFAI-RESEARCH-009",
-            `Each reflection entry should include "action" with apply|reject|defer: ${label}`,
-            "error",
-            rel,
-            "researchSummary.reflectionAction",
-          ),
-        );
-      }
-      if (!REFLECTION_REASON_RE.test(entry)) {
-        issues.push(
-          issue(
-            "QFAI-RESEARCH-010",
-            `Each reflection entry should include non-empty "reason": ${label}`,
-            "error",
-            rel,
-            "researchSummary.reflectionReason",
-          ),
-        );
-      }
-    }
+    issues.push(...checkReflectionEntries(rel, reflectionEntries));
   }
 
   return issues;
 }
 
+/** Per-entry required fields of a `best_practices[]` / `anti_patterns[]` list. */
+function checkPracticeEntries(rel: string, key: string, entries: readonly string[]): Issue[] {
+  const issues: Issue[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i] ?? "";
+    const missing = PRACTICE_FIELDS.filter((field) => !hasNonEmptyField(entry, field));
+    if (missing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-016",
+          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}`,
+          "error",
+          rel,
+          "researchSummary.practiceFields",
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
+/** Per-entry required fields of the `reflection[]` list. */
+function checkReflectionEntries(rel: string, entries: readonly string[]): Issue[] {
+  const issues: Issue[] = [];
+  for (let i = 0; i < entries.length; i++) {
+    const entry = entries[i] ?? "";
+    const label = describeEntry("reflection", entry, i);
+
+    const missing = REFLECTION_FIELDS.filter((field) => !hasNonEmptyField(entry, field));
+    if (missing.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-017",
+          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}`,
+          "error",
+          rel,
+          "researchSummary.reflectionFields",
+        ),
+      );
+    }
+    if (!REFLECTION_ACTION_RE.test(entry)) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-009",
+          `Each reflection entry should include "action" with apply|reject|defer: ${label}`,
+          "error",
+          rel,
+          "researchSummary.reflectionAction",
+        ),
+      );
+    }
+    if (!hasNonEmptyField(entry, "reason")) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-010",
+          `Each reflection entry should include non-empty "reason": ${label}`,
+          "error",
+          rel,
+          "researchSummary.reflectionReason",
+        ),
+      );
+    }
+  }
+  return issues;
+}
+
 type ResearchSummaryScanTarget = {
-  /** Directory the `**\/*.md` scan walks. */
-  scanRoot: string;
+  /** Markdown files the per-file checks read. */
+  files: string[];
   /**
    * The pack the Storage contract binds — the one whose `04_Sources.md` must
-   * carry the heading. `null` when no single pack can be named as the current
+   * carry the section. `null` when no single pack can be named as the current
    * session, in which case the slot-presence gate stays silent rather than
    * retro-failing a pack nobody is working on.
    */
   activePackDir: string | null;
+  /** Discussion root, used to anchor pack-level findings. */
+  discussionRoot: string;
+  /** `currentId` that is set but does not resolve to exactly one pack on disk. */
+  brokenPointer: { currentId: string; reason: string } | null;
 };
 
 /**
- * Which discussion pack the Research Summary gate reads.
+ * Which files the Research Summary gate reads.
  *
- * The Storage contract targets the CURRENT pack, and
+ * The Storage contract names one file in the CURRENT pack, and
  * `.qfai/state.json#discussion.currentId` is that pointer's SSOT — so
- * `resolveActiveDiscussionPack` decides first. Inferring the pack from
- * filesystem timestamps instead would validate a different pack than the one
- * `qfai discussion use <id>` selected.
+ * `resolveActiveDiscussionPack` decides first, and only `04_Sources.md` is
+ * validated. Scanning every markdown file in the pack would report the whole
+ * schema against, say, an `01_Context.md` that merely mentions the heading.
  *
- * Without a pointer we follow the same rule `qfai discussion list --active`
- * uses: a lone `discussion-*` directory is the de-facto active session; two or
- * more are ambiguous, so the scan falls back to the latest pack (an abandoned
- * older pack must not keep the gate red forever) but no pack is named as
- * active. The flat discussion root is the last fallback for layouts that keep
- * no `discussion-<timestamp>` directory at all.
+ * A pointer that is set but unresolvable is a broken SSOT and is reported
+ * (QFAI-RESEARCH-018) instead of being papered over. A pointer that is simply
+ * absent is the normal state of a gitignored runtime file, so it falls back to
+ * the same rule `qfai discussion list --active` uses: a lone `discussion-*`
+ * directory is the de-facto active session; two or more are ambiguous, so the
+ * latest pack is still read (an abandoned older pack must not keep the gate red
+ * forever) but no pack is named as active. The flat discussion root is the last
+ * fallback, for layouts that keep no `discussion-<timestamp>` directory at all
+ * — only there does the scan widen to every markdown file.
  */
 async function resolveResearchSummaryScanTarget(
   root: string,
   config: QfaiConfig,
 ): Promise<ResearchSummaryScanTarget> {
   const discussionRoot = path.resolve(root, config.paths.discussionDir);
+  const base = { discussionRoot, brokenPointer: null } as const;
 
+  let currentId: string | null = null;
   try {
-    const active = await resolveActiveDiscussionPack(root);
-    return { scanRoot: active, activePackDir: active };
+    currentId = await readDiscussionCurrentId(root);
   } catch {
-    // No pointer set, or it names a pack that is missing / duplicated on disk.
-    // `qfai discussion list --active` reports that condition; this gate only
-    // needs to fall back.
+    currentId = null;
+  }
+
+  if (currentId !== null) {
+    try {
+      const active = await resolveActiveDiscussionPack(root);
+      return { ...base, files: [storageFileOf(active)], activePackDir: active };
+    } catch (error) {
+      return {
+        ...base,
+        files: [],
+        activePackDir: null,
+        brokenPointer: {
+          currentId,
+          reason:
+            error instanceof ResolveActiveDiscussionPackError
+              ? error.message
+              : `the active pointer .qfai/state.json#discussion.currentId='${currentId}' could not be resolved`,
+        },
+      };
+    }
   }
 
   let packs: LocatedPack[] = [];
@@ -293,7 +381,7 @@ async function resolveResearchSummaryScanTarget(
   }
   const lone = packs.length === 1 ? packs[0] : undefined;
   if (lone) {
-    return { scanRoot: lone.path, activePackDir: lone.path };
+    return { ...base, files: [storageFileOf(lone.path)], activePackDir: lone.path };
   }
 
   let latest: string | null = null;
@@ -302,7 +390,15 @@ async function resolveResearchSummaryScanTarget(
   } catch {
     latest = null;
   }
-  return { scanRoot: latest ?? discussionRoot, activePackDir: null };
+  if (latest) {
+    return { ...base, files: [storageFileOf(latest)], activePackDir: null };
+  }
+
+  return { ...base, files: await collectMarkdownFiles(discussionRoot), activePackDir: null };
+}
+
+function storageFileOf(packDir: string): string {
+  return path.join(packDir, RESEARCH_SUMMARY_FILE);
 }
 
 async function collectMarkdownFiles(scanRoot: string): Promise<string[]> {
@@ -315,10 +411,31 @@ async function collectMarkdownFiles(scanRoot: string): Promise<string[]> {
 }
 
 /**
- * The gate's completion half: shipping the heading in the template only helps
+ * A `currentId` that names no pack (or two) leaves the gate with nothing to
+ * validate. Falling through to the latest pack would let a completed unrelated
+ * pack report success for a session whose pointer is broken.
+ */
+function describeBrokenPointer(root: string, target: ResearchSummaryScanTarget): Issue[] {
+  if (target.brokenPointer === null) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-RESEARCH-018",
+      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}`,
+      "error",
+      path.relative(root, target.discussionRoot).replace(/\\/g, "/"),
+      "researchSummary.brokenCurrentPointer",
+    ),
+  ];
+}
+
+/**
+ * The gate's completion half: shipping the section in the template only helps
  * while it survives. A pack whose `04_Sources.md` lost the `## Research
- * Summary` section would otherwise be skipped by the per-file loop below and
- * pass `--profile discussion --fail-on error` with no research at all.
+ * Summary` heading — or kept the heading over an empty body — would otherwise
+ * be skipped by the per-file loop and pass `--profile discussion --fail-on
+ * error` with no research at all.
  *
  * A `04_Sources.md` that is missing outright is QFAI-DPACK-002's finding, not
  * this gate's, so an unreadable file is left alone.
@@ -331,7 +448,7 @@ async function checkStorageSlotPresence(
     return [];
   }
 
-  const target = path.join(activePackDir, RESEARCH_SUMMARY_FILE);
+  const target = storageFileOf(activePackDir);
   let content: string;
   try {
     content = await readFile(target, "utf-8");
@@ -339,14 +456,17 @@ async function checkStorageSlotPresence(
     return [];
   }
 
-  if (RESEARCH_SUMMARY_HEADING_RE.test(content)) {
+  const hasHeading = RESEARCH_SUMMARY_HEADING_RE.test(content);
+  const section = hasHeading ? extractResearchSummarySection(content) : null;
+  if (section) {
     return [];
   }
 
+  const detail = hasHeading ? "the section is empty" : 'no "## Research Summary" heading';
   return [
     issue(
       "QFAI-RESEARCH-014",
-      `${RESEARCH_SUMMARY_FILE} has no "## Research Summary" section; store the research-first protocol output there`,
+      `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
       "error",
       path.relative(root, target).replace(/\\/g, "/"),
       "researchSummary.storageSlotMissing",
@@ -402,25 +522,22 @@ function extractResearchSummarySection(content: string): string | null {
   const remainder = content.slice(start);
   const nextHeadingOffset = remainder.search(/^#{1,3}\s+/m);
   const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
-  return section.trim();
+  const trimmed = section.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
-function extractSourceEntries(section: string): Array<{ id: string; block: string }> {
-  const sourcesBlock = extractYamlListBlock(section, "sources");
-  if (!sourcesBlock) {
-    return [];
-  }
-
-  const sourceMatches = [...sourcesBlock.matchAll(SOURCE_ENTRY_RE)];
-  return sourceMatches.map((match, index) => {
-    const start = match.index;
-    const end = sourceMatches[index + 1]?.index ?? sourcesBlock.length;
-    return {
-      id: match[1] || "",
-      block: sourcesBlock.slice(start, end),
-    };
-  });
+/** `field:` present with something after the colon, anywhere in the entry. */
+function hasNonEmptyField(entry: string, field: string): boolean {
+  return new RegExp(`^[ \\t]*(?:-[ \\t]*)?${field}:[ \\t]*\\S`, "im").test(entry);
 }
+
+/** Names an entry in a finding message by its `id` / `source_id`, else index. */
+function describeEntry(key: string, entry: string, index: number): string {
+  const ref = ENTRY_ID_RE.exec(entry)?.[1] ?? SOURCE_ID_OF_ENTRY_RE.exec(entry)?.[1];
+  return ref ? `${key}[${index}] (${ref})` : `${key}[${index}]`;
+}
+
+const SOURCE_ID_OF_ENTRY_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(\S+)/im;
 
 function extractYamlListBlock(section: string, key: string): string | null {
   const lines = section.split(/\r?\n/);
@@ -461,9 +578,10 @@ function extractYamlListBlock(section: string, key: string): string | null {
 
 /**
  * The `- ` items of a YAML list, each as its own text block, so a required
- * field can be demanded of every entry instead of once per list. Sibling of
- * `countYamlListItems`, which only needs the tally and therefore keeps its
- * looser "any `- ` at or below the base indent" rule.
+ * field can be demanded of every entry instead of once per list. Splitting on
+ * the list marker (not on a particular key) is what lets an entry that dropped
+ * its `id` still be seen as its own entry instead of being absorbed into the
+ * previous one.
  */
 function splitYamlListEntries(section: string, key: string): string[] {
   const listBlock = extractYamlListBlock(section, key);
@@ -492,39 +610,6 @@ function splitYamlListEntries(section: string, key: string): string[] {
   }
 
   return entries.map((entryLines) => entryLines.join("\n"));
-}
-
-/** Names a reflection entry in a finding message by its `source_id`, else index. */
-function describeReflectionEntry(entry: string, index: number): string {
-  const ref = REFLECTION_REF_RE.exec(entry)?.[1];
-  return ref ? `reflection[${index}] (${ref})` : `reflection[${index}]`;
-}
-
-function countYamlListItems(section: string, key: string): number {
-  const listBlock = extractYamlListBlock(section, key);
-  if (!listBlock) {
-    return 0;
-  }
-
-  const lines = listBlock.split(/\r?\n/);
-  const firstNonEmpty = lines.find((line) => line.trim().length > 0);
-  if (!firstNonEmpty) {
-    return 0;
-  }
-  const baseIndent = firstNonEmpty.length - firstNonEmpty.trimStart().length;
-
-  let count = 0;
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) {
-      continue;
-    }
-    const currentIndent = line.length - line.trimStart().length;
-    if (/^\s*-\s+\S/.test(line) && currentIndent >= baseIndent) {
-      count += 1;
-    }
-  }
-  return count;
 }
 
 function resolveFreshnessReferenceNow(): number {
