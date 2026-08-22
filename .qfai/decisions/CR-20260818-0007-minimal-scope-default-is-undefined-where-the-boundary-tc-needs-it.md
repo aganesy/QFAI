@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 2, measured against the own workflows tree before writing the row`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — define the minimal-scope default as a literal and enumerate three
 - Applied at: `-`
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0016 (TC-0017-0016)`

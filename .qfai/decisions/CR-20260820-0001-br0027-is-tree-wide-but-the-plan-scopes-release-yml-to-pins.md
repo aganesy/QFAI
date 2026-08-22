@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 4; the conflict surfaced as a test failure and every claim below was measured before filing`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `C` — keep the rule tree-wide and exempt the publish job explicitly
 - Applied at: `-`
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0030 (TC-0017-0030)`

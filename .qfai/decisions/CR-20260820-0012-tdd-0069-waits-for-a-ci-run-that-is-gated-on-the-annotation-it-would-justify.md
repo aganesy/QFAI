@@ -5,10 +5,10 @@
 - Raised by: `/qfai-atdd orchestrator, spec-0017; raised by P1d's qa-gatekeeper REVISE on DR-0017-0010, which found the exit condition that record offered to be unreachable`
 - Raised at: `2026-08-20T23:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `5 then 1` — split the conjunction upstream, then narrow the signal
 - Applied at: `-`
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0069`

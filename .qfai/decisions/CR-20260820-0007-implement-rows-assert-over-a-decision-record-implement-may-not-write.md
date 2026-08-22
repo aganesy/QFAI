@@ -5,10 +5,10 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017; self-reported after review finding B2, against my own commits`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1` — ratify the three decision records and add the ordering rule
 - Applied at: `-`
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0032, TDD-0033, TDD-0034, TDD-0035, TDD-0052, TDD-0066, TDD-0067, TDD-0074, TDD-0075` — all nine, held while this CR is open
