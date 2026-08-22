@@ -379,6 +379,95 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     },
   );
 
+  // An EXPLICIT `--root` reaches this command exactly as it was typed
+  // (`main.ts`'s `resolveRoot` returns an explicit root unchanged), so a
+  // relative one would survive into the copy-pasteable hint. Re-run from
+  // a different working directory, `--root ../project` resolves onto
+  // someone else's tree and `--force` overwrites a canonical handoff the
+  // operator never named. The hint must carry an ABSOLUTE root.
+  it("absolutizes a relative root in the --force re-run hint", async () => {
+    await seedCanonicalAndLegacy();
+    const relativeRoot = path.relative(process.cwd(), root);
+    expect(path.isAbsolute(relativeRoot)).toBe(false);
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root: relativeRoot,
+      legacyFile: "legacy-old.yml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    const message = errs.join("\n");
+    expect(message).toContain(`--root ${shellArg(path.resolve(relativeRoot))}`);
+    // Nothing relative is left in the hint to be re-resolved by whoever
+    // pastes it.
+    expect(message).not.toContain(`--root ${shellArg(relativeRoot)}`);
+  });
+
+  // `copyFile` follows a symlink, so backing a symlinked destination up
+  // by copying preserves the TARGET's bytes as a plain file — and the
+  // `rename` that follows replaces the link itself. Restoring that
+  // backup could never restore the connection to the external handoff,
+  // so the backup has to be the link.
+  it("with --force, preserves a symlinked destination AS a symlink", async () => {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await mkdir(path.join(root, "external"), { recursive: true });
+    const externalAbs = path.join(root, "external", "handoff.yaml");
+    const external = "signature: lives-outside-the-repo\n";
+    await writeFile(externalAbs, external, "utf-8");
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    await symlink(externalAbs, destAbs, "file");
+    await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      force: true,
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    // The canonical path now holds the upgraded file, not a link.
+    expect((await lstat(destAbs)).isSymbolicLink()).toBe(false);
+    await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "Wrong Co"/);
+    // The external file was never written through.
+    await expect(readFile(externalAbs, "utf-8")).resolves.toBe(external);
+    const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+      n.startsWith("handoff.yaml.backup-"),
+    );
+    expect(backups).toHaveLength(1);
+    const backupAbs = path.join(root, ".qfai", backups[0] ?? "");
+    expect((await lstat(backupAbs)).isSymbolicLink()).toBe(true);
+    expect(await readlink(backupAbs)).toBe(externalAbs);
+  });
+
+  // A DANGLING link has no bytes to copy at all: pre-fix the copy failed
+  // with ENOENT and the forced run proceeded with no backup, deleting
+  // the operator's link outright.
+  it("with --force, preserves a dangling symlink destination", async () => {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    const missingAbs = path.join(root, "external", "handoff.yaml");
+    await symlink(missingAbs, destAbs, "file");
+    await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+    const out: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      force: true,
+      write: (m) => out.push(m),
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    expect(out.join("\n")).toMatch(/backed up to/);
+    const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+      n.startsWith("handoff.yaml.backup-"),
+    );
+    expect(backups).toHaveLength(1);
+    const backupAbs = path.join(root, ".qfai", backups[0] ?? "");
+    expect((await lstat(backupAbs)).isSymbolicLink()).toBe(true);
+    expect(await readlink(backupAbs)).toBe(missingAbs);
+  });
+
   // A run that dies between the exclusive `link` and its cleanup leaves
   // the staging sibling behind as a HARD LINK to the canonical file.
   // With a fixed `<dest>.tmp` the next `--force` run truncated the

@@ -24,7 +24,9 @@ import {
   lstat,
   mkdir,
   readFile,
+  readlink,
   rename,
+  symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
@@ -254,9 +256,19 @@ function quoteArg(value: string): string {
  * the legacy source and the destination against whatever the reader's
  * cwd happens to be — up to and including a different project's
  * canonical handoff.
+ *
+ * `path.resolve` is what makes that guarantee hold. An EXPLICIT
+ * `--root` is handed through verbatim by the CLI (`main.ts`'s
+ * `resolveRoot` returns it unchanged when it was given on the command
+ * line), so a relative `--root ../project` would otherwise survive into
+ * the hint — and re-running that pasted command from a different
+ * working directory would resolve `../project` onto someone else's
+ * tree and `--force` a canonical handoff the operator never named. The
+ * legacy path stays as typed: it is resolved against the root, so an
+ * absolute root already pins it.
  */
 function forceHint(root: string, legacyFile: string): string {
-  return `qfai handoff upgrade ${quoteArg(legacyFile)} --root ${quoteArg(root)} --force`;
+  return `qfai handoff upgrade ${quoteArg(legacyFile)} --root ${quoteArg(path.resolve(root))} --force`;
 }
 
 /**
@@ -342,6 +354,53 @@ function isEexist(err: unknown): boolean {
 }
 
 /**
+ * What the current canonical entry IS, and therefore what a faithful
+ * backup of it has to reproduce. A symlink is preserved as a symlink;
+ * anything else is preserved by copying its bytes.
+ */
+type BackupSource = { kind: "file" } | { kind: "symlink"; target: string };
+
+/**
+ * Classify the canonical entry with `lstat` (never `stat`) — `null`
+ * when nothing is there.
+ *
+ * The existence probe already treats a symlink as a directory entry the
+ * operator placed on purpose; the backup has to honour the same reading.
+ * `copyFile` follows the link, so copying would preserve the TARGET's
+ * bytes as a regular file and lose the connection to the external
+ * handoff, and a dangling link would fail with `ENOENT` and be dropped
+ * with no backup at all. Reading the link here lets the backup recreate
+ * the entry itself, dangling or not.
+ */
+async function classifyDestination(destAbs: string): Promise<BackupSource | null> {
+  try {
+    const stats = await lstat(destAbs);
+    if (!stats.isSymbolicLink()) return { kind: "file" };
+    return { kind: "symlink", target: await readlink(destAbs) };
+  } catch (err: unknown) {
+    if (isEnoent(err)) return null;
+    throw err;
+  }
+}
+
+/**
+ * Reproduce `source` at `candidate`, which must not already exist.
+ * Both primitives are exclusive: `COPYFILE_EXCL` opens with `O_EXCL`
+ * and `symlink` fails with `EEXIST` rather than replacing an entry.
+ */
+async function reproduceAt(
+  destAbs: string,
+  candidate: string,
+  source: BackupSource,
+): Promise<void> {
+  if (source.kind === "symlink") {
+    await symlink(source.target, candidate, "file");
+    return;
+  }
+  await copyFile(destAbs, candidate, fsConstants.COPYFILE_EXCL);
+}
+
+/**
  * Copy the current canonical handoff to an EXCLUSIVELY reserved backup
  * name and return that name — or `null` when there was nothing to copy.
  *
@@ -358,19 +417,27 @@ function isEexist(err: unknown): boolean {
  * second silently destroy the first run's backup — the oldest canonical
  * handoff, unrecoverable.
  *
- * A missing source (`ENOENT`) means the entry was a dangling symlink or
- * vanished under us: there are no bytes to preserve, so the caller
- * proceeds with no backup rather than failing an explicitly forced run.
+ * A symlink destination is preserved AS a symlink to the same target,
+ * so the `rename` that follows — which replaces the link with a regular
+ * file — stays undoable: restoring the backup restores the connection
+ * to the external handoff. A dangling link is preserved the same way,
+ * where a byte copy could only have failed.
+ *
+ * A vanished entry (`ENOENT`) means there is nothing left to preserve,
+ * so the caller proceeds with no backup rather than failing an
+ * explicitly forced run.
  */
 async function backupExclusively(destAbs: string): Promise<string | null> {
+  const source = await classifyDestination(destAbs);
+  if (source === null) return null;
   const base = `${destAbs}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt}`;
     try {
-      await copyFile(destAbs, candidate, fsConstants.COPYFILE_EXCL);
+      await reproduceAt(destAbs, candidate, source);
       return candidate;
     } catch (err: unknown) {
-      if (isEnoent(err)) return null;
+      if (isEnoent(err) && source.kind === "file") return null;
       if (!isEexist(err)) throw err;
     }
   }
@@ -379,27 +446,40 @@ async function backupExclusively(destAbs: string): Promise<string | null> {
 
 /**
  * Fallback placement for filesystems that reject hard links (FAT, some
- * network mounts): create the destination with `wx` (`O_EXCL`), which
- * is still EXCLUSIVE — an entry that appeared after the probe yields
- * `EEXIST` and is reported, never overwritten.
+ * network mounts). The name is RESERVED with an empty `wx` (`O_EXCL`)
+ * create, which is still EXCLUSIVE — an entry that appeared after the
+ * probe yields `EEXIST` and is reported, never overwritten — and the
+ * already-complete staged file is then published over that reservation
+ * with one `rename`.
  *
- * What this surrenders relative to `link` is reader atomicity, and only
- * on the fresh-placement path: there is no prior canonical file for a
- * reader to see torn, just a destination that briefly holds fewer bytes
- * than it finally will.
+ * Reservation and publication are deliberately separate steps. Writing
+ * the canonical payload straight into the destination would put a
+ * partially written `.qfai/handoff.yaml` on disk the moment the write
+ * ran out of space or hit an I/O error mid-stream, and would expose the
+ * half-written bytes to a concurrent reader. Both guarantees this
+ * command makes — never publish anything but a finished file, never
+ * leave a partial canonical output behind on failure — survive here
+ * because the reservation carries no content and is removed again if
+ * the publish fails.
  */
 async function createExclusively(
   destAbs: string,
-  body: string,
   stagedPath: string,
 ): Promise<"placed" | "exists"> {
   try {
-    await writeFile(destAbs, body, { encoding: "utf-8", flag: "wx" });
+    await writeFile(destAbs, "", { encoding: "utf-8", flag: "wx" });
   } catch (err: unknown) {
     if (isEexist(err)) return "exists";
     throw err;
   }
-  await removeQuietly(stagedPath);
+  try {
+    await rename(stagedPath, destAbs);
+  } catch (err: unknown) {
+    // Our own empty reservation, and nothing else: removing it leaves
+    // the destination exactly as the probe found it — absent.
+    await removeQuietly(destAbs);
+    throw err;
+  }
   return "placed";
 }
 
@@ -416,16 +496,12 @@ async function createExclusively(
  * unconditionally: on a link-hostile filesystem it would hand back the
  * exact clobber-without-backup this function exists to prevent.
  */
-async function placeExclusively(
-  stagedPath: string,
-  destAbs: string,
-  body: string,
-): Promise<"placed" | "exists"> {
+async function placeExclusively(stagedPath: string, destAbs: string): Promise<"placed" | "exists"> {
   try {
     await link(stagedPath, destAbs);
   } catch (err: unknown) {
     if (isEexist(err)) return "exists";
-    return createExclusively(destAbs, body, stagedPath);
+    return createExclusively(destAbs, stagedPath);
   }
   await removeQuietly(stagedPath);
   return "placed";
@@ -441,10 +517,9 @@ async function commitFresh(
   root: string,
   destAbs: string,
   stagedPath: string,
-  body: string,
 ): Promise<CommitResult> {
   try {
-    if ((await placeExclusively(stagedPath, destAbs, body)) === "exists") {
+    if ((await placeExclusively(stagedPath, destAbs)) === "exists") {
       await removeQuietly(stagedPath);
       return {
         ok: false,
@@ -461,8 +536,48 @@ async function commitFresh(
 }
 
 /**
+ * Fingerprint of the canonical entry, used to tell "the version we
+ * backed up" from "a version somebody else wrote since". `null` means
+ * no entry. `lstat` again, so replacing a symlink with a regular file
+ * of the same size counts as a change.
+ */
+type DestStamp = { ino: number; size: number; mtimeMs: number; symlink: boolean };
+
+async function stampDestination(destAbs: string): Promise<DestStamp | null> {
+  try {
+    const stats = await lstat(destAbs);
+    return {
+      ino: stats.ino,
+      size: stats.size,
+      mtimeMs: stats.mtimeMs,
+      symlink: stats.isSymbolicLink(),
+    };
+  } catch (err: unknown) {
+    if (isEnoent(err)) return null;
+    throw err;
+  }
+}
+
+function sameStamp(a: DestStamp | null, b: DestStamp | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs && a.symlink === b.symlink;
+}
+
+/**
  * Placement under `--force`: reserve a backup name and COPY the prior
  * file into it, then replace the destination with one atomic `rename`.
+ *
+ * The destination is fingerprinted before the copy and re-checked
+ * immediately before the `rename`. `rename` replaces its target
+ * unconditionally, so without that re-check a canonical handoff written
+ * by another process while this run was copying would be destroyed with
+ * only the PRE-copy version in the backup — the very version the
+ * operator lost would exist nowhere. A changed fingerprint therefore
+ * aborts the replacement and removes the now-misleading backup. (This
+ * narrows the window rather than locking it: a writer landing between
+ * the re-check and the `rename`, or one that rewrites the file inside a
+ * single mtime tick without changing its size or inode, is still
+ * indistinguishable from no writer at all.)
  */
 async function commitOverExisting(
   root: string,
@@ -470,7 +585,9 @@ async function commitOverExisting(
   stagedPath: string,
 ): Promise<CommitResult> {
   let backupAbs: string | null;
+  let before: DestStamp | null;
   try {
+    before = await stampDestination(destAbs);
     backupAbs = await backupExclusively(destAbs);
   } catch (err: unknown) {
     await removeQuietly(stagedPath);
@@ -480,6 +597,16 @@ async function commitOverExisting(
     };
   }
   try {
+    if (!sameStamp(before, await stampDestination(destAbs))) {
+      await removeQuietly(stagedPath);
+      if (backupAbs !== null) await removeQuietly(backupAbs);
+      return {
+        ok: false,
+        message:
+          `${toRelPosix(root, destAbs)} was updated by another process while this upgrade was ` +
+          `backing it up; nothing was overwritten. Re-run once that write has settled.`,
+      };
+    }
     await rename(stagedPath, destAbs);
   } catch (err: unknown) {
     await removeQuietly(stagedPath);
@@ -541,7 +668,7 @@ async function commitCanonicalWrite(args: {
   }
   return args.destExists
     ? commitOverExisting(args.root, args.destAbs, stagedPath)
-    : commitFresh(args.root, args.destAbs, stagedPath, body);
+    : commitFresh(args.root, args.destAbs, stagedPath);
 }
 
 /**
