@@ -10,19 +10,30 @@
  * defect the waiver was written for.
  *
  * This script replaces the hand-maintained half of that answer: it scans the
- * package source for every `Issue` code literal the package can emit and writes
- * them to a generated module, so "does this rule exist?" is answered by the
- * emitters themselves rather than by whoever remembered to extend a list.
+ * package source for every code a validate `Issue` can carry and writes them to
+ * a generated module, so "does this rule exist?" is answered by the emitters
+ * themselves rather than by whoever remembered to extend a list.
  *
- * Only the code is captured, never a severity. Severity is per-call-site and
- * frequently a variable, so a scanned value would be a guess; the run that
- * actually produces the finding supplies the real severity, and that is the only
- * run where severity decides anything (`QFAI-WAIVER-002`).
- *
- * Two literal shapes are recognised, matching how findings are constructed
+ * Two emission shapes are recognised, matching how findings are constructed
  * across `src/`:
- *   - `issue("CODE", …)`  — first argument of the `issue()` helper.
- *   - `code: "CODE"`      — object-literal field on an `Issue`.
+ *   - a call to an issue factory — the shared `issue(code, message, severity, …)`
+ *     helper, or any local `function name(code: …): Issue`. Several validators
+ *     build their findings through such a helper, and several name their rule
+ *     through a constant rather than a literal (`issue(RULE_ID, …)`), so the
+ *     first argument is resolved against every `const NAME = "…"` in the tree.
+ *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
+ *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
+ *     other shapes out: `GuardrailIssue` (`QFAI-GR-00N`, a `guardrails`-command
+ *     type that `applyWaivers` never sees), `HandoffValidationIssue`, the
+ *     render-evidence error record and the justification catalog all carry a
+ *     `code` but none of them is a validate `Issue`, and a waiver naming one
+ *     could never match a finding.
+ *
+ * Severity is captured only where every emission of a code spells it as the
+ * literal `"error"`. Such a rule can never be waived (`QFAI-WAIVER-002`), so the
+ * engine has to refuse it even on the runs where it stays quiet; anything less
+ * certain — a severity read from a variable, or a code emitted at more than one
+ * severity — is left to the run that actually produces the finding.
  *
  * Invocation modes:
  *   - default        rewrite the output module in place.
@@ -47,11 +58,6 @@ const DEFAULT_SRC_DIR = path.join(PACKAGE_ROOT, "src");
 const DEFAULT_OUTPUT_FILE = path.join(DEFAULT_SRC_DIR, "core", "emittedRuleCodes.ts");
 const OUTPUT_LABEL = "src/core/emittedRuleCodes.ts";
 
-/** The `issue()` helper's first argument. */
-const ISSUE_CALL_RE = /\bissue\(\s*"([^"\\]+)"/g;
-/** An `Issue` object literal's `code` field. */
-const CODE_FIELD_RE = /\bcode:\s*"([^"\\]+)"/g;
-
 /**
  * The shape a rule id may take, kept identical to `RULE_ID_RE` in
  * `src/core/waivers.ts`. Anything a waiver could not name is not worth
@@ -61,40 +67,589 @@ const CODE_FIELD_RE = /\bcode:\s*"([^"\\]+)"/g;
 const RULE_ID_RE = /^[A-Z][A-Z0-9]*(?:[-_][A-Z0-9]+)*$/;
 
 /**
- * Collect every `Issue` code literal under `srcDir`.
+ * Prefix and suffix wrapping a sanitized string literal's index into the file's
+ * literal table. Long enough that no real identifier collides with one.
+ */
+const LITERAL_PREFIX = "__qfaiLit";
+const LITERAL_SUFFIX = "Lit__";
+
+/** A sanitized string literal, capturing its index into the literal table. */
+const LITERAL_TOKEN_RE = new RegExp(`^${LITERAL_PREFIX}(\\d+)${LITERAL_SUFFIX}$`);
+
+/** A `const NAME = "value"` binding, matched against sanitized text. */
+const STRING_CONST_RE = new RegExp(
+  `\\b(?:const|let|var)\\s+([A-Za-z_$][\\w$]*)\\s*(?::[^=;\\n]+)?=\\s*(${LITERAL_PREFIX}\\d+${LITERAL_SUFFIX})`,
+  "g",
+);
+
+/**
+ * The shared `issue()` helper: `issue(code, message, severity, …)`.
+ *
+ * Seeded rather than discovered so the scan does not depend on
+ * `src/core/validators/utils.ts` being inside the tree it was pointed at.
+ */
+const CORE_ISSUE_FACTORY = ["issue", { severityArg: 2, fixedSeverity: null }];
+
+/**
+ * A local factory: `function name(code: …` whose return type is `Issue`.
+ *
+ * Two validators build their findings through such a helper rather than through
+ * `issue()`, so a scan that knew only `issue()` would drop every code they emit.
+ */
+const ISSUE_FACTORY_RE = /\bfunction\s+([A-Za-z_$][\w$]*)\s*\(\s*code\s*:/g;
+
+/** The `Issue` return annotation that marks a factory, just past its `)`. */
+const ISSUE_RETURN_RE = /^\s*:\s*(?:Promise\s*<\s*)?Issue\b/;
+
+/** A `severity` parameter, in a sanitized parameter slice. */
+const SEVERITY_PARAM_RE = /^\s*severity\s*[?:]/;
+
+/** A factory whose severity cannot be read statically. */
+const UNKNOWN_FACTORY = { severityArg: null, fixedSeverity: null };
+
+/** An object literal's `code:` field, in sanitized text. */
+const CODE_FIELD_RE = /\bcode\s*:\s*([^\s,;}]+)/g;
+
+/** Fields only a validate `Issue` carries among the `code`-bearing shapes. */
+const ISSUE_ONLY_FIELD_RE = /\b(?:category|rule)\s*:/;
+
+/** An object literal's `severity:` field, in sanitized text. */
+const SEVERITY_FIELD_RE = /\bseverity\s*:\s*([^\s,;}]+)/;
+
+/** {@link SEVERITY_FIELD_RE}, for sweeping a factory body for every spelling. */
+const SEVERITY_FIELD_ALL_RE = /\bseverity\s*:\s*([^\s,;}]+)/g;
+
+/**
+ * Replace every string literal, template literal and comment with an opaque
+ * placeholder so the remaining text can be scanned by bracket balance alone.
+ *
+ * String literals become an opaque token resolvable through the returned
+ * `literals` array. Template literals and comments become blanks: no rule id is
+ * ever spelled as one, and blanking them removes the `${…}` braces and the
+ * stray brackets in prose that would otherwise unbalance the scan.
+ *
+ * @param {string} text
+ * @returns {{ sanitized: string, literals: string[] }}
+ */
+function sanitizeSource(text) {
+  const literals = [];
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const char = text[index];
+    const next = text[index + 1];
+    if (char === "/" && next === "/") {
+      while (index < text.length && text[index] !== "\n") {
+        out += " ";
+        index += 1;
+      }
+      continue;
+    }
+    if (char === "/" && next === "*") {
+      const end = text.indexOf("*/", index + 2);
+      const stop = end === -1 ? text.length : end + 2;
+      for (; index < stop; index += 1) {
+        out += text[index] === "\n" ? "\n" : " ";
+      }
+      continue;
+    }
+    if (char === '"' || char === "'") {
+      const scanned = scanQuoted(text, index, char);
+      if (scanned) {
+        literals.push(scanned.value);
+        out += `${LITERAL_PREFIX}${literals.length - 1}${LITERAL_SUFFIX}`;
+        index = scanned.end;
+        continue;
+      }
+      out += " ";
+      index += 1;
+      continue;
+    }
+    if (char === "`") {
+      const end = scanTemplate(text, index);
+      for (; index < end; index += 1) {
+        out += text[index] === "\n" ? "\n" : " ";
+      }
+      continue;
+    }
+    if (char === "/" && startsRegExp(out)) {
+      const end = scanRegExp(text, index);
+      for (; index < end; index += 1) {
+        out += text[index] === "\n" ? "\n" : " ";
+      }
+      continue;
+    }
+    out += char;
+    index += 1;
+  }
+  return { sanitized: out, literals };
+}
+
+/**
+ * @param {string} text
+ * @param {number} start index of the opening quote.
+ * @param {string} quote
+ * @returns {{ value: string, end: number } | null} `null` when unterminated.
+ */
+function scanQuoted(text, start, quote) {
+  let value = "";
+  let index = start + 1;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === "\\") {
+      value += text[index + 1] ?? "";
+      index += 2;
+      continue;
+    }
+    if (char === quote) {
+      return { value, end: index + 1 };
+    }
+    if (char === "\n") {
+      return null;
+    }
+    value += char;
+    index += 1;
+  }
+  return null;
+}
+
+/**
+ * @param {string} text
+ * @param {number} start index of the opening backtick.
+ * @returns {number} index just past the closing backtick.
+ */
+function scanTemplate(text, start) {
+  let index = start + 1;
+  let depth = 0;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
+    if (char === "$" && text[index + 1] === "{") {
+      depth += 1;
+      index += 2;
+      continue;
+    }
+    if (char === "}" && depth > 0) {
+      depth -= 1;
+      index += 1;
+      continue;
+    }
+    if (char === "`") {
+      if (depth === 0) {
+        return index + 1;
+      }
+      index = scanTemplate(text, index);
+      continue;
+    }
+    index += 1;
+  }
+  return text.length;
+}
+
+/**
+ * Whether a `/` at the end of `emitted` opens a regular expression rather than
+ * a division. The usual heuristic: a regex may only follow an operator, an
+ * opening bracket, or nothing at all.
+ *
+ * @param {string} emitted sanitized text produced so far.
+ * @returns {boolean}
+ */
+function startsRegExp(emitted) {
+  const trimmed = emitted.replace(/\s+$/, "");
+  if (trimmed.length === 0) {
+    return true;
+  }
+  const last = trimmed[trimmed.length - 1];
+  if ("(,=:[!&|?{};+-*%~^<>".includes(last)) {
+    return true;
+  }
+  return /\b(?:return|typeof|case|in|of|do|else|yield|await|new|delete|void)$/.test(trimmed);
+}
+
+/**
+ * @param {string} text
+ * @param {number} start index of the opening slash.
+ * @returns {number} index just past the closing slash and its flags.
+ */
+function scanRegExp(text, start) {
+  let index = start + 1;
+  let inClass = false;
+  while (index < text.length) {
+    const char = text[index];
+    if (char === "\\") {
+      index += 2;
+      continue;
+    }
+    if (char === "\n") {
+      return start + 1;
+    }
+    if (char === "[") {
+      inClass = true;
+    } else if (char === "]") {
+      inClass = false;
+    } else if (char === "/" && !inClass) {
+      index += 1;
+      while (index < text.length && /[a-z]/.test(text[index])) {
+        index += 1;
+      }
+      return index;
+    }
+    index += 1;
+  }
+  return text.length;
+}
+
+/**
+ * Resolve one sanitized argument or field value to a string.
+ *
+ * @param {string} raw sanitized source slice.
+ * @param {ReadonlyArray<string>} literals
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants identifier bindings.
+ * @returns {string[]} every string this expression can be.
+ */
+function resolveValue(raw, literals, constants) {
+  const trimmed = raw.trim();
+  const token = LITERAL_TOKEN_RE.exec(trimmed);
+  if (token) {
+    const literal = literals[Number(token[1])];
+    return literal === undefined ? [] : [literal];
+  }
+  const bound = constants.get(trimmed);
+  return bound ? [...bound] : [];
+}
+
+/**
+ * Split a sanitized argument list into top-level arguments.
+ *
+ * @param {string} sanitized
+ * @param {number} openParen index of `(`.
+ * @returns {{ args: string[], end: number } | null} the top-level arguments and
+ *   the index of the closing `)`, or `null` when the list is unbalanced.
+ */
+function splitCallArguments(sanitized, openParen) {
+  const args = [];
+  let depth = 0;
+  let current = "";
+  for (let index = openParen; index < sanitized.length; index += 1) {
+    const char = sanitized[index];
+    if (char === "(" || char === "[" || char === "{") {
+      depth += 1;
+      if (depth === 1) {
+        continue;
+      }
+    } else if (char === ")" || char === "]" || char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        args.push(current);
+        return { args, end: index };
+      }
+    } else if (char === "," && depth === 1) {
+      args.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  return null;
+}
+
+/**
+ * The `{ … }` block starting at or after `position`, as a sanitized slice.
+ *
+ * @param {string} sanitized
+ * @param {number} position
+ * @returns {string | null}
+ */
+function blockAt(sanitized, position) {
+  const start = sanitized.indexOf("{", position);
+  if (start === -1) {
+    return null;
+  }
+  let depth = 0;
+  for (let index = start; index < sanitized.length; index += 1) {
+    const char = sanitized[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return sanitized.slice(start, index + 1);
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * The object literal enclosing `position`, as a sanitized slice.
+ *
+ * @param {string} sanitized
+ * @param {number} position
+ * @returns {string | null}
+ */
+function enclosingObjectLiteral(sanitized, position) {
+  let depth = 0;
+  let start = -1;
+  for (let index = position; index >= 0; index -= 1) {
+    const char = sanitized[index];
+    if (char === "}") {
+      depth += 1;
+    } else if (char === "{") {
+      if (depth === 0) {
+        start = index;
+        break;
+      }
+      depth -= 1;
+    }
+  }
+  if (start === -1) {
+    return null;
+  }
+  depth = 0;
+  for (let index = start; index < sanitized.length; index += 1) {
+    const char = sanitized[index];
+    if (char === "{") {
+      depth += 1;
+    } else if (char === "}") {
+      depth -= 1;
+      if (depth === 0) {
+        return sanitized.slice(start, index + 1);
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Record one emission of `code` at `severity`.
+ *
+ * @param {Map<string, { severities: Set<string | null> }>} sink
+ * @param {string} code
+ * @param {string | null} severity `null` when this call site does not spell one
+ *   as a literal.
+ */
+function recordEmission(sink, code, severity) {
+  if (!RULE_ID_RE.test(code)) {
+    return;
+  }
+  let entry = sink.get(code);
+  if (!entry) {
+    entry = { severities: new Set() };
+    sink.set(code, entry);
+  }
+  entry.severities.add(severity);
+}
+
+/**
+ * Collect every module-level `const NAME = "value"` binding under `srcDir`.
+ *
+ * A name may be bound in more than one module; every binding is kept, because
+ * the scanner cannot tell which one an `issue(NAME, …)` call resolved through
+ * and registering a code that exists is harmless where dropping one is not.
+ *
+ * @param {ReadonlyArray<{ file: string, sanitized: string, literals: string[] }>} sources
+ * @returns {Map<string, Set<string>>}
+ */
+function collectStringConstants(sources) {
+  const constants = new Map();
+  for (const source of sources) {
+    for (const found of source.sanitized.matchAll(STRING_CONST_RE)) {
+      const [, name, token] = found;
+      const [value] = resolveValue(token, source.literals, constants);
+      if (value === undefined) {
+        continue;
+      }
+      let bound = constants.get(name);
+      if (!bound) {
+        bound = new Set();
+        constants.set(name, bound);
+      }
+      bound.add(value);
+    }
+  }
+  return constants;
+}
+
+/**
+ * Collect every code a validate `Issue` can carry under `srcDir`.
  *
  * @param {string} srcDir directory to walk; every `.ts` file below it is read.
  * @param {string} outputFile skipped while scanning — it holds the codes as
  *   plain array members, but skipping it keeps the generator idempotent no
  *   matter how the module is later reformatted.
- * @returns {Promise<string[]>} sorted, de-duplicated codes.
+ * @returns {Promise<{ codes: string[], errorOnly: string[] }>} sorted, de-duplicated.
  */
 async function collectEmittedRuleCodes(srcDir, outputFile) {
-  const codes = new Set();
   const skip = path.resolve(outputFile);
+  const sources = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
     if (path.resolve(file) === skip) {
       continue;
     }
-    let text;
+    let raw;
     try {
-      text = await readFile(file, "utf-8");
+      raw = await readFile(file, "utf-8");
     } catch (error) {
       throw new Error(`failed to read ${file}: ${toMessage(error)}`);
     }
-    for (const pattern of [ISSUE_CALL_RE, CODE_FIELD_RE]) {
-      pattern.lastIndex = 0;
-      let match = pattern.exec(text);
-      while (match) {
-        const candidate = match[1];
-        if (RULE_ID_RE.test(candidate)) {
-          codes.add(candidate);
+    const { sanitized, literals } = sanitizeSource(raw);
+    sources.push({ file, raw, sanitized, literals });
+  }
+
+  const constants = collectStringConstants(sources);
+  const factories = collectIssueFactories(sources);
+  /** @type {Map<string, { severities: Set<string | null> }>} */
+  const emissions = new Map();
+  for (const source of sources) {
+    scanFactoryCalls(source, factories, constants, emissions);
+    scanIssueObjectLiterals(source, constants, emissions);
+  }
+
+  const codes = [...emissions.keys()].sort((a, b) => a.localeCompare(b, "en"));
+  const errorOnly = codes.filter((code) => {
+    const severities = emissions.get(code)?.severities;
+    return Boolean(severities && severities.size === 1 && severities.has("error"));
+  });
+  return { codes, errorOnly };
+}
+
+/**
+ * Every function that turns a code into an `Issue`: the shared `issue()` helper
+ * plus each local `function name(code: …): Issue` declared under the tree.
+ *
+ * A factory that takes its severity as a parameter reports the argument index
+ * to read it from; one that hard-codes a single severity in its body reports
+ * that instead. Anything less definite leaves severity unknown, which keeps the
+ * code out of {@link renderEmittedRuleCodesModule}'s error-only list.
+ *
+ * @param {ReadonlyArray<{ sanitized: string, literals: string[] }>} sources
+ * @returns {Map<string, { severityArg: number | null, fixedSeverity: string | null }>}
+ */
+function collectIssueFactories(sources) {
+  const factories = new Map([CORE_ISSUE_FACTORY]);
+  for (const source of sources) {
+    ISSUE_FACTORY_RE.lastIndex = 0;
+    let match = ISSUE_FACTORY_RE.exec(source.sanitized);
+    while (match) {
+      const name = match[1];
+      const open = source.sanitized.indexOf("(", match.index);
+      const params = open === -1 ? null : splitCallArguments(source.sanitized, open);
+      if (name !== CORE_ISSUE_FACTORY[0] && params) {
+        const tail = source.sanitized.slice(params.end + 1, params.end + 40);
+        if (ISSUE_RETURN_RE.test(tail)) {
+          const described = describeFactory(source, params);
+          const existing = factories.get(name);
+          // Two modules may declare same-named local helpers. Their codes are
+          // still worth collecting, but reading a severity out of an argument
+          // position one of them does not use would be a guess, so a conflict
+          // demotes the name to "severity unknown".
+          factories.set(
+            name,
+            existing && !sameFactory(existing, described) ? UNKNOWN_FACTORY : described,
+          );
         }
-        match = pattern.exec(text);
       }
+      match = ISSUE_FACTORY_RE.exec(source.sanitized);
     }
   }
-  return [...codes].sort((a, b) => a.localeCompare(b, "en"));
+  return factories;
+}
+
+/**
+ * @param {{ severityArg: number | null, fixedSeverity: string | null }} left
+ * @param {{ severityArg: number | null, fixedSeverity: string | null }} right
+ * @returns {boolean}
+ */
+function sameFactory(left, right) {
+  return left.severityArg === right.severityArg && left.fixedSeverity === right.fixedSeverity;
+}
+
+/**
+ * @param {{ sanitized: string, literals: string[] }} source
+ * @param {{ args: string[], end: number }} params
+ * @returns {{ severityArg: number | null, fixedSeverity: string | null }}
+ */
+function describeFactory(source, params) {
+  const severityArg = params.args.findIndex((param) => SEVERITY_PARAM_RE.test(param));
+  if (severityArg !== -1) {
+    return { severityArg, fixedSeverity: null };
+  }
+  const body = blockAt(source.sanitized, params.end + 1);
+  const spelled = new Set();
+  for (const found of body ? body.matchAll(SEVERITY_FIELD_ALL_RE) : []) {
+    for (const value of resolveValue(found[1], source.literals, new Map())) {
+      spelled.add(value);
+    }
+  }
+  return { severityArg: null, fixedSeverity: spelled.size === 1 ? [...spelled][0] : null };
+}
+
+/**
+ * @param {{ sanitized: string, literals: string[] }} source
+ * @param {ReadonlyMap<string, { severityArg: number | null, fixedSeverity: string | null }>} factories
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @param {Map<string, { severities: Set<string | null> }>} emissions
+ */
+function scanFactoryCalls(source, factories, constants, emissions) {
+  for (const [name, factory] of factories) {
+    const pattern = new RegExp(`\\b${name}\\(`, "g");
+    let match = pattern.exec(source.sanitized);
+    while (match) {
+      const call = splitCallArguments(source.sanitized, match.index + match[0].length - 1);
+      if (call && call.args.length > 0) {
+        const codes = resolveValue(call.args[0], source.literals, constants);
+        for (const code of codes) {
+          recordEmission(emissions, code, callSeverity(source, factory, call.args, constants));
+        }
+      }
+      match = pattern.exec(source.sanitized);
+    }
+  }
+}
+
+/**
+ * @param {{ literals: string[] }} source
+ * @param {{ severityArg: number | null, fixedSeverity: string | null }} factory
+ * @param {readonly string[]} args
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @returns {string | null}
+ */
+function callSeverity(source, factory, args, constants) {
+  if (factory.severityArg === null) {
+    return factory.fixedSeverity;
+  }
+  const raw = args[factory.severityArg];
+  if (raw === undefined) {
+    return null;
+  }
+  const resolved = resolveValue(raw, source.literals, constants);
+  return resolved.length === 1 ? resolved[0] : null;
+}
+
+/**
+ * @param {{ sanitized: string, literals: string[] }} source
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @param {Map<string, { severities: Set<string | null> }>} emissions
+ */
+function scanIssueObjectLiterals(source, constants, emissions) {
+  CODE_FIELD_RE.lastIndex = 0;
+  let match = CODE_FIELD_RE.exec(source.sanitized);
+  while (match) {
+    const literal = enclosingObjectLiteral(source.sanitized, match.index);
+    if (literal && ISSUE_ONLY_FIELD_RE.test(literal)) {
+      const codes = resolveValue(match[1], source.literals, constants);
+      const found = SEVERITY_FIELD_RE.exec(literal);
+      const severities = found ? resolveValue(found[1], source.literals, constants) : [];
+      const severity = severities.length === 1 ? severities[0] : null;
+      for (const code of codes) {
+        recordEmission(emissions, code, severity);
+      }
+    }
+    match = CODE_FIELD_RE.exec(source.sanitized);
+  }
 }
 
 /**
@@ -125,12 +680,14 @@ async function listTypeScriptFiles(dir) {
  * shape so `prettier --check` stays green on a freshly generated file.
  *
  * @param {readonly string[]} codes
+ * @param {readonly string[]} errorOnly
  * @returns {string}
  */
-function renderEmittedRuleCodesModule(codes) {
-  const body = codes.map((code) => `  "${code}",`).join("\n");
+function renderEmittedRuleCodesModule(codes, errorOnly) {
+  const list = (values) =>
+    values.length === 0 ? "" : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
   return `/**
- * Every \`Issue\` code this package can emit.
+ * Every code a validate \`Issue\` from this package can carry.
  *
  * GENERATED FILE — do not edit by hand. Run \`npm run generate:rule-codes\`
  * from \`packages/qfai\` to refresh it; the scripts test slice fails on drift.
@@ -139,9 +696,18 @@ function renderEmittedRuleCodesModule(codes) {
  * rule that simply did not fire on this run. Without it, a waiver kept on file
  * after its defect was fixed is reported as naming a rule that does not exist.
  */
-export const EMITTED_RULE_CODES: readonly string[] = [
-${body}
-];
+export const EMITTED_RULE_CODES: readonly string[] = [${list(codes)}];
+
+/**
+ * The subset every emitter raises at \`error\`.
+ *
+ * A waiver may only target \`warning\` / \`info\` findings, so these have to be
+ * refused (\`QFAI-WAIVER-002\`) even on the runs where the rule stays quiet and
+ * no observed severity is available. A code emitted at more than one severity,
+ * or at a severity read from a variable, is deliberately absent: only the run
+ * that produces the finding can judge those.
+ */
+export const ERROR_ONLY_RULE_CODES: readonly string[] = [${list(errorOnly)}];
 `;
 }
 
@@ -192,8 +758,8 @@ async function main() {
     return 2;
   }
 
-  const codes = await collectEmittedRuleCodes(parsed.srcDir, parsed.outputFile);
-  const rendered = renderEmittedRuleCodesModule(codes);
+  const { codes, errorOnly } = await collectEmittedRuleCodes(parsed.srcDir, parsed.outputFile);
+  const rendered = renderEmittedRuleCodesModule(codes, errorOnly);
 
   if (parsed.checkOnly) {
     let current;

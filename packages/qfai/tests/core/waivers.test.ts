@@ -567,11 +567,13 @@ describe("applyWaivers", () => {
 
   // The normal end state of a waiver: the rule fired, the waiver was written,
   // the defect was fixed. From then on the rule is quiet, and the waiver must
-  // not be reported as naming a rule that does not exist.
+  // not be reported as naming a rule that does not exist. Every rule here is
+  // waivable — one emitted only at `error` is refused for that reason instead,
+  // which the error-only case below covers.
   it.each([
-    ["QFAI-ATDD-112", "the code the CLI prints"],
-    ["ATDD-112", "the back-compat stripped alias"],
-    ["E_TC_ORPHAN", "an underscore-shaped code"],
+    ["QFAI-CONTRACT-031", "a code the emitter names through a constant"],
+    ["CONTRACT-031", "the back-compat stripped alias"],
+    ["E_OQ_STATUS_UNPARSEABLE", "an underscore-shaped code"],
     ["W-STALE-REFERENCE", "a single-segment prefixed code"],
   ])("keeps a waiver for the quiet rule %s active (%s)", async (rule) => {
     const root = await createRoot();
@@ -602,9 +604,8 @@ describe("applyWaivers", () => {
     }
   });
 
-  // Severity is not part of the generated registry, so a quiet error-severity
-  // rule is no longer refused up front. It must still be refused on the run
-  // that produces the finding — that is the only run where it could suppress.
+  // The run that produces the finding judges the waiver against the severity it
+  // observed, whatever the generated registry says.
   it("still blocks a waiver for an error finding the run produced", async () => {
     const root = await createRoot();
     try {
@@ -629,6 +630,43 @@ describe("applyWaivers", () => {
       ]);
 
       expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A rule every emitter raises at `error` can never be waived, so the answer
+  // must not depend on whether this run happened to produce the finding: the
+  // same waiver file would otherwise be active on a clean run and rejected on
+  // the run that finally fires the rule.
+  it.each([
+    ["QFAI-ATDD-112", "the code the CLI prints"],
+    ["ATDD-112", "the back-compat stripped alias"],
+  ])("blocks a waiver for the quiet error-only rule %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-14",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "error target on a quiet run"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      // The rule produced nothing on this run.
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(true);
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
       expect(result.waivers.active).toHaveLength(0);
     } finally {
       await rm(root, { recursive: true, force: true });

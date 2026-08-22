@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { EMITTED_RULE_CODES } from "./emittedRuleCodes.js";
+import { EMITTED_RULE_CODES, ERROR_ONLY_RULE_CODES } from "./emittedRuleCodes.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
 import {
@@ -474,11 +474,11 @@ async function loadWaivers(
       );
     }
 
-    // Only this run's own findings (and the static table) carry a severity, so a
-    // quiet error-severity rule is not refused here. It cannot suppress anything
-    // on a run that produced no finding for it, and on the run that does produce
-    // one the observed severity lands in the index and blocks the waiver.
-    if (ruleSeverity === "error") {
+    // An observed `error` decides it outright. Where this run produced no
+    // finding, the generated registry still answers for the rules every emitter
+    // raises at `error`: without that the same waiver file would be active on a
+    // clean run and rejected on the run that finally produced the finding.
+    if (ruleSeverity === "error" || (ruleSeverity === undefined && isErrorOnlyRuleId(ruleId))) {
       blocked = true;
       validationIssues.push(
         issue(
@@ -852,21 +852,66 @@ function isKnownRuleId(ruleId: string): boolean {
  */
 function buildKnownRuleIds(): ReadonlySet<string> {
   const known = new Set<string>();
-  const add = (value: string | undefined): void => {
-    if (value && RULE_ID_RE.test(value)) {
-      known.add(value);
-    }
-  };
   for (const code of EMITTED_RULE_CODES) {
-    add(code);
-    add(code.match(STRIPPED_CODE_RE)?.[1]);
+    addRuleIdSpellings(known, code);
   }
   for (const entry of STATIC_RULE_SEVERITY) {
     for (const key of entry.keys) {
-      add(key);
+      addRuleIdSpellings(known, key, false);
     }
   }
   return known;
+}
+
+let errorOnlyRuleIdsCache: ReadonlySet<string> | null = null;
+
+/**
+ * Whether every emitter of this rule raises it at `error`.
+ *
+ * A waiver may only target `warning` / `info` findings, so such a rule has to be
+ * refused (`QFAI-WAIVER-002`) even on the runs where it stays quiet. Deciding
+ * that from this run's findings alone would make the same waiver file active on
+ * a clean run and rejected on the run that finally produced the finding.
+ *
+ * Only rules the generator could pin to a single literal severity are listed;
+ * one emitted at more than one severity, or at a severity read from a variable,
+ * is left to {@link buildRuleSeverityIndex} and the run that observes it.
+ */
+function isErrorOnlyRuleId(ruleId: string): boolean {
+  errorOnlyRuleIdsCache ??= buildErrorOnlyRuleIds();
+  return errorOnlyRuleIdsCache.has(ruleId);
+}
+
+function buildErrorOnlyRuleIds(): ReadonlySet<string> {
+  const errorOnly = new Set<string>();
+  for (const code of ERROR_ONLY_RULE_CODES) {
+    addRuleIdSpellings(errorOnly, code);
+  }
+  for (const entry of STATIC_RULE_SEVERITY) {
+    if (entry.severity === "error") {
+      for (const key of entry.keys) {
+        addRuleIdSpellings(errorOnly, key, false);
+      }
+    }
+  }
+  return errorOnly;
+}
+
+/**
+ * Add `value` to `target` under every spelling a waiver may write it as.
+ *
+ * @param withStripped whether to also register the back-compat form of a
+ *   `QFAI-`-prefixed code. Static-table keys already list both spellings.
+ */
+function addRuleIdSpellings(target: Set<string>, value: string, withStripped = true): void {
+  if (!RULE_ID_RE.test(value)) {
+    return;
+  }
+  target.add(value);
+  const stripped = withStripped ? value.match(STRIPPED_CODE_RE)?.[1] : undefined;
+  if (stripped && RULE_ID_RE.test(stripped)) {
+    target.add(stripped);
+  }
 }
 
 /**
@@ -1012,10 +1057,10 @@ async function exists(targetPath: string): Promise<boolean> {
  * Severities a waiver is judged against before any run has produced the finding.
  *
  * Whether a rule exists is no longer decided here — {@link isKnownRuleId} reads
- * the generated set of every emitted code for that. What remains is the narrow
- * case where the severity has to be known even on a quiet run: a rule emitted
- * only at `error` must be refused by `QFAI-WAIVER-002` rather than accepted and
- * silently ignored, and the two `QFAI-SCOPE-*` codes are exactly that.
+ * the generated set of every emitted code for that, and {@link isErrorOnlyRuleId}
+ * answers the quiet-run severity question for every rule the generator could pin
+ * to a single literal severity. What remains is the handful of ids the generator
+ * cannot see: the rule-id aliases below, and the severities that go with them.
  *
  * Each entry lists **every** spelling `resolveRuleKeys` would yield had the rule
  * actually fired, which is also how the rule-id aliases that no `code` literal

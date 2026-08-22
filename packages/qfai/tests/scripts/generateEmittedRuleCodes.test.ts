@@ -16,8 +16,7 @@
  * assert the extraction rules without depending on the real source tree.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -27,6 +26,9 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts → tests → packages/qfai
 const PACKAGE_ROOT = path.resolve(__dirname, "../..");
 const SCRIPT = path.join(PACKAGE_ROOT, "scripts", "generate-emitted-rule-codes.mjs");
+// packages/qfai → packages → repository root. `tmp/` there is the only staging
+// area this repository sanctions for scratch files, tests included.
+const TEMP_ROOT = path.resolve(PACKAGE_ROOT, "../..", "tmp");
 
 interface RunResult {
   status: number | null;
@@ -46,7 +48,8 @@ function runGenerator(args: string[]): RunResult {
 const tempDirs: string[] = [];
 
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-rule-codes-"));
+  await mkdir(TEMP_ROOT, { recursive: true });
+  const dir = await mkdtemp(path.join(TEMP_ROOT, "qfai-rule-codes-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -86,14 +89,20 @@ describe("generate-emitted-rule-codes.mjs", () => {
     const output = path.join(dir, "emittedRuleCodes.ts");
     await writeFile(
       path.join(dir, "a.ts"),
-      ['issue("QFAI-EXAMPLE-001", "msg");', 'const x = { code: "E_EXAMPLE_ORPHAN" };'].join("\n"),
+      [
+        'issue("QFAI-EXAMPLE-001", "msg", "warning");',
+        'const x = { code: "E_EXAMPLE_ORPHAN", category: "canonical" };',
+      ].join("\n"),
       "utf-8",
     );
     // Neither literal is a rule id: one is lowercase, one is a dotted
     // validator path used as a `rule`, not a `code`.
     await writeFile(
       path.join(dir, "b.ts"),
-      ['issue("not-a-code", "msg");', 'const y = { code: "specPack.layerPolicy" };'].join("\n"),
+      [
+        'issue("not-a-code", "msg", "warning");',
+        'const y = { code: "specPack.layerPolicy", category: "canonical" };',
+      ].join("\n"),
       "utf-8",
     );
 
@@ -105,6 +114,81 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(written).toContain('"QFAI-EXAMPLE-001"');
     expect(written).not.toContain("not-a-code");
     expect(written).not.toContain("specPack.layerPolicy");
+  });
+
+  // Several validators name their rule through an exported constant. Reading
+  // only string literals dropped every code they emit.
+  it("resolves a code named through a constant, wherever it is declared", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "ids.ts"),
+      'export const EXAMPLE_RULE_ID = "QFAI-EXAMPLE-031";\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(dir, "validator.ts"),
+      [
+        'import { EXAMPLE_RULE_ID } from "./ids.js";',
+        'issue(EXAMPLE_RULE_ID, "msg", "warning");',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(written).toContain('"QFAI-EXAMPLE-031"');
+  });
+
+  // A `code:` field alone is not proof of a validate `Issue`: the guardrails
+  // command and the handoff schema carry their own diagnostic shapes, and
+  // `applyWaivers` never sees either.
+  it("skips a code: field on a shape that is not an Issue", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "guardrails.ts"),
+      'errors.push({ severity: "error", code: "QFAI-GRX-001", message: "m", file: "f" });\n',
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(written).not.toContain("QFAI-GRX-001");
+  });
+
+  // A code raised only at `error` can never be waived, so it has to be
+  // recognisable without a finding in hand.
+  it("lists a code as error-only only when every emitter agrees", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "a.ts"),
+      [
+        'issue("QFAI-EXAMPLE-002", "msg", "error");',
+        'issue("QFAI-EXAMPLE-003", "msg", "error");',
+        'issue("QFAI-EXAMPLE-004", "msg", "warning");',
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(dir, "b.ts"),
+      'issue("QFAI-EXAMPLE-003", "msg", "warning");\n',
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+    const errorOnly = written.slice(written.indexOf("ERROR_ONLY_RULE_CODES"));
+
+    expect(result.status).toBe(0);
+    expect(errorOnly).toContain('"QFAI-EXAMPLE-002"');
+    expect(errorOnly).not.toContain('"QFAI-EXAMPLE-003"');
+    expect(errorOnly).not.toContain('"QFAI-EXAMPLE-004"');
   });
 
   it("exits 2 on an unknown flag", () => {
