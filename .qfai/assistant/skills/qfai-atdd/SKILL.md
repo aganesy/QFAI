@@ -75,7 +75,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
-- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report`) **and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
+- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a residual `QFAI-ATDD-113` / `-115` — whether it is a sibling's, this spec's own or an orphan's is what this read _decides_, so the exception fires on the unresolved finding, not on an ownership you cannot yet have: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report --run-validate`, or `--in` the scoped gate's `validate.spec-<id>.json`) **and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`, since the map misses specs that bind a contract in the rule table alone — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -324,7 +324,7 @@ the heading cannot:
   `.qfai/evidence/coverage-depth-<spec-id>.md` and the `✅`/`⚠️`/`❌` totals.
   The matrix and its per-`❌` justifications live in that committed file;
   restating them here would lose them.
-- **Cross-spec obligations** — one row per residual finding the scoped gate still exits 1 on, and `None` when it exited 0; it is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
+- **Cross-spec obligations** — one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding: `QFAI-ATDD-113` / `-115` aggregate every uncovered contract into one finding's `refs`, so split them into a row each. `None` when the run exited 0. It is what a completion reviewer reads to tell `PASS with cross-spec obligations` from an ordinary FAIL. Fields, worked example and the FAIL cases: `references/cross-spec-obligations.md#the-evidence-entry`.
 
 Template:
 

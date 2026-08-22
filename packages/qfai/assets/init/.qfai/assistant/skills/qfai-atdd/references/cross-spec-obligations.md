@@ -62,8 +62,13 @@ on the spec side, which the Read Set Contract's Default Mode does not cover, so
 resolve it in this order and say in the row's `Why not this stage's work` which
 source answered.
 
-1. **The generated Contract → Spec map.** `npx qfai report` (after a validate
-   run, or with `--run-validate`) writes `.qfai/report/report.md` with a
+1. **The generated Contract → Spec map.** `npx qfai report --run-validate`, or
+   `npx qfai report --in <report>/validate.spec-<id>.json` pointed at the
+   artifact the scoped gate just wrote. Not a bare `npx qfai report`: with
+   neither flag it reads the configured `validate.json`, which a `--spec` run
+   never writes, so it exits 2 in a fresh environment and reports a stale
+   unscoped run in an older one. Either form writes `.qfai/report/report.md`
+   with a
    `### Contract → Spec` section — one line per contract ID listing every spec
    that declares it — and `--format json` puts the same map at
    `traceability.contracts.idToSpecs`. It is a generated report artifact, not a

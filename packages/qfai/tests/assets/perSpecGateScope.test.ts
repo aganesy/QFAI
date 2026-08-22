@@ -298,10 +298,32 @@ describe.each(TREES)("%s", (tree) => {
     expect(atdd).toContain(
       "**and** merge into it the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — always, not only when the map answers `(none)`",
     );
+    // The exception fires on the *unresolved* residual finding. Gating it on
+    // "a sibling's" made the read set unreachable: sibling / own / orphan is
+    // precisely what the map + rule-table merge decides, so an agent holding
+    // the Mandatory Read Set could never open the sources that would let it
+    // fire, and had to FAIL every residual as unattributable.
     expect(atdd).toContain(
-      "Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`",
+      "Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a residual `QFAI-ATDD-113` / `-115`",
     );
+    expect(atdd).toContain(
+      "whether it is a sibling's, this spec's own or an orphan's is what this read _decides_, so the exception fires on the unresolved finding, not on an ownership you cannot yet have",
+    );
+    expect(atdd).not.toContain("only when the scoped gate exits 1 on a sibling's");
     expect(atdd).toContain("#resolving-the-owning-spec");
+
+    // The resolving step has to name an invocation that actually reads the
+    // scoped gate's artifact. A bare `npx qfai report` reads the configured
+    // `validate.json` (`src/cli/commands/report.ts`), which a `--spec` run
+    // never writes — exit 2 on a fresh repo, a stale unscoped run otherwise.
+    expect(obligations).toContain("`npx qfai report --run-validate`");
+    expect(obligations).toContain("`npx qfai report --in <report>/validate.spec-<id>.json`");
+    expect(obligations).toContain(
+      "with neither flag it reads the configured `validate.json`, which a `--spec` run never writes",
+    );
+    expect(atdd).toContain(
+      "`npx qfai report --run-validate`, or `--in` the scoped gate's `validate.spec-<id>.json`",
+    );
   });
 
   it("records the residue per contract, since the findings aggregate per family", async () => {
@@ -319,6 +341,15 @@ describe.each(TREES)("%s", (tree) => {
     // The worked example has to show the split, not a single tidy row.
     expect(obligations).toContain("| QFAI-ATDD-113 | CON-API-0004 |");
     expect(obligations).toContain("| QFAI-ATDD-113 | CON-API-0005 |");
+
+    // The evidence-template bullet in the skill is the copy an executor works
+    // from; "one row per residual finding" there put the two contracts back on
+    // one row and dropped an ID and an owner with them.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "one row per uncovered contract ID the scoped gate still exits 1 on, never one per finding",
+    );
+    expect(atdd).not.toContain("one row per residual finding");
   });
 
   it("cites only contract IDs the validator accepts", async () => {
