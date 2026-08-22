@@ -10,14 +10,19 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 /** The heading a skill uses to declare that it may not do the work itself. */
 const DELEGATION_HEADING = "## Sub-agent Delegation (MANDATORY)";
 
-/** The name the harness knows the delegation tool by. */
-const DELEGATION_TOOL = "Task";
+/** The name the current harness exposes the sub-agent delegation tool under. */
+const DELEGATION_TOOL = "Agent";
+
+/** The name older harnesses exposed the same tool under; kept for compatibility. */
+const LEGACY_DELEGATION_TOOL = "Task";
 
 /**
  * `allowed-tools` is read by the agent harness, not by any QFAI validator, so
  * a wrong entry cannot fail at validate time — it surfaces at run time as a
  * delegation failure the skill's own taxonomy misfiles as an environment
- * problem. These assertions are the only gate on the field.
+ * problem. These assertions are the only gate on the field. Both names are
+ * required: a harness that knows only one of them ignores the other, so
+ * listing both is what makes the granted set runtime-version independent.
  */
 async function skillFiles(tree: string): Promise<string[]> {
   const skillsDir = path.join(repoRoot, tree, "assistant", "skills");
@@ -63,12 +68,13 @@ describe("shipped skills declare the delegation tool they mandate", () => {
       expect(offenders).toEqual([]);
     });
 
-    it(`${tree}: no skill allows the unrecognised \`Agent\` tool`, async () => {
+    it(`${tree}: no skill allows \`${LEGACY_DELEGATION_TOOL}\` without \`${DELEGATION_TOOL}\``, async () => {
       const files = await skillFiles(tree);
       const offenders: string[] = [];
       for (const filePath of files) {
         const content = await readFile(filePath, "utf-8");
-        if (allowedTools(content).includes("Agent")) {
+        const tools = allowedTools(content);
+        if (tools.includes(LEGACY_DELEGATION_TOOL) && !tools.includes(DELEGATION_TOOL)) {
           offenders.push(path.relative(repoRoot, filePath));
         }
       }

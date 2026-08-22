@@ -3,7 +3,7 @@ name: qfai-configure
 title: QFAI Configure (Tune qfai.config.yaml)
 description: "Analyze the repository and tune qfai.config.yaml (testFileGlobs, exclude globs, optional specSections)."
 argument-hint: "[--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task]
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent]
 roles:
   [
     orchestrator,

@@ -3,7 +3,7 @@ name: qfai-discussion
 title: QFAI Discussion (Exploration Planner)
 description: "Run structured discussion that defines exploration conditions, evaluation rubric, and anti-goals for downstream prototyping."
 argument-hint: "<idea-or-problem> [--auto]"
-allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
+allowed-tools: [Read, Glob, Write, TodoWrite, Task, Agent, Bash]
 roles:
   [
     orchestrator,
