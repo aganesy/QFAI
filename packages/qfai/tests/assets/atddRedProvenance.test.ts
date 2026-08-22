@@ -185,9 +185,30 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
       "`qa-gatekeeper` requires an `Oracle proof` on **every row that reaches `red`** — branch 1 and branch 2 —",
     );
     expect(provenance).toContain("A branch-3 row owes none");
-    expect(provenance).toContain("it never reaches a GREEN or completion gate");
-    expect(provenance).toContain("its audit subject at P1d is the row identity");
+    expect(provenance).toContain("it never reaches GREEN");
+    expect(provenance).toContain("Its audit subject at P1d is the row identity");
     expect(provenance).not.toContain("requires an `Oracle proof` on **every** item");
+  });
+
+  it("keeps the branch-3 exclusion true of a waived row at the completion gate", async () => {
+    // The first cut said a branch-3 row "never reaches a GREEN or completion
+    // gate". A user-approved `TDDLIST-001` waiver carries an `exception` row
+    // to the spec-level completion gate — so that clause was false there, and
+    // `qa-gatekeeper` still demanded an `Oracle proof` "on each item" at that
+    // gate: the one form the branch is defined by not having.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("carried there by a user-approved `TDDLIST-001` waiver");
+    expect(provenance).not.toContain("never reaches a GREEN or completion gate");
+
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain(
+      "Require an `Oracle proof` on each item that reached `red` **at a GREEN or completion gate**",
+    );
+    expect(gatekeeper).toContain(
+      "**An `exception` item is outside this requirement, at either gate.**",
+    );
+    expect(gatekeeper).toContain("`TDDLIST-001` waiver can carry it to the spec-level");
+    expect(gatekeeper).not.toContain("Require an `Oracle proof` on each item **at a GREEN");
   });
 
   it("accepts a valid exception as the third evidence form", async () => {
@@ -888,7 +909,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
       "**At a RED observation the proof is a plan, and a plan is enough.**",
     );
     expect(gatekeeper).toContain(
-      "Require an `Oracle proof` on each item **at a GREEN or completion gate**",
+      "Require an `Oracle proof` on each item that reached `red` **at a GREEN or completion gate**",
     );
   });
 

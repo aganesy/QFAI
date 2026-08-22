@@ -280,10 +280,15 @@ shows the test failed before the code existed, not that it discriminates once
 the code does. Branch 2 satisfies this with the mutation it already performs;
 branch 1 names the mutation it intends and `/qfai-implement` records the run at
 GREEN, when there is production code to mutate. A branch-3 row owes none — it
-never reaches a GREEN or completion gate, the scope `agents/qa-gatekeeper.md`
-puts on the requirement, and it is reached only when neither form is available;
-its audit subject at P1d is the row identity and obligation reference plus the
-`DR-ID` and the DR artifact, as the `exception` row above states.
+never reaches GREEN, and it is reached only when neither form is available, so
+the requirement would ask it for the evidence its branch is defined by not
+having. It **can** stand at a spec-level completion gate, carried there by a
+user-approved `TDDLIST-001` waiver ("Branch 3 does not close a spec on its
+own" below), and the gate does not acquire an `Oracle proof` claim on it there:
+`agents/qa-gatekeeper.md` excludes an `exception` item from the requirement at
+both gates and judges it on its `DR-*` instead. Its audit subject at P1d is the
+row identity and obligation reference plus the `DR-ID` and the DR artifact, as
+the `exception` row above states.
 Criteria: `../../qfai-implement/references/oracle-strength.md`.
 
 The `Evidence` cell is a pointer; the payload lives in
