@@ -164,7 +164,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   parent `BR`; it is the only evidence `delivery-planner` can judge parallel dispatch on,
   since RED-first guarantees the module does not exist yet. A ledger without the column
   leaves parallel dispatch unevaluable
-  (`qfai-implement/references/parallelization-policy.md`).
+  (`qfai-implement/references/parallelization-policy.md`), so a ledger authored before
+  the column existed gains it at the next Phase 2b — appended to the header and
+  backfilled on every row. Column order is free; the validator resolves it by name.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
   explicitly inert to it — recording one does not raise or lower TC coverage.
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.

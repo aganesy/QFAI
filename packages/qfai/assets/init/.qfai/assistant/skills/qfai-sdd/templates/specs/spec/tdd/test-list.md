@@ -60,6 +60,12 @@ The header carries one optional column, seeded here because
 | Owning module | The production module this row will write; `-` = not declared |
 
 Fill it from the TC's parent `BR`, which already names the behaviour's home.
+Reach that parent through the TC's `AC-Refs` — the `04_Business-Rules.md` row
+whose `AC-Refs` names the same `AC`. `EX-Ref` never selects it, so an error or
+boundary TC carrying `—` inherits its normal-case sibling's parent on that `AC`.
+Neither table carries a module path column: name the repository module that
+`BR`'s `Rule` will be implemented in, and write `-` when the ACs resolve to no
+`BR` or to several with different homes.
 A row left at `-` still executes, serially only: `delivery-planner` judges
 parallel dispatch on this column alone, because under RED-first the module
 does not exist yet. See

@@ -149,6 +149,36 @@ describe("declared seam has a producer", () => {
       expect(checklists).toContain("Declare each row's `Owning module` from the TC's parent `BR`");
     });
 
+    // "The TC's parent BR" is not a lookup any single table answers: the TC
+    // table carries `AC-Refs`, not `BR-Refs`, and `EX-Ref` is `—` on every
+    // error / boundary row. Left implicit, the seeding agent guesses.
+    it(`${tree}: the route from a TC to its parent BR is spelled out`, async () => {
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+      const template = flat(await read(tree, SDD_TEMPLATE));
+
+      for (const text of [checklists, template]) {
+        expect(text).toContain("`AC-Refs`");
+        expect(text).toContain("04_Business-Rules.md");
+        expect(text).toContain("`EX-Ref` never selects it");
+      }
+    });
+
+    // Phase 2b copies the template only when the ledger is absent and is a
+    // delta otherwise, so a project seeded before this column existed would
+    // keep its 8-column header forever without an explicit migration step.
+    it(`${tree}: a pre-existing ledger is migrated, not left at 8 columns`, async () => {
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+      const skill = flat(await read(tree, SDD_SKILL));
+      const rules = flat(await read(tree, SDD_RULES));
+
+      expect(checklists).toContain("Migrate a pre-existing ledger in place");
+      expect(checklists).toContain(
+        "append the column to the header and separator rows and fill it for every row",
+      );
+      expect(skill).toContain("A ledger whose header predates the column is migrated here");
+      expect(rules).toContain("gains it at the next Phase 2b");
+    });
+
     it(`${tree}: the traceability rules list it among the optional columns`, async () => {
       const rules = flat(await read(tree, SDD_RULES));
 
