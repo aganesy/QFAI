@@ -178,6 +178,67 @@ describe("gen-agent-catalog", () => {
     });
   });
 
+  it("accepts the one explicit indentation indicator it can write", async () => {
+    // `|2` is exactly BODY_INDENT — two columns past the key — so the
+    // regenerated block is valid YAML for the same content.
+    const indented = STALE_CATALOG.replace(
+      "developer_instructions: |",
+      "developer_instructions: |2",
+    );
+    await withFixture(indented, AGENT_MD, async (root) => {
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      expect(written).toContain("      - Probe one thing.");
+      expect(run(["--check", `--root=${root}`]).status).toBe(0);
+    });
+  });
+
+  it("fails on an indentation indicator the generated body would contradict", async () => {
+    // The body is always written at six columns. `|1` would give every line a
+    // stray leading space and `|3` an outright invalid block, and both used to
+    // sail through a re-run of `--check`.
+    for (const indicator of ["|1", "|3"]) {
+      const mismatched = STALE_CATALOG.replace(
+        "developer_instructions: |",
+        `developer_instructions: ${indicator}`,
+      );
+      await withFixture(mismatched, AGENT_MD, async (root) => {
+        const { status, output } = run([`--root=${root}`]);
+
+        expect(status, `${indicator} must not be rewritten`).toBe(1);
+        expect(output).toContain("developer_instructions");
+      });
+    }
+  });
+
+  it("reads the entry id from a line carrying a comment", async () => {
+    // An unrecognised `- id:` line used to leave currentId on the previous
+    // agent, overwriting this entry's block with that agent's body.
+    const commented = STALE_CATALOG.replace(
+      "- id: probe-agent",
+      "- id: probe-agent # the only agent",
+    );
+    await withFixture(commented, AGENT_MD, async (root) => {
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      expect(written).toContain("- id: probe-agent # the only agent");
+      expect(written).toContain("      - Probe one thing.");
+      expect(written).not.toContain("Probe something else entirely");
+    });
+  });
+
+  it("fails on an entry boundary whose id it cannot read", async () => {
+    const unreadable = STALE_CATALOG.replace("- id: probe-agent", "- name: probe-agent");
+    await withFixture(unreadable, AGENT_MD, async (root) => {
+      const { status, output } = run([`--root=${root}`]);
+
+      expect(status).toBe(1);
+      expect(output).toContain("id");
+    });
+  });
+
   it("slices at the ## Mission heading line, not at any mention of it", async () => {
     // A frontmatter description that names the section used to win the
     // `indexOf`, dragging the frontmatter and the title into the block.

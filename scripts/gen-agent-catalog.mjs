@@ -50,16 +50,27 @@ const AGENTS_DIR = join(ASSISTANT, "agents");
 
 /** Indentation of the `developer_instructions` block scalar contents. */
 const BODY_INDENT = "      ";
-const ENTRY_RE = /^ {2}- id: (\S+)\s*$/;
+/**
+ * The start of an agent entry. The id itself is read by `parseEntryId`, which
+ * also handles a quoted id and a trailing comment; `ANY_ENTRY_RE` catches every
+ * other shape of entry line so an unreadable boundary fails loudly instead of
+ * leaving `currentId` pointing at the previous agent — that would rewrite this
+ * entry's block with the previous agent's body and still exit 0 on `--check`.
+ */
+const ENTRY_RE = /^ {2}- id:[ \t]+(.*)$/;
+const ANY_ENTRY_RE = /^ {2}- /;
 /**
  * A literal block scalar header, including the chomping indicator (`|-`, `|+`)
- * and an explicit indentation indicator (`|2`). All of those are valid YAML for
- * the same content, and a header this regex does not recognise would be skipped
- * silently — the entry would never be compared and `--check` would call a stale
- * catalog up to date. `ANY_BLOCK_KEY_RE` turns every other spelling of the
- * key (quoted, folded, flow) into a hard failure for the same reason.
+ * and the one explicit indentation indicator this generator can write (`|2`,
+ * i.e. `BODY_INDENT`, two columns past the `developer_instructions` key). All
+ * of those are valid YAML for the same content, and a header this regex does
+ * not recognise would be skipped silently — the entry would never be compared
+ * and `--check` would call a stale catalog up to date. `ANY_BLOCK_KEY_RE` turns
+ * every other spelling of the key — quoted, folded, flow, or an indentation
+ * indicator other than 2, which `BODY_INDENT` would contradict — into a hard
+ * failure for the same reason.
  */
-const BLOCK_RE = /^ {4}developer_instructions: \|[-+]?[0-9]*[-+]?[ \t]*$/;
+const BLOCK_RE = /^ {4}developer_instructions: \|(?:[-+]?2?|2[-+])[ \t]*$/;
 const ANY_BLOCK_KEY_RE = /^ {4}developer_instructions:/;
 
 const CHECK_ONLY = process.argv.includes("--check");
@@ -130,6 +141,33 @@ function blockEnd(lines, start) {
   return end;
 }
 
+/**
+ * The id of an entry line, given everything after `- id:`. Handles the two
+ * scalar forms YAML allows here — plain and quoted — plus a trailing `#`
+ * comment. Returns undefined when the value is anything else (an anchor, a
+ * multi-line scalar, an unterminated quote), so the caller can fail rather than
+ * carry the previous id forward.
+ */
+function parseEntryId(raw) {
+  const value = raw.trim();
+  if (value.length === 0) return undefined;
+  const quote = value[0];
+  if (quote === '"' || quote === "'") {
+    const closing = value.indexOf(quote, 1);
+    if (closing < 0) return undefined;
+    const trailing = value.slice(closing + 1).trim();
+    if (trailing.length > 0 && !trailing.startsWith("#")) return undefined;
+    const quotedId = value.slice(1, closing);
+    return quotedId.length > 0 ? quotedId : undefined;
+  }
+  // In a plain scalar a comment starts at whitespace followed by `#`; a `#`
+  // with no space before it is part of the token.
+  const commentAt = value.search(/[ \t]#/);
+  const plainId = (commentAt < 0 ? value : value.slice(0, commentAt)).trim();
+  if (plainId.length === 0 || /\s/.test(plainId)) return undefined;
+  return plainId;
+}
+
 function regenerate(source) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const out = [];
@@ -138,16 +176,26 @@ function regenerate(source) {
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
-    const entryMatch = ENTRY_RE.exec(line);
-    if (entryMatch) currentId = entryMatch[1];
+    if (ANY_ENTRY_RE.test(line)) {
+      const entryMatch = ENTRY_RE.exec(line);
+      const entryId = entryMatch === null ? undefined : parseEntryId(entryMatch[1]);
+      if (entryId === undefined) {
+        throw new Error(
+          `agent-catalog.yml has an entry whose id cannot be read: ${line.trim()} — every agent ` +
+            "entry must open with a plain or quoted `- id: <id>`, optionally followed by a comment",
+        );
+      }
+      currentId = entryId;
+    }
     out.push(line);
     index += 1;
     if (!BLOCK_RE.test(line)) {
       if (ANY_BLOCK_KEY_RE.test(line)) {
         throw new Error(
           `agent-catalog.yml entry "${currentId ?? "?"}" writes developer_instructions as ` +
-            `${line.trim()} — only a literal block scalar (|, |-, |+) is generated, and any ` +
-            "other form would be left uncompared",
+            `${line.trim()} — only a literal block scalar indented two columns past the key ` +
+            "(|, |-, |+, |2) is generated, and any other form — including a different explicit " +
+            "indentation indicator — would be left uncompared or regenerated at the wrong depth",
         );
       }
       continue;
