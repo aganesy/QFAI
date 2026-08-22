@@ -5,6 +5,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import {
+  QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
+  QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
+} from "../../src/core/gitignore.js";
 import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
@@ -230,7 +234,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(checklists).toContain(
         "`.qfai/evidence/atdd-<spec-id>.md` for an `Integration` / `API` / `E2E` row",
       );
-      expect(checklists).toContain("recorded as `<spec-id>/TDD-NNNN` in the driving `CR-*`");
+      expect(checklists).toContain(
+        "recorded as `<spec-id>/TDD-NNNN` in the record that authorised the deletion",
+      );
       expect(checklists).toContain("A retired `TDD-ID` is never reused");
 
       const rules = await read(
@@ -245,6 +251,61 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-implement/references/execution-ledger.md",
       );
       expect(ledger).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+    });
+
+    it(`${tree}: the retirement record follows the approval, not a fixed artifact`, async () => {
+      // A normal `/qfai-sdd` run reaches a deletion through an `UPDATE:REMOVE`
+      // Triage row that AskUserQuestion already approved and `sdd-triage.md`
+      // persists to `09_delta.md` — no `CR-*` exists on that path. Demanding
+      // one unconditionally would either strand the stale row or manufacture a
+      // duplicate CR for a change the operator has already approved.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Normal `/qfai-sdd` reseed.**");
+      expect(template).toContain("**Drift Protocol owner rerun.**");
+      expect(template).toContain("Do not open a `CR-*` for a deletion Triage already approved.");
+
+      const triage = await read(tree, "assistant/skills/qfai-sdd/references/sdd-triage.md");
+      expect(triage).toContain("`<spec>/09_delta.md` for rows that touch a single spec");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("do not open a `CR-*` for it");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("recorded in whatever authorised\n   the deletion");
+    });
+
+    it(`${tree}: the deleted row's Evidence value is transcribed somewhere tracked`, async () => {
+      // The premise, asserted against the writer rather than restated: the
+      // managed block ignores `.qfai/evidence/*` and re-includes neither
+      // `implement-<spec-id>.md` nor `atdd-<spec-id>.md`, so on a default
+      // layout the file the `Evidence` cell points at never reaches a commit.
+      // The tracked record — CR under `.qfai/decisions/`, or the Triage row's
+      // `09_delta.md` under `.qfai/specs/` — has to carry the value itself.
+      expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).toContain(".qfai/evidence/*");
+      for (const negation of QFAI_GITIGNORE_GOVERNANCE_NEGATIONS) {
+        expect(negation).not.toMatch(/evidence\/(implement|atdd)/);
+      }
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("Copy the deleted row's `Evidence` cell into that record");
+      expect(template).toContain("excludes `.qfai/evidence/*`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Copy the deleted row's `Evidence` cell into that record");
+
+      // The CR template is one of those records, so its enumeration and its
+      // `Resolution` both have to ask for the spec-qualified ID and the value.
+      const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
+      expect(cr).toContain("reset **or retire** these `tdd/test-list.md` rows");
+      expect(cr).toContain("`<spec-id>/TDD-NNNN` — `<that row's Evidence cell, verbatim>`");
+      expect(cr).toContain("resets and retirements listed separately");
+      expect(cr).not.toContain("- `<TDD-NNNN>`, `<TDD-NNNN>`, …");
     });
 
     it(`${tree}: the encodings the guidance rules out are the ones validateTddList rejects`, async () => {

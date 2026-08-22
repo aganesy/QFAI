@@ -152,7 +152,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
   covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
   This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
-  removing or re-scoping a row is an upstream change and takes the Change Request path.
+  removing or re-scoping a row is an upstream change and takes the Change Request path —
+  except when `/qfai-sdd` is reseeding under an approved `UPDATE:REMOVE` Triage row, which
+  already carries the same operator approval and is itself the record.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
@@ -213,10 +215,15 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec. Because that
-  uniqueness is per spec, a `CR-*` records a retired row as `<spec-id>/TDD-NNNN`
-  — a bare `TDD-0001` cannot be told from another spec's once both rows are
-  deleted. A retired `TDD-ID` is **never reused**: allocate the next one above
-  the highest the spec has ever issued, counting the ones its `CR-*` history
+  uniqueness is per spec, the record that authorised a retirement — the approved
+  `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal
+  `/qfai-sdd` reseed, the driving `CR-*` on a Drift Protocol owner rerun — names
+  the row as `<spec-id>/TDD-NNNN`: a bare `TDD-0001` cannot be told from another
+  spec's once both rows are deleted. That record also carries the deleted row's
+  `Evidence` cell verbatim, because the evidence file it pointed at falls under
+  the `.qfai/evidence/*` line of the QFAI-managed `.gitignore` block and is not
+  re-included. A retired `TDD-ID` is **never reused**: allocate the next one
+  above the highest the spec has ever issued, counting the ones those records
   retired, so a new row's `Evidence` anchor cannot land on a retired cycle's
   `### TDD-NNNN` section in the same evidence file. The validator only sees the
   live ledger, so this one is on the seeding skill.
