@@ -25,6 +25,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 const __filename = fileURLToPath(import.meta.url);
@@ -227,9 +228,81 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
 
 const VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators");
 
-const ATDD_CODE_RE = /"QFAI-ATDD-\d+"/;
+/**
+ * The module that owns the ATDD gate family. Pinned by name so that deleting
+ * it cannot be disguised by some other module happening to emit an ATDD code:
+ * `modules.length > 0` alone would still hold and every other assertion would
+ * vacuously pass.
+ */
+const ATDD_GATE_MODULE = path.resolve(VALIDATORS_DIR, "atddCodeTraceability.ts");
+
+const ATDD_CODE_PATTERN = /^QFAI-ATDD-\d+$/;
 /** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
 const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']/g;
+
+function parse(fileName: string, body: string): ts.SourceFile {
+  return ts.createSourceFile(fileName, body, ts.ScriptTarget.ES2022, true, ts.ScriptKind.TS);
+}
+
+/**
+ * Issue codes a module actually *emits*: the string-literal first argument of
+ * an `issue(...)` call, plus any `code: "..."` property in an Issue literal.
+ *
+ * Prose is deliberately invisible here. `scaffoldPlaceholder.ts` and
+ * `tddList.ts` both discuss `QFAI-ATDD-112` in comments and in the message text
+ * of a `D-SCAFFOLD-*` / `TDDLIST_*` finding while emitting no ATDD code at all —
+ * a whole-file text scan counted them as ATDD emitters, so a deletion of the
+ * real gate module would have left the guard green on two impostors.
+ */
+function collectEmittedCodes(fileName: string, body: string): string[] {
+  const codes = new Set<string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isCallExpression(node) &&
+      ts.isIdentifier(node.expression) &&
+      node.expression.text === "issue"
+    ) {
+      const first = node.arguments[0];
+      if (first !== undefined && ts.isStringLiteralLike(first)) codes.add(first.text);
+    }
+    if (
+      ts.isPropertyAssignment(node) &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "code" &&
+      ts.isStringLiteralLike(node.initializer)
+    ) {
+      codes.add(node.initializer.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parse(fileName, body));
+  return [...codes];
+}
+
+/** Top-level `export [async] function validate*` / `export const validate* =`. */
+function collectExportedValidatorNames(fileName: string, body: string): string[] {
+  const names: string[] = [];
+  const isExported = (node: ts.Node): boolean =>
+    ts.canHaveModifiers(node) &&
+    (ts.getModifiers(node) ?? []).some((m) => m.kind === ts.SyntaxKind.ExportKeyword);
+
+  for (const stmt of parse(fileName, body).statements) {
+    if (ts.isFunctionDeclaration(stmt)) {
+      if (stmt.name && stmt.name.text.startsWith("validate") && isExported(stmt)) {
+        names.push(stmt.name.text);
+      }
+      continue;
+    }
+    if (ts.isVariableStatement(stmt) && isExported(stmt)) {
+      for (const decl of stmt.declarationList.declarations) {
+        if (ts.isIdentifier(decl.name) && decl.name.text.startsWith("validate")) {
+          names.push(decl.name.text);
+        }
+      }
+    }
+  }
+  return names;
+}
 
 /**
  * True only for a *call site* — `name(` — never for a mention. This is what
@@ -297,7 +370,7 @@ function isInvokedFromCallGraph(
   return false;
 }
 
-type AtddModule = { file: string; exports: string[] };
+type AtddModule = { file: string; codes: string[]; exports: string[] };
 
 /** Validator modules that emit at least one `QFAI-ATDD-NNN` issue code. */
 async function collectAtddEmittingModules(): Promise<AtddModule[]> {
@@ -306,14 +379,11 @@ async function collectAtddEmittingModules(): Promise<AtddModule[]> {
   for (const file of files) {
     if (path.basename(file) === "index.ts") continue;
     const body = await readFile(file, "utf-8");
-    if (!ATDD_CODE_RE.test(body)) continue;
-    const exports: string[] = [];
-    PUBLIC_VALIDATOR_RE.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = PUBLIC_VALIDATOR_RE.exec(body)) !== null) {
-      exports.push(match[1]);
-    }
-    out.push({ file, exports });
+    const codes = collectEmittedCodes(file, body)
+      .filter((c) => ATDD_CODE_PATTERN.test(c))
+      .sort();
+    if (codes.length === 0) continue;
+    out.push({ file, codes, exports: collectExportedValidatorNames(file, body) });
   }
   return out;
 }
@@ -329,27 +399,60 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     );
   });
 
-  it("every validators/ module emitting a QFAI-ATDD-* code is invoked from the validate.ts call graph", async () => {
+  it("prose that merely names an ATDD code does not make a module an emitter", () => {
+    const proseOnly = [
+      "// `QFAI-ATDD-112` stopped demanding an annotation for L1/L2, so this",
+      "// ledger is their only gate.",
+      "const findings = [",
+      '  issue("D-SCAFFOLD-PLACEHOLDER", "left exactly as QFAI-ATDD-112 saw it", "warning"),',
+      "];",
+    ].join("\n");
+    expect(collectEmittedCodes("proseOnly.ts", proseOnly)).toEqual(["D-SCAFFOLD-PLACEHOLDER"]);
+
+    const emitter = 'return [issue("QFAI-ATDD-112", "TC lacks a test annotation", "error")];';
+    expect(collectEmittedCodes("emitter.ts", emitter)).toEqual(["QFAI-ATDD-112"]);
+  });
+
+  it("the ATDD gate module still exists and still emits the routing codes", async () => {
+    const modules = await collectAtddEmittingModules();
+    const gate = modules.find((m) => m.file === ATDD_GATE_MODULE);
+
+    expect(
+      gate?.file,
+      "validators/atddCodeTraceability.ts owns the QFAI-ATDD-* family. If it was deleted or " +
+        "stopped emitting, the reachability assertions below go vacuous.",
+    ).toBe(ATDD_GATE_MODULE);
+    // US -> tests/e2e/**, TC -> tests/integration/**, CON-API -> tests/api/**.
+    expect(gate?.codes).toEqual(
+      expect.arrayContaining(["QFAI-ATDD-111", "QFAI-ATDD-112", "QFAI-ATDD-121", "QFAI-ATDD-122"]),
+    );
+  });
+
+  it("every exported validator of an ATDD-emitting module is invoked from the validate.ts call graph", async () => {
     const modules = await collectAtddEmittingModules();
     const callGraph = await buildValidateCallGraph();
 
-    expect(modules.length, "expected at least one ATDD-emitting validator").toBeGreaterThan(0);
-
-    const unwired = modules
-      .filter(
-        ({ file, exports }) => !exports.some((n) => isInvokedFromCallGraph(n, callGraph, file)),
-      )
-      .map(({ file, exports }) => {
-        const names = exports.length > 0 ? exports.join(", ") : "no exported validate* function";
-        return `${path.relative(SRC_ROOT, file)} (${names})`;
-      });
+    const unwired: string[] = [];
+    for (const { file, exports, codes } of modules) {
+      const rel = path.relative(SRC_ROOT, file);
+      if (exports.length === 0) {
+        unwired.push(`${rel} (emits ${codes.join(", ")} but exports no validate* function)`);
+        continue;
+      }
+      // Per validator, not per module: a module that co-locates a wired
+      // `validateA` with an unwired `validateB` must still fail on B.
+      for (const name of exports) {
+        if (!isInvokedFromCallGraph(name, callGraph, file)) unwired.push(`${rel}#${name}`);
+      }
+    }
 
     expect(
       unwired,
-      "ATDD validator modules must actually be *called* from the validate.ts call graph " +
-        "(runAtddValidators, or an orchestrator it reaches). Re-exporting the validator from " +
-        "validators/index.ts is not wiring: an uninvoked module ships an issue code that can " +
-        "never appear in validate.json — exactly the dead-validator state QFAI-ATDD-001 was in.",
+      "Each ATDD validator must actually be *called* from the validate.ts call graph " +
+        "(runAtddValidators, or an orchestrator it reaches). Re-exporting it from " +
+        "validators/index.ts is not wiring, and a wired sibling in the same module does not " +
+        "cover it: an uninvoked validator ships issue codes that can never appear in " +
+        "validate.json — exactly the dead-validator state QFAI-ATDD-001 was in.",
     ).toEqual([]);
   });
 
