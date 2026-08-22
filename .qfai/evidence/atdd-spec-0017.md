@@ -2051,7 +2051,15 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 14: the e2e figure is 1446 and the integration+unit figure 1220. Round 12 re-measured them at
+round 18: the e2e figure is 1446 and the integration+unit figure 1222.
+
+**And the integration+unit figure moved without this stage touching it.** A concurrent session pushed
+`b0f9d443` onto this branch — provenance, doctor and workflow-hygiene work, with two new integration
+tests — and the total this record states went stale between one commit and the next. The e2e figure is
+guarded by the callsite rule and reddened nothing because the new tests are not in that project; the
+integration+unit figure is guarded by nothing and is the one that drifted. It is the asymmetry this
+section has recorded since round 9, now demonstrated by someone else's commit rather than by this
+stage's: **a total that nothing derives goes stale when ANYONE commits.** Round 12 re-measured them at
 1443 and 1216 and round 14 moved both again — the e2e figure by exactly the arithmetic the rule below
 predicts, 1443 + (881 - 879) = 1445, since this round added two callsites: the derived check over the
 mechanism corpus's own size.
@@ -2093,7 +2101,7 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
 pnpm -C packages/qfai test:e2e                  1446 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1220 passed / 19 skipped, exit 0
+vitest --project integration --project unit     1222 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0
