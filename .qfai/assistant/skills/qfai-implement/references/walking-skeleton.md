@@ -85,7 +85,7 @@ persistence — which is most of them. A sentinel leaves such a `US-*` unanswere
 and the smoke script red; a constant shaped like the expected result implements
 that `US-*` ahead of its row and is a blocking finding. The phase would have no
 legal exit. So the script asserts reachability only — process started, transport
-spoke, sentinel returned — and asserts nothing about correctness. The
+spoke, an answer came back — and asserts nothing about correctness. The
 correctness of that `US-*` belongs to the row that owns it, and is taken there
 as an ordinary RED.
 
