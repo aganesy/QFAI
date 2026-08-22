@@ -12,7 +12,7 @@ Red/Green/Refactor cycle one row at a time.
   TC's declared `Level`, obligation in `TC-Refs`;
 - **one `Layer = E2E` row per active `US-*`** from `02_User-stories.md` —
   obligation in `US-Refs`, `TC-Refs` is `-`;
-- **one `Layer = API` row per active `CON-API-*`** the spec declares —
+- **one `Layer = API` row per active `CON-API-*`** the spec **owns** —
   obligation in `CON-API-Refs`, `TC-Refs` is `-`.
 
 Without the last two the ledger has nowhere to hold a `US-*` / `CON-API-*`
@@ -25,6 +25,21 @@ its `US-*` (`QFAI-ATDD-111` does not fire for it), and a contract declaring
 `x-qfai-status: planned` is excluded from `QFAI-ATDD-113`. Seeding an exempt
 obligation would park a completion-prohibiting `todo` row on a test that must
 not be written.
+
+**The surface exemption applies only where surface typing is in use.**
+`test-layers.md` scopes `QFAI-ATDD-111` by surface type only when at least one
+spec in this project declares a UI-bearing surface. A project that has never
+declared one has not opted in, the obligation stays project-wide, and **every**
+`US-*` is therefore active — applying the exemption there drops every E2E row
+and leaves a gate that never clears.
+
+**Which ledger an API row goes in.** `.qfai/contracts/**` has no spec owner in
+the model, so ownership is mechanical: a spec **owns** a `CON-API-*` that its
+own `spec-*/01..10` or `16_*` files name, and when several name it the
+**lowest-numbered** owning spec holds the single row while the others record it
+as a cross-spec obligation. Never write the same `CON-API-*` row into two
+ledgers. A `CON-API-*` no spec names has no owner and gets no row until
+Phase 2c gives it one.
 
 An empty table below is valid — it means the spec has no coverage-target TC and
 no active `US-*` / `CON-API-*` yet, not that the ledger is missing.

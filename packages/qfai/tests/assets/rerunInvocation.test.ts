@@ -65,7 +65,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // whole spec.
     const sdd = await read(tree, SDD);
     expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID>`)");
-    expect(sdd).toContain("Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only");
+    // The route also runs the Phase 2b API-row delta: a contract-only status
+    // flip owes a new `Layer = API` row, or the retirement of a stale one, and
+    // Stage 0 + Phase 0 + Phase 4 alone ran no seeding phase at all.
+    expect(sdd).toContain(
+      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + Phase 4 (Delta update) only",
+    );
   });
 
   it("advertises it in the argument hint, not only in prose", async () => {

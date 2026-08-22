@@ -143,6 +143,11 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // with no surface" would leave exactly those projects with zero E2E rows
       // and a gate that never clears.
       for (const surface of [
+        // The template is copied into every spec that has no ledger yet, so a
+        // Phase 2b recovery reads its Producer section rather than SKILL.md.
+        // An unqualified exemption there drops every E2E row in a project that
+        // never opted into surface typing.
+        TEMPLATE,
         "assistant/skills/qfai-sdd/SKILL.md",
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
@@ -171,6 +176,82 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(checklists).toContain("**Which ledger an API row goes in.**");
       expect(checklists).toContain("Never write the same `CON-API-*` row into two ledgers.");
+
+      // The copied template is the surface a Phase 2b recovery follows. "The
+      // spec declares" there put the same `CON-API-*` row in every declaring
+      // spec's ledger, duplicating the `todo` row and its evidence.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Which ledger an API row goes in.**");
+      expect(template).toContain("**lowest-numbered**");
+      expect(template).toMatch(/Never write the same `CON-API-\*` row into two\s+ledgers\./);
+      expect(template).not.toContain("`CON-API-*`** the spec declares");
+    });
+
+    it(`${tree}: an owner resolved after Phase 2b still gets its API row`, async () => {
+      // Phase 2b runs once and before Phase 2c, and Phase 2c is the step that
+      // names each BR/AC's realizing contract — so a `CON-API-*` no spec named
+      // yet acquires its owner only after the only seeding pass had run.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toMatch(
+        /\*\*Close the phase by re-running the Phase 2b API-row delta over the\s+contracts this phase touched\.\*\*/,
+      );
+      // The Phase 2b text must defer the unowned contract, not drop it.
+      expect(skill).not.toContain("raise it in Phase 2c instead of guessing a ledger");
+      expect(skill).toContain("deferred rather than dropped");
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory does not state the Phase 2c re-run").toContain(
+        "re-run twice more",
+      );
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "**Close the phase by re-running the Phase 2b API-row delta over the contracts this phase touched.**",
+      );
+      expect(checklists.indexOf("## Phase 2c")).toBeLessThan(
+        checklists.indexOf("**Close the phase by re-running"),
+      );
+    });
+
+    it(`${tree}: the --contract route runs the Phase 2b delta too`, async () => {
+      // A contract-only Change Request that flips `x-qfai-status` owes a new
+      // `Layer = API` row (planned -> active) or the retirement of a stale one
+      // (active -> planned). The route ran Stage 0 + Phase 0 + Phase 4 only, so
+      // neither ever happened and the gate and the ledger diverged for good.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      const route = skill.slice(skill.indexOf("- Contract-scoped (`/qfai-sdd --contract"));
+      const bullet = route.slice(0, route.indexOf("\n-"));
+      expect(bullet).toContain("**Phase 2b API-row delta**");
+      expect(bullet).toContain("x-qfai-status: planned");
+      expect(bullet).not.toMatch(/Phase 0 \(Contracts-first\) \+ Phase 4/);
+    });
+
+    it(`${tree}: an eight-column ledger is migrated, not only waived`, async () => {
+      // The empty-obligation-cell check fires only where the column exists, so
+      // a legacy ledger validates. Its E2E/API rows kept the obligation in
+      // `TC-Refs`, which no consumer reads for that layer — so waiving the
+      // validator alone leaves the row selectable and unusable at the handoff.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toMatch(/\*\*An eight-column ledger is migrated\s+in the same pass\*\*/);
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("**Migrate an eight-column ledger in the same pass.**");
+
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain("**A legacy ledger needs a reader rule, not only that waiver.**");
+      expect(ledger).toMatch(/read a non-`TC-\*` obligation token in\s+`TC-Refs`/);
+
+      const implement = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(implement).toContain("On a legacy eight-column ledger that column does not exist");
     });
 
     it(`${tree}: manual recovery restores all three groups, not only the TC one`, async () => {

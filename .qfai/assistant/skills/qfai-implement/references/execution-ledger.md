@@ -88,6 +88,18 @@ cell leaves the row with no auditable target at all. It fires only where the
 column exists, so an eight-column ledger written before these columns shipped is
 a legacy shape, not an error.
 
+**A legacy ledger needs a reader rule, not only that waiver.** Its `E2E` / `API`
+rows recorded their `US-*` / `CON-API-*` in `TC-Refs`, the only cell they had;
+waiving the validator alone leaves such a row selectable but with nothing in the
+column Phase Red step 3 and the per-item evidence contract read, so it stops at
+the handoff. Until the columns exist, read a non-`TC-*` obligation token in
+`TC-Refs` as that row's obligation — the row's `Layer` says which kind it is —
+and record it as the `US-ref` / `CON-API-ref` the evidence contract names. This
+fallback is for reading an existing ledger, never for writing one: the next
+`/qfai-sdd` Phase 2b reseed migrates the ledger, adding both columns and moving
+each token into the one its `Layer` owns as a cell move that keeps `Status`,
+`DR-ID` and `Evidence`.
+
 A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
 without a legal `Layer` the row has no obligation column. Coverage counting
 excludes `API` and `E2E` specifically rather than allowlisting the other three,

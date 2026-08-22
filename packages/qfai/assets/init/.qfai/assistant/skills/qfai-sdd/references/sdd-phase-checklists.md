@@ -54,6 +54,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`. The same holds for an unchanged `US-*` / `CON-API-*` row.
 - Reconcile changed and removed TCs: return a changed TC's row to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in `DR-ID`), and retire the row of a TC deleted upstream or no longer a coverage target. Never leave a stale `done` row nor a selectable row for a TC that no longer exists.
 - Reconcile the obligation rows the same way: append a row for a newly active `US-*` / `CON-API-*`, reset a row whose obligation text changed, and retire the row of one deleted upstream or newly exempt.
+- **Migrate an eight-column ledger in the same pass.** Add `US-Refs` and `CON-API-Refs` to its header and move the `US-*` / `CON-API-*` its existing `E2E` / `API` rows recorded in `TC-Refs` — the only cell those rows had before the columns shipped — into the column the row's `Layer` owns, leaving `TC-Refs` at `-`. It is a cell move: `Status`, `DR-ID` and `Evidence` survive. Left unmigrated the row validates (the empty-cell check fires only where the column exists) and then reaches `/qfai-implement` with no obligation in the column it reads.
 - Keep the ledger table the first markdown table in the file, and keep the `US-Refs` / `CON-API-Refs` columns in its header — a row of that layer with no column to hold its obligation is unverifiable.
 - An empty table is a valid outcome when the spec declares no coverage-target TC and no active `US-*` / `CON-API-*`.
 
@@ -64,6 +65,7 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - When the attribute lives in another relation, state the join that reaches it. No join reaching it means the obligation is unrealizable, however valid both contracts are.
 - Fix the contract or the obligation in this phase — both are owned by `/qfai-sdd`, and a mismatch carried downstream reaches an implementer who can fix neither.
 - Record the outcome per obligation, not per spec.
+- **Close the phase by re-running the Phase 2b API-row delta over the contracts this phase touched.** Naming a realizing contract here is what makes a spec name it, so a `CON-API-*` that had no owner when Phase 2b ran — or whose owner moved to a lower-numbered spec — acquires one only now, and Phase 2b already ran. Append the missing `Layer = API` row at `todo` on the owner ledger and retire a row whose owner moved; otherwise the contract keeps its `QFAI-ATDD-113` obligation with no ledger row anywhere.
 - Full rule: `contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
 
 ## Phase 3: Plan finalize
