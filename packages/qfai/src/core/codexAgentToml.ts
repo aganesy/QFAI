@@ -32,6 +32,30 @@ const REVIEWER_SANDBOX_MODE = "read-only";
 /** Where a canonical agent body starts — everything above it is the H1 title. */
 const BODY_START_MARKER = "## Mission";
 
+/**
+ * The heading, anchored to a whole line.
+ *
+ * A substring search finds `## Mission` wherever it appears, frontmatter
+ * included — `description: "Use the ## Mission section"` is valid YAML and
+ * would move the body start above the closing `---`, handing Codex a
+ * `developer_instructions` that opens with the rest of the frontmatter and the
+ * H1. The document still parses as TOML, so nothing downstream catches it.
+ * `\b` rather than `$` so a heading that carries a subtitle
+ * (`## Mission and scope`) still starts the body, as the substring search did.
+ */
+const BODY_START_HEADING_RE = /^## Mission\b/m;
+
+/** Matches {@link parseAgentFrontmatter}'s block, on LF-normalised input. */
+const FRONTMATTER_BLOCK_RE = /^---\n[\s\S]*?\n---(?:\n|$)/;
+
+/**
+ * Offset of the first character after the frontmatter block, or 0 when the
+ * document has none.
+ */
+function bodySearchStart(normalized: string): number {
+  return FRONTMATTER_BLOCK_RE.exec(normalized)?.[0].length ?? 0;
+}
+
 const TOML_ESCAPES = new Map<string, string>([
   ["\\", "\\\\"],
   ['"', '\\"'],
@@ -106,11 +130,13 @@ export function renderCodexAgentToml(markdown: string, kind: CodexAgentKind): Co
     return { ok: false, error: frontmatter.error };
   }
 
-  const bodyStart = markdown.indexOf(BODY_START_MARKER);
-  if (bodyStart < 0) {
+  const normalized = markdown.replace(/\r\n/g, "\n");
+  const searchStart = bodySearchStart(normalized);
+  const heading = BODY_START_HEADING_RE.exec(normalized.slice(searchStart));
+  if (heading === null) {
     return { ok: false, error: `missing \`${BODY_START_MARKER}\` section` };
   }
-  const body = markdown.slice(bodyStart).replace(/\r\n/g, "\n").trim();
+  const body = normalized.slice(searchStart + heading.index).trim();
   if (body.length === 0) {
     return { ok: false, error: `\`${BODY_START_MARKER}\` section is empty` };
   }

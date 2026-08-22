@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -70,6 +70,51 @@ async function canonicalAgentNames(): Promise<string[]> {
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
     .map((entry) => entry.name.slice(0, -".md".length))
     .sort();
+}
+
+/** An agent a project declared for itself — not part of the shipped roster. */
+const PROJECT_AGENT_ID = "house-style-reviewer";
+
+const PROJECT_AGENT_MARKDOWN = [
+  "---",
+  `name: ${PROJECT_AGENT_ID}`,
+  "description: Reviews a change against this project's own house style.",
+  "tools:",
+  "  - Read",
+  "  - Grep",
+  "---",
+  "",
+  `# ${PROJECT_AGENT_ID}`,
+  "",
+  "## Mission",
+  "",
+  "- Hold the project's house style.",
+  "",
+].join("\n");
+
+function projectCatalogPath(root: string): string {
+  return path.join(root, ".qfai", "assistant", "manifest", "agent-catalog.yml");
+}
+
+async function readProjectCatalog(root: string): Promise<string> {
+  return (await readFile(projectCatalogPath(root), "utf-8")).replace(/\r\n/g, "\n");
+}
+
+async function writeProjectCatalog(root: string, content: string): Promise<void> {
+  await writeFile(projectCatalogPath(root), content, "utf-8");
+}
+
+async function addProjectAgent(root: string, kind: "worker" | "reviewer"): Promise<void> {
+  await writeFile(
+    path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`),
+    PROJECT_AGENT_MARKDOWN,
+    "utf-8",
+  );
+  const catalog = await readProjectCatalog(root);
+  await writeProjectCatalog(
+    root,
+    `${catalog.replace(/\n*$/, "\n")}  - id: ${PROJECT_AGENT_ID}\n    kind: ${kind}\n`,
+  );
 }
 
 afterEach(async () => {
@@ -147,6 +192,79 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     expect(await readFile(target, "utf-8")).toBe(generated);
   });
 
+  // A project's own agent is a supported declaration — `validateAgentDefinition`
+  // accepts a catalog entry plus a canonical markdown file, and `--force` keeps
+  // both. Enumerating the shipped assets alone left it with the same
+  // one-integration-behind split this step exists to close.
+  it("generates a profile for a project's own agent, and drops it once the catalog stops classifying it", async () => {
+    const root = await initProject();
+    await addProjectAgent(root, "reviewer");
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    const generated = await readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8");
+    const profile = parseTomlDocument(generated);
+    expect(profile["name"]).toBe(PROJECT_AGENT_ID);
+    expect(profile["sandbox_mode"]).toBe("read-only");
+
+    // Its classification is gone, so the profile cannot be regenerated. Leaving
+    // the old one behind would keep Codex loading an agent whose write access
+    // nothing can vouch for any more.
+    const catalog = await readProjectCatalog(root);
+    await writeProjectCatalog(
+      root,
+      catalog.replace(
+        `  - id: ${PROJECT_AGENT_ID}\n    kind: reviewer\n`,
+        `  - id: ${PROJECT_AGENT_ID}\n`,
+      ),
+    );
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  // `assistant/manifest/**` is create-only, so a project initialised by an older
+  // release keeps its catalog verbatim. Reading only that copy left every agent
+  // a later release added permanently un-classified and its profile never written.
+  it("classifies an agent the project's own catalog never heard of", async () => {
+    const root = await initProject();
+    const catalog = await readProjectCatalog(root);
+    await writeProjectCatalog(
+      root,
+      catalog.replace("  - id: doc-steward\n    kind: worker\n", "  - id: doc-steward\n"),
+    );
+    await rm(codexAgentPath(root, "doc-steward"), { force: true });
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    const rendered = renderCodexAgentToml(
+      await readFile(path.join(root, ".qfai", "assistant", "agents", "doc-steward.md"), "utf-8"),
+      "worker",
+    );
+    expect(rendered.ok).toBe(true);
+    if (!rendered.ok) return;
+    const written = await readFile(codexAgentPath(root, "doc-steward"), "utf-8");
+    expect(written.replace(/\r\n/g, "\n")).toBe(rendered.toml);
+  });
+
+  // `writeFile` follows a symlink and truncates its referent, so a profile
+  // committed as a link turned the documented `--force` refresh into an
+  // overwrite of whatever the link pointed at.
+  it("--force replaces a symlinked profile instead of writing through it", async () => {
+    const root = await initProject();
+    const outside = path.join(root, "outside-the-wrapper-tree.txt");
+    await writeFile(outside, "untouched\n", "utf-8");
+
+    const target = codexAgentPath(root, "qa-gatekeeper");
+    const generated = await readFile(target, "utf-8");
+    await rm(target, { force: true });
+    await symlink(outside, target, "file");
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    expect(await readFile(outside, "utf-8")).toBe("untouched\n");
+    expect((await lstat(target)).isSymbolicLink()).toBe(false);
+    expect(await readFile(target, "utf-8")).toBe(generated);
+  });
+
   it("writes nothing under --dry-run", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-codex-agents-"));
     createdRoots.push(root);
@@ -187,6 +305,34 @@ describe("the TOML renderer", () => {
     expect(result.ok).toBe(false);
     if (result.ok) return;
     expect(result.error).toContain("## Mission");
+  });
+
+  // `indexOf` matched the first `## Mission` anywhere, and a frontmatter value
+  // is allowed to mention one. The body then opened above the closing `---`,
+  // and the document still parsed as TOML, so nothing downstream noticed.
+  it("starts the body at the heading, not at a frontmatter mention of it", () => {
+    const result = renderCodexAgentToml(
+      [
+        "---",
+        "name: demo",
+        'description: "Keep the ## Mission section short"',
+        "tools: [Read]",
+        "---",
+        "",
+        "# Demo",
+        "",
+        "## Mission",
+        "",
+        "- Do the thing.",
+        "",
+      ].join("\n"),
+      "worker",
+    );
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    const parsed = parseTomlDocument(result.toml);
+    expect(parsed["developer_instructions"]).toBe("## Mission\n\n- Do the thing.");
+    expect(parsed["description"]).toBe("Keep the ## Mission section short");
   });
 
   it("drops catalog entries that declare no usable kind", () => {

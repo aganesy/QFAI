@@ -1210,6 +1210,7 @@ async function syncIntegrationWrappers(
   const codexResult = await createCodexAgentTomls(assistantAssetsDir, destRoot, agents, options);
   copied.push(...codexResult.copied);
   skipped.push(...codexResult.skipped);
+  removed.push(...codexResult.removed);
 
   return { copied, skipped, removed };
 }
@@ -1288,57 +1289,138 @@ async function createCodexAgentTomls(
   destRoot: string,
   agents: string[],
   options: WrapperSyncOptions,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
-  if (agents.length === 0) {
-    return { copied, skipped };
+  const removed: string[] = [];
+
+  const roster = await collectCodexAgentRoster(destRoot, agents);
+  if (roster.length === 0) {
+    return { copied, skipped, removed };
   }
 
   const kinds = await loadAgentCatalogKinds(assistantAssetsDir, destRoot);
   const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
 
-  for (const agentName of agents) {
+  for (const agentName of roster) {
     const destination = path.join(wrapperDir, `${agentName}${CODEX_AGENT_WRAPPER_SUFFIX}`);
-    if ((await pathExists(destination)) && !options.force) {
+    const existing = await pathExists(destination);
+    if (existing && !options.force) {
       skipped.push(destination);
       continue;
     }
 
-    const kind = kinds.get(agentName);
-    if (kind === undefined) {
-      // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
-      // read-only agent write access; guessing `reviewer` would break a worker.
-      info(`  skip: ${destination} (agent-catalog.yml に ${agentName} の kind がありません)`);
-      continue;
-    }
-
-    const markdown = await readCanonicalAgentMarkdown(assistantAssetsDir, destRoot, agentName);
-    const rendered = markdown === undefined ? undefined : renderCodexAgentToml(markdown, kind);
-    if (rendered === undefined || !rendered.ok) {
-      const reason =
-        rendered === undefined ? "canonical markdown が見つかりません" : rendered.error;
-      info(`  skip: ${destination} (${reason})`);
+    const plan = await planCodexAgentProfile(assistantAssetsDir, destRoot, agentName, kinds);
+    if (plan.status === "unavailable") {
+      info(`  skip: ${destination} (${plan.reason})`);
+      // `--force` means "make the wrappers match the canonical agents". A
+      // profile we cannot regenerate is no evidence the old one is still
+      // right: a stale `worker` TOML keeps exactly the write access the
+      // classification guard below just refused to grant, and Codex keeps
+      // loading it. So drop it rather than leave it unexplained.
+      if (existing && options.force) {
+        removed.push(destination);
+        if (!options.dryRun) {
+          await rm(destination, { recursive: true, force: true });
+        }
+      }
       continue;
     }
 
     copied.push(destination);
     if (!options.dryRun) {
       await mkdir(path.dirname(destination), { recursive: true });
-      await writeFile(destination, rendered.toml, "utf-8");
+      // `writeFile` follows a symlink and truncates whatever it points at, so a
+      // `.codex/agents/<name>.toml` committed as a link would turn the
+      // documented `--force` refresh into an overwrite of an arbitrary file,
+      // this repository or not. The wrapper is generator output: drop the link.
+      await removeSymlinkAt(destination);
+      await writeFile(destination, plan.toml, "utf-8");
     }
   }
 
-  return { copied, skipped };
+  return { copied, skipped, removed };
+}
+
+type CodexAgentProfilePlan =
+  | { status: "render"; toml: string }
+  | { status: "unavailable"; reason: string };
+
+/** Renders one profile, or says why the agent cannot get one. */
+async function planCodexAgentProfile(
+  assistantAssetsDir: string,
+  destRoot: string,
+  agentName: string,
+  kinds: Map<string, CodexAgentKind>,
+): Promise<CodexAgentProfilePlan> {
+  const kind = kinds.get(agentName);
+  if (kind === undefined) {
+    // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
+    // read-only agent write access; guessing `reviewer` would break a worker.
+    return {
+      status: "unavailable",
+      reason: `agent-catalog.yml に ${agentName} の kind がありません`,
+    };
+  }
+
+  const markdown = await readCanonicalAgentMarkdown(assistantAssetsDir, destRoot, agentName);
+  if (markdown === undefined) {
+    return { status: "unavailable", reason: "canonical markdown が見つかりません" };
+  }
+
+  const rendered = renderCodexAgentToml(markdown, kind);
+  if (!rendered.ok) {
+    return { status: "unavailable", reason: rendered.error };
+  }
+  return { status: "render", toml: rendered.toml };
+}
+
+/**
+ * Every agent that deserves a Codex profile: the shipped roster plus whatever
+ * the project added under `.qfai/assistant/agents/`.
+ *
+ * A project may declare its own agent — `agent-catalog.yml` plus a canonical
+ * markdown file is exactly what `validateAgentDefinition` accepts, and
+ * `--force` preserves the extra file rather than pruning it. Enumerating the
+ * shipped assets alone left that agent with Claude and Copilot wrappers and no
+ * Codex profile, which is the same one-integration-behind split this whole
+ * step exists to close.
+ */
+async function collectCodexAgentRoster(destRoot: string, shipped: string[]): Promise<string[]> {
+  const roster = new Set(shipped);
+  const projectAgentsDir = path.join(destRoot, ".qfai", "assistant", "agents");
+  let entries: Dirent[];
+  try {
+    entries = await readdir(projectAgentsDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return [...roster].sort();
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    // `isFile()` is false for the symlinked agent docs some layouts leave here,
+    // so accept anything that is not a directory and reads as an agent doc.
+    if (entry.isDirectory() || !entry.name.endsWith(".md") || entry.name === "README.md") {
+      continue;
+    }
+    roster.add(entry.name.slice(0, -".md".length));
+  }
+  return [...roster].sort();
 }
 
 /**
  * The project's own copy wins over the shipped template, for both the catalog
  * and the canonical markdown: `assistant/manifest/**` is copied create-only and
  * `qfai-configure` edits it in place, so a project that retyped an agent must
- * see that reflected in its Codex profile rather than the default. The template
- * is the fallback for the one case where the destination holds nothing yet —
- * `--dry-run`, which writes no files but still has to report what it would do.
+ * see that reflected in its Codex profile rather than the default.
+ *
+ * The template is not just a fallback for the empty destination `--dry-run`
+ * sees, though: it also *fills in* the IDs the project's catalog never heard
+ * of. A project initialised by an older release keeps its catalog verbatim, so
+ * returning the first non-empty map left every agent a later release added
+ * permanently un-classified — markdown and two wrappers written, Codex profile
+ * skipped as "kind がありません" forever.
  */
 async function loadAgentCatalogKinds(
   assistantAssetsDir: string,
@@ -1348,17 +1430,30 @@ async function loadAgentCatalogKinds(
     joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml"),
     path.join(assistantAssetsDir, "manifest", "agent-catalog.yml"),
   ];
+  const kinds = new Map<string, CodexAgentKind>();
   for (const candidate of candidates) {
     const content = await readFileIfPresent(candidate);
     if (content === undefined) {
       continue;
     }
-    const kinds = parseAgentCatalogKinds(content);
-    if (kinds.size > 0) {
-      return kinds;
+    for (const [id, kind] of parseAgentCatalogKinds(content)) {
+      if (!kinds.has(id)) {
+        kinds.set(id, kind);
+      }
     }
   }
-  return new Map();
+  return kinds;
+}
+
+/**
+ * Drops `target` when it is a symlink, leaving its referent untouched — `rm`
+ * unlinks the entry, it does not follow it.
+ */
+async function removeSymlinkAt(target: string): Promise<void> {
+  const stats = await safeLstat(target);
+  if (stats?.isSymbolicLink() === true) {
+    await rm(target, { force: true });
+  }
 }
 
 async function readCanonicalAgentMarkdown(
