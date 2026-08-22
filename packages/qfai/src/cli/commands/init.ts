@@ -1182,7 +1182,8 @@ async function syncIntegrationWrappers(
     // as pre-existing; refusing here keeps it that way. Creation is not
     // gated: writing a file where none existed destroys nothing, and gating
     // it would stop init from provisioning a deliberately shared directory.
-    const escapesProject = alreadyExists && (await resolvesOutsideProject(destRoot, dest));
+    const escapesProject =
+      alreadyExists && options.force && (await resolvesOutsideProject(destRoot, dest));
     if (alreadyExists && (!options.force || escapesProject)) {
       if (escapesProject) {
         info(
