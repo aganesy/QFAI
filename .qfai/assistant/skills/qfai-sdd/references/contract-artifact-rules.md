@@ -141,19 +141,32 @@ ordering assumed above: the obligations already exist and the contract is what
 just changed, so the check is not a formality there — it is what makes the
 rerun safe. Dropping it closes a Change Request over obligations that may have
 stopped being realizable, with a delta entry saying the change was handled.
-Four things change with it, and all four are `MUST`:
+Five things change with it, and all five are `MUST`:
 
 - **Target the obligations that already exist.** The per-obligation rules below
   say "produced in Phase 2", and Phase 2 does not run in this mode. Read that
   as the `BR` / `AC` the in-scope specs already hold; a literal reading gives an
   empty set, and an empty set passes the phase without checking anything.
-- **Take the scope from what Phase 0 wrote, not from the argument.** Phase 0's
+- **Take the scope from what Phase 0 touched, not from the argument.** Phase 0's
   mandatory Cross-contract Reconciliation may amend a contract the invocation
   did not name — typically the paired DB contract of a named API contract, when
   a state or status value moved. Every contract this run changed or re-adjusted
   is in scope, and so is every spec referencing any of them, transitively. A
   spec that references only the paired contract is exactly the one the named-ID
-  scope would miss.
+  scope would miss. **Touched, not written**: under a `confirm-only` Change
+  Request the run writes nothing at all, so a write-keyed scope is empty and
+  the mandatory phase would confirm the Change Request without reading one
+  `BR` / `AC`. There, scope on the contracts Phase 0 _reconciled_ — the named
+  contract and every contract paired against it — and take the specs
+  referencing any of those.
+- **Re-expand the scope after every contract write this phase makes.** The
+  resolution rule below is contract-side, and the contract it amends need not
+  be one Phase 0 touched: repairing one spec's obligation can move a shared
+  contract that other, un-enumerated specs are the only referents of. Scope
+  computed once from Phase 0 leaves those obligations unread while Phase 4
+  closes the Change Request over them. After each contract write, recompute
+  the specs referencing every contract now in scope, reconcile the ones that
+  just entered, and repeat until a pass adds no spec.
 - **Resolve on the contract side; amending an obligation is out of write
   scope.** The in-phase repair rule below assumes Phase 2, 2b and 3 still run
   behind it. Here they do not, so a rewritten `BR` / `AC` leaves the `EX` / `TC`

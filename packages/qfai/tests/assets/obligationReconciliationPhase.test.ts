@@ -136,7 +136,7 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run changed) + Phase 4 (Delta update) only",
+        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run touched) + Phase 4 (Delta update) only",
       );
       expect(skill).toContain("**Phase 2c is not droppable in this mode.**");
     });
@@ -172,16 +172,69 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
       const rules = flat(await read(tree, RULES));
       const checklists = flat(await read(tree, CHECKLISTS));
 
-      expect(skill).toContain("**Scope follows what Phase 0 wrote, not what the argument named.**");
+      expect(skill).toContain(
+        "**Scope follows what Phase 0 touched, not what the argument named.**",
+      );
       expect(skill).toContain(
         "every contract this run changed or re-adjusted is in scope, and so, transitively, is every spec referencing any of them",
       );
-      expect(rules).toContain("**Take the scope from what Phase 0 wrote, not from the argument.**");
+      expect(rules).toContain(
+        "**Take the scope from what Phase 0 touched, not from the argument.**",
+      );
       expect(rules).toContain(
         "A spec that references only the paired contract is exactly the one the named-ID scope would miss.",
       );
       expect(checklists).toContain(
         "including a paired contract Phase 0's Cross-contract Reconciliation amended, not only the named one",
+      );
+    });
+
+    it(`${tree}: a confirm-only rerun scopes on reconciled contracts, not written ones`, async () => {
+      // `confirm-only` writes nothing but the CR reference, so Phase 0 changes
+      // no contract either. Keyed to writes, "any contract this run changed" is
+      // empty in the exact mode the phase is mandatory in — the CR would be
+      // confirmed having read no `BR` / `AC` at all.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain(
+        "Where the mode writes nothing — a `confirm-only` rerun — scope on the contracts Phase 0 **reconciled**, the named one and every contract paired against it",
+      );
+      expect(rules).toContain("**Touched, not written**:");
+      expect(rules).toContain(
+        "a write-keyed scope is empty and the mandatory phase would confirm the Change Request without reading one `BR` / `AC`",
+      );
+      expect(checklists).toContain(
+        "Under `confirm-only` nothing is written, so scope on the contracts Phase 0 **reconciled**",
+      );
+    });
+
+    it(`${tree}: the scope re-expands after a Phase 2c contract write`, async () => {
+      // Phase 2c resolves on the contract side, and the contract it amends need
+      // not be one Phase 0 touched. A set computed once from Phase 0 leaves the
+      // specs that reference only that shared contract unreconciled while
+      // Phase 4 closes the Change Request over them.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain(
+        "**Re-expand the scope after every contract write this phase makes.**",
+      );
+      expect(skill).toContain(
+        "Recompute the referencing specs after each contract write, reconcile the ones that just entered, and repeat until a pass adds no spec.",
+      );
+      expect(skill).toContain(
+        "Re-expand that set after every contract write this phase makes, until a pass adds no spec.",
+      );
+      expect(rules).toContain(
+        "**Re-expand the scope after every contract write this phase makes.**",
+      );
+      expect(rules).toContain("repeat until a pass adds no spec");
+      expect(checklists).toContain("Contract-scoped mode, scope closure:");
+      expect(checklists).toContain(
+        "A shared contract amended here may be referenced only by specs Phase 0 never put in scope.",
       );
     });
 
