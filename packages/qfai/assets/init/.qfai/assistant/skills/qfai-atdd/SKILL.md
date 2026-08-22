@@ -245,17 +245,17 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-Every row counts this spec's own obligations: E2E = required `US-*`, API = the `CON-API-*` this spec references (`QFAI-CONTRACT-REF` in `01_Spec.md`, not the ledger), Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`). `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to.
-`E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**.
-A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
+Every row counts this spec's own obligations: E2E = required `US-*`, API = the `CON-API-*` this spec references, Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`) plus the `CON-DB-*` this spec references. `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to.
+Contract references come from the SSOT the spec carries — `Contract-Refs` in `04_Business-Rules.md`, plus a `QFAI-CONTRACT-REF` line in `01_Spec.md` when there is one — never the ledger; a contract deferred with `x-qfai-status: planned` owes no test, so exclude it from the count and name it in `Notes`.
+`E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**. A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
 
 ### Estimator output table (required)
 
-| Layer       | Raw count | Signal | Evidence                 | Notes |
-| ----------- | --------: | -----: | ------------------------ | ----- |
-| E2E         |       #US |  E2E_s | user stories + `L5` TCs  |       |
-| API         |      #CON |  API_s | API contracts + `L4` TCs |       |
-| Integration |       #TC |  INT_s | `L3`/no-`Level` TCs      |       |
+| Layer       | Raw count | Signal | Evidence                                | Notes |
+| ----------- | --------: | -----: | --------------------------------------- | ----- |
+| E2E         |       #US |  E2E_s | user stories + `L5` TCs                 |       |
+| API         |      #CON |  API_s | active `CON-API-*` + `L4` TCs           |       |
+| Integration |       #TC |  INT_s | `L3`/no-`Level` TCs + active `CON-DB-*` |       |
 
 ## Scaffolding
 

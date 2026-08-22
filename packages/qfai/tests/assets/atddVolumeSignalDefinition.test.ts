@@ -55,10 +55,21 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       const signals = await read(tree, SIGNALS);
       expectPhrase(signals, "counted in **one scope: the spec this run was invoked on**");
       expectPhrase(signals, "the `CON-API-*` **this spec references**");
+      // The reference SSOT has to be one the shipped `/qfai-sdd` template
+      // actually emits. It seeds `Contract-Refs` in `04_Business-Rules.md` and
+      // no `QFAI-CONTRACT-REF` line, so naming only `01_Spec.md` would read
+      // `#CON` 0 for every spec authored from the template.
+      expectPhrase(signals, "the `Contract-Refs` column of `04_Business-Rules.md`");
+      expectPhrase(signals, "the shipped `/qfai-sdd` spec template emits");
+      expectPhrase(
+        signals,
+        "the\n`01_Spec.md` `QFAI-CONTRACT-REF:` line for a spec that declares one",
+      );
+      // `Contract-Refs` is per-`BR`, so the same contract can appear repeatedly.
+      expectPhrase(signals, "Count\neach ID once across both");
       // The ledger is not the source: `/qfai-sdd` seeds no `Layer = API` row,
       // so a first run would read `#CON` 0 for a spec that does have contracts.
-      expectPhrase(signals, "`01_Spec.md` `QFAI-CONTRACT-REF:` declaration");
-      expectPhrase(signals, "Do **not**\ntake this count from `tdd/test-list.md`");
+      expectPhrase(signals, "Do **not** take this count from\n`tdd/test-list.md`");
       expectPhrase(signals, "the repository-wide declared set is **not** this number");
       // The Integration numerator is the layer this skill owns, not every TC:
       // L1/L2 owe nothing here and L4/L5 route to another row.
@@ -70,11 +81,43 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expectPhrase(signals, "never in `#TC`");
 
       const skill = await read(tree, SKILL);
+      expectPhrase(skill, "the `CON-API-*` this spec references");
+      expectPhrase(skill, "Integration = required `TC-*` routing to `tests/integration/**`");
       expectPhrase(
         skill,
-        "the `CON-API-*` this spec references (`QFAI-CONTRACT-REF` in `01_Spec.md`, not the ledger)",
+        "`Contract-Refs` in `04_Business-Rules.md`, plus a `QFAI-CONTRACT-REF` line in `01_Spec.md` when there is one — never the ledger",
       );
-      expectPhrase(skill, "Integration = required `TC-*` routing to `tests/integration/**`");
+    });
+
+    it(`${tree}: a DB contract obligation lands in the Integration numerator`, async () => {
+      // `QFAI-ATDD-115` makes every declared `CON-DB-*` an integration
+      // obligation, so a `#TC` counting only `TC-*` reports the inverse of the
+      // layer's share for a slice whose integration work is contract-driven.
+      const signals = await read(tree, SIGNALS);
+      expectPhrase(signals, "**plus** the active `CON-DB-*` this spec references");
+      expectPhrase(signals, "a `CON-DB-*` is an integration obligation and belongs to `#TC`");
+      expectPhrase(signals, "would read `E2E_s` 100 / `INT_s` 0");
+
+      const skill = await read(tree, SKILL);
+      expectPhrase(skill, "plus the `CON-DB-*` this spec references");
+      expect(flat(skill)).toContain("| `L3`/no-`Level` TCs + active `CON-DB-*` |");
+    });
+
+    it(`${tree}: a deferred contract is excluded from every numerator`, async () => {
+      // `catalog/test-layers.md` defers a `x-qfai-status: planned` contract out
+      // of `QFAI-ATDD-113` / `QFAI-ATDD-115`, so counting it inflates the row
+      // against obligations no test owes yet.
+      const signals = await read(tree, SIGNALS);
+      expectPhrase(signals, "Only **active** obligations count");
+      expectPhrase(signals, "`x-qfai-status: planned` at its document root is deferred out of the");
+      expectPhrase(signals, "`QFAI-ATDD-113` / `QFAI-ATDD-115` test obligation");
+      expectPhrase(signals, "leave it out of its row and name the deferred IDs in `Notes`");
+
+      const skill = await read(tree, SKILL);
+      expectPhrase(
+        skill,
+        "a contract deferred with `x-qfai-status: planned` owes no test, so exclude it from the count and name it in `Notes`",
+      );
     });
 
     it(`${tree}: "low or high" names the band it is judged against`, async () => {

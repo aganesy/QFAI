@@ -12,25 +12,45 @@ would stop holding.
 
 Each of the three is **one row's numerator**, not a count of one ID type: a
 `TC-*` that declares `L4` or `L5` is an API or E2E obligation and belongs to
-that row. Every obligation is counted in exactly one row, so the three never
+that row, and a `CON-DB-*` is an integration obligation and belongs to `#TC`.
+Every obligation is counted in exactly one row, so the three never
 double-count and `total` is their sum.
+
+Only **active** obligations count. A contract whose file declares
+`x-qfai-status: planned` at its document root is deferred out of the
+`QFAI-ATDD-113` / `QFAI-ATDD-115` test obligation by
+`catalog/test-layers.md`, so counting it would charge this spec for work no
+test owes yet: leave it out of its row and name the deferred IDs in `Notes`.
 
 - `#US` — the E2E row: required `US-*` declared by this spec, **plus** this
   spec's required `TC-*` declaring `Level` `L5`/`E2E`.
-- `#CON` — the API row: the `CON-API-*` **this spec references** in its
-  `01_Spec.md` `QFAI-CONTRACT-REF:` declaration — the contract-reference SSOT,
-  written when the spec is authored and reading `none` when there are none —
-  **plus** this spec's required `TC-*` declaring `Level` `L4`/`API`. Do **not**
-  take this count from `tdd/test-list.md`: `/qfai-sdd` Phase 2b seeds no
-  `Layer = API` row (`references/red-provenance.md`), so a first run would read
-  `#CON` 0 for a spec whose contracts this stage is about to implement.
-  `.qfai/contracts/**` has no spec owner in the model (see `SKILL.md`, CRITICAL
-  CONSTRAINTS), so the repository-wide declared set is **not** this number
-  either. A declared contract no spec references is a repo-level obligation for
-  the end-of-stage run — name it in `Notes`, do not count it here.
+- `#CON` — the API row: the `CON-API-*` **this spec references** and has not
+  deferred, **plus** this spec's required `TC-*` declaring `Level` `L4`/`API`.
+  Read the references from **the contract-reference SSOT this spec actually
+  carries**: the `Contract-Refs` column of `04_Business-Rules.md` — the
+  declaration the shipped `/qfai-sdd` spec template emits — together with the
+  `01_Spec.md` `QFAI-CONTRACT-REF:` line for a spec that declares one. Count
+  each ID once across both: `Contract-Refs` is per-`BR`, so one contract bound
+  by three rules is one obligation, not three. Reading `01_Spec.md` alone would
+  report `#CON` 0 for every spec authored from that template, whose contract
+  binding lives only in `04`. Do **not** take this count from
+  `tdd/test-list.md` either: `/qfai-sdd` Phase 2b seeds no `Layer = API` row
+  (`references/red-provenance.md`), so a first run would read `#CON` 0 for a
+  spec whose contracts this stage is about to implement. `.qfai/contracts/**`
+  has no spec owner in the model (see `SKILL.md`, CRITICAL CONSTRAINTS), so the
+  repository-wide declared set is **not** this number either. A declared
+  contract no spec references is a repo-level obligation for the end-of-stage
+  run — name it in `Notes`, do not count it here.
 - `#TC` — the Integration row: required `TC-*` of this spec that route to
   `tests/integration/**`: declared `Level` `L3`/`Integration`, or no declared
-  `Level`. `L1`/`L2` owe nothing to this skill, so they are excluded from `#TC`
+  `Level` — **plus** the active `CON-DB-*` this spec references, read from the
+  same contract-reference SSOT as `#CON` and deferral-filtered the same way.
+  Every declared `CON-DB-*` owes an integration test (`QFAI-ATDD-115`), which
+  this skill's Annotation obligations and DoD carry, so counting only `TC-*`
+  inverts the very share this row reports: one required `US-*`, nine active
+  `CON-DB-*` and no `TC-*` would read `E2E_s` 100 / `INT_s` 0 for a spec whose
+  obligations are almost entirely integration. `L1`/`L2` owe nothing to this
+  skill, so they are excluded from `#TC`
   and from `total`; `L4`/`L5` are counted in the two rows above, never in
   `#TC`. Counting every `TC-*` in `#TC` instead would report an Integration share for
   obligations this skill does not own — a spec of one `US-*` and nine `L1` TCs
