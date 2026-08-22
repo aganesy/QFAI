@@ -5,11 +5,13 @@
  * parameterises: a UI-bearing discussion pack must register at least
  * `competitive_refs_min` competitive references (default 3) in
  * `04_Sources.md`, and every registered reference must populate all three
- * mandatory fields. Setting the knob to `0` opts out of the count gate.
+ * mandatory fields. Setting the knob to `0` opts out of the count gate only —
+ * references that are registered are still checked for completeness.
  */
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
+import { splitMarkdownRow } from "../../specPackParsers.js";
 import type { Issue } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
@@ -17,11 +19,34 @@ import { readSafe } from "../utils.js";
 /** Default minimum applied when `uiux.competitive_refs_min` is absent. */
 export const DEFAULT_COMPETITIVE_REFS_MIN = 3;
 
-const REGISTRY_HEADING = "## competitive reference registry";
+/**
+ * Registry heading matcher.
+ *
+ * Published packs decorate the heading (`## Competitive Reference Registry
+ * (UI-bearing packs)`), so the trailing qualifier must be tolerated instead of
+ * demanding an exact string match.
+ */
+const REGISTRY_HEADING_RE = /^##\s+competitive reference registry\b/i;
+
+/**
+ * Heading that opens a reference block.
+ *
+ * Restricted to `### Reference:` so metadata headings that legitimately sit
+ * beside a registry table (`### Field Definitions`, `### Validation Rules`) are
+ * not collected as empty references — which would also suppress table parsing.
+ */
+const REFERENCE_BLOCK_RE = /^###\s+reference\s*:/i;
 
 const MANDATORY_FIELDS = ["adopted_points", "rejected_points", "local_translation"] as const;
 
 const PLACEHOLDER_RE = /^(?:tbd|todo|example|lorem|placeholder|n\/a|none|-{1,3})$/i;
+
+/**
+ * Unedited authoring-template values are bracketed prose
+ * (`[What was adopted from this reference and why]`). Treat them as
+ * unpopulated so a shipped template cannot be counted as a complete reference.
+ */
+const TEMPLATE_PLACEHOLDER_RE = /^\[[^\]]*\]$/;
 
 type CompetitiveReference = {
   label: string;
@@ -41,12 +66,14 @@ function competitiveIssue(code: string, message: string, suggestedAction: string
 
 function isPopulated(value: string | undefined): boolean {
   const trimmed = value?.trim() ?? "";
-  return trimmed.length > 0 && !PLACEHOLDER_RE.test(trimmed);
+  return (
+    trimmed.length > 0 && !PLACEHOLDER_RE.test(trimmed) && !TEMPLATE_PLACEHOLDER_RE.test(trimmed)
+  );
 }
 
 function extractRegistrySection(content: string): string | null {
   const lines = content.split("\n");
-  const start = lines.findIndex((line) => line.trim().toLowerCase() === REGISTRY_HEADING);
+  const start = lines.findIndex((line) => REGISTRY_HEADING_RE.test(line.trim()));
   if (start === -1) {
     return null;
   }
@@ -71,18 +98,11 @@ function parseBlockReferences(section: string): CompetitiveReference[] {
   return section
     .split(/(?=^###\s+)/m)
     .map((block) => block.trim())
-    .filter((block) => block.startsWith("### "))
+    .filter((block) => REFERENCE_BLOCK_RE.test(block))
     .map((block) => ({
       label: (block.split("\n")[0] ?? "").replace(/^###\s+/, "").trim(),
       missingFields: MANDATORY_FIELDS.filter((field) => !isPopulated(extractField(block, field))),
     }));
-}
-
-function splitRow(row: string): string[] {
-  const cells = row.trim().split("|");
-  if (cells[0]?.trim() === "") cells.shift();
-  if (cells[cells.length - 1]?.trim() === "") cells.pop();
-  return cells.map((cell) => cell.trim());
 }
 
 function columnIndexes(header: string[]): Map<string, number> | null {
@@ -109,12 +129,12 @@ function parseTableReferences(section: string): CompetitiveReference[] {
   if (!header) {
     return [];
   }
-  const indexes = columnIndexes(splitRow(header));
+  const indexes = columnIndexes(splitMarkdownRow(header));
   if (!indexes) {
     return [];
   }
   return rows.map((row, position) => {
-    const cells = splitRow(row);
+    const cells = splitMarkdownRow(row);
     return {
       label: cells[0] ?? `row ${position + 1}`,
       missingFields: MANDATORY_FIELDS.filter(
@@ -141,14 +161,16 @@ function resolveMinimum(config: QfaiConfig): number {
  * Validate the Competitive Reference Registry of a UI-bearing discussion pack.
  *
  * @param root - Discussion pack root directory
- * @param config - Resolved QFAI config; `uiux.competitive_refs_min` bounds the count
+ * @param config - Resolved QFAI config; `uiux.competitive_refs_min` bounds the
+ *   count. `0` disables the count gate only; registered references are still
+ *   required to populate every mandatory field.
  */
 export async function validateCompetitiveReferences(
   root: string,
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const minimum = resolveMinimum(config);
-  if (minimum <= 0 || !(await isUiBearingSpec(root))) {
+  if (!(await isUiBearingSpec(root))) {
     return [];
   }
 
@@ -170,7 +192,7 @@ export async function validateCompetitiveReferences(
   }
 
   const complete = references.length - issues.length;
-  if (complete < minimum) {
+  if (minimum > 0 && complete < minimum) {
     issues.push(
       competitiveIssue(
         "UIX-VAL-COMPETITIVE-REFS-MIN",

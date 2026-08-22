@@ -122,4 +122,11 @@ describe("uiux sidecar templates", { timeout: 15000 }, () => {
     expect(content).toContain("rejected_points");
     expect(content).toContain("local_translation");
   });
+
+  it("04_Sources.md は既定の competitive_refs_min 件分の参照ブロックを備える", async () => {
+    const content = await readCoreTemplate("04_Sources.md");
+    const blocks = content.match(/^###\s+Reference:/gim) ?? [];
+    expect(blocks.length).toBeGreaterThanOrEqual(3);
+    expect(content).toContain("uiux.competitive_refs_min");
+  });
 });

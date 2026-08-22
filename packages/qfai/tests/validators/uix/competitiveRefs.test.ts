@@ -62,19 +62,33 @@ function referenceBlock(name: string, overrides: Record<string, string> = {}): s
   ].join("\n");
 }
 
-function sourcesWithRegistry(body: string[]): string {
+function sourcesWithRegistry(
+  body: string[],
+  heading = "## Competitive Reference Registry",
+): string {
   return [
     "# 04 Sources",
     "",
     "## Source Registry",
     "",
-    "## Competitive Reference Registry",
+    heading,
     "",
     ...body,
     "## Traceability",
     "",
   ].join("\n");
 }
+
+const TABLE_HEADER = [
+  "| SRC-ID | Competitor | adopted_points | rejected_points | local_translation |",
+  "| --- | --- | --- | --- | --- |",
+];
+
+const TABLE_ROWS = [
+  "| SRC-0008 | Linear | Editorial split hero | Dark-mode-first default | Amber pill CTA in nav-right |",
+  "| SRC-0009 | Stripe | Sidebar + content pane | Card-heavy marketing | Sidebar for 15-file pack browsing |",
+  "| SRC-0010 | Vercel | Status-first density | Modal-heavy workflows | Status-first validation report |",
+];
 
 function withUiux(overrides: NonNullable<QfaiConfig["uiux"]>): QfaiConfig {
   return { ...defaultConfig, uiux: { ...defaultConfig.uiux, ...overrides } };
@@ -199,6 +213,107 @@ describe("validateCompetitiveReferences", () => {
 
     const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
     expect(issues).toEqual([]);
+  });
+
+  it("accepts a decorated registry heading published packs already use", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry(
+        [...TABLE_HEADER, ...TABLE_ROWS, ""],
+        "## Competitive Reference Registry (UI-bearing packs)",
+      ),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("ignores metadata H3 headings that sit beside a registry table", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        ...TABLE_HEADER,
+        ...TABLE_ROWS,
+        "",
+        "### Field Definitions",
+        "",
+        "- **adopted_points**: What is adopted from the reference.",
+        "",
+        "### Validation Rules",
+        "",
+        "- Placeholder values are rejected.",
+        "",
+      ]),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("rejects the bracketed placeholders shipped by the authoring template", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        referenceBlock("[Product/Service Name 1]", {
+          adopted_points: "[What was adopted from this reference and why]",
+          rejected_points: "[What was not adopted and why]",
+          local_translation: "[How adopted points were adapted for this project]",
+        }),
+        referenceBlock("Stripe"),
+        referenceBlock("Vercel"),
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(1);
+    expect(incomplete[0]?.message).toContain("adopted_points");
+    expect(issues.some((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN")).toBe(true);
+  });
+
+  it("keeps completeness checks enabled when the minimum is zero", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([referenceBlock("Linear", { local_translation: "TBD" })]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REF-INCOMPLETE"]);
+    expect(issues[0]?.message).toContain("local_translation");
+  });
+
+  it("un-escapes pipes instead of shifting the mandatory columns", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        ...TABLE_HEADER,
+        "| SRC-0008 | Linear | Editorial split \\| offset hero | Dark-mode-first default | |",
+        ...TABLE_ROWS.slice(1),
+        "",
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(1);
+    expect(incomplete[0]?.message).toContain("local_translation");
   });
 
   it("stays silent for non-UI-bearing packs", async () => {
