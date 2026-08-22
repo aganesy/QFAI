@@ -891,7 +891,7 @@ describe.each(TREES)("%s (a gate must be executable by the routing it declares)"
   it("keeps a pre-split row gateable where its evidence actually is", async () => {
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "an `E2E` / `API` row that reached `done` or `review-fix` before this split",
+      "an `E2E` / `API` / `Integration` row advanced past `todo` before its layer's split",
     );
     // Gateable, but only once the marker identifies it as legacy: the sentence
     // now names the marker rather than "such a row".
@@ -1075,6 +1075,49 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(migration).toContain("not with `git log -S`");
     expect(migration).toContain("`git log -p -- <test-list.md>`");
     expect(migration).toContain("append `Pre-split-evidence: implement`");
+  });
+
+  it("migrates every ledger in the repository, not the selected spec's", async () => {
+    // The skill runs on one spec, but the flag is repository-wide: migrating
+    // the spec in hand and then setting it strands every other spec's legacy
+    // rows behind a flag that says the migration is done.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("Enumerate **every** `.qfai/specs/*/tdd/test-list.md`");
+    expect(migration).toContain("Not the selected spec's");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**It reads every `.qfai/specs/*/tdd/test-list.md` in the repository, not the selected spec's**",
+    );
+  });
+
+  it("keys the guard to the ledgers it read, not to the checkout", async () => {
+    // `.qfai/state.json` is checkout-local: a branch with no legacy row set the
+    // flag, and the next branch's legacy rows were never read again.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('{ "migrations": { "preSplitEvidence": { "ledgers"');
+    expect(migration).toContain("`git rev-parse HEAD:.qfai/specs`");
+    expect(migration).toContain("Absent covers a recorded fingerprint that no longer matches");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("**the fingerprint of the tracked ledgers it read**");
+  });
+
+  it("marks only a row advanced before its layer's split", async () => {
+    // The anchor at the last advance also describes a post-split row written to
+    // the implement file by mistake, and marking that one hands item 10's
+    // acceptance to the case the marker exists to keep out.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("## The split boundary, per layer");
+    expect(migration).toContain("`git merge-base --is-ancestor <B(L)> <A>` succeeds");
+    expect(migration).toContain("No `B(L)` exists");
+  });
+
+  it("covers the legacy `Integration` rows the later split left behind", async () => {
+    // Integration joined the ATDD file one release after E2E / API, so rows
+    // already past `todo` at that upgrade hold a lawful implement anchor.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`Integration` joined the ATDD file one release **after**");
+    expect(migration).toContain("They take the same history test as `E2E` / `API`");
+    expect(migration).not.toContain("An `Integration` row gets no marker");
   });
 
   it("defines the rework path a review-fix row takes through this stage", async () => {
@@ -1612,7 +1655,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // A row interrupted mid-cycle by the upgrade stored evidence there too, and
     // unmarked it is judged by the current rule whatever its status.
     const migration = flat(await read(tree, MIGRATION));
-    expect(migration).toContain("for **every** `E2E` / `API` row past `todo`");
+    expect(migration).toContain("for **every** `E2E` / `API` / `Integration` row past `todo`");
     expect(migration).toContain("A row interrupted mid-cycle by the upgrade");
   });
 
@@ -2003,7 +2046,9 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // let a row that never produced an ATDD handoff pass as complete.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("**A row that carries the marker**");
-    expect(implement).toContain("which for an `E2E` / `API` row means the ATDD file");
+    expect(implement).toContain(
+      "which for an `E2E` / `API` / `Integration` row means the ATDD file",
+    );
     expect(implement).not.toContain(
       "A row with no marker is judged by the current rule whatever its status. Accept that anchor",
     );
