@@ -85,7 +85,9 @@ import {
   validateAutopilotPolicy,
   detectHandoffSchemaDrift,
   validateStaleReferences,
+  STUB_SCANNABLE_FILE_PATTERN,
 } from "./validators/index.js";
+import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -460,9 +462,6 @@ async function runAtddValidators(
   root: string,
   config: ConfigLoadResult["config"],
   specScope?: SpecScope,
-  // `full` runs the TDD profile too, and that one owns the stub gate, so it
-  // opts out here rather than emitting every QFAI-TEST-001 finding twice.
-  includeTestTodoStubs = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})),
@@ -483,7 +482,15 @@ async function runAtddValidators(
     // not run, and the repo-wide profiles that do catch it are not what the
     // skill instructs the operator to run. Unscoped like the contract rules:
     // the finding names a test file, which no spec owns.
-    ...(includeTestTodoStubs ? await validateTestTodoStubs(root, config) : []),
+    //
+    // Selection is the stage's own three directories, not
+    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
+    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
+    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
+    // it empty, which made the validator return before reading anything.
+    ...(await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SCANNABLE_FILE_PATTERN),
+    })),
   ];
 }
 
@@ -530,13 +537,38 @@ async function runTddValidators(
   ];
 }
 
+/**
+ * Collapses the stub findings the ATDD and TDD scans both produced.
+ *
+ * `full` runs both, and they select files differently — the acceptance
+ * directories versus `validation.traceability.testFileGlobs` — so neither is a
+ * subset of the other and dropping either one would lose real findings. The
+ * overlap is exact (same rule, file, line and construct), so it dedupes
+ * cleanly instead.
+ */
+function dedupeStubFindings(issues: Issue[]): Issue[] {
+  const seen = new Set<string>();
+  return issues.filter((entry) => {
+    if (entry.code !== "QFAI-TEST-001" && entry.code !== "QFAI-TEST-002") return true;
+    const key = [
+      entry.code,
+      entry.file ?? "",
+      entry.loc?.line ?? "",
+      (entry.refs ?? []).join(","),
+    ].join(" ");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
-  return [
+  return dedupeStubFindings([
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
@@ -544,10 +576,10 @@ async function runFullValidators(
     ...(await runSddValidators(root, config, true, false, specScope)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
-    ...(await runAtddValidators(root, config, specScope, false)),
+    ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
-  ];
+  ]);
 }
 
 async function runUiuxValidators(

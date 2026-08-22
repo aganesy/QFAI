@@ -55,7 +55,42 @@ type StubDialect = {
    * change what an existing waiver matches.
    */
   label?: (match: RegExpMatchArray) => string;
+  /**
+   * Comment and string syntax of the dialect, blanked before the pattern runs.
+   * See {@link maskNonCode}.
+   */
+  nonCode: NonCodeSyntax;
 };
+
+/**
+ * A span of a source file that is not executable code — a block comment or a
+ * string literal.
+ */
+type NonCodeSpan = {
+  open: string;
+  close: string;
+  /** A backslash escapes the next character inside the span (raw strings: no). */
+  escaped: boolean;
+  /** Whether the span may cross a line break. */
+  multiline: boolean;
+};
+
+type NonCodeSyntax = {
+  lineComments: readonly string[];
+  /** Longest opener first: a triple quote must win over a single one. */
+  spans: readonly NonCodeSpan[];
+};
+
+const nonCodeSpan = (
+  open: string,
+  close: string,
+  escaped: boolean,
+  multiline: boolean,
+): NonCodeSpan => ({ open, close, escaped, multiline });
+
+const BLOCK_COMMENT = nonCodeSpan("/*", "*/", false, true);
+const DOUBLE_QUOTED = nonCodeSpan('"', '"', true, false);
+const SINGLE_QUOTED = nonCodeSpan("'", "'", true, false);
 
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
@@ -63,18 +98,144 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     pattern: /\b(it|test|describe)\.todo\s*\(/g,
     runner: "vitest/jest",
     label: (match) => `${match[1]}.todo`,
+    nonCode: {
+      lineComments: ["//"],
+      spans: [BLOCK_COMMENT, nonCodeSpan("`", "`", true, true), DOUBLE_QUOTED, SINGLE_QUOTED],
+    },
   },
   {
     extensions: [".py"],
     pattern: /(pytest\.skip\s*\(|@pytest\.mark\.(?:skip|skipif|xfail)\b|@unittest\.skip\w*\s*\()/g,
     runner: "pytest/unittest",
+    nonCode: {
+      lineComments: ["#"],
+      spans: [
+        nonCodeSpan('"""', '"""', true, true),
+        nonCodeSpan("'''", "'''", true, true),
+        DOUBLE_QUOTED,
+        SINGLE_QUOTED,
+      ],
+    },
   },
-  { extensions: [".go"], pattern: /\bt\.Skip\w*\s*\(/g, runner: "go test" },
-  { extensions: [".java", ".kt", ".kts"], pattern: /@(?:Disabled|Ignore)\b/g, runner: "JUnit" },
-  { extensions: [".rs"], pattern: /#\[ignore\b/g, runner: "cargo test" },
-  { extensions: [".rb"], pattern: /^\s*(?:skip|pending)\b/gm, runner: "RSpec/minitest" },
-  { extensions: [".cs"], pattern: /\[Ignore\b|\bSkip\s*=\s*"/g, runner: ".NET test" },
+  {
+    extensions: [".go"],
+    pattern: /\bt\.Skip\w*\s*\(/g,
+    runner: "go test",
+    nonCode: {
+      lineComments: ["//"],
+      // The backtick raw string takes no backslash escape.
+      spans: [BLOCK_COMMENT, nonCodeSpan("`", "`", false, true), DOUBLE_QUOTED],
+    },
+  },
+  {
+    extensions: [".java", ".kt", ".kts"],
+    pattern: /@(?:Disabled|Ignore)\b/g,
+    runner: "JUnit",
+    nonCode: {
+      lineComments: ["//"],
+      spans: [BLOCK_COMMENT, nonCodeSpan('"""', '"""', true, true), DOUBLE_QUOTED],
+    },
+  },
+  {
+    extensions: [".rs"],
+    pattern: /#\[ignore\b/g,
+    runner: "cargo test",
+    // No single-quote span: in Rust that opens a lifetime far more often than a
+    // literal, and masking from one to the next would blank real code.
+    nonCode: {
+      lineComments: ["//"],
+      spans: [BLOCK_COMMENT, nonCodeSpan('"', '"', true, true)],
+    },
+  },
+  {
+    extensions: [".rb"],
+    pattern: /^\s*(?:skip|pending)\b/gm,
+    runner: "RSpec/minitest",
+    nonCode: { lineComments: ["#"], spans: [DOUBLE_QUOTED, SINGLE_QUOTED] },
+  },
+  {
+    extensions: [".cs"],
+    pattern: /\[Ignore\b|\bSkip\s*=\s*"/g,
+    runner: ".NET test",
+    nonCode: { lineComments: ["//"], spans: [BLOCK_COMMENT, DOUBLE_QUOTED] },
+  },
 ];
+
+/**
+ * Glob file pattern covering every extension some dialect can read.
+ *
+ * A caller that supplies its own globs — the ATDD completion gate scans the
+ * acceptance directories rather than the project's `testFileGlobs` — uses this
+ * so the scan never collects a file `QFAI-TEST-002` would then have to
+ * disclaim.
+ */
+export const STUB_SCANNABLE_FILE_PATTERN = `**/*.{${Array.from(
+  new Set(STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1)))),
+)
+  .sort()
+  .join(",")}}`;
+
+/**
+ * Blanks every comment and string-literal span, keeping offsets and line
+ * breaks intact so the caller can still report a line number.
+ *
+ * The detector is a line regex, so a stub token quoted in a fixture string or
+ * described in a comment read as an executing stub. That is a false `error` on
+ * a gate whose whole job is to be trusted — and it is why this validator's own
+ * tests have to split the token to avoid reporting themselves.
+ */
+function maskNonCode(content: string, syntax: NonCodeSyntax): string {
+  const chars = content.split("");
+  const blank = (index: number): void => {
+    if (chars[index] !== "\n") chars[index] = " ";
+  };
+  let i = 0;
+  while (i < content.length) {
+    if (content[i] === "\n") {
+      i += 1;
+      continue;
+    }
+    if (syntax.lineComments.some((marker) => content.startsWith(marker, i))) {
+      while (i < content.length && content[i] !== "\n") {
+        blank(i);
+        i += 1;
+      }
+      continue;
+    }
+    const span = syntax.spans.find((candidate) => content.startsWith(candidate.open, i));
+    i = span ? maskSpan(content, blank, i, span) : i + 1;
+  }
+  return chars.join("");
+}
+
+/** Blanks one {@link NonCodeSpan}; returns the index just past it. */
+function maskSpan(
+  content: string,
+  blank: (index: number) => void,
+  start: number,
+  span: NonCodeSpan,
+): number {
+  for (let k = start; k < start + span.open.length; k += 1) blank(k);
+  let i = start + span.open.length;
+  while (i < content.length) {
+    // An unterminated quote must not swallow the rest of the file: a
+    // single-line span ends at the line break whatever follows it.
+    if (content[i] === "\n" && !span.multiline) return i;
+    if (span.escaped && content[i] === "\\") {
+      blank(i);
+      if (i + 1 < content.length) blank(i + 1);
+      i += 2;
+      continue;
+    }
+    if (content.startsWith(span.close, i)) {
+      for (let k = i; k < i + span.close.length; k += 1) blank(k);
+      return i + span.close.length;
+    }
+    blank(i);
+    i += 1;
+  }
+  return i;
+}
 
 /** The dialect owning a file, or `null` when qfai knows no stub form for it. */
 function resolveStubDialect(relFile: string): StubDialect | null {
@@ -82,12 +243,29 @@ function resolveStubDialect(relFile: string): StubDialect | null {
   return STUB_DIALECTS.find((dialect) => dialect.extensions.includes(ext)) ?? null;
 }
 
-export async function validateTestTodoStubs(root: string, config: QfaiConfig): Promise<Issue[]> {
+export type TestTodoStubOptions = {
+  /**
+   * Overrides `validation.traceability.testFileGlobs` as the file selection.
+   *
+   * The ATDD completion gate passes the acceptance-test directories it owns.
+   * Reusing the configured globs there did two wrong things at once: a project
+   * whose globs cover `tests/unit/**` had its ATDD gate blocked by a unit
+   * test's stub, and the shipped `qfai.config.yaml` leaves the list empty, so
+   * the gate scanned nothing at all on a freshly initialised repository.
+   */
+  globs?: readonly string[];
+};
+
+export async function validateTestTodoStubs(
+  root: string,
+  config: QfaiConfig,
+  options: TestTodoStubOptions = {},
+): Promise<Issue[]> {
   if (!config.validation.testStrategy.forbidTestTodoStubs) {
     return [];
   }
 
-  const globs = config.validation.traceability.testFileGlobs;
+  const globs = options.globs ?? config.validation.traceability.testFileGlobs;
   if (globs.length === 0) {
     return [];
   }
@@ -100,7 +278,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
   );
 
   const { files } = await collectFilesByGlobs(root, {
-    globs,
+    globs: Array.from(globs),
     ignore: excludeGlobs,
     limit: DEFAULT_GLOB_FILE_LIMIT,
   });
@@ -124,7 +302,10 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
       continue;
     }
 
-    const lines = content.split(/\r?\n/);
+    // Comments and string literals are blanked first: the pattern is a line
+    // regex, so a quoted fixture token or a prose mention is otherwise
+    // reported as an executing stub.
+    const lines = maskNonCode(content, dialect.nonCode).split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i] ?? "";
       // The docstring promises one issue per stub occurrence. Walk every

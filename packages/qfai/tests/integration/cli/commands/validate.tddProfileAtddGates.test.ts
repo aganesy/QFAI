@@ -46,13 +46,8 @@ async function seedSpec(root: string): Promise<void> {
   );
 }
 
-/**
- * An acceptance test that is a silent stub, plus the config that scans for it.
- *
- * `testFileGlobs` defaults to `[]`, and `validateTestTodoStubs` returns early
- * on an empty glob list — without the config the fixture would prove nothing.
- */
-async function seedStubbedAcceptanceTest(root: string): Promise<void> {
+/** The repo-wide test selection a real project configures — unit tests included. */
+async function seedRepoWideTestGlobs(root: string): Promise<void> {
   await writeFile(
     path.join(root, "qfai.config.yaml"),
     ["validation:", "  traceability:", "    testFileGlobs:", "      - tests/**/*.test.ts", ""].join(
@@ -60,13 +55,23 @@ async function seedStubbedAcceptanceTest(root: string): Promise<void> {
     ),
     "utf-8",
   );
-  const testDir = path.join(root, "tests", "e2e", "spec-0001");
+}
+
+/** A silent stub at `relDir`, annotated so the ATDD routing rules see it. */
+async function seedStub(root: string, relDir: string): Promise<void> {
+  const testDir = path.join(root, ...relDir.split("/"));
   await mkdir(testDir, { recursive: true });
   await writeFile(
     path.join(testDir, "us-0001.test.ts"),
     [`it${TODO}("QFAI:SPEC-0001:US-0001 covers the login flow");`, ""].join("\n"),
     "utf-8",
   );
+}
+
+/** An acceptance test that is a silent stub, plus the repo-wide config. */
+async function seedStubbedAcceptanceTest(root: string): Promise<void> {
+  await seedRepoWideTestGlobs(root);
+  await seedStub(root, "tests/e2e/spec-0001");
 }
 
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
@@ -238,6 +243,40 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
         await runValidate({ root, strict: false, profile: "atdd" });
         const stub = (await findings(root)).find((entry) => entry.code === "QFAI-TEST-001");
         expect(stub?.severity).toBe("error");
+      });
+    });
+  });
+
+  it("reports the stub gate on the config qfai init ships", async () => {
+    // `qfai init` writes `testFileGlobs: []` on purpose, and the validator
+    // returns early on an empty list — so wiring it in without an ATDD-owned
+    // default made the gate scan nothing at all on a fresh repository, which
+    // is precisely the state a first `/qfai-atdd` run is in.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedStub(root, "tests/e2e/spec-0001");
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const stub = (await findings(root)).find((entry) => entry.code === "QFAI-TEST-001");
+        expect(stub?.severity).toBe("error");
+        expect(stub?.message).toContain("tests/e2e/spec-0001/us-0001.test.ts");
+      });
+    });
+  });
+
+  it("does not block the atdd gate on a stub outside the stage's directories", async () => {
+    // `/qfai-atdd` owns `tests/e2e/**`, `tests/api/**` and
+    // `tests/integration/**`. A project whose `testFileGlobs` also cover
+    // `tests/unit/**` would otherwise have had a unit test's stub — nothing
+    // this stage can act on — hold its completion gate shut. `--profile tdd`,
+    // which is repo-wide and owns that test, still reports it.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await seedRepoWideTestGlobs(root);
+        await seedStub(root, "tests/unit");
+        await runValidate({ root, strict: false, profile: "atdd" });
+        expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-TEST-001");
+        await runValidate({ root, strict: false, profile: "tdd" });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-TEST-001");
       });
     });
   });

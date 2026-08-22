@@ -110,6 +110,10 @@ describe.each(TREES)("%s", (tree) => {
     const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain("`QFAI-TEST-001`");
     expect(atdd).toContain("which no spec owns either");
+    // And only what it runs. `QFAI-TEST-001` matches the `*.todo` forms, not
+    // `it.skip` / `describe.skip`; promising those told a completion reviewer
+    // a green gate proved a skipped acceptance test did not exist.
+    expect(atdd).toContain("`it.skip` / `describe.skip` are **not** that rule");
   });
 
   it("does not call a nonexistent-spec reference repo-wide wherever it sits", async () => {
