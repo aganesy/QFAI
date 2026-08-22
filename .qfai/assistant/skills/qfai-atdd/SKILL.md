@@ -251,11 +251,11 @@ A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value
 
 ### Estimator output table (required)
 
-| Layer       | Raw count | Signal | Evidence      | Notes |
-| ----------- | --------: | -----: | ------------- | ----- |
-| E2E         |       #US |  E2E_s | user stories  |       |
-| API         |      #CON |  API_s | API contracts |       |
-| Integration |       #TC |  INT_s | test cases    |       |
+| Layer       | Raw count | Signal | Evidence                 | Notes |
+| ----------- | --------: | -----: | ------------------------ | ----- |
+| E2E         |       #US |  E2E_s | user stories + `L5` TCs  |       |
+| API         |      #CON |  API_s | API contracts + `L4` TCs |       |
+| Integration |       #TC |  INT_s | `L3`/no-`Level` TCs      |       |
 
 ## Scaffolding
 
