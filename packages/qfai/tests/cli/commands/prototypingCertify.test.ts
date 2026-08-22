@@ -537,6 +537,30 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     }
   });
 
+  it("exits 64 when a corrupt payload sits under a spec directory outside the frozen set", async () => {
+    // The frozen-set loop never visits `spec-9999/`, but the
+    // certificate digests it — so the sweep runs over every canonical
+    // spec-NNNN directory the accepted iteration actually holds.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings");
+    await seedReviewJson(root, "spec-9999", "old", 1, "{ truncated");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-9999/old.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
   it("still seals the certificate when an undeclared screen's payload is itself valid and converged", async () => {
     // A stray file is audited, not banned outright: per-spec UI
     // contracts can narrow the declared set, and a schema-valid,

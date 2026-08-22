@@ -327,7 +327,9 @@ export function buildEvaluatorReview(input: BuildEvaluatorReviewInput): Evaluato
  *   - `wallTimeSec` records the Reviewer-measured per-session wall
  *     time (number, no upper bound; informational).
  *   - `softWarnings.timeBudget` is a boolean and is true iff
- *     `wallTimeSec` exceeded the per-spec NFR cap. The whole
+ *     `wallTimeSec` exceeded the per-session NFR cap
+ *     ({@link REVIEWER_TIME_BUDGET_SEC}: one (spec, screen) session,
+ *     not a per-spec total). The whole
  *     `softWarnings` object is required and closed (single key today;
  *     additional soft-warning channels would extend the nested object,
  *     not flatten new top-level keys).

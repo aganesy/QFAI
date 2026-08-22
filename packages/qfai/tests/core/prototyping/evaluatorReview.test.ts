@@ -964,7 +964,7 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
       baseReviewerPayload({
         cycle: 3,
         retryCount: 1,
-        // Over the 300 s per-spec cap, so `timeBudget: true` is the
+        // Over the 300 s per-session cap, so `timeBudget: true` is the
         // value the derived rule requires.
         wallTimeSec: 420.7,
         softWarnings: { timeBudget: true },

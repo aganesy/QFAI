@@ -676,6 +676,14 @@ export async function runPrototypingCertify(
       // so the operator diagnostic names the actual defect class.
       const mismatchedPayloads: PayloadFailure[] = [];
       const unconvergedPayloads: PayloadFailure[] = [];
+      // One handle over the three buckets so the stray-payload sweep
+      // files its findings in exactly the same classes as the
+      // declared-pair sweep.
+      const sink: PayloadFailureSink = {
+        invalid: invalidPayloads,
+        mismatched: mismatchedPayloads,
+        unconverged: unconvergedPayloads,
+      };
       // codex r3270911400 (P1, chatgpt-codex-connector): the previous
       // optimisation pre-built a per-spec map from `screenContracts.sourceRef`
       // and used it whenever the indexed entry was non-empty, only
@@ -756,28 +764,31 @@ export async function runPrototypingCertify(
         // `*.review.json` actually on disk in the per-spec directory,
         // holding a stray file against the screen its own filename
         // claims.
-        const declared = new Set(scopedScreens.map((s) => s.screenId));
-        const specDirRel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}`;
-        for (const fileName of await listReviewPayloadFiles(path.join(options.root, specDirRel))) {
-          const screenId = fileName.slice(0, -REVIEW_PAYLOAD_SUFFIX.length);
-          if (declared.has(screenId)) continue;
-          const rel = `${specDirRel}/${fileName}`;
-          const audit = await auditReviewPayload(path.join(options.root, rel), {
-            specDirName,
-            screenId,
-            cycle: acceptedIterationIndex,
-          });
-          if (audit.schemaErrors.length > 0) {
-            invalidPayloads.push({ expectedPath: rel, errors: audit.schemaErrors });
-            continue;
-          }
-          if (audit.identityErrors.length > 0) {
-            mismatchedPayloads.push({ expectedPath: rel, errors: audit.identityErrors });
-          }
-          if (audit.convergenceErrors.length > 0) {
-            unconvergedPayloads.push({ expectedPath: rel, errors: audit.convergenceErrors });
-          }
-        }
+        await auditStrayPayloads({
+          root: options.root,
+          specDirRel: `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}`,
+          specDirName,
+          cycle: acceptedIterationIndex,
+          skipScreens: new Set(scopedScreens.map((s) => s.screenId)),
+          sink,
+        });
+      }
+      // Spec directories OUTSIDE the frozen set are never visited by
+      // the loop above, yet the certificate digests them all the same:
+      // `spec-9999/old.review.json` from a spec dropped out of the
+      // frozen set would ship unread. Sweep every canonical
+      // `spec-NNNN` directory the accepted iteration actually holds.
+      const frozenDirNames = new Set(frozenSpecsPreview.map(normalizeSpecDirName));
+      for (const straySpecDir of await listSpecDirs(acceptedIterAbs)) {
+        if (frozenDirNames.has(straySpecDir)) continue;
+        await auditStrayPayloads({
+          root: options.root,
+          specDirRel: `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${straySpecDir}`,
+          specDirName: straySpecDir,
+          cycle: acceptedIterationIndex,
+          skipScreens: new Set<string>(),
+          sink,
+        });
       }
       if (missingPairs.length > 0) {
         error(
@@ -2073,6 +2084,70 @@ function schemaOnlyAudit(message: string): ReviewPayloadAudit {
 
 /** Filename suffix of a per-(spec × screen) reviewer payload. */
 const REVIEW_PAYLOAD_SUFFIX = ".review.json";
+
+/** The three rejection buckets an audited payload can land in. */
+type PayloadFailureSink = {
+  readonly invalid: PayloadFailure[];
+  readonly mismatched: PayloadFailure[];
+  readonly unconverged: PayloadFailure[];
+};
+
+/**
+ * Audit every `*.review.json` present in one accepted-iteration
+ * per-spec directory that the declared-pair sweep did not already
+ * open (`skipScreens`), filing each finding in the same bucket the
+ * declared-pair sweep uses. A stray payload is held against the spec
+ * directory it sits in and the screen its own filename claims, so a
+ * schema-valid, converged extra payload passes while a corrupt or
+ * unconverged leftover is rejected.
+ */
+async function auditStrayPayloads(args: {
+  root: string;
+  specDirRel: string;
+  specDirName: string;
+  cycle: number;
+  skipScreens: ReadonlySet<string>;
+  sink: PayloadFailureSink;
+}): Promise<void> {
+  for (const fileName of await listReviewPayloadFiles(path.join(args.root, args.specDirRel))) {
+    const screenId = fileName.slice(0, -REVIEW_PAYLOAD_SUFFIX.length);
+    if (args.skipScreens.has(screenId)) continue;
+    const rel = `${args.specDirRel}/${fileName}`;
+    const audit = await auditReviewPayload(path.join(args.root, rel), {
+      specDirName: args.specDirName,
+      screenId,
+      cycle: args.cycle,
+    });
+    if (audit.schemaErrors.length > 0) {
+      args.sink.invalid.push({ expectedPath: rel, errors: audit.schemaErrors });
+      continue;
+    }
+    if (audit.identityErrors.length > 0) {
+      args.sink.mismatched.push({ expectedPath: rel, errors: audit.identityErrors });
+    }
+    if (audit.convergenceErrors.length > 0) {
+      args.sink.unconverged.push({ expectedPath: rel, errors: audit.convergenceErrors });
+    }
+  }
+}
+
+/**
+ * Canonical `spec-NNNN` subdirectories an iteration directory holds,
+ * sorted. Unreadable directory yields `[]` — the layout gate above
+ * already decides whether a per-spec layout is required at all.
+ */
+async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
+  let entries: Array<{ name: string; isDirectory: () => boolean }>;
+  try {
+    entries = await readdir(iterDirAbs, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+  return entries
+    .filter((e) => e.isDirectory() && CANONICAL_SPEC_DIR.test(e.name))
+    .map((e) => e.name)
+    .sort();
+}
 
 /**
  * Every `<screen>.review.json` file that actually exists in one
