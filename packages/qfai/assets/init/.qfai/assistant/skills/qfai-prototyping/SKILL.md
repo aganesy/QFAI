@@ -28,7 +28,8 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-que
 Skill-specific examples:
 
 - DESIGN.md lock drift / conflict resolution (exit `2` recovery)
-- hard-required inputs absent at cycle 0 (`companyName`, brand intent, `primarySpecId`)
+- hard-required inputs absent at cycle 0 (`companyName`, brand intent — see the
+  hard-required bucket under `## Default Autopilot Policy`)
 
 ## Goal
 
