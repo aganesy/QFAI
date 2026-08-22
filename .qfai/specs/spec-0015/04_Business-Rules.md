@@ -75,7 +75,7 @@
   - **auto-decide** (named defaults, AI proceeds without prompting): output formatting, ID / sequence numbering, append-vs-create when a subject overlaps an existing artifact, and option-pick among demonstrably-equivalent alternatives.
   - **ask-user** (AI prompts via `AskUserQuestion` with the bucket's prompt template): approval-required triage ops (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE), destructive operations, version-pin changes, scope expansions.
   - **hard-required** (no default possible; must be supplied before proceeding): `companyName`, brand intent, `primarySpecId` when absent.
-- The skill body MUST reference this section as the source of truth. A skill MAY narrow the auto-decide bucket but MUST NOT widen it.
+- The skill body MUST reference this section as the source of truth. A skill MAY narrow any of the three buckets (drop an entry it cannot reach) but MUST NOT widen one.
 - Reviewer Gate emits `R-AUTOPILOT-POLICY-MISSING` (severity error, non-empty `justification:`) when the section is absent OR is present but missing one or more required buckets (heading-only / partial-bucket population — the "populated with three named buckets" requirement is not satisfied). The `justification:` MUST name the missing bucket(s) by name when the trigger is partial population.
 
 ## BR-0015-0011: Envelope-deviation audit-log write trigger and shape

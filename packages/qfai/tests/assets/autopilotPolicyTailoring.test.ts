@@ -8,9 +8,11 @@
  * The visible cost was in `qfai-implement`: `ask-user` opened on `/qfai-sdd`'s
  * triage operations (a non-goal here) and `hard-required` demanded
  * `companyName` / brand intent (inputs of init and prototyping), while the
- * decisions an implement run genuinely gates on a user — routing a row to
- * `exception`, approving the `TDDLIST-001` accepted-risk waiver such a row
- * needs, and Change-Request escalation — appeared in no bucket.
+ * decisions an implement run genuinely gates on a user — approving the
+ * `TDDLIST-001` accepted-risk waiver an `exception` row needs, and
+ * Change-Request escalation — appeared in no bucket. Routing a row *to*
+ * `exception` is deliberately not among them: Red phase steps 3b and 5 decide
+ * that transition deterministically, so prompting on it would contradict them.
  *
  * This pins both halves: the contract permits narrowing in all three buckets,
  * and `qfai-implement` has taken it. The shipped blocks are also re-parsed
@@ -103,6 +105,9 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     // Reachable here, and named as user-facing under `## User Questions` too.
     expect(askUser).toMatch(/`exception`/);
     expect(askUser).toMatch(/TDDLIST-001/);
+    // The `exception` transition itself stays deterministic (Red steps 3b / 5),
+    // so no bullet may make routing a row into that status a user decision.
+    expect(askUser).not.toMatch(/^routing an item to/im);
     expect(askUser).toMatch(/Change[- ]Request/);
     // `/qfai-sdd` owns triage; writing spec artifacts is a non-goal here.
     expect(askUser).not.toMatch(/SUPERSEDE/);
