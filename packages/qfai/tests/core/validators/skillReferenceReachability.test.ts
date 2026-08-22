@@ -79,6 +79,62 @@ async function writeNamesakeSkillFixture(root: string): Promise<string> {
   return referencesDir;
 }
 
+/**
+ * A skill whose reference file names are not lowercase ASCII.
+ *
+ * `collectFiles` compares only the lower-cased extension and puts no
+ * constraint on the stem, so these are documents like any other; the citation
+ * parser has to read them the same way the collector does.
+ */
+async function writeCharsetSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "charset-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# charset-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "設計は `references/設計.md`、手順は `references/Guide.MD` を読む。",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "設計.md"), "# 設計\n", "utf-8");
+  await writeFile(path.join(referencesDir, "Guide.MD"), "# Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
+/** A project that moved `paths.skillsDir` away from the default location. */
+async function writeRelocatedSkillFixture(root: string): Promise<string> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["paths:", "  skillsDir: .custom/skills", ""].join("\n"),
+    "utf-8",
+  );
+  const skillDir = path.join(root, ".custom", "skills", "demo-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# demo-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "Read `.custom/skills/demo-skill/references/guide.md` before starting.",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "guide.md"), "# Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
 describe("skill reference reachability", { timeout: 30000 }, () => {
   it("reports only the reference no reachable document names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
@@ -106,6 +162,30 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
         path.join(referencesDir, "orphan.md"),
         path.join(namesakeDir, "cited.md"),
       ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves citations of non-ASCII names and upper-case extensions", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-charset-"));
+    try {
+      const referencesDir = await writeCharsetSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a root-relative citation against the configured skillsDir", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-relocated-"));
+    try {
+      const referencesDir = await writeRelocatedSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

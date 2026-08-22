@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
+import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -106,7 +107,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     }
   }
 
-  issues.push(...(await collectUnreachableReferences(skillsDir)));
+  issues.push(...(await collectReferenceGraphIssues(root, skillsDir)));
 
   return issues;
 }
@@ -121,10 +122,10 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * a property of the graph rather than a probability. Reported as `warning`:
  * the unread guidance is soft rule text, so nothing hard is being skipped.
  */
-async function collectUnreachableReferences(skillsDir: string): Promise<Issue[]> {
-  const documents = await readSkillDocuments(skillsDir);
-  const reachable = collectReachableDocuments(skillsDir, documents);
-  return [...documents.keys()]
+async function collectReferenceGraphIssues(root: string, skillsDir: string): Promise<Issue[]> {
+  const { documents, unreadable } = await readSkillDocuments(skillsDir);
+  const reachable = collectReachableDocuments(citationContext(root, skillsDir), documents);
+  const unreachable = [...documents.keys()]
     .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
     .sort((a, b) => a.localeCompare(b))
     .map((file) =>
@@ -136,26 +137,56 @@ async function collectUnreachableReferences(skillsDir: string): Promise<Issue[]>
         "skills.referenceReachability",
       ),
     );
+  return [...unreadable, ...unreachable];
 }
 
-/** Skill-tree documents that can cite or be cited, keyed by absolute path. */
-async function readSkillDocuments(skillsDir: string): Promise<Map<string, string>> {
+type SkillDocuments = {
+  /** Skill-tree documents that can cite or be cited, keyed by absolute path. */
+  documents: Map<string, string>;
+  /** One issue per document whose content could not be read at all. */
+  unreadable: Issue[];
+};
+
+/**
+ * A document that cannot be read is reported, not dropped.
+ *
+ * Swallowing the failure would delete the file from the graph: it would cite
+ * nothing, be scanned for nothing, and — because the checks above only read
+ * the required files and every `SKILL.md` — leave the tree with no finding at
+ * all. An unusable reference is a worse outcome than an uncited one, so the
+ * read error becomes its own issue.
+ */
+async function readSkillDocuments(skillsDir: string): Promise<SkillDocuments> {
   const files = await collectFiles(skillsDir, { extensions: [".md", ".yaml", ".yml"] });
   const documents = new Map<string, string>();
+  const unreadable: Issue[] = [];
   for (const file of files.sort((a, b) => a.localeCompare(b))) {
     try {
       documents.set(file, await readFile(file, "utf-8"));
-    } catch {
-      // An unreadable document cites nothing and is not the subject of this
-      // check; the file-level validators above own reporting it.
-      continue;
+    } catch (error) {
+      unreadable.push(
+        issue(
+          "QFAI-SKILLS-014",
+          `skills 配下の文書を読み込めませんでした（${describeReadError(error)}）。参照到達性を判定できないため、権限と I/O を確認してください。`,
+          "error",
+          file,
+          "skills.documentReadable",
+        ),
+      );
     }
   }
-  return documents;
+  return { documents, unreadable };
+}
+
+function describeReadError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
 }
 
 /** Breadth-first closure over "document A cites the path of document B". */
-function collectReachableDocuments(skillsDir: string, documents: Map<string, string>): Set<string> {
+function collectReachableDocuments(
+  context: CitationContext,
+  documents: Map<string, string>,
+): Set<string> {
   const files = [...documents.keys()];
   const reachable = new Set(files.filter((file) => path.basename(file) === "SKILL.md"));
   const queue = [...reachable];
@@ -165,7 +196,7 @@ function collectReachableDocuments(skillsDir: string, documents: Map<string, str
       break;
     }
     const content = documents.get(current) ?? "";
-    for (const cited of resolveCitations(skillsDir, current, content, documents)) {
+    for (const cited of resolveCitations(context, current, content, documents)) {
       if (reachable.has(cited)) {
         continue;
       }
@@ -179,9 +210,40 @@ function collectReachableDocuments(skillsDir: string, documents: Map<string, str
 /**
  * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
  * `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
+ *
+ * The name classes are Unicode and the extension is matched case-insensitively
+ * because that is how the files themselves are collected: `collectFiles`
+ * lower-cases the extension before comparing and puts no constraint on the
+ * stem, so `references/設計.md` and `references/Guide.MD` are documents the
+ * reachability check has to be able to see cited.
  */
-const DOCUMENT_CITATION_PATTERN = /[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*\.(?:md|ya?ml)\b/g;
-const SKILLS_PREFIX_PATTERN = /(?:^|\/)assistant\/skills\//;
+const DOCUMENT_CITATION_PATTERN =
+  /[\p{L}\p{N}\p{M}._-]+(?:\/[\p{L}\p{N}\p{M}._-]+)*\.(?:md|ya?ml)\b/giu;
+
+/** Everything a citation token is resolved against, derived from the config. */
+type CitationContext = {
+  root: string;
+  skillsDir: string;
+  /** `<skillsDir>` as a project-root-relative prefix, when it has one. */
+  skillsDirPrefix: RegExp | null;
+};
+
+function citationContext(root: string, skillsDir: string): CitationContext {
+  return { root, skillsDir, skillsDirPrefix: skillsDirPrefixPattern(root, skillsDir) };
+}
+
+/**
+ * The prefix a root-relative citation carries, taken from the configured
+ * `skillsDir` rather than from the default directory name — a project that
+ * moved its skills to `.custom/skills` cites `.custom/skills/...`.
+ */
+function skillsDirPrefixPattern(root: string, skillsDir: string): RegExp | null {
+  const relative = toPosixRelative(root, skillsDir);
+  if (relative === "" || relative === ".." || relative.startsWith("../")) {
+    return null;
+  }
+  return new RegExp(`(?:^|/)${escapeRegExp(relative)}/`);
+}
 
 /**
  * A citation names one file, so the edge must land on one file.
@@ -190,26 +252,20 @@ const SKILLS_PREFIX_PATTERN = /(?:^|\/)assistant\/skills\//;
  * `qfai-sdd/SKILL.md` citing `references/review-cycle-playbook.md` also lit up
  * `qfai-discussion/references/review-cycle-playbook.md`, which no discussion
  * document reaches. Each token is instead resolved against the citing
- * document's own directory, its skill root, and the skills root — so a
- * cross-skill edge exists only where the path spells one out.
+ * document's own directory, its skill root, the skills root and the project
+ * root — so a cross-skill edge exists only where the path spells one out.
  */
 function resolveCitations(
-  skillsDir: string,
+  context: CitationContext,
   citingFile: string,
   content: string,
   documents: Map<string, string>,
 ): string[] {
-  const skillRoot = skillRootOf(skillsDir, citingFile);
-  const roots = [path.dirname(citingFile), ...(skillRoot === null ? [] : [skillRoot]), skillsDir];
   const cited = new Set<string>();
   for (const match of content.matchAll(DOCUMENT_CITATION_PATTERN)) {
-    const token = match[0];
-    const prefixMatch = SKILLS_PREFIX_PATTERN.exec(token);
-    const candidates =
-      prefixMatch === null
-        ? roots.map((root) => path.resolve(root, token))
-        : [path.resolve(skillsDir, token.slice(prefixMatch.index + prefixMatch[0].length))];
-    const target = candidates.find((candidate) => documents.has(candidate));
+    const target = citationCandidates(context, citingFile, match[0]).find((candidate) =>
+      documents.has(candidate),
+    );
     if (target !== undefined) {
       cited.add(target);
     }
@@ -217,9 +273,26 @@ function resolveCitations(
   return [...cited];
 }
 
+function citationCandidates(context: CitationContext, citingFile: string, token: string): string[] {
+  const skillRoot = skillRootOf(context.skillsDir, citingFile);
+  const bases = [
+    path.dirname(citingFile),
+    ...(skillRoot === null ? [] : [skillRoot]),
+    context.skillsDir,
+    context.root,
+  ];
+  const candidates = bases.map((base) => path.resolve(base, token));
+  const prefixMatch = context.skillsDirPrefix?.exec(token) ?? null;
+  if (prefixMatch !== null) {
+    const withinSkills = token.slice(prefixMatch.index + prefixMatch[0].length);
+    candidates.push(path.resolve(context.skillsDir, withinSkills));
+  }
+  return candidates;
+}
+
 /** The `<skillsDir>/<skill>` directory a document belongs to, if any. */
 function skillRootOf(skillsDir: string, file: string): string | null {
-  const relative = path.relative(skillsDir, file).split(path.sep).join("/");
+  const relative = toPosixRelative(skillsDir, file);
   const [skill, ...rest] = relative.split("/");
   if (skill === undefined || skill === "" || skill === ".." || rest.length === 0) {
     return null;
@@ -228,8 +301,11 @@ function skillRootOf(skillsDir: string, file: string): string | null {
 }
 
 function isReferenceDocument(skillsDir: string, file: string): boolean {
-  const relative = path.relative(skillsDir, file).split(path.sep).join("/");
-  return /^[^/]+\/references\//.test(relative);
+  return /^[^/]+\/references\//.test(toPosixRelative(skillsDir, file));
+}
+
+function toPosixRelative(from: string, to: string): string {
+  return path.relative(from, to).split(path.sep).join("/");
 }
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {

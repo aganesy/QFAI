@@ -1,0 +1,73 @@
+/**
+ * A skill document that cannot be read must not vanish from the report.
+ *
+ * The reachability walk reads every `.md` / `.yml` under `skillsDir`. If a read
+ * fails — permissions, a broken mount, an I/O error — dropping the file would
+ * remove it from the graph entirely: it cites nothing, is scanned for nothing,
+ * and no other validator opens it, so an unusable reference would ship in
+ * silence. The failure is reported as its own issue instead.
+ */
+
+import type * as FsPromises from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
+import path from "node:path";
+
+import { describe, expect, it, vi } from "vitest";
+
+import { loadConfig } from "../../../src/core/config.js";
+import { validateAssistantAssets } from "../../../src/core/validators/assistantAssets.js";
+
+const UNREADABLE_BASENAME = "unreadable.md";
+const READ_FAILURE_CODE = "QFAI-SKILLS-014";
+
+vi.mock("node:fs/promises", async () => {
+  const actual = await vi.importActual<typeof FsPromises>("node:fs/promises");
+  return {
+    ...actual,
+    default: actual,
+    readFile: (...args: Parameters<typeof actual.readFile>) =>
+      typeof args[0] === "string" && path.basename(args[0]) === "unreadable.md"
+        ? Promise.reject(new Error("EACCES: permission denied, open 'unreadable.md'"))
+        : actual.readFile(...args),
+  };
+});
+
+async function writeSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# demo-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      `Follow \`references/${UNREADABLE_BASENAME}\`.`,
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, UNREADABLE_BASENAME), "# Unreadable\n", "utf-8");
+  return referencesDir;
+}
+
+describe("skill document readability", { timeout: 30000 }, () => {
+  it("reports the read failure instead of dropping the document", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-document-readability-"));
+    try {
+      const referencesDir = await writeSkillFixture(root);
+      const { config } = await loadConfig(root);
+      const issues = await validateAssistantAssets(root, config);
+      const readFailures = issues.filter((entry) => entry.code === READ_FAILURE_CODE);
+
+      expect(readFailures).toHaveLength(1);
+      expect(readFailures[0]?.file).toBe(path.join(referencesDir, UNREADABLE_BASENAME));
+      expect(readFailures[0]?.severity).toBe("error");
+      expect(readFailures[0]?.message).toContain("EACCES");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
