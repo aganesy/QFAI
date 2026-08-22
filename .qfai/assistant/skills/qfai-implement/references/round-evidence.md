@@ -45,7 +45,8 @@ as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
-its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
+its place), the GREEN pair, the reviewer verdict, and the `Review pack` /
+`Review pack seal` pair. Row-level fields are not round
 fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
 `Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a

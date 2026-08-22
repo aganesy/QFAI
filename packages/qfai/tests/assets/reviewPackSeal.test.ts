@@ -47,6 +47,32 @@ const section = (content: string, heading: string): string => {
   return next < 0 ? content.slice(after) : content.slice(after, next);
 };
 
+/**
+ * The logical list items of a section: each `- ` line plus every continuation
+ * line up to the next bullet or heading. Measuring only the first physical line
+ * would let a removed paragraph return simply by being wrapped.
+ */
+const bulletsOf = (body: string): string[] => {
+  const items: string[] = [];
+  let open = false;
+  for (const line of body.split("\n")) {
+    if (line.startsWith("- ")) {
+      items.push(line);
+      open = true;
+      continue;
+    }
+    if (line.startsWith("#")) {
+      open = false;
+      continue;
+    }
+    if (!open || line.trim() === "") {
+      continue;
+    }
+    items[items.length - 1] = `${items[items.length - 1]} ${line.trim()}`;
+  }
+  return items;
+};
+
 /** GitHub's heading -> fragment slug, enough for the ASCII headings shipped here. */
 const slug = (heading: string): string =>
   heading
@@ -117,6 +143,11 @@ describe("the review pack seal has a heading of its own", () => {
       // The per-round field list names the fields and points at the contract.
       expect(flat(round)).toContain("`Round N: Review pack` — the `review-<timestamp>/` directory");
       expect(round).toContain(ANCHOR);
+      // The same file's exhaustive list of round fields has to carry the two
+      // new ones too, or an agent reading that list omits them.
+      expect(flat(round)).toContain(
+        "the reviewer verdict, and the `Review pack` / `Review pack seal` pair",
+      );
       // The layout file states the per-round pack rule the seal depends on.
       expect(layout).toContain(ANCHOR);
       expect(flat(layout)).toContain(
@@ -144,13 +175,14 @@ describe("the ATDD stage seal has a reference of its own", () => {
     it(`${tree}: the DoD states the obligations as skimmable bullets`, async () => {
       const skill = await read(tree, ATDD_SKILL);
       const dod = section(skill, "## Success Criteria (Definition of Done)");
-      const bullets = dod.split("\n").filter((line) => line.startsWith("- "));
+      const bullets = bulletsOf(dod);
 
       expect(bullets.length).toBeGreaterThan(9);
       // No bullet may be more than half the section again. The seal bullet was
       // 2,024 characters — larger than the other nine put together. The cap is
-      // above the longest bullet this section already carries, so it fails on a
-      // paragraph moving back in, not on ordinary prose.
+      // above the longest bullet this section already carries (531 characters,
+      // wrapped over nine lines), so it fails on a paragraph moving back in —
+      // wrapped or not — and not on ordinary prose.
       for (const bullet of bullets) {
         expect(bullet.length, `DoD bullet is a paragraph: ${bullet.slice(0, 80)}…`).toBeLessThan(
           700,
@@ -158,7 +190,12 @@ describe("the ATDD stage seal has a reference of its own", () => {
       }
 
       expect(dod).toContain("references/pack-seal.md#recompute-the-p8-audit-hash");
+      // The seal bullet requires both moments, so it names both anchors:
+      // `#seal-the-p8-pack` defines only the recording.
       expect(dod).toContain("references/pack-seal.md#seal-the-p8-pack");
+      expect(dod).toContain(
+        "references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value",
+      );
     });
 
     it(`${tree}: the evidence template has a slot for both seal fields`, async () => {

@@ -296,7 +296,7 @@ Notes:
 - Every ledger row this cycle advanced carries one of the three RED-provenance forms — an observed RED pair with its `Oracle proof`, the `Satisfied-by` + falsifiability trio, or a `DR-*` recording why neither was available — and `qa-gatekeeper` has accepted it. The third form is a valid _branch_, and it is **not a completion**: `exception` is a blocking output and needs a user-approved `TDDLIST-001` waiver, or the row is parked and the spec stays open (`references/red-provenance.md#branch-3-does-not-close-a-spec-on-its-own`).
 - Completion is approved by a reviewer who did not implement tests.
 - **The P8 reviewer's `Audited evidence hash` is recomputed before completion is declared**, from the current stage evidence file and Coverage Depth Matrix — a mismatch means the evidence moved after the verdict (`references/pack-seal.md#recompute-the-p8-audit-hash-before-declaring-completion`).
-- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict and recomputed after (`references/pack-seal.md#seal-the-p8-pack`).
+- **The P8 review pack is sealed, and its seal is re-checked at completion against the recorded value** — `Review pack:` and `Review pack seal:` in the stage evidence file's `## Final status`, recorded before this stage writes its verdict (`references/pack-seal.md#seal-the-p8-pack`) and recomputed against that recorded value at completion (`references/pack-seal.md#recompute-the-seal-at-completion-against-the-recorded-value`).
 
 ## Not-done criteria
 
