@@ -20,6 +20,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+import { parse as parseYaml } from "yaml";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -27,14 +28,28 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
+const ATE = "assistant/agents/acceptance-test-engineer.md";
+const CATALOG = "assistant/manifest/agent-catalog.yml";
 
-const read = async (tree: string): Promise<string> =>
-  await readFile(path.join(repoRoot, tree, ATDD), "utf-8");
+const readAt = async (tree: string, rel: string): Promise<string> =>
+  await readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+const read = async (tree: string): Promise<string> => await readAt(tree, ATDD);
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
 describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates CON-API", (tree) => {
+  it("the frontmatter description — the discovery surface — names CON-DB", async () => {
+    // A skill candidate is selected from `description` before anything reads
+    // the body, so a DB-contract-only request must be able to match here.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      'description: "Implement automated acceptance tests (E2E/API/Integration) aligned with US/TC/CON-API/CON-DB obligations from specs and contracts."',
+    );
+    expect(atdd).not.toContain("aligned with US/TC/CON-API obligations");
+  });
+
   it("the reviewer gate asks about Integration/CON-DB coverage", async () => {
     // A `completion-reviewer` works from this bullet and nothing else.
     const atdd = flat(await read(tree));
@@ -100,5 +115,61 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     ]) {
       expect(atdd).not.toContain(stale);
     }
+  });
+});
+
+/**
+ * The work order at `SKILL.md` assigns the `CON-DB` obligation to the
+ * Integration layer, but the layer is implemented by the mandatory delegate
+ * `acceptance-test-engineer`. Its role contract stopped at `CON-API` in
+ * responsibilities, required inputs and deliverables, so a delegate that obeys
+ * its own contract literally never opens `.qfai/contracts/db/**` and the very
+ * next `QFAI-ATDD-115` run stops the stage.
+ *
+ * The codex TOML mirror is not re-checked here: `tests/codex/agents.test.ts`
+ * (TC-0003-0003) already pins `developer_instructions` to the canonical MD
+ * body byte for byte, so these assertions propagate to it.
+ */
+describe.each(TREES)("%s — the ATDD delegate is contracted to cover CON-DB", (tree) => {
+  /** The `developer_instructions` of one catalog entry, by id. */
+  const catalogInstructions = async (id: string): Promise<string> => {
+    const parsed: unknown = parseYaml(await readAt(tree, CATALOG));
+    if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
+      throw new Error(`${tree}/${CATALOG}: must parse to an object`);
+    }
+    const agents = (parsed as Record<string, unknown>)["agents"];
+    if (!Array.isArray(agents)) {
+      throw new Error(`${tree}/${CATALOG}: agents must be an array`);
+    }
+    for (const entry of agents) {
+      if (entry === null || typeof entry !== "object" || Array.isArray(entry)) continue;
+      const agent: Record<string, unknown> = entry as Record<string, unknown>;
+      if (agent["id"] !== id) continue;
+      const instructions = agent["developer_instructions"];
+      if (typeof instructions !== "string") {
+        throw new Error(`${tree}/${CATALOG}: ${id}.developer_instructions must be a string`);
+      }
+      return instructions;
+    }
+    throw new Error(`${tree}/${CATALOG}: no agent with id ${id}`);
+  };
+
+  const assertContract = (doc: string): void => {
+    expect(doc).toContain(
+      "- Implement integration coverage for required `TC-*` behavior and declared `CON-DB-*` contracts.",
+    );
+    expect(doc).toContain("- .qfai/contracts/db/\\*\\*");
+    expect(doc).toContain("- Mapping from US / TC / CON-API / CON-DB to test assets");
+    // The regression: a contract that ends at `CON-API` reads as complete.
+    expect(doc).not.toContain("- Implement integration coverage for required `TC-*` behavior.");
+    expect(doc).not.toContain("- Mapping from US / TC / CON-API to test assets");
+  };
+
+  it("the canonical role assigns DB contracts, their directory and their mapping", async () => {
+    assertContract(flat(await readAt(tree, ATE)));
+  });
+
+  it("agent-catalog.yml carries the same contract for that agent", async () => {
+    assertContract(flat(await catalogInstructions("acceptance-test-engineer")));
   });
 });
