@@ -151,10 +151,15 @@ describe("TC-0010-0012: the atomic state.json write preserves what it replaces",
       const close = handle.close.bind(handle);
       // Stand in for the other account that owns the shared directory:
       // it swaps the scratch the moment the descriptor is released.
+      // Renamed over rather than unlinked-and-rewritten, so the decoy is
+      // holding its own inode while the scratch still holds one — an
+      // unlink first lets the filesystem hand the freed number straight
+      // back and the swap becomes invisible.
       handle.close = async (): Promise<void> => {
         await close();
-        await actual.rm(String(target), { force: true });
-        await actual.writeFile(String(target), "not the state document", "utf-8");
+        const decoy = `${String(target)}.decoy`;
+        await actual.writeFile(decoy, "not the state document", "utf-8");
+        await actual.rename(decoy, String(target));
       };
       return handle;
     });
