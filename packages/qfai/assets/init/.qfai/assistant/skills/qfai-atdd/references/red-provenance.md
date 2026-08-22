@@ -197,12 +197,11 @@ Take the first that applies, and record which one in the evidence file.
    states. Hand the row over naming the predicate to break: its Phase Red
    **step 3c** applies the mutation, runs this row's selector, captures the
    failure, writes the trio into this row's entry here, and reverts only once
-   `qa-gatekeeper` has answered. The row
-   is not deferred waiting for evidence only that step can produce. Writing
-   the mutation here to "just take the evidence" is the breach the boundary
-   exists to prevent, and the alternative — stopping because no agent may
-   touch the file — sends a row with a perfectly good falsifiability story to
-   `exception`.
+   `qa-gatekeeper` has answered. The row is not deferred waiting for evidence
+   only that step can produce. Writing the mutation here to "just take the
+   evidence" is the breach the boundary exists to prevent, and the alternative
+   — stopping because no agent may touch the file — sends a row with a
+   perfectly good falsifiability story to `exception`.
 
    `/qfai-implement` Phase Red **step 3c** follows the shared path in
    `../../qfai-implement/references/red-not-observable.md`, **in this order**:
