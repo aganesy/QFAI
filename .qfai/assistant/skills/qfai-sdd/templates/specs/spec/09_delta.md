@@ -47,7 +47,8 @@
 `Re-opened by:` is the only sanctioned route out of `DO NOT`. Moving a rejected
 candidate to `## Adopted` without it is the reintroduction the Delta Rejected
 Guard blocks; `npx qfai validate` reports `QFAI-DECISION-004` when the ID here
-resolves to no `Status: re-open` record.
+resolves to no `Status: re-open` record, and equally when such a record names
+no candidate here.
 -->
 
 ## Impact

@@ -43,22 +43,26 @@ in this file, so it inherits the ID scheme above and resolves the same way.
 A re-open entry carries three things beyond a normal decision:
 
 - `Re-opens:` — the prior `DR-*` being reconsidered. It must be a declared ID,
-  and it cannot be the entry's own.
+  and it cannot be the entry's own nor a re-open that points back at it: a pair
+  citing each other has no prior decision anywhere in the loop.
 - `Decision:` — what changed since the rejection. A re-open that repeats the
   original argument is the reintroduction the guard exists to stop.
-- `Approved by:` / `Approved at:` — the explicit approval. Until both are
-  filled, the entry stays `Status: proposed`.
+- `Approved by:` / `Approved at:` — the explicit approval, the time as
+  `YYYY-MM-DDThh:mm:ssZ`. Until both are filled, the entry stays
+  `Status: proposed`.
 
 The rejected candidate in the same spec's delta points back at it through
-`## Rejected`'s `Re-opened by:` line, so the rejection and the re-adoption are
-readable from one place.
+`## Rejected`'s `Re-opened by:` line. Both directions are required, so the
+rejection and the re-adoption are readable from either end.
 
-`npx qfai validate` reports `QFAI-DECISION-001` when `Re-opens:` is missing,
-malformed or self-referential, `QFAI-DECISION-002` when it resolves to no
-declared record, `QFAI-DECISION-003` when the approval is absent, and
-`QFAI-DECISION-004` when a delta's `Re-opened by:` names no `Status: re-open`
-entry here. A re-open asserted anywhere else — a PR description, a commit
-message — is not one.
+`npx qfai validate` reports `QFAI-DECISION-001` when the entry's own ID is off
+the scheme or `Re-opens:` is missing, malformed, self-referential or circular,
+`QFAI-DECISION-002` when it resolves to no declared record, `QFAI-DECISION-003`
+when the approval is absent or `Approved at:` is not a real
+`YYYY-MM-DDThh:mm:ssZ` instant, `QFAI-DECISION-004` when the delta's
+`Re-opened by:` and this entry do not name each other, and
+`QFAI-DECISION-005` when `Decision:` is missing. A re-open asserted anywhere
+else — a PR description, a commit message — is not one.
 
 ## Empty State
 

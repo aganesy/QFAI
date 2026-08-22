@@ -17,6 +17,7 @@
 
 import path from "node:path";
 
+import { escapeRegExp } from "./regex.js";
 import { exists, readSafe } from "./validators/utils.js";
 
 /**
@@ -43,14 +44,35 @@ export const RE_OPEN_STATUS = "re-open";
 export type DecisionRecordEntry = {
   id: string;
   status: string | null;
+  decision: string | null;
   reOpens: string | null;
   approvedBy: string | null;
   approvedAt: string | null;
 };
 
 /**
- * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
- * shared `_policies/08_Decisions.md`.
+ * The files a spec's `DR-*` may be declared in.
+ *
+ * `decisionsPath` is the layout's own Decisions file — `07_Decisions.md` in a
+ * layered spec but `14_Decisions.md` in a `spec-pack`. Resolving against the
+ * layered name alone reported every `spec-pack` record as undeclared, so the
+ * caller passes the path its layout actually resolved.
+ */
+function declarationFiles(
+  specDir: string,
+  specsRoot: string,
+  decisionsPath?: string | null,
+): string[] {
+  const files = new Set<string>();
+  if (decisionsPath) files.add(path.normalize(decisionsPath));
+  for (const name of DR_DECLARATION_FILES) files.add(path.normalize(path.join(specDir, name)));
+  files.add(path.normalize(path.join(specsRoot, DR_POLICY_DECLARATION_FILE)));
+  return [...files];
+}
+
+/**
+ * Every `DR-*` declared for this spec: its own Decisions file plus the shared
+ * `_policies/08_Decisions.md`.
  *
  * Both files are read, not one: a policy-level decision is cited from spec
  * ledgers, and resolving only against the spec-local file would report every
@@ -59,13 +81,10 @@ export type DecisionRecordEntry = {
 export async function collectDeclaredDrIds(
   specDir: string,
   specsRoot: string,
+  decisionsPath?: string | null,
 ): Promise<Set<string>> {
   const declared = new Set<string>();
-  const files = [
-    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
-    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
-  ];
-  for (const file of files) {
+  for (const file of declarationFiles(specDir, specsRoot, decisionsPath)) {
     if (!(await exists(file))) continue;
     const text = await readSafe(file);
     for (const match of text.matchAll(/\bDR-\d{4}(?:-\d{4})?\b/g)) {
@@ -87,13 +106,10 @@ export async function collectDeclaredDrIds(
 export async function collectDeclaredDrHeadingIds(
   specDir: string,
   specsRoot: string,
+  decisionsPath?: string | null,
 ): Promise<Set<string>> {
   const declared = new Set<string>();
-  const files = [
-    ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
-    path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
-  ];
-  for (const file of files) {
+  for (const file of declarationFiles(specDir, specsRoot, decisionsPath)) {
     if (!(await exists(file))) continue;
     for (const entry of parseDecisionRecordEntries(await readSafe(file))) {
       declared.add(entry.id);
@@ -116,6 +132,27 @@ export function isPlaceholderValue(value: string | null | undefined): boolean {
   return /^(tbd|todo|n\/a|none|未定)$/i.test(trimmed);
 }
 
+/** The `Approved at:` instant both templates define: `YYYY-MM-DDThh:mm:ssZ`. */
+export const APPROVED_AT_FORMAT = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/;
+
+/**
+ * An approval time an audit can rely on: the shipped format **and** a real
+ * instant.
+ *
+ * A non-empty check alone accepts `yesterday` or `2026-02-31`, which records
+ * that someone typed something rather than when the re-open was approved. The
+ * round-trip through `Date` rejects the calendar-invalid dates the shape regex
+ * cannot see.
+ */
+export function isAuditableInstant(value: string | null | undefined): boolean {
+  if (value === null || value === undefined) return false;
+  const trimmed = value.trim();
+  if (!APPROVED_AT_FORMAT.test(trimmed)) return false;
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return false;
+  return parsed.toISOString().replace(/\.\d{3}Z$/, "Z") === trimmed;
+}
+
 /** Strip the decoration a template field carries around its value. */
 function cleanValue(raw: string): string {
   return raw
@@ -130,8 +167,23 @@ function normalizeKey(raw: string): string {
 }
 
 const HEADING_RE = /^#{2,6}\s+(DR-[A-Za-z0-9][A-Za-z0-9-]*)\s*[:：]?/;
+const ANY_HEADING_RE = /^\s{0,3}#{1,6}(?:\s|$)/;
 const FIELD_RE = /^\s*[-*]\s*([A-Za-z][A-Za-z -]*?)\s*[:：]\s*(.*)$/;
-const FENCE_RE = /^\s*(?:```|~~~)/;
+const FENCE_OPEN_RE = /^\s*(`{3,}|~{3,})[^\r\n]*$/;
+
+/**
+ * The regex that closes a fence opened by `token`.
+ *
+ * A boolean toggle cannot express CommonMark nesting: a ````` ```` ````` block
+ * quoting a ` ``` ` markdown sample closes on the inner opener, and the sample's
+ * `### DR-*` lines are then parsed as declarations. Matching the opener's
+ * character and minimum length keeps a documented example an example.
+ */
+function closeFenceRe(token: string): RegExp | null {
+  const fenceChar = token[0];
+  if (!fenceChar) return null;
+  return new RegExp(`^\\s*${escapeRegExp(fenceChar)}{${token.length},}\\s*$`);
+}
 
 /**
  * Parse the `### DR-*` blocks of a Decisions file.
@@ -139,29 +191,43 @@ const FENCE_RE = /^\s*(?:```|~~~)/;
  * Fenced blocks are skipped: both shipped templates document the entry shape
  * inside prose and a reference file may quote a sample, and a quoted sample is
  * not a declaration.
+ *
+ * A record ends at the next heading of any level, not only at the next `DR-*`
+ * one. Both templates follow the entries with prose that describes the same
+ * field names, so a record left open would absorb the description's `- Re-opens:`
+ * line and report the documentation's value as the record's own.
  */
 export function parseDecisionRecordEntries(text: string): DecisionRecordEntry[] {
   const entries: DecisionRecordEntry[] = [];
   let current: DecisionRecordEntry | null = null;
-  let inFence = false;
+  let openFence: RegExp | null = null;
 
   for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
-    if (FENCE_RE.test(line)) {
-      inFence = !inFence;
+    if (openFence) {
+      if (openFence.test(line)) openFence = null;
       continue;
     }
-    if (inFence) continue;
+    const fenceOpen = FENCE_OPEN_RE.exec(line);
+    if (fenceOpen?.[1]) {
+      openFence = closeFenceRe(fenceOpen[1]);
+      if (openFence) continue;
+    }
 
     const heading = HEADING_RE.exec(line);
     if (heading?.[1]) {
       current = {
         id: heading[1].toUpperCase(),
         status: null,
+        decision: null,
         reOpens: null,
         approvedBy: null,
         approvedAt: null,
       };
       entries.push(current);
+      continue;
+    }
+    if (ANY_HEADING_RE.test(line)) {
+      current = null;
       continue;
     }
     if (!current) continue;
@@ -171,6 +237,7 @@ export function parseDecisionRecordEntries(text: string): DecisionRecordEntry[] 
     const key = normalizeKey(field[1]);
     const value = cleanValue(field[2] ?? "");
     if (key === "status") current.status = value.toLowerCase();
+    else if (key === "decision") current.decision = value;
     else if (key === "re-opens") current.reOpens = value;
     else if (key === "approved-by") current.approvedBy = value;
     else if (key === "approved-at") current.approvedAt = value;

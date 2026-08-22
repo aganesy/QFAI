@@ -20,7 +20,10 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
-import { collectReOpenEntries } from "../../src/core/decisionRecords.js";
+import {
+  collectDeclaredDrHeadingIds,
+  collectReOpenEntries,
+} from "../../src/core/decisionRecords.js";
 import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
 const DELTA_BASE = [
@@ -46,7 +49,23 @@ const DELTA_BASE = [
 
 const APPROVED = ["- Approved by: ops-lead", "- Approved at: 2026-01-02T03:04:05Z"].join("\n");
 
-function reOpen(fields: string[]): string {
+/** `DELTA_BASE` plus the `## Rejected` back-references the records need. */
+function deltaFor(...ids: string[]): string {
+  return [DELTA_BASE, ...ids.map((id) => `- Re-opened by: ${id}`), ""].join("\n");
+}
+
+const RE_OPEN_ID = "DR-0001-0002";
+
+function reOpen(fields: string[], options: { id?: string; decision?: string | null } = {}): string {
+  const id = options.id ?? RE_OPEN_ID;
+  const decision =
+    options.decision === null
+      ? []
+      : [
+          `- Decision: ${
+            options.decision ?? "the size bound landed, so the growth objection no longer holds"
+          }`,
+        ];
   return [
     "# 07 Decisions",
     "",
@@ -57,10 +76,10 @@ function reOpen(fields: string[]): string {
     "- Status: rejected",
     "- Decision: do not cache in-process",
     "",
-    "### DR-0001-0002: re-adopt the in-process cache",
+    `### ${id}: re-adopt the in-process cache`,
     "",
     "- Status: re-open",
-    "- Decision: the size bound landed, so the growth objection no longer holds",
+    ...decision,
     ...fields,
     "",
   ].join("\n");
@@ -117,39 +136,179 @@ describe("the re-open record has a parsed shape", () => {
     ].join("\n");
     expect(collectReOpenEntries(template)).toEqual([]);
   });
+
+  it("ends the record at the next non-DR heading", () => {
+    const text = [
+      reOpen(["- Re-opens: DR-0001-0001", APPROVED]),
+      "## Re-open records",
+      "",
+      "- Re-opens: the prior DR-* this re-adopts",
+      "- Approved by: whoever signed it off",
+      "",
+    ].join("\n");
+    const entries = collectReOpenEntries(text);
+    expect(entries).toHaveLength(1);
+    // The prose below the records describes the same field names; without the
+    // heading ending the block it would overwrite what the record declared.
+    expect(entries[0]?.reOpens).toBe("DR-0001-0001");
+    expect(entries[0]?.approvedBy).toBe("ops-lead");
+  });
+
+  it("keeps a ``` sample nested in a ```` fence out of the records", () => {
+    const text = [
+      "````markdown",
+      "```",
+      "### DR-9999-9999: quoted sample",
+      "",
+      "- Status: re-open",
+      "```",
+      "````",
+      "",
+      "### DR-0001-0002: the real record",
+      "",
+      "- Status: re-open",
+    ].join("\n");
+    expect(collectReOpenEntries(text).map((entry) => entry.id)).toEqual(["DR-0001-0002"]);
+  });
+
+  it("resolves declarations against the layout's own Decisions file", async () => {
+    const root = path.join(
+      os.tmpdir(),
+      `qfai-reopen-layout-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+    );
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    try {
+      // `spec-pack` numbers the Decisions file 14, not 07.
+      const decisionsPath = path.join(specDir, "14_Decisions.md");
+      await writeFile(
+        decisionsPath,
+        "### DR-0001-0001: bound the cache\n\n- Status: rejected\n",
+        "utf-8",
+      );
+      const declared = await collectDeclaredDrHeadingIds(specDir, specsRoot, decisionsPath);
+      expect([...declared]).toContain("DR-0001-0001");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
-describe("QFAI-DECISION-001..003 gate the record itself", () => {
+describe("QFAI-DECISION-001..003, 005 gate the record itself", () => {
+  const delta = deltaFor(RE_OPEN_ID);
+
   it("reports a re-open with no prior DR", async () => {
-    await withSpec({ decisions: reOpen([APPROVED]) }, async (root) => {
+    await withSpec({ decisions: reOpen([APPROVED]), delta }, async (root) => {
       expect(await codes(root)).toContain("QFAI-DECISION-001");
     });
   });
 
   it("reports a re-open that names itself", async () => {
-    await withSpec({ decisions: reOpen(["- Re-opens: DR-0001-0002", APPROVED]) }, async (root) => {
+    await withSpec(
+      { decisions: reOpen([`- Re-opens: ${RE_OPEN_ID}`, APPROVED]), delta },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-001");
+      },
+    );
+  });
+
+  it("reports a re-open whose own id is off the DR-* scheme", async () => {
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED], { id: "DR-fake" }),
+        delta: deltaFor("DR-fake"),
+      },
+      async (root) => {
+        // Everything else about the record is well-formed, so without the id
+        // check it would pass every gate under an id no scheme allows.
+        expect(await codes(root)).toContain("QFAI-DECISION-001");
+      },
+    );
+  });
+
+  it("reports two re-opens that only cite each other", async () => {
+    const decisions = [
+      "# 07 Decisions",
+      "",
+      "## Decisions",
+      "",
+      "### DR-0001-0002: re-adopt the cache",
+      "",
+      "- Status: re-open",
+      "- Decision: the size bound landed",
+      "- Re-opens: DR-0001-0003",
+      APPROVED,
+      "",
+      "### DR-0001-0003: re-adopt the cache again",
+      "",
+      "- Status: re-open",
+      "- Decision: the bound is still there",
+      "- Re-opens: DR-0001-0002",
+      APPROVED,
+      "",
+    ].join("\n");
+    await withSpec({ decisions, delta: deltaFor("DR-0001-0002", "DR-0001-0003") }, async (root) => {
+      // Both ids are declared and neither is self-referential, but the loop
+      // contains no decision made before them.
       expect(await codes(root)).toContain("QFAI-DECISION-001");
     });
   });
 
   it("reports a prior DR that is declared nowhere", async () => {
-    await withSpec({ decisions: reOpen(["- Re-opens: DR-0009-0009", APPROVED]) }, async (root) => {
-      expect(await codes(root)).toContain("QFAI-DECISION-002");
-    });
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0009-0009", APPROVED]), delta },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-002");
+      },
+    );
   });
 
   it("reports a re-open whose approval is still the template placeholder", async () => {
     const fields = ["- Re-opens: DR-0001-0001", "- Approved by: `-`", "- Approved at: `-`"];
-    await withSpec({ decisions: reOpen(fields) }, async (root) => {
+    await withSpec({ decisions: reOpen(fields), delta }, async (root) => {
       expect(await codes(root)).toContain("QFAI-DECISION-003");
     });
   });
 
-  it("accepts a re-open that names a declared prior DR and an approver", async () => {
-    await withSpec({ decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]) }, async (root) => {
-      const found = await codes(root);
-      expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+  it("reports an `Approved at:` that is not an auditable instant", async () => {
+    const fields = ["- Re-opens: DR-0001-0001", "- Approved by: ops-lead", "- Approved at: 昨日"];
+    await withSpec({ decisions: reOpen(fields), delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-003");
     });
+  });
+
+  it("reports an `Approved at:` that names no real calendar day", async () => {
+    const fields = [
+      "- Re-opens: DR-0001-0001",
+      "- Approved by: ops-lead",
+      "- Approved at: 2026-02-31T00:00:00Z",
+    ];
+    await withSpec({ decisions: reOpen(fields), delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-003");
+    });
+  });
+
+  it("reports a re-open that never says what changed", async () => {
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED], { decision: null }),
+        delta,
+      },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-005");
+      },
+    );
+  });
+
+  it("accepts a re-open that names a declared prior DR and an approver", async () => {
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
   });
 });
 
@@ -164,10 +323,21 @@ describe("QFAI-DECISION-004 gates the delta back-reference", () => {
     );
   });
 
-  it("accepts a `Re-opened by:` that names the re-open record", async () => {
-    const delta = `${DELTA_BASE}\n- Re-opened by: DR-0001-0002\n`;
+  it("reports a re-open record the delta never points back at", async () => {
+    // The record claims the rejection was lifted while `## Rejected` still
+    // reads `DO NOT` with no `Re-opened by:` — the state the guard exists to
+    // make unreachable, and the direction the first pass did not check.
     await withSpec(
-      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta: DELTA_BASE },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-004");
+      },
+    );
+  });
+
+  it("accepts a `Re-opened by:` that names the re-open record", async () => {
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta: deltaFor(RE_OPEN_ID) },
       async (root) => {
         expect(await codes(root)).not.toContain("QFAI-DECISION-004");
       },

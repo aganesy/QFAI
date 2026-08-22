@@ -8,6 +8,7 @@ import {
   collectDeclaredDrHeadingIds,
   collectReOpenEntries,
   DR_ID_FORMAT,
+  isAuditableInstant,
   isPlaceholderValue,
   RE_OPEN_STATUS,
   type DecisionRecordEntry,
@@ -1472,7 +1473,7 @@ function validateDeltaGate(entry: SpecEntry, text: string): Issue[] {
   ];
 }
 
-/** `07_Decisions.md` entry shape checks for a `[RE-OPEN]` record. */
+/** Decisions-file entry shape checks for a `[RE-OPEN]` record. */
 const RE_OPEN_RULE = "specPack.decisionsReOpen";
 /** The `## Rejected` back-reference that points at such a record. */
 const RE_OPENED_BY_RULE = "specPack.deltaReOpenedBy";
@@ -1499,103 +1500,240 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
     return [];
   }
 
-  const declared = await collectDeclaredDrHeadingIds(entry.dir, specsRoot);
+  const context: ReOpenContext = {
+    // The layout's own Decisions file, not the layered name: `spec-pack`
+    // resolves `14_Decisions.md`, and searching `07_Decisions.md` there
+    // reported every correctly declared prior DR as missing.
+    declared: await collectDeclaredDrHeadingIds(entry.dir, specsRoot, entry.decisionsPath),
+    cyclic: collectCyclicReOpenIds(reOpens),
+    decisionsPath: entry.decisionsPath,
+    decisionsName: path.basename(entry.decisionsPath),
+  };
   const issues: Issue[] = [];
   for (const record of reOpens) {
-    issues.push(...validateReOpenRecord(record, declared, entry.decisionsPath));
+    issues.push(...validateReOpenRecord(record, context));
   }
+  issues.push(...validateReOpenBackReferences(entry, reOpens, backRefs, context.decisionsName));
+  return issues;
+}
+
+/** What the per-record checks need beyond the record itself. */
+type ReOpenContext = {
+  declared: Set<string>;
+  cyclic: Set<string>;
+  decisionsPath: string;
+  decisionsName: string;
+};
+
+/**
+ * The `Re-opens:` chains that never reach a decision made before them.
+ *
+ * Two `Status: re-open` records naming each other satisfy "declared" and
+ * "not myself" while no prior decision exists anywhere in the loop, so the
+ * pair manufactures its own justification. A chain that leaves the re-open
+ * records — reaching a `rejected` or `accepted` entry — terminates and is fine.
+ */
+function collectCyclicReOpenIds(records: DecisionRecordEntry[]): Set<string> {
+  const target = new Map<string, string>();
+  for (const record of records) {
+    const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+    if (prior.length > 0) target.set(record.id, prior.toUpperCase());
+  }
+  const cyclic = new Set<string>();
+  for (const id of target.keys()) {
+    const seen = new Set<string>([id]);
+    let cursor = target.get(id);
+    while (cursor !== undefined) {
+      if (seen.has(cursor)) {
+        cyclic.add(id);
+        break;
+      }
+      seen.add(cursor);
+      cursor = target.get(cursor);
+    }
+  }
+  return cyclic;
+}
+
+/**
+ * The four things the guard's own sentence demands of a re-open: an id in the
+ * `DR-*` scheme, the prior `DR-*` it reconsiders, what changed since the
+ * rejection, and an explicit approval.
+ */
+function validateReOpenRecord(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  return [
+    ...validateReOpenIdScheme(record, context),
+    ...validateReOpensField(record, context),
+    ...validateReOpenRationale(record, context),
+    ...validateReOpenApproval(record, context),
+  ];
+}
+
+/**
+ * The record's own id obeys the `DR-*` scheme.
+ *
+ * The heading pattern is deliberately loose so a mistyped id still surfaces as
+ * a record rather than vanishing; without this check `### DR-fake` would carry
+ * a correct prior DR and approval past every other gate, and a delta could
+ * point back at it by the same off-scheme id.
+ */
+function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  if (DR_ID_FORMAT.test(record.id)) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-DECISION-001",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が DR-NNNN / DR-NNNN-MMMM の形式ではありません。`,
+      "error",
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`### DR-NNNN-MMMM` の形式で見出しを書き直し、delta の `Re-opened by:` も同じ ID に合わせてください。",
+    ),
+  ];
+}
+
+/** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
+function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  const issues: Issue[] = [];
+  const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
+  const cyclic = context.cyclic.has(record.id);
+
+  if (!DR_ID_FORMAT.test(prior) || prior.toUpperCase() === record.id || cyclic) {
+    const reason = cyclic
+      ? `\`Re-opens:\` の参照が循環しており、先行する決定に到達しません (値: ${prior || "(なし)"})`
+      : `再考の対象となる先行 DR を \`Re-opens:\` が指していません (値: ${prior || "(なし)"})`;
+    issues.push(
+      issue(
+        "QFAI-DECISION-001",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
+        "error",
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [record.id],
+        "canonical",
+        "`Re-opens:` に先行する Decision Record の ID を DR-NNNN もしくは DR-NNNN-MMMM の形式で記載してください（自分自身も、自分を指し返す re-open も指せません）。",
+      ),
+    );
+  } else if (!context.declared.has(prior.toUpperCase())) {
+    issues.push(
+      issue(
+        "QFAI-DECISION-002",
+        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。`,
+        "error",
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [record.id, prior],
+        "canonical",
+        `先行 Decision Record を spec の ${context.decisionsName}（または _policies/08_Decisions.md）に宣言してから再オープンしてください。`,
+      ),
+    );
+  }
+
+  return issues;
+}
+
+/**
+ * A re-open records what changed since the rejection.
+ *
+ * The guard's sentence and both templates require it: a re-open that only
+ * repeats the original argument is the reintroduction the guard exists to stop,
+ * and without `Decision:` there is nothing to read it from.
+ */
+function validateReOpenRationale(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  if (!isPlaceholderValue(record.decision)) {
+    return [];
+  }
+  return [
+    issue(
+      "QFAI-DECISION-005",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。`,
+      "error",
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`Decision:` に、却下の根拠を無効化した変化（何が変わって再採用できるのか）を記載してください。",
+    ),
+  ];
+}
+
+/** A re-open carries the explicit, auditable approval the guard requires. */
+function validateReOpenApproval(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  const missingApprover = isPlaceholderValue(record.approvedBy);
+  // Non-empty is not enough: `Approved at: yesterday` records that someone
+  // typed something, not when the re-open was approved.
+  const badInstant = !isAuditableInstant(record.approvedAt);
+  if (!missingApprover && !badInstant) {
+    return [];
+  }
+  const reason = missingApprover
+    ? "明示的な承認 (`Approved by` / `Approved at`) がありません"
+    : `\`Approved at: ${(record.approvedAt ?? "").trim() || "(なし)"}\` が YYYY-MM-DDThh:mm:ssZ 形式の実在する時刻ではありません`;
+  return [
+    issue(
+      "QFAI-DECISION-003",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
+      "error",
+      context.decisionsPath,
+      RE_OPEN_RULE,
+      [record.id],
+      "canonical",
+      "`Approved by:` に承認者、`Approved at:` に YYYY-MM-DDThh:mm:ssZ 形式（UTC）の承認時刻を記載してください。承認前は `Status: proposed` のままにします。",
+    ),
+  ];
+}
+
+/**
+ * The delta's `## Rejected` and the re-open record point at each other.
+ *
+ * Both directions are required, not one: a re-open record whose delta entry
+ * still reads `Re-opened by: -` leaves the rejection standing as `DO NOT` while
+ * the record claims it was lifted, which is exactly the state the guard is
+ * meant to make unreachable.
+ */
+function validateReOpenBackReferences(
+  entry: SpecEntry,
+  reOpens: DecisionRecordEntry[],
+  backRefs: string[],
+  decisionsName: string,
+): Issue[] {
+  const issues: Issue[] = [];
   const reOpenIds = new Set(reOpens.map((record) => record.id));
+  const referenced = new Set(backRefs.map((ref) => ref.toUpperCase()));
+  const deltaFile = entry.deltaPath.length > 0 ? entry.deltaPath : entry.decisionsPath;
   for (const ref of backRefs) {
     if (reOpenIds.has(ref.toUpperCase())) continue;
     issues.push(
       issue(
         "QFAI-DECISION-004",
-        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の 07_Decisions.md にある \`Status: re-open\` の Decision Record に解決しません。`,
+        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。`,
         "error",
-        entry.deltaPath,
+        deltaFile,
         RE_OPENED_BY_RULE,
         [ref],
         "canonical",
-        "07_Decisions.md に `Status: re-open` の DR エントリを追加し、`Re-opened by:` からその ID を参照してください。再採用を取り消す場合は `Re-opened by:` を `-` に戻します。",
+        `${decisionsName} に \`Status: re-open\` の DR エントリを追加し、\`Re-opened by:\` からその ID を参照してください。再採用を取り消す場合は \`Re-opened by:\` を \`-\` に戻します。`,
       ),
     );
   }
-  return issues;
-}
-
-/**
- * The three things the guard's own sentence demands of a re-open: the prior
- * `DR-*` it reconsiders, that the reference resolves, and an explicit approval.
- */
-function validateReOpenRecord(
-  record: DecisionRecordEntry,
-  declared: Set<string>,
-  decisionsPath: string,
-): Issue[] {
-  return [
-    ...validateReOpensField(record, declared, decisionsPath),
-    ...validateReOpenApproval(record, decisionsPath),
-  ];
-}
-
-/** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
-function validateReOpensField(
-  record: DecisionRecordEntry,
-  declared: Set<string>,
-  decisionsPath: string,
-): Issue[] {
-  const issues: Issue[] = [];
-  const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
-
-  if (!DR_ID_FORMAT.test(prior) || prior.toUpperCase() === record.id) {
+  for (const record of reOpens) {
+    if (referenced.has(record.id)) continue;
     issues.push(
       issue(
-        "QFAI-DECISION-001",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、再考の対象となる先行 DR を \`Re-opens:\` が指していません (値: ${prior || "(なし)"})。`,
+        "QFAI-DECISION-004",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。`,
         "error",
-        decisionsPath,
-        RE_OPEN_RULE,
+        deltaFile,
+        RE_OPENED_BY_RULE,
         [record.id],
         "canonical",
-        "`Re-opens:` に先行する Decision Record の ID を DR-NNNN もしくは DR-NNNN-MMMM の形式で記載してください（自分自身は指せません）。",
-      ),
-    );
-  } else if (!declared.has(prior.toUpperCase())) {
-    issues.push(
-      issue(
-        "QFAI-DECISION-002",
-        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が 07_Decisions.md にも _policies/08_Decisions.md にもありません。`,
-        "error",
-        decisionsPath,
-        RE_OPEN_RULE,
-        [record.id, prior],
-        "canonical",
-        "先行 Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に宣言してから再オープンしてください。",
+        `delta の \`## Rejected\` で再採用した候補の \`Re-opened by:\` に \`${record.id}\` を記載してください。再採用しないなら ${decisionsName} の \`Status:\` を \`proposed\` に戻します。`,
       ),
     );
   }
-
-  return issues;
-}
-
-/** A re-open carries the explicit approval the guard requires. */
-function validateReOpenApproval(record: DecisionRecordEntry, decisionsPath: string): Issue[] {
-  const issues: Issue[] = [];
-  if (isPlaceholderValue(record.approvedBy) || isPlaceholderValue(record.approvedAt)) {
-    issues.push(
-      issue(
-        "QFAI-DECISION-003",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、明示的な承認 (\`Approved by\` / \`Approved at\`) がありません。`,
-        "error",
-        decisionsPath,
-        RE_OPEN_RULE,
-        [record.id],
-        "canonical",
-        "`Approved by:` に承認者、`Approved at:` に YYYY-MM-DDThh:mm:ssZ 形式の承認時刻を記載してください。承認前は `Status: proposed` のままにします。",
-      ),
-    );
-  }
-
   return issues;
 }
 

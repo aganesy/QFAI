@@ -49,6 +49,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "QFAI-DECISION-002",
       "QFAI-DECISION-003",
       "QFAI-DECISION-004",
+      "QFAI-DECISION-005",
     ]) {
       expect(decisions).toContain(code);
     }
