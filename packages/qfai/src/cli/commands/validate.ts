@@ -430,7 +430,8 @@ const GATE_GROUP_FAMILIES = {
   "traceability-ledger": ["QFAI-TRACE-002"],
   // Split from the group above because `sdd` deliberately does not run it: at
   // that gate the linked implementation is untouched by design. `QFAI-TRACE-003`
-  // only ever reports that *this* check could not get a diff, so it travels
+  // only ever reports that *this* check could not run — no diff at all, or a
+  // spec the diff names that the working tree no longer carries — so it travels
   // with it.
   "traceability-impl-drift": ["QFAI-TRACE-001", "QFAI-TRACE-003"],
 } as const satisfies Record<string, readonly string[]>;

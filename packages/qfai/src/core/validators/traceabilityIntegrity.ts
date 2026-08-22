@@ -128,6 +128,27 @@ async function listLayeredSpecs(specsDir: string): Promise<LayeredSpec[]> {
   }
 }
 
+/**
+ * Spec ids the diff names but the working tree no longer carries as a layered
+ * spec — a whole-spec `DELETE`, a rename, or a conversion to the spec-pack
+ * layout.
+ *
+ * The scan enumerates the working tree, so such a spec is otherwise invisible:
+ * its ledger is gone with it, and the `QFAI-TRACE-001` pass that used to run
+ * off the diff-derived id list silently stops happening. Reading the base
+ * branch's copy of the ledger is a different (and much larger) feature — this
+ * only refuses to let the check disappear without a word, the same contract
+ * `QFAI-TRACE-003` already carries for an unavailable diff.
+ *
+ * Sorted for a stable finding order; `changedSpecIds` comes out in git's order.
+ */
+function reportUninspectableSpecIds(
+  changedSpecIds: ReadonlySet<string>,
+  presentSpecIds: ReadonlySet<string>,
+): string[] {
+  return [...changedSpecIds].filter((specId) => !presentSpecIds.has(specId)).sort();
+}
+
 type LedgerRead =
   | { readonly ok: true; readonly entries: LedgerEntry[] }
   | { readonly ok: false; readonly issue: Issue };
@@ -262,7 +283,7 @@ export async function validateTraceabilityIntegrity(
       issues.push(
         issue(
           "QFAI-TRACE-003",
-          `Could not diff against "${baseBranch}", so the BR/AC to implementation integrity check (QFAI-TRACE-001) was skipped for every spec. Fetch the base ref (a shallow CI clone does not carry it) or set validation baseBranch in qfai.config.yaml. Ledger presence is still checked.`,
+          `Could not diff against "${baseBranch}", so the BR/AC to implementation integrity check (QFAI-TRACE-001) was skipped for every spec. Fetch the base ref (a shallow CI clone does not carry it) or set the top-level baseBranch key in qfai.config.yaml (it is read from the document root, not from under validation). Ledger presence is still checked.`,
           "info",
           undefined,
           "traceability.integrity.diffUnavailable",
@@ -271,7 +292,22 @@ export async function validateTraceabilityIntegrity(
     }
   }
 
-  for (const { specId, ledgerPath } of await listLayeredSpecs(specsDir)) {
+  const layeredSpecs = await listLayeredSpecs(specsDir);
+  const presentSpecIds = new Set(layeredSpecs.map((spec) => spec.specId));
+
+  for (const specId of reportUninspectableSpecIds(changedSpecIds, presentSpecIds)) {
+    issues.push(
+      issue(
+        "QFAI-TRACE-003",
+        `Spec ${specId} has BR/AC changes in the diff against "${baseBranch}" but no layered spec directory in the working tree, so its ledger cannot be read and the BR/AC to implementation integrity check (QFAI-TRACE-001) could not run for it. If the spec was deleted on purpose this needs no action; if it was renamed or converted, re-check the implementation links the old ledger carried.`,
+        "info",
+        path.join(config.paths.specsDir, specId),
+        "traceability.integrity.specNotInWorkingTree",
+      ),
+    );
+  }
+
+  for (const { specId, ledgerPath } of layeredSpecs) {
     const ledger = await readSpecLedger(specId, ledgerPath);
     if (!ledger.ok) {
       issues.push(ledger.issue);

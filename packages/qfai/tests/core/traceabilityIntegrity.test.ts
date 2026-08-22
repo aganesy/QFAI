@@ -486,6 +486,9 @@ describe("an unavailable diff is reported, not swallowed", () => {
     expect(skipped?.severity).toBe("info");
     expect(skipped?.rule).toBe("traceability.integrity.diffUnavailable");
     expect(skipped?.message).toContain("origin/main");
+    // `baseBranch` is normalized from the document root (config.ts#306), never
+    // from `validation`, so the repair instruction has to say top level.
+    expect(skipped?.message).toContain("top-level baseBranch");
     // Ledger presence does not depend on the diff, so it is still reported.
     expect(issues.some((entry) => entry.code === "QFAI-TRACE-002")).toBe(true);
   });
@@ -594,6 +597,48 @@ describe("the unconditional scan stays inside its own layout and profile", () =>
     expect(issues).toHaveLength(1);
     expect(issues[0]?.code).toBe("QFAI-TRACE-002");
     expect(issues[0]?.rule).toBe("traceability.integrity.ledgerMissing");
+  });
+
+  it("reports a spec the diff names but the working tree no longer carries", async () => {
+    // Whole-spec DELETE: the diff still shows 04_Business-Rules.md, but the
+    // directory (and the ledger inside it) is gone, so nothing on disk can be
+    // enumerated for it. Silence here would let both QFAI-TRACE-001 and
+    // QFAI-TRACE-002 vanish for the deleted spec.
+    await seedLayeredSpec(path.join(specsRoot, "spec-0001"));
+    vi.mocked(execFileSync).mockReturnValue(
+      [".qfai/specs/spec-0002/04_Business-Rules.md", ".qfai/specs/spec-0002/01_Spec.md"].join("\n"),
+    );
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    const removed = issues.find(
+      (entry) => entry.rule === "traceability.integrity.specNotInWorkingTree",
+    );
+    expect(removed?.code).toBe("QFAI-TRACE-003");
+    expect(removed?.severity).toBe("info");
+    expect(removed?.message).toContain("spec-0002");
+    expect(removed?.file).toContain("spec-0002");
+  });
+
+  it("does not report a spec the diff names and the working tree still carries", async () => {
+    const specDir = path.join(specsRoot, "spec-0001");
+    await seedLayeredSpec(specDir);
+    await writeFile(
+      path.join(specDir, "16_Traceability-ledger.md"),
+      [
+        "# Traceability Ledger",
+        "",
+        "| BR/AC | Implementation File | Test File |",
+        "| --- | --- | --- |",
+        "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      ].join("\n"),
+      "utf-8",
+    );
+    vi.mocked(execFileSync).mockReturnValue(
+      [".qfai/specs/spec-0001/04_Business-Rules.md", "src/core/someModule.ts"].join("\n"),
+    );
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toEqual([]);
   });
 
   it("does not emit QFAI-TRACE-003 for sdd when git cannot answer", async () => {

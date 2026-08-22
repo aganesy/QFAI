@@ -237,7 +237,10 @@ Template: `templates/specs/spec/16_Traceability-ledger.md`.
   the `--profile sdd` gate the linked code is untouched by design.
 - `QFAI-TRACE-001` needs the branch diff. When git cannot produce one (base ref absent, shallow CI
   clone, not a repository) `QFAI-TRACE-003` (`info`) says so and that check is skipped for every
-  spec; fetch the base ref or set `baseBranch` in `qfai.config.yaml`.
+  spec; fetch the base ref or set `baseBranch` at the **top level** of `qfai.config.yaml` (it is not
+  read from under `validation`). `QFAI-TRACE-003` also fires per spec when the diff carries BR/AC
+  changes for a spec the working tree no longer holds as layered (whole-spec `DELETE`, rename,
+  conversion): the ledger went with it, so the check is un-runnable rather than passing.
 - A ledger path that is not a regular file (FIFO, socket, device, directory) is never opened: it is
   reported as `QFAI-TRACE-002` and that spec's integrity check is skipped.
 - Schema for the **layered** layout — the first Markdown table is the one read; header needs ≥3
