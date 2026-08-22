@@ -179,15 +179,18 @@ successively more of it:
   **It does not, however, give option 2 a second independent failure, and an earlier version of this
   paragraph claimed it did.** P1d's fourth pass checked: all seven non-`spec-0017` TCs are themselves
   `todo`, so option 2 as worded — an exemption for _a spec's_ own in-flight rows, not this spec's —
-  is general and would clear `QFAI-ATDD-112` outright. Option 2 still fails, by the **third** reason
-  given above: `build` runs the profile UNSCOPED, where `QFAI-ATDD-112` names fifteen TCs across four
-  specs, so an exemption for one spec's in-flight rows clears none of the other three specs' and the gate
-  this option exists to clear stays red.
+  is general and would clear `QFAI-ATDD-112` outright.
 
-  **Corrected 2026-08-22, after round 16.** This cited the FIRST reason — that `QFAI-ATDD-111` has no
-  ledger rows to exempt — and the round-15 correction two bullets up withdrew that reason's premise, so
-  the sentence keeping option 2 rejected pointed at a bullet that now supports it. The option is not
-  reintroduced and the decision does not change; the ground does.
+  **Open as of 2026-08-22, after round 17: this option's rejection has no surviving stated ground.** It
+  cited the FIRST reason above — that `QFAI-ATDD-111` has no ledger rows to exempt — and round 15's
+  correction withdrew that reason's premise, because `US-0017-0007` is covered and the rule no longer
+  fires for this spec. Round 16 substituted the unscoped strand, and round 17 measured that too: all
+  fifteen TCs `QFAI-ATDD-112` names unscoped are `todo` or `blocked`, so the exemption clears the rule
+  outright rather than leaving other specs behind.
+
+  The `/qfai-atdd` stage recorded this rather than choosing a new ground, because the option is this CR's
+  to decide and the CR is `/qfai-implement`'s record. What is owed is either a ground that survives the
+  two corrections or a re-opening.
 
 Recorded so that no option here is read as sufficient by itself.
 

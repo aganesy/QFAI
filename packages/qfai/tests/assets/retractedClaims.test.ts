@@ -110,6 +110,10 @@ interface Retracted {
  */
 const RETRACTED: readonly Retracted[] = [
   {
+    claim: "four of the eight are refactor in the ledger",
+    why: "all four are blocked with a Blocked-By and have been for 285 commits; the five refactor rows that CR holds are TDD-0052/-0066/-0067/-0074/-0075, none of them among the eight (round 14 completion B2, still standing at round 17)",
+  },
+  {
     claim: "line endings and trailing whitespace normalized",
     why: "the trailing-whitespace strip was the second collision and the line-ending fold the third; neither digest normalizes anything now (round 16 completion B3)",
   },

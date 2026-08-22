@@ -131,15 +131,21 @@ The two that need their reasoning stated rather than asserted:
   the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
   a `Blocked-By`, no gate was narrowed, no waiver was requested, and nothing was merged.
 
-  **Option 2's ground has moved twice and this sentence followed it once.** Its second stated reason was
-  withdrawn during that CR's own review, leaving it rejected on its first — that `QFAI-ATDD-111` has no
-  ledger rows to exempt. Round 15 then corrected the bullet that first reason cites, because
-  `US-0017-0007` is covered and `QFAI-ATDD-111` no longer fires for this spec at all; round 16 found this
-  sentence still pointing at it, so a reader following the citation landed on a bullet that supports the
-  option rather than rejecting it. **The ground that survives both corrections is the unscoped one**:
-  `build` runs the profile unscoped, where `QFAI-ATDD-112` names fifteen TCs across four specs and an
-  exemption for one spec's in-flight rows clears none of the other three specs' — so the gate the option
-  exists to clear stays red. Option 2 is not reintroduced; what changed is which sentence rejects it.
+  **Option 2 has lost every stated ground it had, and this stage cannot supply another.** Its second
+  reason was withdrawn during that CR's own review. Its first — that `QFAI-ATDD-111` has no ledger rows
+  to exempt — was withdrawn by round 15's correction, because `US-0017-0007` is covered and the rule no
+  longer fires for this spec. Round 16 offered a third, the unscoped strand, and round 17 refuted that
+  too by measuring it: all fifteen TCs `QFAI-ATDD-112` names unscoped are `todo` or `blocked`, so an
+  exemption for a spec's in-flight rows clears the rule outright rather than leaving other specs behind.
+
+  **So the honest state is that option 2's rejection is unsupported, not that option 2 is right.** The
+  option is `/qfai-implement`'s to decide and the CR is its record; this stage may not re-open it, and it
+  may not leave a `No RE-OPEN is required` standing on three grounds that are gone. It is handed over as
+  an open item: whoever owns `CR-20260820-0012` owes either a ground that survives or a re-opening.
+
+  Two of the three withdrawals were this stage's own corrections, each correct in itself and each
+  removing the support for a sentence elsewhere. That is the cost of correcting a record in place, and
+  the reason a correction has to be followed to whatever cites it.
 
 **No RE-OPEN is required.**
 
@@ -1782,10 +1788,15 @@ something is written, believed without reading it.
    scoped gate this stage runs sees the 8; `build` runs the profile **unscoped** and sees all 15, so eight
    is the number this stage can act on and fifteen is the number a gate reports.
 
-   The eight are NOT "the 6 `blocked` and 2 `todo` rows here", which is how this item read for several
-   rounds: § "Ledger rows advanced" measures that false in both directions — four of the eight are
-   `refactor` in the ledger while `CR-20260820-0007` holds them, and `TDD-0070` is named in no blocked set
-   at all.
+   **The eight ARE the 6 `blocked` and 2 `todo` rows**, one for one, derived from the ledger's own
+   74 / 6 / 2 tally. This item said the opposite for several rounds, on the ground that "four of the eight
+   are `refactor` in the ledger while `CR-20260820-0007` holds them" — which round 14 measured false and
+   corrected in the section next door, leaving this copy standing until round 17's gate found it. The four
+   rows in question are `blocked` with a `Blocked-By`, and have been for 285 commits.
+
+   What the retracted sentence was pointing at is real and belongs to five OTHER rows: `TDD-0052`,
+   `-0066`, `-0067`, `-0074` and `-0075` are `refactor` while `CR-20260820-0007` holds them, and none of
+   the five is among the eight.
 
    Of the two `todo` rows, **only `TDD-0070` is on branch 3** (`DR-0017-0010`, PASS at P1d pass 6).
    `TDD-0069` is `blocked` on `CR-20260820-0012` and takes **no** RED-provenance branch at all: a
@@ -2080,7 +2091,7 @@ pnpm verify:pack                                exit 0
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 error=49 (see § "The full profile")
+node ... validate --profile full                 error=48 with the round sealed; see § "The full profile"
 ```
 
 **`--project assets` does not exist**, and an earlier version of this block named it. The workspace
@@ -2277,6 +2288,12 @@ differ.
 | 15    | `implementation-reviewer` | REVISE  |       15 | B1-B4, M1-M2, m1-m6, A1-A3 |  15 |
 | 15    | `completion-reviewer`     | REVISE  |       14 | B1-B5, M1-M3, m1-m4, A1-A2 |  14 |
 | 15    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B2, M1-M4, m1-m3, A1 |     10 |
+| 16    | `implementation-reviewer` | REVISE  |        8 | B1-B4, M1, m1, A1-A2   |       8 |
+| 16    | `completion-reviewer`     | REVISE  |       13 | B1-B5, M1-M5, m1-m2, A1 |    13 |
+| 16    | `qa-gatekeeper` (stage)   | REVISE  |        9 | B1-B2, M1-M2, m1-m3, A1-A2 |  9 |
+| 17    | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M3, m1-m2, A1 |    10 |
+| 17    | `completion-reviewer`     | REVISE  |       11 | B1-B5, M1-M4, m1, A1   |      11 |
+| 17    | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1, M1-M2, m1-m2, A1   |       6 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2374,20 +2391,78 @@ fail from outside the phrasing, the coordinates or the directory it was written 
 floor, a roster and a wider file list, and each was falsified in the direction that matters before it was
 kept.
 
+### Round 17, and the second time this stage edited the subject mid-round
+
+**The stage broke its own rule again.** Round 12 established that a finding measured against a
+half-applied tree is indistinguishable from a false one, and this record wrote that up as a defect in how
+the stage runs rounds. It happened a second time here: while `completion-reviewer` was still measuring,
+two files carried an uncommitted change of mine for part of the round. I disclosed it unprompted, reverted
+to HEAD, and asked the reviewer to re-take anything affected and to report it rather than soften it. It
+re-took every affected measurement at the clean tree and all results were identical, which is luck rather
+than diligence — the point of the rule is that the reviewer should not have to.
+
+The round's own findings, against work the stage did in round 16 and against two things it did unprompted:
+
+**Two walks disagreed about what a quote is, three ways**, and each ran a build with the scan clean. ANSI-C
+quoting (`$'a\''` is two characters, and the escaped quote does not close the string) was modelled by
+neither. `codeMask` had no model of `$( … )`, so `"$(echo ")")"` put a `)` on a code position and a real
+pipe stopped splitting — one quotation mark decided the verdict, and `commandsOf` had entered substitutions
+all along. And `<<\EOF` is bash's third spelling of a quoted delimiter, which the walk did not unquote, so
+the closer never matched — whereupon the rule answered a missing closer by treating the whole rest of the
+body as data. **Fail-open, in the one place this file exists to be fail-closed.**
+
+**The scope gap both reviewers predicted was real and the gate demonstrated it.** Every pin read
+`.github/workflows/**`; `qfai init` writes more. A planted `package.json` with a `preinstall` and an
+`.npmrc` reached the adopter root, the digest-approved install ran them, and the whole suite stayed green.
+The one thing that caught a first variant was eslint's `no-require-imports` — a rule about how the planted
+file was written — and inlining the payload evaded it.
+
+**And the shape pins read a parsed document, which is not an identity.** Eight YAML spellings of an empty
+value collapse onto one `null`, a non-mapping step is invisible to `isRecord`, number spellings collapse:
+two files that differ can serialize the same. The boundary is the bytes now, and the shapes say which part
+moved.
+
+**Three of round 16's guard repairs failed again, all in one shape** — the check reads a wider region than
+the claim it makes. The corpus count searched the whole file for a numeral three words from the word; class
+C's roster built its named-cell set from the whole matrix; the Delta tie read any pipe-line in the section.
+That shape is now the stated failure mode of the family, and each repair is scoped to the region its claim
+is about.
+
+**Two doubled escapes were found this round by a method worth keeping**: extract the regex from the file's
+own bytes and evaluate it, rather than reading it. `\*\*` is an escaped backslash and a quantifier, not two
+asterisks; a `]` escape inside a character class closes the class. Both lines read correctly.
+
+**And three of the round's findings were against this stage's own corrections.** The `revision_form` repair
+was a fix and this record called it an unsettleable open question — the contract settles it in one sentence,
+three directories away, which nobody had looked for. The `--profile full` figure was measured before the
+repair that changed it. And option 2's rejection lost its third ground, after this stage supplied the third
+to replace one its own correction had removed. Correcting a record in place costs following the correction
+to whatever cites it, and twice now that cost was paid by the next round instead.
+
 ### The full profile
 
-`validate --profile full` reports **`error=49`** at this stage's HEAD, and `build` runs that profile.
+**`validate --profile full` has no single number, and that is the finding.** `build` runs the profile,
+and three of its rules — `QFAI-REVIEW-004`, `-005`, `-007` — report against the review pack this stage
+has open. So the count tracks the ROUND's state, not the revision's: **48 with the current round sealed,
+50 at a revision that has just opened a pack, 49 once reports land in it and before a `summary.json`
+does.** Round 16 recorded 49 as a property of the tree; round 17's gate measured 50 at the committed
+revision and reconstructed the sequence from the run-log timestamps.
+
+A number that moves three ways without the subject changing is not a measurement of the subject, so what
+is recorded here is the rule and the sealed value. **48 with this round sealed**, re-measured at that
+state.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
 and never re-run, in the block whose own first sentence says it is re-measured rather than carried.
 
 **Round 15 then recorded 50, and round 16 found that wrong for a reason worth stating: the same commit
 measured the number and removed one of the items that made it up.** I ran the profile, saw 45
 `QFAI-REVIEW-007`, fixed the one of the forty-five this stage had written, and wrote the pre-fix figure
-down as current — "error=50", at five sites. Measuring before repairing and recording after is a sequence that
+down as current — "error=50", at three sites, which round 17 corrected from the "five" this sentence
+claimed. Measuring before repairing and recording after is a sequence that
 produces a true measurement of a tree that no longer exists, and nothing in this record's derived-count
 machinery reaches the unscoped profile.
 
-The forty-nine, by rule:
+The forty-eight, by rule, with the round sealed:
 
 ```text
 QFAI-REVIEW-007   44   summary.json missing or misusing `revision_form`
@@ -2406,18 +2481,24 @@ admit — and it is corrected and the pack re-sealed, which is what took the cou
 forty-four are packs other stages wrote: a cross-spec obligation rather than this stage's work, recorded
 with its number per this skill's CRITICAL CONSTRAINTS rather than waived.
 
-**What that correction did not do is make the field true.** `revision_form` admits `content-hash` or
-`legacy`, and what this stage's packs record under it is a short git commit sha, unchanged by the edit —
-so the repair moved the pack from a value the schema rejects to a value the schema accepts and the
-content does not support. Round 16 measured that every one of this stage's packs is in that state, and
-so is every other pack in the repository that passes the rule. Either the field's `content-hash` is
-meant to cover a commit sha, in which case the label is right and nothing more is owed, or the whole
-repository mislabels it — and this stage cannot settle which, because the contract is not this spec's.
-Recorded as an open question rather than reported as a fix, which is what the first version of this
-paragraph did.
+**That correction was a fix, and the paragraph that called it a relabel was wrong.**
+`references/review-artifact-layout.md` settles the field in one sentence: `revision_form: "content-hash"`
+with `revision` given "as a git rev or `working-tree+<content hash>`". A short commit sha is the first of
+those two forms, so the round-16 edit moved the pack from a value the schema rejects to the value the
+contract prescribes.
 
-`QFAI-REVIEW-004` / `-005` are against **this stage's own in-flight review pack** — a pack cannot satisfy
-the layout contract until its last reviewer has landed and it has been sealed. Round 4's gatekeeper found
+This paragraph said the opposite for a round — that the repair had relabelled rather than corrected, and
+that this stage could not settle which reading was right "because the contract is not this spec's". The
+contract is three directories away and says so plainly. **"I cannot settle this" is a claim, and it needs
+the same evidence as any other**: round 17's gate found the sentence by reading the file this stage had
+declined to look for. Recorded rather than deleted, because the failure is not the wrong answer but the
+decision to record an open question instead of spending five minutes closing it.
+
+`QFAI-REVIEW-004` / `-005` are against **a review pack that is not yet sealed** — a pack cannot satisfy
+the layout contract until its last reviewer has landed and it has been sealed. Round 17's gate found this
+sentence attributing them to "this stage's own in-flight pack" while the pack they named was round 13's,
+abandoned since `b62adfa1` and never sealed because its three reviewers died before writing: a pack that
+clears itself never. It is sealed now, which is why the count above is 48. Round 4's gatekeeper found
 this undisclosed, and it is the same class of gap as the two packs that were missing `summary.json`:
 masked in CI only because the `tdd` step fails first on the scoped gate's error, which was `error=2` when
 this was written and is `error=1` now.
@@ -2609,7 +2690,7 @@ Review pack seal:  b96d2d5d521f4ec7dfcf03dabca22537cae4c1eb56ff8e46fe36841fd4185
 Review pack:       .qfai/review/review-20260822090000000/            (round 16 — stage gates only)
 Review pack seal:  b310c5eab9dde8fb57b4430940877610e58def51f34acd3cf9224689b4324f28
 Review pack:       .qfai/review/review-20260822120000000/            (round 17 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  bcfe4dd3586a4e3d14d07b369ba44bdcab37a072ee901f7dfaa7f9fbaa5dce15
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
