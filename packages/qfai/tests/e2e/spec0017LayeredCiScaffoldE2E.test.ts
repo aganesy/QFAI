@@ -41,7 +41,7 @@
  * spec's own integration slice was pushed past its timeout by exactly that shape.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, readdir, rm, access, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, readdir, rm, stat, access, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -56,8 +56,9 @@ import {
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
   ALLOWED_WORKFLOW_FILES,
-  INIT_MUST_NOT_SHIP,
+  initMustNotShip,
   INIT_INSTRUCTION_TREES,
+  ALLOWED_INIT_CONTENT,
   ALLOWED_INIT_PATHS,
   ALLOWED_WORKFLOW_SHAPE,
   ALLOWED_JOB_SHAPE,
@@ -524,6 +525,7 @@ describe(
       // a file a package manager or a shell executes.
       const root = await project();
       const shipped: string[] = [];
+      const notFiles: string[] = [];
       const walk = async (at: string): Promise<void> => {
         for (const entry of await readdir(at, { withFileTypes: true })) {
           const full = path.join(at, entry.name);
@@ -531,13 +533,37 @@ describe(
             await walk(full);
             continue;
           }
-          shipped.push(path.relative(root, full).split(path.sep).join("/"));
+          const relative = path.relative(root, full).split(path.sep).join("/");
+          // A symbolic link is neither a file nor a directory to `readdir`, and reading one as a file
+          // throws — which is how this was found. `qfai init` ships seventy of them deliberately: each
+          // agent's skills directory is a link into `.qfai/assistant/skills/`. So a link is RESOLVED
+          // rather than refused: one pointing at a directory is covered where that directory is walked,
+          // and one pointing at a file is judged on the file's kind, because what runs is the target.
+          if (!entry.isFile()) {
+            const target = await stat(full).catch(() => undefined);
+            if (target === undefined) {
+              notFiles.push(`${relative}: a link that resolves to nothing`);
+              continue;
+            }
+            if (target.isDirectory()) continue;
+          }
+          shipped.push(relative);
         }
       };
       await walk(root);
       expect(shipped.length, "the init tree must have files to read").toBeGreaterThan(20);
+      expect
+        .soft(notFiles, "`qfai init` writes files, and anything else is a channel nobody reviewed")
+        .toEqual([]);
 
-      const executable = shipped.filter((file) => INIT_MUST_NOT_SHIP.test(file));
+      // By KIND, which means reading each file rather than its name: a hook script has no extension,
+      // and round 18's gate shipped one — `#!/bin/sh`, mode 0755 — through the name-only version.
+      const executable: string[] = [];
+      for (const file of shipped) {
+        const full = path.join(root, file);
+        const why = initMustNotShip(file, await readFile(full), (await stat(full)).mode);
+        if (why !== undefined) executable.push(`${file}: ${why}`);
+      }
       expect
         .soft(
           executable,
@@ -560,6 +586,18 @@ describe(
           [...ALLOWED_INIT_PATHS].filter((file) => !outsideTrees.includes(file)).sort(),
           "a reviewed init path that no longer arrives",
         )
+        .toEqual([]);
+
+      // And their CONTENT. The path pin says which files arrive and nothing about what is in them, so
+      // an arbitrary line in the shipped `DESIGN.md` was invisible — four of the six were pinned by name
+      // alone. The two workflows are byte-pinned above; these four are byte-pinned here.
+      const contentDrift: string[] = [];
+      for (const [file, digest] of ALLOWED_INIT_CONTENT) {
+        const actual = fileDigest(await readFile(path.join(root, ...file.split("/"))));
+        if (actual !== digest) contentDrift.push(`${file}: ${actual}`);
+      }
+      expect
+        .soft(contentDrift, "a reviewed init file whose content is not the reviewed content")
         .toEqual([]);
     });
 
@@ -818,7 +856,9 @@ describe(
         // non-mapping step is invisible to `isRecord`, and eight YAML spellings of an empty value
         // serialize to the same `null`. Two files that differ can produce one shape, which is the one
         // thing a boundary may not permit — so the boundary is the file and the shapes say what moved.
-        const digest = fileDigest(await workflowText(file));
+        const digest = fileDigest(
+          await readFile(path.join(await project(), ".github", "workflows", file)),
+        );
         if (digest !== ALLOWED_WORKFLOW_FILES.get(file)) {
           contexts.push(`${file}: content ${digest}`);
         }

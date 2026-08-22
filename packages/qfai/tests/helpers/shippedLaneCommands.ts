@@ -82,21 +82,18 @@ export function commandsOf(body: string): string[] {
   // wait for the newline: everything between the delimiter and it is still command text.
   let heredocEnd: number | undefined;
 
-  // The last CODE character before `at`, spaces and tabs skipped.
+  // **`lastCode` lived here and is gone.** Round 16 added it because three decisions in this walk were
+  // reading the raw text while `codeMask` — computed at the top of this function — knew better: an
+  // escaped `>` made `echo a\>|npx tsup` read as one `echo` while bash piped a build.
   //
-  // **Three decisions in this walk were reading the raw text**, and `codeMask` — computed at the top of
-  // this function, whose own comment says a second weaker parse of the same text was retired — knew
-  // better than all three. An ESCAPED `>` decided them: `echo a\>|npx tsup` pipes a build into `npx
-  // tsup` in bash, while the noclobber rule read the `\>` as an operator and joined the two commands
-  // into one `echo`. Seven spellings ran a real build that way, confirmed by executing them.
-  const lastCode = (at: number): string => {
-    for (let j = at - 1; j >= 0; j -= 1) {
-      if (!mask[j]) continue;
-      if (/[ \t]/.test(body[j] ?? "")) continue;
-      return body[j] ?? "";
-    }
-    return "";
-  };
+  // It answered "what is the LAST code character", and every decision that used it needed "what is the
+  // PREVIOUS character, and is it code". The difference only shows when something masked sits between,
+  // and round 18 found it: a quoted redirection target left the operator as the last code character and
+  // disarmed the split, so `echo x > "$GITHUB_OUTPUT" | npx tsup` — the shipped tree's own idiom with a
+  // pipe after it — ran a build with the scan clean, in eleven spellings.
+  //
+  // The three rules read `body[i - 1]` with `mask[i - 1]` now, which is what each of them meant. A
+  // helper that is nearly the question is worse than no helper: it reads as though it were the question.
 
   const flush = (): void => {
     out.push(current);
@@ -151,6 +148,12 @@ export function commandsOf(body: string): string[] {
       while (k < body.length && /[ \t]/.test(body[k] ?? "")) k += 1;
       let delimiter = "";
       let delimiterQuote = "";
+      // Whether the delimiter was quoted AT ALL, in any of bash's three spellings. It decides what the
+      // DATA is: a quoted delimiter makes the here-document literal, and an unquoted one leaves it
+      // subject to expansion — so `read v <<EOF` with `$(npx tsup)` in its body RUNS the build, while
+      // the same body under `<<'EOF'` does not. The first version of this repair treated all data as
+      // inert and its own comment cited only the quoted case, which is the reading that was wrong.
+      let quotedDelimiter = false;
       for (; k < body.length; k += 1) {
         const next = body[k] ?? "";
         if (delimiterQuote !== "") {
@@ -160,6 +163,7 @@ export function commandsOf(body: string): string[] {
         }
         if (next === '"' || next === "'") {
           delimiterQuote = next;
+          quotedDelimiter = true;
           continue;
         }
         // `<<\\EOF` is bash's THIRD spelling of a quoted delimiter, beside `<<'EOF'` and `<<""EOF""`,
@@ -167,10 +171,15 @@ export function commandsOf(body: string): string[] {
         // never matched — and the rule below then treated the whole rest of the body as data.
         if (next === "\\") {
           delimiter += body[k + 1] ?? "";
+          quotedDelimiter = true;
           k += 1;
           continue;
         }
-        if (/[\s;&|)]/.test(next)) break;
+        // `<`, `>` and `(` end the word too. Without them the scanner and bash named different
+        // delimiters: `cat <<EOF>>"$GITHUB_OUTPUT"` — the shipped idiom with one space removed — read
+        // the delimiter as `EOF>>$GITHUB_OUTPUT`, so the closer never matched, the data region ran past
+        // real commands, and the line was refused for a delimiter that does not exist.
+        if (/[\s;&|)<>(]/.test(next)) break;
         delimiter += next;
       }
       if (delimiter !== "") {
@@ -191,6 +200,26 @@ export function commandsOf(body: string): string[] {
           // file exists to be fail-closed. A delimiter the scanner cannot pair is a delimiter it
           // cannot read.
           if (at === null) out.push(`unterminated-here-document ${delimiter}`);
+          // An UNQUOTED delimiter leaves the data subject to expansion, so a substitution inside it is
+          // a command that runs. The data is not read as commands — it is data — but every `$( … )` and
+          // backtick in it is, which is the distinction the first version of this repair missed while
+          // its comment cited only the quoted case.
+          if (!quotedDelimiter) {
+            const data = at === null ? rest : rest.slice(0, at.index);
+            for (let d = 0; d < data.length; d += 1) {
+              if (data[d] === "$" && data[d + 1] === "(") {
+                const close = matchingParen(data, d + 1);
+                out.push(...commandsOf(data.slice(d + 2, close)));
+                d = close;
+                continue;
+              }
+              if (data[d] === "`") {
+                const close = data.indexOf("`", d + 1);
+                out.push(...commandsOf(data.slice(d + 1, close === -1 ? data.length : close)));
+                d = close === -1 ? data.length : close;
+              }
+            }
+          }
           current += body.slice(i, k);
           heredocEnd = lineEnd + (at === null ? rest.length : at.index + at[0].length);
           i = k - 1;
@@ -290,7 +319,13 @@ export function commandsOf(body: string): string[] {
     // `echo a|grep -f <(make)` splits — its `)` closes the process substitution.
     // `>|` is bash's noclobber override, one operator. Splitting it at the `|` left a fragment whose
     // whole content was `>`, which the write scan then reported as a write to the empty string.
-    const clobber = ch === "|" && lastCode(i) === ">";
+    // `>|` is ONE operator, so the `>` must be the character immediately before the `|`. `lastCode`
+    // skips masked text, so a quoted redirection target left the operator as "the last code character"
+    // and disarmed the split from a distance: `echo x > "$GITHUB_OUTPUT" | npx tsup` — the shipped
+    // tree's own idiom with a pipe after it — ran a build with the scan clean, in eleven spellings,
+    // while every unquoted control was refused. `lastCode` answers "what is the last code character",
+    // and the question here is "what is the previous character, and is it code".
+    const clobber = ch === "|" && body[i - 1] === ">" && mask[i - 1] === true;
     const isAlternation = (): boolean => {
       // A `)` that closes a group already open at this point is not a case arm, so the pipe inside
       // `( echo x | npx tsup )` is a pipe. Depth is counted over CODE positions only.
@@ -315,8 +350,12 @@ export function commandsOf(body: string): string[] {
     // the write scan then reported a write to a file named `2` with an empty target. One character,
     // three meanings, and the shipped tree will reach for the second the first time a lane wants a
     // diagnostic off stdout.
+    // Adjacent on both sides, for the reason `clobber` above gives: `&>` and `>&` are single operators,
+    // and a `<` or `>` several masked characters back is a different redirection entirely.
     const redirectAmp =
-      ch === "&" && ((body[i + 1] === ">" && mask[i + 1] === true) || /[<>]/.test(lastCode(i)));
+      ch === "&" &&
+      ((body[i + 1] === ">" && mask[i + 1] === true) ||
+        (/[<>]/.test(body[i - 1] ?? "") && mask[i - 1] === true));
     if (
       ch === ";" ||
       (ch === "|" && !clobber && !isAlternation()) ||
@@ -440,7 +479,11 @@ function codeMask(body: string): boolean[] {
       mask[i] = false;
       continue;
     }
-    if (ch === "#" && (i === 0 || /[\s;&|(]/.test(body[i - 1] ?? " "))) {
+    // The same guard `commandsOf`'s comment rule carries, and it was missing here — so the two walks
+    // disagreed about where a comment starts, which is the disagreement round 17 repaired in one of
+    // them. An escaped space is not a separator: `echo x <\ #y & npx tsup` started a comment here and
+    // did not there, and the build after the `&` ran with the scan clean.
+    if (ch === "#" && (i === 0 || (mask[i - 1] === true && /[\s;&|(]/.test(body[i - 1] ?? " ")))) {
       inComment = true;
       mask[i] = false;
       continue;
@@ -455,6 +498,18 @@ function matchingParen(body: string, open: number): number {
   let quote = "";
   for (let i = open; i < body.length; i += 1) {
     const ch = body[i] ?? "";
+    // **The third quote walk in this file, and the one the other two depend on.** It had no backslash
+    // model while both of the others did, so `echo "$(echo \")" ; npx tsup` closed the substitution at
+    // the escaped quote, and the separator and the build after it landed inside a word. Round 18 ran
+    // twenty-four spellings of that through with the scan clean.
+    //
+    // A backslash escapes the next character outside single quotes, exactly as it does in `codeMask`
+    // and `commandsOf`. Three walks is itself the finding; what keeps them honest until there is one is
+    // that each has now been given the same three rules.
+    if (ch === "\\" && quote !== "'") {
+      i += 1;
+      continue;
+    }
     if (quote !== "") {
       if (ch === quote) quote = "";
       continue;
@@ -919,9 +974,13 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * empty value collapse onto the same `null`, and several number spellings collapse too — so two files
  * that differ can serialize identically, which is the one thing a boundary may not permit.
  *
- * The bytes are the identity, exactly as they are for a `run:` body. Line endings are normalized because
- * `.gitattributes` stores these files LF and a checkout is free to hand back CRLF; nothing else is,
- * because every other normalization tried in this file turned out to erase a behaviour.
+ * The bytes are the identity, exactly as they are for a `run:` body — and **the bytes, not the decoded
+ * text.** The first version hashed a UTF-8 string, so two files differing in one byte collided: `0xFE`
+ * and `0xFF` are both the replacement character once decoded. It also folded CRLF, justified by a
+ * `.gitattributes` that sets `eol=lf` — which is the line that makes the fold unreachable, so the
+ * justification cited the case it excluded. Both are gone: nothing is normalized, because `eol=lf` makes
+ * the bytes stable across checkouts and because every normalization tried in this file has turned out to
+ * erase something.
  *
  * The shape pins are kept beside this one and are not redundant: this says the file is not the reviewed
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
@@ -931,9 +990,9 @@ export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-validate.yml", "08e79f77a91b59c60b15d3e517341dcf18561b09397f804564f3a58c9bd1c7f6"],
 ]);
 
-/** The bytes of a shipped file, line endings normalized and nothing else. */
-export function fileDigest(raw: string): string {
-  return createHash("sha256").update(raw.replace(/\r\n/g, "\n")).digest("hex");
+/** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
+export function fileDigest(raw: Buffer): string {
+  return createHash("sha256").update(raw).digest("hex");
 }
 
 /**
@@ -959,6 +1018,24 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   "qfai.config.yaml",
 ]);
 
+/**
+ * And the CONTENT of the four that are not workflows.
+ *
+ * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
+ * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
+ * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
+ * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ */
+export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
+  [
+    ".github/copilot-instructions.md",
+    "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
+  ],
+  [".gitignore", "e24743532e16ec18882df932ab1e2ff25e0618947ed5cbfaa197fda05a06a9db"],
+  ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
+  ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
+]);
+
 /** The four trees excluded from the path pin, and excluded from nothing else. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
   ".qfai/",
@@ -978,9 +1055,34 @@ export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
  * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
  * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
  * same claim about the tree the lane runs in.
+ *
+ * **The first version called itself a kind rule and was an extension list**, which round 18's gate beat
+ * by shipping `.agents/hooks/post-checkout` — a `#!/bin/sh` script with no extension at all, arriving
+ * mode `0755` — into an adopter tree with the whole suite green. A name is not a kind. `initMustNotShip`
+ * below asks the three questions that decide whether something runs: does it start with a shebang, is it
+ * marked executable, is it a manifest or a script by name. The pattern is kept as the third of those.
  */
 export const INIT_MUST_NOT_SHIP =
-  /(?:^|\/)(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pnpm-workspace\.yaml|\.npmrc|\.yarnrc(?:\.yml)?|\.pnpmfile\.(?:c?js))$|\.(?:c?js|mjs|sh|bash|ps1|bat|cmd)$|(?:^|\/)\.git\/hooks\//;
+  /(?:^|\/)(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pnpm-workspace\.yaml|\.npmrc|\.yarnrc(?:\.yml)?|\.pnpmfile\.(?:c?js))$|\.(?:c?js|mjs|sh|bash|ps1|bat|cmd|py|rb|pl)$|(?:^|\/)(?:\.git\/)?hooks\//;
+
+/**
+ * Why this file would run, or the empty string if nothing would run it.
+ *
+ * Three questions, because there are three answers to "who runs this": a kernel reads a shebang, a
+ * filesystem carries an executable bit, and a tool reads a name it knows. The name was the only one the
+ * first version asked, and a hook script has no extension.
+ */
+export function initMustNotShip(
+  relativePath: string,
+  contents: Buffer,
+  mode: number,
+): string | undefined {
+  if (contents.subarray(0, 2).toString("latin1") === "#!") return "carries a shebang";
+  // The owner-execute bit. Git records only this one, so it is the only one an adopter can receive.
+  if ((mode & 0o100) !== 0) return "arrives executable";
+  if (INIT_MUST_NOT_SHIP.test(relativePath)) return "is a manifest or a script by name";
+  return undefined;
+}
 
 /**
  * Every shipped step, in the job it belongs to and the order the file runs them, with its `run:`

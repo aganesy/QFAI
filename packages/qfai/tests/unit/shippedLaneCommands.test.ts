@@ -273,6 +273,15 @@ const MECHANISMS = [
   "read x <<\\EOF\ndata\nEOF\nnpx tsup",
   "read x <<NOPE\nnpx tsup",
   "read x <<EOF && npx tsup\ndata\nEOF",
+  // round 18: five more root causes, 50 executed escapes between them
+  // the third quote walk, `matchingParen`, had no backslash model while the other two did
+  'echo "$(echo \\")" ; npx tsup',
+  // `codeMask`'s comment rule was missing the guard `commandsOf`'s carries
+  "echo x <\\ #y & npx tsup",
+  // an UNQUOTED here-document delimiter leaves its data subject to expansion
+  "read v <<EOF\n$(npx tsup)\nEOF",
+  // and `lastCode` skipped masked text, so a quoted redirection target disarmed the split
+  'echo x > "$GITHUB_OUTPUT" | npx tsup',
   // a `node` with no flag at all, which reads its program from stdin: the absence of an argument
   // is not the absence of a program, and the inverted rule refuses it by the missing `-e`
   "node",
