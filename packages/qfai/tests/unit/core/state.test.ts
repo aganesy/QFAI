@@ -193,6 +193,27 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     },
   );
 
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "writes through a parent directory that refuses new files",
+    async () => {
+      const dir = path.join(root, ".qfai");
+      const abs = path.join(dir, "state.json");
+      await mkdir(dir, { recursive: true });
+      await writeFile(abs, `${JSON.stringify({ atdd: { cycles: 1 } })}\n`, "utf-8");
+      await chmod(dir, 0o555);
+      try {
+        // File-update-only permissions: the sibling scratch file cannot
+        // be created, but the direct write this replaced worked here and
+        // `discussion use` must keep working here.
+        await writeStateFile(root, { discussion: { currentId: "discussion-RO-DIR" } });
+        expect(await readdir(dir)).toEqual(["state.json"]);
+        expect(await readDiscussionCurrentId(root)).toBe("discussion-RO-DIR");
+      } finally {
+        await chmod(dir, 0o755);
+      }
+    },
+  );
+
   it.skipIf(process.platform === "win32")(
     "refuses the write when state.json is a dangling symlink",
     async () => {

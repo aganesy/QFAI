@@ -216,11 +216,11 @@ async function resolveLinkTarget(abs: string): Promise<string> {
  * `state.json` deliberately made read-only — and reset its mode to the
  * scratch file's while doing so. The explicit `access` check restores
  * the EACCES/EPERM the fail-soft callers already handle
- * (`validators/scaffoldPlaceholder.ts`), and the returned mode is
- * re-applied to the scratch file so an atomic write preserves the
- * document's permissions.
+ * (`validators/scaffoldPlaceholder.ts`), and the returned `Stats` of
+ * the existing document drive the mode / ownership handling in
+ * {@link writeStateFile}.
  */
-async function prepareWriteTarget(abs: string): Promise<{ target: string; mode?: number }> {
+async function prepareWriteTarget(abs: string): Promise<{ target: string; current?: Stats }> {
   let link: Stats;
   try {
     link = await lstat(abs);
@@ -232,10 +232,88 @@ async function prepareWriteTarget(abs: string): Promise<{ target: string; mode?:
   try {
     const current = link.isSymbolicLink() ? await stat(target) : link;
     await access(target, fsConstants.W_OK);
-    return { target, mode: current.mode & 0o7777 }; // permission bits only, not the file type
+    return { target, current };
   } catch (err) {
     if (isEnoent(err)) return { target }; // dangling link: create its target
     throw err;
+  }
+}
+
+/** Remove a scratch file; never masks the failure that prompted it. */
+async function discardScratch(tmp: string): Promise<void> {
+  try {
+    await unlink(tmp);
+  } catch {
+    // Best-effort cleanup only; the original failure is what matters.
+  }
+}
+
+/**
+ * Fill the scratch file `rename` will move over the document, and
+ * report what landed on disk.
+ *
+ * The mode is handed to `writeFile` rather than chmod-ed afterwards so
+ * the scratch carries the document's permissions from its FIRST byte:
+ * creating it under the ambient umask (typically `0644`) and only
+ * tightening it once the whole document is written exposes a `0600`
+ * state to every other account on a shared host for the length of the
+ * write, and leaves a loosely-permissioned copy behind if the process
+ * dies inside that window. `umask` can only CLEAR bits, so the chmod
+ * still runs to widen the file back to the recorded mode.
+ */
+async function fillScratch(tmp: string, body: string, mode: number | undefined): Promise<Stats> {
+  await writeFile(tmp, body, mode === undefined ? "utf-8" : { encoding: "utf-8", mode });
+  if (mode !== undefined) await chmod(tmp, mode);
+  return stat(tmp);
+}
+
+/** True when the directory refused a new entry although the document itself is writable. */
+function isDirectoryDenied(err: unknown): boolean {
+  return hasErrnoCode(err) && (err.code === "EACCES" || err.code === "EPERM");
+}
+
+/**
+ * True when moving `scratch` over the document would hand the file to
+ * a different owner. `rename` keeps the SCRATCH file's uid/gid, so on a
+ * shared checkout, updating another account's group-writable
+ * `state.json` would transfer it to the running user — locking the
+ * owner out or leaking it into an unintended group. Comparing the real
+ * scratch inode instead of `process.getuid()` keeps setgid directories
+ * (where the scratch already inherits the document's group) out of the
+ * fallback; Windows reports 0 for both ids, so nothing is detected there.
+ */
+function transfersOwnership(scratch: Stats, current: Stats): boolean {
+  return scratch.uid !== current.uid || scratch.gid !== current.gid;
+}
+
+/** Backoff before each `rename` retry, in ms. Short: the contention window is a syscall wide. */
+const RENAME_RETRY_BACKOFF_MS = [5, 10, 20];
+
+/**
+ * Replace the document with the scratch file, retrying the transient
+ * Windows failures.
+ *
+ * `rename` over an existing path is unconditionally permitted on POSIX
+ * but not on Windows: `MoveFileEx` reports EPERM/EACCES/EBUSY while any
+ * handle holds the destination — an editor or AV scanner, or simply a
+ * second concurrent write replacing the same `state.json`. The direct
+ * `writeFile` this replaced never touched the directory entry and so
+ * never hit that class of failure; a few short retries keep the atomic
+ * write from losing an update the old one would have landed.
+ */
+async function renameOnto(tmp: string, target: string): Promise<void> {
+  for (let attempt = 0; ; attempt += 1) {
+    try {
+      await rename(tmp, target);
+      return;
+    } catch (err) {
+      const backoff = RENAME_RETRY_BACKOFF_MS[attempt];
+      const transient =
+        hasErrnoCode(err) &&
+        (err.code === "EPERM" || err.code === "EACCES" || err.code === "EBUSY");
+      if (!transient || backoff === undefined) throw err;
+      await new Promise((resolve) => setTimeout(resolve, backoff));
+    }
   }
 }
 
@@ -248,24 +326,52 @@ async function prepareWriteTarget(abs: string): Promise<{ target: string; mode?:
  * collide on the scratch file (interleaved read-modify-write remains a
  * separate concern). A failure anywhere in the sequence removes the
  * scratch file before rethrowing.
+ *
+ * The sibling temp needs rights the direct `writeFile` this replaced
+ * did not, and it cannot carry rights that file kept. Where the two
+ * disagree the write falls back to rewriting the document in place —
+ * losing atomicity, but never the reachability or the ownership the
+ * previous implementation guaranteed:
+ *   - the parent directory rejects new entries (file-update-only
+ *     permissions), so no scratch file can be created at all;
+ *   - the scratch file's owner/group differs from the document's, so
+ *     the rename would replace them.
  */
 export async function writeStateFile(root: string, state: Record<string, unknown>): Promise<void> {
   const abs = stateAbsPath(root);
   await mkdir(path.dirname(abs), { recursive: true });
-  const { target, mode } = await prepareWriteTarget(abs);
+  const { target, current } = await prepareWriteTarget(abs);
+  const body = `${JSON.stringify(state, null, 2)}\n`;
   const dir = path.dirname(target);
   const base = path.basename(target);
   const tmp = path.join(dir, `${base}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`);
+
+  let scratch: Stats;
   try {
-    await writeFile(tmp, `${JSON.stringify(state, null, 2)}\n`, "utf-8");
-    if (mode !== undefined) await chmod(tmp, mode);
-    await rename(tmp, target);
+    // permission bits only, not the file type
+    scratch = await fillScratch(
+      tmp,
+      body,
+      current === undefined ? undefined : current.mode & 0o7777,
+    );
   } catch (err) {
-    try {
-      await unlink(tmp);
-    } catch {
-      // Best-effort cleanup only; the original failure is what matters.
+    await discardScratch(tmp);
+    if (current !== undefined && isDirectoryDenied(err)) {
+      await writeFile(target, body, "utf-8");
+      return;
     }
+    throw err;
+  }
+
+  try {
+    if (current !== undefined && transfersOwnership(scratch, current)) {
+      await writeFile(target, body, "utf-8");
+      await discardScratch(tmp);
+    } else {
+      await renameOnto(tmp, target);
+    }
+  } catch (err) {
+    await discardScratch(tmp);
     throw err;
   }
   await sweepStaleTemps(dir, base);
