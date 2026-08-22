@@ -54,15 +54,24 @@ The compliance gate scans rendered HTML — `<style>` blocks, inline
 `style="..."` attributes, AND Tailwind `class="..."` attributes — for
 four categories of forbidden literals. The gate is **hard and
 non-waivable**: any finding blocks convergence, and there is no
-Reviewer override. `designMdViolations` is injected by the static
-scanner. On a **convergence** stop (all four axes exceptional) the
-accepted iteration's HTML is re-scanned before the stop is honoured,
-so a hand-written `[]` in the Reviewer report is discarded and the
-loop keeps iterating. A **max-iterations** stop skips that re-scan —
+Reviewer override. Ordinary cycles carry no scanner output —
+`designMdViolations` stays `[]` in every Reviewer report — because the
+scan runs at the two checkpoints below, not once per cycle. On a
+**convergence** stop (all four axes exceptional) the accepted
+iteration's HTML is re-scanned before the stop is honoured, so a
+hand-written `[]` in the Reviewer report is discarded and the loop
+keeps iterating (the re-scan drives that decision only; it is not
+written back into the review). A **max-iterations** stop skips that re-scan —
 it reports an exhausted budget, not a clean bill of health — but
 `npx qfai prototyping certify` re-scans every final HTML file
-unconditionally and exits 2 on any finding, so no route seals a
-certificate over a violation.
+unconditionally and exits 2 on any finding, so no certificate is
+**issued** over a violation. One carve-out:
+`npx qfai prototyping certify --upgrade-scope full` is not an issuing
+path — it re-gates an already-sealed scope-limited certificate against
+the validate-side gate signal and rewrites the scope marker without
+re-scanning HTML. If the final HTML moved after the seal, re-run
+`npx qfai prototyping certify --check`, which recomputes the evidence
+digests and reports the mismatch.
 
 Within a frozen run the only way past a finding is to change the HTML:
 use a token already declared in `DESIGN.md`, or drop the literal. Do
@@ -70,8 +79,11 @@ use a token already declared in `DESIGN.md`, or drop the literal. Do
 ≥ 1 compares live `DESIGN.md`, `DESIGN.md.lock.yaml` and the cycle-0
 cached sha256 before anything else, so the next iterate exits 2 with a
 hash mismatch. A genuine brand change is a separate operation:
-refreeze the lock via `/qfai-sdd`, then restart the loop from
-`--cycle 0`.
+refreeze the lock via `/qfai-sdd`, then restart the loop with
+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`.
+`--force` is not optional here — the prior loop's `iter-00` is still on
+disk and cycle 0 refuses to overwrite it without one; with it, `iter-00`
+is renamed to `iter-00.backup-<ISO>` before the reset.
 
 ### 1. color literal ban
 

@@ -11,14 +11,22 @@
  * tokens.
  *
  * The gate this scanner feeds is hard and non-waivable — there is no
- * Reviewer override for a finding. `prototypingIterate` re-scans the
+ * Reviewer override for a finding. Nothing injects scanner output into
+ * an ordinary per-cycle review, so `designMdViolations` stays `[]` there
+ * until one of two checkpoints runs. `prototypingIterate` re-scans the
  * accepted iteration's HTML before honouring a CONVERGENCE stop, so a
  * Reviewer-recorded empty `designMdViolations` is discarded rather than
- * trusted; a `max-iterations` stop skips that re-scan and simply ends
- * the loop. `prototypingCertify` then exits 2 on any violation found in
- * the final HTML, unconditionally, which is what makes the gate
- * non-waivable on every path. The shipped `generator-prompt.md` states
- * the same posture on the authoring side; the two must not drift apart.
+ * trusted (the recomputed list drives the stop decision only; it is not
+ * written back into `prototyping.json`); a `max-iterations` stop skips
+ * that re-scan and simply ends the loop. `prototypingCertify` then exits
+ * 2 on any violation found in the final HTML, unconditionally, so no
+ * certificate is ISSUED over a violation. The one path that does not
+ * re-scan is `certify --upgrade-scope full`, which is not an issuing
+ * path: it re-gates an already-sealed scope-limited certificate against
+ * the validate-side gate signal and rewrites the scope marker in place
+ * (`certify --check` is what catches HTML that moved after the seal).
+ * The shipped `generator-prompt.md` states the same posture on the
+ * authoring side; the two must not drift apart.
  *
  * Input tree: both production call sites feed this scanner the CAPTURE
  * fan-out under `.qfai/evidence/prototyping/iter-NN/` — `prototypingCertify`

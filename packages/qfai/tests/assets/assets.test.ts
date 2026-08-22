@@ -452,6 +452,21 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
       expect(generatorRef).toMatch(/certify` re-scans every final HTML file\s+unconditionally/);
+      // No scanner injects `designMdViolations` into an ordinary cycle's
+      // review — `recomputeFinalIterDesignMdViolations` runs only on the
+      // convergence stop and its result is never written back. The prompt
+      // must not tell the generator to expect prior-review findings.
+      expect(generatorRef).toMatch(/Ordinary cycles carry no scanner output/);
+      expect(generatorRef).toMatch(/stays `\[\]` in every Reviewer report/);
+      expect(generatorRef).toMatch(/not\s+written back into the review/);
+      // `runPrototypingCertify` branches to `runUpgradeScopeFull` BEFORE
+      // the HTML scan, so `--upgrade-scope full` rewrites a sealed
+      // certificate without re-scanning. The "unconditional" claim above
+      // must therefore be scoped to the issuing path and the carve-out
+      // named, with `--check` as the recovery.
+      expect(generatorRef).toMatch(/certify --upgrade-scope full` is not an issuing/);
+      expect(generatorRef).toMatch(/without\s+re-scanning HTML/);
+      expect(generatorRef).toMatch(/certify --check`/);
       expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
       expect(reviewerRef).toMatch(/on a convergence stop/);
       expect(reviewerRef).toMatch(/gate is non-waivable/);
@@ -466,7 +481,14 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       );
       expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
       expect(generatorRef).toMatch(/refreeze the lock via `\/qfai-sdd`/);
-      expect(generatorRef).toMatch(/restart the loop from\s+`--cycle 0`/);
+      // The restart must be a runnable command: the prior loop always left
+      // an `iter-00` behind, and the cycle-0 destructive-rerun gate in
+      // `prototypingIterate` exits 2 without `--force`. A bare `--cycle 0`
+      // hint cannot recover the run.
+      expect(generatorRef).toMatch(
+        /restart the loop with\s+`npx qfai prototyping iterate --cycle 0 --target-url <url> --force`/,
+      );
+      expect(generatorRef).toMatch(/`--force` is not optional here/);
     }
   });
 
@@ -486,13 +508,22 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       ),
       "utf-8",
     );
-    expect(scanner).toMatch(/hard and non-waivable/);
-    expect(scanner).toMatch(/no\s+\*?\s*Reviewer override/);
+    // Match against the prose with the JSDoc `*` gutter and line wrapping
+    // removed, so a re-wrap of the block comment cannot fail this test
+    // without the statement itself changing.
+    const scannerProse = scanner.replace(/^\s*\*\s?/gm, "").replace(/\s+/g, " ");
+    expect(scannerProse).toContain("hard and non-waivable");
+    expect(scannerProse).toContain("there is no Reviewer override");
     // Same scoping as the prompt half: the iterate-side re-scan covers the
     // convergence stop only; certify is the unconditional backstop.
-    expect(scanner).toMatch(/CONVERGENCE stop/);
-    expect(scanner).toMatch(/`max-iterations` stop skips that re-scan/);
-    expect(scanner).toMatch(/unconditionally/);
+    expect(scannerProse).toContain("CONVERGENCE stop");
+    expect(scannerProse).toContain("`max-iterations` stop skips that re-scan");
+    expect(scannerProse).toContain("unconditionally");
+    // And the same two carve-outs the prompt now carries: no per-cycle
+    // injection, and `--upgrade-scope full` does not re-scan.
+    expect(scannerProse).toContain("stays `[]`");
+    expect(scannerProse).toContain("not written back into `prototyping.json`");
+    expect(scannerProse).toContain("`certify --upgrade-scope full`");
   });
 
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {
