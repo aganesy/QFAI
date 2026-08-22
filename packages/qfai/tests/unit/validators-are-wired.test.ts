@@ -228,63 +228,147 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
 const VALIDATORS_DIR = path.resolve(__dirname, "../../src/core/validators");
 
 const ATDD_CODE_RE = /"QFAI-ATDD-\d+"/;
-const RELATIVE_IMPORT_RE = /from\s+["'](\.\.?\/[\w./-]+)["']/g;
+/** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
+const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']/g;
 
 /**
- * Map every non-test module under src/ to the modules that import it. Relative
- * specifiers are written as `./x.js` (NodeNext) and are resolved back to their
- * `.ts` origin so the index is keyed by real source paths.
+ * True only for a *call site* — `name(` — never for a mention. This is what
+ * separates real wiring from a barrel re-export: `export { validateX } from
+ * "./x.js"` and `import { validateX } from "./x.js"` name the symbol but never
+ * follow it with `(`, so re-exporting a validator from validators/index.ts can
+ * no longer disguise it as invoked.
  */
-async function buildSrcImporterIndex(): Promise<Map<string, string[]>> {
-  const files = await listTsFiles(SRC_ROOT);
-  const index = new Map<string, string[]>();
-  for (const file of files) {
-    const body = await readFile(file, "utf-8");
-    RELATIVE_IMPORT_RE.lastIndex = 0;
+function isCalledIn(name: string, text: string): boolean {
+  return new RegExp(String.raw`\b${name}\s*\(`).test(text);
+}
+
+/**
+ * Every module transitively reachable from validate.ts through relative
+ * specifiers, keyed by resolved `.ts` path. The barrel (`validators/index.ts`)
+ * is traversed like any other module, but because reachability is decided by
+ * `isCalledIn` its re-export lines contribute no call sites.
+ */
+async function buildValidateCallGraph(): Promise<Map<string, string>> {
+  const modules = new Map<string, string>();
+  const queue: string[] = [VALIDATE_TS];
+  const seen = new Set<string>(queue);
+
+  while (queue.length > 0) {
+    const file = queue.shift();
+    if (file === undefined) break;
+    let body: string;
+    try {
+      body = await readFile(file, "utf-8");
+    } catch {
+      // Unresolved specifier (directory index, type-only module) — best-effort
+      // traversal, the guard degrades to "not a call site" for it.
+      continue;
+    }
+    modules.set(file, body);
+    MODULE_SPECIFIER_RE.lastIndex = 0;
     let match: RegExpExecArray | null;
-    while ((match = RELATIVE_IMPORT_RE.exec(body)) !== null) {
+    while ((match = MODULE_SPECIFIER_RE.exec(body)) !== null) {
       const rel = match[1];
       if (!rel) continue;
       const resolved = path.resolve(path.dirname(file), rel.replace(/\.js$/, ".ts"));
       if (!resolved.startsWith(SRC_ROOT)) continue;
-      const importers = index.get(resolved) ?? [];
-      if (!importers.includes(file)) importers.push(file);
-      index.set(resolved, importers);
+      if (seen.has(resolved)) continue;
+      seen.add(resolved);
+      queue.push(resolved);
     }
   }
-  return index;
+  return modules;
 }
 
+/**
+ * Is `name` invoked anywhere in the validate.ts call graph other than the
+ * module that declares it? Excluding the declaring module keeps its own
+ * `export async function name(` header from counting as a call.
+ */
+function isInvokedFromCallGraph(
+  name: string,
+  callGraph: ReadonlyMap<string, string>,
+  declaringFile: string,
+): boolean {
+  for (const [file, body] of callGraph) {
+    if (file === declaringFile) continue;
+    if (isCalledIn(name, body)) return true;
+  }
+  return false;
+}
+
+type AtddModule = { file: string; exports: string[] };
+
 /** Validator modules that emit at least one `QFAI-ATDD-NNN` issue code. */
-async function collectAtddEmittingModules(): Promise<string[]> {
+async function collectAtddEmittingModules(): Promise<AtddModule[]> {
   const files = await listTsFiles(VALIDATORS_DIR);
-  const out: string[] = [];
+  const out: AtddModule[] = [];
   for (const file of files) {
     if (path.basename(file) === "index.ts") continue;
     const body = await readFile(file, "utf-8");
-    if (ATDD_CODE_RE.test(body)) {
-      out.push(file);
+    if (!ATDD_CODE_RE.test(body)) continue;
+    const exports: string[] = [];
+    PUBLIC_VALIDATOR_RE.lastIndex = 0;
+    let match: RegExpExecArray | null;
+    while ((match = PUBLIC_VALIDATOR_RE.exec(body)) !== null) {
+      exports.push(match[1]);
     }
+    out.push({ file, exports });
   }
   return out;
 }
 
 describe("meta-test: ATDD validators are reachable from the production graph", () => {
-  it("every validators/ module emitting a QFAI-ATDD-* code has a non-test importer under src/", async () => {
+  it("a barrel re-export is not mistaken for a call site", () => {
+    const barrelOnly =
+      'export { validateAtddSample } from "./atddSample.js";\n' +
+      'import { validateAtddSample } from "./atddSample.js";\n';
+    expect(isCalledIn("validateAtddSample", barrelOnly)).toBe(false);
+    expect(isCalledIn("validateAtddSample", "...(await validateAtddSample(root, config)),")).toBe(
+      true,
+    );
+  });
+
+  it("every validators/ module emitting a QFAI-ATDD-* code is invoked from the validate.ts call graph", async () => {
     const modules = await collectAtddEmittingModules();
-    const importerIndex = await buildSrcImporterIndex();
+    const callGraph = await buildValidateCallGraph();
 
     expect(modules.length, "expected at least one ATDD-emitting validator").toBeGreaterThan(0);
 
-    const orphans = modules
-      .filter((file) => (importerIndex.get(file) ?? []).filter((i) => i !== file).length === 0)
-      .map((file) => path.relative(SRC_ROOT, file));
+    const unwired = modules
+      .filter(
+        ({ file, exports }) => !exports.some((n) => isInvokedFromCallGraph(n, callGraph, file)),
+      )
+      .map(({ file, exports }) => {
+        const names = exports.length > 0 ? exports.join(", ") : "no exported validate* function";
+        return `${path.relative(SRC_ROOT, file)} (${names})`;
+      });
 
     expect(
-      orphans,
-      "ATDD validator modules must be wired into runAtddValidators (src/core/validate.ts) and " +
-        "re-exported from validators/index.ts. An unreachable module ships an issue code that " +
-        "can never appear in validate.json.",
+      unwired,
+      "ATDD validator modules must actually be *called* from the validate.ts call graph " +
+        "(runAtddValidators, or an orchestrator it reaches). Re-exporting the validator from " +
+        "validators/index.ts is not wiring: an uninvoked module ships an issue code that can " +
+        "never appear in validate.json — exactly the dead-validator state QFAI-ATDD-001 was in.",
+    ).toEqual([]);
+  });
+
+  it("validators/index.ts re-exports every ATDD-emitting validator", async () => {
+    const modules = await collectAtddEmittingModules();
+    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+
+    const missing: string[] = [];
+    for (const { exports } of modules) {
+      for (const name of exports) {
+        if (!new RegExp(String.raw`export\s*\{[^}]*\b${name}\b[^}]*\}\s*from`).test(indexBody)) {
+          missing.push(name);
+        }
+      }
+    }
+
+    expect(
+      missing,
+      `validators/index.ts must re-export every ATDD-emitting validator. Missing: ${missing.join(", ")}`,
     ).toEqual([]);
   });
 
