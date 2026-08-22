@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
+import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
@@ -1383,8 +1384,9 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     root: string,
     primarySurface: string,
     secondarySurfaces: string[],
+    packId = "discussion-20260101000000000",
   ): Promise<void> {
-    const packDir = path.join(root, ".qfai/discussion/discussion-20260101000000000");
+    const packDir = path.join(root, ".qfai/discussion", packId);
     await mkdir(packDir, { recursive: true });
     const secondaryBlock =
       secondarySurfaces.length === 0
@@ -1453,5 +1455,39 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     await seedUiBearingProject(root);
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+  });
+
+  // `/qfai-sdd` Phase 0 reads the ACTIVE pack, so this validator must agree
+  // with the `.qfai/state.json#discussion.currentId` pointer rather than with
+  // filesystem timestamps.
+  it("active cli pack wins over a newer web pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await seedClassification(root, "web", [], "discussion-20260202000000000");
+    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-031");
+  });
+
+  it("active web pack wins over a newer cli pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", [], "discussion-20260101000000000");
+    await seedClassification(root, "cli", [], "discussion-20260202000000000");
+    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  it("a dangling active pointer falls back to the newest pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await writeDiscussionCurrentId(root, "discussion-19990101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
   });
 });

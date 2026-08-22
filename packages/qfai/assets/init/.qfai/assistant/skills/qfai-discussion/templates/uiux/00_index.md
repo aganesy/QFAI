@@ -9,7 +9,9 @@ Manifest of all UI/UX sidecar artifacts produced during a UI-bearing discussion.
 Brand-level intent (product intent, brand signals, anti-goals,
 reference pool framed as deviate-from inputs) lives in root
 `DESIGN.md` (front-matter + `# Brand Philosophy` body), not in this
-sidecar family.
+sidecar family — on a visual-prototyping surface (`web`, `mobile`,
+`desktop`, `mixed`). A cli-only pack has no root `DESIGN.md` at all,
+so it has no brand-level intent layer either.
 
 | File                      | Purpose                                  | Required |
 | ------------------------- | ---------------------------------------- | -------- |
@@ -19,8 +21,15 @@ sidecar family.
 
 ## Completeness Rule
 
-All required files MUST be present for a UI-bearing pack alongside root
-`DESIGN.md`. Partial generation is not permitted.
+All three required files above MUST be present for every UI-bearing pack.
+Partial generation is not permitted.
+
+Root `DESIGN.md` sits alongside them **only** on a visual-prototyping surface
+(`web`, `mobile`, `desktop`, `mixed`). A cli-only pack — `primary_surface: cli`
+with no visual surface in `secondary_surfaces` — is complete without it:
+`/qfai-discussion` authors no root `DESIGN.md` for such a pack, `/qfai-sdd`
+Phase 0 skips the freeze, and `/qfai-prototyping` does not run on `cli`. Do not
+report a cli-only pack as incomplete for a missing `DESIGN.md`.
 
 ## Forbidden Legacy Files
 

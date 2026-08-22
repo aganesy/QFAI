@@ -11,7 +11,11 @@ import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
 import { VISUAL_BROWSER_SURFACES, readValidatedClassification } from "../detection/surfaceType.js";
 import type { UiBearingClassification } from "../detection/surfaceType.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
+import {
+  ResolveActiveDiscussionPackError,
+  findLatestDiscussionPackDir,
+  resolveActiveDiscussionPack,
+} from "../discussionPack.js";
 import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -165,6 +169,41 @@ async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boole
 }
 
 /**
+ * Locate the discussion pack whose `01_Context.md` classification decides the
+ * cli carve-out below.
+ *
+ * `/qfai-sdd` Phase 0 reads the **active** pack (the one
+ * `qfai discussion use <id>` pinned into `.qfai/state.json#discussion.currentId`),
+ * so this validator must select the same one: with several packs on disk, a
+ * project whose active pack is `cli` while the newest is `web` would otherwise
+ * be handed DCON-030/031 that Phase 0 never intends to satisfy — and the
+ * inverse would silently drop both gates for a visual pack.
+ *
+ * The pointer is optional, so `ResolveActiveDiscussionPackError` (absent /
+ * dangling / duplicate `currentId`) is not a failure: fall back to the newest
+ * pack, which is what every project that has never run `qfai discussion use`
+ * already relies on. Any other failure (unreadable discussion root) yields
+ * `null`, which keeps the gates on.
+ */
+async function resolveClassificationPackDir(
+  root: string,
+  config: QfaiConfig,
+): Promise<string | null> {
+  try {
+    return await resolveActiveDiscussionPack(root);
+  } catch (error) {
+    if (!(error instanceof ResolveActiveDiscussionPackError)) {
+      return null;
+    }
+  }
+  try {
+    return await findLatestDiscussionPackDir(resolvePath(root, config, "discussionDir"));
+  } catch {
+    return null;
+  }
+}
+
+/**
  * True when the project's own classification says every surface it ships is
  * `cli` — `primary_surface: cli` with no `web` / `mobile` / `desktop` /
  * `mixed` entry in `secondary_surfaces`.
@@ -176,7 +215,7 @@ async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boole
  * DESIGN.md requirement the discussion skill dropped would simply reappear as
  * a hard `qfai validate --profile sdd` error.
  *
- * The classification is read from the latest discussion pack's
+ * The classification is read from the **active** discussion pack's
  * `01_Context.md` via the strict validated reader, so a malformed or
  * contradictory block (which `uix/classification.ts` reports separately)
  * yields `null` and this returns `false` — the strict brand-SSOT behaviour.
@@ -188,12 +227,7 @@ async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boole
  * gate.
  */
 async function isCliOnlySurfaceProject(root: string, config: QfaiConfig): Promise<boolean> {
-  let packDir: string | null = null;
-  try {
-    packDir = await findLatestDiscussionPackDir(resolvePath(root, config, "discussionDir"));
-  } catch {
-    return false;
-  }
+  const packDir = await resolveClassificationPackDir(root, config);
   if (packDir === null) {
     return false;
   }

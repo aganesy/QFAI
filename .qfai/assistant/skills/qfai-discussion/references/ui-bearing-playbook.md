@@ -64,6 +64,12 @@ shadows:
   per-surface `route:` meanings.
 - No `prototyping.yaml`: `cli` is not a valid prototyping execution surface,
   so a recommendation naming it cannot be executed downstream.
+- `templates/uiux/00_index.md` carries the same carve-out: the three sidecars
+  are the whole family for a cli-only pack, with no root `DESIGN.md` beside them.
+- Downstream, `/qfai-implement`'s Visual Review Guard drops the four
+  design-contract inputs (root `DESIGN.md`, its lock, `design-system.yaml`,
+  `prototype-handoff.yaml`) and both prototype-evidence inputs for a cli-only
+  target, leaving `.qfai/contracts/ui/*.yaml` as its UI contract input.
 
 ### Trend Scan SSOT
 

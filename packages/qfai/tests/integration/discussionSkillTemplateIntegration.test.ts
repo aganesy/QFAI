@@ -228,6 +228,43 @@ describe("discussion skill template integration", () => {
     expect(playbook).toMatch(/`primary_surface: cli` with `secondary_surfaces: \[web\]`/);
   });
 
+  // The canonical `uiux/00_index.md` is copied into every UI-bearing pack and
+  // declares the family's own completeness rule. Left unconditional it tells
+  // the generated pack that root DESIGN.md must sit beside the three sidecars,
+  // which contradicts the carve-out the same run just applied.
+  it("生成される 00_index.md が cli-only pack に DESIGN.md を要求しない", async () => {
+    const index = await readFile(path.join(uiuxTemplateDir, "00_index.md"), "utf-8");
+    const completeness = index.split(/^## /m).find((s) => s.startsWith("Completeness Rule")) ?? "";
+    expect(completeness, "no Completeness Rule section").not.toBe("");
+    expect(completeness).toMatch(/cli-only/);
+    // Every DESIGN.md mention in the manifest must be scoped, not absolute.
+    for (const line of index.split("\n").filter((line) => line.includes("DESIGN.md"))) {
+      expect(line, `unconditional DESIGN.md requirement -> ${line}`).not.toMatch(
+        /MUST be present .*alongside root `DESIGN\.md`/,
+      );
+    }
+  });
+
+  // A cli-only pack finishes SDD and enters `/qfai-implement`, whose Visual
+  // Review Guard read order lists root DESIGN.md, its lock, design-system.yaml
+  // and prototype-handoff.yaml. None of those exist for a cli-only target, so
+  // the guard must name the reduced read order or implementation is blocked on
+  // inputs this carve-out guarantees will never be produced.
+  it("qfai-implement の Visual Review Guard が cli-only の read order を持つ", async () => {
+    const implementSkill = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+      ),
+      "utf-8",
+    );
+    const guard =
+      implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
+    expect(guard, "no Visual Review Guard section").not.toBe("");
+    expect(guard).toMatch(/cli-only/);
+    expect(guard).toMatch(/`\.qfai\/contracts\/ui\/\*\.yaml`/);
+  });
+
   // Half a carve-out is worse than none: if the Reviewer Gate still demands a
   // root DESIGN.md from `cli`, the pack discussion just exempted is bounced at
   // review instead of at completion.
