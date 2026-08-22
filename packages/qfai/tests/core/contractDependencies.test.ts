@@ -66,6 +66,26 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     );
   });
 
+  it("reads the key from a JSON contract, quoted and across lines", () => {
+    // `.json` is collected as an API contract, but every other lane here is a
+    // regex over an unquoted YAML key on one line.
+    expect(
+      extractDeclaredDependencies(
+        [
+          "// QFAI-CONTRACT-ID: CON-API-0001",
+          "{",
+          '  "openapi": "3.1.0",',
+          '  "x-qfai-depends-on": [',
+          '    "CON-API-0002",',
+          '    "CON-DB-0001"',
+          "  ]",
+          "}",
+          "",
+        ].join("\n"),
+      ),
+    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+  });
+
   it("reads a YAML block sequence", () => {
     expect(
       extractDeclaredDependencies("x-qfai-depends-on:\n  - CON-API-0002\n  - CON-API-0003\n"),
@@ -201,6 +221,14 @@ describe("the declaration itself is distinguishable from its absence", () => {
     expect(hasDependencyDeclaration("x-qfai-depends-on:\nopenapi: 3.0.0\n")).toBe(false);
     expect(hasDependencyDeclaration("-- Depends on: TBD\n")).toBe(false);
   });
+
+  it("reads an empty JSON array as `none`, and its absence as silence", () => {
+    const json = (body: string): string =>
+      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "openapi": "3.1.0"${body}\n}\n`;
+    expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": []'))).toBe(true);
+    expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": "-"'))).toBe(true);
+    expect(hasDependencyDeclaration(json(""))).toBe(false);
+  });
 });
 
 describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
@@ -237,6 +265,29 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
           "a.yaml":
             "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.0.0\nx-qfai-depends-on: [CON-API-0002]\n",
           "b.yaml": "# QFAI-CONTRACT-ID: CON-API-0002\nopenapi: 3.0.0\nx-qfai-depends-on: []\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+      },
+    );
+  });
+
+  it("stays silent on a JSON API contract declaring `[]`", async () => {
+    await withContracts(
+      {
+        api: {
+          "a.json": [
+            "// QFAI-CONTRACT-ID: CON-API-0001",
+            "{",
+            '  "openapi": "3.1.0",',
+            '  "info": { "title": "Sample", "version": "0.1.0" },',
+            '  "paths": {},',
+            '  "x-qfai-depends-on": []',
+            "}",
+            "",
+          ].join("\n"),
         },
       },
       async (root) => {

@@ -10,11 +10,27 @@ const SHORT_CONTRACT_ID_RE = /(?<!CON-)\b(API|DB|UI)-(\d{1,4})\b/gi;
 const CONTRACT_INDEX_HEADER_KEYS = new Set(["contractid", "declaredid", "shortid"]);
 const DECLARED_ID_HEADER_KEY = "declaredid";
 const DEPENDS_ON_HEADER_KEY = "dependson";
+/**
+ * Columns holding a contract's canonical id, as opposed to an abbreviation of it.
+ *
+ * `Short ID` is deliberately absent: `API-001` normalizes to `CON-API-0001`, so
+ * counting it as coverage lets a row whose `Declared ID` is blank, `-`, or
+ * mistyped still claim the contract is indexed.
+ */
+const CANONICAL_ID_HEADER_KEYS = new Set([DECLARED_ID_HEADER_KEY, "contractid"]);
 /** A cell that states "none" rather than an id: `-` in a `Depends On` or a placeholder `Declared ID`. */
 const NONE_CELL_RE = /^(?:[-–—]|\[[ \t]*\]|none|なし)$/i;
+/**
+ * A heading introducing one of the three contract kinds the id rules govern.
+ *
+ * `Design Contracts` / `Evidence Contracts` / `CLI Contracts` index other
+ * artifact kinds by slug and are excluded — matching `CON-(API|DB|UI)-\d+`,
+ * the only ids `QFAI-CONTRACT-010` declares.
+ */
+const CANONICAL_CONTRACT_HEADING_RE = /(?:^|[^A-Za-z])(?:DB|API|UI)[ \t]*(?:Contracts?|契約)/i;
 
 type IndexTableRow = { cells: string[]; line: number };
-type IndexTable = { headers: string[]; rows: IndexTableRow[]; line: number };
+type IndexTable = { headers: string[]; rows: IndexTableRow[]; line: number; heading: string };
 
 export async function validateContractReferences(
   root: string,
@@ -42,7 +58,7 @@ export async function validateContractReferences(
     }
 
     const referencedIds = extractContractIds(text);
-    referencedIds.forEach((contractId) => mirroredIds.add(contractId));
+    extractMirroredContractIds(text).forEach((contractId) => mirroredIds.add(contractId));
     for (const contractId of referencedIds) {
       if (contractIndex.ids.has(contractId)) {
         continue;
@@ -140,15 +156,52 @@ function extractContractIds(text: string): string[] {
   return Array.from(ids).sort((a, b) => a.localeCompare(b));
 }
 
+/**
+ * Contract ids a row actually *claims to index*.
+ *
+ * `extractContractIds` reads `Short ID` too, which is right for
+ * `QFAI-CONTRACT-030` — any id written in the index must resolve — but wrong
+ * for coverage. A row carrying `API-001` with a blank, `-`, or mistyped
+ * `Declared ID` names no contract: the row checks skip it because they cannot
+ * read an id, so counting the short form as coverage silenced
+ * `QFAI-CONTRACT-034` as well and the broken row produced no finding at all.
+ */
+function extractMirroredContractIds(text: string): Set<string> {
+  const ids = new Set<string>();
+
+  for (const table of parseIndexTables(text)) {
+    const canonicalColumns = table.headers
+      .map((column, columnIndex) => ({ columnKey: normalizeHeaderKey(column), columnIndex }))
+      .filter(({ columnKey }) => CANONICAL_ID_HEADER_KEYS.has(columnKey))
+      .map(({ columnIndex }) => columnIndex);
+    if (canonicalColumns.length === 0) {
+      continue;
+    }
+    for (const row of table.rows) {
+      for (const columnIndex of canonicalColumns) {
+        extractCellContractIds(row.cells[columnIndex] ?? "", ids);
+      }
+    }
+  }
+
+  return ids;
+}
+
 /** Every markdown table in the file, as header + body rows with 1-based lines. */
 function parseIndexTables(text: string): IndexTable[] {
   const tables: IndexTable[] = [];
   const lines = text.split(/\r?\n/);
+  let heading = "";
 
   for (let lineIndex = 0; lineIndex < lines.length - 1; lineIndex++) {
     const headerLine = lines[lineIndex];
     const separatorLine = lines[lineIndex + 1];
     if (headerLine === undefined || separatorLine === undefined) {
+      continue;
+    }
+    const headingMatch = /^#{1,6}[ \t]+(.*)$/.exec(headerLine);
+    if (headingMatch) {
+      heading = (headingMatch[1] ?? "").trim();
       continue;
     }
     if (!isTableRow(headerLine) || !isSeparatorRow(separatorLine)) {
@@ -168,7 +221,7 @@ function parseIndexTables(text: string): IndexTable[] {
       rowIndex++;
     }
 
-    tables.push({ headers: parseTableRow(headerLine), rows, line: lineIndex + 1 });
+    tables.push({ headers: parseTableRow(headerLine), rows, line: lineIndex + 1, heading });
     lineIndex = rowIndex - 1;
   }
 
@@ -237,10 +290,19 @@ function validateDependsOnColumn(filePath: string, text: string, index: Contract
  * rule entirely — so demanding a `Depends On` column of them is a false
  * positive. A table qualifies when every non-empty `Declared ID` cell resolves
  * to exactly one canonical contract id; an empty cell and the `-` placeholder
- * are neutral, which is what keeps the shipped `0 items` template — the table
- * with no contracts yet — under the column check.
+ * are neutral.
+ *
+ * Neutral rows alone decide nothing, and a table with **no** rows is all
+ * neutral: a Design table that happens to be empty looked exactly like the
+ * shipped `0 items` API table, so dropping `Depends On` from it raised
+ * `QFAI-CONTRACT-032` for a table that owes no apply order. When no row states
+ * an id either way, the enclosing section heading decides — `### API Contracts`
+ * and its DB / UI siblings are the tables these rules were written for, and
+ * that is what keeps the empty shipped template under the column check.
  */
 function declaresCanonicalContractIds(table: IndexTable, declaredIdColumn: number): boolean {
+  let statesAnId = false;
+
   for (const row of table.rows) {
     const cell = (row.cells[declaredIdColumn] ?? "").trim();
     if (cell.length === 0 || NONE_CELL_RE.test(cell)) {
@@ -251,8 +313,10 @@ function declaresCanonicalContractIds(table: IndexTable, declaredIdColumn: numbe
     if (ids.size !== 1) {
       return false;
     }
+    statesAnId = true;
   }
-  return true;
+
+  return statesAnId || CANONICAL_CONTRACT_HEADING_RE.test(table.heading);
 }
 
 function validateDependsOnRows(

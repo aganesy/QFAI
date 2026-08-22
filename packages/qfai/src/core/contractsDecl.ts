@@ -52,6 +52,72 @@ const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
 const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
 /** Non-global on purpose: a `/g` regex carries `lastIndex` between `exec` calls. */
 const DEPENDS_ON_YAML_SCALAR_RE = /^[ \t]*x-qfai-depends-on:[ \t]*(\S[^\n]*?)[ \t]*$/im;
+/** The declaration key itself, for the JSON lane where regexes cannot reach. */
+const DEPENDS_ON_KEY = "x-qfai-depends-on";
+
+/**
+ * The declaration as a JSON contract writes it.
+ *
+ * `.qfai/contracts/api/**` collects `.json` next to `.yaml`, but every regex
+ * above matches an unquoted YAML key on a single line. A JSON contract spelling
+ * `"x-qfai-depends-on": []` — or spreading the array over several lines — read
+ * as "never stated", so `QFAI-CONTRACT-015` fired on a file that had declared
+ * its apply order, and `QFAI-CONTRACT-014` / `-033` never saw the ids it listed.
+ *
+ * Declaration lines are stripped before parsing: `QFAI-CONTRACT-010` requires a
+ * `QFAI-CONTRACT-ID` comment line and a comment is not valid JSON, so the raw
+ * text of a conforming JSON contract never parses on its own — the same reason
+ * `validateContractFile` strips before `parseStructuredContract`.
+ *
+ * Returns `undefined` when the text is not a JSON object or does not carry the
+ * key, so a YAML contract keeps taking the regex lane untouched.
+ */
+function readJsonDependsOn(text: string): { value: unknown } | undefined {
+  const entries =
+    parseJsonObjectEntries(text) ?? parseJsonObjectEntries(stripContractDeclarationLines(text));
+  if (!entries) {
+    return undefined;
+  }
+  for (const [key, value] of entries) {
+    if (key.trim().toLowerCase() === DEPENDS_ON_KEY) {
+      return { value };
+    }
+  }
+  return undefined;
+}
+
+/** The document's own entries, or `undefined` when the text is not a JSON object. */
+function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
+  const trimmed = text.trim();
+  if (!trimmed.startsWith("{")) {
+    return undefined;
+  }
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    return undefined;
+  }
+  if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
+    return undefined;
+  }
+  return Object.entries(parsed);
+}
+
+/**
+ * Whether a JSON `x-qfai-depends-on` value states an apply order.
+ *
+ * An array — `[]` included — is a statement: `[]` is the JSON spelling of "no
+ * dependencies". A string is only a statement when it is one of the explicit
+ * "none" spellings; a non-empty list of ids has already been answered by
+ * `extractDeclaredDependencies`.
+ */
+function statesJsonDependencies(value: unknown): boolean {
+  if (Array.isArray(value)) {
+    return true;
+  }
+  return typeof value === "string" && DEPENDS_ON_NONE_VALUE_RE.test(value.trim());
+}
 
 export function extractDeclaredDependencies(text: string): string[] {
   const found = new Set<string>();
@@ -67,6 +133,8 @@ export function extractDeclaredDependencies(text: string): string[] {
   if (flow) push(flow[1] ?? "");
   const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
   if (block) push(block[1] ?? "");
+  const json = readJsonDependsOn(text);
+  if (json && json.value !== undefined) push(JSON.stringify(json.value));
   return Array.from(found).sort();
 }
 
@@ -94,6 +162,10 @@ export function hasDependencyDeclaration(text: string): boolean {
     if (DEPENDS_ON_NONE_VALUE_RE.test((match[1] ?? "").trim())) {
       return true;
     }
+  }
+  const json = readJsonDependsOn(text);
+  if (json) {
+    return statesJsonDependencies(json.value);
   }
   const scalar = DEPENDS_ON_YAML_SCALAR_RE.exec(text);
   return scalar !== null && DEPENDS_ON_NONE_VALUE_RE.test((scalar[1] ?? "").trim());

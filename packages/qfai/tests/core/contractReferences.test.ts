@@ -323,6 +323,50 @@ describe("the contract index's Depends On column", () => {
     }
   });
 
+  it("leaves an empty table under a non-contract heading alone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      // A Design table that happens to hold no rows states no id either way, so
+      // row evidence cannot tell it from the shipped `0 items` API table. Only
+      // the section it sits under can.
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md"),
+        [
+          "# 05 Contracts",
+          "",
+          "## Design Contracts",
+          "",
+          "| Short ID | Entity | Declared ID | File | Purpose |",
+          "| -------- | ------ | ----------- | ---- | ------- |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports an empty table under a contract heading", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ------- |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves a table that indexes another artifact kind by slug alone", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {
@@ -361,6 +405,39 @@ describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
       expect(issue?.severity).toBe("warning");
       expect(issue?.refs).toEqual(["CON-API-0001"]);
       expect(issue?.file).toContain("api-0001-sample.yaml");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let a Short ID stand in for a blank Declared ID", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      // `API-001` normalizes to `CON-API-0001`, so counting the short form as
+      // coverage hid the blank `Declared ID`: the row checks skip a row they
+      // cannot read an id from, leaving the broken row with no finding at all.
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md"),
+        [
+          "# 05 Contracts",
+          "",
+          "## API Contracts",
+          "",
+          "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+          "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+          "| API-001 | /api/orders | | `.qfai/contracts/api/api-0001-sample.yaml` | - | create draft |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-034");
+
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toEqual(["CON-API-0001"]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
