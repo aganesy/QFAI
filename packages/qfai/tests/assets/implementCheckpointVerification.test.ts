@@ -228,11 +228,13 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
-  // The repair moves the tree, so the affected rows' GREEN (item 5) and per-item
-  // checkpoint (item 12) go stale with the verdicts. Re-taking only the verdicts
-  // left items 5 and 12 pinned to the old revision — item 10 wants one `Revision`
-  // across 5, 7 and 8 — on rows the item loop skips, so nothing could restore them.
-  it("re-verifies the whole per-item evidence of every row the repair touched", async () => {
+  // The repair moves the tree, so the affected rows' GREEN (item 5), reviewer
+  // verdicts and per-item checkpoint (item 12) all describe the pre-fix tree.
+  // Re-taking the verdicts alone left nothing saying the row's test still passes
+  // and still discriminates — on rows the item loop skips, so nothing supplies it
+  // later. The row's own entry is not rewritten: that is how the shared-fixture
+  // case already pairs a `done` row with a record that is still open.
+  it("pairs every repaired row with a re-verification at the boundary", async () => {
     for (const dir of SKILL_DIRS) {
       const criteria = flat(
         section(
@@ -241,18 +243,39 @@ describe("qfai-implement checkpoint verification contract", () => {
         ),
       );
 
-      expect(criteria).toContain("**Re-verify each affected row in place.**");
-      // Named, so the repair cannot stop at the reviewer verdicts.
-      expect(criteria).toContain("the GREEN of gate item 5");
-      expect(criteria).toContain("the per-item checkpoint of item 12");
+      expect(criteria).toContain(
+        "**Re-verify each affected `done` row, and record it at the boundary.**",
+      );
+      expect(criteria).toContain("A `done` row's own entry is not rewritten");
+      expect(criteria).toContain("qfai-atdd/references/shared-test-artifacts.md");
+      expect(criteria).toContain("`## Shared-artifact re-verify` heading");
+      // What each line carries: the re-run, and the proof that still discriminates.
+      expect(criteria).toContain("the row's own selector re-run");
+      expect(criteria).toContain("`Oracle proof` mutation re-taken against the repaired tree");
+      expect(criteria).toContain("A passing re-run alone is not enough on a row that has a proof");
       expect(criteria).toContain("evidence-revision.md#what-makes-evidence-stale");
-      expect(criteria).toContain("re-run of the **per-item** set");
-      // The re-observation is legal on a `done` row precisely because it is not a
-      // re-execution: no status moves and the loop's `done`-row skip never applies.
-      expect(criteria).toContain("This is a re-observation, not a re-execution");
-      expect(criteria).toContain("the row never leaves `done`");
-      // Item 3 keeps its own revision — folding it in would make a correct row stale.
-      expect(criteria).toContain("Item 3 is not re-taken");
+      // The record is sealed with the boundary it belongs to.
+      expect(criteria).toContain("`Checkpoint verification seal` is taken over this block");
+    }
+  });
+
+  // A repair that edits a test file moves the `RED test manifest`, so item 10's
+  // `RED test hash` recomputation mismatches by construction on a handed-over row
+  // — and a `done` row cannot take a fresh RED. The re-verify line carries the new
+  // manifest and hash, which is the evidence that recomputation looks for.
+  it("clears the RED test hash a test-touching repair moves, without re-taking item 3", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("any artifact its `RED test manifest` names");
+      expect(criteria).toContain("the `RED test hash` recomputation at item 10");
+      expect(criteria).toContain("**Item 3 is not re-taken**");
+      expect(criteria).toContain("a RED addresses the manifest as it was when it was observed");
     }
   });
 
@@ -269,7 +292,7 @@ describe("qfai-implement checkpoint verification contract", () => {
         ),
       );
 
-      expect(criteria).toContain("every _required_ reviewer whose scope the fix touches");
+      expect(criteria).toContain("every **required** reviewer whose scope the fix touches");
       expect(criteria).toContain('"Required" is wider than `blocking_agents`');
       expect(criteria).toContain("`product-surface-reviewer` on a UI-affecting row");
       expect(criteria).toContain("lists only under `conditional_agents`");
@@ -277,8 +300,30 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
-  // A formatter/linter/type fix inside a `done` row's test file changes the test
-  // without moving its obligation. Treating that as a Change Request demanded a
+  // A parked row never reached Phase Green: it has no GREEN, no `Oracle proof`
+  // and no checkpoint to re-take, and no gate checks its evidence. Demanding them
+  // made a per-spec FAIL unclearable on any ledger holding an `exception` row.
+  it("keeps exception rows out of the in-place re-verification", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("**`exception` rows are outside all of this.**");
+      expect(criteria).toContain("it owes no GREEN, no `Oracle proof`");
+      // Its own approval-free exit is the edge that reopens it, not a CR.
+      expect(criteria).toContain(
+        "`exception -> todo` is that row's own exit and needs no approval",
+      );
+    }
+  });
+
+  // A formatter/linter/type fix inside a `done` row's test file — and a corrected
+  // expected value that never matched its acceptance criterion — change the test
+  // without moving the obligation. Treating either as a Change Request demanded a
   // reset `change-request-reset.md` may only grant for an approved *upstream*
   // change, so the row was left holding a static gate it could never clear.
   it("keeps an obligation-preserving test fix out of the approved reset", async () => {
@@ -291,10 +336,37 @@ describe("qfai-implement checkpoint verification contract", () => {
       );
 
       expect(criteria).toContain("**A test edit alone is not a Change Request.**");
-      expect(criteria).toContain("without changing what the test asserts");
+      expect(criteria).toContain("the **obligation** moving");
+      expect(criteria).toContain("not the test text changing");
+      // The corrected-assertion case: no upstream artifact moved, so no CR exists.
+      expect(criteria).toContain(
+        "correcting an expected value that never matched the criterion it was written from",
+      );
       expect(criteria).toContain("approved **upstream** change invalidating rows");
-      // The reset is reserved for the edit that does move the obligation.
-      expect(criteria).toContain("without changing **what the row's test asserts**");
+      // It owes more inside the same path, not a different path.
+      expect(criteria).toContain(
+        "the re-taken `Oracle proof` is what shows the corrected assertion",
+      );
+      // The reset stays for the repair that really does move the obligation.
+      expect(criteria).toContain("without moving the obligation itself");
+    }
+  });
+
+  // Step 4 already says `QFAI-TEST-001` has no spec owner, and a sibling's
+  // `it.todo` fails this gate. Left out of the record-and-wait branch, it fell to
+  // the in-place repair, which would edit a spec this run is not processing.
+  it("routes QFAI-TEST-001 to the record-and-wait branch", async () => {
+    for (const dir of SKILL_DIRS) {
+      const criteria = flat(
+        section(
+          await readFile(path.join(dir, "references", "checkpoint-verification.md"), "utf-8"),
+          "## Pass criteria",
+        ),
+      );
+
+      expect(criteria).toContain("**and every `QFAI-TEST-001`** — it is not repaired from here");
+      expect(criteria).toContain("A todo stub is not code a `done` row of this spec produced");
+      expect(criteria).toContain("the boundary stays unpassed until its owner clears it");
     }
   });
 

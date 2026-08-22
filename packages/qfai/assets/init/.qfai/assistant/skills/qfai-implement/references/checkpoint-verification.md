@@ -127,54 +127,77 @@ failure would have no legal repair path at all.
 
 **A per-spec FAIL is not a ledger event.** Fix it in place and leave every `Status` where it is: no
 row's obligation moved, its test asserts what it always asserted and still passes, so no TDD cycle
-restarts and no reset is owed. What _is_ owed is the affected rows' **per-item evidence**. The fix
-moves the tree, so every observation those rows took against the old `Revision` — the GREEN of gate
-item 5, the reviewer verdicts of items 7-9, the per-item checkpoint of item 12 — now describes a
-tree that no longer exists, which `evidence-revision.md#what-makes-evidence-stale` calls stale.
-Re-taking the verdicts alone would leave items 5 and 12 pinned to the old revision and item 10's
-same-`Revision` requirement unsatisfiable, on rows that are `done` and therefore skipped by the item
-loop: the repair would strand exactly the evidence it invalidated.
+restarts and no reset is owed. What the fix does move is the tree. The GREEN of gate item 5, the
+reviewer verdicts of items 7-9 and the per-item checkpoint of item 12 that the affected rows
+recorded were all taken against a `Revision` the repair replaces, and
+`evidence-revision.md#what-makes-evidence-stale` calls an observation stale the moment the tree its
+work landed at is no longer the one it names. Re-taking the reviewer verdicts alone leaves the rest
+of that set describing the pre-fix tree, with nothing recorded anywhere saying the row's test still
+passes and still discriminates over the repaired one — on rows the item loop skips, so no later run
+supplies it either.
 
-**Re-verify each affected row in place.** For every row whose production code or test the fix
-touched, re-take at the new `Revision`, in this order:
+**Re-verify each affected `done` row, and record it at the boundary.** A `done` row's own entry is
+not rewritten: its observations honestly address the revision they were made at, and appending to
+one breaks the `Audited evidence hash` of the verdicts that closed it. Pair it instead, exactly as
+`../../qfai-atdd/references/shared-test-artifacts.md` pairs a `done` row whose shared fixture a
+later row edited — the row keeps the observation it made, and the record that is still open carries
+the proof that it still holds. That record here is the spec-level boundary's own, in the evidence
+file the rule below selects, under a `## Shared-artifact re-verify` heading beside it: this stage is
+the one that moved the artifact, so this is the second of the two places gate item 10 already reads.
+One line per `done` row the fix touched, naming **its spec and `TDD-ID` together**
+(`spec-0002/TDD-0001`) and carrying, at the new `Revision`:
 
-- **First, the row's own test** — the per-item step 1 command, plus the GREEN re-observed by
-  `qa-gatekeeper` with the `Oracle proof` item 5 requires and the post-refactor re-confirmation of
-  item 6.
-- **Then a fresh verdict from every _required_ reviewer whose scope the fix touches.** "Required" is
-  wider than `blocking_agents`, exactly as it is at the 12-point gate: `implementation-reviewer` and
+- the row's own selector re-run — the per-item step 1 command — and its result;
+- that row's recorded `Oracle proof` mutation re-taken against the repaired tree, reverted, and the
+  restored GREEN. A passing re-run alone is not enough on a row that has a proof: the repair may
+  have left the test passing against anything;
+- a fresh verdict from every **required** reviewer whose scope the fix touches. "Required" is wider
+  than `blocking_agents`, exactly as it is at the 12-point gate: `implementation-reviewer` and
   `completion-reviewer` always, and `product-surface-reviewer` on a UI-affecting row, which
   `agent-routing.yml` lists only under `conditional_agents` while item 9 still requires its
   prototype parity PASS. A repair that changes display logic to satisfy a linter or the type checker
   is that case, and re-running the blocking list alone would carry the pre-fix surface verdict onto
-  a display it never saw.
-- **Last, the row's `Checkpoint verification command` / `result` / `seal`**, re-recorded from a
-  re-run of the **per-item** set, so item 12's seal is taken over the revision the row actually
-  landed at.
+  a display it never saw;
+- when the fix touched the row's test file, or any artifact its `RED test manifest` names, that
+  artifact's new manifest and hash — the evidence the `RED test hash` recomputation at item 10 is
+  looking for, which mismatches by construction once a test file moves. **Item 3 is not re-taken**:
+  a RED addresses the manifest as it was when it was observed, and a `done` row has no transition
+  that would let it observe another.
 
-Append all of it as a fresh evidence entry under the new `Revision`; nothing from the pre-fix
-revision is reused. Item 3 is not re-taken — it names its own `RED revision`, judged against the
-tree the RED was observed on. This is a re-observation, not a re-execution: the row never leaves
-`done`, the `done`-row skip in `SKILL.md` governs the item loop and does not reach a boundary-owned
-re-observation, and no `Status` moves. Only once every affected row is re-verified do you re-run the
-**whole** per-spec set. Spec-level completion is declared from that re-run, never from the failed
-one.
+The spec-level `Checkpoint verification seal` is taken over this block as well as over the command
+and result, so a line added afterwards moves it. **`exception` rows are outside all of this.** A
+parked row's evidence is not checked at any gate — `execution-ledger.md` exempts rows at `todo`,
+`red` and `exception` — and it never reached Phase Green, so it owes no GREEN, no `Oracle proof`, no
+item 6 re-confirmation and no per-item checkpoint; its reason lives in its `DR-*`. Asking one for
+that evidence is asking for a run it could not have made. If the repair resolves the anomaly, or
+invalidates what the `DR-*` records, `exception -> todo` is that row's own exit and needs no
+approval — nothing here reopens it in place. Only once every affected `done` row is re-verified do
+you re-run the **whole** per-spec set. Spec-level completion is declared from that re-run, never
+from the failed one.
 
-**A test edit alone is not a Change Request.** A formatter rewrap, an unused import, a type
-annotation or a rename inside a `done` row's test file changes the file without changing what the
-test asserts, so the obligation is exactly where it was and the re-verification above — whose step 1
-re-runs that very test — is the whole of what is owed. Routing it to the approved reset instead
-would demand a CR that `change-request-reset.md` cannot legitimately issue: that reset exists for an
-approved **upstream** change invalidating rows, and here nothing upstream moved, so the row would be
-left holding a static gate it may not clear.
+**A test edit alone is not a Change Request.** What makes a repair one is the **obligation** moving —
+the acceptance criterion, business rule or `TC-*` the row's `TC-ref` names — not the test text
+changing. A formatter rewrap, an unused import, a type annotation or a rename leaves the obligation
+exactly where it was, and so does correcting an expected value that never matched the criterion it
+was written from: the row owed that criterion all along and its test merely stated it wrongly. Both
+are repaired by the re-verification above. Routing them to the approved reset instead would demand a
+CR that `change-request-reset.md` cannot legitimately issue — that reset exists for an approved
+**upstream** change invalidating rows, and here no upstream artifact moved — leaving the row holding
+a static gate it may never clear. A correction that does move the assertion owes more inside the
+same path, not a different path: the re-taken `Oracle proof` is what shows the corrected assertion
+still discriminates, and `completion-reviewer`'s fresh verdict is what confirms it still covers the
+row's `TC-ref`.
 
-Two findings do leave the in-place path. When the fix cannot be made without changing **what the
-row's test asserts** — its predicate, its expected value, the obligation behind it — the obligation
-itself moved: that is a Change Request, and the row re-enters through the approved reset
-(`change-request-reset.md`), which is the legal reopen precisely because something upstream changed.
-When the finding has no spec owner — the `.qfai/contracts/**` and un-owned `QFAI-TRACE-*` findings
-step 4 describes — it is not repaired from here at all: record it with its owning artifact as step 4
-requires, and the boundary stays unpassed until its owner clears it.
+Two findings do leave the in-place path. When the repair cannot be made without moving the
+obligation itself — the acceptance criterion, the business rule or the test case behind the row, so
+an upstream artifact has to change — that is a Change Request, and the row re-enters through the
+approved reset (`change-request-reset.md`), which is the legal reopen precisely because something
+upstream changed. When the finding has no owner inside this spec — the `.qfai/contracts/**` and
+un-owned `QFAI-TRACE-*` findings step 4 describes, **and every `QFAI-TEST-001`** — it is not
+repaired from here at all. A todo stub is not code a `done` row of this spec produced: in a sibling
+spec's tests it is that spec's to clear, and in this spec's own it is an obligation this ledger has
+not discharged, which is a row's work and not a boundary repair. Record it with its owning artifact
+or spec as step 4 requires, and the boundary stays unpassed until its owner clears it.
 
 ## Spec-level boundary on an already-complete ledger
 
@@ -221,8 +244,9 @@ anywhere would move.
 it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was
 per-item only, and the full-suite result on a terminal ledger could still be edited from FAIL to
 PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving. Take it the
-same way — the audit hash over the spec-level `Checkpoint verification command` and
-`Checkpoint verification result` together with the `Revision` that run was made against — record it
+same way — the audit hash over the spec-level `Checkpoint verification command`,
+`Checkpoint verification result` and any `## Shared-artifact re-verify` block this boundary wrote
+(_Repairing a per-spec FAIL_), together with the `Revision` that run was made against — record it
 beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
 declared. A mismatch means the record was edited after the run, and completion is not declared.
 
