@@ -10,9 +10,10 @@
  *
  * The check is deliberately narrow: it only resolves entries that *look* like
  * repository-relative paths, so parenthetical prose and symbol names inside the
- * block ("`MAX_ITERATIONS = 10`") are never mistaken for a file. Fenced code is
- * skipped as well, so a document that *illustrates* the block format cannot be
- * read as declaring one.
+ * block ("`MAX_ITERATIONS = 10`") are never mistaken for a file. Fenced code
+ * and HTML comments are skipped as well, so a document that *illustrates* the
+ * block format — or one that comments an obsolete route out — cannot be read as
+ * declaring one.
  */
 import path from "node:path";
 
@@ -42,42 +43,89 @@ const PATH_LIKE_RE = /^[A-Za-z0-9_@.-]+(?:\/[A-Za-z0-9_@.-]+)+\/?$/;
 const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})\s*(.*)$/;
 
 /**
- * Mark every line that sits inside a fenced code block (the fence lines
- * themselves included). A contract that documents the `- SSOT modules:` shape
- * by example — or a `README.md` under the contracts root that quotes one — must
- * not have its illustration mistaken for real metadata.
+ * Strip the HTML-comment regions of a single line, returning the visible
+ * remainder plus whether a comment is still open at the end of it so the caller
+ * can carry the state across lines.
+ */
+function maskLineComments(line: string, inComment: boolean): { text: string; open: boolean } {
+  let visible = "";
+  let index = 0;
+  let open = inComment;
+
+  while (index < line.length) {
+    if (open) {
+      const close = line.indexOf("-->", index);
+      if (close === -1) {
+        return { text: visible, open: true };
+      }
+      index = close + 3;
+      open = false;
+      continue;
+    }
+    const start = line.indexOf("<!--", index);
+    if (start === -1) {
+      visible += line.slice(index);
+      break;
+    }
+    visible += line.slice(index, start);
+    index = start + 4;
+    open = true;
+  }
+
+  return { text: visible, open };
+}
+
+/**
+ * Return the *content* of each line: everything that is neither fenced code
+ * (the fence lines themselves included) nor inside an HTML comment is kept
+ * verbatim, and every masked region becomes empty text.
+ *
+ * A contract that documents the `- SSOT modules:` shape by example — or a
+ * `README.md` under the contracts root that quotes one — must not have its
+ * illustration mistaken for real metadata; neither must a stale route the
+ * author commented out with `<!--` / `-->` rather than deleting, which would
+ * otherwise be resolved on disk and fail the contract for a path it no longer
+ * claims. Every other Markdown extractor in this package masks comments the
+ * same way (`specPackParsers.ts#maskNonSpecRegions`).
  *
  * A fence opened with backticks cannot be closed by tildes, and the closing
  * fence must be at least as long as the opening one and carry no info string,
  * per CommonMark. An unclosed fence swallows the rest of the file, which is
- * also what a Markdown renderer does.
+ * also what a Markdown renderer does. Fence state wins over comment state: a
+ * `<!--` inside a fenced sample is sample text, not a comment opener, so it
+ * cannot swallow the rest of the document either.
  */
-function markFencedLines(lines: readonly string[]): boolean[] {
-  const fenced = new Array<boolean>(lines.length).fill(false);
+function maskedContent(lines: readonly string[]): string[] {
+  const content = new Array<string>(lines.length).fill("");
   let openMarker: string | null = null;
+  let inComment = false;
 
   for (let index = 0; index < lines.length; index++) {
-    const match = FENCE_RE.exec(lines[index] ?? "");
-    if (openMarker === null) {
-      if (match) {
-        openMarker = match[1] ?? "";
-        fenced[index] = true;
+    const raw = lines[index] ?? "";
+    if (openMarker !== null) {
+      const match = FENCE_RE.exec(raw);
+      const marker = match?.[1] ?? "";
+      const closes =
+        match !== null &&
+        marker[0] === openMarker[0] &&
+        marker.length >= openMarker.length &&
+        (match[2] ?? "").trim().length === 0;
+      if (closes) {
+        openMarker = null;
       }
       continue;
     }
-    fenced[index] = true;
-    const marker = match?.[1] ?? "";
-    const closes =
-      match !== null &&
-      marker[0] === openMarker[0] &&
-      marker.length >= openMarker.length &&
-      (match[2] ?? "").trim().length === 0;
-    if (closes) {
-      openMarker = null;
+    const masked = maskLineComments(raw, inComment);
+    inComment = masked.open;
+    const fence = FENCE_RE.exec(masked.text);
+    if (fence !== null) {
+      openMarker = fence[1] ?? "";
+      continue;
     }
+    content[index] = masked.text;
   }
 
-  return fenced;
+  return content;
 }
 
 /**
@@ -114,14 +162,19 @@ export type SsotModuleEntry = {
  * indented continuation of the previous entry — i.e. at the next top-level list
  * item, heading, or blank line. Continuation lines are skipped rather than
  * parsed, so a backtick in a parenthetical never becomes a phantom entry.
+ *
+ * The line that *ends* a block is handed back to the outer scan rather than
+ * consumed, so a contract that documents two targets with two adjacent
+ * `- SSOT modules:` blocks — no blank line between them — still has its second
+ * header read. Consuming it made every entry below it invisible.
  */
 export function extractSsotModuleEntries(text: string): SsotModuleEntry[] {
   const lines = text.split(/\r?\n/);
-  const fenced = markFencedLines(lines);
+  const content = maskedContent(lines);
   const entries: SsotModuleEntry[] = [];
 
   for (let index = 0; index < lines.length; index++) {
-    if (fenced[index] === true || !BLOCK_HEADER_RE.test(lines[index] ?? "")) {
+    if (!BLOCK_HEADER_RE.test(content[index] ?? "")) {
       continue;
     }
     let cursor = index + 1;
@@ -130,15 +183,19 @@ export function extractSsotModuleEntries(text: string): SsotModuleEntry[] {
       if (line.trim().length === 0 || !/^\s/.test(line)) {
         break;
       }
-      if (fenced[cursor] === true || !INDENTED_ITEM_RE.test(line)) {
-        continue; // continuation line of the previous entry
+      const visible = content[cursor] ?? "";
+      if (!INDENTED_ITEM_RE.test(visible)) {
+        continue; // continuation line, fenced sample, or commented-out entry
       }
-      const modulePath = ENTRY_RE.exec(line)?.[1];
+      const modulePath = ENTRY_RE.exec(visible)?.[1];
       if (modulePath !== undefined && PATH_LIKE_RE.test(modulePath)) {
         entries.push({ modulePath, line: cursor + 1 });
       }
     }
-    index = cursor;
+    // `cursor` is the terminator, not part of this block: step back one so the
+    // outer increment lands on it. `cursor > index` always, so the scan still
+    // advances.
+    index = cursor - 1;
   }
 
   return entries;

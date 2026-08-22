@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { validateProject } from "../../src/core/validate.js";
 import {
   extractSsotModuleEntries,
   validateContractSsotModules,
@@ -69,6 +70,47 @@ describe("extractSsotModuleEntries", () => {
     );
 
     expect(entries).toEqual([{ modulePath: "packages/qfai/src/core/real.ts", line: 11 }]);
+  });
+
+  it("ignores a block, and an entry, that an author commented out", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# CLI Contract",
+        "",
+        "<!--",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/retired.ts` (the old route, kept for history)",
+        "-->",
+        "",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/real.ts`",
+        "  <!-- - `packages/qfai/src/core/also-retired.ts` -->",
+        "  - `packages/qfai/src/core/second.ts`",
+      ].join("\n"),
+    );
+
+    expect(entries).toEqual([
+      { modulePath: "packages/qfai/src/core/real.ts", line: 9 },
+      { modulePath: "packages/qfai/src/core/second.ts", line: 11 },
+    ]);
+  });
+
+  it("reads the second of two adjacent blocks", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# CLI Contract",
+        "",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/first.ts`",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/second.ts`",
+      ].join("\n"),
+    );
+
+    expect(entries).toEqual([
+      { modulePath: "packages/qfai/src/core/first.ts", line: 4 },
+      { modulePath: "packages/qfai/src/core/second.ts", line: 6 },
+    ]);
   });
 });
 
@@ -166,6 +208,50 @@ describe("validateContractSsotModules", () => {
     }
   });
 
+  it("ignores an SSOT modules block the contract author commented out", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-modules-"));
+    try {
+      await seedContract(root, "qfai-report.md", [
+        "# CLI Contract: `qfai report`",
+        "",
+        "<!-- superseded routing, kept until the split lands",
+        "- SSOT modules:",
+        "  - `src/core/imaginary.ts`",
+        "-->",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a dead entry in the second of two adjacent blocks", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-modules-"));
+    try {
+      await mkdir(path.join(root, "src", "core"), { recursive: true });
+      await writeFile(path.join(root, "src", "core", "real.ts"), "export const a = 1;\n", "utf-8");
+      await seedContract(root, "qfai-doctor.md", [
+        "# CLI Contract: `qfai doctor`",
+        "",
+        "- SSOT modules:",
+        "  - `src/core/real.ts`",
+        "- SSOT modules:",
+        "  - `src/core/gone.ts`",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.refs).toContain("src/core/gone.ts");
+      expect(issues[0]?.loc?.line).toBe(6);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("is silent on contracts that declare no SSOT modules block", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-modules-"));
     try {
@@ -192,5 +278,47 @@ describe("validateContractSsotModules", () => {
     const issues = await validateContractSsotModules(repoRoot, defaultConfig);
 
     expect(issues.map((item) => `${item.file}: ${item.refs?.join(", ") ?? ""}`)).toEqual([]);
+  });
+});
+
+/**
+ * `qfai-implement` names `--profile tdd` as its completion gate, and the
+ * implementation stage is the one that moves and renames the very modules a
+ * contract routes to. A profile that could not observe the dead route it had
+ * just created was a gate in name only.
+ */
+describe("the tdd profile checks contract SSOT routing", () => {
+  it("reports a dead SSOT modules entry under --profile tdd", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-tdd-"));
+    try {
+      // Enough of an assistant tree that init counts as having run here.
+      await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+      await writeFile(
+        path.join(root, ".qfai", "assistant", "README.md"),
+        [
+          "# QFAI assistant tree",
+          "",
+          "## Canonical entrypoint",
+          "",
+          "- .qfai/assistant/skills/",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedContract(root, "qfai-implement.md", [
+        "# CLI Contract: `qfai implement`",
+        "",
+        "- SSOT modules:",
+        "  - `src/core/moved-away.ts`",
+      ]);
+
+      const result = await validateProject(root, undefined, { profile: "tdd" });
+      const dead = result.issues.filter((item) => item.code === "QFAI-CONTRACT-050");
+
+      expect(dead).toHaveLength(1);
+      expect(dead[0]?.refs).toContain("src/core/moved-away.ts");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

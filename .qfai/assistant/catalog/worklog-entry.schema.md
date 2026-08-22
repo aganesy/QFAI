@@ -3,13 +3,12 @@
 - Contract scope: frontmatter and body schema for `.qfai/steering/*.md` entries
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
-- SSOT modules:
-  - `packages/qfai/src/core/validators/worklogSurface.ts` (frontmatter parser
-    and link-integrity check; both are private helpers of this single module —
-    there is no `core/worklog/` directory. A split into dedicated `parseEntry` /
-    `validateLinks` modules, with the parser exposed as
-    `string → Result<Entry, SchemaError>`, is an intended future decomposition,
-    not a location that exists today)
+- Enforced by: `npx qfai validate` (`--profile sdd` and `--profile full`), whose
+  work-log surface checks — the frontmatter parser and the link-integrity check
+  alike — ship already compiled inside the installed package. The QFAI source
+  tree is not part of the npm distribution, so this contract names no local
+  module path on purpose: the schema below plus the `npx qfai validate` output
+  are the surface you can actually read here.
 
 ## Storage model
 

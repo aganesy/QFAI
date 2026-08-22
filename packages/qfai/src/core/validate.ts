@@ -519,6 +519,12 @@ async function runTddValidators(
     // that cannot be applied was invisible to the only profile the stage runs.
     // `full` opts out below because `runSddValidators` already includes it.
     ...(includeContracts ? await validateContracts(root, config) : []),
+    // Same reasoning for the contract -> implementation routing block: the
+    // implementation stage is the one that moves and renames those modules, so
+    // `--profile tdd` — the gate `qfai-implement` names — has to see a
+    // `- SSOT modules:` entry it just made dead. It rides `includeContracts`
+    // so `full` does not report it twice.
+    ...(includeContracts ? await validateContractSsotModules(root, config) : []),
   ];
 }
 
