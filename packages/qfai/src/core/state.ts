@@ -3,9 +3,9 @@ import { constants as fsConstants } from "node:fs";
 import type { Stats } from "node:fs";
 import {
   access,
-  chmod,
   lstat,
   mkdir,
+  open,
   readdir,
   readFile,
   readlink,
@@ -169,10 +169,17 @@ const STALE_TEMP_MS = 60 * 60 * 1000;
 /**
  * Best-effort collection of scratch files left by runs that were killed
  * between the write and the rename. Without it they accumulate next to
- * `state.json` forever, and QFAI's managed `.gitignore` ignores only
- * `.qfai/state.json` itself — so each one shows up as an untracked file
- * a `git add .` would sweep into a commit. Never fails the write it
- * follows.
+ * `state.json` forever.
+ *
+ * This is the second half of the answer to that debris, not the whole
+ * one: it only runs when a LATER write happens, and a checkout whose
+ * next command never writes state keeps its leftover indefinitely. The
+ * first half is `QFAI_STATE_SCRATCH_IGNORE` in the managed `.gitignore`
+ * (`core/gitignore.ts`), which keeps a leftover out of `git add .` for
+ * as long as it survives — the scratch itself cannot be moved out of
+ * `.qfai`, since `rename` is atomic only within one directory.
+ *
+ * Never fails the write it follows.
  */
 async function sweepStaleTemps(dir: string, base: string): Promise<void> {
   let names: string[];
@@ -252,19 +259,66 @@ async function discardScratch(tmp: string): Promise<void> {
  * Fill the scratch file `rename` will move over the document, and
  * report what landed on disk.
  *
- * The mode is handed to `writeFile` rather than chmod-ed afterwards so
- * the scratch carries the document's permissions from its FIRST byte:
+ * Everything happens through ONE descriptor, opened `wx`
+ * (`O_CREAT|O_EXCL|O_WRONLY`), because every path-based step here is a
+ * fresh lookup another account sharing the directory can win. `O_EXCL`
+ * refuses to follow a symlink already planted at the scratch name, and
+ * `fchmod`/`fstat` on the open handle describe the inode this call
+ * created — a path-based `chmod`/`stat` follows a link swapped in after
+ * the last byte was written, so an attacker-chosen file with the
+ * document's uid/gid would pass the ownership check in
+ * {@link transfersOwnership} and the rename would then publish the link
+ * itself as `state.json`.
+ *
+ * The mode is handed to `open` rather than chmod-ed afterwards so the
+ * scratch carries the document's permissions from its FIRST byte:
  * creating it under the ambient umask (typically `0644`) and only
  * tightening it once the whole document is written exposes a `0600`
  * state to every other account on a shared host for the length of the
  * write, and leaves a loosely-permissioned copy behind if the process
- * dies inside that window. `umask` can only CLEAR bits, so the chmod
- * still runs to widen the file back to the recorded mode.
+ * dies inside that window. `umask` can only CLEAR bits, so the
+ * `fchmod` still runs to widen the file back to the recorded mode.
  */
 async function fillScratch(tmp: string, body: string, mode: number | undefined): Promise<Stats> {
-  await writeFile(tmp, body, mode === undefined ? "utf-8" : { encoding: "utf-8", mode });
-  if (mode !== undefined) await chmod(tmp, mode);
-  return stat(tmp);
+  const handle = await open(tmp, "wx", mode);
+  let written: Stats;
+  try {
+    await handle.writeFile(body, "utf-8");
+    if (mode !== undefined) await handle.chmod(mode);
+    written = await handle.stat();
+  } catch (err) {
+    // The caller unlinks the scratch; only the close is ours to undo.
+    await handle.close().catch(() => undefined);
+    throw err;
+  }
+  // Deliberately not swallowed: a close that fails is a write that did
+  // not land, and renaming that scratch would publish a truncated state.
+  await handle.close();
+  return written;
+}
+
+/**
+ * Refuse the rename when the scratch is no longer the inode
+ * {@link fillScratch} filled.
+ *
+ * `rename` moves whatever the NAME points at, and it does not follow
+ * symlinks — so a scratch swapped for a link between the close and the
+ * rename turns `state.json` into that link, and every later write
+ * lands on the attacker's file instead. `lstat` here is the last
+ * cheap check available (Node exposes no `renameat2`/`RENAME_EXCHANGE`);
+ * it closes the window the open descriptor cannot cover.
+ *
+ * `ino` of 0 means the platform does not report inode numbers, so only
+ * the file-type half of the check applies there — never a false refusal.
+ */
+async function assertScratchIntact(tmp: string, written: Stats): Promise<void> {
+  const now = await lstat(tmp);
+  const sameInode = written.ino === 0 || (now.ino === written.ino && now.dev === written.dev);
+  if (now.isSymbolicLink() || !now.isFile() || !sameInode) {
+    throw new Error(
+      `${tmp} was replaced after it was written; refusing to rename it over the state file.`,
+    );
+  }
 }
 
 /** True when the directory refused a new entry although the document itself is writable. */
@@ -284,6 +338,20 @@ function isDirectoryDenied(err: unknown): boolean {
  */
 function transfersOwnership(scratch: Stats, current: Stats): boolean {
   return scratch.uid !== current.uid || scratch.gid !== current.gid;
+}
+
+/**
+ * True when the document is reachable under more than one name. `rename`
+ * only re-points the `.qfai/state.json` directory entry, so the other
+ * hard links keep resolving to the OLD inode: a checkout that shares its
+ * state file with another tree by hard link would see the two names
+ * diverge from the first write onward, where the direct `writeFile` this
+ * replaced updated the one inode every name resolves to. Regular files
+ * only — a directory's `nlink` counts its `.` entries and says nothing
+ * about sharing.
+ */
+function sharesInodeWithOtherNames(current: Stats): boolean {
+  return current.isFile() && current.nlink > 1;
 }
 
 /** Backoff before each `rename` retry, in ms. Short: the contention window is a syscall wide. */
@@ -335,7 +403,9 @@ async function renameOnto(tmp: string, target: string): Promise<void> {
  *   - the parent directory rejects new entries (file-update-only
  *     permissions), so no scratch file can be created at all;
  *   - the scratch file's owner/group differs from the document's, so
- *     the rename would replace them.
+ *     the rename would replace them;
+ *   - the document has other hard links, which the rename would strand
+ *     on the pre-write inode.
  */
 export async function writeStateFile(root: string, state: Record<string, unknown>): Promise<void> {
   const abs = stateAbsPath(root);
@@ -364,10 +434,14 @@ export async function writeStateFile(root: string, state: Record<string, unknown
   }
 
   try {
-    if (current !== undefined && transfersOwnership(scratch, current)) {
+    if (
+      current !== undefined &&
+      (transfersOwnership(scratch, current) || sharesInodeWithOtherNames(current))
+    ) {
       await writeFile(target, body, "utf-8");
       await discardScratch(tmp);
     } else {
+      await assertScratchIntact(tmp, scratch);
       await renameOnto(tmp, target);
     }
   } catch (err) {

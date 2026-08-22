@@ -14,12 +14,14 @@
 
 import {
   chmod,
+  link,
   lstat,
   mkdir,
   mkdtemp,
   readdir,
   readFile,
   rm,
+  stat,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -164,6 +166,25 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     ]);
     expect(await readdir(path.join(root, ".qfai"))).toEqual(["state.json"]);
     expect(await readDiscussionCurrentId(root)).toMatch(/^discussion-[ABC]$/u);
+  });
+
+  it("keeps a hard-linked state.json on its own inode", async () => {
+    const abs = path.join(root, ".qfai", "state.json");
+    await mkdir(path.dirname(abs), { recursive: true });
+    await writeFile(abs, `${JSON.stringify({ atdd: { cycles: 1 } })}\n`, "utf-8");
+    const shared = path.join(root, "shared-state.json");
+    await link(abs, shared);
+    const before = await stat(abs);
+
+    // A rename only re-points `.qfai/state.json`; the second name would
+    // keep resolving to the pre-write inode, so the two checkouts sharing
+    // this state would silently diverge.
+    await writeDiscussionCurrentId(root, "discussion-LINKED");
+
+    expect(await readFile(shared, "utf-8")).toBe(await readFile(abs, "utf-8"));
+    expect(await readDiscussionCurrentId(root)).toBe("discussion-LINKED");
+    expect((await stat(abs)).ino).toBe(before.ino);
+    expect(await readdir(path.dirname(abs))).toEqual(["state.json"]);
   });
 
   it("removes the scratch file when the write fails", async () => {
