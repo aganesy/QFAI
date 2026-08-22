@@ -3,7 +3,12 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  maskNonSpecRegions,
+  splitMarkdownRow,
+} from "../specPackParsers.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { TRIAGE_TABLE_HEADER } from "../sddTriage.js";
 import type { Issue } from "../types.js";
@@ -213,16 +218,25 @@ function maskTriageSection(fileName: string, text: string): string {
     return text;
   }
   const lines = text.replace(/\r\n/g, "\n").split("\n");
+  // Headings, section ends and tables are located on a copy whose fenced code
+  // blocks, HTML comments and top-level indented code are blanked — the same
+  // view `validateTriageSection` reads. `maskNonSpecRegions` preserves the line
+  // count, so its indices still address `lines`. Without it a `## Triage` shown
+  // as a format example inside a fence opened a section here that no Triage
+  // validator reads, and the carve-out then blanked the prohibited IDs of the
+  // next seven-column table for `QFAI-LAYER-100` /
+  // `TRACE_SHARED_SCOPE_VIOLATION`.
+  const scanned = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
   const masked = [...lines];
   let index = 0;
-  while (index < lines.length) {
-    if (!CANONICAL_TRIAGE_HEADING_RE.test(lines[index] ?? "")) {
+  while (index < scanned.length) {
+    if (!CANONICAL_TRIAGE_HEADING_RE.test(scanned[index] ?? "")) {
       index += 1;
       continue;
     }
     // Every canonical section, not just the first: a re-run that appends a
     // second `## Triage` is validated as one, so it must be exempted as one.
-    index = maskTriageTables(lines, index + 1, masked);
+    index = maskTriageTables(scanned, index + 1, masked);
   }
   return masked.join("\n");
 }

@@ -229,6 +229,36 @@ describe("validateTriageSection", () => {
     expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
+  it("does not emit QFAI-TRIAGE-001 when both headings only appear as an example", () => {
+    // 完全な書式例 (Change Summary + Triage) を fence / HTML コメントに置いた
+    // だけの文書。本文にはどちらも無いので「Change Summary はあるのに Triage
+    // が無い」は成立しない — Triage 側だけ mask して片側を生テキストで読むと
+    // QFAI-TRIAGE-001 が誤発火する。
+    const text = [
+      "# 09 Delta",
+      "",
+      "この delta はまだ空。書式:",
+      "",
+      "```markdown",
+      "## Change Summary",
+      "",
+      "- 変更点を書く",
+      "",
+      "## Triage",
+      "",
+      "(ここに表を書く)",
+      "```",
+      "",
+      "<!--",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "-->",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
   it("ignores a Triage heading inside an HTML comment", () => {
     const text = [
       "# 09 Delta",

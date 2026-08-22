@@ -698,7 +698,12 @@ function validateCreateRows(
 
 export function validateTriageSection(text: string, deltaPath: string): Issue[] {
   const issues: Issue[] = [];
-  const headings = extractH2Headings(text);
+  // `collectTriageSections` と同じ masked テキストから読む。生テキストのまま
+  // だと、書式例として fenced code block / HTML コメントに `## Change Summary`
+  // と `## Triage` を並べただけの文書で hasChangeSummary だけが true になり、
+  // 実在しない欠落として QFAI-TRIAGE-001 が誤発火する (`--fail-on warning`
+  // では検証自体が落ちる)。
+  const headings = extractH2Headings(maskNonSpecRegions(text));
   const hasChangeSummary = headings.has(normalizeHeading("Change Summary"));
   const sections = collectTriageSections(text);
   const hasTriage = sections.length > 0;
