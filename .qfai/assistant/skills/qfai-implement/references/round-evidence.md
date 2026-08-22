@@ -33,6 +33,13 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   falsifiability run was observed against, taken before the revert destroys it
   (`evidence-revision.md`). It is that observation's address, so it takes the
   prefix for the same reason the trio does
+- `Round N: Replacement proof revision` — the tree this round's re-taken
+  `Oracle proof` ran against, present only where a `REVISE` replaced the
+  acceptance test (`../../qfai-atdd/references/review-fix-rounds.md`). The
+  replacement, and so the re-take, happens per round, so one slot either
+  overwrote the earlier round's address or left this round's proof attributed to
+  a tree it never ran on. `Round N: RED revision` is left alone — it addresses
+  the natural RED the same block describes
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: Oracle proof` — the production mutation that made this round's test
@@ -74,7 +81,8 @@ as free prose.
 Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio and
 its revision in its place), the `RED failure mode` that classifies it, the
-GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer
+`Replacement proof revision` where the test was replaced, the GREEN pair, the
+`Oracle proof`, the review pack and its seal, the reviewer
 verdict. Row-level fields are not round fields and
 take no prefix: `TDD-ID`, the obligation reference, `Test file`, `Selector`,
 `Layer`, and the refactor-verify pair. `RED revision`, `RED test hash` and
@@ -94,17 +102,19 @@ A single-round item satisfies the contract with `Round 1: ...` and no
 reviewer-verdict line, which is the same content the previous one-pair
 contract required. Nothing existing becomes non-conformant.
 
-**An entry written before a field joined this list carries it unprefixed**, so
-read an unprefixed occurrence of any field above as that entry's `Round 1:`
-value — the completion gate accepts it there, and both forms together are a
-duplicate, not two rounds. Re-taking it is usually not available: the tree an
-`Oracle proof` or a RED addressed is destroyed by the revert or by Phase Green,
-so requiring the prefix on a row already at `refactor` or `review-fix` would
+**An entry written before a field joined this list carries it unprefixed.** Read
+an unprefixed occurrence of any field above as belonging to that entry's
+**highest-numbered** round, **not** to round 1: the field was one row-level slot
+then, so every round overwrote it and the value that survived is the last one
+written. On a single-round entry that is `Round 1`. The earlier rounds have no
+copy and none can be made — the tree an `Oracle proof` or a RED addressed is
+destroyed by the revert or by Phase Green — so their absence is not a finding,
+and requiring the prefix on a row already at `refactor` or `review-fix` would
 strand a correctly evidenced row with no way to produce what it asks for.
-Rewrite it with the prefix the next time the row opens a round — that round
-writes its own prefixed fields, and leaving the old value bare beside them is
-what makes the two indistinguishable. A row that never opens another round
-keeps the unprefixed form and reaches `done` on it.
+Rewrite the value under its round's prefix the next time the row opens a round;
+a bare value left beside a prefixed one for the same round is a duplicate, not
+two rounds. A row that never opens another round keeps the unprefixed form and
+reaches `done` on it.
 
 ## Where the rounds happen
 

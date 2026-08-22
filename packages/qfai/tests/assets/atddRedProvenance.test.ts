@@ -167,7 +167,7 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
     // phase, because there is no production code to mutate until then.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "RED command+result, `RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
+      "RED command+result, `Round 1: RED failure mode`, `RED revision`, **`RED test hash` and its manifest**, `qa-gatekeeper` PASS, the `Oracle proof` plan |",
     );
     expect(provenance).toContain("A natural RED is not a substitute");
     expect(provenance).toContain("branch 1 names the mutation it intends");
@@ -1653,7 +1653,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     );
     expect(baseline).toContain("where the row has one, `Replacement proof revision`");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("also carries `Replacement proof revision`");
+    expect(implement).toContain("also carries `Round N: Replacement proof revision`");
   });
 
   it("stops restating the working-tree serialization in the baseline", async () => {
@@ -1685,7 +1685,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // still describes, so overwriting its revision with the tree a later
     // mutation ran against hashed two trees as one observation.
     const reviewFix = flat(await read(tree, REVIEW_FIX));
-    expect(reviewFix).toContain("`Replacement proof revision`");
+    expect(reviewFix).toContain("`Round N: Replacement proof revision`");
     expect(reviewFix).toContain("**not over `RED revision`**");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("Leave `RED revision` alone**");
@@ -1848,7 +1848,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     const implement = flat(await read(tree, IMPLEMENT));
     // The field is named now, so the consumer sentence names it too.
     expect(implement).toContain(
-      "**write the re-taken proof and, in `Replacement proof revision`, the tree it ran against",
+      "**write the re-taken proof and, in `Round N: Replacement proof revision`, the tree it ran against",
     );
   });
 
@@ -2009,7 +2009,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // recorded it — so a correct ATDD-owned row reached the completion gate
     // missing a mandatory field.
     const provenance = flat(await read(tree, PROVENANCE));
-    expect(provenance).toContain("`RED failure mode` is on both rows");
+    expect(provenance).toContain("`Round 1: RED failure mode` is on both rows");
     expect(provenance).toContain("on branch 2 it is `falsifiability`");
   });
 
