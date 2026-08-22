@@ -24,8 +24,14 @@ const DISCUSSION_RULES = "assistant/skills/qfai-discussion/references/discussion
 const COMPLETION_MATRIX =
   "assistant/skills/qfai-discussion/references/discussion-completion-matrix.md";
 
+/** How the playbook must cite the schema: a path an initialized project can resolve. */
+const RULES_CITATION = `\`.qfai/${DISCUSSION_RULES}#prototypingyaml\``;
+
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
+
+/** The project root a `.qfai/...` citation resolves against, for each shipped tree. */
+const projectRootOf = (tree: string): string => path.join(repoRoot, tree, "..");
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
@@ -48,9 +54,18 @@ describe("Stage 0 treats prototyping.yaml as optional for UI-bearing packs", () 
       expect(playbook).toContain(
         "Stop if `prototyping.yaml` is present in the latest UI-bearing pack and does not parse against the schema in",
       );
-      expect(playbook).toContain(
-        "`skills/qfai-discussion/references/discussion-artifact-rules.md#prototypingyaml`",
-      );
+      expect(playbook).toContain(RULES_CITATION);
+    });
+
+    it(`${tree}: the cited schema path resolves in an initialized project`, async () => {
+      const playbook = flat(await read(tree, PLAYBOOK));
+
+      // The citation is only useful if an agent standing in the project root can
+      // open it; a tree-relative `skills/...` form dangles everywhere.
+      expect(playbook).toContain(RULES_CITATION);
+      await expect(
+        readFile(path.join(projectRootOf(tree), ".qfai", DISCUSSION_RULES), "utf-8"),
+      ).resolves.toContain("## `prototyping.yaml`");
     });
 
     it(`${tree}: Stage 0 forbids fabricating the file to clear the gate`, async () => {
