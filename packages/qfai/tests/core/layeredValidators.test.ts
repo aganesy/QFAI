@@ -177,6 +177,65 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("rejects a CAP ID repeated on two catalogue rows", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // Row order is the mapping, so the repeat claims two spec directories at
+      // once. Both exist and both cite the CAP, so nothing but 107 fires.
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-107"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0001"]);
+      expect(issues[0]?.file).toBe(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads only the table inside the CAP Catalog section", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A retired-ID table before the catalogue and a published-history table
+      // after it both carry a `CAP ID` header; counting either would add rows
+      // and shift every row position below.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002" },
+        undefined,
+        {
+          catalogHeading: true,
+          leader: [
+            "## Retired IDs",
+            "",
+            "| CAP ID   | Reason    |",
+            "| -------- | --------- |",
+            "| CAP-0007 | withdrawn |",
+          ],
+          trailer: [
+            "## Published history",
+            "",
+            "| CAP ID   | Reason    |",
+            "| -------- | --------- |",
+            "| CAP-0008 | published |",
+          ],
+        },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("numbers rows by catalogue position, not by a CAP quoted in an earlier cell", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -329,7 +388,12 @@ async function seedPolicies(
   capIds: string[],
   declaredSpecs?: Record<string, string>,
   notes?: Record<string, string>,
-  extras?: { capCells?: Record<string, string>; trailer?: string[] },
+  extras?: {
+    capCells?: Record<string, string>;
+    leader?: string[];
+    trailer?: string[];
+    catalogHeading?: boolean;
+  },
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -348,6 +412,8 @@ async function seedPolicies(
     [
       "# 03 Capabilities",
       "",
+      ...(extras?.leader ?? []),
+      ...(extras?.catalogHeading ? ["", "## CAP Catalog", ""] : []),
       withSpecColumn
         ? "| CAP ID | Statement | Success metrics | Notes | Spec |"
         : "| CAP ID | Statement | Success metrics | Notes |",

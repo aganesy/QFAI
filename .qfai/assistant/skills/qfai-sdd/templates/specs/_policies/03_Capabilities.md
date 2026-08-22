@@ -7,6 +7,11 @@
 - Row position is the mapping: inserting or reordering a row re-points every spec
   directory below it, so a reorder renames each of those directories and updates the
   matching `Spec:` line in its `01_Spec.md` and the `Spec` column below.
+- A renumber is not local to the spec: grep the whole pack for the old spec ID and
+  re-point every inbound reference to it (`Superseded-by:` in another `01_Spec.md`,
+  links, plan and delta entries). Left alone, the old ID now names the spec that took
+  over that position, so it still exists and validates while pointing at the wrong
+  capability.
 - `Parent: CAP-*` travels with its capability, so it stays as written — rewriting it
   during a reorder re-attaches the spec to a different capability.
 - Keep IDs stable once published.

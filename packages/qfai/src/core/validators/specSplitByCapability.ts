@@ -16,6 +16,8 @@ const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const SPEC_CELL_RE = /^spec-\d{4}$/i;
 const HEADER_CAP_CELL_RE = /cap\s*id/i;
 const HEADER_SPEC_CELL_RE = /(^|[^a-z])spec([^a-z]|$)/i;
+const ATX_HEADING_RE = /^ {0,3}(#{1,6})\s+/;
+const CAP_CATALOG_HEADING_RE = /^ {0,3}(#{1,6})\s+.*\bcap\s+catalog\b/i;
 
 /** Stands in for the declared value in QFAI-SPLIT-106 when the cell is blank. */
 const UNDECLARED_SPEC_CELL = "(未宣言)";
@@ -42,13 +44,75 @@ type CapCatalogue = {
 };
 
 /**
- * Parses the CAP catalogue table(s) of `_policies/03_Capabilities.md`.
+ * The half-open line range the catalogue table is looked for in.
  *
- * Only a *confirmed* table is read: a header row is one whose next line is the
- * GFM separator, and the run of rows below it ends at the first line that is
- * not a table row. The document is masked with {@link maskNonSpecRegions}
- * first, so a fenced or HTML-commented sample table — the file illustrates its
- * own format — is not scanned as a real catalogue and cannot overwrite a row's
+ * The template makes `## CAP Catalog` the SSOT section, so the search is
+ * confined to it: a second table elsewhere in the file — a history of retired
+ * IDs, say, whose header also names a CAP column — would otherwise be read as
+ * catalogue rows and inflate both the CAP count and the row positions. When no
+ * such heading exists (an older or hand-rolled catalogue) the whole document
+ * stands in, and the single-table rule below still keeps the trailing tables
+ * out.
+ */
+function findCatalogueWindow(lines: string[]): { start: number; end: number } {
+  for (let index = 0; index < lines.length; index += 1) {
+    const heading = CAP_CATALOG_HEADING_RE.exec(lines[index] ?? "");
+    if (heading === null) {
+      continue;
+    }
+    const level = heading[1]?.length ?? 0;
+    for (let end = index + 1; end < lines.length; end += 1) {
+      const next = ATX_HEADING_RE.exec(lines[end] ?? "");
+      if (next !== null && (next[1]?.length ?? 0) <= level) {
+        return { start: index + 1, end };
+      }
+    }
+    return { start: index + 1, end: lines.length };
+  }
+  return { start: 0, end: lines.length };
+}
+
+/**
+ * Reads the data rows below a confirmed header, stopping at the first line
+ * that is not a table row so the table's own end bounds the catalogue.
+ */
+function readCatalogueRows(
+  lines: string[],
+  window: { start: number; end: number },
+  capColumn: number,
+  specColumn: number,
+): CapCatalogueRow[] {
+  const rows: CapCatalogueRow[] = [];
+  for (let index = window.start; index < window.end; index += 1) {
+    const line = lines[index] ?? "";
+    if (!looksLikeTableRow(line)) {
+      break;
+    }
+    if (isTableSeparator(line)) {
+      continue;
+    }
+    const cells = splitMarkdownRow(line);
+    const [capId, ...extraCapIds] = uniqueMatches(cells[capColumn] ?? "", CAP_ID_RE);
+    if (capId === undefined || extraCapIds.length > 0) {
+      // Not a capability row: the CAP column names no ID, or names several so
+      // the row cannot be attributed to one. Skipping keeps the numbering of
+      // the rows that do name exactly one CAP intact.
+      continue;
+    }
+    rows.push({ capId, specCell: specColumn >= 0 ? (cells[specColumn] ?? "") : "" });
+  }
+  return rows;
+}
+
+/**
+ * Parses the CAP catalogue table of `_policies/03_Capabilities.md`.
+ *
+ * Only the *first confirmed* table inside {@link findCatalogueWindow} is read:
+ * a header row is one whose next line is the GFM separator and whose cells name
+ * a CAP column, and the run of rows below it ends at the first line that is not
+ * a table row. The document is masked with {@link maskNonSpecRegions} first, so
+ * a fenced or HTML-commented sample table — the file illustrates its own
+ * format — is not scanned as a real catalogue and cannot overwrite a row's
  * cells with its example values.
  *
  * The CAP and `Spec` cells are read from the header's column indices rather
@@ -68,42 +132,29 @@ type CapCatalogue = {
  */
 function parseCapCatalogue(markdown: string): CapCatalogue {
   const lines = maskNonSpecRegions(markdown).split("\n");
-  const rows: CapCatalogueRow[] = [];
-  let hasSpecColumn = false;
-  let capColumn = -1;
-  let specColumn = -1;
+  const window = findCatalogueWindow(lines);
 
-  for (let index = 0; index < lines.length; index += 1) {
+  for (let index = window.start; index < window.end; index += 1) {
     const line = lines[index] ?? "";
-    if (!looksLikeTableRow(line)) {
-      capColumn = -1;
-      specColumn = -1;
+    if (!looksLikeTableRow(line) || isTableSeparator(line)) {
       continue;
     }
-    if (isTableSeparator(line)) {
+    if (!isTableSeparator(lines[index + 1] ?? "")) {
       continue;
     }
-    const cells = splitMarkdownRow(line);
-    if (isTableSeparator(lines[index + 1] ?? "")) {
-      capColumn = cells.findIndex((cell) => HEADER_CAP_CELL_RE.test(cell));
-      specColumn = capColumn >= 0 ? cells.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell)) : -1;
-      hasSpecColumn = hasSpecColumn || specColumn >= 0;
-      continue;
-    }
+    const header = splitMarkdownRow(line);
+    const capColumn = header.findIndex((cell) => HEADER_CAP_CELL_RE.test(cell));
     if (capColumn < 0) {
       continue;
     }
-    const [capId, ...extraCapIds] = uniqueMatches(cells[capColumn] ?? "", CAP_ID_RE);
-    if (capId === undefined || extraCapIds.length > 0) {
-      // Not a capability row: the CAP column names no ID, or names several so
-      // the row cannot be attributed to one. Skipping keeps the numbering of
-      // the rows that do name exactly one CAP intact.
-      continue;
-    }
-    rows.push({ capId, specCell: specColumn >= 0 ? (cells[specColumn] ?? "") : "" });
+    const specColumn = header.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell));
+    return {
+      hasSpecColumn: specColumn >= 0,
+      rows: readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
+    };
   }
 
-  return { hasSpecColumn, rows };
+  return { hasSpecColumn: false, rows: [] };
 }
 
 function normalizeDeclaredSpecCell(cell: string): string {
@@ -191,6 +242,27 @@ export async function validateSpecSplitByCapability(
       ),
     );
     return issues;
+  }
+
+  // Row order is the mapping, so a CAP repeated on two rows claims two spec
+  // directories at once. The count check below would then be satisfied by the
+  // duplicate itself, and `validateDefinedIds` records a defining file as a set
+  // so it cannot see a repeat inside one file either — the pair would pass in
+  // silence. Reject it here, where the row positions are still in hand.
+  const duplicateCapIds = Array.from(
+    new Set(capIds.filter((capId, index) => capIds.indexOf(capId) !== index)),
+  );
+  if (duplicateCapIds.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-107",
+        `_policies/03_Capabilities.md の CAP ID が重複しています: ${duplicateCapIds.join(", ")}`,
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.duplicateCapIds",
+        duplicateCapIds,
+      ),
+    );
   }
 
   if (capIds.length !== layeredEntries.length) {

@@ -1498,6 +1498,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/\|\s*Spec\s*\|/);
     expect(content).toContain("QFAI-SPLIT-106");
     expect(content).toMatch(/inserting or reordering a row/i);
+    // A renumber has to travel to every inbound reference, or the old ID keeps
+    // resolving — to the spec that took over the position.
+    expect(content).toMatch(/Superseded-by:/);
   });
 
   it("ensures solution-architect agent contains required contract constraints", async () => {
