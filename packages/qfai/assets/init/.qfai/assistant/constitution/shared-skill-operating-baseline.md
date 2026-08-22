@@ -36,6 +36,8 @@ the rule. A skill approaching it is a signal to move a section out.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
+- When `--auto` is active, ask nothing: no AskUserQuestion, no plain-text question.
+  Proceed with explicit assumptions and record them in the outputs.
 
 ## Canonical qfai Launcher (Mandatory)
 

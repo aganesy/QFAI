@@ -156,7 +156,7 @@ The skill collapses avoidable per-session prompts to 0-1 by classifying every de
 
 A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. Widening triggers a Reviewer-Gate finding.
 
-Ask every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above.
+Route every ask-user and hard-required item through the protocol in [User Questions (AskUserQuestion Protocol)](#user-questions-askuserquestion-protocol) above, including its `--auto` no-question rule.
 
 project_memory:
 

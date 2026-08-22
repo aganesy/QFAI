@@ -89,6 +89,13 @@ describe("every shipped SKILL.md carries the AskUserQuestion protocol section", 
       expect(content).toContain("prefer structured choices over free-text input");
       expect(content).toContain("explicit numbered choices");
       expect(content).toContain("State why AskUserQuestion was unavailable.");
+      // The fourth MUST (`communication.md` rule 4 / Constitution Article X.4):
+      // without it a skill body that says "ask through the protocol" would
+      // stall a non-interactive `--auto` run waiting on input.
+      expect(content).toContain("When `--auto` is active, ask nothing");
+      expect(content).toContain(
+        "Proceed with explicit assumptions and record them in the outputs.",
+      );
     }
   });
 
