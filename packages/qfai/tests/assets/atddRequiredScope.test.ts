@@ -81,9 +81,46 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
       expect(block).toMatch(/before that|until then|before the project/);
     });
 
+    it(`${tree}: the US narrowing lists the UI-contract names the resolver accepts`, async () => {
+      const block = flat(coverageObligations(await read(tree)));
+      // A pseudo-glob (`<spec-id>*.yaml`) claims both too much and too
+      // little against `hasMatchingUiContract`: it reads as admitting
+      // `0002-orders.yaml` (rejected) while hiding `ui-0002-screen.yaml`
+      // and the `spec-0002/` subdirectory (both accepted).
+      for (const shape of [
+        "`<spec-id>.yaml`",
+        "`spec-<spec-id>.yaml`",
+        "`ui-<spec-id>.yaml`",
+        "`ui-<spec-id>-<slug>.yaml`",
+        "`spec-<spec-id>/` subdirectory",
+      ]) {
+        expect(block).toContain(shape);
+      }
+      expect(block).not.toContain("<spec-id>*.yaml");
+    });
+
     it(`${tree}: the CON-API narrowing names the deferral marker`, async () => {
       const block = flat(coverageObligations(await read(tree)));
       expect(block).toContain("x-qfai-status: planned");
+      // `isPlannedApiContract` honours the marker only at the document
+      // root, and it defers every `CON-API-*` in that file. Describing it
+      // per "contract operation" invites authoring it under an OpenAPI
+      // operation, where it is ignored and `QFAI-ATDD-113` still fires.
+      expect(block).toMatch(/top-level key/);
+      expect(block).toMatch(/defers the whole file/);
+      expect(block).toMatch(/QFAI-ATDD-113/);
+    });
+
+    it(`${tree}: the read set carries the project-wide opt-in inputs`, async () => {
+      const content = await read(tree);
+      // The opt-in is decided outside the target spec, so a read set listing
+      // only that spec cannot resolve it until the closing validate run.
+      for (const heading of ["Inputs Priority (Preflight)", "Read Set Contract (Mandatory)"]) {
+        const body = flat(section(content, heading));
+        expect(body).toContain("qfai.config.yaml");
+        expect(body).toContain(".qfai/contracts/ui/**");
+        expect(body).toContain("01_Spec.md` frontmatter");
+      }
     });
 
     it(`${tree}: DoD and not-done read \`required\` from the one definition`, async () => {
@@ -100,6 +137,10 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
       // `E2E = required US-*` is where the wrong reading first costs a row
       // count, before any test is written.
       expect(signals).toMatch(/Coverage obligations/);
+      // The API row is `required`, not `declared`: counting deferred
+      // contracts here overstates the Raw count the estimator publishes.
+      expect(signals).toContain("API = required `CON-API-*`");
+      expect(signals).not.toContain("API = declared");
     });
   }
 });

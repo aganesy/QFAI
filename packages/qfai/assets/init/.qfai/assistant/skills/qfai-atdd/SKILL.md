@@ -57,6 +57,7 @@ When unsure, read inputs in this order:
   - `.qfai/contracts/api/**` (CON-API)
   - `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
+  - `qfai.config.yaml` (`prototyping.primarySpecId`), **every** `.qfai/contracts/ui/**` basename and every sibling `.qfai/specs/*/01_Spec.md` frontmatter — always, even for a spec with no surface of its own: the `US-*` narrowing is the project-wide opt-in above, so a sibling's declaration alone decides whether this spec owes E2E references
 - P5: `.qfai/specs/<spec-id>/07_Decisions.md` + `.qfai/specs/_policies/08_Decisions.md` (Decision Records, `DR-*`; if no spec yet, state "not applicable")
 - P6: legacy artifacts (optional only)
   - `.qfai/specs/<spec-id>/scenario.feature`
@@ -71,6 +72,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
   - `.qfai/specs/<spec-id>/05_Examples.md`
   - `.qfai/specs/<spec-id>/06_Test-Cases.md`
+  - `qfai.config.yaml`, `.qfai/contracts/ui/**` and every sibling `.qfai/specs/*/01_Spec.md` frontmatter — the project-wide surface opt-in that decides this spec's `US-*` obligation. Resolve it **before** the Test Volume Estimate; leaving it to the closing `npx qfai validate` turns a known row count into a late `QFAI-ATDD-111`.
   - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff.
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
@@ -160,18 +162,15 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
   So a sibling spec's uncovered contract exits 1 on this spec's gate. That is a real limit, not a formality. When it happens: record the finding, its owning spec and why it is not this stage's work as a cross-spec obligation in this stage's evidence, and say so in the completion report — do **not** claim the gate passed, weaken the profile, lower `--fail-on`, or waive it. Closing them is the owning spec's next `/qfai-atdd` run. The repo-wide run belongs to `/qfai-verify`, at the end of the stage.
 
 - Coverage obligations are mandatory, and **`required` narrows on a different mechanism for each ID kind — `US-*` by surface type, `TC-*` by its declared `Level`, `CON-API-*` by active-vs-deferred. They share a word, not a rule; never carry one kind's over to another**:
-  - `tests/e2e/**` must cover all required `US-*`. **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`, a matching UI contract `.qfai/contracts/ui/<spec-id>*.yaml`, a legacy `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide `QFAI-ATDD-111` as a spec error (`catalog/test-layers.md#atdd-annotation-hard-gate`).
-  - Every `TC-*` must be covered from the directory its declared `Level` routes
-    to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` ->
-    `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level`
-    routes to `tests/integration/**`.
+  - `tests/e2e/**` must cover all required `US-*`. **Required** here = every declared `US-*` of a **user-facing** spec, "user-facing" being the same surface union `/qfai-prototyping` resolves — frontmatter `surface_type: ui-bearing` in `01_Spec.md`, a matching UI contract in `.qfai/contracts/ui/` (the resolver accepts these names and no others: `<spec-id>.yaml`, `spec-<spec-id>.yaml`, `ui-<spec-id>.yaml`, `ui-<spec-id>-<slug>.yaml`, or any `*.yaml` at any depth under a `spec-<spec-id>/` subdirectory — a basename that merely contains the id, such as `0002-orders.yaml`, is not one, and a `.yml` extension never is), a legacy `# … prototyping …` heading, or the spec pinned by `qfai.config.yaml#prototyping.primarySpecId`; any one signal is enough. **That narrowing is a project-wide, all-or-nothing opt-in**: it turns on the moment any one spec in the repository declares a user-facing surface, and until then it is off repo-wide. So a spec with no user-facing surface owes no E2E reference once the project has opted in, and before that owes one for every declared `US-*` — the obligation on the spec in front of you can change because a **different** spec added a surface declaration, with nothing in this stage's inputs to show it. On a resolution failure `qfai` names the reason on stderr and keeps the obligation project-wide, so read stderr before treating an unexpectedly wide `QFAI-ATDD-111` as a spec error (`catalog/test-layers.md#atdd-annotation-hard-gate`).
+  - Every `TC-*` must be covered from the directory its declared `Level` routes to: `L3`/`Integration` -> `tests/integration/**`, `L4`/`API` -> `tests/api/**`, `L5`/`E2E` -> `tests/e2e/**`. A TC with no declared `Level` routes to `tests/integration/**`.
   - **`L1`/`Unit` and `L2`/`Component` owe nothing here** — out of this skill's
     scope, excluded from `QFAI-ATDD-112`, gated by `tdd/test-list.md` under
     `/qfai-implement`, and named on every run by `QFAI-ATDD-117` (`info`). Do
     not duplicate an L1/L2 annotation into `tests/integration/**` to quiet a
     gate: that is the all-integration collapse `catalog/test-layers.md` lists as
     an anti-pattern.
-  - `tests/api/**` must cover all required `CON-API-*`. **Required** here = every **active** declared contract operation; one deferred with `x-qfai-status: planned` is declared but not owed. Surface typing does not touch this obligation.
+  - `tests/api/**` must cover all required `CON-API-*`. **Required** here = every **active** declared contract operation; one deferred with `x-qfai-status: planned` is declared but not owed. **That marker is read only as a top-level key of the contract document, and it defers the whole file** — every `CON-API-*` that file declares, not one operation. Written under an OpenAPI operation it is ignored: the contract stays active and `QFAI-ATDD-113` fires for each of its uncovered operations, so slice a partially-planned contract into its own file rather than marking the operation. Surface typing does not touch this obligation.
 - Forbidden references (a TC annotation outside its declared home):
   `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
   unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.
@@ -245,7 +244,7 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped, so filling it in from "every declared `US-*`" gets the row count wrong before a single test is written.
+E2E = required `US-*`, API = required `CON-API-*`, Integration = required `TC-*`. Read `required` per ID kind from Coverage obligations — the `US-*` row is surface-scoped and the `CON-API-*` row drops every contract deferred with `x-qfai-status: planned`, so filling either in from "every declared" overstates the Raw count before a single test is written.
 When a signal is low or high, propose options and a recommendation; never fail
 on a signal value alone.
 
@@ -494,6 +493,6 @@ A skill MAY narrow the auto-decide bucket (drop entries) but MUST NOT widen it. 
 
 project_memory:
 
-- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. "Required" narrows differently per ID kind — US by surface type (a project-wide opt-in: active only once some spec declares a user-facing surface, project-wide before that), TC by declared Level, CON-API by active-vs-deferred (x-qfai-status: planned defers). Each TC declaring L3/L4/L5, or no Level, is covered from the directory that Level routes to (L3/Integration -> tests/integration/**, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
+- Coverage obligations stay layer-pinned for US and CON-API: tests/e2e/** must cover all required US; tests/api/\*\* all required CON-API. "Required" narrows differently per ID kind — US by surface type (a project-wide opt-in: active only once some spec declares a user-facing surface, project-wide before that), TC by declared Level, CON-API by active-vs-deferred (a top-level x-qfai-status: planned defers that whole contract file; under an operation it is ignored). Resolving the US opt-in needs qfai.config.yaml, every .qfai/contracts/ui/** basename and sibling 01_Spec.md frontmatter, read before the Volume Estimate. Each TC declaring L3/L4/L5, or no Level, is covered from the directory that Level routes to (L3/Integration -> tests/integration/\*\*, L4/API -> tests/api/\*\*, L5/E2E -> tests/e2e/\*\*; no declared Level -> tests/integration/\*\*). L1/Unit and L2/Component owe no ATDD annotation — tdd/test-list.md covers them. An existing one in tests/integration/\*\* is neither counted nor flagged, so do not require adding or removing it.
 - Forbidden references guard the test-layer policy: a TC annotation outside its declared home is rejected — tests/api/** must not carry QFAI:SPEC-XXXX:TC-YYYY unless that TC declares L4/API, and tests/e2e/** likewise unless it declares L5/E2E.
 - Floor / ratio signals are planning hints, never gates; legacy scenario.feature / coverage ledger files remain optional inputs.
