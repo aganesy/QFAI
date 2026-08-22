@@ -623,7 +623,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         await runInit({ dir: root, force: false, dryRun: true, yes: true });
       });
 
-      expect(dryRunOutput).toContain("would set: git config core.symlinks true");
+      expect(dryRunOutput).toContain("would set: git config --local core.symlinks true");
       const { stdout: afterDryRun } = await execFile(
         "git",
         ["config", "--local", "--get", "core.symlinks"],
@@ -659,6 +659,103 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(output).toContain("git config: core.symlinks already true");
       expect(output).not.toContain("git config: core.symlinks=true");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still pins core.symlinks locally when only the global config enables it", async () => {
+    // The skip decision has to read the same scope the write targets. An
+    // unscoped read also sees global/system config, so a `true` inherited from
+    // there suppressed the local pin and left the repository depending on a
+    // setting that can be removed outside it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const globalConfig = path.join(root, "fake-global-gitconfig");
+    const previousGlobal = process.env.GIT_CONFIG_GLOBAL;
+    try {
+      await writeFile(globalConfig, "[core]\n\tsymlinks = true\n", "utf8");
+      process.env.GIT_CONFIG_GLOBAL = globalConfig;
+
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      // Git for Windows may seed a local value at init time; clear it so the
+      // only `true` in play comes from the global config above.
+      await execFile("git", ["config", "--local", "--unset-all", "core.symlinks"], {
+        cwd: repo,
+      }).catch(() => undefined);
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: repo, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks=true");
+      expect(output).not.toContain("already true");
+      const { stdout: localValue } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(localValue.trim()).toBe("true");
+    } finally {
+      if (previousGlobal === undefined) {
+        delete process.env.GIT_CONFIG_GLOBAL;
+      } else {
+        process.env.GIT_CONFIG_GLOBAL = previousGlobal;
+      }
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the common .git/config when init runs inside a linked worktree", async () => {
+    // `--absolute-git-dir` answers `.git/worktrees/<name>` there, which holds
+    // no `config` file at all, while the local-scope write lands in the common
+    // `.git/config`. Reporting the per-worktree dir pointed at nothing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      const reported = /git config: core\.symlinks=true \(([^)]+)\)/.exec(output);
+      expect(reported).not.toBeNull();
+      const reportedPath = reported?.[1] ?? "";
+      expect(reportedPath).not.toContain("worktrees");
+      // The reported file must be the one git actually wrote to.
+      await access(reportedPath);
+      const { stdout: origin } = await execFile(
+        "git",
+        ["config", "--local", "--show-origin", "--get", "core.symlinks"],
+        { cwd: linked },
+      );
+      expect(origin.trim()).toContain("true");
+      expect(origin.replace(/\\/g, "/").toLowerCase()).toContain(
+        reportedPath.replace(/\\/g, "/").toLowerCase(),
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
     }

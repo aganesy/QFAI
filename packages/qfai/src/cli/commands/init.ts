@@ -1066,22 +1066,42 @@ async function pathExists(target: string): Promise<boolean> {
  * repository. `git rev-parse` resolves upward from `cwd`, so `--dir subdir`
  * inside an existing repository configures that repository rather than
  * `subdir`; naming the resolved file in the report makes that visible.
+ *
+ * The common git dir is what matters, not the per-worktree one: inside a
+ * linked worktree `--absolute-git-dir` answers `.git/worktrees/<name>`, which
+ * holds no `config` file at all, while the local-scope write lands in the
+ * common `.git/config`. Older git without `--path-format` falls back to the
+ * per-worktree answer, which is still correct for a non-worktree checkout.
  */
 async function resolveGitConfigPath(destRoot: string): Promise<string | null> {
+  const gitDir =
+    (await runGitRevParse("git rev-parse --path-format=absolute --git-common-dir", destRoot)) ??
+    (await runGitRevParse("git rev-parse --absolute-git-dir", destRoot));
+  return gitDir === null ? null : path.join(gitDir, "config");
+}
+
+/** Runs one `git rev-parse` form, answering null when it fails or is empty. */
+async function runGitRevParse(command: string, destRoot: string): Promise<string | null> {
   try {
-    const { stdout } = await execAsync("git rev-parse --absolute-git-dir", { cwd: destRoot });
-    const gitDir = stdout.trim();
-    return gitDir === "" ? null : path.join(gitDir, "config");
+    const { stdout } = await execAsync(command, { cwd: destRoot });
+    const resolved = stdout.trim();
+    return resolved === "" ? null : resolved;
   } catch {
-    // Not a git repository — skip
+    // Not a git repository, or a git too old for this rev-parse form.
     return null;
   }
 }
 
-/** True when the effective `core.symlinks` already makes the write a no-op. */
+/**
+ * True when the repository-local `core.symlinks` already makes the write a
+ * no-op. The read is scope-matched to the write: an unscoped read also sees
+ * global and system config, so a `true` inherited from there would suppress
+ * the local pin and leave the repository dependent on a setting that can be
+ * removed outside it.
+ */
 async function gitSymlinksAlreadyEnabled(destRoot: string): Promise<boolean> {
   try {
-    const { stdout } = await execAsync("git config --get core.symlinks", { cwd: destRoot });
+    const { stdout } = await execAsync("git config --local --get core.symlinks", { cwd: destRoot });
     return stdout.trim().toLowerCase() === "true";
   } catch {
     // Exit 1 = unset. Any other failure is treated the same: write and let the
@@ -1107,18 +1127,18 @@ async function configureGitSymlinks(destRoot: string, dryRun: boolean): Promise<
   }
 
   if (dryRun) {
-    return [`  would set: git config core.symlinks true (${configPath})`];
+    return [`  would set: git config --local core.symlinks true (${configPath})`];
   }
 
   try {
-    await execAsync("git config core.symlinks true", { cwd: destRoot });
+    await execAsync("git config --local core.symlinks true", { cwd: destRoot });
   } catch (err: unknown) {
     const detail = err instanceof Error ? err.message : String(err);
     throw new Error(
       [
-        "git config core.symlinks true の設定に失敗しました。",
+        "git config --local core.symlinks true の設定に失敗しました。",
         "手動で以下を実行してください:",
-        "  git config core.symlinks true",
+        "  git config --local core.symlinks true",
         `原因: ${detail}`,
       ].join("\n"),
     );
