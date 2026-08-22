@@ -163,6 +163,20 @@ When parallel dispatch is authorized, the ledger has one writer:
   **complete** evidence block to the row, not by the worker writing it. A block
   missing any contract field does not satisfy item 10: the orchestrator obtains
   the missing fields first, and the row stays out of `done` until it has them.
+- **`Prototype parity` is the one field the orchestrator recomputes rather than
+  copies.** Completeness is not enough for it: `n/a` is a complete value and the
+  cheapest one, and the worker returning it is the implementer — the actor whose
+  self-report gate item 9 exists to check. A worker that missed a clause, or
+  answered before its own production change existed, would skip
+  `product-surface-reviewer` on the strength of its own say-so, which is what a
+  single mechanical definition (`ui-affecting.md`) was written to prevent. So
+  before it routes reviewers or writes the row, the orchestrator evaluates the
+  three clauses **itself**, on the merged trunk, from the ledger row, the
+  declared UI paths, the slice's actual diff and the declared UI contracts
+  (`ui-affecting.md#the-test`). Its own result decides; a worker value that
+  disagrees is a **reported discrepancy**, not a tie to break — record it with
+  the row and treat a worker `n/a` on a row a clause selects the way any other
+  false gate claim is treated (`#seam-reconciliation-after-a-parallel-run`).
 
 ## Ledger ownership
 

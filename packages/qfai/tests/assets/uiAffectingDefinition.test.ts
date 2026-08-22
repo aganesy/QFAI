@@ -289,5 +289,107 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       // rule only covers path cells.
       expect(structure).toContain("#normalising-owning-module");
     });
+
+    it(`${tree}: an undeclared Owning module falls back to the row's own change`, async () => {
+      const definition = await read(tree, DEFINITION);
+      const skill = await read(tree, SKILL);
+
+      // `Owning module` is optional, so `-` plus a unit test outside every
+      // declared UI path plus an obligation naming no contract id defeated all
+      // three clauses while the production code landed under `src/components/`.
+      // The column the row was never required to fill cannot be what decides.
+      expect(definition).toContain("### When `Owning module` is not declared");
+      expect(definition).toContain("the clause is **not skipped**");
+      expect(definition).toContain("git diff --name-only");
+      expect(definition).toContain("required to fill is empty");
+
+      // And the answer is taken at the gate, where the diff exists — an early
+      // reading is a working assumption, not the recorded value.
+      const item9 = skill
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("9. UI-affecting items have prototype parity PASS"));
+      expect(item9).toContain("#when-owning-module-is-not-declared");
+      expect(item9).toContain("against the tree the row landed at");
+    });
+
+    it(`${tree}: a structured primary task id is a link target`, async () => {
+      const definition = await read(tree, DEFINITION);
+
+      // `screens[].primary_tasks[]` is a closed `{id, label, acceptance}` shape
+      // whose `id` is the stable handle ATDD scaffolds cite, so an obligation
+      // that references a screen's task references it by that id and nothing
+      // else. Collecting only screen / element / action ids missed the link.
+      expect(definition).toContain("`screens[].primary_tasks[].id`");
+      expect(definition).toContain("ui-contract-guide.md#screensprimary_tasks-shape");
+    });
+
+    it(`${tree}: the parity verdict is dated and hashed like items 7-8`, async () => {
+      const definition = await read(tree, DEFINITION);
+      const skill = await read(tree, SKILL);
+
+      // `PASS (clause N)` alone dates from nothing, so a PASS taken against one
+      // surface could be carried onto a row whose UI, contract or rendered
+      // evidence moved afterwards.
+      expect(definition).toContain(
+        "### Staleness: `Reviewed revision` and `Audited evidence hash`",
+      );
+
+      const evidenceLine = skill
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("- `Prototype parity`"));
+      expect(evidenceLine).toContain("Reviewed revision");
+      expect(evidenceLine).toContain("Audited evidence hash");
+      expect(evidenceLine).toContain("#staleness-reviewed-revision-and-audited-evidence-hash");
+
+      // Gate item 10's revision-agreement rule covered items 3/5/7/8 and
+      // excluded item 9, which is what let a stale PASS through it.
+      const item10 = skill.split(/\r?\n/).find((line) => line.startsWith("10. `test-list.md`"));
+      expect(item10).toBeDefined();
+      expect(item10).toContain("items 5, 7, 8 and 9 share `Revision`");
+      expect(item10).toContain("Item 9's hash is recomputed");
+    });
+
+    it(`${tree}: the design contracts resolve from contractsDir too`, async () => {
+      const skill = await read(tree, SKILL);
+      const readOrder = skill
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("- Read spec + contract inputs first"));
+
+      // `designContractReadiness` resolves the three design files from
+      // `config.paths.contractsDir`, so pinning them to `.qfai/contracts/design/`
+      // in the same read order that resolves UI contracts dynamically made a
+      // repointed project read a stale mirror or stop on a default it never had.
+      expect(readOrder).toContain("`<contractsDir>/design/DESIGN.md.lock.yaml`");
+      expect(readOrder).toContain("`<contractsDir>/design/design-system.yaml`");
+      expect(readOrder).toContain("`<contractsDir>/design/prototype-handoff.yaml`");
+      expect(readOrder).not.toContain("`.qfai/contracts/design/");
+    });
+
+    it(`${tree}: the orchestrator re-derives the answer under parallel mode`, async () => {
+      const definition = await read(tree, DEFINITION);
+      const policy = await read(tree, POLICY);
+
+      // A worker returning `n/a` is the implementer self-reporting on the gate
+      // that exists to check it — a complete evidence block is not enough.
+      expect(policy).toContain("the one field the orchestrator recomputes rather than");
+      expect(policy).toContain("`ui-affecting.md#the-test`");
+      expect(policy).toContain("Its own result decides");
+      expect(policy).toContain("**reported discrepancy**");
+      expect(definition).toContain("does **not** take the worker's value");
+    });
+
+    it(`${tree}: an installed project has a path off the stale manifest`, async () => {
+      const definition = await read(tree, DEFINITION);
+
+      // `init --force` regenerates skills/ and agents/ but never manifest/, so
+      // an existing project keeps a catalog pinned to `.qfai/contracts/ui/`
+      // and a routing entry with no predicate. Same shape, same remedy as
+      // qfai-atdd/references/stale-manifest.md.
+      expect(definition).toContain("## A project whose manifest predates this definition");
+      expect(definition).toContain(
+        "node_modules/qfai/assets/init/.qfai/assistant/manifest/agent-catalog.yml",
+      );
+      expect(definition).toContain("../qfai-atdd/references/stale-manifest.md");
+    });
   }
 });

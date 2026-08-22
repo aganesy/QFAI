@@ -13,7 +13,9 @@ it removes a reviewer round from the row.
 
 ## The two inputs
 
-Both are declarations the project already owns. The test reads them and nothing else.
+Both are declarations the project already owns, and no other declaration is consulted. The one
+non-declared input is the row's **own production change**, which clause 1 falls back to when the
+ledger left `Owning module` undeclared (`#when-owning-module-is-not-declared`).
 
 - **Declared UI paths** — the bullets under
   `.qfai/assistant/catalog/structure.md#ui-surface-paths-ssot`. That section is the only place a
@@ -37,10 +39,13 @@ that holds. An item is **UI-affecting** when any of the following holds:
 
 1. Its `Owning module` matches a declared UI path, matched as **two candidates** (below) so that
    both the repo-relative and the dotted-module form the ledger allows are covered. Evaluated
-   **only when the ledger declares one**: that column is optional
+   against the cell **only when the ledger declares one**: that column is optional
    (`execution-ledger.md#declared-seam-column-optional-required-for-parallel-dispatch`) and `-`
    means "not declared", so a rule keyed on it alone would be unevaluable on the ledgers that omit
-   it.
+   it. When it is `-`, the clause is **not skipped** — the production paths the row itself created
+   or modified stand in for the cell and are matched the same way
+   (`#when-owning-module-is-not-declared`). A row never answers `n/a` because a column it was never
+   required to fill is empty.
 2. Its `Test file` matches a declared UI path. `Test file` is the only path-valued **required**
    column, so this clause is evaluable on every ledger — it is what keeps the definition total.
 3. An obligation the row carries — `TC-Refs`, `US-Refs` or `CON-API-Refs` — is **linked** (below)
@@ -73,6 +78,37 @@ carries no `/` and cannot match a path glob verbatim, and a path put through it 
 (`App/tsx`) that names no declared directory. Clause 2 is unaffected either way: `Test file` is
 required and always a path.
 
+### When `Owning module` is not declared
+
+`Owning module` is optional, so the escape it opens is exact: a row whose unit test sits outside
+every declared UI path (`tests/unit/Button.test.tsx`), whose obligation names no contract id, and
+whose `Owning module` cell is `-` fails all three clauses even though its production code lands
+under a declared UI path such as `src/components/`. Nothing in the ledger contradicts the `n/a`,
+and the column it would have been caught by was one the row was never required to fill.
+
+The fix is not to make the column mandatory — `execution-ledger.md` requires it only for parallel
+dispatch, and requiring it on every row would put a declaration where the ledger deliberately has
+none. Instead, when the cell is `-`, clause 1 reads the paths the row's **own change** touched:
+
+- **The list** — the production files this row created or modified, taken exactly the way the seam
+  reconciliation takes them (`parallelization-policy.md#seam-reconciliation-after-a-parallel-run`):
+  `git diff --name-only <the revision the row started from>..<the row's current tree>`, restricted
+  to production paths, test files excluded (clause 2 already reads those). Each path is matched
+  against the declared UI paths verbatim — a diff path is always a path, so the dotted-module
+  candidate does not apply.
+- **When it is evaluated** — at the completion gate, where item 9 is checked and the change exists.
+  Before that the row has no diff, so a trigger answered early (the Visual Review Guard reads the
+  contracts _before_ implementation) is answered from the cell, the `Test file` and the obligation
+  alone, and **re-evaluated here**. An early `n/a` is a working assumption, never the recorded
+  answer: `Prototype parity` is written from the gate-time evaluation, so a row that turned out to
+  edit a UI path is routed to `product-surface-reviewer` before it may reach `done`, and the review
+  round that adds is the cost of having implemented a UI surface without declaring one.
+- **When the row has no production change** — the _RED not observable_ path waives item 4, so the
+  diff is empty and the clause simply does not fire. An empty list is not a match.
+
+This keeps the definition mechanical: the list comes from `git`, the globs come from
+`structure.md`, and neither is the implementer's reading of an adjective.
+
 ### What "linked" means
 
 The link must be **written down**. It is never inferred from wording, from similarity of intent, or
@@ -82,9 +118,19 @@ ways by two agents. It holds when either literal occurrence exists, and otherwis
 - **a.** the obligation id (`TC-…`, `US-…`, `CON-API-…`) occurs verbatim inside a declared UI
   contract file — in a screen's `primary_tasks` acceptance text, an element's `validations`, an
   `obligations:` list the project adds, or any other field; or
-- **b.** a `screens[].id`, `elements[].id` or `actions[].id` from a declared UI contract occurs
-  verbatim in the obligation's own source entry — `06_Test-Cases.md` for a `TC-*`,
-  `02_User-stories.md` for a `US-*`, the API contract entry that declares a `CON-API-*`.
+- **b.** a `screens[].id`, `screens[].primary_tasks[].id`, `elements[].id` or `actions[].id` from a
+  declared UI contract occurs verbatim in the obligation's own source entry — `06_Test-Cases.md`
+  for a `TC-*`, `02_User-stories.md` for a `US-*`, the API contract entry that declares a
+  `CON-API-*`.
+
+`primary_tasks[].id` is in that list because the structured `primary_tasks` shape
+(`../qfai-sdd/references/ui-contract-guide.md#screensprimary_tasks-shape`) is a closed
+`{id, label, acceptance}` mapping whose `id` is defined there as the stable handle ATDD scaffolds
+cite — so a test case that references a screen's task references it by that id and by nothing
+else. Collecting only screen / element / action ids missed that link, and a row whose `Test file`
+sits in another directory with `Owning module` undeclared then answered `n/a` on a contract it was
+written against. The legacy string-only `primary_tasks` shape has no id and contributes none;
+such an entry can still fire clause 3 through direction **a.**
 
 Both directions are membership in a set of literal strings, so two agents evaluating the same row
 read the same two sets and reach the same answer. The shipped UI contract schema carries no
@@ -116,10 +162,10 @@ reference down in one of those two places — not to argue that the row "is real
 The answer is recorded either way, so that item 9 leaves an artifact even when it is satisfied
 vacuously. In the row's per-item evidence entry, `Prototype parity` carries:
 
-| Outcome         | `Prototype parity` value                                                                                            |
-| --------------- | ------------------------------------------------------------------------------------------------------------------- |
-| A clause fired  | the product-surface-reviewer verdict with the clause that routed the row — `PASS (clause N)` or `REVISE (clause N)` |
-| No clause fired | `n/a (not UI-affecting)`                                                                                            |
+| Outcome         | `Prototype parity` value                                                                                                                                                   |
+| --------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A clause fired  | the product-surface-reviewer verdict with the clause that routed the row — `PASS (clause N)` or `REVISE (clause N)` — plus `Reviewed revision` and `Audited evidence hash` |
+| No clause fired | `n/a (not UI-affecting)` plus the `Reviewed revision` the clauses were evaluated against                                                                                   |
 
 `clause N` is the number of the first clause that held. It is the auditable half: it names which
 declaration the decision came from — a UI path, or a written-down obligation link — so a later
@@ -128,6 +174,28 @@ A blank cell satisfies neither branch and blocks `done` like any other missing g
 this record the failure mode is silent by construction: a skipped item 9 leaves nothing behind, so
 a row that had a UI surface and declined to say so is indistinguishable afterwards from a row that
 legitimately had none.
+
+### Staleness: `Reviewed revision` and `Audited evidence hash`
+
+`PASS (clause N)` alone dates from nothing. `Spec review` and `Code quality review` each carry a
+`Reviewed revision` and an `Audited evidence hash` for exactly this reason
+(`references/evidence-revision.md`), and without them a parity PASS taken against one surface can
+be carried forward onto a row whose production UI, UI contract or rendered evidence moved after the
+reviewer returned. So item 9's entry carries both:
+
+- **`Reviewed revision`** — the revision the verdict was taken against, recorded the same way items
+  7 and 8 record theirs. On an `n/a` row it is the revision the **clauses** were evaluated at,
+  which is what makes the gate-time re-evaluation above checkable rather than assertable.
+- **`Audited evidence hash`** — taken over the inputs the decision actually used: the declared UI
+  contract files a clause fired on, and the rendered evidence the reviewer judged
+  (`.qfai/evidence/prototyping/**` / the screenshots or HTML named in the entry). On an `n/a` row
+  there is no reviewer and no rendered evidence, so the hash is omitted and the revision alone
+  carries it.
+
+Gate item 10 re-checks both against the current tree, alongside items 3, 5, 7 and 8: item 9's
+`Reviewed revision` must agree with the `Revision` items 5, 7 and 8 share, and the hash is
+recomputed over the same inputs. A mismatch means the surface moved under the verdict — the row
+re-runs the clauses and, if one still fires, takes a fresh parity review before `done`.
 
 ### Rows completed before this field existed
 
@@ -140,4 +208,35 @@ resets it, at which point it runs the clauses like any other row. Do not backfil
 from one that was evaluated.
 
 Under coordinated parallel mode the worker returns this field in its evidence block like every
-other contract field, and the orchestrator writes it (`parallelization-policy.md`).
+other contract field, and the orchestrator writes it — but it does **not** take the worker's value
+on trust. The worker is the implementer, and the implementer's self-report is the thing this
+definition exists to remove: the orchestrator re-derives the clauses itself on the merged trunk and
+rejects a mismatch before routing or writing
+(`parallelization-policy.md#coordinated-parallel-mode-ledger-ownership`).
+
+## A project whose manifest predates this definition
+
+`npx qfai init --force` regenerates `assistant/skills/**` and `assistant/agents/**` but leaves
+`assistant/manifest/**` alone — those are the declarative files `/qfai-configure` owns, and
+overwriting a project's adjusted agent taxonomy is the worse failure (`init.ts`). So an existing
+project takes this definition without taking the manifest half of it: its
+`agent-catalog.yml#developer_instructions` for `product-surface-reviewer` still names the fixed
+`.qfai/contracts/ui/` input, and its `agent-routing.yml` still lists the reviewer under
+`conditional_agents` with no predicate named. A reviewer routed from that catalog reads a
+narrower contract set than the clause that routed it — it misses `.yml` contracts, the per-spec
+subdirectory layout and every repointed `contractsDir` — so it can PASS without ever opening the
+contract the decision came from.
+
+The definition still applies. The remedy is the same one
+`../qfai-atdd/references/stale-manifest.md` prescribes for the same distribution shape:
+
+1. **Diff both manifests against the installed package** —
+   `node_modules/qfai/assets/init/.qfai/assistant/manifest/agent-catalog.yml` and
+   `agent-routing.yml` — and merge the shipped roles' contracts in, keeping the project's own
+   routing choices and any roles it added. That is the step that actually moves the files;
+   `/qfai-configure` edits what the project has rather than reconciling it against the package, so
+   there is no migration command to wait for.
+2. **Until that merge has run**, resolve the reviewer's contract inputs from this file rather than
+   from the catalog — `#the-two-inputs` is the SSOT for the set either way — and record in the
+   evidence entry that the catalog predates this definition, so a PASS taken on a narrower read is
+   visible as the stale input it is rather than mistaken for a clean one.
