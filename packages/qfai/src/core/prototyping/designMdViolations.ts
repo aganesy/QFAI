@@ -21,6 +21,13 @@
  * `generator-prompt.md#output-layout--two-trees-two-shapes`; this file and
  * that prompt are an SSOT-sync pair (see `../validators/promptScannerPairs.ts`).
  *
+ * The capture fan-out is not the only writer of the scanned tree:
+ * `--emit-skeletons` also writes `<screenId>.html` into the SAME
+ * `.qfai/evidence/prototyping/iter-00/` directory (`iterationDir(0)`), not
+ * into the authored `.qfai/prototypes/` tree. A cycle-0 skeleton left in
+ * place is therefore scanned here like any captured snapshot, so its
+ * placeholder CSS must stay inside the DESIGN.md token set.
+ *
  * Both trees are written by the CLI the prompt prescribes: the capture fan-out
  * by `npx qfai prototyping iterate --capture`, and this scanner runs under
  * `npx qfai prototyping certify`. `npx` is not cosmetic — qfai is a project
