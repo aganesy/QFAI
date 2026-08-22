@@ -156,7 +156,8 @@ The eight required columns, the allowed transitions and the exception rules are 
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
-   satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
+   satisfied by step 2's narrow suite — nothing is re-run, and step 2's command
+   set and outcome are what the checkpoint fields record. Transition to `done`
    only on PASS; on failure transition to `exception` with a DR-ID (legal from
    `refactor`, whereas re-opening a `done` row is not). For a T1 group every member
    transitions in the same ledger write.
@@ -421,7 +422,7 @@ review is requested.
 - `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
 - `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
-- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary. **Off a boundary nothing is re-run, and the three fields are still required**: record Phase: Refactor step 2's narrow relevant-suite command set and its outcome here verbatim and seal them the same way — item 12 demands the full suite only on a boundary row, so this pair satisfies it, and an empty field or an unrun full-suite command is the only way to fail it (`references/checkpoint-verification.md#evidence`)
 - `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
 
 These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their

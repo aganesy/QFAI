@@ -11,7 +11,8 @@ A checkpoint boundary is reached in exactly two places:
   PASS for the item and before it transitions `refactor` -> `done`. **Not every row is one.** Which
   rows are is defined in `relevant-test-suite.md#checkpoint-boundaries`, and a row between
   boundaries is already satisfied by the narrow relevant suite of Phase: Refactor step 2 — nothing
-  is re-run there.
+  is re-run there. That row still owes the three checkpoint evidence fields; what it records in
+  them is in `#evidence`.
 - **Per spec** — after the last item in `test-list.md` reaches `done` or a valid `exception`, before
   declaring spec-level completion.
 
@@ -142,6 +143,16 @@ and recomputed at gate item 12: these fields are appended after every reviewer h
 sit in no audit subject, and the revision that would otherwise cover them excludes
 `.qfai/evidence/**`. Without it a recorded FAIL could be edited to PASS on a `done` row and no hash
 anywhere would move.
+
+**A row between boundaries records the same three fields.** They are unconditional — gate item 12
+recomputes the seal on every row — so a row off a boundary cannot leave them empty and cannot
+invent a full-suite command it never ran. Nothing is re-run there, so
+`Checkpoint verification command` takes the narrow relevant-suite command set of Phase: Refactor
+step 2 verbatim, `Checkpoint verification result` takes that run's outcome, and the seal is taken
+over the two together with the `Revision` exactly as at a boundary. Item 12 accepts that pair: it
+requires the **full** suite only for a row that sits on a boundary. Label the entry with the
+resolution step used (`relevant-test-suite.md`) so the reviewer can tell a narrow off-boundary
+record from a truncated boundary one.
 
 **The spec-level boundary records a seal of its own, and the spec completion conditions recompute
 it.** That boundary has no row, so gate item 12 never runs for it: the seal defined here was

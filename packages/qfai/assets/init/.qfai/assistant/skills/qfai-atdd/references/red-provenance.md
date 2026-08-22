@@ -406,7 +406,7 @@ only of branch-3 rows has to hand them over just as a branch-1 run does.
 
 | Branch           | Handed over                     | Why then                                                                                                                                                                                                                                            |
 | ---------------- | ------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `observed-red`   | P1c, one row at a time          | The row ends with a deliberately failing test and no production code, and P5-P8 need a green suite. A second deliberate RED left open elsewhere fails the first row's checkpoint.                                                                   |
+| `observed-red`   | P1c, one row at a time          | The row ends with a deliberately failing test and no production code, and P5-P8 need a green suite. A second deliberate RED left open elsewhere fails the first full-suite checkpoint that reaches it.                                              |
 | `falsifiability` | P4b, after P4 and before P6     | The trio is produced by Phase Red **step 3c**, the only step that runs the mutation, and the mutation needs the surface P2-P4 build. The trio is the row's RED payload, so P6 has nothing to capture and P8 nothing to judge until step 3c has run. |
 | `exception`      | P1d, once the `DR-*` is written | Only `/qfai-implement` can write `todo -> exception`. A run with no branch-1 row otherwise ends with the Decision Record recorded and the ledger untouched.                                                                                         |
 
@@ -427,10 +427,12 @@ the time that row's turn comes.
 **P1b and P1c are one loop per `TDD-ID`**, not two phases. P1c takes each row
 through GREEN and its checkpoint before the next row's failing test is written;
 completing every branch-1 RED in P1b first would leave several deliberate
-failures open at once, and every row's checkpoint runs the full suite
-(`../../qfai-implement/references/checkpoint-verification.md`). A second deliberate
-RED left open elsewhere fails the first row's checkpoint — and that row is then
-stranded at `refactor`, which Phase Red does not re-select.
+failures open at once, and any checkpoint that runs the full suite sees all of
+them. This file does not restate how often that is: the cadence is defined only
+in `../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries`,
+and the last row a run completes is always one of those boundaries, so an open
+RED left elsewhere is reached in every run. It fails that row's checkpoint — and
+the row is then stranded at `refactor`, which Phase Red does not re-select.
 
 **P1c — discharge branch 1, one row at a time.** Branch 1 ends with a
 deliberately failing test and no production code, and this stage does not write

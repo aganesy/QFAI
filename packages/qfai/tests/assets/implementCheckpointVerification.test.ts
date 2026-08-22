@@ -188,6 +188,45 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(headingSlugs(cadence)).toContain("checkpoint-boundaries");
       expect(cadence).toContain("**This list is the single definition of the boundary cadence.**");
       expect(cadence).toContain("every **N-th** completed row, with `N = 10` by default");
+
+      // `qfai-atdd` hands branch-1 rows to this skill, and its own reference
+      // restated the cadence as one full suite per row. Two skills, two
+      // frequencies — the same contradiction one directory over.
+      const provenance = await readFile(
+        path.join(dir, "..", "qfai-atdd", "references", "red-provenance.md"),
+        "utf-8",
+      );
+      expect(provenance, "red-provenance.md must not restate the cadence").not.toContain(
+        "every row's checkpoint runs the full suite",
+      );
+      expect(provenance).toContain(
+        "../../qfai-implement/references/relevant-test-suite.md#checkpoint-boundaries",
+      );
+    }
+  });
+
+  // Off a boundary nothing is re-run, but item 12 still recomputes the seal over
+  // all three checkpoint fields on every row. Without a stated source for those
+  // fields an off-boundary row either cannot reach `done` or has to fabricate a
+  // full-suite command it never executed.
+  it("gives an off-boundary row a completable checkpoint evidence contract", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+
+      expect(reference).toContain("**A row between boundaries records the same three fields.**");
+      expect(reference).toContain("recomputes the seal on every row");
+      expect(reference).toContain("invent a full-suite command it never ran");
+      expect(reference).toContain("takes the narrow relevant-suite command set of Phase: Refactor");
+
+      expect(skill).toContain(
+        "**Off a boundary nothing is re-run, and the three fields are still required**",
+      );
+      expect(skill).toContain("`references/checkpoint-verification.md#evidence`");
+      expect(headingSlugs(reference)).toContain("evidence");
     }
   });
 
