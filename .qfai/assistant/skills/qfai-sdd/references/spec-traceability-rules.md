@@ -214,15 +214,19 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
 - **`TDD-ID` allocation is by reserved block, decided before the workers
   split.** Uniqueness alone does not say who takes the next value.
-  `TDD-NNNN` is dense, spec-scoped and monotonic, so that value is `max + 1`
+  `TDD-NNNN` is spec-scoped and monotonic, so that value is `max + 1`
   over the very file every concurrent author is also appending to — and
   `constitution/workflow.md` requires worktree separation for parallel work,
   which makes the read stale the moment another author appends.
   `TDDLIST_DUPLICATE_ID` is an `error`, so everyone but the last writer is
   locked out of landing their rows at all. The rule:
   1. **Serial authoring — `max + 1`.** Take the maximum `TDD-NNNN` over the
-     whole ledger, including retired, `blocked` and `exception` rows, and
-     allocate upward from it. Nothing changes for the ordinary case.
+     whole ledger, including retired, `blocked` and `exception` rows, **and
+     the upper bound of every bullet under `## TDD-ID reservations`**, and
+     allocate upward from it. The reservation bullets are part of the
+     maximum, not decoration: a block that is still being worked has no rows
+     in the file yet, and a block that is finished may have consumed only its
+     first id. Nothing else changes for the ordinary case.
   2. **Concurrent authoring — reserve first, on the shared branch.** Before
      dispatching authors that will append to one spec's ledger from separate
      worktrees, make one serialized write on the branch they all fork from
@@ -239,9 +243,16 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      where a batch of rows cannot.
   3. **A block is a budget, not a promise.** An author that exhausts its block
      stops and asks for another one; it does not continue past the boundary.
-     Unused reserved IDs stay unused and the bullet is deleted — leave the
-     gap, exactly as `_policies/11_Slice-Policy.md` says for spec IDs. Density
-     is not a property `TDD-NNNN` is required to have.
+     Unused reserved IDs stay unused — leave the gap, exactly as
+     `_policies/11_Slice-Policy.md` says for spec IDs. Density is not a
+     property `TDD-NNNN` is required to have. **The reservation bullet is
+     never deleted**; close it in place, shaped
+     `- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`, so
+     its upper bound survives as the high-water mark rule 1 reads. Delete it
+     and the next serial `max + 1` walks straight back into the block's
+     unused tail — reserve `TDD-0065..TDD-0079`, spend `TDD-0065` only, and
+     the next author is handed `TDD-0066`, reissuing the very ids the gap
+     retired.
   4. **A written `TDD-ID` is never renumbered.** Once an id appears anywhere
      outside the ledger — a commit message, `.qfai/evidence/implement-*.md`,
      `.qfai/evidence/atdd-*.md`, or a `DR-*` cross-reference — a merge does

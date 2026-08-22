@@ -18,10 +18,16 @@ The execution ledger at `.qfai/specs/<spec-id>/tdd/test-list.md` is the single r
 
 ## TDD-ID allocation
 
-`TDD-NNNN` is dense, spec-scoped and monotonic, so the next value is `max + 1`
+`TDD-NNNN` is spec-scoped and monotonic, so the next value is `max + 1`
 over every table in the file when authoring serially — including retired,
 `blocked` and `exception` rows — and comes from a block reserved under
-`## TDD-ID reservations` when authors run concurrently. Worktree separation is
+`## TDD-ID reservations` when authors run concurrently. The maximum ranges
+over the upper bound of every reservation bullet as well, and those bullets
+are never deleted: a consumed or abandoned block is closed in place
+(`- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`) so its
+end stays the permanent high-water mark. Drop the bullet and `max + 1` falls
+back into the block's unused tail, reissuing ids the gap was meant to retire
+and colliding with a block still being worked. Worktree separation is
 mandatory for parallel work (`constitution/workflow.md`), so a `max + 1` read
 taken inside one worktree is stale as soon as another appends, and
 `TDDLIST_DUPLICATE_ID` is an `error`: guessing locks out every writer but the

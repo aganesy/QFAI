@@ -41,6 +41,11 @@ describe("TDD-ID allocation", () => {
       expect(rules).toContain(
         "Take the maximum `TDD-NNNN` over the whole ledger, including retired, `blocked` and `exception` rows",
       );
+      // A reserved-but-unwritten block has no rows yet, so rows alone are not
+      // the high-water mark.
+      expect(rules).toContain(
+        "**and the upper bound of every bullet under `## TDD-ID reservations`**",
+      );
     });
 
     it(`${tree}: the rule names the race it closes`, async () => {
@@ -79,6 +84,9 @@ describe("TDD-ID allocation", () => {
 
       expect(rules).toContain("**A block is a budget, not a promise.**");
       expect(rules).toContain("stops and asks for another one; it does not continue past the");
+      // Deleting a spent bullet would hand its unused tail back to `max + 1`.
+      expect(rules).toContain("**The reservation bullet is never deleted**");
+      expect(rules).toContain("- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>");
       expect(rules).toContain("**A written `TDD-ID` is never renumbered.**");
       // Renumbering at merge time is what breaks the out-of-ledger references.
       expect(rules).toContain(".qfai/evidence/atdd-*.md");
@@ -98,6 +106,9 @@ describe("TDD-ID allocation", () => {
         "from a block reserved under `## TDD-ID reservations` when authors run concurrently",
       );
       expect(ledger).toContain("Never renumber an id that has already been written outside");
+      expect(ledger).toContain(
+        "The maximum ranges over the upper bound of every reservation bullet as well, and those bullets are never deleted",
+      );
     });
 
     it(`${tree}: the SKILL points at the allocation rule before a write`, async () => {
