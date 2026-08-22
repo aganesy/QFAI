@@ -191,6 +191,93 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(errorOnly).not.toContain('"QFAI-EXAMPLE-004"');
   });
 
+  // Several validators carry the code on a record and hand it to the factory
+  // as a property (`issue(finding.ruleId, …)`), so reading only literals and
+  // identifiers dropped every code they emit.
+  it("resolves a code handed to the factory as a property", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "audit.ts"),
+      [
+        'const findings = [{ ruleId: "QFAI-EXAMPLE-040", dimension: "layout" }];',
+        'for (const finding of findings) issue(finding.ruleId, "msg", severity);',
+      ].join("\n"),
+      "utf-8",
+    );
+    // Same property name, different file: the values must not leak across.
+    await writeFile(
+      path.join(dir, "other.ts"),
+      'const unrelated = { ruleId: "QFAI-EXAMPLE-041" };\n',
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(written).toContain('"QFAI-EXAMPLE-040"');
+    expect(written).not.toContain("QFAI-EXAMPLE-041");
+  });
+
+  // `Issue.severity` is required, so a `code`-bearing literal without one is
+  // the metadata a factory call is about to turn into a finding — not a
+  // finding whose severity is unknown.
+  it("reads the factory call's severity through a metadata literal", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "coverage.ts"),
+      [
+        'const groups = [{ code: "QFAI-EXAMPLE-050", rule: "plan.howOnly" }];',
+        'for (const group of groups) issue(group.code, "msg", "error", file, group.rule);',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+    const errorOnly = written.slice(written.indexOf("ERROR_ONLY_RULE_CODES"));
+
+    expect(result.status).toBe(0);
+    expect(errorOnly).toContain('"QFAI-EXAMPLE-050"');
+  });
+
+  // Prototyping's exploration mode downgrades its relaxable codes to warning
+  // before `applyWaivers` sees them, so an error-only classification would
+  // reject on a clean run the waiver a run with the finding accepts.
+  it("drops a code a post-emission rewrite can relax from the error-only list", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "mode.ts"),
+      [
+        "export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [",
+        '  "QFAI-EXAMPLE-060", // relaxed under exploration',
+        "] as const;",
+      ].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(dir, "gate.ts"),
+      [
+        'issue("QFAI-EXAMPLE-060", "msg", "error");',
+        'issue("QFAI-EXAMPLE-061", "msg", "error");',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+    const errorOnly = written.slice(written.indexOf("ERROR_ONLY_RULE_CODES"));
+
+    expect(result.status).toBe(0);
+    // Still a real rule: only its error-only classification is withdrawn.
+    expect(written).toContain('"QFAI-EXAMPLE-060"');
+    expect(errorOnly).not.toContain('"QFAI-EXAMPLE-060"');
+    expect(errorOnly).toContain('"QFAI-EXAMPLE-061"');
+  });
+
   it("exits 2 on an unknown flag", () => {
     const result = runGenerator(["--nope"]);
 

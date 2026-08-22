@@ -673,6 +673,76 @@ describe("applyWaivers", () => {
     }
   });
 
+  // Prototyping's exploration mode downgrades its relaxable codes error →
+  // warning before `applyWaivers` sees them, so `error` is not the only
+  // severity these can reach the engine at. Classifying them from the raw
+  // emitter would reject on a clean run the very waiver the run that produces
+  // the (relaxed) finding accepts.
+  it.each([["QFAI-CRIT-008"], ["QFAI-DCON-030"], ["QFAI-DCON-031"], ["QFAI-DCON-032"]])(
+    "keeps a waiver for the exploration-relaxable rule %s active on a quiet run",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260208-15",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: [".qfai/prototyping/**"]',
+            '    reason: "soft-rubric gate, relaxed under exploration"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260208-01"',
+            "",
+          ].join("\n"),
+        );
+
+        // The rule produced nothing on this run.
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+        expect(result.waivers.active.map((item) => item.id)).toEqual(["WVR-20260208-15"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
+  // The property-resolved emitters must reach the registry too: a waiver for
+  // one of them read as an unknown rule on every run where it stayed quiet.
+  it.each([["QFAI-AUD-001"], ["QFAI-ORPHAN-100"], ["QFAI-PLAN-002"]])(
+    "recognises the quiet rule %s, whose emitter names it through a property",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260208-16",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: [".qfai/specs/**"]',
+            '    reason: "root cause fixed; kept on file until expiry"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260208-01"',
+            "",
+          ].join("\n"),
+        );
+
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   // The code spelling is the one operators are told to write, so it must carry
   // the same `match.dl_ids` requirement as the rule-id spelling.
   it("requires match.dl_ids for a row-scoped rule named by its code", async () => {

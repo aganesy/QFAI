@@ -21,6 +21,13 @@
  *     build their findings through such a helper, and several name their rule
  *     through a constant rather than a literal (`issue(RULE_ID, …)`), so the
  *     first argument is resolved against every `const NAME = "…"` in the tree.
+ *     Others carry the code on a record and hand it over as a property
+ *     (`issue(finding.ruleId, …)`, `issue(input.missingCode, …)`,
+ *     `issue(group.code, …)`), so a property access is resolved against the
+ *     values that property is given in object literals **in the same file** —
+ *     the file that spells `ruleId: "…"` is always the file that passes
+ *     `finding.ruleId` on. Scanning only literals and identifiers dropped every
+ *     code these validators emit.
  *   - an object literal carrying `code: "…"` **and** an `Issue`-only field
  *     (`category:` or `rule:`). The extra field is what keeps diagnostics of
  *     other shapes out: `GuardrailIssue` (`QFAI-GR-00N`, a `guardrails`-command
@@ -33,7 +40,18 @@
  * literal `"error"`. Such a rule can never be waived (`QFAI-WAIVER-002`), so the
  * engine has to refuse it even on the runs where it stays quiet; anything less
  * certain — a severity read from a variable, or a code emitted at more than one
- * severity — is left to the run that actually produces the finding.
+ * severity — is left to the run that actually produces the finding. Two shapes
+ * are deliberately *not* read as severity evidence:
+ *   - an object literal with no `severity:` field at all. `Issue.severity` is
+ *     required, so such a literal is emission metadata on its way to a factory
+ *     call (`{ code, rule, patterns, message }` in `layerCoverage`), not a
+ *     finding; counting it as "severity unknown" would mask the `"error"` the
+ *     factory call right below it does spell.
+ *   - a code that a post-emission rewrite can hand to `applyWaivers` at a
+ *     lower severity. Prototyping's exploration mode downgrades its relaxable
+ *     codes error → warning before waivers are applied, so classifying them
+ *     from the raw emitter would reject on a clean run the very waiver a run
+ *     with the finding accepts.
  *
  * Invocation modes:
  *   - default        rewrite the output module in place.
@@ -110,6 +128,15 @@ const UNKNOWN_FACTORY = { severityArg: null, fixedSeverity: null };
 /** An object literal's `code:` field, in sanitized text. */
 const CODE_FIELD_RE = /\bcode\s*:\s*([^\s,;}]+)/g;
 
+/**
+ * Any `name: value` field, in sanitized text. Used to learn what strings a
+ * property is given, so a code handed on as `record.property` resolves.
+ */
+const ANY_FIELD_RE = /\b([A-Za-z_$][\w$]*)\s*:\s*([^\s,;{}()[\]]+)/g;
+
+/** A property access, capturing the property name a value was read from. */
+const PROPERTY_ACCESS_RE = /^[A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)*\.([A-Za-z_$][\w$]*)$/;
+
 /** Fields only a validate `Issue` carries among the `code`-bearing shapes. */
 const ISSUE_ONLY_FIELD_RE = /\b(?:category|rule)\s*:/;
 
@@ -118,6 +145,25 @@ const SEVERITY_FIELD_RE = /\bseverity\s*:\s*([^\s,;}]+)/;
 
 /** {@link SEVERITY_FIELD_RE}, for sweeping a factory body for every spelling. */
 const SEVERITY_FIELD_ALL_RE = /\bseverity\s*:\s*([^\s,;}]+)/g;
+
+/**
+ * Constants naming the codes a post-emission rewrite lowers below `error`
+ * before `applyWaivers` sees them.
+ *
+ * `src/core/prototyping/mode.ts` is the SSOT for that list at runtime;
+ * `runPrototypingValidators` applies it to the whole prototyping profile, so
+ * under `mode: exploration` these codes reach the waiver engine as `warning`
+ * however their emitter spelled them. Classifying them error-only from the
+ * emitter would make the same waiver file active on the run that produces the
+ * (relaxed) finding and rejected on the clean run — the exact inversion this
+ * module exists to remove. Seeded by name for the same reason
+ * {@link CORE_ISSUE_FACTORY} is: the scan must not depend on the module being
+ * inside the tree it was pointed at.
+ */
+const RELAXED_CODE_LIST_NAMES = new Set(["EXPLORATION_RELAXABLE_CODES"]);
+
+/** A `const NAME = [` array binding, matched against sanitized text. */
+const ARRAY_CONST_RE = /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*\[/g;
 
 /**
  * Replace every string literal, template literal and comment with an opaque
@@ -322,6 +368,97 @@ function resolveValue(raw, literals, constants) {
 }
 
 /**
+ * Resolve the expression a code was named through.
+ *
+ * Beyond {@link resolveValue}'s literal and identifier, a property access
+ * resolves to every string that property is given in an object literal in the
+ * same file. Several validators carry the code on a record and hand it to the
+ * factory that way — `issue(finding.ruleId, …)` in `designAudit`,
+ * `issue(input.missingCode, …)` in `orphanProhibition`, `issue(group.code, …)`
+ * in `layerCoverage` — and each of them builds those records in the file that
+ * passes them on, so the same file always holds the answer.
+ *
+ * Same-file is also what keeps the resolution honest: widening it to the whole
+ * tree would let any `code:` field anywhere — `GuardrailIssue`'s included —
+ * answer for every `x.code` argument in `src/`.
+ *
+ * @param {string} raw sanitized source slice.
+ * @param {{ literals: string[], properties: ReadonlyMap<string, ReadonlySet<string>> }} source
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @returns {string[]} every string this expression can be.
+ */
+function resolveCodeExpression(raw, source, constants) {
+  const direct = resolveValue(raw, source.literals, constants);
+  if (direct.length > 0) {
+    return direct;
+  }
+  const access = PROPERTY_ACCESS_RE.exec(raw.trim());
+  if (!access) {
+    return [];
+  }
+  const bound = source.properties.get(access[1]);
+  return bound ? [...bound] : [];
+}
+
+/**
+ * Every string a property is given in an object literal in one file.
+ *
+ * @param {{ sanitized: string, literals: string[] }} source
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @returns {Map<string, Set<string>>}
+ */
+function collectPropertyValues(source, constants) {
+  const properties = new Map();
+  for (const found of source.sanitized.matchAll(ANY_FIELD_RE)) {
+    const [, name, value] = found;
+    const resolved = resolveValue(value, source.literals, constants);
+    if (resolved.length === 0) {
+      continue;
+    }
+    let bound = properties.get(name);
+    if (!bound) {
+      bound = new Set();
+      properties.set(name, bound);
+    }
+    for (const one of resolved) {
+      bound.add(one);
+    }
+  }
+  return properties;
+}
+
+/**
+ * Every code a post-emission rewrite can lower below `error`.
+ *
+ * Read out of the {@link RELAXED_CODE_LIST_NAMES} array constants, which are
+ * the runtime SSOT for that relaxation.
+ *
+ * @param {ReadonlyArray<{ sanitized: string, literals: string[] }>} sources
+ * @returns {Set<string>}
+ */
+function collectDowngradedCodes(sources) {
+  const codes = new Set();
+  for (const source of sources) {
+    ARRAY_CONST_RE.lastIndex = 0;
+    let match = ARRAY_CONST_RE.exec(source.sanitized);
+    while (match) {
+      if (RELAXED_CODE_LIST_NAMES.has(match[1])) {
+        // The `[` the match ends on, not the first `[` after it: a
+        // `readonly string[]` annotation sits between the two.
+        const members = splitCallArguments(source.sanitized, match.index + match[0].length - 1);
+        for (const member of members ? members.args : []) {
+          for (const value of resolveValue(member, source.literals, new Map())) {
+            codes.add(value);
+          }
+        }
+      }
+      match = ARRAY_CONST_RE.exec(source.sanitized);
+    }
+  }
+  return codes;
+}
+
+/**
  * Split a sanitized argument list into top-level arguments.
  *
  * @param {string} sanitized
@@ -428,8 +565,9 @@ function enclosingObjectLiteral(sanitized, position) {
  *
  * @param {Map<string, { severities: Set<string | null> }>} sink
  * @param {string} code
- * @param {string | null} severity `null` when this call site does not spell one
- *   as a literal.
+ * @param {string | null | undefined} severity `null` when this site spells a
+ *   severity this scan cannot read; `undefined` when the site carries no
+ *   severity at all and therefore says nothing about the rule's severity.
  */
 function recordEmission(sink, code, severity) {
   if (!RULE_ID_RE.test(code)) {
@@ -440,7 +578,9 @@ function recordEmission(sink, code, severity) {
     entry = { severities: new Set() };
     sink.set(code, entry);
   }
-  entry.severities.add(severity);
+  if (severity !== undefined) {
+    entry.severities.add(severity);
+  }
 }
 
 /**
@@ -501,15 +641,20 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
 
   const constants = collectStringConstants(sources);
   const factories = collectIssueFactories(sources);
+  const downgraded = collectDowngradedCodes(sources);
   /** @type {Map<string, { severities: Set<string | null> }>} */
   const emissions = new Map();
   for (const source of sources) {
-    scanFactoryCalls(source, factories, constants, emissions);
-    scanIssueObjectLiterals(source, constants, emissions);
+    const resolvable = { ...source, properties: collectPropertyValues(source, constants) };
+    scanFactoryCalls(resolvable, factories, constants, emissions);
+    scanIssueObjectLiterals(resolvable, constants, emissions);
   }
 
   const codes = [...emissions.keys()].sort((a, b) => a.localeCompare(b, "en"));
   const errorOnly = codes.filter((code) => {
+    if (downgraded.has(code)) {
+      return false;
+    }
     const severities = emissions.get(code)?.severities;
     return Boolean(severities && severities.size === 1 && severities.has("error"));
   });
@@ -588,7 +733,7 @@ function describeFactory(source, params) {
 }
 
 /**
- * @param {{ sanitized: string, literals: string[] }} source
+ * @param {{ sanitized: string, literals: string[], properties: ReadonlyMap<string, ReadonlySet<string>> }} source
  * @param {ReadonlyMap<string, { severityArg: number | null, fixedSeverity: string | null }>} factories
  * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
  * @param {Map<string, { severities: Set<string | null> }>} emissions
@@ -600,7 +745,7 @@ function scanFactoryCalls(source, factories, constants, emissions) {
     while (match) {
       const call = splitCallArguments(source.sanitized, match.index + match[0].length - 1);
       if (call && call.args.length > 0) {
-        const codes = resolveValue(call.args[0], source.literals, constants);
+        const codes = resolveCodeExpression(call.args[0], source, constants);
         for (const code of codes) {
           recordEmission(emissions, code, callSeverity(source, factory, call.args, constants));
         }
@@ -630,7 +775,7 @@ function callSeverity(source, factory, args, constants) {
 }
 
 /**
- * @param {{ sanitized: string, literals: string[] }} source
+ * @param {{ sanitized: string, literals: string[], properties: ReadonlyMap<string, ReadonlySet<string>> }} source
  * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
  * @param {Map<string, { severities: Set<string | null> }>} emissions
  */
@@ -640,16 +785,38 @@ function scanIssueObjectLiterals(source, constants, emissions) {
   while (match) {
     const literal = enclosingObjectLiteral(source.sanitized, match.index);
     if (literal && ISSUE_ONLY_FIELD_RE.test(literal)) {
-      const codes = resolveValue(match[1], source.literals, constants);
-      const found = SEVERITY_FIELD_RE.exec(literal);
-      const severities = found ? resolveValue(found[1], source.literals, constants) : [];
-      const severity = severities.length === 1 ? severities[0] : null;
+      const codes = resolveCodeExpression(match[1], source, constants);
       for (const code of codes) {
-        recordEmission(emissions, code, severity);
+        recordEmission(emissions, code, objectLiteralSeverity(source, literal, constants));
       }
     }
     match = CODE_FIELD_RE.exec(source.sanitized);
   }
+}
+
+/**
+ * The severity an object literal claims for its code.
+ *
+ * `undefined` — no evidence — when the literal has no `severity:` field at all.
+ * `Issue.severity` is required, so such a literal is not a finding but the
+ * metadata a factory call is about to turn into one (`{ code, rule, patterns,
+ * message }` in `layerCoverage`, whose `issue(group.code, …, "error")` is the
+ * real emission). Reading it as "severity unknown" would drop the code out of
+ * the error-only list on the strength of a record that never reaches
+ * `applyWaivers`.
+ *
+ * @param {{ literals: string[] }} source
+ * @param {string} literal sanitized object-literal slice.
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @returns {string | null | undefined}
+ */
+function objectLiteralSeverity(source, literal, constants) {
+  const found = SEVERITY_FIELD_RE.exec(literal);
+  if (!found) {
+    return undefined;
+  }
+  const severities = resolveValue(found[1], source.literals, constants);
+  return severities.length === 1 ? severities[0] : null;
 }
 
 /**
