@@ -123,7 +123,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  */
 async function collectUnreachableReferences(skillsDir: string): Promise<Issue[]> {
   const documents = await readSkillDocuments(skillsDir);
-  const reachable = collectReachableDocuments(documents);
+  const reachable = collectReachableDocuments(skillsDir, documents);
   return [...documents.keys()]
     .filter((file) => isReferenceDocument(skillsDir, file) && !reachable.has(file))
     .sort((a, b) => a.localeCompare(b))
@@ -154,8 +154,8 @@ async function readSkillDocuments(skillsDir: string): Promise<Map<string, string
   return documents;
 }
 
-/** Breadth-first closure over "document A names document B's filename". */
-function collectReachableDocuments(documents: Map<string, string>): Set<string> {
+/** Breadth-first closure over "document A cites the path of document B". */
+function collectReachableDocuments(skillsDir: string, documents: Map<string, string>): Set<string> {
   const files = [...documents.keys()];
   const reachable = new Set(files.filter((file) => path.basename(file) === "SKILL.md"));
   const queue = [...reachable];
@@ -165,15 +165,66 @@ function collectReachableDocuments(documents: Map<string, string>): Set<string> 
       break;
     }
     const content = documents.get(current) ?? "";
-    for (const file of files) {
-      if (reachable.has(file) || !content.includes(path.basename(file))) {
+    for (const cited of resolveCitations(skillsDir, current, content, documents)) {
+      if (reachable.has(cited)) {
         continue;
       }
-      reachable.add(file);
-      queue.push(file);
+      reachable.add(cited);
+      queue.push(cited);
     }
   }
   return reachable;
+}
+
+/**
+ * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
+ * `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
+ */
+const DOCUMENT_CITATION_PATTERN = /[A-Za-z0-9._-]+(?:\/[A-Za-z0-9._-]+)*\.(?:md|ya?ml)\b/g;
+const SKILLS_PREFIX_PATTERN = /(?:^|\/)assistant\/skills\//;
+
+/**
+ * A citation names one file, so the edge must land on one file.
+ *
+ * Matching a bare basename made every same-named document reachable at once:
+ * `qfai-sdd/SKILL.md` citing `references/review-cycle-playbook.md` also lit up
+ * `qfai-discussion/references/review-cycle-playbook.md`, which no discussion
+ * document reaches. Each token is instead resolved against the citing
+ * document's own directory, its skill root, and the skills root — so a
+ * cross-skill edge exists only where the path spells one out.
+ */
+function resolveCitations(
+  skillsDir: string,
+  citingFile: string,
+  content: string,
+  documents: Map<string, string>,
+): string[] {
+  const skillRoot = skillRootOf(skillsDir, citingFile);
+  const roots = [path.dirname(citingFile), ...(skillRoot === null ? [] : [skillRoot]), skillsDir];
+  const cited = new Set<string>();
+  for (const match of content.matchAll(DOCUMENT_CITATION_PATTERN)) {
+    const token = match[0];
+    const prefixMatch = SKILLS_PREFIX_PATTERN.exec(token);
+    const candidates =
+      prefixMatch === null
+        ? roots.map((root) => path.resolve(root, token))
+        : [path.resolve(skillsDir, token.slice(prefixMatch.index + prefixMatch[0].length))];
+    const target = candidates.find((candidate) => documents.has(candidate));
+    if (target !== undefined) {
+      cited.add(target);
+    }
+  }
+  return [...cited];
+}
+
+/** The `<skillsDir>/<skill>` directory a document belongs to, if any. */
+function skillRootOf(skillsDir: string, file: string): string | null {
+  const relative = path.relative(skillsDir, file).split(path.sep).join("/");
+  const [skill, ...rest] = relative.split("/");
+  if (skill === undefined || skill === "" || skill === ".." || rest.length === 0) {
+    return null;
+  }
+  return path.join(skillsDir, skill);
 }
 
 function isReferenceDocument(skillsDir: string, file: string): boolean {

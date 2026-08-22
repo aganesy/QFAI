@@ -59,6 +59,26 @@ async function writeSkillFixture(root: string): Promise<string> {
   return referencesDir;
 }
 
+/**
+ * A second skill owning a file whose basename the first skill also cites.
+ *
+ * `demo-skill/SKILL.md` says `references/cited.md`, meaning its own; the
+ * namesake here has no inbound citation from any `other-skill` document and
+ * must still be reported.
+ */
+async function writeNamesakeSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "other-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    ["# other-skill", "", "[DRIFT-PROTOCOL:MANDATORY]", "", "Nothing else to read.", ""].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "cited.md"), "# Namesake\n", "utf-8");
+  return referencesDir;
+}
+
 describe("skill reference reachability", { timeout: 30000 }, () => {
   it("reports only the reference no reachable document names", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reachability-"));
@@ -70,6 +90,22 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
       expect(issues[0]?.file).toBe(path.join(referencesDir, "orphan.md"));
       // Soft rule text, so the finding must not stop a run that gates on error.
       expect(issues[0]?.severity).toBe("warning");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let one skill's citation reach another skill's namesake file", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-namesake-"));
+    try {
+      const referencesDir = await writeSkillFixture(root);
+      const namesakeDir = await writeNamesakeSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([
+        path.join(referencesDir, "orphan.md"),
+        path.join(namesakeDir, "cited.md"),
+      ]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
