@@ -41,6 +41,7 @@ import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionG
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
 import {
   checkAssistantAssetLineBudget,
+  type ExemptAssistantAsset,
   type OversizedAssistantAsset,
 } from "./doctor/assetLineBudget.js";
 
@@ -529,11 +530,13 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     scanned: report.scanned,
     oversized: report.oversized,
     // The baseline promises the exemption is visible to the reader, not just to
-    // the implementation: the generated agent catalog is listed with its paths.
+    // the implementation: each exempt path is listed with the reason it was not
+    // measured, and the same pair is rendered into the message for text readers.
     exempt: report.exempt,
     unreadable: report.unreadable,
     unscannable: report.unscannable,
   };
+  const exemptNote = formatExemptAssets(report.exempt);
 
   if (report.status === "skipped_missing_assistant") {
     return {
@@ -551,7 +554,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       id: "assets.lineBudget",
       severity: "ok",
       title,
-      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です`,
+      message: `${report.scanned} 件の assistant asset がいずれも ${report.maxLines} 行以内です${exemptNote}`,
       details,
     };
   }
@@ -569,7 +572,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
       title,
       message:
         `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした: ` +
-        `${unmeasuredPaths.join(", ")}${formatNextActionHint(incompleteActions)}`,
+        `${formatMessagePaths(unmeasuredPaths)}${exemptNote}${formatNextActionHint(incompleteActions)}`,
       details: {
         ...details,
         nextActions: incompleteActions,
@@ -579,7 +582,7 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
 
   const unmeasuredNote =
     unmeasured > 0
-      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${unmeasuredPaths.join(", ")}）`
+      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${formatMessagePaths(unmeasuredPaths)}）`
       : "";
   const nextActions = assetLineBudgetNextActions(report.oversized);
   return {
@@ -588,12 +591,37 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     title,
     message:
       `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています: ` +
-      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${formatNextActionHint(nextActions)}`,
+      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${exemptNote}` +
+      formatNextActionHint(nextActions),
     details: {
       ...details,
       nextActions,
     },
   };
+}
+
+/* eslint-disable-next-line no-control-regex -- the point of this class is to match control characters */
+const MESSAGE_CONTROL_CHARACTERS = /[\u0000-\u001f\u007f-\u009f]/g;
+
+/**
+ * Makes one path safe to splice into a single-line finding message.
+ *
+ * A filename may legally contain a newline or an ANSI escape on POSIX, and
+ * `formatDoctorText` prints `check.message` verbatim. Left raw, one oversized
+ * asset could inject extra lines — including counterfeit `[ok]` / `[error]`
+ * lines — into the very output whose one-finding-per-line shape downstream
+ * severity greps rely on. `details` keeps the raw path; only what is rendered
+ * is escaped.
+ */
+function escapeForMessage(value: string): string {
+  return value.replace(
+    MESSAGE_CONTROL_CHARACTERS,
+    (character) => `\\x${character.charCodeAt(0).toString(16).padStart(2, "0")}`,
+  );
+}
+
+function formatMessagePaths(paths: ReadonlyArray<string>): string {
+  return paths.map(escapeForMessage).join(", ");
 }
 
 /**
@@ -608,7 +636,25 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
  * see exactly one line per finding.
  */
 function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>): string {
-  return oversized.map((entry) => `${entry.path} (${entry.lines} 行)`).join(", ");
+  return oversized.map((entry) => `${escapeForMessage(entry.path)} (${entry.lines} 行)`).join(", ");
+}
+
+/**
+ * States what was skipped and why, in the default output as well as in JSON.
+ *
+ * An asset that is never measured is invisible otherwise: the counts speak only
+ * for what was measured, so without this a reader has no way to tell a compliant
+ * tree from one whose longest file is exempt. The baseline promises the reason
+ * travels with the path, so both are rendered.
+ */
+function formatExemptAssets(exempt: ReadonlyArray<ExemptAssistantAsset>): string {
+  if (exempt.length === 0) {
+    return "";
+  }
+  const entries = exempt
+    .map((entry) => `${escapeForMessage(entry.path)}（${escapeForMessage(entry.reason)}）`)
+    .join(", ");
+  return `（検査対象外 ${exempt.length} 件: ${entries}）`;
 }
 
 /** Appends the repair guidance so text readers get it, not only JSON readers. */

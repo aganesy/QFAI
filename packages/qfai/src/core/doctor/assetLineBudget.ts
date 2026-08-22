@@ -85,6 +85,9 @@ async function countFileLines(absolute: string): Promise<number> {
 
 export type OversizedAssistantAsset = { path: string; lines: number };
 
+/** An asset skipped by {@link LINE_BUDGET_EXEMPT}, carried with its reason. */
+export type ExemptAssistantAsset = { path: string; reason: string };
+
 export type AssistantAssetBudgetStatus =
   | "ok"
   | "over_budget"
@@ -98,21 +101,39 @@ export type AssistantAssetBudgetReport = {
   /** Number of asset files measured (exempt and unreadable files excluded). */
   scanned: number;
   oversized: OversizedAssistantAsset[];
-  /** Exempt paths that were present and therefore skipped. */
-  exempt: string[];
+  /**
+   * Exempt paths that were present and therefore skipped, each with the reason
+   * from {@link LINE_BUDGET_EXEMPT}. The shipped baseline promises the reader
+   * sees *why* a file was not measured, so the reason travels with the path
+   * instead of living only in this module's source.
+   */
+  exempt: ExemptAssistantAsset[];
   /** Files that could not be read; reported rather than silently passed. */
   unreadable: string[];
   /** Directories that could not be listed; their contents were never measured. */
   unscannable: string[];
 };
 
+/**
+ * Rewrites the platform's separators to `/` — and only the platform's.
+ *
+ * A blanket `replace(/[\\/]+/g, "/")` is wrong off Windows: POSIX treats a
+ * backslash as an ordinary filename character, so an authored asset literally
+ * named `manifest\agent-catalog.yml` directly under `assistant/` would be
+ * reported as `assistant/manifest/agent-catalog.yml`, collide with the
+ * {@link LINE_BUDGET_EXEMPT} key and go unmeasured at any length. On Windows
+ * both separators are real separators, so both still collapse there.
+ */
+function toPosixSegments(relative: string): string {
+  return path.sep === "\\" ? relative.replace(/[\\/]+/g, "/") : relative.replace(/\/+/g, "/");
+}
+
 function toQfaiRelativePath(assistantDir: string, absolute: string): string {
   const assistantName = path.basename(ASSISTANT_DIR);
   if (path.resolve(absolute) === path.resolve(assistantDir)) {
     return assistantName;
   }
-  const rel = path.relative(assistantDir, absolute).replace(/[\\/]+/g, "/");
-  return `${assistantName}/${rel}`;
+  return `${assistantName}/${toPosixSegments(path.relative(assistantDir, absolute))}`;
 }
 
 type AssistantAssetScan = {
@@ -167,6 +188,29 @@ async function scanAssistantAssets(assistantDir: string): Promise<AssistantAsset
   return { files: files.sort(), unscannable: unscannable.sort() };
 }
 
+/** Reads a Node `errno` code off an unknown rejection without asserting a type. */
+function errorCode(error: unknown): string | undefined {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const { code } = error;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Classifies the presence probe on the assistant tree.
+ *
+ * Only "the path is not there" means the tree has not been created. A probe
+ * that fails for any other reason — `EACCES`/`EPERM` on `.qfai` itself, or an
+ * I/O error — measured nothing, and reporting that as `skipped_missing_assistant`
+ * would answer a permission fault with "run 'qfai init'" and quietly certify an
+ * unmeasured tree. Those are reported as unprobeable instead.
+ */
+function classifyAssistantProbe(error: unknown): "missing" | "unprobeable" {
+  const code = errorCode(error);
+  return code === "ENOENT" || code === "ENOTDIR" ? "missing" : "unprobeable";
+}
+
 /**
  * Measures every `.qfai/assistant/**` asset against {@link ASSISTANT_ASSET_MAX_LINES}.
  *
@@ -179,36 +223,43 @@ export async function checkAssistantAssetLineBudget(
   root: string,
 ): Promise<AssistantAssetBudgetReport> {
   const assistantDir = path.resolve(root, ASSISTANT_DIR);
-  let assistantExists = true;
+  const empty = {
+    assistantDir,
+    maxLines: ASSISTANT_ASSET_MAX_LINES,
+    scanned: 0,
+    oversized: [],
+    exempt: [],
+    unreadable: [],
+  };
+  let probe: "present" | "missing" | "unprobeable" = "present";
   try {
     await access(assistantDir);
-  } catch {
-    assistantExists = false;
+  } catch (error) {
+    probe = classifyAssistantProbe(error);
   }
-  if (!assistantExists) {
+  if (probe === "missing") {
+    return { status: "skipped_missing_assistant", ...empty, unscannable: [] };
+  }
+  if (probe === "unprobeable") {
     return {
-      status: "skipped_missing_assistant",
-      assistantDir,
-      maxLines: ASSISTANT_ASSET_MAX_LINES,
-      scanned: 0,
-      oversized: [],
-      exempt: [],
-      unreadable: [],
-      unscannable: [],
+      status: "incomplete",
+      ...empty,
+      unscannable: [toQfaiRelativePath(assistantDir, assistantDir)],
     };
   }
 
   const scan = await scanAssistantAssets(assistantDir);
 
   const oversized: OversizedAssistantAsset[] = [];
-  const exempt: string[] = [];
+  const exempt: ExemptAssistantAsset[] = [];
   const unreadable: string[] = [];
   let scanned = 0;
 
   for (const absolute of scan.files) {
     const relPath = toQfaiRelativePath(assistantDir, absolute);
-    if (LINE_BUDGET_EXEMPT.has(relPath)) {
-      exempt.push(relPath);
+    const exemptReason = LINE_BUDGET_EXEMPT.get(relPath);
+    if (exemptReason !== undefined) {
+      exempt.push({ path: relPath, reason: exemptReason });
       continue;
     }
     let lines: number;

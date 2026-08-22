@@ -5,6 +5,7 @@
 // doctor check that exposes it.
 
 import type * as NodeFs from "node:fs";
+import type * as NodeFsPromises from "node:fs/promises";
 import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -34,6 +35,31 @@ vi.mock("node:fs", async (importOriginal) => {
   };
 });
 
+/**
+ * Marker for a root whose assistant directory cannot be probed at all.
+ *
+ * `chmod 000` on a directory is not portable to Windows either, so the `access`
+ * rejection is injected the same way the read failure is: by path marker, with
+ * every other call going through to the real implementation.
+ */
+const UNPROBEABLE_ROOT = "qfai-unprobeable-";
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof NodeFsPromises>();
+  return {
+    ...actual,
+    access: async (
+      target: Parameters<typeof actual.access>[0],
+      mode?: Parameters<typeof actual.access>[1],
+    ) => {
+      if (String(target).includes(UNPROBEABLE_ROOT)) {
+        throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+      }
+      return actual.access(target, mode);
+    },
+  };
+});
+
 import { createDoctorData } from "../../../../src/core/doctor.js";
 import {
   ASSISTANT_ASSET_MAX_LINES,
@@ -44,6 +70,15 @@ import {
 
 async function withTempRoot(fn: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-asset-budget-"));
+  try {
+    await fn(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function withUnprobeableRoot(fn: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), UNPROBEABLE_ROOT));
   try {
     await fn(root);
   } finally {
@@ -129,9 +164,53 @@ describe("checkAssistantAssetLineBudget", () => {
 
       expect(report.status).toBe("ok");
       expect(report.oversized).toEqual([]);
-      expect(report.exempt).toEqual([exemptRel]);
+      // The baseline promises the reader sees *why* a file was skipped, so the
+      // reason travels with the path rather than living only in the source.
+      expect(report.exempt).toEqual([
+        { path: exemptRel, reason: LINE_BUDGET_EXEMPT.get(exemptRel ?? "") },
+      ]);
     });
   });
+
+  it("does not treat an unreadable assistant directory as 'not created yet'", async () => {
+    await withUnprobeableRoot(async (root) => {
+      const report = await checkAssistantAssetLineBudget(root);
+
+      // Answering EACCES with "run 'qfai init'" would certify a tree that was
+      // never measured. Only ENOENT means the tree has not been created.
+      expect(report.status).toBe("incomplete");
+      expect(report.unscannable).toEqual(["assistant"]);
+      expect(report.scanned).toBe(0);
+    });
+  });
+
+  // POSIX-only: Windows rejects `\` in a filename, so the collision this guards
+  // against cannot be staged there (and `path.sep === "\\"` keeps the old
+  // collapse, which is correct on that platform).
+  it.skipIf(path.sep === "\\")(
+    "keeps a POSIX backslash in a filename out of the exemption match",
+    async () => {
+      await withTempRoot(async (root) => {
+        const exemptRel = [...LINE_BUDGET_EXEMPT.keys()][0] ?? "";
+        const withinAssistant = exemptRel.replace(/^assistant\//, "");
+        const assistantDir = path.join(root, ".qfai", "assistant");
+        await mkdir(assistantDir, { recursive: true });
+        // One file, directly under assistant/, whose *name* contains the
+        // separators of the exempt path. It is an authored asset, not the
+        // generated catalog, so the ceiling still applies to it.
+        await writeFile(
+          path.join(assistantDir, withinAssistant.replace(/\//g, "\\")),
+          "x\n".repeat(ASSISTANT_ASSET_MAX_LINES + 3),
+          "utf-8",
+        );
+
+        const report = await checkAssistantAssetLineBudget(root);
+
+        expect(report.exempt).toEqual([]);
+        expect(report.oversized).toHaveLength(1);
+      });
+    },
+  );
 
   it("measures assets under directories the default walker ignores", async () => {
     await withTempRoot(async (root) => {
@@ -269,6 +348,57 @@ describe("doctor assets.lineBudget check", () => {
       expect(check?.message).toContain(`assistant/catalog/${UNREADABLE_ASSET}`);
     });
   });
+
+  it("states the exempt path and its reason in the default output, not only in JSON", async () => {
+    await withTempRoot(async (root) => {
+      const exemptRel = [...LINE_BUDGET_EXEMPT.keys()][0] ?? "";
+      const reason = LINE_BUDGET_EXEMPT.get(exemptRel) ?? "";
+      await writeAsset(root, exemptRel.replace(/^assistant\//, ""), ASSISTANT_ASSET_MAX_LINES + 40);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+      expect(check?.severity).toBe("ok");
+      // Without this the counts speak only for what was measured, and a reader
+      // cannot tell a compliant tree from one whose longest file is exempt.
+      expect(check?.message).toContain(exemptRel);
+      expect(check?.message).toContain(reason);
+      expect(check?.details?.["exempt"]).toEqual([{ path: exemptRel, reason }]);
+    });
+  });
+
+  // POSIX-only: Windows rejects a newline in a filename.
+  it.skipIf(path.sep === "\\")(
+    "escapes control characters in a path before rendering it into the message",
+    async () => {
+      await withTempRoot(async (root) => {
+        const assistantDir = path.join(root, ".qfai", "assistant", "skills", "qfai-demo");
+        await mkdir(assistantDir, { recursive: true });
+        const hostileName = "over\n[ok] injected: not a real finding.md";
+        await writeFile(
+          path.join(assistantDir, hostileName),
+          "x\n".repeat(ASSISTANT_ASSET_MAX_LINES + 1),
+          "utf-8",
+        );
+
+        const data = await createDoctorData({ startDir: root, rootExplicit: true });
+        const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+
+        expect(check?.severity).toBe("warning");
+        // One finding stays one line, so the injected `[ok]` cannot pose as a
+        // separate severity-prefixed line in `formatDoctorText` output.
+        expect(check?.message).not.toContain("\n");
+        expect(check?.message).toContain("over\\x0a[ok] injected");
+        // `details` keeps the real path so tooling can still act on it.
+        expect(check?.details?.["oversized"]).toEqual([
+          {
+            path: `assistant/skills/qfai-demo/${hostileName}`,
+            lines: ASSISTANT_ASSET_MAX_LINES + 2,
+          },
+        ]);
+      });
+    },
+  );
 
   it("is ok when the assistant tree is inside the ceiling", async () => {
     await withTempRoot(async (root) => {
