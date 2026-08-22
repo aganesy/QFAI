@@ -55,7 +55,11 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       const signals = await read(tree, SIGNALS);
       expectPhrase(signals, "counted in **one scope: the spec this run was invoked on**");
       expectPhrase(signals, "the `CON-API-*` **this spec references**");
-      expectPhrase(signals, "the repository-wide\ndeclared set is **not** this number");
+      // The ledger is not the source: `/qfai-sdd` seeds no `Layer = API` row,
+      // so a first run would read `#CON` 0 for a spec that does have contracts.
+      expectPhrase(signals, "`01_Spec.md` `QFAI-CONTRACT-REF:` declaration");
+      expectPhrase(signals, "Do **not**\ntake this count from `tdd/test-list.md`");
+      expectPhrase(signals, "the repository-wide declared set is **not** this number");
       // The Integration numerator is the layer this skill owns, not every TC:
       // L1/L2 owe nothing here and L4/L5 route to another row.
       expectPhrase(
@@ -66,7 +70,10 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expectPhrase(signals, "never in `#TC`");
 
       const skill = await read(tree, SKILL);
-      expectPhrase(skill, "the `CON-API-*` this spec references (`CON-API-Refs`)");
+      expectPhrase(
+        skill,
+        "the `CON-API-*` this spec references (`QFAI-CONTRACT-REF` in `01_Spec.md`, not the ledger)",
+      );
       expectPhrase(skill, "Integration = required `TC-*` routing to `tests/integration/**`");
     });
 

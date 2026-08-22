@@ -17,14 +17,17 @@ double-count and `total` is their sum.
 
 - `#US` — the E2E row: required `US-*` declared by this spec, **plus** this
   spec's required `TC-*` declaring `Level` `L5`/`E2E`.
-- `#CON` — the API row: the `CON-API-*` **this spec references** — the API
-  obligations its `tdd/test-list.md` carries in `CON-API-Refs`, which are the
-  contracts this spec's `tests/api/**` must cover — **plus** this spec's
-  required `TC-*` declaring `Level` `L4`/`API`. `.qfai/contracts/**` has no spec
-  owner in the model (see `SKILL.md`, CRITICAL CONSTRAINTS), so the
-  repository-wide declared set is **not** this number. A declared contract no
-  spec references is a repo-level obligation for the end-of-stage run — name it
-  in `Notes`, do not count it here.
+- `#CON` — the API row: the `CON-API-*` **this spec references** in its
+  `01_Spec.md` `QFAI-CONTRACT-REF:` declaration — the contract-reference SSOT,
+  written when the spec is authored and reading `none` when there are none —
+  **plus** this spec's required `TC-*` declaring `Level` `L4`/`API`. Do **not**
+  take this count from `tdd/test-list.md`: `/qfai-sdd` Phase 2b seeds no
+  `Layer = API` row (`references/red-provenance.md`), so a first run would read
+  `#CON` 0 for a spec whose contracts this stage is about to implement.
+  `.qfai/contracts/**` has no spec owner in the model (see `SKILL.md`, CRITICAL
+  CONSTRAINTS), so the repository-wide declared set is **not** this number
+  either. A declared contract no spec references is a repo-level obligation for
+  the end-of-stage run — name it in `Notes`, do not count it here.
 - `#TC` — the Integration row: required `TC-*` of this spec that route to
   `tests/integration/**`: declared `Level` `L3`/`Integration`, or no declared
   `Level`. `L1`/`L2` owe nothing to this skill, so they are excluded from `#TC`
