@@ -149,13 +149,19 @@ async function fixture(): Promise<{ dir: string; log: string }> {
   // one. Root config carries `rootKnobs`; the workspace's project carries `projectKnobs`.
   await writeFile(
     path.join(dir, "vitest.config.ts"),
+    // **No `vitest/config` import.** `defineConfig` is an identity helper, and the fixture wrote a
+    // BARE specifier into a config living in `os.tmpdir()` — where no ancestor has a `node_modules`
+    // holding vitest, so nothing resolves it. Measured: `require.resolve("vitest/config")` from a
+    // fresh temp dir is `MODULE_NOT_FOUND`. Two of round 20's reviewers reproduced the load failure
+    // and this stage could not, which is the worst shape a test can have: its outcome depends on the
+    // resolver's mood rather than on the subject. The sibling workspace file next to this one has
+    // always exported a plain object, so the two now agree and neither imports anything but the knobs.
     [
-      `import { defineConfig } from "vitest/config";`,
       `import { rootKnobs } from "${knobs}";`,
       ``,
-      `export default defineConfig({`,
+      `export default {`,
       `  test: { ...rootKnobs },`,
-      `});`,
+      `};`,
       ``,
     ].join("\n"),
     "utf8",

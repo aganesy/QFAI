@@ -1287,29 +1287,60 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
 ];
 
 /**
- * Every file in the template ROOT — the source `qfai init` copies verbatim, before anything else.
+ * Every file in the init SOURCE outside the mirrored `.qfai/` tree — the bytes `qfai init` copies
+ * verbatim into an adopter.
  *
- * `ALLOWED_INIT_PATHS` pins the initialised OUTPUT and excludes the eight instruction trees, because
- * they hold two hundred files that belong to other specs. Round 19 walked in through that exclusion
- * twice: a payload at `.agents/qfai-bootstrap` (extensionless, mode 0644, a BOM in front of its
- * shebang) and a `.claude/settings.json` carrying a `hooks` command string. Both reached an adopter
- * tree with all three pins green.
+ * Round 19 pinned `root/` here after two payloads walked in through the OUTPUT pin's exclusion of the
+ * eight instruction trees. Round 20 walked in through the same exclusion one directory over:
+ * `assets/init/.github/instructions/**` is a THIRD source tree, it ships verbatim into the excluded
+ * `.github/instructions/`, and no pin walked it. Two files. Enumerating them costs nothing and the
+ * absence of the enumeration cost a round.
  *
- * What had stopped an earlier attempt was a seven-name list in another spec's asset test, written
- * before `.agents/` existed — so the defence was the date the list was written, not a rule.
- *
- * This is the same pin one level upstream, where the tree is **two files instead of two hundred**.
- * Two properties make that the right place for it: the template root is copied FIRST and with
- * `force: false`, so a file placed here also pre-empts the real one at the same adopter path — the
- * shadow route — and it is the only part of the init source that is not itself mirrored from
- * somewhere with a guard of its own. Short enough to stay honest, and it closes both routes with one
- * list.
+ * **`.qfai/**` is deliberately not here, and that is a residual rather than a decision to be proud
+ * of.** Its 169 entries are mirrored from this repository's own `.qfai/` by `pnpm sync:ssot`, they
+ * belong to other specs, and they change on that schedule — a path pin over them would redden on
+ * every skill edit, which is the "guard that reddens on the honest edit" hazard this record has been
+ * tracking since round 10. What guards them is mirror parity plus the kind rule below. Round 20's
+ * gate defeated that pair with a file carrying no shebang, no executable bit and no known name, run
+ * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
-export const ALLOWED_INIT_ROOT_ASSETS: ReadonlySet<string> = new Set([
-  ".github/workflows/qfai-tests.yml",
-  ".github/workflows/qfai-validate.yml",
-  "DESIGN.md",
-  "qfai.config.yaml",
+export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.github/workflows/qfai-tests.yml",
+  "root/.github/workflows/qfai-validate.yml",
+  "root/DESIGN.md",
+  "root/qfai.config.yaml",
+  ".github/instructions/code-review.instructions.md",
+  ".github/instructions/principles.instructions.md",
+]);
+
+/** The one source tree the enumeration above excludes, named so the exclusion is checkable. */
+export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
+
+/**
+ * The file extensions `qfai init` may ship, which is the fourth question about who runs a file.
+ *
+ * The other three ask what the bytes say (a shebang), what the filesystem says (an executable bit)
+ * and what a tool would know the name for. Round 20's gate beat all three with a file carrying none
+ * of them — `.qfai/assistant/bootstrap`, extensionless, mode 0644, shell text — run as `sh <file>`,
+ * which is the execution path `initMustNotShip`'s own docstring names as consulting "no bit and no
+ * offset". It reached an adopter with every pin green.
+ *
+ * The property that separates it from everything legitimately here is not its name and not its
+ * content: **it is that the init source ships DATA, and data has a data extension.** All 175 entries
+ * are `.md`, `.yml`, `.yaml`, `.json`, `.sql` or `.sample`, 158 of them markdown, and none has ever
+ * been extensionless. So the rule is an enumeration of what may ship rather than a list of what may
+ * not — the same inversion the rest of this file is built on, arrived at three rounds late because
+ * the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ *
+ * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost.
+ */
+export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
+  ".md",
+  ".yml",
+  ".yaml",
+  ".json",
+  ".sql",
+  ".sample",
 ]);
 
 /**

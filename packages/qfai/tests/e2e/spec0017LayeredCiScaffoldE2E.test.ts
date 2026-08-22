@@ -71,7 +71,9 @@ import {
   INIT_INSTRUCTION_TREES,
   ALLOWED_INIT_CONTENT,
   ALLOWED_INIT_PATHS,
-  ALLOWED_INIT_ROOT_ASSETS,
+  ALLOWED_INIT_SOURCE_ASSETS,
+  ALLOWED_INIT_SOURCE_EXTENSIONS,
+  INIT_SOURCE_MIRRORED_TREE,
   ALLOWED_PROVENANCE_SHAPE,
   BUILD_DECORATION,
   LIVE_DECORATIONS,
@@ -713,30 +715,25 @@ describe(
         .toEqual([]);
     });
 
-    it("ships nothing from the template root but the two workflows", async () => {
-      // **The pin one level upstream of the three above**, and the round that made it necessary shipped
-      // two payloads through the gap: `.agents/qfai-bootstrap`, extensionless and mode 0644 with a BOM
-      // in front of its shebang, and a `.claude/settings.json` carrying a `hooks` command string. Both
-      // arrived in the adopter tree with the path pin, the content pin and the kind rule all green,
-      // because all three exclude the eight instruction trees.
+    it("ships nothing from the init source but the enumerated files, as data", async () => {
+      // **The pin one level upstream of the three above**, widened twice by the rounds that beat it.
+      // Round 19 shipped `.agents/qfai-bootstrap` and a `.claude/settings.json` hooks block through
+      // the OUTPUT pin's exclusion of the eight instruction trees, and this pin over the template root
+      // closed both. Round 20 walked in one directory over — `assets/init/.github/instructions/**` is
+      // a THIRD source tree that ships verbatim into the excluded `.github/instructions/`, and nothing
+      // walked it — and then through the mirrored `.qfai/` tree with a file carrying no shebang, no
+      // executable bit and no known name, run as `sh <file>`.
       //
-      // What had caught an earlier attempt was a seven-name list in `tests/assets/assets.test.ts` —
-      // another spec's file, written before `.agents/` existed. A defence that works because of when a
-      // list was written is not a defence; this is the same question asked where the answer is two
-      // files, and it is asked over the SOURCE because the template root is copied first and with
-      // `force: false`, so a file planted here also pre-empts the real one at the same adopter path.
-      const rootAssets = path.resolve(
-        process.cwd(),
-        "..",
-        "..",
-        "packages",
-        "qfai",
-        "assets",
-        "init",
-        "root",
-      );
+      // Two rules answer those. The PATH enumeration covers everything outside the mirrored tree, and
+      // it is six files. The EXTENSION rule covers everything including the mirrored tree: the init
+      // source ships data, and data has a data extension. That is the fourth question about who runs
+      // a file, arrived at after three rounds of enumerating the dangerous side — which cannot be
+      // finished, and which is the mistake this file's own design principle exists to avoid.
+      const source = path.resolve(process.cwd(), "..", "..", "packages", "qfai", "assets", "init");
       const found: string[] = [];
-      const flagged: string[] = [];
+      const unenumerated: string[] = [];
+      const wrongKind: string[] = [];
+      const runnable: string[] = [];
       const walk = async (dir: string): Promise<void> => {
         for (const entry of await readdir(dir, { withFileTypes: true })) {
           const full = path.join(dir, entry.name);
@@ -744,62 +741,69 @@ describe(
             await walk(full);
             continue;
           }
-          const rel = path.relative(rootAssets, full).split(path.sep).join("/");
+          const rel = path.relative(source, full).split(path.sep).join("/");
           found.push(rel);
-          // Asked here too: a file may be enumerated and still be a script, and the enumeration is a
-          // list of names while this is a question about what the bytes are.
           const why = initMustNotShip(rel, await readFile(full), (await lstat(full)).mode);
-          if (why !== undefined) flagged.push(`${rel}: ${why}`);
+          if (why !== undefined) runnable.push(`${rel}: ${why}`);
+          const extension = path.extname(rel);
+          if (!ALLOWED_INIT_SOURCE_EXTENSIONS.has(extension)) {
+            wrongKind.push(
+              `${rel}: ships as ${extension === "" ? "an extensionless file" : extension}`,
+            );
+          }
+          if (rel.startsWith(INIT_SOURCE_MIRRORED_TREE)) continue;
+          if (!ALLOWED_INIT_SOURCE_ASSETS.has(rel)) unenumerated.push(rel);
         }
       };
-      await walk(rootAssets);
+      await walk(source);
 
+      expect(found.length, "the init source must have files to read").toBeGreaterThan(100);
       expect(
-        found.filter((rel) => !ALLOWED_INIT_ROOT_ASSETS.has(rel)).sort(),
-        "a file in the template root that no one enumerated — it is copied verbatim into every " +
-          "adopter tree, and first, so it also shadows whatever else would land at that path",
+        unenumerated.sort(),
+        "a file in the init source outside the mirrored tree that no one enumerated — it is copied " +
+          "verbatim into every adopter tree, and the template root is copied FIRST, so a file there " +
+          "also shadows whatever else would land at that path",
       ).toEqual([]);
       expect(
-        [...ALLOWED_INIT_ROOT_ASSETS].filter((rel) => !found.includes(rel)).sort(),
-        "an enumerated template-root asset that is no longer there — the list is the claim, so a " +
-          "stale entry is a claim about a file that does not exist",
+        [...ALLOWED_INIT_SOURCE_ASSETS].filter((rel) => !found.includes(rel)).sort(),
+        "an enumerated init source asset that is no longer there — the list is the claim, so a stale " +
+          "entry is a claim about a file that does not exist",
       ).toEqual([]);
-      expect(flagged, "a template-root asset that something would run").toEqual([]);
+      expect(
+        wrongKind.sort(),
+        "an init source file that does not ship as data. Round 20's payload had no shebang, no " +
+          "executable bit and no name any tool knows — what it did not have was an extension, and " +
+          "every one of the files that belong here does",
+      ).toEqual([]);
+      expect(runnable, "an init source file that something would run").toEqual([]);
     });
 
-    it("agrees with bash about which decorations actually run a build", async () => {
-      // **The oracle that has found every defect in this file, committed.**
+    it("agrees with bash about which decorations actually run a build", async (ctx) => {
+      // Round 20 found three defects in this harness on its first review, two of them silent.
       //
-      // Round 19's gate stated the residual precisely: the differential test asserts that `codeMask`
-      // and `refusals()` AGREE, so a fault common to both leaves it green, and the `inert` list —
-      // the half meant to anchor the mask to reality — anchors it to shapes the stage asserted are
-      // inert rather than to bash. Nothing in the committed suite ran a shell. The only instrument
-      // that has ever falsified this file is a reviewer's fake bundler on `PATH`, and it "lives in
-      // reviewer scratch and is deleted at the end of each round".
-      //
-      // So it lives here now. A fake `npx` records its arguments and exits 0; each decoration goes
-      // through `bash -c` with the marker cleared first; a `live` row must leave the marker and an
-      // `inert` row must not. The corpora are the same objects the differential test reads — a second
-      // copy would have put the two instruments back on separate evidence, which is the divergence
-      // this whole file is a record of.
-      //
-      // Running it found two rows misfiled on the day it was written: `build_once() { … }` defined a
-      // function bash never entered, and `if [ -f package.json ]` is live only where that file exists.
-      const bashAt = spawnSync("bash", ["-c", "printf ok"], { encoding: "utf-8" });
-      if (bashAt.error !== undefined || bashAt.stdout.trim() !== "ok") {
-        // No POSIX shell here. Skipping is honest; pretending the corpus was verified is not.
-        expect(bashAt.error, "bash is unavailable, so this oracle did not run").toBeDefined();
+      // **`bash` missing made this PASS, not skip.** The probe asserted `error` was defined and
+      // returned, so a runner without a POSIX shell got a green tick for a claim nothing checked —
+      // the failure mode the block above says is worse than no guard at all. It is `ctx.skip()` now,
+      // which reports as skipped rather than as verified.
+      const probe = spawnSync("bash", ["-c", "printf ok"], { encoding: "utf-8" });
+      if (probe.error !== undefined || probe.status !== 0 || probe.stdout.trim() !== "ok") {
+        ctx.skip();
         return;
       }
 
       const lab = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-spec0017-oracle-"));
       try {
         const bin = path.join(lab, "bin");
-        const marker = path.join(lab, "ran.txt");
+        const marker = path.join(lab, "ran.txt").split(path.sep).join("/");
         await mkdir(bin, { recursive: true });
+        // **The marker path is single-quoted inside the script.** It was interpolated bare, so a
+        // `TMPDIR` containing a space split the redirection target: `sh` exited 0 with no stderr,
+        // every `live` row reported a false misfiling, and the fake bundler wrote a file OUTSIDE the
+        // lab that the cleanup below never saw. A harness that reports the subject as broken when its
+        // own path has a space in it is an instrument that fails in the direction of noise.
         await writeFile(
           path.join(bin, "npx"),
-          `#!/bin/sh\nprintf '%s\\n' "npx $*" >> ${marker.split(path.sep).join("/")}\nexit 0\n`,
+          `#!/bin/sh\nprintf '%s\\n' "npx $*" >> '${marker}'\nexit 0\n`,
           { mode: 0o755 },
         );
         // The `if [ -f package.json ]` row is live only where that file exists, which is the context
@@ -819,30 +823,46 @@ describe(
         ] as const) {
           for (const shape of shapes) {
             await rm(marker, { force: true });
-            spawnSync("bash", ["-c", shape.replace("%s", BUILD_DECORATION)], {
+            // **The subprocess's own outcome is read.** The first version discarded `status`,
+            // `stderr` and `error`, so a fake bundler that never launched — an unwritable marker, a
+            // `noexec` temp directory, a shell that died — read as "bash did not run it", which is
+            // the answer an `inert` row wants. The oracle would have agreed with itself.
+            const ran = spawnSync("bash", ["-c", shape.replace("%s", BUILD_DECORATION)], {
               cwd: lab,
               env,
               encoding: "utf-8",
               timeout: 30000,
             });
-            const ran = await access(marker).then(
+            if (ran.error !== undefined) {
+              misfiled.push(`could not run ${JSON.stringify(shape)}: ${ran.error.message}`);
+              continue;
+            }
+            const left = await access(marker).then(
               () => true,
               () => false,
             );
-            if (ran !== mustRun) {
+            if (left !== mustRun) {
               misfiled.push(
-                `${mustRun ? "live" : "inert"} but bash ${ran ? "RAN" : "did not run"} it: ${JSON.stringify(shape)}`,
+                `${mustRun ? "live" : "inert"} but bash ${left ? "RAN" : "did not run"} it: ` +
+                  `${JSON.stringify(shape)}${ran.stderr.trim() === "" ? "" : ` (stderr: ${ran.stderr.trim().split("\n")[0] ?? ""})`}`,
               );
             }
           }
         }
+        // The positive control: if the fake bundler never worked at all, every `live` row would
+        // report and this list would be the whole corpus rather than one row. Stated so a reader can
+        // tell a broken harness from a broken subject.
+        expect(
+          misfiled.length,
+          `the harness itself is not working: ${String(misfiled.length)} of ${String(LIVE_DECORATIONS.length)} live rows did not run`,
+        ).toBeLessThan(LIVE_DECORATIONS.length);
         expect(
           misfiled,
           "a decoration filed against what bash actually does with it. `live` and `inert` are claims " +
             "about a shell, and this is the only assertion in the suite that asks the shell",
         ).toEqual([]);
       } finally {
-        await rm(lab, { recursive: true, force: true });
+        await rm(lab, { recursive: true, force: true, maxRetries: 3 });
       }
     });
 
