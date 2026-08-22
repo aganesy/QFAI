@@ -32,6 +32,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const SKELETON = "assistant/skills/qfai-implement/references/walking-skeleton.md";
 const ADMISSIBILITY = "assistant/skills/qfai-implement/references/red-admissibility.md";
+const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
 const ROUTING = "assistant/manifest/agent-routing.yml";
 const RED_PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const ATDD_SKILL = "assistant/skills/qfai-atdd/SKILL.md";
@@ -374,6 +375,72 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       }
       // Same rule as every other gate result in this skill.
       expect(doc).toContain("the command and its real output, never a prose verdict");
+    });
+
+    // Requiring the sentinel *response* made the phase unpassable for any
+    // project whose entrypoint already answers the US — an existing app, or a
+    // US an earlier spec finished. Passing would have meant regressing a
+    // working handler to 501, while smoke contract 3 says the script does not
+    // inspect the outcome at all.
+    it(`${tree}: a surface that already answers exits the phase on its real response`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("**with whatever that surface already returns**");
+      expect(doc).toContain("nothing here prescribes one either");
+      // The sentinel is what Bound 1 leaves a *new* seam, not a demand.
+      expect(doc).toContain("**permitted answer of a seam this phase newly authors**");
+      expect(doc).toContain("never a response the smoke script requires");
+      expect(doc).toContain(
+        "its real `200` / `201` and its real payload exit the phase as they stand",
+      );
+      expect(doc).toContain("**Any answer that process gives counts**");
+      // And Bound 1 does not reach backwards into finished work.
+      expect(doc).toContain("This bound governs what the phase **writes**, not what it finds");
+      expect(skill).toContain("never regressed to a sentinel to look skeletal");
+    });
+
+    // The cross-invocation re-run left the whole of one invocation uncovered:
+    // its own Red/Green/Refactor can break the composition root while a suite
+    // that constructs its subject directly stays green, and the spec-level
+    // command set never starts the product.
+    it(`${tree}: spec completion re-runs the smoke command, not the opening record`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+      const checkpoint = unwrap(await read(tree, CHECKPOINT));
+
+      expect(doc).toContain("### The same re-run before spec completion");
+      expect(doc).toContain(
+        "**spec-level checkpoint re-runs the `Skeleton command` of every in-scope entrypoint**",
+      );
+      expect(doc).toContain("**fails that checkpoint, blocks spec completion**");
+      expect(doc).toContain("returns the entrypoint to this phase's 3-cycle budget");
+
+      // The command set itself has to carry it, or the rule has no runner.
+      expect(checkpoint).toContain("the spec-level set is steps 2, 3 and 4, plus step 5");
+      expect(checkpoint).toContain(
+        "**The `Skeleton command` of every in-scope entrypoint whose `Skeleton verdict` is `applicable`**",
+      );
+      expect(checkpoint).toContain("no other step in this set runs the product");
+      expect(skill).toContain("blocks completion on a non-zero exit");
+    });
+
+    // Making the evidence file git-tracked turned "verbatim" from a discarded
+    // scrollback into repository history: a queue URL, connection string or
+    // token echoed at start-up would be committed permanently.
+    it(`${tree}: the tracked evidence redacts secrets without losing the exit status`, async () => {
+      const skill = unwrap(await read(tree, SKILL));
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("**Verbatim except for secrets.**");
+      expect(doc).toContain("**known secret values replaced by a stable placeholder**");
+      // Redaction may not cost the criterion or the halt taxonomy its inputs.
+      expect(doc).toContain("the **exit status** is never redacted");
+      expect(doc).toContain("redact the **value**, not the line");
+      expect(doc).toContain("so the halt is still classifiable by the taxonomy above");
+      // Nor may it become a licence to write prose where output belongs.
+      expect(doc).toContain("Redaction is not licence to paraphrase");
+      expect(skill).toContain("**with known secret values replaced by a named placeholder**");
     });
   }
 });

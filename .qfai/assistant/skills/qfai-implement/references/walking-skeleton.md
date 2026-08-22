@@ -65,9 +65,19 @@ script's exit status is.
 
 **Reached, not satisfied — this is a boot obligation.** The entrypoint starts,
 the request the `US-*` names arrives at the surface it names, and the started
-process answers it with the non-contracted sentinel of Bound 1 (`501`, or any
-status no row owns). That is the whole criterion. Nothing here asserts the
-`US-*`'s outcome.
+process answers it — **with whatever that surface already returns**. That is the
+whole criterion. Nothing here asserts the `US-*`'s outcome, and nothing here
+prescribes one either.
+
+The non-contracted sentinel of Bound 1 (`501`, or any status no row owns) is
+therefore the **permitted answer of a seam this phase newly authors** — Bound 1
+leaves such a seam nothing else to return — and never a response the smoke
+script requires. Where the entrypoint already answers that surface, because the
+project is an existing application or an earlier spec finished the `US-*`, its
+real `200` / `201` and its real payload exit the phase as they stand. Demanding
+the sentinel there would make passing the phase conditional on regressing a
+working handler to `501`, which contradicts smoke contract 3 (the script does
+not inspect the outcome) and "do not rebuild what already starts" below.
 
 Requiring the outcome would make this criterion and Bound 1 unsatisfiable
 together on every project whose `US-*` set is authorization, calculation or
@@ -113,6 +123,8 @@ satisfies it, though, never the stored record: see `#evidence`.
    a worker — and asserts that reachability alone: the request was served by the
    process the entrypoint started. It asserts nothing about that `US-*`'s
    outcome; asserting the outcome would need the predicate Bound 1 forbids.
+   **Any answer that process gives counts** — the sentinel of a seam authored
+   here, or the real response of a surface that already worked.
 4. **Exits non-zero on any failure**, including a start-up timeout. A script
    that reports a failure on stdout and exits 0 proves nothing.
 5. **Names the `US-*` whose surface it reaches**, so the phase's evidence points
@@ -151,6 +163,11 @@ Registering a route with a status the ledger does not contract for (`501`, or
 `200` where a row owns `201`) keeps the surface reachable **and** keeps every
 row's RED available. Prefer that over a handler that already returns the status
 some row owns.
+
+This bound governs what the phase **writes**, not what it finds. A handler that
+already implements its `US-*` was authored by some earlier row and is that row's
+proof, so leave it exactly as it is: downgrading it to a sentinel to look more
+skeletal would delete GREEN work no row asked to be re-opened.
 
 ## Bound 2 — seam debt is written back (blocking)
 
@@ -244,8 +261,8 @@ row is selected, each carrying:
 | `Skeleton verdict`    | `applicable` or `not applicable` plus the reason                          |
 | `Skeleton entrypoint` | the declared entrypoint, as a command                                     |
 | `Skeleton US`         | the `US-*` whose surface the smoke script reaches                         |
-| `Skeleton command`    | the smoke-script invocation, verbatim                                     |
-| `Skeleton result`     | its output and **exit status**, verbatim                                  |
+| `Skeleton command`    | the smoke-script invocation, verbatim, secret values redacted             |
+| `Skeleton result`     | its output and **exit status**, verbatim, secret values redacted          |
 | `Skeleton gatekeeper` | the `qa-gatekeeper` verdict on that run — `PASS` required when applicable |
 | `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows         |
 | `Skeleton cycles`     | cycles used, of 3                                                         |
@@ -254,6 +271,29 @@ row is selected, each carrying:
 skill: the command and its real output, never a prose verdict
 (`../SKILL.md#evidence-hard-rules`). A `Skeleton verdict` of `not applicable`
 leaves the remaining fields empty and needs no smoke script.
+
+**Verbatim except for secrets.** A real transport is started with real
+connection material: a queue URL, a database connection string, an API token in
+the command line or echoed by the runtime at start-up. Because this file is
+git-tracked, verbatim there is not a discarded terminal scrollback — it is a
+credential written into the repository's permanent history, from where a
+rotation is the only removal. So `Skeleton command` and `Skeleton result` are
+copied verbatim with **known secret values replaced by a stable placeholder**
+(`<QUEUE_URL>`, `<DB_PASSWORD>`, the variable's own name), and nothing else
+altered. The redaction is bounded by what it must leave intact:
+
+- the **exit status** is never redacted — it is the criterion itself;
+- redact the **value**, not the line: the failing command, the error class and
+  the message stay, so the halt is still classifiable by the taxonomy above;
+- name each placeholder in place, so a reader can tell a redaction from a
+  truncation;
+- when a run cannot be recorded without its secrets — the whole diagnostic is
+  the credential — record the redacted head, the exit status and that fact.
+  Withholding the record is not an option; the phase is never silently skipped.
+
+Redaction is not licence to paraphrase. A prose verdict where output belongs is
+the failure this rule already forbids, and a redacted transcript is still a
+transcript.
 
 **On every later invocation, read this file first.** An entrypoint with no
 section runs the phase. An entrypoint whose latest recorded `Skeleton result` is
@@ -275,6 +315,31 @@ way — the record of what broke is what the classification is made from.
 
 That read is what makes "once per entrypoint" checkable across invocations
 instead of a memory of what a previous session did.
+
+### The same re-run before spec completion
+
+Reading this file at the top of the next invocation closes the gap **between**
+invocations. It does nothing about the gap **inside** one. The rows that follow
+this phase edit the composition root, the start-up configuration and the
+dependency wiring, and a suite whose tests construct their subject directly
+stays green through every one of those breakages. The spec-level command set is
+the full suite, the static gates and `validate`
+(`checkpoint-verification.md#verification-command-set-per-spec`); not one of
+them starts the product. Left at that, a spec completes on this phase's opening
+record while its entrypoint no longer boots — the exact state the phase exists
+to remove, arrived at from the other end.
+
+So the **spec-level checkpoint re-runs the `Skeleton command` of every in-scope
+entrypoint** and appends each run under its section, exactly as a later
+invocation would, and the appended exit status decides in the same way: non-zero
+**fails that checkpoint, blocks spec completion**, and returns the entrypoint to
+this phase's 3-cycle budget and its halt classification. Entrypoints whose
+verdict is `not applicable` have no command and are skipped.
+
+Re-run it at a **per-item** checkpoint as well whenever the item touched an
+entrypoint, its wiring or its start-up configuration. That is not the cheapest
+place to run it, but it is by far the cheapest place to attribute the break,
+because exactly one row's work stands between the last passing run and this one.
 
 ## Reached from `/qfai-atdd`
 
