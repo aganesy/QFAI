@@ -176,6 +176,12 @@ describe("qfai-implement checkpoint verification contract", () => {
         expect(document, `${name} must not claim a boundary per row`).not.toContain(
           "Every item has exactly one",
         );
+        // Nor may either re-derive the condition. "The last row a run completes
+        // is always a boundary" is false for a run that completes one named row
+        // while others are still `todo` — the ordinary `/qfai-atdd` handoff.
+        expect(document, `${name} must not re-derive the condition`).not.toContain(
+          "always a boundary",
+        );
       }
 
       expect(reference).toContain("**Not every row is one.**");

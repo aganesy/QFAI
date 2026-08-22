@@ -58,8 +58,14 @@ describe('"relevant test suite" is defined and bounded', () => {
       expect(skill).toContain(
         "The **full** suite is required here only when the item sits on a checkpoint boundary",
       );
-      // ...while still running at least once per spec.
-      expect(skill).toContain("the last row a run completes is always a boundary");
+      // ...while still running at least once per spec. The guarantee comes from
+      // the unconditional spec-level boundary, not from a condition re-derived
+      // in `SKILL.md`: a run that completes one named row while others are still
+      // `todo` — the ordinary `/qfai-atdd` handoff — is not on a boundary.
+      expect(skill).toContain(
+        "the spec-level boundary runs it unconditionally on a terminal ledger",
+      );
+      expect(skill).not.toContain("always a boundary");
     });
 
     it(`${tree}: the once-per-spec boundary follows work, not file position`, async () => {
