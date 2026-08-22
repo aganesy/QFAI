@@ -150,7 +150,9 @@ export type QfaiReportConfig = {
    * Number of newest `run-*` directories retained regardless of age, so
    * `validate.log`'s `run_log:` pointer can never be pruned away.
    * Default (when unset) is applied at the call-site by
-   * `RUN_LOG_KEEP_LATEST_DEFAULT`.
+   * `RUN_LOG_KEEP_LATEST_DEFAULT`; `0` is clamped up to
+   * `RUN_LOG_KEEP_LATEST_MIN` (1) there, because keeping nothing would
+   * strand that pointer. Use `staleTtlDays: 0` to keep every run.
    */
   keepLatestRuns?: number;
 };

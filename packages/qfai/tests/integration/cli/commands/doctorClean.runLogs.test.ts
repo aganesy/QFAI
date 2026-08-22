@@ -96,6 +96,59 @@ describe("doctor --clean prunes stale validate run logs", () => {
     expect(await exists(stale)).toBe(true);
   });
 
+  it("refuses to prune while the config carries issues", async () => {
+    const root = await newTempDir("bad-config");
+    // Quoted "0" is not a number, so normalization drops it and the
+    // 14-day default would otherwise take over — deleting exactly the
+    // logs the operator meant to keep forever.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      'report:\n  staleTtlDays: "0"\n  keepLatestRuns: 1\n',
+      "utf-8",
+    );
+    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+    await seedRunLog(root, "run-20260811120000002", 0);
+
+    const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
+
+    expect(exit).toBe(0);
+    expect(await exists(stale)).toBe(true);
+  });
+
+  it("refuses to prune an outDir shared with another project root", async () => {
+    const mono = await newTempDir("shared-outdir");
+    await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
+    for (const app of ["app-a", "app-b"]) {
+      await mkdir(path.join(mono, app), { recursive: true });
+      await writeFile(
+        path.join(mono, app, "qfai.config.yaml"),
+        "paths:\n  outDir: ../shared-report\nreport:\n  keepLatestRuns: 1\n",
+        "utf-8",
+      );
+    }
+    // Two stale runs: with `keepLatestRuns: 1` and app-a's TTL in
+    // force, the older one would be deleted out of app-b's evidence
+    // trail were the collision not detected first.
+    const sharedRoot = path.join(mono, "shared-report");
+    const shared = path.join(sharedRoot, "run-20260401120000001");
+    for (const runId of ["run-20260401120000001", "run-20260402120000002"]) {
+      const dir = path.join(sharedRoot, runId);
+      await mkdir(dir, { recursive: true });
+      const mtime = new Date(Date.now() - 30 * DAY_MS);
+      await utimes(dir, mtime, mtime);
+    }
+
+    const exit = await runDoctor({
+      root: path.join(mono, "app-a"),
+      rootExplicit: true,
+      format: "text",
+      clean: true,
+    });
+
+    expect(exit).toBe(0);
+    expect(await exists(shared)).toBe(true);
+  });
+
   it("doctor reports the run-log count so the growth is visible", async () => {
     const root = await newTempDir("count");
     await seedRunLog(root, "run-20260401120000001", 30);

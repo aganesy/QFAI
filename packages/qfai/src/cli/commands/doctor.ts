@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { createDoctorData, type DoctorProfile } from "../../core/doctor.js";
 import { cleanStaleReviewPacks } from "../../core/doctor/cleanReviewPacks.js";
-import { cleanStaleRunLogs } from "../../core/doctor/cleanRunLogs.js";
+import { cleanStaleRunLogs, precheckRunLogPrune } from "../../core/doctor/cleanRunLogs.js";
 import { runAutoremediate } from "../../core/doctor/autoremediate.js";
 import { ensureRootGitignoreEntries } from "./init.js";
 import { findConfigRoot, loadConfig } from "../../core/config.js";
@@ -102,10 +102,14 @@ function formatDoctorJson(data: unknown): string {
  * wording from the live path would falsely read as "it happened".
  * Mirror the `autoremediate` dry-run vocabulary (`would run ...` /
  * `would fill ...`).
+ *
+ * Review-pack archival always runs (it moves, and is therefore
+ * recoverable). The run-log prune deletes, so it runs only after
+ * `precheckRunLogPrune` clears it.
  */
 async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<string[]> {
   const lines: string[] = [];
-  const { config } = await loadConfig(resolvedRoot);
+  const { config, issues } = await loadConfig(resolvedRoot);
   const reviewTtlDays = config.review?.staleTtlDays;
   const packs = await cleanStaleReviewPacks(resolvedRoot, {
     ...(typeof reviewTtlDays === "number" ? { ttlDays: reviewTtlDays } : {}),
@@ -122,6 +126,15 @@ async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<str
     );
   }
 
+  // The run-log half of `--clean` deletes rather than moves, so it is
+  // gated on the two preconditions the diagnostic pass would otherwise
+  // only report AFTER the deletion (invalid config, shared outDir).
+  const precheck = await precheckRunLogPrune(resolvedRoot, config, issues);
+  if (precheck.blocked) {
+    lines.push(`doctor --clean: run log prune skipped — ${precheck.reason}`);
+    return lines;
+  }
+
   const runLogTtlDays = config.report?.staleTtlDays;
   const keepLatestRuns = config.report?.keepLatestRuns;
   const runLogs = await cleanStaleRunLogs(resolvedRoot, config, {
@@ -129,7 +142,7 @@ async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<str
     ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
     ...(dryRun ? { dryRun: true } : {}),
   });
-  const runLogCounts = `in-ttl=${runLogs.skippedInTtl.length}, kept-latest=${runLogs.retainedLatest.length} (ttlDays=${runLogs.ttlDays}, keepLatestRuns=${runLogs.keepLatest})`;
+  const runLogCounts = `in-ttl=${runLogs.skippedInTtl.length}, kept-latest=${runLogs.retainedLatest.length}, kept-pointer=${runLogs.retainedPointer.length} (ttlDays=${runLogs.ttlDays}, keepLatestRuns=${runLogs.keepLatest})`;
   lines.push(
     dryRun
       ? `doctor --clean (dry-run): would prune run logs=${runLogs.removed.length}, ${runLogCounts}`

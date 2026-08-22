@@ -27,7 +27,7 @@ import { exists } from "../validators/utils.js";
 import { loadConfig } from "../config.js";
 import { migrateLegacyReviewPacks } from "./migrateLegacyReviewPacks.js";
 import { cleanStaleReviewPacks } from "./cleanReviewPacks.js";
-import { cleanStaleRunLogs } from "./cleanRunLogs.js";
+import { cleanStaleRunLogs, precheckRunLogPrune } from "./cleanRunLogs.js";
 import { probeSkillManifestRuntimeDeps } from "./skillManifestProbe.js";
 
 export type InstallRunner = (name: string, cwd: string) => Promise<void>;
@@ -174,7 +174,7 @@ export async function runAutoremediate(
   }
 
   // (2) Archive stale review packs (--clean behavior).
-  const { config } = await loadConfig(options.root);
+  const { config, issues: configIssues } = await loadConfig(options.root);
   const ttlDays = config.review?.staleTtlDays;
   const cleanResult = await cleanStaleReviewPacks(options.root, {
     ...(typeof ttlDays === "number" ? { ttlDays } : {}),
@@ -188,19 +188,29 @@ export async function runAutoremediate(
   // (2b) Prune stale validate run logs (--clean behavior, second target).
   // Kept in lockstep with the `--clean` branch in `cli/commands/doctor.ts`
   // so `--autoremediate` is not a narrower clean than `--clean`.
-  const runLogTtlDays = config.report?.staleTtlDays;
-  const keepLatestRuns = config.report?.keepLatestRuns;
-  const runLogResult = await cleanStaleRunLogs(options.root, config, {
-    ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
-    ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
-    ...(options.dryRun ? { dryRun: true } : {}),
-  });
-  const prunedRunLogs = runLogResult.removed.map((entry) => entry.runId);
-  lines.push(
-    options.dryRun
-      ? `autoremediate: would prune run logs=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length} (dry-run)`
-      : `autoremediate: run logs pruned=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length}`,
-  );
+  // Same precondition gate as `--clean`: an invalid config or an outDir
+  // shared with another project root means the retention numbers in
+  // hand are not the ones governing the directory, and this half of the
+  // cleanup deletes rather than moves.
+  const prunedRunLogs: string[] = [];
+  const precheck = await precheckRunLogPrune(options.root, config, configIssues);
+  if (precheck.blocked) {
+    lines.push(`autoremediate: run log prune skipped — ${precheck.reason}`);
+  } else {
+    const runLogTtlDays = config.report?.staleTtlDays;
+    const keepLatestRuns = config.report?.keepLatestRuns;
+    const runLogResult = await cleanStaleRunLogs(options.root, config, {
+      ...(typeof runLogTtlDays === "number" ? { ttlDays: runLogTtlDays } : {}),
+      ...(typeof keepLatestRuns === "number" ? { keepLatest: keepLatestRuns } : {}),
+      ...(options.dryRun ? { dryRun: true } : {}),
+    });
+    prunedRunLogs.push(...runLogResult.removed.map((entry) => entry.runId));
+    lines.push(
+      options.dryRun
+        ? `autoremediate: would prune run logs=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length} (dry-run)`
+        : `autoremediate: run logs pruned=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length}`,
+    );
+  }
 
   // (3) Write missing default-keyed config fields (user-authored values
   // are NOT touched because we only append the key when absent).

@@ -39,6 +39,7 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
+import { detectOutDirCollisions } from "./doctor/outDirCollisions.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -1292,29 +1293,6 @@ function relativizeMaybe(root: string, target: string): string {
   return path.isAbsolute(target) ? toRelativePath(root, target) || target : target;
 }
 
-const DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS = [
-  ...DEFAULT_TEST_FILE_EXCLUDE_GLOBS,
-  "**/.pnpm/**",
-  "**/tmp/**",
-  "**/.mcp-tools/**",
-];
-
-type OutDirCollision = {
-  outDir: string;
-  roots: string[];
-};
-
-type OutDirCollisionResult = {
-  monorepoRoot: string;
-  configRoots: string[];
-  collisions: OutDirCollision[];
-  scan: {
-    truncated: boolean;
-    matchedFileCount: number;
-    limit: number;
-  };
-};
-
 async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
   try {
     const result = await detectOutDirCollisions(root);
@@ -1361,63 +1339,4 @@ async function buildOutDirCollisionCheck(root: string): Promise<DoctorCheck> {
       details: { error: String(error) },
     };
   }
-}
-
-async function detectOutDirCollisions(root: string): Promise<OutDirCollisionResult> {
-  const monorepoRoot = await findMonorepoRoot(root);
-  const configScan = await collectFilesByGlobs(monorepoRoot, {
-    globs: ["**/qfai.config.yaml"],
-    ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
-  });
-  const configPaths = configScan.files;
-  const configRoots = Array.from(
-    new Set(configPaths.map((configPath) => path.dirname(configPath))),
-  ).sort((a, b) => a.localeCompare(b));
-  const outDirToRoots = new Map<string, Set<string>>();
-
-  for (const configRoot of configRoots) {
-    const { config } = await loadConfig(configRoot);
-    const outDir = path.normalize(resolvePath(configRoot, config, "outDir"));
-    const roots = outDirToRoots.get(outDir) ?? new Set<string>();
-    roots.add(configRoot);
-    outDirToRoots.set(outDir, roots);
-  }
-
-  const collisions: OutDirCollision[] = [];
-  for (const [outDir, roots] of outDirToRoots.entries()) {
-    if (roots.size > 1) {
-      collisions.push({
-        outDir,
-        roots: Array.from(roots).sort((a, b) => a.localeCompare(b)),
-      });
-    }
-  }
-
-  return {
-    monorepoRoot,
-    configRoots,
-    collisions,
-    scan: {
-      truncated: configScan.truncated,
-      matchedFileCount: configScan.matchedFileCount,
-      limit: configScan.limit,
-    },
-  };
-}
-
-async function findMonorepoRoot(startDir: string): Promise<string> {
-  let current = path.resolve(startDir);
-  for (;;) {
-    const gitPath = path.join(current, ".git");
-    const workspacePath = path.join(current, "pnpm-workspace.yaml");
-    if ((await exists(gitPath)) || (await exists(workspacePath))) {
-      return current;
-    }
-    const parent = path.dirname(current);
-    if (parent === current) {
-      break;
-    }
-    current = parent;
-  }
-  return path.resolve(startDir);
 }

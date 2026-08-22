@@ -54,3 +54,12 @@ export const RUN_LOG_STALE_TTL_DAYS_DEFAULT = 14;
  * must never be able to reach it.
  */
 export const RUN_LOG_KEEP_LATEST_DEFAULT = 5;
+
+/**
+ * Floor under `report.keepLatestRuns`. `0` is accepted by the config
+ * normalizer as a number, but a zero floor would let a TTL-expired
+ * newest run be pruned while `<outDir>/validate.log` still names it —
+ * a Hard Gate trail pointing at a directory that no longer exists.
+ * Opting out of pruning is expressed with `report.staleTtlDays: 0`.
+ */
+export const RUN_LOG_KEEP_LATEST_MIN = 1;
