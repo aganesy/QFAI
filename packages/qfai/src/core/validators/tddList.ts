@@ -565,15 +565,66 @@ function hasPhaseAuthoredFieldAfterGate(section: string): boolean {
     );
 }
 
+/**
+ * `Round N: reviewer verdict` — the one field a completion reviewer writes
+ * *inside* the round block, after it has read that block.
+ *
+ * The gate fields end the phase-authored region, but this one sits before them,
+ * so a prefix slice alone put the reviewers' own line inside what they hashed.
+ * The subject contract excludes it for exactly that reason
+ * (`constitution/shared-skill-delegation-baseline.md`, completion review), and a
+ * second round cannot be opened without one (a `REVISE` on round N is what
+ * opens N+1), so every legitimate review-fix -> Round 2 row disagreed with the
+ * hash recomputed here and reported as unresolved.
+ */
+const REVIEWER_APPENDED_ROUND_FIELD =
+  /^\s*(?:\|\s*)?(?:[-*][ \t]+)?(?:\*\*)?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict(?:\*\*)?[ \t]*(?::|\|)[ \t]*(.*)$/i;
+
+/**
+ * The index of the last line of the fenced value that starts at or after
+ * `start`, or `start - 1` when no fence follows — so the caller resumes on the
+ * next line and drops nothing it did not mean to.
+ *
+ * A field whose value is fenced (`evidenceFieldOccurrences`) owns those lines
+ * too; dropping only its label would have left the verdict text itself in the
+ * subject.
+ */
+function fencedEvidenceValueEnd(lines: readonly string[], start: number): number {
+  let cursor = start;
+  while (cursor < lines.length && (lines[cursor] ?? "").trim().length === 0) cursor += 1;
+  const marker = /^\s*(`{3,}|~{3,})[^\r\n]*$/.exec(lines[cursor] ?? "")?.[1];
+  if (marker === undefined) return start - 1;
+  for (cursor += 1; cursor < lines.length; cursor += 1) {
+    const closing = /^\s*(`{3,}|~{3,})\s*$/.exec(lines[cursor] ?? "")?.[1];
+    if (
+      closing !== undefined &&
+      closing.charAt(0) === marker.charAt(0) &&
+      closing.length >= marker.length
+    ) {
+      return cursor;
+    }
+  }
+  return lines.length - 1;
+}
+
 function phaseAuthoredEvidence(section: string, tddId: string): string {
   const normalized = section.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const boundary = visibleLines.findIndex((line) => GATE_COMPLETED_EVIDENCE_FIELD.test(line));
-  const authored = originalLines
-    .slice(0, boundary < 0 ? originalLines.length : boundary)
-    .join("\n");
-  return normalizeAuditArtifact(`### ${tddId}\n${authored}`);
+  const end = boundary < 0 ? originalLines.length : boundary;
+  const kept: string[] = [];
+  for (let index = 0; index < end; index += 1) {
+    const verdict = REVIEWER_APPENDED_ROUND_FIELD.exec(visibleLines[index] ?? "");
+    if (verdict === null) {
+      kept.push(originalLines[index] ?? "");
+      continue;
+    }
+    if ((verdict[1] ?? "").trim().length === 0) {
+      index = Math.min(fencedEvidenceValueEnd(originalLines, index + 1), end - 1);
+    }
+  }
+  return normalizeAuditArtifact(`### ${tddId}\n${kept.join("\n")}`);
 }
 
 function completedEvidenceAuditHash(evidenceFile: string, section: string, tddId: string): string {
@@ -1013,7 +1064,17 @@ function missingCompletedEvidenceFields(
   if (EVIDENCE_PLACEHOLDER.test(expected.obligationValue)) {
     missing.push(`${expected.obligationField} naming a real ledger obligation`);
   }
-  for (const field of ["qa-gatekeeper", "Spec review", "Code quality review"] as const) {
+  // `Prototype parity` is written only on a UI-affecting row (gate item 9), so
+  // its absence is not a defect — but a row that states it and states `REVISE`
+  // is one the product-surface-reviewer blocked. Reading only the other three
+  // verdicts let such a row reach `done` on a matching hash and a full field
+  // set, with the one verdict that refused it sitting in plain sight.
+  for (const field of [
+    "qa-gatekeeper",
+    "Spec review",
+    "Code quality review",
+    "Prototype parity",
+  ] as const) {
     const verdict = rowEvidenceFieldValue(section, field);
     if (verdict !== null && verdict.toUpperCase() !== "PASS") {
       missing.push(`${field}: PASS`);

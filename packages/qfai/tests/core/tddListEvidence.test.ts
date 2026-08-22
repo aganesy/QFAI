@@ -39,6 +39,34 @@ function normalizeArtifact(value: string): string {
   return `${lines.join("\n")}\n`;
 }
 
+/**
+ * The subject minus `Round N: reviewer verdict` — the one field the completion
+ * reviewers write inside a round block, after they have read it, so what they
+ * hashed never contained it. A fenced verdict owns its fence lines too.
+ */
+function withoutReviewerVerdicts(text: string): string {
+  const lines = text.split("\n");
+  const kept: string[] = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const verdict = /^\s*(?:- )?(?:Round[ \t]+\d+:[ \t]*)?reviewer verdict[ \t]*:[ \t]*(.*)$/i.exec(
+      lines[index] ?? "",
+    );
+    if (verdict === null) {
+      kept.push(lines[index] ?? "");
+      continue;
+    }
+    if ((verdict[1] ?? "").trim().length > 0) continue;
+    let cursor = index + 1;
+    while (cursor < lines.length && (lines[cursor] ?? "").trim().length === 0) cursor += 1;
+    if (!/^\s*```/.test(lines[cursor] ?? "")) continue;
+    for (cursor += 1; cursor < lines.length; cursor += 1) {
+      if (/^\s*```\s*$/.test(lines[cursor] ?? "")) break;
+    }
+    index = Math.min(cursor, lines.length - 1);
+  }
+  return kept.join("\n");
+}
+
 function phaseAuditHash(evidenceFile: string, content: string, tddId = "TDD-0001"): string {
   const after = content.split(new RegExp(`^### ${tddId}\\s*$`, "m"))[1] ?? "";
   // Stop at the next entry heading, so a file that carries an editing item
@@ -46,9 +74,9 @@ function phaseAuditHash(evidenceFile: string, content: string, tddId = "TDD-0001
   const section = after.split(/^#{1,3} /m)[0] ?? "";
   const authored =
     section.split(
-      /^\s*(?:\|\s*)?(?:- )?(?:Spec review|Spec audited|Code quality review|Code quality audited|Checkpoint verification)/m,
+      /^\s*(?:\|\s*)?(?:- )?(?:Spec review|Spec audited|Code quality review|Code quality audited|Prototype parity|Checkpoint verification)/m,
     )[0] ?? "";
-  const artifact = normalizeArtifact(`### ${tddId}\n${authored}`);
+  const artifact = normalizeArtifact(withoutReviewerVerdicts(`### ${tddId}\n${authored}`));
   return digest(`${evidenceFile}\0${digest(artifact)}`);
 }
 
@@ -670,6 +698,93 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
+
+  it("accepts a second round opened by the first round's REVISE verdict", async () => {
+    // The verdict that opens round 2 is required (a round may only be opened by
+    // a `REVISE`) and is written by the completion reviewers after they read the
+    // block, so it is outside the subject they hash. Recomputing over the raw
+    // prefix put their own line back in, and every row that legitimately went
+    // review-fix -> Round 2 reported as unresolved however correct it was.
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          `- Round 1: reviewer verdict: REVISE — needs new production behaviour
+- Round 2: Revision: ${secondRoundRevision}
+- Round 2: RED revision: def7890000000000000000000000000000000000
+- Round 2: RED command: npm test
+- Round 2: RED result: 1 failed
+- Round 2: GREEN command: npm test
+- Round 2: GREEN result: 1 passed
+- Refactor verify command: npm test`,
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("keeps a fenced reviewer verdict out of the audited subject", async () => {
+    await withProject(async (root) => {
+      const secondRoundRevision = "bcd1230000000000000000000000000000000000";
+      const evidence = completeEntry("Unit")
+        .replace(
+          "- Refactor verify command: npm test",
+          `- Round 1: reviewer verdict:
+\`\`\`text
+REVISE — needs new production behaviour
+\`\`\`
+- Round 2: Revision: ${secondRoundRevision}
+- Round 2: RED revision: def7890000000000000000000000000000000000
+- Round 2: RED command: npm test
+- Round 2: RED result: 1 failed
+- Round 2: GREEN command: npm test
+- Round 2: GREEN result: 1 passed
+- Refactor verify command: npm test`,
+        )
+        .replaceAll(
+          "reviewed revision: abc1230000000000000000000000000000000000",
+          `reviewed revision: ${secondRoundRevision}`,
+        );
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: secondRoundRevision },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  for (const [parity, expected] of [
+    ["PASS", false],
+    ["REVISE", true],
+  ] as const) {
+    it(`${expected ? "rejects" : "accepts"} a completed entry with Prototype parity ${parity}`, async () => {
+      // Gate item 9 makes a UI-affecting row's completion conditional on the
+      // product-surface-reviewer's PASS. Reading only the other three verdicts
+      // let a row whose parity said `REVISE` reach `done` on a full field set.
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          "- Checkpoint verification command: npm test",
+          `- Prototype parity: ${parity}\n- Checkpoint verification command: npm test`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes.includes("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED")).toBe(expected);
+      });
+    });
+  }
 
   for (const [field, invalid] of [
     ["Round 1: RED command", "skipped"],
