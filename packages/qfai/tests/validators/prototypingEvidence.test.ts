@@ -280,6 +280,26 @@ describe("validatePrototypingEvidence", () => {
     ).toBe(true);
   });
 
+  // The character band counts Hiragana / Katakana / Han only, so a Hangul
+  // critique is measured on the word path — which is what the shipped
+  // reviewer prompt now tells a Korean-writing reviewer to target.
+  it("measures a Hangul proseCritique on the word band, not the character band", async () => {
+    const root = await newTempDir();
+    const koreanCritique = "정보설계와동선은대체로양호하다.".repeat(50);
+    await seedPrototypingJson(root, {
+      specsCovered: ["0001"],
+      iterations: [{ ...validIter(0), proseCritique: koreanCritique }],
+      acceptedIterationIndex: 0,
+      stopReason: null,
+    });
+    const issues = await validatePrototypingEvidence(root, makeConfig());
+    expect(
+      issues.some(
+        (i) => i.code === "QFAI-PROT-002" && i.message.includes("words outside band 200..500"),
+      ),
+    ).toBe(true);
+  });
+
   it("emits QFAI-PROT-006 when iterations.length > 15", async () => {
     const root = await newTempDir();
     const iters = Array.from({ length: 16 }, (_, i) => validIter(i));

@@ -226,7 +226,7 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].proseCritique must be a non-empty 200-500 English word (or 600-2500 CJK character) string.`,
+          `iterations[${i}].proseCritique must be a non-empty 200-500 English word (or 600-2500 Japanese/Chinese character) string.`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.proseCritique",
@@ -238,7 +238,7 @@ export async function validatePrototypingEvidence(
         issues.push(
           issue(
             "QFAI-PROT-002",
-            `iterations[${i}].proseCritique must be 200-500 English words or 600-2500 CJK characters (${band.error}).`,
+            `iterations[${i}].proseCritique must be 200-500 English words or 600-2500 Japanese/Chinese characters (${band.error}).`,
             "error",
             PROTO_JSON_REL,
             "prototypingEvidence.proseCritique.wordCount",
