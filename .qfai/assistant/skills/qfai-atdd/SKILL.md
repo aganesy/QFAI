@@ -175,7 +175,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 - Forbidden references (a TC annotation outside its declared home):
   `tests/api/**` and `tests/e2e/**` must not contain `QFAI:SPEC-XXXX:TC-YYYY`
   unless that TC declares `Level` `L4`/`API` or `L5`/`E2E` respectively.
-- Unknown references (`US/TC/CON-API` not declared) must be treated as errors.
+- Unknown references (`US/TC/CON-API/CON-DB` not declared) must be treated as errors.
 - **The E2E/API ledger rows this stage feeds are bound by `/qfai-implement`'s lifecycle.** See "Execution Ledger" below: a row advanced on none of the three RED-provenance forms is a lifecycle violation.
 - Floors/ratios are planning signals only, not gates.
 - Legacy `scenario.feature` or coverage ledgers may exist but are not mandatory inputs for completion.

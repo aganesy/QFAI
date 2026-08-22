@@ -30,6 +30,7 @@ const TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const ATDD = "assistant/skills/qfai-atdd/SKILL.md";
 const ATE = "assistant/agents/acceptance-test-engineer.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
+const LAYERS = "assistant/catalog/test-layers.md";
 
 const readAt = async (tree: string, rel: string): Promise<string> =>
   await readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -84,6 +85,17 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
     );
   });
 
+  it("an undeclared CON-DB reference is named as an error, like the other three", async () => {
+    // `QFAI-ATDD-104` errors on an undefined `QFAI:CON-DB-*` annotation
+    // (`src/core/validators/atddCodeTraceability.ts:704`), so a rule that
+    // enumerates only `US/TC/CON-API` tells the reader to ignore what the very
+    // next validate run fails on.
+    const atdd = flat(await read(tree));
+    expect(atdd).toContain(
+      "Unknown references (`US/TC/CON-API/CON-DB` not declared) must be treated as errors.",
+    );
+  });
+
   it("the volume estimate sizes Integration with its DB contracts", async () => {
     // The Integration row was defined as `#TC`, so the layer that owes the
     // `CON-DB` work was estimated without counting any of it.
@@ -112,9 +124,26 @@ describe.each(TREES)("%s — /qfai-atdd enumerates CON-DB wherever it enumerates
       "Integration = required `TC-*`. When a signal",
       "`tests/api/**` must cover all required `CON-API-*`. -",
       "layer-pinned for US and CON-API",
+      "Unknown references (`US/TC/CON-API` not declared)",
     ]) {
       expect(atdd).not.toContain(stale);
     }
+  });
+});
+
+/**
+ * `catalog/test-layers.md` is the annotation reference `/qfai-atdd` sends the
+ * reader to, and it stated the same unknown-reference rule with the same gap.
+ * Leaving it at `CON-API` there re-teaches the omission one hop away from the
+ * skill that was just corrected.
+ */
+describe.each(TREES)("%s — the layer catalog errors on an undeclared CON-DB too", (tree) => {
+  it("the unknown-reference rule enumerates all four obligation kinds", async () => {
+    const layers = flat(await readAt(tree, LAYERS));
+    expect(layers).toContain(
+      "Unknown references (`US/TC/CON-API/CON-DB` not declared) are errors.",
+    );
+    expect(layers).not.toContain("Unknown references (`US/TC/CON-API` not declared)");
   });
 });
 
