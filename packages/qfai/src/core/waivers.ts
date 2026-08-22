@@ -65,10 +65,7 @@ export async function applyWaivers(
   root: string,
   findings: Issue[],
 ): Promise<{ issues: Issue[]; waivers: ValidationWaivers }> {
-  const resolvedRoot = path.resolve(root);
-  const ruleSeverityIndex = buildRuleSeverityIndex(findings);
-  const loaded = await loadWaivers(resolvedRoot, ruleSeverityIndex);
-  const applied = applyWaiversToFindings(resolvedRoot, findings, loaded.applicableWaivers);
+  const { applied, loaded } = await runWaiverPass(root, findings);
 
   return {
     issues: [...applied.issues, ...loaded.validationIssues],
@@ -76,6 +73,41 @@ export async function applyWaivers(
       active: loaded.activeWaivers,
       suppressed: applied.suppressed,
     },
+  };
+}
+
+/**
+ * Runs the same waiver pass over findings raised outside `validateProject`.
+ *
+ * `report` adds findings of its own (the uncounted-delta scan) after
+ * `validateProject` has already applied waivers, so without this pass they are
+ * structurally unwaivable: no `suppress` and no `downgrade_to` could ever reach
+ * them, and a project that deliberately keeps an unfilled delta would be stuck
+ * with a warning it has no way to accept.
+ *
+ * The waiver file's own findings (`QFAI-WAIVER-00x`) and the active-waiver list
+ * are deliberately dropped: `validateProject` already reported both for this
+ * same file, and returning them again would double-count every parse error.
+ * Only the applied result — the findings and what they suppressed — comes back.
+ */
+export async function applyWaiversToExtraFindings(
+  root: string,
+  findings: Issue[],
+): Promise<AppliedWaiverResult> {
+  const { applied } = await runWaiverPass(root, findings);
+  return applied;
+}
+
+async function runWaiverPass(
+  root: string,
+  findings: Issue[],
+): Promise<{ applied: AppliedWaiverResult; loaded: LoadWaiversResult }> {
+  const resolvedRoot = path.resolve(root);
+  const ruleSeverityIndex = buildRuleSeverityIndex(findings);
+  const loaded = await loadWaivers(resolvedRoot, ruleSeverityIndex);
+  return {
+    applied: applyWaiversToFindings(resolvedRoot, findings, loaded.applicableWaivers),
+    loaded,
   };
 }
 
@@ -953,10 +985,10 @@ async function exists(targetPath: string): Promise<boolean> {
  * understates severity would let `QFAI-WAIVER-002` pass a waiver it must block.
  *
  * Deliberately small: an entry here is a promise the rule exists. `COMPAT-*`,
- * `DELTA-*`, `VFY-*` and `CTYPE-*` were listed and are emitted by nothing under
- * `src/`, so they told an operator a rule was real and waivable when it could
- * never fire — while the codes that do fire were rejected outright by the
- * grammar above.
+ * `DELTA-*`, `VFY-*` and most of `CTYPE-*` were listed and are emitted by
+ * nothing under `src/`, so they told an operator a rule was real and waivable
+ * when it could never fire — while the codes that do fire were rejected
+ * outright by the grammar above.
  */
 const STATIC_RULE_SEVERITY: ReadonlyArray<{
   readonly keys: readonly string[];
@@ -974,6 +1006,11 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // waiver without QFAI-WAIVER-004 calling the rule unknown on the runs where
   // every Level is recognized.
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
+  // Emitted at `warning` by core/report.ts for a delta file the Change Type
+  // counters could not use. `validate` never raises it, so a project that
+  // accepts an intentionally unfilled delta would otherwise have its waiver
+  // read as an unknown rule on every `qfai validate` run.
+  { keys: ["QFAI-CTYPE-004", "CTYPE-004"], severity: "warning" },
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

@@ -64,7 +64,61 @@ notes: something real happened here
 \`\`\`
 `;
 
-const NOTE_MARKER = "yielded no counted decision entry";
+/**
+ * One real decision beside two the counters cannot use.
+ *
+ * `DL-0002` is the shipped skeleton, `DL-0003` is a `#### Meta` block missing
+ * `compat` / `scope` / `notes`. A file-level check calls this file healthy
+ * because `DL-0001` counts, and the two decisions it under-reports appear
+ * nowhere.
+ */
+const PARTIALLY_COUNTED_DELTA = `# 09 Delta
+
+## Decision Log
+
+### DL-0001
+
+#### Meta
+
+\`\`\`yaml
+id: DL-0001
+date: 2026-08-22
+primary: Behavior
+tags: ["@api"]
+compat: Change
+scope:
+  - src/core/report.ts
+notes: something real happened here
+\`\`\`
+
+### DL-0002
+
+#### Meta
+
+\`\`\`yaml
+id: DL-0002
+date: YYYY-MM-DD
+primary: Initial
+tags: ["@docs"]
+compat: Improvement
+scope:
+  - <file / module this decision touches>
+notes: <what was decided and why>
+\`\`\`
+
+### DL-0003
+
+#### Meta
+
+\`\`\`yaml
+id: DL-0003
+date: 2026-08-22
+primary: Ops
+tags: ["@test"]
+\`\`\`
+`;
+
+const NOTE_MARKER = "hold decision entries the counters could not use";
 const SCAN_CODE = "QFAI-CTYPE-004";
 
 /** A validation run that found nothing, so the report's own findings stand alone. */
@@ -125,7 +179,12 @@ describe("the Change Type summary names the input it counted", () => {
       expect(data.changeType.summary.deltaFilesScanned).toBe(1);
       expect(data.changeType.summary.totalEntries).toBe(0);
       expect(data.changeType.summary.uncountedDeltaFiles).toEqual([
-        { file: ".qfai/specs/spec-0001/09_delta.md", reason: "unparsed" },
+        {
+          file: ".qfai/specs/spec-0001/09_delta.md",
+          reason: "unparsed",
+          countedEntries: 0,
+          uncountedEntries: 0,
+        },
       ]);
 
       const markdown = formatReportMarkdown(data);
@@ -179,7 +238,12 @@ describe("the Change Type summary names the input it counted", () => {
         expect(data.changeType.summary.deltaFilesScanned).toBe(2);
         expect(data.changeType.summary.totalEntries).toBe(1);
         expect(data.changeType.summary.uncountedDeltaFiles).toEqual([
-          { file: ".qfai/specs/spec-0002/09_delta.md", reason: "unparsed" },
+          {
+            file: ".qfai/specs/spec-0002/09_delta.md",
+            reason: "unparsed",
+            countedEntries: 0,
+            uncountedEntries: 0,
+          },
         ]);
 
         const markdown = formatReportMarkdown(data);
@@ -188,6 +252,36 @@ describe("the Change Type summary names the input it counted", () => {
         expect(markdown).toContain(".qfai/specs/spec-0002/09_delta.md");
       },
     );
+  });
+
+  it("warns about the uncounted entries beside a counted one in the same file", async () => {
+    // The case a file-level check cannot see: `DL-0001` counts, so the file
+    // looks healthy while `DL-0002` / `DL-0003` leave the Change Type total
+    // short by two with nothing anywhere saying so.
+    await withProject({ "spec-0001": PARTIALLY_COUNTED_DELTA }, async (root) => {
+      const data = await createReportData(root, EMPTY_VALIDATION);
+
+      expect(data.changeType.summary.totalEntries).toBe(1);
+      expect(data.changeType.summary.uncountedDeltaFiles).toEqual([
+        {
+          file: ".qfai/specs/spec-0001/09_delta.md",
+          reason: "mixed",
+          countedEntries: 1,
+          uncountedEntries: 2,
+        },
+      ]);
+      expect(data.changeType.deltaCoverage.status).toBe("delta-not-counted");
+      expect(data.summary.counts.warning).toBe(1);
+
+      const findings = data.issues.filter((issue) => issue.code === SCAN_CODE);
+      expect(findings).toHaveLength(1);
+      expect(findings[0]?.message).toContain("3 件のうち 2 件");
+
+      const markdown = formatReportMarkdown(data);
+      expect(markdown).toContain("- decision entries: 1");
+      expect(markdown).toContain(NOTE_MARKER);
+      expect(markdown).toContain("2/3 entries uncounted");
+    });
   });
 
   it("does not count the unfilled template as a decision", async () => {
@@ -204,7 +298,12 @@ describe("the Change Type summary names the input it counted", () => {
       expect(data.changeType.summary.compat.Improvement).toBe(0);
       expect(data.changeType.summary.tags["@docs"]).toBe(0);
       expect(data.changeType.summary.uncountedDeltaFiles).toEqual([
-        { file: ".qfai/specs/spec-0001/09_delta.md", reason: "placeholder" },
+        {
+          file: ".qfai/specs/spec-0001/09_delta.md",
+          reason: "placeholder",
+          countedEntries: 0,
+          uncountedEntries: 1,
+        },
       ]);
 
       expect(formatReportMarkdown(data)).toContain(NOTE_MARKER);
@@ -237,5 +336,46 @@ describe("an uncounted delta file is a finding, not only prose", () => {
         expect(markdown).toContain(SCAN_CODE);
       },
     );
+  });
+
+  // The finding is raised after `validateProject` has already applied waivers,
+  // so it has to run the same pass itself. Without it a project that keeps an
+  // unfilled delta on purpose has no way to accept the warning.
+  it("goes through the project's waivers like any other finding", async () => {
+    await withProject({ "spec-0001": UNPARSABLE_DELTA }, async (root) => {
+      await writeFile(
+        path.join(root, ".qfai", "waivers.yml"),
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-01",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "delta is intentionally unfilled until the spec is decided"',
+          '    expires: "2099-01-01"',
+          '    evidence: ".qfai/specs/spec-0001/09_delta.md"',
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const data = await createReportData(root, EMPTY_VALIDATION);
+
+      expect(data.issues.find((issue) => issue.code === SCAN_CODE)?.suppressed).toBe(true);
+      expect(data.summary.counts).toEqual({ info: 0, warning: 0, error: 0 });
+      expect(data.waivers.suppressed.total).toBe(1);
+      expect(data.waivers.suppressed.byRule["QFAI-CTYPE-004"]).toBe(1);
+
+      // A waiver that silences the finding but not the verdict it drives is not
+      // a waiver: the Dashboard has to read clean too.
+      expect(data.changeType.deltaCoverage.status).toBe("ok");
+      expect(data.changeType.deltaCoverage.uncountedDeltaFiles).toBe(0);
+      expect(data.changeType.summary.uncountedDeltaFiles).toEqual([]);
+
+      const markdown = formatReportMarkdown(data);
+      expect(markdown).toContain("- fail-on=warning: PASS");
+      expect(markdown).not.toContain(NOTE_MARKER);
+    });
   });
 });

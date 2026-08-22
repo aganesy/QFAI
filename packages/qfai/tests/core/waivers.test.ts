@@ -536,6 +536,37 @@ describe("applyWaivers", () => {
     }
   });
 
+  // `QFAI-CTYPE-004` is raised by `report`, never by `validate`. Without a
+  // static entry every `qfai validate` run would call the waiver an unknown
+  // rule, even though `qfai report` applies it on the very same tree.
+  it("accepts a waiver for a rule only the report emits", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260822-01",
+          "    rule: QFAI-CTYPE-004",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "delta is intentionally unfilled"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+      expect(result.waivers.active).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reports a well-formed but unemitted rule as WAIVER-004, not WAIVER-001", async () => {
     const root = await createRoot();
     try {
