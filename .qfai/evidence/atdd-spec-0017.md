@@ -2304,6 +2304,9 @@ differ.
 | 17    | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M3, m1-m2, A1 |    10 |
 | 17    | `completion-reviewer`     | REVISE  |       11 | B1-B5, M1-M4, m1, A1   |      11 |
 | 17    | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1, M1-M2, m1-m2, A1   |       6 |
+| 18    | `implementation-reviewer` | REVISE  |       11 | B1-B5, M1, m1-m4, A1   |      11 |
+| 18    | `completion-reviewer`     | REVISE  |       12 | B1-B5, M1-M3, m1-m3, A1 |    12 |
+| 18    | `qa-gatekeeper` (stage)   | REVISE  |       11 | B1-B2, M1-M4, m1-m3, A1-A2 | 11 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2448,6 +2451,52 @@ three directories away, which nobody had looked for. The `--profile full` figure
 repair that changed it. And option 2's rejection lost its third ground, after this stage supplied the third
 to replace one its own correction had removed. Correcting a record in place costs following the correction
 to whatever cites it, and twice now that cost was paid by the next round instead.
+
+### Round 18, and what eighteen rounds have established
+
+`implementation-reviewer` executed about 1600 cases with a fake bundler on `PATH` as the oracle. **Fifty
+ran a real build while `refusals()` returned `[]`**, and they reduce to five independent causes:
+
+- **`matchingParen` had no backslash model.** It is this file's THIRD quote walk and the one the other two
+  depend on, so an escaped quote inside a substitution closed it early and the build after the separator
+  landed inside a word. Two walks were repaired in round 17 and the third was not looked at.
+- **`codeMask`'s comment rule was missing the guard `commandsOf`'s carries** — the exact repair round 17
+  made in one of the two walks and not the other, one round later.
+- **An unquoted here-document delimiter leaves its data subject to expansion.** The repair treated all
+  data as inert and its own comment cited only the quoted case, which is the reading that was wrong.
+- **The delimiter scan did not break on `<`, `>` or `(`**, so the scanner and bash named different
+  delimiters — which also turned the shipped `$GITHUB_OUTPUT` idiom, one space removed, into a false
+  refusal.
+- **`lastCode` was nearly the question.** It answered "what is the last code character" where all three
+  of its callers meant "what is the previous character, and is it code". The difference only shows when
+  something masked sits between, and a quoted redirection target is exactly that: `echo x >
+  "$GITHUB_OUTPUT" | npx tsup` ran a build with the scan clean. It is deleted. **A helper that is nearly
+  the question is worse than none, because it reads as though it were the question.**
+
+**The init surface was beaten again, one commit after it was built.** `INIT_MUST_NOT_SHIP` called itself
+a kind rule and was an extension list, so a `#!/bin/sh` hook with no extension and mode `0755` shipped
+into an adopter tree with the whole suite green. A name is not a kind: the rule now asks the three
+questions that decide whether something runs — a shebang, an executable bit, a name a tool knows.
+
+**And the four record guards failed for the third consecutive round**, three of them in round 17's shape
+verbatim and the fourth in the shape round 17's own repair introduced: told that each guard read a wider
+region than its claim, the corpus-count repair narrowed the NEEDLE instead and lost a spelling the
+version before it caught. The region and the needle are two problems.
+
+**What eighteen rounds have established, stated once here rather than re-derived each round:**
+
+1. **A boundary drawn at a reading is a boundary at the reader's limits.** Every escape in rounds 15 to
+   18 was a place where what the scan read was narrower than what bash, YAML or the filesystem does.
+   Each repair moved the boundary outward — bodies, keys, values, shapes, bytes, the whole init tree —
+   and each time the next round found what lay one step beyond it.
+2. **Two copies of a rule diverge, and the one nobody is looking at is the one that is wrong.** Three
+   quote walks, two comment rules, two fence strippers, two roster directions: every one of these was
+   found as a disagreement rather than as an error.
+3. **A guard's region is part of its claim.** Four guards, four rounds, one cause.
+4. **Correcting a record in place costs following the correction to whatever cites it**, and twice the
+   next round paid that cost instead of the stage.
+5. **"I cannot settle this" needs the evidence any other claim needs.** The one time this record recorded
+   an open question rather than an answer, the contract that settled it was three directories away.
 
 ### The full profile
 
@@ -2704,7 +2753,7 @@ Review pack seal:  b310c5eab9dde8fb57b4430940877610e58def51f34acd3cf9224689b4324
 Review pack:       .qfai/review/review-20260822120000000/            (round 17 — stage gates only)
 Review pack seal:  bcfe4dd3586a4e3d14d07b369ba44bdcab37a072ee901f7dfaa7f9fbaa5dce15
 Review pack:       .qfai/review/review-20260822150000000/            (round 18 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  b62a5174cf942a19308c18c9bccfccd6cf460ffd3e1d2b6f9c7a97a099e47a29
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
