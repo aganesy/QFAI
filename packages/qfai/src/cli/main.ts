@@ -179,7 +179,14 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           process.exitCode = options.invalidExitCode;
           return;
         }
-        const resolvedRoot = await resolveRoot(options);
+        // `discussion ... --format json` writes its whole payload to
+        // stdout, so the defaultConfig notice has to go to stderr there —
+        // otherwise stdout is JSON-plus-a-Japanese-warning and no
+        // `JSON.parse` (or downstream jq) can read it.
+        const resolvedRoot = await resolveRoot(
+          options,
+          options.discussionFormat === "json" ? error : warn,
+        );
         process.exitCode = await runDiscussion({
           root: resolvedRoot,
           action: options.discussionAction,
@@ -345,14 +352,23 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+/**
+ * `notify` is the sink for the "no qfai.config.yaml" notice. It defaults
+ * to `warn` (stdout), but a command whose stdout is a machine-readable
+ * payload must pass `error` so the notice cannot be interleaved with the
+ * payload and break `JSON.parse` on the consumer side.
+ */
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  notify: (message: string) => void = warn,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(
+    notify(
       `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
     );
   }

@@ -1,6 +1,7 @@
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import type { LocatedPack } from "../../core/packLocator.js";
 import { findPacks } from "../../core/packLocator.js";
 import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../core/state.js";
 import { error, info } from "../lib/logger.js";
@@ -32,9 +33,25 @@ async function resolveDiscussionRoot(root: string): Promise<string> {
   return path.resolve(root, config.paths.discussionDir);
 }
 
-async function listCandidateDirs(discussionRoot: string): Promise<string[]> {
-  const packs = await findPacks(discussionRoot, "discussion");
-  return packs.map((pack) => pack.name).sort((left, right) => left.localeCompare(right));
+type PackListing = { ok: true; packs: LocatedPack[] } | { ok: false; message: string };
+
+/**
+ * Enumerate the packs under `discussionRoot` (already sorted by name).
+ *
+ * An absent root is "no packs" — a legitimate empty listing. Every other
+ * read failure (EACCES, EIO, a file where the dir should be, …) is
+ * returned as a failure instead of being flattened into an empty list,
+ * so no caller can report "there are no packs" when it merely could not
+ * look.
+ */
+async function listPacks(discussionRoot: string): Promise<PackListing> {
+  try {
+    const packs = await findPacks(discussionRoot, "discussion", { onReadFailure: "throw" });
+    return { ok: true, packs };
+  } catch (cause) {
+    const detail = cause instanceof Error ? cause.message : String(cause);
+    return { ok: false, message: `cannot enumerate ${discussionRoot}: ${detail}` };
+  }
 }
 
 /**
@@ -100,7 +117,12 @@ async function runListActive(
 ): Promise<number> {
   const format = options.format ?? "text";
   const discussionRoot = await resolveDiscussionRoot(options.root);
-  const candidates = await listCandidateDirs(discussionRoot);
+  const listing = await listPacks(discussionRoot);
+  if (!listing.ok) {
+    writeErr(`qfai discussion list --active: ${listing.message}`);
+    return 1;
+  }
+  const candidates = listing.packs.map((pack) => pack.name);
   const currentId = await readDiscussionCurrentId(options.root);
 
   if (currentId === null) {
@@ -152,17 +174,41 @@ async function runListActive(
  * `discussion use <id>` needs answered before it can be run. "Nothing
  * to list" is not a failure for a list verb, so zero candidates exits
  * 0 with an empty payload rather than reusing the `list --active`
- * recovery error.
+ * recovery error. Failing to *read* the root is a different matter: it
+ * exits non-zero rather than passing an unreadable directory off as an
+ * empty list.
  */
 async function runListPacks(
   options: DiscussionOptions,
   write: (m: string) => void,
+  writeErr: (m: string) => void,
 ): Promise<number> {
   const format = options.format ?? "text";
   const discussionRoot = await resolveDiscussionRoot(options.root);
-  const candidates = await listCandidateDirs(discussionRoot);
+  const listing = await listPacks(discussionRoot);
+  if (!listing.ok) {
+    writeErr(`qfai discussion list: ${listing.message}`);
+    return 1;
+  }
   const currentId = await readDiscussionCurrentId(options.root);
-  const packs = candidates.map((id) => ({ id, active: id === currentId }));
+
+  // A `dangerous` dir is a `discussion-*` name the rest of the toolchain
+  // refuses (QFAI-DPACK-005 asks for a rename or a removal), so it is not
+  // something `discussion use <id>` can be pointed at. Listing it beside
+  // the real packs would advertise it as a valid choice, so it is kept
+  // out of the payload and named on stderr with its repair instead —
+  // stderr so that `--format json` stdout stays parseable.
+  const dangerous = listing.packs.filter((pack) => pack.isDangerous).map((pack) => pack.name);
+  const packs = listing.packs
+    .filter((pack) => !pack.isDangerous)
+    .map((pack) => ({ id: pack.name, active: pack.name === currentId }));
+
+  if (dangerous.length > 0) {
+    writeErr(
+      `qfai discussion list: ignored non-canonical discussion dir(s): ${dangerous.join(", ")} ` +
+        "(rename to discussion-YYYYMMDDhhmmssSSS or remove them; see QFAI-DPACK-005).",
+    );
+  }
 
   if (format === "json") {
     write(JSON.stringify({ packs }, null, 2));
@@ -186,5 +232,5 @@ export async function runDiscussion(options: DiscussionOptions): Promise<number>
   if (options.active) {
     return runListActive(options, write, writeErr);
   }
-  return runListPacks(options, write);
+  return runListPacks(options, write, writeErr);
 }

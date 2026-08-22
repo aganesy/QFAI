@@ -292,4 +292,90 @@ describe("bare `discussion list` enumerates packs", () => {
     expect(code).toBe(0);
     expect(cap.out).toEqual(["  discussion-20260101000000000"]);
   });
+
+  // A dir like `discussion-latest` is `dangerous` naming: QFAI-DPACK-005
+  // demands a rename or a removal, and `discussion use <id>` cannot be
+  // usefully pointed at it. Since this list exists to hand the operator
+  // the arguments `discussion use` accepts, offering that name would be
+  // offering an unusable choice.
+  it("does not offer a non-canonical dir as a selectable pack", async () => {
+    await makePack("discussion-20260101000000000");
+    await makePack("discussion-latest");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    const body = JSON.parse(cap.out.join("\n")) as { packs?: { id: string }[] };
+    expect(body.packs).toEqual([{ id: "discussion-20260101000000000", active: false }]);
+    // …but it is not silently dropped: stderr names it and the repair.
+    expect(cap.err.join("\n")).toMatch(/discussion-latest/);
+    expect(cap.err.join("\n")).toMatch(/QFAI-DPACK-005/);
+  });
+
+  // "The directory could not be read" and "the directory holds no packs"
+  // are different facts. Collapsing the first into an exit-0 empty list
+  // tells the operator their packs are gone when they are merely
+  // unreachable, so a non-ENOENT failure has to surface.
+  it("exits non-zero instead of printing an empty list when the root cannot be read", async () => {
+    // A plain file where the discussion dir belongs reproduces a
+    // non-ENOENT readdir failure (ENOTDIR) on every supported platform.
+    const { writeFile } = await import("node:fs/promises");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "discussion"), "not a directory", "utf-8");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/cannot enumerate/);
+  });
+});
+
+// The tests above drive `runDiscussion` directly, which bypasses
+// `main.ts#resolveRoot` — and that is exactly where the JSON view used
+// to be corrupted: with no `qfai.config.yaml` above the cwd and no
+// `--root`, the defaultConfig notice was written to stdout right before
+// the payload, so stdout as a whole was not parseable JSON. This drives
+// the real `run(...)` entry point to pin the separation.
+describe("`discussion list --format json` keeps stdout parseable via the CLI entry point", () => {
+  it("routes the defaultConfig notice to stderr, leaving stdout pure JSON", async () => {
+    const { run } = await import("../../../../src/cli/main.js");
+    const stdout: string[] = [];
+    const stderr: string[] = [];
+    const originalOut = process.stdout.write.bind(process.stdout);
+    const originalErr = process.stderr.write.bind(process.stderr);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    // Sandbox root: no qfai.config.yaml here or above (os.tmpdir()), so
+    // `resolveRoot` takes the "defaultConfig" branch.
+    await makePack("discussion-20260101000000000");
+    try {
+      process.stdout.write = (chunk: unknown): boolean => {
+        stdout.push(String(chunk));
+        return true;
+      };
+      process.stderr.write = (chunk: unknown): boolean => {
+        stderr.push(String(chunk));
+        return true;
+      };
+      await run(["discussion", "list", "--format", "json"], root);
+    } finally {
+      process.stdout.write = originalOut;
+      process.stderr.write = originalErr;
+      process.exitCode = previousExitCode;
+    }
+    expect(stderr.join("")).toMatch(/defaultConfig/);
+    const body = JSON.parse(stdout.join("")) as { packs?: { id: string }[] };
+    expect(body.packs).toEqual([{ id: "discussion-20260101000000000", active: false }]);
+  });
 });
