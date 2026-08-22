@@ -117,6 +117,22 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).toContain("one new `todo` row is appended per remaining boundary");
   });
 
+  it("picks the kept boundary from the record when the row never ran a RED", async () => {
+    // The residual path blocks the row at selection, ahead of RED, so the
+    // common `blocked` case has no observation to narrow to; demanding one
+    // either stalls Phase 2b or invites a fabricated observation.
+    const phase2b = section(
+      await read(tree, CHECKLISTS),
+      "## Phase 2b: Seed `tdd/test-list.md`",
+      "## Phase 2c",
+    );
+
+    expect(phase2b).toContain("**A `blocked` row has no such observation");
+    expect(phase2b).toContain("Do not demand a recorded RED there and do not invent one");
+    expect(phase2b).toContain("the driving `CR-*` names first among the ones it says the row");
+    expect(phase2b).toContain("`06_Test-Cases.md` lists them under that `TC-*`");
+  });
+
   it("migrates an existing ledger's columns instead of only seeding new ones", async () => {
     // The template is copied only when the ledger is absent, so an upgraded
     // project keeps its eight-column table and the residual path's
@@ -154,7 +170,8 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).not.toContain("unless its recorded RED/GREEN still holds");
     // The reset itself is a cell write, so it stays with the cells' owner.
     expect(phase2b).toContain("**This phase does not write that reset**, only the row identity");
-    expect(phase2b).toContain("`qfai-implement/references/change-request-reset.md`");
+    // Relative to `qfai-sdd/references/`, so the sibling skill needs `../../`.
+    expect(phase2b).toContain("`../../qfai-implement/references/change-request-reset.md`");
   });
 
   it("carries the Phase 2b exceptions into project_memory", async () => {
@@ -247,6 +264,40 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(red).toContain("The row leaves `blocked` only through that owner rerun");
     expect(red).toContain("returns it to `todo`");
+  });
+
+  it("leaves the blocked row's reset with the cells' owner, after the rerun", async () => {
+    // Phase 2b writes row identity only, so the `blocked -> todo` reset and the
+    // `DR-ID` / `Blocked-By` cells it comes with belong to this skill's
+    // Change-Request preflight — running one without the other either has
+    // `/qfai-sdd` write cells it does not own or strands the row at `blocked`.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    expect(red).toContain("**and the preflight that follows it**, in that order");
+    expect(red).toContain("Phase 2b writes row identity alone");
+    expect(red).toContain("Stage 0 Change-Request preflight then returns it to `todo`");
+    expect(red).toContain("`references/change-request-reset.md`");
+  });
+
+  it("reports an already-blocked named row instead of re-judging its shape", async () => {
+    // The named-row rule selects by id whatever the status, so a retry during
+    // the approval wait would otherwise file a second `CR-*` for the same
+    // matrix and aim a `todo -> blocked` write at a row that is not `todo`.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    expect(red).toContain(
+      "**A named `TDD-ID` that is already `blocked` is reported, never re-judged.**",
+    );
+    expect(red).toContain("Return that row's existing `Blocked-By` as this id's outcome");
+    expect(red).toContain("Everything below applies only to a row actually at `Status = todo`.");
   });
 
   it("judges the shape at selection, ahead of the `todo -> red` write", async () => {
