@@ -1,4 +1,4 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { parseSkillFrontmatter, type SkillFrontmatter } from "../agentFrontmatter.js";
@@ -22,6 +22,16 @@ export type RoutingBinding = "required" | "conditional";
 export type SkillRouting = {
   agents: Map<string, RoutingBinding>;
   reviewProfile?: string;
+  /**
+   * How many well-formed phase objects the walk collected for this skill.
+   *
+   * Presence in the routing map is not the same as being routed: a `- skill:`
+   * header alone registers the entry, so `phases: []`, an absent `phases:` key
+   * and a non-list value all left the skill looking routed while the manifest
+   * can dispatch nobody inside it. `QFAI-AGENT-017` is decided on this count,
+   * not on the header.
+   */
+  phases: number;
 };
 
 /** Every reviewer a review profile can select, with how firmly it binds. */
@@ -42,7 +52,7 @@ type Selection = { binding: RoutingBinding; source: string };
 const MANIFEST_EXTERNAL_ROLES = new Set(["orchestrator"]);
 
 export function emptySkillRouting(): SkillRouting {
-  return { agents: new Map() };
+  return { agents: new Map(), phases: 0 };
 }
 
 /**
@@ -71,7 +81,7 @@ export function recordRoutedAgents(
 /**
  * Compare each skill's `roles:` frontmatter with what the manifests select for
  * it, in both directions, and each skill that binds itself to the manifest
- * against the routes the manifest actually declares.
+ * against the routes and the review gate the manifest actually declares.
  */
 export async function validateSkillRoles(
   root: string,
@@ -82,12 +92,23 @@ export async function validateSkillRoles(
 ): Promise<void> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   for (const [skill, entry] of routing) {
+    // A header with no usable phase list dispatches nothing, so neither
+    // direction of the cross-check can say anything true about it —
+    // `reportUnroutedSkills` reports the header itself as `QFAI-AGENT-017`
+    // instead of blaming each declared role for a manifest-level defect.
+    if (entry.phases === 0) {
+      continue;
+    }
     const skillPath = path.join(skillsDir, skill, "SKILL.md");
     const frontmatter = await readSkillFrontmatter(skillPath);
     if (!frontmatter) {
       continue;
     }
     const rel = path.relative(root, skillPath).replace(/\\/g, "/");
+    // Ahead of the `roles:` guards below: which review gate the skill and the
+    // manifest each name is a divergence in its own right, and a skill that
+    // declares no `roles:` still has to agree about its profile.
+    reportProfileDisagreement(skill, entry, frontmatter.routingProfile, profiles, rel, issues);
     if (frontmatter.rolesError) {
       // Without this the slip reads as "no `roles:` key" and BOTH directions
       // below are skipped, so a missing mandatory routed agent passes.
@@ -120,9 +141,73 @@ export async function validateSkillRoles(
  */
 async function readSkillFrontmatter(skillPath: string): Promise<SkillFrontmatter | undefined> {
   try {
+    // `stat` before `readFile`, and only a regular file is read. The
+    // pre-flight that stops `qfai validate` on a damaged skills tree
+    // (`inspectIntegrationSurface`) knows only the canonical
+    // `.qfai/assistant/skills`, so a project that moved `paths.skillsDir`
+    // reaches this read with the damage unreported — and `readFile` on a FIFO
+    // there waits for a writer that never comes, hanging the whole run instead
+    // of failing it. Nothing that is not a regular file carries frontmatter
+    // this rule can adjudicate, so the bound costs no coverage.
+    if (!(await stat(skillPath)).isFile()) {
+      return undefined;
+    }
     return parseSkillFrontmatter(await readFile(skillPath, "utf-8"));
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * The review gate the skill names and the gate the manifest routes it through
+ * must be the same one, and it must exist.
+ *
+ * Only `entry.reviewProfile` was ever used, so a skill could declare a
+ * `routing-profile:` that `review-profiles.yml` never defines while the
+ * manifest sent it through a different profile, and the roles cross-check went
+ * green on the manifest's side of the disagreement — the shipped
+ * `qfai-prototyping` (`ui-surface-aware` against `ui-bearing`) was in exactly
+ * that state.
+ *
+ * Checked only when the skill declares `routing-profile:`, the same binding
+ * signal `QFAI-AGENT-017` reads: a skill that declares none holds the manifest
+ * to nothing, exactly as an absent `roles:` does.
+ */
+function reportProfileDisagreement(
+  skill: string,
+  entry: SkillRouting,
+  declared: string | undefined,
+  profiles: Map<string, ProfileSelection>,
+  rel: string,
+  issues: Issue[],
+): void {
+  if (declared === undefined) {
+    return;
+  }
+  const routed = entry.reviewProfile;
+  if (routed !== declared) {
+    const found = routed === undefined ? "declares no review_profile" : `declares ${routed}`;
+    issues.push(
+      issue(
+        "QFAI-AGENT-018",
+        `${rel} declares routing-profile: ${declared} but the agent-routing.yml route for "${skill}" ${found}`,
+        "error",
+        rel,
+        "agentDefinition.routingProfileMismatch",
+      ),
+    );
+    return;
+  }
+  if (!profiles.has(declared)) {
+    issues.push(
+      issue(
+        "QFAI-AGENT-018",
+        `${rel} and agent-routing.yml both name review profile "${declared}", which review-profiles.yml does not define`,
+        "error",
+        rel,
+        "agentDefinition.unknownReviewProfile",
+      ),
+    );
   }
 }
 
@@ -223,6 +308,11 @@ function reportUnselectableRoles(
  * have missed a workflow that can no longer dispatch anyone. Skills that
  * declare no `routing-profile:` (the shipped `web-research` is deliberately
  * un-routed) are exempt.
+ *
+ * The test is whether the manifest collected a phase for the skill, not
+ * whether it carries a `- skill:` header: emptying the phase list, dropping
+ * the `phases:` key or writing a non-list there leaves the same workflow that
+ * can dispatch no one, and the header alone used to excuse all three.
  */
 async function reportUnroutedSkills(
   root: string,
@@ -239,7 +329,7 @@ async function reportUnroutedSkills(
     return;
   }
   for (const name of entries.sort()) {
-    if (routing.has(name)) {
+    if ((routing.get(name)?.phases ?? 0) > 0) {
       continue;
     }
     const skillPath = path.join(skillsDir, name, "SKILL.md");

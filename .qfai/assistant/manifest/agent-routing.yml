@@ -1,7 +1,7 @@
 schema_version: "1.0"
 
 # Contract with each skill's `roles:` frontmatter (validated by
-# `QFAI-AGENT-014` .. `QFAI-AGENT-017`):
+# `QFAI-AGENT-014` .. `QFAI-AGENT-018`):
 #
 # A skill's `roles:` is the closed set of agents it may dispatch, so it must be
 # a SUPERSET of every agent this manifest binds to that skill —
@@ -24,8 +24,12 @@ schema_version: "1.0"
 # (`QFAI-AGENT-016`) — otherwise one notation slip disables the cross-check.
 # And a skill that declares `routing-profile:` but that this file routes
 # nothing to is an error too (`QFAI-AGENT-017`): a deleted or misspelled
-# `- skill:` block leaves a workflow that can dispatch no one. Skills with no
+# `- skill:` block — or a `- skill:` header left with no usable `phases:` —
+# leaves a workflow that can dispatch no one. Skills with no
 # `routing-profile:` (`web-research`) are deliberately un-routed and exempt.
+# That `routing-profile:` must also name the same profile this file's
+# `review_profile:` gives the skill, and one `review-profiles.yml` defines
+# (`QFAI-AGENT-018`): otherwise the two sides state different review gates.
 
 routing:
   - skill: qfai-discussion

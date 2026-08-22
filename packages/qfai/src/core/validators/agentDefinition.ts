@@ -190,7 +190,15 @@ export async function validateAgentDefinition(root: string, config: QfaiConfig):
 
   const routing = await validateRouting(routingPath, catalogIds, issues, root);
   const profiles = await validateProfiles(profilesPath, reviewerIds, issues, root);
-  await validateSkillRoles(root, config, routing, profiles, issues);
+  // `undefined` means the manifest could not be parsed or has the wrong shape,
+  // which `QFAI-AGENT-007` / `QFAI-AGENT-009` already report. Cross-checking
+  // `roles:` against the empty result of that failure is not a weaker check but
+  // a wrong one: every skill would be told its routes are missing and every
+  // declared role called unreachable, sending the operator to seven `SKILL.md`
+  // files for one broken manifest.
+  if (routing !== undefined && profiles !== undefined) {
+    await validateSkillRoles(root, config, routing, profiles, issues);
+  }
 
   return issues;
 }
@@ -288,7 +296,7 @@ async function validateRouting(
   catalogIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<Map<string, SkillRouting>> {
+): Promise<Map<string, SkillRouting> | undefined> {
   const rel = manifestRelativePath(routingPath, root);
   // Collected during this walk rather than re-parsed by `validateSkillRoles`:
   // the per-skill routed set is exactly what the walk already resolves, and a
@@ -306,7 +314,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return routed;
+      return undefined;
     }
     const routingRoot = parsed as Record<string, unknown>;
     if (!Array.isArray(routingRoot.routing)) {
@@ -319,7 +327,7 @@ async function validateRouting(
           "agentDefinition.invalidRoutingShape",
         ),
       );
-      return routed;
+      return undefined;
     }
 
     for (const [routeIndex, route] of routingRoot.routing.entries()) {
@@ -423,6 +431,7 @@ async function validateRouting(
         "agentDefinition.routingParse",
       ),
     );
+    return undefined;
   }
   return routed;
 }
@@ -449,6 +458,10 @@ function collectRouteHeader(
 
 /** Fold one phase's four agent fields into the skill's collected routed set. */
 function collectPhaseAgents(entry: SkillRouting, phase: RoutingPhase): void {
+  // Counted here rather than from `phases.length`, so only phases this walk
+  // could actually read count: `QFAI-AGENT-017` asks whether the manifest can
+  // dispatch anything inside the skill, and a list of non-objects cannot.
+  entry.phases += 1;
   recordRoutedAgents(entry, phase.mandatory_agents, "required");
   recordRoutedAgents(entry, phase.blocking_agents, "required");
   recordRoutedAgents(entry, phase.conditional_agents, "conditional");
@@ -498,7 +511,7 @@ async function validateProfiles(
   reviewerIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<Map<string, ProfileSelection>> {
+): Promise<Map<string, ProfileSelection> | undefined> {
   const rel = manifestRelativePath(profilesPath, root);
   // A profile selects reviewers a phase list never names, so `QFAI-AGENT-014`
   // and `QFAI-AGENT-015` need this side of the manifest too — the first before
@@ -517,7 +530,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return selections;
+      return undefined;
     }
     const profilesRoot = parsed as Record<string, unknown>;
     if (
@@ -534,7 +547,7 @@ async function validateProfiles(
           "agentDefinition.invalidProfilesShape",
         ),
       );
-      return selections;
+      return undefined;
     }
     const profiles = profilesRoot.profiles as Record<string, unknown>;
     for (const [profileName, profile] of Object.entries(profiles)) {
@@ -573,6 +586,7 @@ async function validateProfiles(
         "agentDefinition.profilesParse",
       ),
     );
+    return undefined;
   }
   return selections;
 }

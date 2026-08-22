@@ -13,6 +13,7 @@
  * nothing to at all (`QFAI-AGENT-017`).
  */
 
+import { execFileSync } from "node:child_process";
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -50,6 +51,7 @@ const ROLES_ROUTING_CODES = new Set([
   "QFAI-AGENT-015",
   "QFAI-AGENT-016",
   "QFAI-AGENT-017",
+  "QFAI-AGENT-018",
 ]);
 
 /** One `SKILL.md` with the given extra frontmatter lines. */
@@ -77,7 +79,38 @@ type Fixture = {
   blocking?: readonly string[];
   /** A second skill directory the routing manifest names nowhere. */
   extraSkill?: { name: string; routingProfile?: string };
+  /** `routing-profile:` for demo-skill's own frontmatter. */
+  skillRoutingProfile?: string;
+  /** The manifest's `review_profile:` for demo-skill; `null` omits the key. */
+  reviewProfile?: string | null;
+  /** Replace demo-skill's phase list with one that dispatches nothing. */
+  phases?: "empty" | "absent" | "not-a-list";
+  /** The whole routing manifest, for shapes the walk cannot use at all. */
+  brokenRouting?: string;
+  /** Replace demo-skill's `SKILL.md` with a FIFO (POSIX only). */
+  fifoSkillDoc?: boolean;
 };
+
+/** demo-skill's `phases:` block, in the shape the fixture asked for. */
+function phaseLines(fixture: Fixture): string[] {
+  switch (fixture.phases) {
+    case "absent":
+      return [];
+    case "empty":
+      return ["    phases: []"];
+    case "not-a-list":
+      return ["    phases: none"];
+    default:
+      return [
+        "    phases:",
+        "      - id: only",
+        `        mandatory_agents: [${(fixture.mandatory ?? []).join(", ")}]`,
+        `        conditional_agents: [${(fixture.conditional ?? []).join(", ")}]`,
+        "        parallel_groups: []",
+        `        blocking_agents: [${(fixture.blocking ?? []).join(", ")}]`,
+      ];
+  }
+}
 
 async function runFixture(fixture: Fixture): Promise<Issue[]> {
   const root = path.join(
@@ -90,26 +123,32 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
   try {
     await writeFile(path.join(manifest, "agent-catalog.yml"), CATALOG, "utf-8");
     await writeFile(path.join(manifest, "review-profiles.yml"), PROFILES, "utf-8");
+    const reviewProfile =
+      fixture.reviewProfile === undefined ? "demo-profile" : fixture.reviewProfile;
     await writeFile(
       path.join(manifest, "agent-routing.yml"),
-      [
-        "routing:",
-        "  - skill: demo-skill",
-        "    phases:",
-        "      - id: only",
-        `        mandatory_agents: [${(fixture.mandatory ?? []).join(", ")}]`,
-        `        conditional_agents: [${(fixture.conditional ?? []).join(", ")}]`,
-        "        parallel_groups: []",
-        `        blocking_agents: [${(fixture.blocking ?? []).join(", ")}]`,
-        "    review_profile: demo-profile",
-        "",
-      ].join("\n"),
+      fixture.brokenRouting ??
+        [
+          "routing:",
+          "  - skill: demo-skill",
+          ...phaseLines(fixture),
+          ...(reviewProfile === null ? [] : [`    review_profile: ${reviewProfile}`]),
+          "",
+        ].join("\n"),
       "utf-8",
     );
     const rolesLine =
       fixture.rolesLine ?? (fixture.roles && `roles: [${fixture.roles.join(", ")}]`);
-    if (rolesLine) {
-      await writeSkill(root, "demo-skill", [rolesLine]);
+    if (rolesLine ?? fixture.skillRoutingProfile) {
+      await writeSkill(root, "demo-skill", [
+        ...(rolesLine ? [rolesLine] : []),
+        ...(fixture.skillRoutingProfile ? [`routing-profile: ${fixture.skillRoutingProfile}`] : []),
+      ]);
+    }
+    if (fixture.fifoSkillDoc) {
+      const skillDoc = path.join(root, ".qfai", "assistant", "skills", "demo-skill", "SKILL.md");
+      await rm(skillDoc, { force: true });
+      execFileSync("mkfifo", [skillDoc]);
     }
     if (fixture.extraSkill) {
       await writeSkill(
@@ -280,6 +319,120 @@ describe("QFAI-AGENT-017 — a skill bound to the manifest must be routed", () =
     });
     expect(issues).toEqual([]);
   });
+
+  // A `- skill:` header alone registered the skill as routed, so all three of
+  // these left a workflow that can dispatch no one looking fully routed.
+  for (const phases of ["empty", "absent", "not-a-list"] as const) {
+    it(`reports a route header whose phases: is ${phases}`, async () => {
+      const issues = await runFixture({
+        roles: ["delivery-planner"],
+        skillRoutingProfile: "demo-profile",
+        phases,
+      });
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-017"]);
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
+    });
+  }
+
+  it("does not blame the declared roles of a skill with no usable phases", async () => {
+    // The manifest dispatches nobody inside it, so neither direction of the
+    // roles cross-check can say anything true — only QFAI-AGENT-017 can.
+    const issues = await runFixture({
+      roles: ["delivery-planner", "qa-strategist"],
+      skillRoutingProfile: "demo-profile",
+      phases: "empty",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-017"]);
+  });
+});
+
+describe("a damaged SKILL.md cannot hang the run", () => {
+  // The pre-flight that stops `qfai validate` on a damaged skills tree knows
+  // only the canonical `.qfai/assistant/skills`, so a project that moved
+  // `paths.skillsDir` reaches this read with the damage unreported — and
+  // `readFile` on a FIFO waits for a writer that never comes.
+  const posixOnly = process.platform === "win32" ? it.skip : it;
+
+  posixOnly(
+    "skips a SKILL.md that is not a regular file instead of waiting on it",
+    async () => {
+      const issues = await runFixture({
+        roles: ["delivery-planner"],
+        mandatory: ["delivery-planner"],
+        fifoSkillDoc: true,
+      });
+      expect(issues).toEqual([]);
+    },
+    20_000,
+  );
+});
+
+describe("QFAI-AGENT-018 — the skill and the manifest must name the same review gate", () => {
+  it("reports a routing-profile: the manifest's review_profile: contradicts", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "other-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.message).toContain("other-profile");
+    expect(issues[0]?.message).toContain("demo-profile");
+  });
+
+  it("reports a route that gives the skill no review_profile: at all", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      reviewProfile: null,
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.message).toContain("no review_profile");
+  });
+
+  it("reports a profile review-profiles.yml does not define", async () => {
+    // Both sides agreeing is not enough: `qfai-prototyping` named
+    // `ui-surface-aware`, which no profile file has ever defined.
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "ghost-profile",
+      reviewProfile: "ghost-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.message).toContain("ghost-profile");
+  });
+
+  it("accepts a routing-profile: that matches a defined profile", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+    });
+    expect(issues).toEqual([]);
+  });
+});
+
+describe("an unusable routing manifest stops the cross-check", () => {
+  // `validateRouting` reports QFAI-AGENT-007 and resolves no routes at all, so
+  // holding every skill against that empty result told each of them its route
+  // was missing and each declared role unreachable — for one broken manifest.
+  for (const [label, brokenRouting] of [
+    ["a scalar document", "just a string\n"],
+    ["a non-list routing:", "routing: none\n"],
+    ["unparseable YAML", "routing:\n  - skill: demo-skill\n   bad-indent: [\n"],
+  ] as const) {
+    it(`emits no roles/routing finding for ${label}`, async () => {
+      const issues = await runFixture({
+        roles: ["delivery-planner", "qa-strategist"],
+        skillRoutingProfile: "demo-profile",
+        brokenRouting,
+      });
+      expect(issues).toEqual([]);
+    });
+  }
 });
 
 describe("shipped manifests and skills agree", () => {

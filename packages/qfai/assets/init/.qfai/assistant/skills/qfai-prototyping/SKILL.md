@@ -12,7 +12,7 @@ roles:
     devops-ci-engineer,
     completion-reviewer,
   ]
-routing-profile: ui-surface-aware
+routing-profile: ui-bearing
 mode: execution-focused
 ---
 
