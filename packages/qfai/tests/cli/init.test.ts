@@ -616,6 +616,55 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps a one-line agent file spelling the target some other way out of the prune", async () => {
+    // Only the bytes `path.relative` produces are what init writes. Resolving
+    // the content and comparing destinations accepted a redundant `./` and an
+    // absolute path to the same file as things init had written, and `--force`
+    // deleted a one-line file somebody wrote by hand. Same line
+    // `isFlattenedLink` already holds for the repair path.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const dotted = path.join(root, ".claude", "agents", "dotted-note.md");
+      const dottedContent = "../../.qfai/assistant/agents/./retired-agent.md";
+      await writeFile(dotted, dottedContent, "utf-8");
+
+      const absolute = path.join(root, ".claude", "agents", "absolute-note.md");
+      const absoluteContent = path
+        .join(root, ".qfai", "assistant", "agents", "retired-agent.md")
+        .split(path.sep)
+        .join("/");
+      await writeFile(absolute, absoluteContent, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(dotted, "utf-8")).toBe(dottedContent);
+      expect(await readFile(absolute, "utf-8")).toBe(absoluteContent);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an agent wrapper pointing below the canonical agents directory", async () => {
+    // The prune is limited to a direct child of `.qfai/assistant/agents/`, the
+    // only shape init writes. `QFAI-LINK-001` reports a nested target too, and
+    // its remedy says so — it is a manual delete, not something `--force` does.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const nested = path.join(root, ".claude", "agents", "nested.md");
+      await symlink("../../.qfai/assistant/agents/group/legacy.md", nested, "file");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(nested)).isSymbolicLink()).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not prune through an integration directory that is a symlink", async () => {
     // `readdir` follows the link, so enumerating `.claude/agents` lists an
     // external tree — while an entry's target is resolved against the lexical

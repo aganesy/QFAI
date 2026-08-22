@@ -1028,6 +1028,15 @@ describe("what init wrote is still checked after the roster moves on", () => {
       expect(found?.suggested_action).toContain("canonical 側");
       expect(found?.suggested_action).toContain("`qfai-` で始まる skill wrapper");
       expect(found?.suggested_action).toContain("prune 対象外なので、報告されたパスを手で削除");
+      // The agent half of that promise stops at a direct child of
+      // `.qfai/assistant/agents/`: this rule reports anything landing under
+      // `.qfai/assistant/`, so a nested or cross-kind agent target is reported
+      // and never pruned, and the remedy must not send the operator to
+      // `--force` for one.
+      expect(found?.suggested_action).toContain(
+        "解決先が `.qfai/assistant/agents/` の直下にある agent wrapper",
+      );
+      expect(found?.suggested_action).toContain("`.qfai/assistant/agents/<sub>/…`");
     });
   });
 

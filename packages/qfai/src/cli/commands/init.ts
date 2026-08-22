@@ -1999,6 +1999,19 @@ async function pruneStaleAgentWrappers(
       if (path.dirname(resolved) !== agentsDir || shipped.has(path.basename(resolved))) {
         continue;
       }
+      // A **regular** file is a wrapper only when it holds the exact bytes init
+      // writes for that target — `path.relative` from this directory, nothing
+      // else. Resolving the content and comparing the destination accepted
+      // `../../.qfai/assistant/agents/./retired.md`, and an absolute path to
+      // the same file, as things init had written; neither is a byte sequence
+      // it produces, and `--force` deleted a one-line file somebody wrote by
+      // hand. `isFlattenedLink` already keeps those non-canonical spellings on
+      // the preserve side, and this is a delete, so it holds the same line. A
+      // symlink is left to the resolved-target test: its content is the link,
+      // not a document, and `ensureSymlink` normalises it the same way.
+      if (!entry.isSymbolicLink() && !isGeneratedWrapperTarget(target, fullDir, resolved)) {
+        continue;
+      }
       if (dryRun) {
         removed.push(entryPath);
         continue;
@@ -2097,6 +2110,21 @@ async function removeJudgedAgentWrapper(entryPath: string, target: string): Prom
   // so `recursive` would only widen this to a directory it never judged.
   await rm(sidecar, { force: true });
   return true;
+}
+
+/**
+ * Whether `target` is the byte sequence init writes for a wrapper in
+ * `wrapperDir` pointing at `resolved`.
+ *
+ * `createAgentSymlinks` builds every agent target with `path.relative`, so that
+ * is the only spelling a flattened wrapper can legitimately hold. Comparing
+ * resolved destinations instead accepted every other spelling of the same file
+ * — a redundant `./`, a doubled separator, an absolute path — and none of those
+ * are bytes init produced. Separator-insensitive on Windows only, for the same
+ * reason {@link toComparableTarget} is.
+ */
+function isGeneratedWrapperTarget(target: string, wrapperDir: string, resolved: string): boolean {
+  return toComparableTarget(target) === toComparableTarget(path.relative(wrapperDir, resolved));
 }
 
 /**
