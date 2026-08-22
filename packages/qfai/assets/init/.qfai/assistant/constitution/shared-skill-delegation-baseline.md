@@ -418,7 +418,7 @@ post-escalation verification review of a user-named fix.
      on a branch-3 row the `DR-*` artifact the row names, whole, under its
      repo-relative path — the subject says the DR is that branch's evidence, and
      a subject with no record for it is a hash that does not move when the DR
-     text changes; and
+     text changes; and on a `product-surface-reviewer` verdict each surface artifact its subject names under `.qfai/evidence/**`, whole, under its repo-relative path, for the same reason — the rendered output is that verdict's evidence, and a subject of fields alone does not move when the screenshot is replaced; and
      the part of `.qfai/evidence/coverage-depth-<spec-id>.md` that belongs to
      this row's obligation — not the file whole, and matched **exactly**. A
      row may legitimately carry several (`TC-Refs: TC-0001, TC-0002`), so split
