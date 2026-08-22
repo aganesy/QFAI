@@ -16,8 +16,9 @@
  *      `./validators/...`, and their imports in turn (2-hop). This reaches the
  *      orchestrator pattern where validate.ts imports `validateStateGate` and
  *      the orchestrator internally calls a sibling validator.
- *   4. Walk that graph one *function body* at a time: validate.ts and every
- *      loaded module's top-level code are reachable, and a function body joins
+ *   4. Walk that graph one *function body* at a time: every loaded module's
+ *      top-level code and validate.ts's *exported* functions are the seeds,
+ *      and any other body — including validate.ts's own orchestrators — joins
  *      them only once reachable code uses its name. Assert each validator is
  *      used from what that walk reaches, OR is on the documented
  *      PENDING_WIRING allowlist (existing dead code that requires a
@@ -41,6 +42,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildWiringGraph,
+  collectModuleBindings,
   stripCommentsAndLiterals,
   type WiringGraph,
   type WiringModule,
@@ -149,15 +151,21 @@ async function readSourceOrUndefined(file: string): Promise<string | undefined> 
   }
 }
 
+/**
+ * The relative specifiers this module actually evaluates at runtime.
+ *
+ * Only value `import` / `export … from` statements count. Matching every
+ * `from "./…"` in the raw text pulled in modules reached by an `import type`
+ * edge — erased at compile time — as well as any specifier written in a
+ * comment or a string, and each such module's top-level code was then treated
+ * as reachable. A validator used at the top level of a module nobody evaluates
+ * would have read as wired. {@link collectModuleBindings} strips comments,
+ * template and regex literals and keeps only runtime edges.
+ */
 function localImportSpecifiers(body: string): string[] {
-  const importRe = /from\s+["'](\.\.?\/[\w./-]+)["']/g;
-  const out: string[] = [];
-  let match: RegExpExecArray | null;
-  while ((match = importRe.exec(body)) !== null) {
-    const rel = match[1];
-    if (rel !== undefined) out.push(rel);
-  }
-  return out;
+  return collectModuleBindings(body).runtimeSpecifiers.filter((specifier) =>
+    specifier.startsWith("."),
+  );
 }
 
 /**
@@ -171,7 +179,10 @@ function localImportSpecifiers(body: string): string[] {
  * loaded no matter what calls it; a dead validator calling another dead
  * validator would otherwise make the second look wired. {@link buildWiringGraph}
  * therefore admits a function body only once code already proven reachable uses
- * that function — import aliases (`import { validateFoo as runFoo }`) included.
+ * that function — import aliases (`import { validateFoo as runFoo }`) included,
+ * and validate.ts's own non-exported orchestrators held to the same rule, so
+ * deleting the `runPrototypingValidators(...)` call is caught rather than
+ * masked by that orchestrator's body still being scanned.
  */
 async function buildValidateWiringGraph(): Promise<WiringGraph> {
   const validateBody = await readFile(VALIDATE_TS, "utf-8");

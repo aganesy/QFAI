@@ -25,12 +25,31 @@
  * entry file transitively imports is not enough, because `validators/index.ts`
  * is a barrel that re-exports every validator: a dead validator calling another
  * dead validator would make the second one look wired. The graph therefore
- * splits each module into its top-level function bodies (parameter list
- * included — defaults run per call) plus the module-level residue, seeds
- * reachability with the entry module and every loaded module's residue (top-
- * level code does run on import), and admits a function body only once
- * already-reachable code names that function — calling it, naming it under an
- * `import { x as y }` alias, or handing it to a dispatch table.
+ * splits every module — the entry module included — into its top-level function
+ * bodies (parameter list included, since defaults run per call) plus the
+ * module-level residue, and then:
+ *
+ *   - seeds reachability with every module's residue (top-level code does run
+ *     on import) and with the entry module's *exported* functions, which are
+ *     the pipeline's real public entry points;
+ *   - admits any other function body only once already-reachable code names
+ *     that function — calling it, naming it under an `import { x as y }` alias,
+ *     or handing it to a dispatch table.
+ *
+ * Seeding the entry module's non-exported bodies too would defeat the guard it
+ * is meant to be: deleting the `runPrototypingValidators(...)` call out of
+ * `validateProject` would leave that orchestrator's body queued anyway, and
+ * every validator it names would still read as wired.
+ *
+ * A name is resolved to the module that owns it before its body is admitted:
+ * an import binding is followed through re-export chains ({@link
+ * collectModuleBindings}), and an unqualified name first resolves against the
+ * *using* module's own declarations. Two modules that both declare `helper`
+ * therefore stay apart, instead of a call to the reachable one dragging the
+ * dead one's body in. Only when neither route resolves does the walk fall back
+ * to admitting every module that declares that name — the "we cannot tell"
+ * case, which covers a namespace-import property reference
+ * (`validators.validateFoo`) and a helper called without an import edge.
  *
  * Known limitations, all of which err towards a *loud* verdict rather than a
  * silent one:
@@ -136,11 +155,16 @@ function opensRegexLiteral(emitted: string, lastSignificant: string): boolean {
 }
 
 /**
- * Removes comments, string/template literals and regex literals from a
- * TypeScript source, replacing each removed run with a single space so token
+ * Removes comments and regex literals, plus — unless `keepQuoted` — string and
+ * template literals. Each removed run becomes a single space so token
  * boundaries survive.
+ *
+ * `keepQuoted` preserves `"…"` / `'…'` runs verbatim, which is what
+ * {@link collectModuleBindings} needs: a module specifier *is* a string
+ * literal. Template literals are dropped in both modes, so a multi-line code
+ * sample written inside backticks cannot contribute a fake `import` line.
  */
-export function stripCommentsAndLiterals(source: string): string {
+function scanAndStrip(source: string, keepQuoted: boolean): string {
   let out = "";
   let lastSignificant = "";
   let i = 0;
@@ -152,7 +176,12 @@ export function stripCommentsAndLiterals(source: string): string {
     } else if (ch === "/" && next === "*") {
       i = skipBlockComment(source, i);
       out += " ";
-    } else if (ch === '"' || ch === "'" || ch === "`") {
+    } else if (ch === '"' || ch === "'") {
+      const end = skipQuoted(source, i, ch);
+      out += keepQuoted ? source.slice(i, end) : " ";
+      lastSignificant = ch;
+      i = end;
+    } else if (ch === "`") {
       i = skipQuoted(source, i, ch);
       out += " ";
     } else if (ch === "/" && opensRegexLiteral(out, lastSignificant)) {
@@ -165,6 +194,23 @@ export function stripCommentsAndLiterals(source: string): string {
     }
   }
   return out;
+}
+
+/**
+ * Removes comments, string/template literals and regex literals from a
+ * TypeScript source, replacing each removed run with a single space so token
+ * boundaries survive.
+ */
+export function stripCommentsAndLiterals(source: string): string {
+  return scanAndStrip(source, false);
+}
+
+/**
+ * Removes comments, template literals and regex literals, keeping quoted
+ * strings so module specifiers survive.
+ */
+export function stripCommentsKeepingQuoted(source: string): string {
+  return scanAndStrip(source, true);
 }
 
 /**
@@ -221,31 +267,140 @@ export function identifiersIn(code: string): Set<string> {
   return out;
 }
 
-/**
- * Collects value `import { a as b }` bindings as `alias -> original`.
- *
- * `import type { … }` clauses and `type`-prefixed specifiers are skipped: a
- * type-only binding is erased at compile time, so a later mention of it is a
- * type reference and never evidence that the validator runs.
- */
-export function collectImportAliases(code: string): Map<string, string> {
-  const aliases = new Map<string, string>();
-  const clauseRe = /\bimport\s+\{([^}]*)\}/g;
-  let clause: RegExpExecArray | null;
-  while ((clause = clauseRe.exec(code)) !== null) {
-    for (const specifier of (clause[1] ?? "").split(",")) {
-      const trimmed = specifier.trim();
-      if (trimmed === "" || /^type\s/.test(trimmed)) continue;
-      const parts = trimmed.split(/\s+as\s+/);
-      const original = parts[0]?.trim();
-      const alias = parts[1]?.trim();
-      if (original !== undefined && original !== "" && alias !== undefined && alias !== "") {
-        aliases.set(alias, original);
-      }
-    }
-  }
-  return aliases;
+// ---------------------------------------------------------------------------
+// Module edges
+// ---------------------------------------------------------------------------
+
+/** One end of a module edge: which module, and which name inside it. */
+export interface ModuleBinding {
+  specifier: string;
+  /** The name as the target module exports it; `*` / `default` for those forms. */
+  imported: string;
 }
+
+/** The runtime module edges of one file. */
+export interface ModuleBindings {
+  /** Local binding name -> where it comes from, for value imports only. */
+  imports: Map<string, ModuleBinding>;
+  /** Re-exported name -> where it comes from (`export { a as b } from "x"`). */
+  reexports: Map<string, ModuleBinding>;
+  /** Specifiers of `export * from "x"`. */
+  starReexports: string[];
+  /**
+   * Every specifier this module evaluates at runtime, in source order: value
+   * imports, side-effect imports and re-export edges. `import type` /
+   * `export type` are erased at compile time and are deliberately absent — a
+   * type-only edge never causes the target module's top-level code to run.
+   */
+  runtimeSpecifiers: string[];
+}
+
+/**
+ * An `import`/`export … from` statement at the start of a line.
+ *
+ * The clause may not contain `;()=:` or a quote, which keeps a non-statement
+ * line that merely starts with `export` (`export interface X {` …) from
+ * swallowing the next real `from` clause several lines down.
+ */
+const FROM_STATEMENT_RE =
+  /^[ \t]*(import|export)[ \t\r\n]+([^;()=:"'`]*?)\bfrom[ \t]*(["'])([^"'\n]+)\3/gm;
+
+/** `import "./side-effect.js";` — no clause, but the module still runs. */
+const SIDE_EFFECT_IMPORT_RE = /^[ \t]*import[ \t]*(["'])([^"'\n]+)\1/gm;
+
+/** One `{ a as b }` entry, minus the inline-`type` specifiers. */
+function parseNamedSpecifiers(clause: string): Array<{ imported: string; local: string }> {
+  const braces = /\{([^}]*)\}/.exec(clause);
+  if (braces === null) return [];
+  const out: Array<{ imported: string; local: string }> = [];
+  for (const specifier of (braces[1] ?? "").split(",")) {
+    const trimmed = specifier.trim();
+    if (trimmed === "" || /^type\s/.test(trimmed)) continue;
+    const parts = trimmed.split(/\s+as\s+/);
+    const imported = parts[0]?.trim() ?? "";
+    const local = (parts[1] ?? parts[0])?.trim() ?? "";
+    if (imported !== "" && local !== "") out.push({ imported, local });
+  }
+  return out;
+}
+
+/** The `x` of `import x from "y"` / `import x, { … } from "y"`, if present. */
+function parseDefaultBinding(clause: string): string | undefined {
+  const match = /^\s*([A-Za-z_$][\w$]*)\s*(?:,|$)/.exec(clause);
+  return match?.[1];
+}
+
+/** The `ns` of `import * as ns from "y"`, if present. */
+function parseNamespaceBinding(clause: string): string | undefined {
+  const match = /^\s*\*\s+as\s+([A-Za-z_$][\w$]*)/.exec(clause);
+  return match?.[1];
+}
+
+function recordImportClause(bindings: ModuleBindings, clause: string, specifier: string): void {
+  const namespace = parseNamespaceBinding(clause);
+  if (namespace !== undefined) bindings.imports.set(namespace, { specifier, imported: "*" });
+  const defaultBinding = parseDefaultBinding(clause);
+  if (defaultBinding !== undefined) {
+    bindings.imports.set(defaultBinding, { specifier, imported: "default" });
+  }
+  for (const { imported, local } of parseNamedSpecifiers(clause)) {
+    bindings.imports.set(local, { specifier, imported });
+  }
+}
+
+function recordExportClause(bindings: ModuleBindings, clause: string, specifier: string): void {
+  if (/^\s*\*\s*$/.test(clause)) {
+    bindings.starReexports.push(specifier);
+    return;
+  }
+  for (const { imported, local } of parseNamedSpecifiers(clause)) {
+    bindings.reexports.set(local, { specifier, imported });
+  }
+}
+
+/**
+ * Collects the module edges that actually exist at runtime.
+ *
+ * Comments, template literals and regex literals are stripped first, and every
+ * statement must start its line, so a specifier mentioned in prose, in a code
+ * sample or inside a quoted string cannot become an edge. `import type` /
+ * `export type` statements — and inline `{ type X }` specifiers — are skipped:
+ * they are erased at compile time, so they neither run the target module nor
+ * make a later mention of the binding evidence that a validator executes.
+ */
+export function collectModuleBindings(source: string): ModuleBindings {
+  const code = stripCommentsKeepingQuoted(source);
+  const bindings: ModuleBindings = {
+    imports: new Map(),
+    reexports: new Map(),
+    starReexports: [],
+    runtimeSpecifiers: [],
+  };
+
+  FROM_STATEMENT_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = FROM_STATEMENT_RE.exec(code)) !== null) {
+    const keyword = match[1] ?? "";
+    const clause = match[2] ?? "";
+    const specifier = match[4] ?? "";
+    if (/^\s*type\b/.test(clause) || specifier === "") continue;
+    bindings.runtimeSpecifiers.push(specifier);
+    if (keyword === "import") recordImportClause(bindings, clause, specifier);
+    else recordExportClause(bindings, clause, specifier);
+  }
+
+  SIDE_EFFECT_IMPORT_RE.lastIndex = 0;
+  while ((match = SIDE_EFFECT_IMPORT_RE.exec(code)) !== null) {
+    const specifier = match[2];
+    if (specifier !== undefined && specifier !== "") bindings.runtimeSpecifiers.push(specifier);
+  }
+
+  return bindings;
+}
+
+// ---------------------------------------------------------------------------
+// Function slicing
+// ---------------------------------------------------------------------------
 
 /** Index just past the bracket matching the one at `open`. */
 function matchBracket(code: string, open: number): number {
@@ -316,6 +471,8 @@ export interface FunctionBody {
   name: string;
   /** The body text, declaration header excluded. */
   code: string;
+  /** True when the declaration carries `export` — a public entry point. */
+  exported: boolean;
 }
 
 /** A module split into bodies that run only when called, plus the rest. */
@@ -330,6 +487,7 @@ interface Candidate {
   index: number;
   headerEnd: number;
   kind: "function" | "value";
+  exported: boolean;
 }
 
 function collectCandidates(code: string): Candidate[] {
@@ -343,7 +501,13 @@ function collectCandidates(code: string): Candidate[] {
     while ((match = re.exec(code)) !== null) {
       const name = match[1];
       if (name !== undefined) {
-        out.push({ name, index: match.index, headerEnd: re.lastIndex, kind });
+        out.push({
+          name,
+          index: match.index,
+          headerEnd: re.lastIndex,
+          kind,
+          exported: /^\s*export\b/.test(match[0]),
+        });
       }
     }
   }
@@ -351,9 +515,34 @@ function collectCandidates(code: string): Candidate[] {
 }
 
 /**
+ * End of an expression-bodied arrow: the first `;` or `,` outside any bracket
+ * group. Reaching the end of the file without one takes the rest of the module,
+ * which errs towards reporting a wired validator as unwired rather than the
+ * other way round.
+ */
+function findExpressionEnd(code: string, from: number): number {
+  let i = from;
+  while (i < code.length) {
+    const ch = code[i] ?? "";
+    if (ch === "(" || ch === "[" || ch === "{") {
+      i = matchBracket(code, i);
+      continue;
+    }
+    if (ch === ";" || ch === ",") return i;
+    i += 1;
+  }
+  return code.length;
+}
+
+/**
  * Decides where a `const name = ...` body starts. Only an arrow function or a
  * function expression is carved out; an object literal is left in the residue,
  * because its methods are not gated on the binding being called.
+ *
+ * Both arrow spellings are carved out. An expression body
+ * (`const unused = () => validateFoo(root);`) runs exactly when the binding is
+ * called, so leaving it in the residue would make every validator such a
+ * one-liner names look wired even when nothing calls the binding.
  */
 function findValueBody(
   code: string,
@@ -375,7 +564,9 @@ function findValueBody(
     if (ch === ";") return undefined;
     if (ch === "=" && code[i + 1] === ">") {
       const body = nextSignificant(code, i + 2);
-      return code[body] === "{" ? { start: body, end: matchBracket(code, body) } : undefined;
+      return code[body] === "{"
+        ? { start: body, end: matchBracket(code, body) }
+        : { start: body, end: findExpressionEnd(code, body) };
     }
     i += 1;
   }
@@ -409,13 +600,21 @@ export function sliceFunctions(code: string): ModuleSlices {
         ? findBlockBody(code, chunkStart)
         : findValueBody(code, chunkStart);
     if (body === undefined) continue;
-    functions.push({ name: candidate.name, code: code.slice(chunkStart, body.end) });
+    functions.push({
+      name: candidate.name,
+      code: code.slice(chunkStart, body.end),
+      exported: candidate.exported,
+    });
     residue += code.slice(cursor, candidate.index);
     cursor = body.end;
   }
   residue += code.slice(cursor);
   return { residue, functions };
 }
+
+// ---------------------------------------------------------------------------
+// Reachability
+// ---------------------------------------------------------------------------
 
 /** A module handed to {@link buildWiringGraph}. */
 export interface WiringModule {
@@ -431,74 +630,158 @@ export interface WiringGraph {
   usedNames: ReadonlySet<string>;
 }
 
-function prepare(source: string): { slices: ModuleSlices; aliases: Map<string, string> } {
-  const executable = stripCommentsAndLiterals(source);
-  const aliases = collectImportAliases(executable);
-  const withoutBindings = stripModuleBindingStatements(executable);
-  const slices = sliceFunctions(withoutBindings);
+interface PreparedModule {
+  file: string;
+  residue: string;
+  /** Declared name -> its bodies (a name may be declared more than once). */
+  bodies: Map<string, string[]>;
+  exportedFunctions: string[];
+  bindings: ModuleBindings;
+}
+
+/** Collapses `\` and `.`/`..` segments so two spellings of a path compare equal. */
+function normalizeModulePath(file: string): string {
+  const parts = file.replace(/\\/g, "/").split("/");
+  const out: string[] = [];
+  for (const part of parts) {
+    if (part === ".") continue;
+    if (part === ".." && out.length > 1) {
+      out.pop();
+      continue;
+    }
+    out.push(part);
+  }
+  return out.join("/");
+}
+
+function prepareModule(module: WiringModule): PreparedModule {
+  const executable = stripCommentsAndLiterals(module.source);
+  const slices = sliceFunctions(stripModuleBindingStatements(executable));
+  const bodies = new Map<string, string[]>();
+  const exportedFunctions: string[] = [];
+  for (const fn of slices.functions) {
+    const existing = bodies.get(fn.name) ?? [];
+    existing.push(stripDeclarationHeaders(fn.code));
+    bodies.set(fn.name, existing);
+    if (fn.exported) exportedFunctions.push(fn.name);
+  }
   return {
-    slices: {
-      residue: stripDeclarationHeaders(slices.residue),
-      functions: slices.functions.map((fn) => ({
-        name: fn.name,
-        code: stripDeclarationHeaders(fn.code),
-      })),
-    },
-    aliases,
+    file: normalizeModulePath(module.file),
+    residue: stripDeclarationHeaders(slices.residue),
+    bodies,
+    exportedFunctions,
+    bindings: collectModuleBindings(module.source),
   };
 }
 
 /**
  * Builds the set of names reachable from `entry`.
  *
- * `entry` is the pipeline's entry module: all of it counts as reachable. Every
- * module in `imported` contributes its module-level residue immediately (that
- * code runs on import), but each of its function bodies only once reachable
- * code names that function — so a validator whose body is never called cannot
- * lend reachability to the validators it calls.
+ * `entry` contributes its module-level residue and its exported functions —
+ * the pipeline's public entry points. Every module in `imported` contributes
+ * its residue only (that code runs on import); every other function body, in
+ * the entry module as much as in an imported one, joins the walk only once
+ * reachable code names it. A validator whose body is never called therefore
+ * cannot lend reachability to the validators it calls, and neither can an
+ * orchestrator inside the entry module that nothing calls any more.
  *
  * The walk is a worklist over chunks rather than a rescan of a growing corpus:
  * each chunk is tokenised once, which keeps a whole `src/` graph linear.
  */
 export function buildWiringGraph(entry: WiringModule, imported: WiringModule[]): WiringGraph {
-  const entryPrepared = prepare(entry.source);
-  const aliasToOriginal = new Map<string, string>(entryPrepared.aliases);
-  const queue: string[] = [
-    entryPrepared.slices.residue,
-    ...entryPrepared.slices.functions.map((fn) => fn.code),
-  ];
-
-  /** Function bodies waiting for something reachable to name them. */
-  const pending = new Map<string, string[]>();
-  for (const module of imported) {
-    const prepared = prepare(module.source);
-    for (const [alias, original] of prepared.aliases) aliasToOriginal.set(alias, original);
-    queue.push(prepared.slices.residue);
-    for (const fn of prepared.slices.functions) {
-      const bodies = pending.get(fn.name) ?? [];
-      bodies.push(fn.code);
-      pending.set(fn.name, bodies);
+  const prepared = [entry, ...imported].map((module) => prepareModule(module));
+  const modules = new Map<string, PreparedModule>();
+  const declaredIn = new Map<string, string[]>();
+  for (const module of prepared) {
+    modules.set(module.file, module);
+    for (const name of module.bodies.keys()) {
+      const files = declaredIn.get(name) ?? [];
+      files.push(module.file);
+      declaredIn.set(name, files);
     }
   }
 
-  const used = new Set<string>();
-  const markUsed = (name: string): void => {
-    if (used.has(name)) return;
-    used.add(name);
-    // `import { validateFoo as runFoo }` — using the alias uses the real one.
-    const original = aliasToOriginal.get(name);
-    if (original !== undefined) markUsed(original);
-    const bodies = pending.get(name);
-    if (bodies !== undefined) {
-      pending.delete(name);
-      queue.push(...bodies);
+  /** Resolves a relative specifier against the modules actually in the graph. */
+  const resolveSpecifier = (fromFile: string, specifier: string): string | undefined => {
+    if (!specifier.startsWith(".")) return undefined;
+    const base = normalizeModulePath(
+      `${fromFile.slice(0, fromFile.lastIndexOf("/"))}/${specifier}`,
+    );
+    for (const candidate of [
+      base.replace(/\.js$/, ".ts"),
+      base,
+      `${base}.ts`,
+      `${base}/index.ts`,
+    ]) {
+      if (modules.has(candidate)) return candidate;
     }
+    return undefined;
   };
+
+  const used = new Set<string>();
+  const queue: Array<{ file: string; code: string }> = prepared.map((module) => ({
+    file: module.file,
+    code: module.residue,
+  }));
+  const visited = new Set<string>();
+  const admitted = new Set<string>();
+
+  const admit = (file: string, name: string): boolean => {
+    const bodies = modules.get(file)?.bodies.get(name);
+    if (bodies === undefined) return false;
+    const key = `${file} ${name}`;
+    if (admitted.has(key)) return true;
+    admitted.add(key);
+    for (const code of bodies) queue.push({ file, code });
+    return true;
+  };
+
+  /** Admits every module that declares `name` — the "cannot resolve it" case. */
+  const admitByName = (name: string): void => {
+    for (const file of declaredIn.get(name) ?? []) admit(file, name);
+  };
+
+  const markUsed = (file: string, name: string): void => {
+    const key = `${file} ${name}`;
+    if (visited.has(key)) return;
+    visited.add(key);
+    used.add(name);
+
+    const module = modules.get(file);
+    const binding = module?.bindings.imports.get(name) ?? module?.bindings.reexports.get(name);
+    if (binding !== undefined && binding.imported !== "*" && binding.imported !== "default") {
+      // `import { validateFoo as runFoo }` — using the alias uses the real one,
+      // through however many barrels the re-export chain runs.
+      used.add(binding.imported);
+      const target = resolveSpecifier(file, binding.specifier);
+      if (target !== undefined) {
+        markUsed(target, binding.imported);
+        return;
+      }
+      admitByName(binding.imported);
+      return;
+    }
+
+    if (module !== undefined && admit(file, name)) return;
+
+    for (const specifier of module?.bindings.starReexports ?? []) {
+      const target = resolveSpecifier(file, specifier);
+      if (target !== undefined && modules.get(target)?.bodies.has(name) === true) {
+        markUsed(target, name);
+        return;
+      }
+    }
+
+    admitByName(name);
+  };
+
+  const entryFile = normalizeModulePath(entry.file);
+  for (const name of modules.get(entryFile)?.exportedFunctions ?? []) markUsed(entryFile, name);
 
   while (queue.length > 0) {
     const chunk = queue.pop();
     if (chunk === undefined) continue;
-    for (const name of identifiersIn(chunk)) markUsed(name);
+    for (const name of identifiersIn(chunk.code)) markUsed(chunk.file, name);
   }
 
   return {

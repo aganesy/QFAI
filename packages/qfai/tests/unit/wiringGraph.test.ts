@@ -15,6 +15,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   buildWiringGraph,
+  collectModuleBindings,
   identifiersIn,
   stripCommentsAndLiterals,
   stripDeclarationHeaders,
@@ -329,5 +330,155 @@ describe("buildWiringGraph", () => {
     );
     expect(graph.isCalled("validateFoo")).toBe(true);
     expect(graph.isCalled("validateBar")).toBe(false);
+  });
+
+  it("does not count a call made from an entry orchestrator nothing calls", () => {
+    // The failure this guard exists for: delete the call to the orchestrator
+    // and every validator it names must go back to reading as unwired.
+    const graph = buildWiringGraph(
+      entry(
+        [
+          'import { validateFoo } from "./validators/index.js";',
+          "export function run() {",
+          "  return [];",
+          "}",
+          "async function runPrototypingValidators(root) {",
+          "  return validateFoo(root);",
+          "}",
+        ].join("\n"),
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("counts a call made from an entry orchestrator the exported entry point reaches", () => {
+    const graph = buildWiringGraph(
+      entry(
+        [
+          'import { validateFoo } from "./validators/index.js";',
+          "export function run(root) {",
+          "  return runPrototypingValidators(root);",
+          "}",
+          "async function runPrototypingValidators(root) {",
+          "  return validateFoo(root);",
+          "}",
+        ].join("\n"),
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+
+  it("does not count a call in an expression-bodied arrow nothing calls", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_("/src/core/validators/concise.ts", "export const unused = () => validateFoo(root);"),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("counts an expression-bodied arrow once something calls it", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return used(root);\n}"), [
+      module_(
+        "/src/core/validators/concise.ts",
+        "export const used = (root) => validateFoo(root);",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+
+  it("keeps same-named helpers in two modules apart", () => {
+    // A call to the reachable module's `helper` must not drag in the dead
+    // module's identically named `helper`.
+    const graph = buildWiringGraph(
+      entry(
+        [
+          'import { reachable } from "./validators/live.js";',
+          "export function run(root) {",
+          "  return reachable(root);",
+          "}",
+        ].join("\n"),
+      ),
+      [
+        module_(
+          "/src/core/validators/live.ts",
+          "export function reachable(root) {\n  return helper(root);\n}\nfunction helper(root) {\n  return [];\n}",
+        ),
+        module_(
+          "/src/core/validators/dead.ts",
+          "export function unreachable(root) {\n  return helper(root);\n}\nfunction helper(root) {\n  return validateFoo(root);\n}",
+        ),
+      ],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("still resolves a call that carries no import edge at all", () => {
+    const graph = buildWiringGraph(
+      entry("export function run(root) {\n  return helper(root);\n}"),
+      [
+        module_(
+          "/src/core/validators/helper.ts",
+          "export function helper(root) {\n  return validateFoo(root);\n}",
+        ),
+      ],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+});
+
+describe("collectModuleBindings", () => {
+  it("ignores type-only import and export edges", () => {
+    const bindings = collectModuleBindings(
+      ['import type { Issue } from "./types.js";', 'export type { Issue } from "./types.js";'].join(
+        "\n",
+      ),
+    );
+    expect(bindings.runtimeSpecifiers).toEqual([]);
+  });
+
+  it("ignores a specifier written in a comment or inside a template literal", () => {
+    const bindings = collectModuleBindings(
+      [
+        '// import { a } from "./commented.js";',
+        "const sample = `",
+        'import { b } from "./templated.js";',
+        "`;",
+        'import { c } from "./real.js";',
+      ].join("\n"),
+    );
+    expect(bindings.runtimeSpecifiers).toEqual(["./real.js"]);
+  });
+
+  it("keeps value imports, side-effect imports and re-export edges", () => {
+    const bindings = collectModuleBindings(
+      [
+        'import { validateFoo as runFoo } from "./foo.js";',
+        'import "./register.js";',
+        'export { validateBar } from "./bar.js";',
+      ].join("\n"),
+    );
+    expect(bindings.runtimeSpecifiers.sort()).toEqual(["./bar.js", "./foo.js", "./register.js"]);
+    expect(bindings.imports.get("runFoo")).toEqual({
+      specifier: "./foo.js",
+      imported: "validateFoo",
+    });
+    expect(bindings.reexports.get("validateBar")).toEqual({
+      specifier: "./bar.js",
+      imported: "validateBar",
+    });
+  });
+
+  it("does not mistake a declaration that starts a line for an import clause", () => {
+    const bindings = collectModuleBindings(
+      [
+        "export interface Options {",
+        "  root: string;",
+        "}",
+        'import { validateFoo } from "./foo.js";',
+      ].join("\n"),
+    );
+    expect(bindings.runtimeSpecifiers).toEqual(["./foo.js"]);
+    expect(bindings.imports.get("validateFoo")?.imported).toBe("validateFoo");
   });
 });
