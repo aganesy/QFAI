@@ -3,6 +3,7 @@ import {
   lstat,
   mkdtemp,
   mkdir,
+  readdir,
   readFile,
   readlink,
   rm,
@@ -863,6 +864,41 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(linked, "utf-8")).toContain("[BLOCKER]");
       // And the file the link pointed at is untouched.
       expect(await readFile(escapee, "utf-8")).toBe("someone-elses-file\n");
+      // The staging file the replacement goes through is renamed, not left behind.
+      const leftovers = (await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"));
+      expect(leftovers).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not overwrite instructions reached through a symlinked ancestor", async () => {
+    // `lstat` only answers about the last path component, so with
+    // `.github/instructions` pointing at a shared directory the destination
+    // looks like an ordinary file — one that belongs to whatever the link
+    // points at. Refresh must not follow the ancestor out of the project.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      await writeFile(path.join(outside, "code-review.instructions.md"), "shared-cr\n", "utf-8");
+      await writeFile(path.join(outside, "principles.instructions.md"), "shared-pr\n", "utf-8");
+      try {
+        await symlink(outside, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(outside, "code-review.instructions.md"), "utf-8")).toBe(
+        "shared-cr\n",
+      );
+      expect(await readFile(path.join(outside, "principles.instructions.md"), "utf-8")).toBe(
+        "shared-pr\n",
+      );
     } finally {
       await rm(root, { recursive: true, force: true });
       await rm(outside, { recursive: true, force: true });

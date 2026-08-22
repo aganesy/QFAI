@@ -142,7 +142,9 @@ describe("TC-0003-0013: --force refreshes instructions", () => {
     const content = await readFile(INIT_CLI, "utf-8");
     expect(content).toMatch(/instructions/i);
     // The Step 3.5 loop must consult --force, not skip unconditionally.
-    expect(content).toMatch(/Step 3\.5[\s\S]*?if \(alreadyExists && !options\.force\)/);
+    expect(content).toMatch(/Step 3\.5[\s\S]*?if \(alreadyExists && \(!options\.force \|\|/);
+    // …and a refresh must still refuse an entry that resolves out of the project.
+    expect(content).toMatch(/Step 3\.5[\s\S]*?await resolvesOutsideProject\(destRoot, dest\)/);
   });
 });
 

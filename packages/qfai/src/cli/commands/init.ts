@@ -11,6 +11,7 @@ import {
   readdir,
   readFile,
   readlink,
+  realpath,
   rename,
   rm,
   symlink,
@@ -1172,7 +1173,23 @@ async function syncIntegrationWrappers(
   for (const fileName of instructionsFiles) {
     const dest = path.join(destRoot, ".github", "instructions", fileName);
     const alreadyExists = await pathExists(dest);
-    if (alreadyExists && !options.force) {
+    // An overwrite is only ours to perform when the entry it lands on lives
+    // inside the project. `pathExists` is lstat-based, so a leaf symlink is
+    // handled below by replacing the entry — but an **ancestor** symlink
+    // (`.github` or `.github/instructions` pointing at a shared directory)
+    // makes `dest` resolve to somebody else's file that lstat reports as an
+    // ordinary one. Before this loop honoured `--force` that file was skipped
+    // as pre-existing; refusing here keeps it that way. Creation is not
+    // gated: writing a file where none existed destroys nothing, and gating
+    // it would stop init from provisioning a deliberately shared directory.
+    const escapesProject = alreadyExists && (await resolvesOutsideProject(destRoot, dest));
+    if (alreadyExists && (!options.force || escapesProject)) {
+      if (escapesProject) {
+        info(
+          `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
+            `更新するにはリンク先で直接編集してください。`,
+        );
+      }
       skipped.push(dest);
     } else {
       copied.push(dest);
@@ -1191,21 +1208,7 @@ async function syncIntegrationWrappers(
               ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
           );
         }
-        // Replace the entry, not whatever it points at. `pathExists` is
-        // lstat-based, so `alreadyExists` is true for a symlink here — and
-        // `writeFile` follows one. A `--force` refresh would then rewrite the
-        // link's target, which for a link out of the project is a file this
-        // command was never asked to touch (and for a dangling link is a file
-        // it silently creates elsewhere). Unlink first so `dest` is recreated
-        // as a regular file, the same remove-then-recreate `ensureSymlink`
-        // performs for a wrapper it must replace. Done after the template read,
-        // so a failed read leaves the existing entry alone rather than deleting
-        // it and having nothing to put back.
-        const existingEntry = alreadyExists ? await safeLstat(dest) : undefined;
-        if (existingEntry?.isSymbolicLink()) {
-          await rm(dest, { recursive: true, force: true });
-        }
-        await writeFile(dest, content, "utf-8");
+        await replaceWithRegularFile(dest, content);
       }
     }
   }
@@ -1852,6 +1855,75 @@ async function safeLstat(target: string): Promise<Stats | undefined> {
     return await lstat(target);
   } catch {
     return undefined;
+  }
+}
+
+/**
+ * True when `target`'s **containing directory** resolves outside `destRoot`.
+ *
+ * `lstat` answers about the last path component only, so it cannot see an
+ * ancestor symlink: with `.github/instructions` pointing at a shared
+ * directory, `dest` is a perfectly ordinary file — one that belongs to
+ * whatever the link points at, not to this project. Both sides are
+ * `realpath`ed so a project reached through a symlink (`/tmp` on macOS, a
+ * junctioned checkout on Windows) is not mistaken for an escape.
+ *
+ * The leaf is deliberately not resolved: a symlink at `dest` itself is
+ * replaced as an entry by {@link replaceWithRegularFile}, which never writes
+ * through it, so it is not an escape.
+ *
+ * A `realpath` failure answers `true`. Not being able to prove the path stays
+ * inside the project is not a licence to overwrite it.
+ */
+async function resolvesOutsideProject(destRoot: string, target: string): Promise<boolean> {
+  let rootReal: string;
+  let parentReal: string;
+  try {
+    rootReal = await realpath(destRoot);
+    parentReal = await realpath(path.dirname(target));
+  } catch {
+    return true;
+  }
+  const relative = path.relative(rootReal, parentReal);
+  return relative.startsWith("..") || path.isAbsolute(relative);
+}
+
+/**
+ * Write `content` at `dest` as a regular file, replacing whatever entry is
+ * already there.
+ *
+ * Written to a sibling temp path and `rename`d into place, for two reasons.
+ * `rename` acts on the entry rather than following it, so a symlink at `dest`
+ * is replaced instead of having its target rewritten — the file a link out of
+ * the project points at is one this command was never asked to touch. And the
+ * content exists in full before the entry is touched, so an `ENOSPC`, an ACL
+ * change or a transient I/O fault mid-write leaves the original in place; the
+ * earlier remove-then-write order made those failures destroy the existing
+ * entry with nothing to put back.
+ */
+async function replaceWithRegularFile(dest: string, content: string): Promise<void> {
+  const tempPath = `${dest}.qfai-init-${process.pid.toString(36)}-${Date.now().toString(36)}`;
+  await writeFile(tempPath, content, "utf-8");
+  try {
+    await rename(tempPath, dest);
+  } catch (err: unknown) {
+    // `rename` cannot replace a directory entry, which is what `dest` is when
+    // somebody left a directory symlink there. Removing that entry and
+    // retrying is safe in a way the old order was not: the content is already
+    // on disk, so the retry is a metadata operation.
+    const existing = await safeLstat(dest);
+    if (existing?.isSymbolicLink() || existing?.isDirectory()) {
+      await rm(dest, { recursive: true, force: true });
+      try {
+        await rename(tempPath, dest);
+        return;
+      } catch (retryErr: unknown) {
+        await rm(tempPath, { force: true }).catch(() => undefined);
+        throw retryErr;
+      }
+    }
+    await rm(tempPath, { force: true }).catch(() => undefined);
+    throw err;
   }
 }
 
