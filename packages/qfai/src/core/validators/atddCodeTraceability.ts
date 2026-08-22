@@ -270,13 +270,18 @@ type AtddTraceabilitySummary = {
     conDb: string[];
   };
   /**
-   * Owed obligations referenced only from a prose carrier (`QFAI-ATDD-118`).
+   * Owed obligations no carrier declares a runnable test for (`QFAI-ATDD-118`).
    *
    * The field downstream readers gate on. `missing` alone says an ID was found
-   * somewhere under the scanned roots; it does not say an executable test
-   * references it, because the scan reads `.md` and `.feature` too. An
-   * obligation listed here is covered on paper and by nothing that runs, so
-   * "covered by code" is `missing.<kind>` empty **and** this empty.
+   * somewhere under the scanned roots; it does not say a test references it,
+   * because the scan reads `.md` and `.feature` too and a `.test.ts` may hold
+   * nothing but the annotation. An obligation listed here is written down and
+   * carried by nothing that declares a test, so "covered by code" is
+   * `missing.<kind>` empty **and** this empty.
+   *
+   * Two limits a gate must read with it, both in `scan` below: the partition is
+   * empty when `truncated` is set (unproven, so suppressed), and a declared but
+   * skipped test still counts as a declaration.
    */
   coveredByCarrierOnly: {
     us: string[];
@@ -621,7 +626,7 @@ export async function validateAtddCodeTraceability(
 }
 
 /**
- * `QFAI-ATDD-118` — obligations discharged by a prose file and nothing else.
+ * `QFAI-ATDD-118` — obligations discharged by an annotation and nothing else.
  *
  * Coverage is decided by a text match over the scanned roots, and the scan
  * deliberately reads `.md` / `.feature` so an annotation ledger or a Gherkin
@@ -631,6 +636,10 @@ export async function validateAtddCodeTraceability(
  * apart. `info`, not `error`: a markdown ledger is a legitimate carrier and
  * this names the state rather than banning it — the same treatment
  * `QFAI-ATDD-117` gives the Unit/Component exclusion one level down.
+ *
+ * States "no test is declared for this ID", which is weaker than "nothing runs
+ * for it": a declared suite that is entirely skipped still counts as declared,
+ * so the wording promises a declaration and not an execution.
  */
 function buildCarrierOnlyIssues(
   result: AtddCodeTraceabilityResult,
@@ -650,13 +659,13 @@ function buildCarrierOnlyIssues(
   return [
     issue(
       "QFAI-ATDD-118",
-      `実行されない注釈 carrier（\`.md\` / \`.markdown\`）だけでカバーされている obligation があります（${String(refs.length)} 件）: ${shown}${rest}`,
+      `テスト宣言を持たない注釈 carrier だけでカバーされている obligation があります（${String(refs.length)} 件）: ${shown}${rest}`,
       "info",
       attribution.file,
       "atddCodeTraceability.coverage.carrierOnly",
       refs,
       "change",
-      `これらの ID は散文ファイルに書かれているだけで、実行される acceptance test はありません。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実行されるテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。\`.feature\` は runner が実行するため code として数えます。`,
+      `これらの ID を参照しているファイルは、\`.md\` の散文か、テスト宣言（\`it\` / \`test\` / \`describe\`、Gherkin の \`Scenario:\`、\`def test_\` 等）を含まないファイルだけです。${dirs.integration} / ${dirs.api} / ${dirs.e2e} の実際のテストへ注釈を移すか、その状態を意図的な placeholder として記録してください。判定するのは「テストが宣言されているか」までで、skip されているかまでは見ません。`,
       { relatedFiles: attribution.relatedFiles },
     ),
   ];
@@ -888,9 +897,17 @@ function buildSummaryMarkdown(summary: AtddTraceabilitySummary): string {
   lines.push("## Covered By Annotation Carrier Only");
   lines.push("");
   lines.push(
-    "Referenced only from a prose carrier (`.md` / `.markdown`) — no executable test references them (QFAI-ATDD-118).",
+    "Referenced only from carriers that declare no test — prose (`.md`) or a code file holding nothing but the annotation (QFAI-ATDD-118).",
   );
   lines.push("");
+  if (summary.scan.truncated) {
+    // Without this line the four empty lists below read as "nothing is
+    // carrier-only", when the scan simply stopped before it could tell.
+    lines.push(
+      "> Scan truncated at the file limit: this partition is indeterminate and was suppressed. Treat it as unknown, not as empty.",
+    );
+    lines.push("");
+  }
   lines.push("- US");
   lines.push(...toList(summary.coveredByCarrierOnly.us));
   lines.push("- TC");

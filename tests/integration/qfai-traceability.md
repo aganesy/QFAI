@@ -1,8 +1,8 @@
 # QFAI Integration Traceability
 
 This file is an annotation carrier, not a test. Every `TC-*` listed here is
-reported by `QFAI-ATDD-118` (`info`) as covered by prose and by nothing that
-runs, and appears under `coveredByCarrierOnly.tc` in
+reported by `QFAI-ATDD-118` (`info`) as carried by prose and by no file
+that declares a test, and appears under `coveredByCarrierOnly.tc` in
 `.qfai/report/atdd-traceability/summary.json`. Moving an ID to an executable
 `tests/integration/**` test is what turns it into coverage.
 

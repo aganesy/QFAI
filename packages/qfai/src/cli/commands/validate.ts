@@ -733,7 +733,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
   "QFAI-ATDD-118":
-    "An obligation whose only annotation carrier is a prose `.md` file is covered on paper, not by an executable test.",
+    "An obligation whose every annotation carrier declares no test is covered on paper, not by a test.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":

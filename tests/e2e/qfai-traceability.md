@@ -1,8 +1,8 @@
 # QFAI E2E Traceability
 
 This file is an annotation carrier, not a test. Every `US-*` listed here is
-reported by `QFAI-ATDD-118` (`info`) as covered by prose and by nothing that
-runs, and appears under `coveredByCarrierOnly.us` in
+reported by `QFAI-ATDD-118` (`info`) as carried by prose and by no file
+that declares a test, and appears under `coveredByCarrierOnly.us` in
 `.qfai/report/atdd-traceability/summary.json`. Moving an ID to an executable
 `tests/e2e/**` test is what turns it into coverage.
 

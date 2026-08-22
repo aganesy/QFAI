@@ -13,7 +13,12 @@
  * carrier, `QFAI-ATDD-118` (`info`) names the obligations that have nothing
  * else, and `coveredByCarrierOnly` puts the same partition in
  * `summary.json` so `qfai report` and the completion reviewer can gate on it.
- * A `.feature` counts as code — a runner executes it.
+ *
+ * The carrier kind is read off the file body, not off its extension: a
+ * `.feature` with a `Scenario:` is a test, and a `.test.ts` holding only the
+ * annotation comment is the same ledger under a different name. Judged at
+ * "a test is declared", which is where a text scan can stop being honest —
+ * whether that test is skipped is not asked.
  */
 
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
@@ -77,6 +82,15 @@ async function withProject(project: Project, task: (root: string) => Promise<voi
 const codes = (issues: Awaited<ReturnType<typeof validateAtddCodeTraceability>>): string[] =>
   issues.map((entry) => entry.code);
 
+/** An annotated E2E test with a declaration a runner would collect. */
+const EXECUTABLE_US_0001_TEST = [
+  "// QFAI:SPEC-0001:US-0001",
+  'it("serves the story", () => {',
+  "  expect(true).toBe(true);",
+  "});",
+  "",
+].join("\n");
+
 describe("an annotation carrier is not an executable test", () => {
   it("names a US whose only carrier is a markdown bullet list", async () => {
     // The exact shape measured on qfai's own repository: one heading, one
@@ -105,13 +119,54 @@ describe("an annotation carrier is not an executable test", () => {
       {
         us: ["US-0001"],
         files: {
-          "tests/e2e/us-0001.test.ts": "// QFAI:SPEC-0001:US-0001\n",
+          "tests/e2e/us-0001.test.ts": EXECUTABLE_US_0001_TEST,
         },
       },
       async (root) => {
         const found = codes(await validateAtddCodeTraceability(root, defaultConfig));
         expect(found).not.toContain("QFAI-ATDD-118");
         expect(found).not.toContain("QFAI-ATDD-111");
+      },
+    );
+  });
+
+  it("names a code-extension file that declares no test, so renaming the ledger changes nothing", async () => {
+    // The loophole an extension check leaves open: the same bullet list saved
+    // as `.test.ts` would clear both `missing` and `coveredByCarrierOnly`, and
+    // the state this finding exists to name would be invisible again.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": "// QFAI:SPEC-0001:US-0001\n// TODO: write the test\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        const carrierOnly = issues.find((entry) => entry.code === "QFAI-ATDD-118");
+
+        expect(carrierOnly?.refs).toEqual(["SPEC-0001:US-0001"]);
+        expect(codes(issues)).not.toContain("QFAI-ATDD-111");
+      },
+    );
+  });
+
+  it("counts a declared suite even when it is skipped, because skip state is not the claim", async () => {
+    // `describe.skip` is a declaration a runner collects and reports. Calling
+    // it prose would put this finding in the placeholder gate's territory and
+    // promise an execution guarantee a text scan cannot make.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts":
+            '// QFAI:SPEC-0001:US-0001\ndescribe.skip("US-0001", () => {});\n',
+        },
+      },
+      async (root) => {
+        expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
       },
     );
   });
@@ -124,11 +179,37 @@ describe("an annotation carrier is not an executable test", () => {
         us: ["US-0001"],
         files: {
           "tests/e2e/qfai-traceability.md": "- QFAI:SPEC-0001:US-0001\n",
-          "tests/e2e/us-0001.test.ts": "// QFAI:SPEC-0001:US-0001\n",
+          "tests/e2e/us-0001.test.ts": EXECUTABLE_US_0001_TEST,
         },
       },
       async (root) => {
         expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
+      },
+    );
+  });
+
+  it("reads a non-JS test declaration, so the check is not a JS-only rule", async () => {
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/test_us_0001.py": "# QFAI:SPEC-0001:US-0001\ndef test_us_0001():\n    pass\n",
+        },
+      },
+      async (root) => {
+        const config = {
+          ...defaultConfig,
+          validation: {
+            ...defaultConfig.validation,
+            traceability: {
+              ...defaultConfig.validation.traceability,
+              testFileGlobs: ["tests/**/*.py"],
+            },
+          },
+        };
+        expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
           "QFAI-ATDD-118",
         );
       },
@@ -198,7 +279,7 @@ describe("an annotation carrier is not an executable test", () => {
         us: ["US-0001", "US-0002"],
         files: {
           "tests/e2e/qfai-traceability.md": "- QFAI:SPEC-0001:US-0001\n",
-          "tests/e2e/us-0002.test.ts": "// QFAI:SPEC-0001:US-0002\n",
+          "tests/e2e/us-0002.test.ts": EXECUTABLE_US_0001_TEST.replace("US-0001", "US-0002"),
         },
       },
       async (root) => {
