@@ -158,10 +158,11 @@ ratifies a comparison the author knew was fabricated.
    `Approved at` and `Approved option` so the approval is a record, not a
    memory. Creating this file is the only write this step makes: the delta and
    Decisions files the reference lands in — `spec-*/09_delta.md` +
-   `spec-*/07_Decisions.md` for a spec artifact, or `_policies/10_delta.md` +
-   `_policies/08_Decisions.md` for a policy artifact — are upstream SSOT, so the
-   reference to this CR is written there by the owner skill in step 4, never
-   before approval.
+   `spec-*/07_Decisions.md` for a spec artifact, `_policies/10_delta.md` +
+   `_policies/08_Decisions.md` for a policy artifact, and the referencing specs'
+   `09_delta.md` for a contract artifact, per the destination table in step 4 —
+   are upstream SSOT, so the reference to this CR is written there by the owner
+   skill in step 4, never before approval.
    Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
    - context — for intent drift, what conflicts; for defect drift, what the
@@ -185,17 +186,31 @@ ratifies a comparison the author knew was fabricated.
    itself is not waived — the operator is ratifying the classification as much
    as the fix.
 4. Rerun the owner skill for the upstream artifact, **naming the invocation and
-   the mode** the CR approved. That rerun is what records the CR reference in
-   `spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact, or
-   `_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact.
+   the mode** the CR approved. That rerun is what records the CR reference, in
+   the destination this table names for the artifact's class — all three classes
+   have one, so no CR is left without a home.
 
-   Invocation by artifact class:
+   Invocation and CR-reference destination by artifact class:
 
-   | Upstream artifact    | Invocation                      |
-   | -------------------- | ------------------------------- |
-   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           |
-   | `_policies/**`       | `/qfai-sdd` (no argument)       |
-   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` |
+   | Upstream artifact    | Invocation                      | CR reference lands in                                                                                                  |
+   | -------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           | `spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`                               |
+   | `_policies/**`       | `/qfai-sdd` (no argument)       | `_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`                         |
+   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | the `09_delta.md` of every spec that references the contract, or `_policies/10_delta.md` when the change is cross-spec |
+
+   Two consequences of that table are load-bearing:
+   - **The delta write is unconditional; the Decisions write is not.** The CR ID
+     is recorded in a Decision Record's `Related` field, which both Decisions
+     templates accept, so a CR that mints no `DR-*` writes the delta only.
+     Inventing a record-less CR section in `spec-*/07_Decisions.md` /
+     `_policies/08_Decisions.md`, or minting a throwaway `DR-*` to have
+     somewhere to put the reference, both breach `qfai-sdd`'s constraint against
+     authoring a layout the template does not define.
+   - **A contract CR records in the delta only.** `--contract` runs Stage 0 +
+     Phase 0 + Phase 4, and no Decisions file is in that scope. If the contract
+     change also forces a decision, that decision is policy-level: mint the
+     `DR-*` by rerunning the CR's `_policies/**` row as well, not by widening
+     the contract rerun.
 
    Mode — the CR's "approved actions" field MUST name one:
    - **`confirm-only`** — re-read the artifact and confirm it already satisfies

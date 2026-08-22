@@ -20,7 +20,7 @@ Cross-spec Decision Records. A `DR-*` cited from any spec's `tdd/test-list.md`
 - Context: what forced the decision — the constraint, conflict or anomaly
 - Decision: what was decided, in the imperative
 - Consequences: what this costs and what it forecloses
-- Related: the specs, capabilities or contracts this decision binds, or `-`
+- Related: the specs, capabilities, contracts or `CR-*` this decision binds, or `-`
 
 ## Empty State
 

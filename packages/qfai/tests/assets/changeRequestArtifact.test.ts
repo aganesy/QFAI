@@ -204,7 +204,7 @@ describe("a Change Request is a defined artifact", () => {
       // #373 made step 4 name the invocation and the rerun mode. The claim this
       // case pins — the reference lands upstream only via that rerun — is
       // unchanged, so it is asserted flattened: the wrap column is not the rule.
-      expect(flat(drift)).toContain("That rerun is what records the CR reference in");
+      expect(flat(drift)).toContain("That rerun is what records the CR reference");
       const step2 = drift.slice(drift.indexOf("2. Create a Change Request"), drift.indexOf("3. "));
       expect(step2).not.toContain("Reference it from `09_delta.md`");
     });
@@ -217,17 +217,24 @@ describe("a Change Request is a defined artifact", () => {
       // define, leaving the real homes (`08_`, `10_`) without the approval.
       const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
 
-      // step 4 — the mandated write.
+      // step 4 — the mandated write, per the destination table.
       expect(drift).toContain(
-        "That rerun is what records the CR reference in `spec-*/09_delta.md` + " +
-          "`spec-*/07_Decisions.md` for a spec artifact, or `_policies/10_delta.md` + " +
-          "`_policies/08_Decisions.md` for a policy artifact.",
+        "That rerun is what records the CR reference, in the destination this table names",
       );
-      // step 2 — the same pair, stated as upstream SSOT.
       expect(drift).toContain(
-        "`spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact, or " +
-          "`_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact — " +
-          "are upstream SSOT",
+        "| `spec-*/**` files    | `/qfai-sdd <spec-id>`           | " +
+          "`spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`",
+      );
+      expect(drift).toContain(
+        "| `_policies/**`       | `/qfai-sdd` (no argument)       | " +
+          "`_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`",
+      );
+      // step 2 — the same destinations, stated as upstream SSOT.
+      expect(drift).toContain(
+        "`spec-*/09_delta.md` + `spec-*/07_Decisions.md` for a spec artifact, " +
+          "`_policies/10_delta.md` + `_policies/08_Decisions.md` for a policy artifact, " +
+          "and the referencing specs' `09_delta.md` for a contract artifact, " +
+          "per the destination table in step 4 — are upstream SSOT",
       );
       // the Decision Record carve-out.
       expect(drift).toContain(
@@ -249,6 +256,48 @@ describe("a Change Request is a defined artifact", () => {
       // The policy layer's real `07_` / `09_` must not be shadowed anywhere.
       expect(drift).not.toContain("`_policies/07_Decisions.md`");
       expect(drift).not.toContain("`_policies/09_delta.md`");
+    });
+
+    it(`${tree}: the contract layer has a CR-reference destination too`, async () => {
+      // The invocation table treats `.qfai/contracts/**` as its own upstream
+      // class, so an enumeration that branches only spec / policy leaves a
+      // contract-only CR with nowhere to record the approval.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain(
+        "| `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | " +
+          "the `09_delta.md` of every spec that references the contract, or " +
+          "`_policies/10_delta.md` when the change is cross-spec |",
+      );
+      expect(drift).toContain("**A contract CR records in the delta only.**");
+      expect(drift).toContain("`--contract` runs Stage 0 + Phase 0 + Phase 4");
+    });
+
+    it(`${tree}: a CR that mints no Decision Record writes the delta only`, async () => {
+      // Both Decisions templates define only a `### DR-*` block, so a
+      // record-less CR entry would be a layout the owner skill invented.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain("**The delta write is unconditional; the Decisions write is not.**");
+      expect(drift).toContain(
+        "The CR ID is recorded in a Decision Record's `Related` field, which both " +
+          "Decisions templates accept, so a CR that mints no `DR-*` writes the delta only.",
+      );
+
+      // ...and "both templates accept" has to be true of the policy one, which
+      // listed only specs / capabilities / contracts.
+      const specDecisions = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/07_Decisions.md",
+      );
+      expect(specDecisions).toContain(
+        "- Related: the `AC-*` / `BR-*` / `TC-*` / `TDD-*` / `CR-*` this decision binds, or `-`",
+      );
+      const policyDecisions = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/_policies/08_Decisions.md",
+      );
+      expect(policyDecisions).toContain(
+        "- Related: the specs, capabilities, contracts or `CR-*` this decision binds, or `-`",
+      );
     });
 
     it(`${tree}: superseded requires the approval fields the gate demands`, async () => {
