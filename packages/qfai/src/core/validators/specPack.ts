@@ -328,9 +328,10 @@ const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE"
 /**
  * Every `spec-`-prefixed token a single `Existing Spec` cell names, taken
  * whole: the match runs to the end of the alphanumeric run and may not start
- * inside one. Extracting `spec-\d{4}` directly would read a typo'd
- * `spec-00010` as the existing `spec-0001` and let the row through, so the
- * token is captured first and checked against the well-formed shape after.
+ * inside one. Matching the four-digit form directly would read a token that
+ * carries one digit too many as the shorter spec it happens to start with,
+ * so the existence check would pass on a misspelled ID. The token is captured
+ * whole here and checked against the well-formed shape below.
  */
 const EXISTING_SPEC_TOKEN_RE = /(?<![0-9A-Za-z])spec-[0-9A-Za-z]*/g;
 
