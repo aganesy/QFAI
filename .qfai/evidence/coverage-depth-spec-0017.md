@@ -40,8 +40,8 @@ Each has exactly one step:
 
 Round 1's `qa-gatekeeper` found this and it had not been disclosed. The first version of this matrix
 read job names and structure and never read a step body, which is the same error as the vacuous
-claims implement rounds 4-6 kept finding: a property asserted over how something is *written* rather
-than over what it *does*. Two consequences, both applied below:
+claims implement rounds 4-6 kept finding: a property asserted over how something is _written_ rather
+than over what it _does_. Two consequences, both applied below:
 
 - **`US-0017-0004`** — "no lane rebuilds what one could produce" passes because no lane runs
   anything at all. Its `Normal path` was already `❌`; what changes is that the `❌` now names the
@@ -97,7 +97,7 @@ this list did not gain until round 14 pointed at the disagreement between the tw
 
 - `US-0017-0002` — "**Own-CI** supply-chain hardening…", goal "every own-CI job…"
 - `US-0017-0003` — "the setup preamble to exist exactly once **in the repository**", and its
-  Non-goals *rule out* shipping the mechanism to adopters (a composite action under the shipped
+  Non-goals _rule out_ shipping the mechanism to adopters (a composite action under the shipped
   `.github/` is a hard pack failure, DTC-1)
 - `US-0017-0005` — "separated into their own **own-CI** jobs and matrix legs"
 - `US-0017-0008` — "**the repository's own** duplicate of the shipped validate workflow deleted"
@@ -116,7 +116,7 @@ stories are. The own-tree half of each of the four is asserted, and here is wher
 | `US-0017-0002` | `tests/scripts/ownWorkflowTopology.test.ts` — SHA pins and `persist-credentials` across the set |
 | `US-0017-0003` | `tests/scripts/workflowHygiene.test.ts` — the single shared setup definition, own tree          |
 | `US-0017-0005` | `tests/scripts/ownWorkflowTopology.test.ts` — the seven matrix legs and the pinned check names  |
-| `US-0017-0008` | `tests/scripts/ownWorkflowTopology.test.ts` — the retired duplicate and the folded profile run |
+| `US-0017-0008` | `tests/scripts/ownWorkflowTopology.test.ts` — the retired duplicate and the folded profile run  |
 
 Those assertions are `Integration` rows of `tdd/test-list.md` and are scored there, not here. What
 this matrix scores for those four stories is the adopter-facing half only, and each row's cells should
@@ -136,19 +136,19 @@ asserted by its total is not asserted. The table below is the partition, and
 `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` checks it against the table's own cells for
 completeness, disjointness and no non-`❌` member.
 
-| class | US ID        | `❌` columns                                                                              |
-| ----- | ------------ | ---------------------------------------------------------------------------------------- |
+| class | US ID        | `❌` columns                                                                               |
+| ----- | ------------ | ------------------------------------------------------------------------------------------ |
 | A     | US-0017-0004 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0005 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0006 | Normal path, Error path, Boundary values, Special values, State transitions, Combinatorial |
 | A     | US-0017-0008 | Error path, Boundary values, Special values, State transitions, Combinatorial              |
-| B     | US-0017-0001 | State transitions, Combinatorial                                                          |
-| B     | US-0017-0002 | State transitions                                                                         |
-| B     | US-0017-0003 | State transitions, Combinatorial                                                          |
-| B     | US-0017-0007 | State transitions, Combinatorial                                                          |
-| B     | US-0017-0009 | State transitions, Combinatorial                                                          |
-| C     | US-0017-0001 | Boundary values                                                                           |
-| C     | US-0017-0007 | Error path                                                                                |
+| B     | US-0017-0001 | State transitions, Combinatorial                                                           |
+| B     | US-0017-0002 | State transitions                                                                          |
+| B     | US-0017-0003 | State transitions, Combinatorial                                                           |
+| B     | US-0017-0007 | State transitions, Combinatorial                                                           |
+| B     | US-0017-0009 | State transitions, Combinatorial                                                           |
+| C     | US-0017-0001 | Boundary values                                                                            |
+| C     | US-0017-0007 | Error path                                                                                 |
 
 Sizes, derived from the table above: **A 23, B 9, C 2 — 34 cells.**
 
@@ -210,6 +210,117 @@ justified. The members are enumerated in `coverageDepthMatrix.test.ts` and each 
 own reason; a new one reddens until it appears in both. That is the move `ALLOWED_STEP_BODIES` makes one
 instrument over: enumerate our own surface, refuse the rest, and make an addition a review rather than a
 silent pass.
+
+## Every ⚠️ cell, named
+
+Fifteen depth cells are `⚠️`, and until round 20 not one of them was enumerated anywhere. The section
+above and the test that reads it both key on `❌`, so a `⚠️` was outside the contract **by
+construction** — and `US-0017-0002` and `US-0017-0009` have no justification section at all, because
+this artifact writes one only for a row whose `Status` is `❌`.
+
+That is the wrong way round for the value a reader most needs the reason for. `❌` at least says
+"nothing here". `⚠️` says "something here" and, unnamed, says nothing about which half.
+
+The partition below has the same three properties the `❌` one carries — disjoint, complete, and
+naming nothing the table scores otherwise — and `coverageDepthMatrix.test.ts` enforces all three plus
+a line per member. The reason classes are NOT shared with `❌`'s: A/B/C say why a behaviour cannot be
+exercised at all, and every class here is a statement about a behaviour that partly is.
+
+| class | US ID        | `⚠️` columns                    |
+| ----- | ------------ | ------------------------------- |
+| W1    | US-0017-0001 | Error path, Special values      |
+| W2    | US-0017-0002 | Boundary values, Combinatorial  |
+| W2    | US-0017-0003 | Boundary values, Special values |
+| W3    | US-0017-0004 | Oracle strength                 |
+| W3    | US-0017-0005 | Oracle strength                 |
+| W3    | US-0017-0006 | Oracle strength                 |
+| W2    | US-0017-0007 | Boundary values, Special values |
+| W4    | US-0017-0008 | Normal path                     |
+| W3    | US-0017-0008 | Oracle strength                 |
+| W2    | US-0017-0009 | Boundary values, Special values |
+
+Sizes of the ⚠️ classes: **W1 2, W2 8, W3 4, W4 1 — 15 cells, one line each.**
+
+**W1 — the surface IS exercised, by a row that is not this one.** This matrix scores _the surface each
+story is actually about_, which its opening section states, so a behaviour asserted against the
+identical shipped bytes counts as exercised even when the annotation carrying it belongs to another
+spec. What the `⚠️` records is that this spec's own row does not carry it, and that something the row
+is about is unreached by anybody.
+
+- `US-0017-0001` × `Error path` — the shipped orchestrator has nine degraded branches: five
+  `fail_open` sites (`qfai-tests.yml:85`, `:88`, `:91`, `:99`, `:114`), three probe fallbacks
+  (`:135`, `:150`, `:158`) and the verdict's `exit 1` on a failed or cancelled lane (`:267-269`).
+  This row asserts none of them — its whole coverage is three assertions at
+  `spec0017LayeredCiScaffoldE2E.test.ts:270-287`, which read a job key, a job's existence and a
+  substring. The branches are exercised, over the same bytes, at
+  `spec0003ShippedWorkflowSetE2E.test.ts:530-593` and
+  `shippedWorkflowDetection.test.ts:341-449`. **One is reached by nothing in the repository**: the
+  `name-only diff failed` arm at `qfai-tests.yml:98-100`, which needs a fixture where `git diff`
+  itself exits non-zero.
+- `US-0017-0001` × `Special values` — the row reads no output at all: it never touches
+  `steps.diff.outputs.lanes` and never feeds the verdict a `result`. The two value classes that
+  matter — the empty selection `"[]"` and the five-element superset — are asserted at
+  `spec0003ShippedWorkflowSetE2E.test.ts:502-528`, and the verdict's four `result` strings at
+  `:555-593`. Same surface, another row.
+
+**W2 — part of the domain is exercised and a named part is not.** The discriminator is real and the
+corpus it runs over is real; what is missing is a value at the edge, and it is named per cell.
+
+- `US-0017-0002` × `Boundary values` — the SHA discriminator at
+  `spec0017LayeredCiScaffoldE2E.test.ts:319` is `/@[0-9a-f]{40}\b/`, which genuinely rejects 39 hex
+  digits on the count, 41 on the `\b`, uppercase on the class and a seven-character short sha. **No
+  such value is ever fed to it**: the corpus is four non-local `uses:` refs
+  (`qfai-tests.yml:56`, `qfai-validate.yml:50`, `:143`, `:171`), all valid. And the collection's
+  non-emptiness is unasserted here while the own tree asserts exactly that at
+  `workflowHygiene.test.ts:292`, so a shipped tree carrying no `uses:` at all would satisfy both
+  halves of this row vacuously.
+- `US-0017-0002` × `Combinatorial` — two independent properties, pinned and hardened, are evaluated
+  on every step of the arrived tree, which is a two-factor sweep over the real corpus. What is not
+  exercised is a step that satisfies one and fails the other; the technique exists in the repository
+  — `workflowHygiene.test.ts:528` removes _both_ permission blocks and asserts the pair — and is not
+  applied to the arrived tree.
+- `US-0017-0003` × `Boundary values`, and `US-0017-0003` × `Special values` — the two probe candidates and the
+  fail-open default are exercised; a blank or whitespace-only version file is not. Stated in this
+  row's own section below.
+- `US-0017-0007` × `Boundary values` — one worker and four are exercised, and one worker is the true
+  boundary. `US-0017-0007` × `Special values` — the override rejects `""`, `" "`, `"0"`, `"-1"` and `"2.5"`, which is
+  a real special-value sweep over the parser and not over the pool it configures. Both stated in that
+  row's section.
+- `US-0017-0009` × `Boundary values`, and `US-0017-0009` × `Special values` — the row runs one default `qfai init`
+  and varies no value; the mapping document is asserted only for its presence and a disclaimer
+  phrase, so no domain with an edge is read. The layer codes the received mapping names, and the
+  hyphen the loader's own extraction regex turns on
+  (`specPackParsers.ts:81`, `/@?(layer-[a-z0-9-]+)/gi`), are both available to assert and unasserted.
+
+**W3 — the oracle is weaker than the claim it is asked to carry.** Something real is observed; it is
+not the thing the story is about.
+
+- `US-0017-0004` × `Oracle strength` — the assertion filters `job.steps[].run` for build commands, and
+  every step in every lane is an `echo` placeholder, so it cannot distinguish "no lane rebuilds" from
+  "no lane does anything". Stated in that row's section.
+- `US-0017-0005` × `Oracle strength` — the assertion is about file topology and cannot distinguish a
+  lane that runs tests from a lane that echoes. Stated in that row's section.
+- `US-0017-0006` × `Oracle strength` — the sole annotated test parses the arrived `qfai-tests.yml` and
+  asserts its trigger mapping contains `pull_request`
+  (`spec0017LayeredCiScaffoldE2E.test.ts:1244-1252`). Parsing rather than grepping earns something:
+  `pull_request` occurs twice in the shipped file, at the trigger (`qfai-tests.yml:36`) and inside
+  `QFAI_BASE_REF` (`:67`), so a grep-shaped oracle would stay green over a deleted trigger block. Two
+  things keep it from `✅`. It is **totally subsumed** by `:1136-1140`, which compares the same
+  arrived document minus `jobs` against a pinned literal that spells
+  `"pull_request":null` — so any mutation this test would catch reddens that one too. And it is
+  off-subject: nothing in it mentions a hygiene lane. The story's own property IS asserted, in full,
+  at `workflowHygiene.test.ts:1690` — but over `REPO_ROOT`, and the adopter half is unassertable
+  today, because `grep -rn check-workflow-hygiene packages/qfai/assets/` returns nothing. No hygiene
+  lane ships.
+- `US-0017-0008` × `Oracle strength` — the row asserts that the adopter's `qfai-validate.yml` still
+  contains the literal `qfai validate` somewhere in its raw text, which is the "how it is written"
+  class this record names as its recurring defect. The assertion it wants is written one file over,
+  against the same `qfai init` output, over step `run:` bodies.
+
+**W4 — one half of the story is reachable and the other is not.**
+
+- `US-0017-0008` × `Normal path` — `⚠️` rather than `❌` because reachability is genuinely half the
+  story, and that half is asserted. Stated in that row's section.
 
 ## Justifications, one per ❌ status row
 
@@ -289,8 +400,8 @@ verb**" — it did not; it was a closed five-member package-manager list, so `ma
 misclassified" — a figure measured only against a corpus this stage chose, which is how every version
 of this predicate came to be reported clean and then broken.
 
-v4's naming defect is the one worth keeping in view: it measured **how a script is *called* rather
-than what it *does***, which is the failure mode § "The finding that re-scored this matrix after round
+v4's naming defect is the one worth keeping in view: it measured **how a script is _called_ rather
+than what it _does_**, which is the failure mode § "The finding that re-scored this matrix after round
 1" names as this spec's recurring one.
 
 `v12` lives in `packages/qfai/tests/helpers/buildCommand.ts` with its corpora in
@@ -453,11 +564,12 @@ what has not happened.
 - **US-0017-0001** `⚠️`: the detection job and the needs-map verdict both ship and both are asserted,
   with oracles (`E1`, `E3`). `Boundary values` is class C, `State transitions` and `Combinatorial`
   are class B.
+
 ### US-0017-0003, now ✅ — a stated reason that was simply false, and the assertion it was hiding
 
-The first version scored `Oracle strength` `⚠️` and `Status` `⚠️` with this reason: *"'File-derived' —
+The first version scored `Oracle strength` `⚠️` and `Status` `⚠️` with this reason: _"'File-derived' —
 the positive half — is not established: nothing here proves the version comes from a file rather than
-from a default."*
+from a default."_
 
 **That was false.** `packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml:117-149`
 probes `.nvmrc`, then `.node-version`, publishes what it finds as a step output, and only falls open
@@ -472,12 +584,12 @@ It is asserted now, and **behaviourally**: the test locates the resolver through
 body, and executes it under `bash -e -o pipefail` — the flags GitHub applies to a `shell: bash` step —
 **four times**, in four fixture directories:
 
-| fixture                          | asserted                                            |
-| -------------------------------- | --------------------------------------------------- |
-| `.nvmrc` = `23.4.1`              | the published version is `23.4.1`                   |
-| `.node-version` = `21.7.3`       | the published version is `21.7.3`                   |
-| both files present               | `.nvmrc` wins, so the probe order is a fact         |
-| neither present                  | exit 0, the published version is exactly `20`, and a `::warning::` is emitted |
+| fixture                    | asserted                                                                      |
+| -------------------------- | ----------------------------------------------------------------------------- |
+| `.nvmrc` = `23.4.1`        | the published version is `23.4.1`                                             |
+| `.node-version` = `21.7.3` | the published version is `21.7.3`                                             |
+| both files present         | `.nvmrc` wins, so the probe order is a fact                                   |
+| neither present            | exit 0, the published version is exactly `20`, and a `::warning::` is emitted |
 
 The first version ran it twice and asserted "a different documented value" for the fallback. Round 3
 pointed out that the integration row one layer down asserts the exact literal, and that an E2E row
@@ -489,18 +601,18 @@ rounds caught: `.nvmrc` also occurs in the step's warning message and `version=`
 fallback publish, so breaking the mechanism left both patterns matching other text in the same body.
 `E6`/`E7` reddened nothing. Rewritten to run the step, six rounds redden (`E6`-`E11`) with a comment
 control green. Another instance of the class enumerated at `atdd-spec-0017.md` § "Gaps / Open risks"
-item 7 — a claim about how code is *written* surviving the
+item 7 — a claim about how code is _written_ surviving the
 behaviour being removed — and the fix is the same every time: run the thing and look.
 
 **What this E2E row adds over the integration layer, and what it does not.** Round 2's
 `implementation-reviewer` pointed out that `tests/integration/shippedWorkflowPortability.test.ts`
-already extracts the same `run` body from the same asset and executes it, asserting *more* than the
+already extracts the same `run` body from the same asset and executes it, asserting _more_ than the
 first version of this row did. So the behavioural execution is not the new thing, and saying it was
 would be a weaker instance of the `US-0017-0007` pattern this stage withdrew a claim over.
 
 What the E2E row genuinely adds is one fact the integration row cannot see: **the resolver arrives in
 the adopter's tree through `qfai init`**, rather than merely existing under `assets/`. That is an
-E2E-layer fact and this is its right home. The resolution *depth* is owned one layer down, and is
+E2E-layer fact and this is its right home. The resolution _depth_ is owned one layer down, and is
 cross-referenced rather than restated. The row was also brought up to the integration row's fidelity
 rather than left below it — the documented fallback is asserted verbatim (`20`, the
 `engines: ">=20.19.0"` floor) instead of "any leading digit", both probe candidates are exercised, and

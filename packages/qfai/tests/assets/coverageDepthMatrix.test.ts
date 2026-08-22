@@ -168,17 +168,49 @@ function parseMatrix(text: string): Row[] {
   return rows;
 }
 
+/** The heading of the `⚠️` partition, so the two tables are read from their own sections. */
+const WARNING_SECTION = "## Every ⚠️ cell, named";
+
+/** The heading of the `❌` partition. */
+const CROSS_SECTION = "## Every ❌ cell, named";
+
+/**
+ * The text of one `##` section, ending at the next heading OUTSIDE a fenced block.
+ *
+ * `parsePartition` used to scan the whole document, which was correct while there was exactly one
+ * partition table in it. There are two now, and a row-shaped line is a row-shaped line — so each
+ * table is read from its own section or the two would merge, and the merge would look like a
+ * completeness pass.
+ */
+function sectionOf(text: string, heading: string): string {
+  const at = text.indexOf(heading);
+  if (at === -1) return "";
+  const end = nextHeadingAt(text, at);
+  return end === -1 ? text.slice(at) : text.slice(at, end);
+}
+
 /**
  * Parse the `Every ❌ cell, named` partition table into one entry per claimed cell.
  *
  * Rows look like `| A | US-0017-0004 | Normal path, Error path, … |`. The columns are named in full
  * so a member is checkable against the matrix table's own headers rather than against an abbreviation
  * only this file would understand.
+ * Scoped to ONE section: there are two partition tables now, and a row-shaped line is a
+ * row-shaped line, so scanning the whole document would merge them — and the merge would read
+ * as a completeness pass.
+ *
  */
-function parsePartition(text: string): Array<{ className: string; row: string; column: string }> {
+function parsePartition(
+  text: string,
+  heading: string,
+): Array<{ className: string; row: string; column: string }> {
   const members: Array<{ className: string; row: string; column: string }> = [];
-  for (const line of text.split(/\r?\n/)) {
-    const match = /^\|\s*([A-Z])\s*\|\s*(US-\d{4}-\d{4})\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
+  for (const line of sectionOf(text, heading).split(/\r?\n/)) {
+    // A class label may carry a digit. The cross partition uses A/B/C and the warning
+    // partition W1..W4, and a single-letter capture silently matched none of the latter —
+    // the table parsed to zero members, which the size check would have read as a pass had
+    // the non-emptiness assertion above it not been there.
+    const match = /^\|\s*([A-Z]\d*)\s*\|\s*(US-\d{4}-\d{4})\s*\|\s*(.+?)\s*\|\s*$/.exec(line);
     if (match === null) continue;
     const [, className, row, columns] = match;
     if (className === undefined || row === undefined || columns === undefined) continue;
@@ -290,7 +322,7 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // checking it: round 2 broke the first version three ways — cutting a class's enumeration while
     // leaving its stated size, renaming a member to a cell the table scores ⚠️, and resizing two
     // halves so the sum survived — all green. So this reads the partition table's MEMBERS.
-    const members = parsePartition(text);
+    const members = parsePartition(text, CROSS_SECTION);
     expect(members.length, "the partition table must declare members").toBeGreaterThan(0);
 
     const declared = new Set(members.map(({ row, column }) => `${row}/${column}`));
@@ -548,6 +580,77 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
         `class ${className}'s justification must carry its own reasoning, not another class's`,
       ).toMatch(phrase);
     }
+  });
+
+  it("names every ⚠️ cell with a reason class, and only ⚠️ cells", async () => {
+    // **The contract gap round 20 found, and the reason it was invisible.** `§ "Every ❌ cell, named"`
+    // and the test above both key on `❌`, so a `⚠️` cell was outside the enumeration BY
+    // CONSTRUCTION — `US-0017-0002` and `US-0017-0009` do not even have a justification section,
+    // because the artifact writes one only for a row whose `Status` is `❌`. Fifteen depth cells said
+    // "partially covered" and stopped, which is the value a reader most needs the reason for: `❌` at
+    // least says "nothing here"; `⚠️` says "something here" and names neither half.
+    //
+    // The structural properties are the same three the `❌` partition carries — disjoint, complete,
+    // and containing nothing the table does not score that way — so they are asserted the same way.
+    // The reason CLASSES are not the same and are not shared: `❌`'s A/B/C are about why a behaviour
+    // cannot be exercised, and a `⚠️` is a statement about a behaviour that partly IS.
+    const text = await readFile(MATRIX, "utf8");
+    const rows = parseMatrix(text);
+    const depth = COLUMNS.filter((column) => column !== "Status");
+
+    const members = parsePartition(text, WARNING_SECTION);
+    expect(members.length, "the ⚠️ partition table must declare members").toBeGreaterThan(0);
+
+    const declared = new Set(members.map(({ row, column }) => `${row}/${column}`));
+    const actual = new Set<string>();
+    for (const row of rows) {
+      for (const column of depth) {
+        // `parseMatrix` normalises a cell to the full "⚠️", while `WARNING_HEAD` is only its
+        // first code point — the variation selector is the difference, and comparing against the
+        // head made every declared member read as a phantom.
+        if (row.cells[column] === "⚠️") actual.add(`${row.id}/${column}`);
+      }
+    }
+
+    expect(declared.size, "a ⚠️ cell may not be claimed by two reason classes").toBe(
+      members.length,
+    );
+    const unclaimed = [...actual].filter((key) => !declared.has(key)).sort();
+    const phantom = [...declared].filter((key) => !actual.has(key)).sort();
+    expect(unclaimed, "every ⚠️ cell must be named by a reason class").toEqual([]);
+    expect(phantom, "a reason class may not name a cell the table does not score ⚠️").toEqual([]);
+
+    // Sizes by equality, parsed — the `toContain`-on-a-number defect round 3 broke twice next door.
+    const sizes = new Map<string, number>();
+    for (const { className } of members) sizes.set(className, (sizes.get(className) ?? 0) + 1);
+    const stated = /^Sizes of the ⚠️ classes: \*\*(.+?)\*\*/m.exec(text);
+    expect(stated, "the ⚠️ section must state the sizes it derives").not.toBeNull();
+    const statedPairs = new Map<string, number>();
+    for (const match of (stated?.[1] ?? "").matchAll(/\b(W\d) (\d+)\b/g)) {
+      statedPairs.set(match[1] ?? "", Number(match[2]));
+    }
+    expect(
+      Object.fromEntries([...statedPairs].sort()),
+      "the stated ⚠️ class sizes must equal the members the table lists",
+    ).toEqual(Object.fromEntries([...sizes].sort()));
+    const statedTotal = /—\s*(\d+) cells, one line each/.exec(stated?.[1] ?? "");
+    expect(statedTotal, "the ⚠️ sizes line must state its own total").not.toBeNull();
+    expect(Number(statedTotal?.[1]), "and that total must be the ⚠️ cell count").toBe(actual.size);
+
+    // And each member needs a LINE of its own under the section, keyed by its coordinates — the
+    // enumeration is what makes the count checkable, and a line is what makes it a reason. Without
+    // this the table could name fifteen cells and say nothing about any of them, which is the state
+    // round 20 found and this section exists to end.
+    const section = sectionOf(text, WARNING_SECTION);
+    const unexplained = members
+      .filter(({ row, column }) => !new RegExp(`\`${row}\`\\s*×\\s*\`${column}\``).test(section))
+      .map(({ row, column }) => `${row}/${column}`)
+      .sort();
+    expect(
+      unexplained,
+      "a ⚠️ cell named in the partition table with no line explaining it — the count without the " +
+        "reason is what this section was added to stop",
+    ).toEqual([]);
   });
 
   it("carries a justification section for every ❌ status row", async () => {

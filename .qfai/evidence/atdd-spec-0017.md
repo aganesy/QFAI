@@ -40,13 +40,13 @@ said nine, which was the file's `DR` count transposed onto its rejected-alternat
 caught it.) **No rejected option is reintroduced by this stage**, and one of them is the reason for this
 stage's largest correction:
 
-- *"writing test cases for the two partly observable obligations as if a gate existed … a row that
-  cannot fail looks like coverage"* — this is exactly what `US-0017-0007` had become. Its one
+- _"writing test cases for the two partly observable obligations as if a gate existed … a row that
+  cannot fail looks like coverage"_ — this is exactly what `US-0017-0007` had become. Its one
   assertion could not fail for any project `qfai init` produces. Withdrawing the claim follows the
   delta's `DO NOT` rather than working around it.
-- *"splitting the test-case set across two markdown tables"* — not touched; this stage did not write
+- _"splitting the test-case set across two markdown tables"_ — not touched; this stage did not write
   `06_Test-Cases.md` at all.
-- *"recording the size breach as a SPLIT candidate"* — not proposed.
+- _"recording the size breach as a SPLIT candidate"_ — not proposed.
 - `07_Decisions.md`'s rejected alternatives concern validator placement, ledger timing and the own
   tree's validate copy. This stage added a **script** under `scripts/`, which is the accepted shape
   (`DR` rejected "a validator rule under `src/core/validators/**`" and "a second parser over the
@@ -67,22 +67,22 @@ behaviour and not a substitute for closing it.
 The four record-deriving guards, the classifier they share, and the two artifacts that carry the boundary
 are checked one at a time against all nine rejected options:
 
-| artifact                        | nearest rejected option                                  | verdict          |
-| ------------------------------- | -------------------------------------------------------- | ---------------- |
-| `tests/helpers/buildCommand.ts` | "a second parser over the same surface" (`:133`)          | not that surface |
-| `tests/helpers/shippedLaneCommands.ts` | "a second parser over the same surface" (`:133`)   | not that surface: it reads workflow YAML and shell, which no validator parses |
-| `tests/unit/shippedLaneCommands.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured: the pre-repair helper lets every corpus entry through |
-| `tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured: every rule in it has been reddened by a plant in the shipped tree |
-| `tests/integration/scripts/checkAtddAnnotationLedger.test.ts` | same                     | measured |
-| `tests/unit/buildCommand.test.ts` | "a row that cannot fail looks like coverage" (delta)    | measured, not assumed |
-| `tests/assets/coverageDepthMatrix.test.ts` | same                                          | measured |
-| `tests/assets/stageEvidenceCounts.test.ts` | same                                          | measured |
-| `tests/assets/retractedClaims.test.ts` | same                                              | measured |
-| `tests/helpers/recordProse.ts` | "a second parser over the same surface" (`:133`) | not a parser at all: one line predicate, extracted because two of this stage's own guards answered "is a blockquoted line an assertion" opposite ways |
-| `tests/e2e/spec0017RunnerParallelismE2E.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured, and the fixture rebuilt when round 12 showed it could not express the inert state |
-| `tests/integration/spec0017OwnWorkflowScope.test.ts` | "annotate a row the pack has not settled" (`CR-20260818-0007`) | **not annotated**, deliberately — see § "TC-0017-0016" |
-| `packages/qfai/tsconfig.tests.json` | "a second gate over the same surface" | not a second gate: nothing was checking this surface at all |
-| `CR-20260820-0012` option 5     | options 1-4, rejected in that CR                          | none reintroduced |
+| artifact                                                      | nearest rejected option                                        | verdict                                                                                                                                               |
+| ------------------------------------------------------------- | -------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `tests/helpers/buildCommand.ts`                               | "a second parser over the same surface" (`:133`)               | not that surface                                                                                                                                      |
+| `tests/helpers/shippedLaneCommands.ts`                        | "a second parser over the same surface" (`:133`)               | not that surface: it reads workflow YAML and shell, which no validator parses                                                                         |
+| `tests/unit/shippedLaneCommands.test.ts`                      | "a row that cannot fail looks like coverage" (delta)           | measured: the pre-repair helper lets every corpus entry through                                                                                       |
+| `tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts`              | "a row that cannot fail looks like coverage" (delta)           | measured: every rule in it has been reddened by a plant in the shipped tree                                                                           |
+| `tests/integration/scripts/checkAtddAnnotationLedger.test.ts` | same                                                           | measured                                                                                                                                              |
+| `tests/unit/buildCommand.test.ts`                             | "a row that cannot fail looks like coverage" (delta)           | measured, not assumed                                                                                                                                 |
+| `tests/assets/coverageDepthMatrix.test.ts`                    | same                                                           | measured                                                                                                                                              |
+| `tests/assets/stageEvidenceCounts.test.ts`                    | same                                                           | measured                                                                                                                                              |
+| `tests/assets/retractedClaims.test.ts`                        | same                                                           | measured                                                                                                                                              |
+| `tests/helpers/recordProse.ts`                                | "a second parser over the same surface" (`:133`)               | not a parser at all: one line predicate, extracted because two of this stage's own guards answered "is a blockquoted line an assertion" opposite ways |
+| `tests/e2e/spec0017RunnerParallelismE2E.test.ts`              | "a row that cannot fail looks like coverage" (delta)           | measured, and the fixture rebuilt when round 12 showed it could not express the inert state                                                           |
+| `tests/integration/spec0017OwnWorkflowScope.test.ts`          | "annotate a row the pack has not settled" (`CR-20260818-0007`) | **not annotated**, deliberately — see § "TC-0017-0016"                                                                                                |
+| `packages/qfai/tsconfig.tests.json`                           | "a second gate over the same surface"                          | not a second gate: nothing was checking this surface at all                                                                                           |
+| `CR-20260820-0012` option 5                                   | options 1-4, rejected in that CR                               | none reintroduced                                                                                                                                     |
 
 The two that need their reasoning stated rather than asserted:
 
@@ -100,8 +100,8 @@ The two that need their reasoning stated rather than asserted:
   **Two properties, and they need different instruments — this bullet cited the wrong one for a round.**
   The mutation families under § "Execution logs" (`M*`/`X*`/`Y*`/`Q*` for the matrix, `C*` for the
   derived counts, `W*` for the retracted claims, and the in-suite sweep over every grammar member)
-  establish that **deleting a rule reddens the corpus**. That is a property of the *guards*. It says
-  nothing about whether the *story's* assertion can fail when a shipped lane contains a build, which is
+  establish that **deleting a rule reddens the corpus**. That is a property of the _guards_. It says
+  nothing about whether the _story's_ assertion can fail when a shipped lane contains a build, which is
   what this rejected option is actually about — and the previous version of this bullet discharged the
   option by citing the sweep, which is the naming-the-wrong-instrument defect two other findings in this
   same round are about.
@@ -118,7 +118,7 @@ The two that need their reasoning stated rather than asserted:
   `tests/unit/buildCommand.test.ts` and refused by `tests/unit/shippedLaneCommands.test.ts`. Over a
   build the grammar does not declare, the predicate was vacuous, and it stayed vacuous through ten
   versions — round 10's verdict was that it did not need a weakness, only a tool nobody had named. The
-  previous version of this bullet said "the option is not reintroduced *now*, in both senses" without
+  previous version of this bullet said "the option is not reintroduced _now_, in both senses" without
   that qualifier, which read as a general claim and was false as one.
 
   What answers the general claim is not a better spelling list. `shippedLaneCommands.ts` inverts the
@@ -127,6 +127,7 @@ The two that need their reasoning stated rather than asserted:
   classifier keeps the own-tree job, where a miss is tolerable. Note also who measured: four of the five
   plantings were reviewers', not this stage's, and the story's discriminating power was only ever
   established from outside.
+
 - **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
   the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
   the row) and option 4 (merge first, then satisfy it) all stay rejected: no gate was narrowed, no
@@ -169,7 +170,7 @@ end-to-end surface is: initialise an empty project and read what arrives.
 The first version justified that with a premise — "a user story is about the adopter" — and round 1's
 `completion-reviewer` read it against this spec's US catalogue, where it does not hold: `US-0017-0002`
 says "**own-CI** supply-chain hardening", `-0003` "exactly once **in the repository**" with Non-goals
-that *rule out* shipping the mechanism, `-0005` "their own **own-CI** jobs and matrix legs", and
+that _rule out_ shipping the mechanism, `-0005` "their own **own-CI** jobs and matrix legs", and
 `-0008` "**the repository's own** duplicate". Four of the nine name the own tree explicitly, so
 scoring every cell against the adopter's tree understates those four and credits shipped-tree
 observables to own-tree obligations.
@@ -198,7 +199,7 @@ The correction is on `US-0017-0005`: the five shipped layer lanes each contain e
 that step is `echo "<layer> lane placeholder - opted in, but the test-lane body ships in a later
 revision of this file"`. **No shipped lane runs a test.** The first measurement read job names and
 structure and never read a step body — the same failure mode as the four vacuous claims implement
-rounds 4-6 found, which all asserted over how code is *written* rather than what it *does*.
+rounds 4-6 found, which all asserted over how code is _written_ rather than what it _does_.
 
 **3. The five unsatisfied stories are not asserted as absences.** A test pinning "no hygiene lane is
 invoked" fails the day someone correctly adds one — a test that punishes its own fix. Each asserts
@@ -317,7 +318,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   `tests/assets/stageEvidenceCounts.test.ts` counts the file's callsites and reddens when this number
   and the file disagree, which is how the 25th arrived: the number was 24 until family 4 was declared,
   and the guard failed the same commit — twice, since the 26th followed for the two call sites the member
-sweep cannot reach. That guard exists because the previous version of this line said
+  sweep cannot reach. That guard exists because the previous version of this line said
   "No count of them is stated anywhere in this record" **while stating one two words earlier** — a
   sentence about how the record is written, contradicted by the record. Rounds 9 and 10 each found the
   number wrong in a different place — ten here, nine there, eleven items in the list, and the two
@@ -327,7 +328,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
   that the case list and the grammar name the same members, a sweep that deletes each member in turn and
   requires a case to notice, and the eleven real builds it planted in a shipped lane — ten of which the
   story did not see
-- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
+- **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 6 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
 - **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 13 tests deriving this record's own
@@ -385,7 +386,7 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
   -> Tests 23 passed (23), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
-  -> Tests 5 passed (5), exit 0
+  -> Tests 6 passed (6), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
   -> Tests 13 passed (13), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
@@ -720,7 +721,7 @@ Measured after: **9.39s**, down from 14.36s, with all ten tests passing.
 
 The conversion also demonstrated why a behaviour-preserving refactor is a claim rather than a fact. Making
 `git()` async left **six call sites without `await`**, `tsc -b` accepted every one of them, and the
-failure surfaced as a *different* test asserting the absence of a warning it now received. The type checker
+failure surfaced as a _different_ test asserting the absence of a warning it now received. The type checker
 could not see it and the lint rule for floating promises did not fire on the shape used; what caught it was
 the suite.
 
@@ -851,7 +852,7 @@ could not read. Inversion helps only when the failure of the scan is itself a re
 - **`R03 A5`** — an orchestration defect on this stage's side, not the subject's. Two reviewers were told
   to plant into the same shipped asset tree concurrently, and the gatekeeper caught a `qfai-extra.yml` it
   had not created. Committing the request before launch — round 1's fix — does nothing about reviewers
-  mutating the subject *concurrently*, which their read-only rule explicitly permits. The consequence is
+  mutating the subject _concurrently_, which their read-only rule explicitly permits. The consequence is
   worse than noise: a reviewer whose plant collides can attribute a catch to the wrong instrument. Future
   rounds isolate each plant-based role, or run them serially.
 
@@ -1003,14 +1004,14 @@ Every one is a body the tree accepted unrefused and that runs code.
 De-duplicated by mechanism rather than by spelling they are six classes on three levels, and the levels
 are the finding:
 
-| Level        | The class                                              | What the scan had no model of                                                                                                   |
-| ------------ | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
-| lexer        | the quote state was wrong, so the split was wrong      | `isAlternation` re-parsed raw text with no quote or comment state, so a `)` inside a string closed a `case` arm it was never in    |
-| lexer        | a command's INPUT is a command                         | `node` reads its program from stdin, so a here-string, a pipe and a `<` file each run code that no argument carries                |
-| invocation   | a flag is part of an invocation                        | for an interpreter the flags ARE the program: `--run=`, `--import=`, `--require=`, `--test`, `-p`, `--eval=`, `npx --package=`     |
-| invocation   | an environment prefix decides what a name resolves to  | judged by a denylist-shaped sniff, so an unlisted prefix passed                                                                    |
-| effect       | the lane WRITES the code a permitted install then runs | neither half is refusable alone — the write is by a by-name program, the install is enumerated — and the pair is a build           |
-| effect       | `env:` is an execution channel with no `run:` body     | `NODE_OPTIONS=--require=./loader.cjs` was verified executing, and nothing read `env:` at step, job or workflow level               |
+| Level      | The class                                              | What the scan had no model of                                                                                                   |
+| ---------- | ------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------- |
+| lexer      | the quote state was wrong, so the split was wrong      | `isAlternation` re-parsed raw text with no quote or comment state, so a `)` inside a string closed a `case` arm it was never in |
+| lexer      | a command's INPUT is a command                         | `node` reads its program from stdin, so a here-string, a pipe and a `<` file each run code that no argument carries             |
+| invocation | a flag is part of an invocation                        | for an interpreter the flags ARE the program: `--run=`, `--import=`, `--require=`, `--test`, `-p`, `--eval=`, `npx --package=`  |
+| invocation | an environment prefix decides what a name resolves to  | judged by a denylist-shaped sniff, so an unlisted prefix passed                                                                 |
+| effect     | the lane WRITES the code a permitted install then runs | neither half is refusable alone — the write is by a by-name program, the install is enumerated — and the pair is a build        |
+| effect     | `env:` is an execution channel with no `run:` body     | `NODE_OPTIONS=--require=./loader.cjs` was verified executing, and nothing read `env:` at step, job or workflow level            |
 
 **The structural point is not that fourteen were missed.** It is why the misses keep arriving: the scan
 decides what a lane runs by **reading the text of a command**, which is entry 17 of the list at § "Gaps /
@@ -1122,11 +1123,11 @@ is in flight, and the round in question is dead rather than open.
 
 ## Test volume estimate
 
-| Layer       | Raw count | Signal | Evidence                   | Notes                                                       |
-| ----------- | --------: | -----: | -------------------------- | ----------------------------------------------------------- |
+| Layer       | Raw count | Signal | Evidence                   | Notes                                                            |
+| ----------- | --------: | -----: | -------------------------- | ---------------------------------------------------------------- |
 | E2E         |         9 |      9 | `US-0017-0001` … `-0009`   | one describe each; `-0007` restored in round 12, in its own file |
-| API         |         0 |      0 | no `CON-API-*` declared    | nothing owed                                                 |
-| Integration |        71 |     63 | `Layer = Integration` rows | 63 `refactor`; 6 `blocked`, 2 `todo` — see the section below  |
+| API         |         0 |      0 | no `CON-API-*` declared    | nothing owed                                                     |
+| Integration |        71 |     63 | `Layer = Integration` rows | 63 `refactor`; 6 `blocked`, 2 `todo` — see the section below     |
 
 The 11 `Unit` rows owe nothing here (`L1` has no mandated directory).
 
@@ -1208,7 +1209,7 @@ writes `Blocked-By`**, or the ledger will carry a refuted reason next to a corre
 **One asymmetry this stage owes plainly**: `exception` needs a P1d `qa-gatekeeper` PASS and `blocked`
 does not. So re-classifying `TDD-0069` moved it out of the gate its twin still has to pass. That is the
 correct status on the merits — `execution-ledger.md` scopes `blocked` to "an upstream defect, an
-unresolved Change Request, or an unfinished row in another spec", and `blocked` is *more* conservative
+unresolved Change Request, or an unfinished row in another spec", and `blocked` is _more_ conservative
 than `exception`, which satisfies spec completion while `blocked` prohibits it — but the gate asymmetry
 is a consequence worth naming rather than leaving for a reader to notice.
 
@@ -1217,7 +1218,7 @@ section recorded the branch with the `DR-*` "pending", on the stated grounds tha
 author it because `07_Decisions.md` is a read-only P5 input. That obstacle was **the wrong artifact**:
 `qfai-implement/references/execution-ledger.md` § "Where the Decision Record is written" puts a
 branch-3 DR at `.qfai/decisions/DR-<id>-<slug>.md` and says explicitly **not**
-`07_Decisions.md` / `09_delta.md`, and `constitution/drift-protocol.md` whitelists *creating* exactly
+`07_Decisions.md` / `09_delta.md`, and `constitution/drift-protocol.md` whitelists _creating_ exactly
 that file. `completion-reviewer` and `qa-gatekeeper` each found it independently, and each pointed out
 that this stage had exercised the same authority in the same round when it wrote `CR-20260820-0011`.
 `TDD-0069` / `TDD-0070` are also **not** in `CR-20260820-0007`'s blocked set, so that CR was not the
@@ -1239,10 +1240,10 @@ REVISE was about the **content of the anomaly account**, and it split the two ro
   `execution-ledger.md`'s three grounds, none of which is "waiting on run history".
 - **`TDD-0069` not sustained.** Three defects: the stated obstacle was wrong ("a repo-wide
   `QFAI-ATDD-111` unrelated to this row" — both errors are scoped to `spec-0017`, and
-  `QFAI-ATDD-111`'s subject `US-0017-0007` is the parent of `AC-0017-0029`, which is *these rows'*
+  `QFAI-ATDD-111`'s subject `US-0017-0007` is the parent of `AC-0017-0029`, which is _these rows'_
   AC); the exit condition offered was **unreachable**, because the gate is self-referential; and
   `EX-0017-0053` was quoted at half its length, dropping "exactly one runner project is tuned, largest
-  first" — the clause that *is* checkable today, and whose omission means branch 2 had not really been
+  first" — the clause that _is_ checkable today, and whose omission means branch 2 had not really been
   examined.
 
 All three were verified independently before being applied. The DR is revised, `TDD-0069` is
@@ -1304,12 +1305,12 @@ So the correction has been applied at the source this time, in the `### TDD-0069
 what follows is a list of where each retracted statement was rewritten rather than an assertion that
 they are gone:
 
-| retracted statement                                      | rewritten at                        |
-| -------------------------------------------------------- | ----------------------------------- |
-| "because the workflow changes are unmerged"              | § `TDD-0069`, branch 1 paragraph    |
-| "there is no run history to mutate" (for clause 1)       | § `TDD-0069`, branch 2 paragraph    |
-| "branch 3 it is" for both rows                           | this section's opening              |
-| the `exception` P1d PASS as the blocker for both         | § "P1d's verdict: PASS, at the sixth pass" |
+| retracted statement                                | rewritten at                               |
+| -------------------------------------------------- | ------------------------------------------ |
+| "because the workflow changes are unmerged"        | § `TDD-0069`, branch 1 paragraph           |
+| "there is no run history to mutate" (for clause 1) | § `TDD-0069`, branch 2 paragraph           |
+| "branch 3 it is" for both rows                     | this section's opening                     |
+| the `exception` P1d PASS as the blocker for both   | § "P1d's verdict: PASS, at the sixth pass" |
 
 Each is now stated where a reader meets it, and the first two quote the old sentence as a quotation
 rather than asserting it. Row 4's target was `"Neither transition is authorised"` for two rounds — a
@@ -1396,13 +1397,13 @@ Round 1's `completion-reviewer` checked that against
 `.qfai/assistant/manifest/agent-routing.yml:139-206` and the disclosure was itself incomplete — the
 whole value of a volunteered deviation being its completeness. The mandatory set, per phase, is:
 
-| phase            | mandatory                                       | conditional                              | blocking                            |
-| ---------------- | ----------------------------------------------- | ---------------------------------------- | ----------------------------------- |
-| `coverage`       | `test-design-analyst`, `qa-strategist`          | —                                        | `test-design-analyst`               |
-| `red`            | `delivery-planner`, `acceptance-test-engineer`  | `qa-gatekeeper`                           | `delivery-planner`, `qa-gatekeeper` |
-| `implementation` | `acceptance-test-engineer`                      | —                                        | —                                   |
-| `evidence`       | —                                               | `devops-ci-engineer`, `qa-gatekeeper`     | `qa-gatekeeper`                     |
-| `review`         | `completion-reviewer`, `qa-gatekeeper`          | `implementation-reviewer`                 | both                                |
+| phase            | mandatory                                      | conditional                           | blocking                            |
+| ---------------- | ---------------------------------------------- | ------------------------------------- | ----------------------------------- |
+| `coverage`       | `test-design-analyst`, `qa-strategist`         | —                                     | `test-design-analyst`               |
+| `red`            | `delivery-planner`, `acceptance-test-engineer` | `qa-gatekeeper`                       | `delivery-planner`, `qa-gatekeeper` |
+| `implementation` | `acceptance-test-engineer`                     | —                                     | —                                   |
+| `evidence`       | —                                              | `devops-ci-engineer`, `qa-gatekeeper` | `qa-gatekeeper`                     |
+| `review`         | `completion-reviewer`, `qa-gatekeeper`         | `implementation-reviewer`             | both                                |
 
 So the omissions were `qa-strategist` and `delivery-planner`, both mandatory and one of them
 blocking, and `devops-ci-engineer` was promoted to mandatory when the manifest has it **conditional**.
@@ -1456,7 +1457,7 @@ rewritten to RUN the step under bash
 `.nvmrc` also occurs in the step's warning message and `version=` also occurs in its fallback
 publish, so breaking the real mechanism left both text patterns matching other text in the same body.
 That is another instance of the recurring class enumerated at § "Gaps / Open risks" item 7 — a claim
-asserted over how code is *written* rather than what it does — and this one was written while applying a
+asserted over how code is _written_ rather than what it does — and this one was written while applying a
 review finding about exactly that class of error. **No count is stated here on purpose.** Three sites in
 these two files carried three different counts of this pattern (four, five and four) with nothing
 deriving any of them; the occurrences are enumerated in one place now, and the number is however long
@@ -1640,7 +1641,7 @@ R3  ONE more unbacked claim                                    REDDENS
 
 `R2` is the one that matters. The first bound (`> 100`) **failed** on it — the remediation
 `CR-20260820-0011` option 1 prescribes — while being blind to `R1`. The second (`checked >= 208`)
-reddened on the first ledger line *removed*, which is the same option's other branch. The claim count
+reddened on the first ledger line _removed_, which is the same option's other branch. The claim count
 is not asserted at all now; only `unbacked` has a direction pinned.
 
 ### G1-G3 — the loop guard
@@ -1652,7 +1653,7 @@ G3  symlinked directories stop being followed                  REDDENS
 ```
 
 `G3` reddened **nothing** the first time it was run, and that is how round 4's vacuity finding was
-confirmed from this side: the symlink test passed the link as the walk's *root*, and `readdir` follows a
+confirmed from this side: the symlink test passed the link as the walk's _root_, and `readdir` follows a
 root whatever kind of node it is, so `entry.isSymbolicLink()` — the branch under test — was never
 reached. The test now places the link inside the scanned directory.
 
@@ -1771,10 +1772,10 @@ defect somewhere else.
 was `"defeated by running the formatter ci:lint enforces"`. That is withdrawn. Two configuration facts
 refute it:
 
-| fact                                                                    | source                |
-| ----------------------------------------------------------------------- | --------------------- |
-| `.qfai/evidence/**` and `.qfai/review/**` are excluded from Prettier     | `.prettierignore`     |
-| markdown is formatted with `proseWrap: "preserve"`, so nothing reflows   | `.prettierrc.json`    |
+| fact                                                                   | source             |
+| ---------------------------------------------------------------------- | ------------------ |
+| `.qfai/evidence/**` and `.qfai/review/**` are excluded from Prettier   | `.prettierignore`  |
+| markdown is formatted with `proseWrap: "preserve"`, so nothing reflows | `.prettierrc.json` |
 
 No formatter touches these files, and none would rewrap them if it did. **The line breaks are
 hand-wrapped by this stage** — the same stage that then attributed them to a tool. The failure was real
@@ -1815,6 +1816,7 @@ something is written, believed without reading it.
    reason the `DR-ID` column was not widened to carry a `Blocked-By` value. An earlier version of this
    item said both rows were parked on branch 3 — the same false statement § "Ledger rows advanced"
    reports as corrected after standing two rounds, surviving here in different words.
+
 4. **The gate still exits 1 for other specs, and none of them is this one.** `--spec 0017` scopes the
    spec-owned rules, and `spec-0003` (8 US), `spec-0006` (1), `spec-0008` (1) and `spec-0015` (**1**) are
    `QFAI-ATDD-111`'s eleven items repo-wide — **all of them**. This spec contributes none, because
@@ -1827,6 +1829,7 @@ something is written, believed without reading it.
    the "all 71 rows" sentence, one layer down. Recorded as a cross-spec obligation per this
    skill's CRITICAL CONSTRAINTS: not this stage's work, closing it is each owning spec's next
    `/qfai-atdd` run, and the repo-wide run belongs to `/qfai-verify`.
+
 5. **127 E2E ledger claims are backed by no test.** `CR-20260820-0011`. A cross-spec
    obligation across 16 specs; the guard that measures it now ships, and the number is held by a
    **ratchet** — `toBeLessThanOrEqual(127)` — which reddens on a new unbacked claim and stays green
@@ -1842,6 +1845,7 @@ something is written, believed without reading it.
    (§ "Execution logs"). This read `W1`/`W2`/`W3` for two rounds, naming a family that did not exist —
    and `W*` now names the retracted-claims family, so the stale reference would have resolved to the
    wrong instrument rather than to nothing.
+
 6. **The E2E surface cannot exercise a real workflow run.** It reads what `init` ships. Whether a
    documentation-only change actually produces a narrow lane set is now observable — PR #794's runs
    show it — and nothing consumes that observation. That is class B of the matrix's `❌` cells — whose
@@ -1851,8 +1855,7 @@ something is written, believed without reading it.
    of a finding about it.** Every occurrence is a claim asserted over **how something is written**
    rather than over **what it does**. This is the canonical list — three other sites used to carry
    three different counts of it, so they point here now and the count is the list's length:
-
-   1. `E4` — a package-manager regex that measured npm-script *naming*; `pnpm run build` and six more
+   1. `E4` — a package-manager regex that measured npm-script _naming_; `pnpm run build` and six more
       idiomatic forms reddened nothing.
    2. `v4` — `pnpm ci:build-verify` reported as a build **by the script's name**, when its body reaches
       no build at all.
@@ -1893,11 +1896,11 @@ something is written, believed without reading it.
        did not understand was permission to run anything. Round 11 ran fifteen of eighteen real builds
        past it, and probe 01 was `pnpm build`, the first entry its own corpus refuses, with one `if`
        around it. This is the sharpest instance in the list because the claim was not incidental: it was
-       the *reason for the design*, it was written in three files, and it was never measured. Round 10
+       the _reason for the design_, it was written in three files, and it was never measured. Round 10
        accepted it on the strength of a corpus that could not test it (entry 13).
    13. **That corpus.** All 62 `PLANTED` entries were bare commands, so "0 escaped" carried no
        information about wrapping — and the accept direction was worse than uninformative. Its
-       must-accept case produced no refusals *because of* the hole, so the test certifying the
+       must-accept case produced no refusals _because of_ the hole, so the test certifying the
        instrument was derived from the instrument's blind spot and any real repair had to redden it.
        That is entry 5 (probes generated from the sets they pin) at the level of a whole instrument
        rather than a member.
@@ -1952,7 +1955,6 @@ something is written, believed without reading it.
    only helps if the failure of the scan is itself a refusal.
 
    Two further limits are worth stating, because each cost a round:
-
    - **An oracle round on a pin whose needle is a closed enumeration proves nothing outside that
      enumeration.** The pack-count pin passed every round it existed and went inert at exactly eleven
      packs, when the numeral left the alternation its pattern listed. Matching nothing was a pass.
@@ -1964,10 +1966,11 @@ something is written, believed without reading it.
      section that names every column. Before writing a guard over prose, mutate the prose it guards —
      the direction that matters is the one where the record is wrong, and a check that cannot express
      that state is decoration however carefully it is worded.
+
 8. **`TDD-0069` and `TDD-0070` are parked, and they are parked for two different reasons.**
    **Both are still `todo` in the ledger**, and what follows is the status each is owed rather than
    one it has — round 4 and round 5 each found this item asserting the statuses while `## Final
-   status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0010`, whose
+status` said neither had been written. `TDD-0070` is owed `exception` against `DR-0017-0010`, whose
    account P1d sustained through all six passes and passed at the sixth: post-merge history cannot
    exist pre-merge.
    `TDD-0069` is owed `blocked` on `CR-20260820-0012`, and P1d's fourth pass **released** that write
@@ -1986,7 +1989,6 @@ something is written, believed without reading it.
    `Evidence`; the first version of this line said `Notes`, a column that does not exist.)
 
 9. **Two things the shipped-lane repairs do not close, stated rather than implied.**
-
    - **An allowed install runs the adopter's own code.** `npm ci`, `npm install --no-audit --no-fund`,
      `pnpm install --frozen-lockfile` and `yarn` are all enumerated, and every one of them executes
      whatever `preinstall` / `postinstall` / `prepare` an adopter's `package.json` declares. This item
@@ -2004,6 +2006,7 @@ something is written, believed without reading it.
      shipped lane executes no build in an adopter's tree". Every assertion in this record about that
      story means the first sentence. Naming it matters because the second sentence is the one a reader
      assumes.
+
    - **And the lane can still choose WHERE a reviewed install runs**, or could until round 15:
      `defaults.run.working-directory` pointed the digest-approved lockfile-aware install at a tree of the
      planter's choosing, whose lifecycle scripts then ran. It is closed by the key enumerations — that
@@ -2014,50 +2017,51 @@ something is written, believed without reading it.
      the only check that reads an adopter-facing body at all. What it is not, after the sweep, is the
      thing standing between an unreviewed body and the shipped tree — `ALLOWED_STEP_BODIES` is.
 
-10. **A `⚠️` cell cannot be justified in this artifact, whatever anyone writes, and that is a contract
-    gap rather than a prose gap.** Round 19's `qa-gatekeeper` filed the symptom as a residual under a
-    check it explicitly passed; round 20's `completion-reviewer` found the cause, and found this item's
-    first version wrong in three ways at once.
+10. **CLOSED. A `⚠️` cell could not be justified in this artifact whatever anyone wrote, and now it
+    can.** Round 19's `qa-gatekeeper` filed the symptom as a residual under a check it explicitly
+    passed; round 20's `completion-reviewer` found the cause and refuted three things this item said
+    in its first form. Both the contract and the fifteen cells are now written.
 
-    `§ "Every ❌ cell, named"` and `coverageDepthMatrix.test.ts` both key on `❌`. So a `⚠️` cell is
-    outside the enumeration by construction, and `US-0017-0002` and `US-0017-0009` have no
-    justification section at all — the artifact gives one only to a row whose `Status` is `❌`. Writing
-    prose does not close that; changing what the enumeration covers does.
+    **The cause was a contract gap, not missing prose.** `§ "Every ❌ cell, named"` and
+    `coverageDepthMatrix.test.ts` both keyed on `❌`, so a `⚠️` cell was outside the enumeration by
+    construction, and `US-0017-0002` and `US-0017-0009` had no justification section at all — the
+    artifact writes one only for a row whose `Status` is `❌`. Writing prose would not have closed
+    that; changing what the enumeration covers did.
 
-    **The measurement, by the parse the guard itself uses.** Fifteen `⚠️` cells across the seven depth
-    columns:
+    **What was added.** `§ "Every ⚠️ cell, named"` carries a partition of all fifteen depth cells into
+    four classes with a line each, and the guard enforces the same three properties the `❌` partition
+    has — disjoint, complete, naming nothing scored otherwise — plus a stated size per class and a
+    line per member. `parsePartition` now reads one section rather than the document, because two
+    row-shaped tables in one file would otherwise merge and the merge would read as a completeness
+    pass. Falsified five ways, each restored from a copy: a dropped member, a member that is not
+    `⚠️`, a cell claimed twice, a stated size that no longer matches, and a member with no line.
 
-    ```text
-    US-0017-0001  Error path, Special values
-    US-0017-0002  Boundary values, Combinatorial
-    US-0017-0003  Boundary values, Special values
-    US-0017-0004  Oracle strength
-    US-0017-0005  Oracle strength
-    US-0017-0006  Oracle strength
-    US-0017-0007  Boundary values, Special values
-    US-0017-0008  Normal path, Oracle strength
-    US-0017-0009  Boundary values, Special values
-    ```
+    **The classes, and what they are for.** They are deliberately not `❌`'s A/B/C: those say why a
+    behaviour cannot be exercised, and every one of these is a statement about a behaviour that partly
+    is. `W1` (2 cells) — the surface IS exercised, by a row that is not this one. `W2` (8) — part of
+    the domain is exercised and a named part is not. `W3` (4) — the oracle is weaker than the claim.
+    `W4` (1) — one half of the story is reachable and the other is not.
 
-    **Seven of the fifteen already carry a reason** — `-0003`'s two, `-0004`, `-0005`, `-0007`'s two and
-    `-0008`'s normal path, each quoted in round 20's `R02`. Eight genuinely carry nothing: `-0001`'s
-    two, `-0002`'s two, `-0006`'s and `-0008`'s oracle strength, and `-0009`'s two. So the work is
-    **eight reasons and one contract change**, not fifteen sentences — and a round that discharged this
-    item as first written would have written seven reasons for cells that already have one, in a second
-    place, which is lesson 2 turned into a work order.
+    **`W1` is the class worth arguing about, and the argument is in the artifact's own words.** This
+    matrix scores _the surface each story is actually about_ — its opening section says so — not the
+    annotation that happens to carry a test. So `US-0017-0001`'s error paths and value classes count
+    as exercised even though `spec-0003`'s rows assert them, and the `⚠️` records the two facts a
+    reader needs: this spec's row does not carry it, and one branch (`qfai-tests.yml:98-100`, the
+    `name-only diff failed` arm) is reached by nothing in the repository at all. A derivation that
+    recommended re-scoring those cells to `❌` was set aside on exactly that ground: it read the matrix
+    as scoring per annotation, and the matrix says it scores per surface.
 
-    **What the first version of this item got wrong, recorded because the shape matters more than the
-    numbers.** It said sixteen while its own enumeration listed fifteen — a numeral contradicting the
-    list beside it, in the paragraph arguing against writing things quickly, in the record whose
-    most-repeated defect is a numeral nothing derives. It said all of them "carry no reason anywhere",
-    which seven counter-examples refute. And it cited lesson 5 as warning against "tidy summaries",
-    which lesson 5 does not say: lesson 5 is that a deferral needs the evidence any other claim needs.
-    **Applied properly it is the standard this item failed**, not the licence it claimed — the evidence
-    offered for deferring was a count the table does not hold and a universal the artifact refutes.
+    **What the first version of this item got wrong**, kept because the shape matters more than the
+    numbers. It said sixteen while its own enumeration listed fifteen — a numeral contradicting the
+    list beside it, in the paragraph arguing against writing things quickly. It said all of them
+    "carry no reason anywhere", which seven counter-examples refute. And it cited lesson 5 as warning
+    against "tidy summaries", which lesson 5 does not say: lesson 5 is that a deferral needs the
+    evidence any other claim needs, and applied properly it was the standard that paragraph failed.
 
-    The deferral itself stands, and round 20's reviewer said so before filing the rest: the obligation
-    was one round old, it arrived as a residual under a passing check, and it landed in the commit that
-    OPENS a review round — the one moment this stage's own rule says the subject must stop moving.
+    **The residual, stated rather than absorbed.** Two of the fifteen name work nothing here can do:
+    `US-0017-0006`'s oracle cannot reach the adopter half because no hygiene lane ships
+    (`grep -rn check-workflow-hygiene packages/qfai/assets/` returns nothing), and the `fail_open` arm
+    above needs a fixture in which `git diff` itself exits non-zero. Both are named in their lines.
 
 11. **Three claims this record retracted are standing, live and unquoted, in the execution ledger — a
     file this skill reads and does not write.** Round 20's `qa-gatekeeper` re-grepped all 33 needles
@@ -2089,7 +2093,6 @@ something is written, believed without reading it.
     **The related limit, measured.** Two of the 33 needles cannot be widened as they stand, and this
     paragraph deliberately does not write either of them out — round 20 found that doing so is itself
     the offence, which is the neatest demonstration available that the guard works:
-
     - the **pack-count** needle matches a sentence in `_policies/08_Decisions.md`,
       `_policies/10_delta.md` and `spec-0017/09_delta.md` about one design being fragmented across
       three SPEC packs, which is a different noun from a review pack;
@@ -2111,11 +2114,11 @@ cleared. Five rounds asked for this. The request was **committed before they lau
 fault and is fixed structurally rather than by intention. All three confirmed HEAD did not move and
 `git status --porcelain` was empty at their start.
 
-| reviewer                   | verdict  | findings                        | report                             |
-| -------------------------- | -------- | ------------------------------- | ---------------------------------- |
-| `implementation-reviewer`  | REVISE   | 4 blocking, 6 medium, 9 low     | `R01_implementation-reviewer.md`   |
-| `completion-reviewer`      | REVISE   | 4 blocking, 4 major, 5 minor    | `R02_completion-reviewer.md`       |
-| `qa-gatekeeper`            | REVISE   | 3 blocking, 6 advisory          | `R03_qa-gatekeeper.md`             |
+| reviewer                  | verdict | findings                     | report                           |
+| ------------------------- | ------- | ---------------------------- | -------------------------------- |
+| `implementation-reviewer` | REVISE  | 4 blocking, 6 medium, 9 low  | `R01_implementation-reviewer.md` |
+| `completion-reviewer`     | REVISE  | 4 blocking, 4 major, 5 minor | `R02_completion-reviewer.md`     |
+| `qa-gatekeeper`           | REVISE  | 3 blocking, 6 advisory       | `R03_qa-gatekeeper.md`           |
 
 **What they could not break, having tried:** the `US-0017-0003` behavioural assertion (`qa-gatekeeper`
 added two rounds this stage had not measured, and reports the failure messages name the row's own
@@ -2126,7 +2129,7 @@ matching line for line; the scoped gate at `error=2` with the right content, its
 Delta Rejected Guard.
 
 **One thing they vindicated rather than merely accepted.** `qa-gatekeeper` reports that the tracked
-`.qfai/report/validate.log` was rewritten *during its review* by another process — unscoped,
+`.qfai/report/validate.log` was rewritten _during its review_ by another process — unscoped,
 `warnings: 376`, five specs — provably not its own, since both of its runs wrote into its shadow root.
 That is the exact hazard this record cites when it declines to use `validate.log` as Hard Gate
 evidence. Had the citation been `validate.log`, this section would now be quoting another stage's
@@ -2138,12 +2141,12 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 20: the e2e figure is 1478 and the integration+unit figure 1240.
+round 20: the e2e figure is 1479 and the integration+unit figure 1240.
 
 **And the integration+unit figure moved — but not for the reason this paragraph gave for a round, and
 the figure it replaced had been wrong since round 15.** A concurrent session pushed `b0f9d443` onto this
-branch, and the first version of this paragraph attributed the whole move to it: *"the integration+unit
-figure moved without this stage touching it."* Round 19's `completion-reviewer` measured the window
+branch, and the first version of this paragraph attributed the whole move to it: _"the integration+unit
+figure moved without this stage touching it."_ Round 19's `completion-reviewer` measured the window
 commit by commit and the attribution is false. Re-derived here with the guard's own `CALLSITE` rule,
 extracted from its bytes and run over `tests/{integration,unit}/**/*.test.ts` at each revision:
 
@@ -2162,7 +2165,7 @@ touching it was written one commit after this stage moved it.
 
 **And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — for
 integration+unit, 99 against passed and 118 against passed-plus-skipped; for e2e, 564 and 580. It holds
-at round 12's `1216` / `1117`, at today's e2e `1478` / `914`, and at
+at round 12's `1216` / `1117`, at today's e2e `1479` / `915`, and at
 today's `1239` / `1140`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
 the record said **1220**: one high for the whole of rounds 15 to 18, in the block whose first sentence is
 "re-run after the last artifact changed". The re-measurement that replaced it did not detect that,
@@ -2188,7 +2191,7 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 914
+e2e callsites at this tree: 915
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -2227,7 +2230,7 @@ mode, for the third time.
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1478 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1479 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1240 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
@@ -2317,13 +2320,13 @@ with `git diff` rather than by rereading the file. What is derivable about the a
 naming a single instrument for all of it was itself a wrong attribution, of the same class as the two
 this section reports:
 
-| derived                                                | instrument                        |
-| ------------------------------------------------------ | --------------------------------- |
+| derived                                                                                             | instrument                    |
+| --------------------------------------------------------------------------------------------------- | ----------------------------- |
 | per-file test counts, annotated describes, recorded vitest outputs, the named packs and their seals | `stageEvidenceCounts.test.ts` |
-| the pack-count **numeral** in prose ("Eight packs")     | `retractedClaims.test.ts`         |
-| the classifier version this record names                | `coverageDepthMatrix.test.ts`     |
-| the matrix's totals, partition, class prose, row width  | `coverageDepthMatrix.test.ts`     |
-| every grammar member of the classifier                  | `unit/buildCommand.test.ts`       |
+| the pack-count **numeral** in prose ("Eight packs")                                                 | `retractedClaims.test.ts`     |
+| the classifier version this record names                                                            | `coverageDepthMatrix.test.ts` |
+| the matrix's totals, partition, class prose, row width                                              | `coverageDepthMatrix.test.ts` |
+| every grammar member of the classifier                                                              | `unit/buildCommand.test.ts`   |
 
 Five rounds each found a number here that the tree did not hold; correcting them one at a time did not
 work, and on its first run the derived-count guard found a pack seal missing from a section this record
@@ -2376,7 +2379,7 @@ the retracted-claims list, which round 8 added.
 
 **The clause-1 correction was itself wrong, and this is the fifth vacuous claim on this spec.** Round
 1's finding was that `EX-0017-0053` had been half-quoted, dropping "exactly one runner project is
-tuned, largest first". The repair said that clause *is* satisfied by pre-existing state and *is*
+tuned, largest first". The repair said that clause _is_ satisfied by pre-existing state and _is_
 falsifiable by tuning a second project in `vitest.knobs.ts`. **That mutation does nothing**:
 `maxWorkers` lives in `rootKnobs`, the file's own docstring records that a per-project worker
 declaration "type-checked, it ran, it emitted no warning — and it did nothing" at a ratio of 0.93, and
@@ -2406,67 +2409,67 @@ those reports, not of the rule** — which is the opposite of what the next para
 without recounting, and `summary` carries what that pack's own `summary.json` records where the two
 differ.
 
-| round | reviewer                  | verdict | findings | id families            | summary |
-| ----- | ------------------------- | ------- | -------: | ---------------------- | ------: |
-| 1     | `completion-reviewer`     | REVISE  |       13 | B1-B5, M1-M4, m1-m4    |      13 |
-| 1     | `qa-gatekeeper` (stage)   | REVISE  |        — | enumerated inline      |       5 |
-| 2     | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M6           |      10 |
-| 2     | `completion-reviewer`     | REVISE  |       13 | B1-B4, M1-M4, m1-m5    |      13 |
-| 2     | `qa-gatekeeper` (stage)   | REVISE  |        — | enumerated inline      |       9 |
-| 2     | `qa-gatekeeper` (P1d 1)   | REVISE  |        6 | B1-B3, N1-N3           |       6 |
-| 3     | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M6           |      10 |
-| 3     | `completion-reviewer`     | REVISE  |       16 | B1-B7, M1-M5, m1-m4    |      16 |
-| 3     | `qa-gatekeeper` (P1d 2)   | REVISE  |        3 | B1-B3                  |       3 |
-| 3     | `qa-gatekeeper` (stage)   | **did not run** |  — | —                      |       — |
-| 4     | `implementation-reviewer` | not routed — the code was read by round 4's gatekeeper | — | — | — |
-| 4     | `completion-reviewer`     | REVISE  |       16 | B1-B6, M1-M5, m1-m5    |      16 |
-| 4     | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1, B2, M4, M4b, B6, B6b |    12 |
-| 4     | `qa-gatekeeper` (P1d 3)   | REVISE  |        5 | B1-B2, M1-M3           |       8 |
-| 5     | `completion-reviewer`     | REVISE  |       17 | B1-B7, M1-M5, m1-m5    |      17 |
-| 5     | `qa-gatekeeper` (stage)   | REVISE  |       12 | B1-B10, M1, M3         |      17 |
-| 5     | `qa-gatekeeper` (P1d 4)   | REVISE  |        3 | B1-B3                  |       3 |
-| 6     | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M5, m1-m6    |      18 |
-| 6     | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B10                 |      20 |
-| 6     | `qa-gatekeeper` (P1d 5)   | REVISE  |        2 | B1-B2                  |       3 |
-| 7     | `completion-reviewer`     | REVISE  |       21 | B1-B6, M1-M7, m1-m8    |      21 |
-| 7     | `qa-gatekeeper` (stage)   | REVISE  |       18 | B1-B11, A1-A7          |      18 |
-| 7     | `qa-gatekeeper` (P1d 6)   | **PASS** |       8 | M1, A1-A7 (inline)     |       8 |
-| 8     | `completion-reviewer`     | REVISE  |       29 | B1-B6, M1-M7, m1-m16   |      29 |
-| 8     | `qa-gatekeeper` (stage)   | REVISE  |       22 | B1-B11, A1-A11         |      22 |
-| 9     | `implementation-reviewer` | REVISE  |       25 | B1-B4, M1-M9, m1-m12   |      25 |
-| 9     | `completion-reviewer`     | REVISE  |       22 | B1-B6, M1-M6, m1-m10   |      22 |
-| 9     | `qa-gatekeeper` (stage)   | REVISE  |       17 | B1-B8, A1-A9           |      17 |
-| 10    | `implementation-reviewer` | REVISE  |       26 | B1-B6, M1-M9, m1-m11   |      26 |
-| 10    | `completion-reviewer`     | REVISE  |       20 | B1-B5, M1-M7, m1-m8    |      20 |
-| 10    | `qa-gatekeeper` (stage)   | REVISE  |       16 | B1-B9, A1-A7           |      16 |
-| 11    | `implementation-reviewer` | REVISE  |       16 | B1-B4, M1-M5, m1-m7    |      16 |
-| 11    | `completion-reviewer`     | REVISE  |       17 | B1-B6, M1-M7, m1-m4    |      17 |
-| 11    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B8, A1-A7           |      15 |
-| 12    | `implementation-reviewer` | REVISE  |       16 | B1-B2, M1-M6, m1-m7, A1 |     16 |
-| 12    | `completion-reviewer`     | REVISE  |       26 | B1-B6, M1-M9, m1-m8, A1-A3 |  26 |
-| 12    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B6, A1-A8           |      14 |
-| 13    | — none ran                | —       |        0 | reviewers died on ENOTFOUND |    — |
-| 14    | `implementation-reviewer` | REVISE  |       10 | B1-B5, m1-m3, A1-A2    |      10 |
-| 14    | `completion-reviewer`     | REVISE  |       14 | B1-B3, M1-M4, m1-m4, A1-A3 |  14 |
-| 14    | `qa-gatekeeper` (stage)   | REVISE  |       14 | B1-B4, M1-M4, m1-m3, A1-A3 |  14 |
-| 15    | `implementation-reviewer` | REVISE  |       15 | B1-B4, M1-M2, m1-m6, A1-A3 |  15 |
-| 15    | `completion-reviewer`     | REVISE  |       14 | B1-B5, M1-M3, m1-m4, A1-A2 |  14 |
-| 15    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B2, M1-M4, m1-m3, A1 |     10 |
-| 16    | `implementation-reviewer` | REVISE  |        8 | B1-B4, M1, m1, A1-A2   |       8 |
-| 16    | `completion-reviewer`     | REVISE  |       13 | B1-B5, M1-M5, m1-m2, A1 |    13 |
-| 16    | `qa-gatekeeper` (stage)   | REVISE  |        9 | B1-B2, M1-M2, m1-m3, A1-A2 |  9 |
-| 17    | `implementation-reviewer` | REVISE  |       10 | B1-B4, M1-M3, m1-m2, A1 |    10 |
-| 17    | `completion-reviewer`     | REVISE  |       11 | B1-B5, M1-M4, m1, A1   |      11 |
-| 17    | `qa-gatekeeper` (stage)   | REVISE  |        6 | B1, M1-M2, m1-m2, A1   |       6 |
-| 18    | `implementation-reviewer` | REVISE  |       11 | B1-B5, M1, m1-m4, A1   |      11 |
-| 18    | `completion-reviewer`     | REVISE  |       12 | B1-B5, M1-M3, m1-m3, A1 |    12 |
-| 18    | `qa-gatekeeper` (stage)   | REVISE  |       11 | B1-B2, M1-M4, m1-m3, A1-A2 | 11 |
-| 19    | `implementation-reviewer` | REVISE  |        8 | B1, M1-M3, m1-m3, A1   |       8 |
-| 19    | `completion-reviewer`     | REVISE  |       13 | B1-B6, M1-M2, m1-m3, A1-A2 | 13 |
-| 19    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B3, M1-M3, m1-m3, A1 |     10 |
-| 20    | `implementation-reviewer` | REVISE  |        8 | B1, M1-M4, m1-m2, A1   |       8 |
-| 20    | `completion-reviewer`     | REVISE  |       16 | B1-B6, M1-M4, m1-m4, A1-A2 | 16 |
-| 20    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B2, M1-M4, m1-m3, A1-A6 | 15 |
+| round | reviewer                  | verdict                                                | findings | id families                 | summary |
+| ----- | ------------------------- | ------------------------------------------------------ | -------: | --------------------------- | ------: |
+| 1     | `completion-reviewer`     | REVISE                                                 |       13 | B1-B5, M1-M4, m1-m4         |      13 |
+| 1     | `qa-gatekeeper` (stage)   | REVISE                                                 |        — | enumerated inline           |       5 |
+| 2     | `implementation-reviewer` | REVISE                                                 |       10 | B1-B4, M1-M6                |      10 |
+| 2     | `completion-reviewer`     | REVISE                                                 |       13 | B1-B4, M1-M4, m1-m5         |      13 |
+| 2     | `qa-gatekeeper` (stage)   | REVISE                                                 |        — | enumerated inline           |       9 |
+| 2     | `qa-gatekeeper` (P1d 1)   | REVISE                                                 |        6 | B1-B3, N1-N3                |       6 |
+| 3     | `implementation-reviewer` | REVISE                                                 |       10 | B1-B4, M1-M6                |      10 |
+| 3     | `completion-reviewer`     | REVISE                                                 |       16 | B1-B7, M1-M5, m1-m4         |      16 |
+| 3     | `qa-gatekeeper` (P1d 2)   | REVISE                                                 |        3 | B1-B3                       |       3 |
+| 3     | `qa-gatekeeper` (stage)   | **did not run**                                        |        — | —                           |       — |
+| 4     | `implementation-reviewer` | not routed — the code was read by round 4's gatekeeper |        — | —                           |       — |
+| 4     | `completion-reviewer`     | REVISE                                                 |       16 | B1-B6, M1-M5, m1-m5         |      16 |
+| 4     | `qa-gatekeeper` (stage)   | REVISE                                                 |        6 | B1, B2, M4, M4b, B6, B6b    |      12 |
+| 4     | `qa-gatekeeper` (P1d 3)   | REVISE                                                 |        5 | B1-B2, M1-M3                |       8 |
+| 5     | `completion-reviewer`     | REVISE                                                 |       17 | B1-B7, M1-M5, m1-m5         |      17 |
+| 5     | `qa-gatekeeper` (stage)   | REVISE                                                 |       12 | B1-B10, M1, M3              |      17 |
+| 5     | `qa-gatekeeper` (P1d 4)   | REVISE                                                 |        3 | B1-B3                       |       3 |
+| 6     | `completion-reviewer`     | REVISE                                                 |       17 | B1-B6, M1-M5, m1-m6         |      18 |
+| 6     | `qa-gatekeeper` (stage)   | REVISE                                                 |       10 | B1-B10                      |      20 |
+| 6     | `qa-gatekeeper` (P1d 5)   | REVISE                                                 |        2 | B1-B2                       |       3 |
+| 7     | `completion-reviewer`     | REVISE                                                 |       21 | B1-B6, M1-M7, m1-m8         |      21 |
+| 7     | `qa-gatekeeper` (stage)   | REVISE                                                 |       18 | B1-B11, A1-A7               |      18 |
+| 7     | `qa-gatekeeper` (P1d 6)   | **PASS**                                               |        8 | M1, A1-A7 (inline)          |       8 |
+| 8     | `completion-reviewer`     | REVISE                                                 |       29 | B1-B6, M1-M7, m1-m16        |      29 |
+| 8     | `qa-gatekeeper` (stage)   | REVISE                                                 |       22 | B1-B11, A1-A11              |      22 |
+| 9     | `implementation-reviewer` | REVISE                                                 |       25 | B1-B4, M1-M9, m1-m12        |      25 |
+| 9     | `completion-reviewer`     | REVISE                                                 |       22 | B1-B6, M1-M6, m1-m10        |      22 |
+| 9     | `qa-gatekeeper` (stage)   | REVISE                                                 |       17 | B1-B8, A1-A9                |      17 |
+| 10    | `implementation-reviewer` | REVISE                                                 |       26 | B1-B6, M1-M9, m1-m11        |      26 |
+| 10    | `completion-reviewer`     | REVISE                                                 |       20 | B1-B5, M1-M7, m1-m8         |      20 |
+| 10    | `qa-gatekeeper` (stage)   | REVISE                                                 |       16 | B1-B9, A1-A7                |      16 |
+| 11    | `implementation-reviewer` | REVISE                                                 |       16 | B1-B4, M1-M5, m1-m7         |      16 |
+| 11    | `completion-reviewer`     | REVISE                                                 |       17 | B1-B6, M1-M7, m1-m4         |      17 |
+| 11    | `qa-gatekeeper` (stage)   | REVISE                                                 |       15 | B1-B8, A1-A7                |      15 |
+| 12    | `implementation-reviewer` | REVISE                                                 |       16 | B1-B2, M1-M6, m1-m7, A1     |      16 |
+| 12    | `completion-reviewer`     | REVISE                                                 |       26 | B1-B6, M1-M9, m1-m8, A1-A3  |      26 |
+| 12    | `qa-gatekeeper` (stage)   | REVISE                                                 |       14 | B1-B6, A1-A8                |      14 |
+| 13    | — none ran                | —                                                      |        0 | reviewers died on ENOTFOUND |       — |
+| 14    | `implementation-reviewer` | REVISE                                                 |       10 | B1-B5, m1-m3, A1-A2         |      10 |
+| 14    | `completion-reviewer`     | REVISE                                                 |       14 | B1-B3, M1-M4, m1-m4, A1-A3  |      14 |
+| 14    | `qa-gatekeeper` (stage)   | REVISE                                                 |       14 | B1-B4, M1-M4, m1-m3, A1-A3  |      14 |
+| 15    | `implementation-reviewer` | REVISE                                                 |       15 | B1-B4, M1-M2, m1-m6, A1-A3  |      15 |
+| 15    | `completion-reviewer`     | REVISE                                                 |       14 | B1-B5, M1-M3, m1-m4, A1-A2  |      14 |
+| 15    | `qa-gatekeeper` (stage)   | REVISE                                                 |       10 | B1-B2, M1-M4, m1-m3, A1     |      10 |
+| 16    | `implementation-reviewer` | REVISE                                                 |        8 | B1-B4, M1, m1, A1-A2        |       8 |
+| 16    | `completion-reviewer`     | REVISE                                                 |       13 | B1-B5, M1-M5, m1-m2, A1     |      13 |
+| 16    | `qa-gatekeeper` (stage)   | REVISE                                                 |        9 | B1-B2, M1-M2, m1-m3, A1-A2  |       9 |
+| 17    | `implementation-reviewer` | REVISE                                                 |       10 | B1-B4, M1-M3, m1-m2, A1     |      10 |
+| 17    | `completion-reviewer`     | REVISE                                                 |       11 | B1-B5, M1-M4, m1, A1        |      11 |
+| 17    | `qa-gatekeeper` (stage)   | REVISE                                                 |        6 | B1, M1-M2, m1-m2, A1        |       6 |
+| 18    | `implementation-reviewer` | REVISE                                                 |       11 | B1-B5, M1, m1-m4, A1        |      11 |
+| 18    | `completion-reviewer`     | REVISE                                                 |       12 | B1-B5, M1-M3, m1-m3, A1     |      12 |
+| 18    | `qa-gatekeeper` (stage)   | REVISE                                                 |       11 | B1-B2, M1-M4, m1-m3, A1-A2  |      11 |
+| 19    | `implementation-reviewer` | REVISE                                                 |        8 | B1, M1-M3, m1-m3, A1        |       8 |
+| 19    | `completion-reviewer`     | REVISE                                                 |       13 | B1-B6, M1-M2, m1-m3, A1-A2  |      13 |
+| 19    | `qa-gatekeeper` (stage)   | REVISE                                                 |       10 | B1-B3, M1-M3, m1-m3, A1     |      10 |
+| 20    | `implementation-reviewer` | REVISE                                                 |        8 | B1, M1-M4, m1-m2, A1        |       8 |
+| 20    | `completion-reviewer`     | REVISE                                                 |       16 | B1-B6, M1-M4, m1-m4, A1-A2  |      16 |
+| 20    | `qa-gatekeeper` (stage)   | REVISE                                                 |       15 | B1-B2, M1-M4, m1-m3, A1-A6  |      15 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2633,7 +2636,7 @@ ran a real build while `refusals()` returned `[]`**, and they reduce to five ind
 - **`lastCode` was nearly the question.** It answered "what is the last code character" where all three
   of its callers meant "what is the previous character, and is it code". The difference only shows when
   something masked sits between, and a quoted redirection target is exactly that: `echo x >
-  "$GITHUB_OUTPUT" | npx tsup` ran a build with the scan clean. It is deleted. **A helper that is nearly
+"$GITHUB_OUTPUT" | npx tsup` ran a build with the scan clean. It is deleted. **A helper that is nearly
   the question is worse than none, because it reads as though it were the question.**
 
 **The init surface was beaten again, one commit after it was built.** `INIT_MUST_NOT_SHIP` called itself
@@ -2893,7 +2896,6 @@ What is not satisfied:
   **The same finding is what holds the repository's required `build` context**, whose `tdd`-profile
   step runs at `--root .`; `main` is green on that gate, so the condition is this branch's. Every
   route to clearing it was checked rather than assumed, and each is closed for a stated reason:
-
   - **a waiver cannot reach it.** `.qfai/waivers.yml` states the rule in its own header —
     "Waivers apply to `warning` and `info` findings only. A waiver aimed at an `error` is a
     configuration error and fails the run." `QFAI-ATDD-112` is an `error`, so the `TDDLIST-001`
@@ -2907,6 +2909,7 @@ What is not satisfied:
   So the red gate is the correct signal for a spec with four undecided change requests, and the
   only thing that clears it is deciding them. Recorded here so the next round does not re-derive
   the three closed routes;
+
 - **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
@@ -2991,7 +2994,7 @@ Round 1's pack, for continuity:
 
 **Twenty** packs, one per round — and round 13's holds a request and no reports, because its three
 reviewers died on `ENOTFOUND` before writing. Zero is a legitimate response count for a round; it is not
-a passed one. The seal is *supposed* to be fixed at the moment the last reviewer
+a passed one. The seal is _supposed_ to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures the gap **per round**, without a
 summary figure — because this sentence carried one ("four of seven closed packs") while the section it
 points at had already retracted that exact wording for going stale as packs closed. One section asserting
@@ -3191,7 +3194,7 @@ reproduce exactly as stated.
 
 **Why round 1's superseded seal is recorded rather than dropped.** The re-seal added `summary.json`, and
 "the pack gained a required artifact" is equally compatible with the reports having changed too — so the
-*reasoning* would launder an illegitimate re-seal. What discharges it is that the first seal still
+_reasoning_ would launder an illegitimate re-seal. What discharges it is that the first seal still
 reproduces over the three reports **as they stand now**, which both round-2 and round-3 gates
 recomputed independently. Recording the superseded value is what makes that check possible.
 
