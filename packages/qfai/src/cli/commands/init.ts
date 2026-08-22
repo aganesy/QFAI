@@ -1905,6 +1905,10 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
   "qfai-require",
   "qfai-scenario-test",
   "qfai-sdd",
+  // SDD が 3 skill に分かれていた期間 (recut より前) に roster に載っていたので、
+  // 当時の generator は両方に command / prompt wrapper を書いている。
+  "qfai-sdd-planning",
+  "qfai-sdd-refinement",
   "qfai-spec",
   "qfai-tdd-green",
   "qfai-tdd-red",
@@ -1919,11 +1923,15 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
  * stem は「過去に qfai がその名前を使った」ことしか示さない。プロジェクトが
  * 自分で `.claude/commands/qfai-spec.md` を書いた場合も、旧 wrapper を自前の
  * 内容に差し替えた場合も、名前だけで消せばユーザのコンテンツを失う。qfai が
- * 配ってきた wrapper は例外なく「同じ stem の canonical doc」への参照を本文に
- * 持つ (`@.qfai/assistant/prompts/<stem>.md` あるいは
- * `.qfai/assistant/skills/<stem>/SKILL.md`) — 出荷された全世代の wrapper が
- * そうなっている。この参照が生成物である証拠であり、これを持たないファイルは
- * stem が一致しても触らない。
+ * 配ってきた wrapper は例外なく「同じ stem の canonical doc」への委譲行を持ち
+ * ({@link DELEGATION_LINES})、出荷された全世代の wrapper がそうなっている。
+ * この行が生成物である証拠であり、これを持たないファイルは stem が一致しても
+ * 触らない。
+ *
+ * 判定は **行単位の完全一致** で行う。canonical パスが本文のどこかに現れる
+ * ことを証拠にすると、同名のプロジェクト独自 command が説明文・否定文・コード
+ * 例でそのパスに言及しただけで init 生成物と誤認され、`--force` で消える。
+ * 生成された wrapper では委譲行がその行の全体なので、部分一致を許す理由がない。
  *
  * 本文は {@link WRAPPER_EVIDENCE_MAX_BYTES} までしか読まない。出荷された
  * wrapper はどの世代も 1 KB 未満だが、同名の通常ファイルが何であるかは
@@ -1945,11 +1953,22 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
     return false;
   }
 
-  return (
-    body.includes(`.qfai/assistant/prompts/${stem}.md`) ||
-    body.includes(`.qfai/assistant/skills/${stem}/SKILL.md`)
-  );
+  const delegations = new Set(DELEGATION_LINES(stem));
+  return body.split(/\r?\n/).some((line) => delegations.has(line.trim()));
 }
+
+/**
+ * 出荷実績のある委譲行の全形。
+ *
+ * Claude の slash command は `@<path>`、Copilot prompt / Codex / Agents の
+ * skill wrapper は箇条書きの `- <path>` で canonical doc を指す。canonical の
+ * 置き場所は `assistant/prompts/<stem>.md` から `assistant/skills/<stem>/SKILL.md`
+ * へ移っており、どちらの世代の wrapper もまだプロジェクトに残りうる。
+ */
+const DELEGATION_LINES = (stem: string): readonly string[] => {
+  const targets = [`.qfai/assistant/prompts/${stem}.md`, `.qfai/assistant/skills/${stem}/SKILL.md`];
+  return targets.flatMap((target) => [`@${target}`, `- ${target}`]);
+};
 
 /**
  * 所有権判定のために読む wrapper 本文の上限。
@@ -2022,31 +2041,44 @@ async function linksIntoCanonicalSkills(
     // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
     return false;
   }
+  return resolvesIntoCanonicalSkills(entryPath, target, canonicalSkillsDir);
+}
+
+/** そのリンク先文字列が canonical skills tree の中を指すか。 */
+function resolvesIntoCanonicalSkills(
+  entryPath: string,
+  target: string,
+  canonicalSkillsDir: string,
+): boolean {
   const resolved = path.resolve(path.dirname(entryPath), target);
   const rel = path.relative(canonicalSkillsDir, resolved);
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
 /**
- * その entry が init の置いた skill wrapper か — 形は世代によって二通りある。
+ * その entry が init の置いた skill wrapper か — 形は三通りある。
  *
- * wrapper が symlink になったのは symlink recut 以降で、それ以前の init は
- * `.codex/skills/<id>/SKILL.md` のような **実ディレクトリ** を配っていた。
- * symlink だけを見ていると、recut 前の release から直接アップグレードした
- * プロジェクトに残る引退済み wrapper
- * (`qfai-spec/` など) が prune を素通りする — 名前が現 roster にないので
- * {@link ensureSymlink} の上書きにも当たらず、`--force` 後も廃止済みの指示が
- * アシスタントからロードできる状態で残ってしまう。
+ * 1. **symlink** — recut 後の init が張る形。リンク先で判定する
+ *    ({@link linksIntoCanonicalSkills})。
+ * 2. **実ディレクトリ** — recut 前の init は `.codex/skills/<id>/SKILL.md`
+ *    のようなディレクトリを配っていた。symlink だけを見ていると、recut 前の
+ *    release から直接アップグレードしたプロジェクトに残る引退済み wrapper
+ *    (`qfai-spec/` など) が prune を素通りする — 名前が現 roster にないので
+ *    {@link ensureSymlink} の上書きにも当たらず、`--force` 後も廃止済みの
+ *    指示がアシスタントからロードできる状態で残ってしまう。所有権は
+ *    `.claude/commands/` の wrapper と同じ基準 ({@link isInitWrittenWrapper})
+ *    で決める: 配ってきた `SKILL.md` は例外なく同じ id の canonical doc への
+ *    委譲行を持つ。これを持たないディレクトリはプロジェクトが自分で作った
+ *    ものなので、名前が引退済み id と衝突していても触らない。
+ * 3. **flatten された symlink** — `core.symlinks = false` の checkout では
+ *    symlink がリンク先文字列を内容とする通常ファイルになる。近傍の
+ *    {@link isFlattenedLink} が扱うのと同じ形で、これも init の生成物である。
+ *    通常ファイルを一律に非生成物としていると、その checkout では引退済み
+ *    wrapper が消えないままになる。
  *
- * ディレクトリ形式の所有権は `.claude/commands/` の wrapper と同じ基準
- * ({@link isInitWrittenWrapper}) で決める: 配ってきた `SKILL.md` は例外なく
- * 同じ id の canonical doc への委譲行を持つ。これを持たないディレクトリは
- * プロジェクトが自分で作ったものなので、名前が引退済み id と衝突していても
- * 触らない。
- *
- * 通常ファイルはどちらでもない。修復 sidecar (`qfai-atdd.qfai-repair-1234`)
- * がそれで、prune は repair より先に走るため、消すと前回の失敗した修復が
- * 残した唯一の控えを失うことになる。
+ * 残る通常ファイルは修復 sidecar (`qfai-atdd.qfai-repair-1234`) で、これは
+ * 名前が引退済み id と一致しないためそもそもここへ来ない。prune は repair
+ * より先に走るので、消すと前回の失敗した修復が残した唯一の控えを失う。
  */
 async function isInitWrittenSkillWrapper(
   entry: Dirent,
@@ -2056,11 +2088,29 @@ async function isInitWrittenSkillWrapper(
   if (entry.isSymbolicLink()) {
     return linksIntoCanonicalSkills(entryPath, canonicalSkillsDir);
   }
-  if (!entry.isDirectory()) {
+  if (entry.isDirectory()) {
+    const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
+    if (doc === null) {
+      return false;
+    }
+    const delegations = new Set(DELEGATION_LINES(entry.name));
+    return doc.split(/\r?\n/).some((line) => delegations.has(line.trim()));
+  }
+  if (!entry.isFile()) {
     return false;
   }
-  const body = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
-  return body !== null && body.includes(`.qfai/assistant/skills/${entry.name}/SKILL.md`);
+  // flatten された link。内容は「リンク先そのもの」なので、余計な行を持つ
+  // ファイルは対象外 — プロジェクトのメモが同じパスを 1 行書いていた場合に
+  // 消さないための条件でもある。
+  const flattened = await readWrapperEvidence(entryPath);
+  if (flattened === null) {
+    return false;
+  }
+  const target = flattened.trim();
+  if (target === "" || /[\r\n]/.test(target)) {
+    return false;
+  }
+  return resolvesIntoCanonicalSkills(entryPath, target, canonicalSkillsDir);
 }
 
 async function pruneStaleQfaiWrappers(

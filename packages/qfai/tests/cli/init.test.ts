@@ -680,6 +680,98 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("removes the flattened form of a retired skill symlink", async () => {
+    // A `core.symlinks = false` checkout leaves the link as a regular file
+    // holding the target string. Treating every regular file as not-ours left
+    // the retired wrapper in place on exactly those checkouts, where the id is
+    // out of the roster so `createSkillSymlinks` never reaches it either.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".claude", "skills", "qfai-spec");
+      await writeFile(
+        stale,
+        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-spec"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project note at a retired basename that merely mentions the target", async () => {
+    // The flattened form is the target and nothing else. A note that names the
+    // canonical path in a sentence is not a link, and deleting it would be the
+    // same over-reach the prefix walk made.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const note = path.join(root, ".claude", "skills", "qfai-spec");
+      const body = "we used to symlink ../../.qfai/assistant/skills/qfai-spec here\n";
+      await writeFile(note, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(note, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes the command and prompt wrappers of the retired split SDD skills", async () => {
+    // `qfai-sdd-planning` / `qfai-sdd-refinement` were in the roster while the
+    // generator still wrote `.claude/commands/` and `.github/prompts/`, so
+    // their wrappers exist in the wild — and were left behind by a stem set
+    // recovered only from the assets still in the tree.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-sdd-planning.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-sdd-refinement.prompt.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await writeFile(command, "@.qfai/assistant/prompts/qfai-sdd-planning.md\n", "utf-8");
+      await writeFile(prompt, "- .qfai/assistant/prompts/qfai-sdd-refinement.md\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(command)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(lstat(prompt)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project command that only mentions the canonical path in prose", async () => {
+    // Ownership is the delegation line, which is the whole line in every
+    // generation qfai shipped. Accepting the path anywhere in the body let a
+    // project's own `qfai-spec.md` be deleted for explaining — or forbidding —
+    // the canonical document.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body =
+        "Our spec flow. Do NOT read .qfai/assistant/prompts/qfai-spec.md — it is gone.\n";
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps an oversized file at a legacy wrapper basename instead of reading it whole", async () => {
     // Deciding whether to delete is not a reason to pull an arbitrary file
     // into memory: a large log left at `qfai-spec.md` used to be read whole as
