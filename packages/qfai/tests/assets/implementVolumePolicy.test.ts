@@ -191,8 +191,15 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(ledger).toContain("it forms a group of one and is reviewed alone");
 
       expect(section).toContain("the set of items that share one `BR-Ref` value");
-      expect(section).toContain("the next `todo` **T1** row carries a different `BR-Ref`");
+      expect(section).toContain(
+        "no `todo` **T1** row carrying the key remains **anywhere** in the ledger",
+      );
       expect(section).not.toContain("the first T1 row of a BR/AC reaches `refactor`");
+      // Ledger order need not be key-contiguous. Closing on "the next `todo`
+      // row has a different key" reopens a second group on the same key later,
+      // which is one review per contiguous run, not one per `BR-Ref`.
+      expect(section).toContain("The keyed conditions scan the **whole** ledger");
+      expect(section).toContain("`BR-A, BR-B, BR-A`");
       expect(skill).toContain("the rows sharing one `BR-Ref`, the ledger's group key");
     });
 
@@ -207,6 +214,11 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(ledger).toContain("**`TC` -> `EX` -> `BR`.**");
       expect(ledger).toContain("that `EX`'s `BR-Ref` in `05_Examples.md`");
       expect(ledger).toContain("**Only for a TC with no `EX-Ref`:**");
+      // One `EX` may pin a cohesive rule bundle to several `BR-*`
+      // (`layerCoverage.test.ts`), so the hop is not single-valued and the
+      // tie-break has to run over the union, not only over several `TC-Refs`.
+      expect(ledger).toContain("may list **several** `BR-*` in that one cell");
+      expect(ledger).toContain("The tie-break applies to the whole union");
     });
 
     it(`${tree}: the close conditions are scoped to the key's T1 members`, async () => {
@@ -217,11 +229,16 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("every **T1** row carrying the key has reached `refactor`");
       expect(section).toContain("Both keyed conditions read **T1 members only**");
       expect(section).toContain("neither join the group nor hold it open");
-      // `-` is "not resolved", not a value rows share.
+      // `-` is "not resolved", not a value rows share — and neither is the
+      // empty cell the validator accepts as the same state. Reading `""` as an
+      // ordinary key batches rows no `BR` relates into one review unit.
       expect(section).toContain("`-` is **not** a shared key");
+      expect(section).toContain("**empty cell reads exactly as `-`**");
       expect(section).toContain(
         "opens a group of one that closes the moment that row reaches `refactor`",
       );
+      const ledger = unwrap(await read(tree, LEDGER));
+      expect(ledger).toContain("**An empty cell is the same state as `-`**");
     });
 
     it(`${tree}: the ledger-exhausted clause is a terminator, not a grouping rule`, async () => {

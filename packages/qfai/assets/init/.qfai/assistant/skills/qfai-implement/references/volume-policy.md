@@ -86,11 +86,13 @@ the review-ready state — and waits there for its group. Members still move
 `refactor -> done`, only together.
 
 - **Open** the group when a T1 row reaches `refactor` and no group is open. Its
-  `BR-Ref` value becomes the group's key. `-` is **not** a shared key: a row
-  carrying `-` opens a group of one that closes the moment that row reaches
-  `refactor`, however many other `-` rows the ledger holds. Reading `-` as one
-  key would merge rows no `BR` relates and, with a second `-` row still `todo`,
-  leave both close conditions below false.
+  `BR-Ref` value becomes the group's key. `-` is **not** a shared key, and an
+  **empty cell reads exactly as `-`** — the validator treats the two as one
+  legal "not resolved" state, so this rule must too. A row carrying either
+  opens a group of one that closes the moment that row reaches `refactor`,
+  however many other unresolved rows the ledger holds. Reading `-` (or `""`) as
+  one key would merge rows no `BR` relates and, with a second unresolved row
+  still `todo`, leave both close conditions below false.
 - **Fill** it by continuing to process the ledger's remaining T1 rows carrying
   that same `BR-Ref`, one item at a time. The one-item-at-a-time constraint is
   about the Red/Green cycle: at most one row is in `red` or `green` at any
@@ -98,10 +100,18 @@ the review-ready state — and waits there for its group. Members still move
   group, not an abandoned item, so parking is not a violation of that
   constraint.
 - **Close** the group — this is the review-start condition — at whichever comes
-  first: every **T1** row carrying the key has reached `refactor`; the next
-  `todo` **T1** row carries a different `BR-Ref`; the ledger has no `todo` rows
-  left. A group never spans a spec, so finishing a ledger also closes the open
-  group.
+  first: every **T1** row carrying the key has reached `refactor`; no `todo`
+  **T1** row carrying the key remains **anywhere** in the ledger (the rest are
+  parked in `blocked` / `exception` and will not reach `refactor`); the ledger
+  has no `todo` rows left. A group never spans a spec, so finishing a ledger
+  also closes the open group.
+- The keyed conditions scan the **whole** ledger, not the next `todo` row.
+  Ledger order need not put one key's rows together, and the default serial run
+  walks it in order (`references/parallelization-policy.md`), so on
+  `BR-A, BR-B, BR-A` "the next `todo` row carries a different `BR-Ref`" is true
+  while an unprocessed `A` still sits below it. Closing there opens a second
+  group on the same key later, which breaks both "one review per `BR-Ref`" and
+  the batch reduction it buys.
 - Both keyed conditions read **T1 members only**. Tier is derived per row, so
   one `BR-Ref` can hold T2 and T3 rows as well; those are reviewed alone and
   neither join the group nor hold it open. Counting them as members strands it:
@@ -148,9 +158,10 @@ whole spec one group. Pick one of two, in this order:
    the regeneration the ledger's delta rule forbids.
 2. Resolve the key yourself, once per row, by the procedure
    `execution-ledger.md` states (`TC-Refs` -> the TC's `EX-Ref` in
-   `06_Test-Cases.md` -> that `EX`'s `BR-Ref` in `05_Examples.md`; only a TC
-   with no `EX-Ref` falls back to its `AC-Refs` -> every `BR` whose `AC-Refs`
-   names one of them in `04_Business-Rules.md`; lowest-numbered `BR-*` wins),
+   `06_Test-Cases.md` -> that `EX`'s `BR-Ref` in `05_Examples.md`, which may
+   itself name several `BR-*`; only a TC with no `EX-Ref` falls back to its
+   `AC-Refs` -> every `BR` whose `AC-Refs` names one of them in
+   `04_Business-Rules.md`; the lowest-numbered `BR-*` of the whole union wins),
    and record the group's key next to its member `TDD-ID`s in the evidence
    file. The tie-break is what makes the answer the same for the next agent
    that reads the same rows.

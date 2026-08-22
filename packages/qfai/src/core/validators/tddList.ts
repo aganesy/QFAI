@@ -4,7 +4,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
+import {
+  maskNonSpecRegions,
+  parseAllMarkdownTables,
+  parseFirstMarkdownTable,
+} from "../specPackParsers.js";
 import {
   EXCEPTION_PARKED_CODE,
   EXCEPTION_PARKED_RULE_ID,
@@ -147,6 +151,9 @@ const BR_ID_FORMAT = /^BR-\d{4}-\d{4}$/;
 
 /** The file a ledger's `BR-Ref` has to resolve into. */
 const BR_DECLARATION_FILE = "04_Business-Rules.md";
+
+/** The column `04_Business-Rules.md` declares a rule's id in. */
+const BR_ID_COLUMN = "BR-ID";
 
 /**
  * The `Layer` values the shipped ledger schema declares
@@ -368,6 +375,45 @@ function toPosixRel(value: string): string {
 }
 
 /**
+ * Every `BR-*` the spec's `04_Business-Rules.md` **declares**, or `null` when
+ * the file is absent.
+ *
+ * `null` is not an empty set: a spec with no rules file cannot contradict a
+ * `BR-Ref`, and reporting every key as dangling there would fire on layouts
+ * that legitimately have no `04`. Fenced and commented regions are masked so a
+ * rule quoted in an example block does not count as a declaration.
+ *
+ * Only definition positions count — the rule table's `BR-ID` column (its first
+ * column when the header is absent) and a `## BR-NNNN-NNNN` heading — which is
+ * the same walk `layerCoverage.ts` uses to build the v1421 `BR` set. Scanning
+ * the whole file instead would collect a `BR-*` that a `Rule` or `Notes` cell,
+ * or the prose around the table, merely mentions: a retired or compared-against
+ * id would then resolve, and `TDDLIST_BR_REF_UNRESOLVED` would stay silent
+ * while the T1 group is keyed on a rule the file no longer declares.
+ */
+async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null> {
+  const file = path.join(specDir, BR_DECLARATION_FILE);
+  if (!(await exists(file))) return null;
+  const declared = new Set<string>();
+  const text = maskNonSpecRegions(await readSafe(file));
+  for (const match of text.matchAll(/^##\s+(BR-\d{4}-\d{4})\b/gim)) {
+    const id = match[1];
+    if (id !== undefined) declared.add(id.toUpperCase());
+  }
+  for (const table of parseAllMarkdownTables(text)) {
+    const named = table.headers.findIndex(
+      (header) => header.trim().toLowerCase() === BR_ID_COLUMN.toLowerCase(),
+    );
+    const idIndex = named >= 0 ? named : 0;
+    for (const row of table.rows) {
+      const value = (row[idIndex] ?? "").trim().toUpperCase();
+      if (BR_ID_FORMAT.test(value)) declared.add(value);
+    }
+  }
+  return declared;
+}
+
+/**
  * Every `DR-*` declared for this spec: its own `07_Decisions.md` plus the
  * shared `_policies/08_Decisions.md`.
  *
@@ -375,26 +421,6 @@ function toPosixRel(value: string): string {
  * ledgers, and resolving only against the spec-local file would report every
  * such citation as unresolved.
  */
-/**
- * Every `BR-*` the spec's `04_Business-Rules.md` mentions, or `null` when the
- * file is absent.
- *
- * `null` is not an empty set: a spec with no rules file cannot contradict a
- * `BR-Ref`, and reporting every key as dangling there would fire on layouts
- * that legitimately have no `04`. Fenced and commented regions are masked so a
- * rule quoted in an example block does not count as a declaration.
- */
-async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null> {
-  const file = path.join(specDir, BR_DECLARATION_FILE);
-  if (!(await exists(file))) return null;
-  const declared = new Set<string>();
-  const text = maskNonSpecRegions(await readSafe(file));
-  for (const match of text.matchAll(/\bBR-\d{4}-\d{4}\b/g)) {
-    declared.add(match[0].toUpperCase());
-  }
-  return declared;
-}
-
 async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
   const declared = new Set<string>();
   const files = [
@@ -1127,9 +1153,10 @@ async function validateSpecTddList(
     const declaredBrIds = await collectDeclaredBrIds(specDir);
     for (const ref of ledgerRows()) {
       const brRef = cell(ref, BR_REF_COLUMN);
-      // Empty and `-` are the same legal state — "not resolved". The row forms
-      // a review group of one and is reviewed alone, which is the documented
-      // safe degradation, not a defect.
+      // Empty and `-` are the same legal state — "not resolved" — and
+      // `volume-policy.md` says so in the same words: neither is a shared key,
+      // and either forms a review group of one that is reviewed alone. That is
+      // the documented safe degradation, not a defect.
       if (brRef.length === 0 || brRef === "-") continue;
       const token = brRef.toUpperCase();
       if (!BR_ID_FORMAT.test(token)) {
@@ -1142,7 +1169,7 @@ async function validateSpecTddList(
             "tddList.brRefFormat",
             [brRef],
             "change",
-            `${BR_REF_COLUMN} は1行1件です。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、複数該当する場合は最小番号の \`BR-*\` を書いてください。該当する BR がない行は \`-\` です。`,
+            `${BR_REF_COLUMN} は1行1件です。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、こうして得た \`BR-*\` の和集合（1件の \`EX\` が複数 \`BR\` を挙げる場合も含む）から最小番号の1件を書いてください。該当する BR がない行は \`-\`（空欄も同じ扱い）です。`,
           ),
         );
         continue;

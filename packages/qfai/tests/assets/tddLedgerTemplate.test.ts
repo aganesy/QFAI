@@ -62,13 +62,21 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // `EX` to one `BR` under a different rule that merely shares its `AC`.
       expect(template).toContain("read each TC's `EX-Ref` in `06_Test-Cases.md`");
       expect(template).toContain("Only a TC with no `EX-Ref` falls back to its `AC-Refs`");
+      // An `EX` may name several `BR-*` for a cohesive rule bundle
+      // (`layerCoverage.test.ts` allows it), so the tie-break has to cover the
+      // whole union — restricting it to "several `TC-Refs`" leaves a
+      // single-`TC` row with a multi-`BR` `EX` without a derivable key.
+      expect(template).toContain("taking every `BR-*` listed there");
+      expect(template).toContain("across several `TC-Refs` and across a multi-`BR` `EX` alike");
+      expect(template).toContain("An empty cell reads the same as `-`");
 
       const checklists = await read(
         tree,
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain("- Fill `BR-Ref` —");
-      expect(checklists).toContain("lowest-numbered `BR-*` wins");
+      expect(checklists).toContain("the lowest-numbered `BR-*` of the whole union wins");
+      expect(checklists).toContain("one `EX` may name several `BR-*`");
       expect(checklists).toContain("only a TC with no `EX-Ref` falls back");
     });
 
@@ -87,6 +95,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(ssot).toContain("`Blocked-By`, `BR-Ref`");
       expect(ssot).toContain("`BR-Ref` is **conditionally required**");
       expect(ssot).toContain("its cells are checked for both — shape and referent — at `warning`");
+      // Empty is the same "not resolved" state the validator accepts, so the
+      // SSOT must not leave `""` readable as a key rows share.
+      expect(ssot).toContain('`-` for "not resolved" — an empty cell reads the same');
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

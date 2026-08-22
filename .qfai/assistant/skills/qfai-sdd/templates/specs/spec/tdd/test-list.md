@@ -60,10 +60,13 @@ and `/qfai-implement` can close no T1 review group without it.
 `BR-Ref` is resolved here because this is the only phase where `03`, `04`, `05`
 and `06` are all open: read each TC's `EX-Ref` in `06_Test-Cases.md` and that
 `EX`'s `BR-Ref` in `05_Examples.md` — the edge that names the rule the test
-verifies. Only a TC with no `EX-Ref` falls back to its `AC-Refs` and every `BR`
-whose `AC-Refs` names one of them in `04_Business-Rules.md`. Across several
-`TC-Refs`, keep the **lowest-numbered** `BR-*`. Write `-` when no `BR` reaches
-the row.
+verifies — taking every `BR-*` listed there when one `EX` covers a cohesive
+rule bundle. Only a TC with no `EX-Ref` falls back to its `AC-Refs` and every
+`BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`. Then take the
+union of everything reached and keep the **lowest-numbered** `BR-*` of it —
+across several `TC-Refs` and across a multi-`BR` `EX` alike — so the key is the
+same for whoever resolves it next. Write `-` when no `BR` reaches the row. An
+empty cell reads the same as `-`, and that row is reviewed alone.
 `/qfai-implement` batches its T1 reviews on this value and can close no group
 without it. It is derived from upstream, not from run state, so a reseed
 re-resolves it — that is not the row rewrite the delta rule forbids.

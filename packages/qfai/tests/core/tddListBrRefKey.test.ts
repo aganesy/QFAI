@@ -105,6 +105,36 @@ describe("the ledger's review-group key is checked when it is declared", () => {
     expect(finding?.message).toContain("BR-0001-0009");
   });
 
+  it("collects declarations from the BR-ID column, not from prose or Notes", async () => {
+    // A retired or compared-against `BR-*` written into a `Rule` / `Notes`
+    // cell, or into the prose around the table, is a mention. Counting it as a
+    // declaration lets a `BR-Ref` that the rule table does not declare resolve
+    // silently, and the T1 group is keyed on a rule that no longer exists.
+    const rules = `# 04 Business Rules
+
+Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
+
+| BR-ID | Title | AC-Refs | Rule | Notes |
+| ----- | ----- | ------- | ---- | ----- |
+| BR-0001-0001 | First | AC-0001-0001 | A rule | Replaces BR-0001-0007 |
+`;
+    for (const mentioned of ["BR-0001-0007", "BR-0001-0008", "BR-0001-0009"]) {
+      const issues = await run(`${WITH_KEY}\n${row(mentioned)}`, { rules });
+      const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_UNRESOLVED");
+      expect(finding?.message, `${mentioned} resolved against a mention`).toContain(mentioned);
+    }
+    const declared = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules });
+    expect(declared.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+  });
+
+  it("accepts a rule declared by a `## BR-NNNN-NNNN` heading", async () => {
+    // The heading layout `layerCoverage.ts` also walks. Reading only tables
+    // would report every key of such a pack as dangling.
+    const rules = "# 04 Business Rules\n\n## BR-0001-0002\n\nA rule.\n";
+    const issues = await run(`${WITH_KEY}\n${row("BR-0001-0002")}`, { rules });
+    expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+  });
+
   it("does not call a key dangling when the spec has no 04_Business-Rules.md", async () => {
     // No rules file cannot contradict the key. Firing there would report every
     // row of a layout that legitimately has no `04`.

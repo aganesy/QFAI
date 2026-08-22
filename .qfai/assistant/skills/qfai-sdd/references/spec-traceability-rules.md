@@ -149,7 +149,8 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   what it enforces, so ledgers seeded before the column keep passing — and required for
   `/qfai-implement`'s T1 review batching, which can close no group without it. `/qfai-sdd`
   Phase 2b seeds it. One value per row: a single `BR-*` declared in `04_Business-Rules.md`, or
-  `-` for "not resolved" (that row is reviewed alone). When the column is present its cells are
+  `-` for "not resolved" — an empty cell reads the same — and that row is reviewed alone,
+  never batched with the other unresolved rows. When the column is present its cells are
   checked for both — shape and referent — at `warning`, so a mistyped or dangling key is named
   rather than silently regrouping rows.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
