@@ -46,8 +46,9 @@ research_summary:
 
 - Every `sources[]` entry needs `id`, `title`, `url`, and a `published` date in `YYYY-MM-DD` form.
 - At least 80% of the sources should be published within the last two years.
-- At least one `reflection[]` entry must carry `action: apply`; never auto-overwrite an existing
-  BP/AP rule — record `reject` or `defer` with a reason instead.
+- Every `source_id` must resolve to an `id` in the same `sources[]` list.
+- At least one `reflection[]` entry must record an apply decision (`action` set to apply); never
+  auto-overwrite an existing BP/AP rule — record a reject or defer decision with a reason instead.
 
 ## Trend Scan
 

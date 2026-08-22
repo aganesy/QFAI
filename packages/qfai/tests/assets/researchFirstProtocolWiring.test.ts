@@ -12,7 +12,6 @@
  * the validator's parser can actually read it.
  */
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
@@ -57,8 +56,15 @@ const SCHEMA_KEYS = ["sources:", "best_practices:", "anti_patterns:", "reflectio
 
 const tempDirs: string[] = [];
 
+/**
+ * Scratch packs live under the repository-root `tmp/` (Article XI), so a run
+ * killed before `afterEach` leaves the leftovers inside the repo's own
+ * gitignored staging area instead of the machine-wide temp directory.
+ */
 async function newTempDir(): Promise<string> {
-  const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-research-wiring-"));
+  const scratchRoot = path.join(repoRoot, "tmp");
+  await mkdir(scratchRoot, { recursive: true });
+  const dir = await mkdtemp(path.join(scratchRoot, "qfai-research-wiring-"));
   tempDirs.push(dir);
   return dir;
 }
@@ -83,16 +89,37 @@ function section(content: string, heading: string): string {
 }
 
 /** Writes the shipped sources template into a throwaway discussion pack. */
-async function seedPack(template: string): Promise<string> {
+async function seedPack(
+  template: string,
+  packName = "discussion-20260101000000000",
+): Promise<string> {
   const root = await newTempDir();
-  const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+  const packDir = path.join(root, ".qfai", "discussion", packName);
   await mkdir(packDir, { recursive: true });
   await writeFile(path.join(packDir, "04_Sources.md"), template, "utf-8");
   return root;
 }
 
+/** The `04_Sources.md` template as shipped from the assets SSOT tree. */
+async function readShippedTemplate(): Promise<string> {
+  return readFile(path.join(discussionRoots[0] ?? "", "templates", "04_Sources.md"), "utf-8");
+}
+
 function today(): string {
   return new Date().toISOString().slice(0, 10);
+}
+
+/** Only the `published` date replaced — the state a fake "run" would leave. */
+function fillDateOnly(template: string): string {
+  return template.replaceAll("published: YYYY-MM-DD", `published: ${today()}`);
+}
+
+/** Every shipped placeholder replaced with real data, as an actual run would. */
+function fillEveryPlaceholder(template: string): string {
+  return fillDateOnly(template).replace(
+    /^(\s*(?:-\s*)?[A-Za-z0-9_]+:[ \t]*)\[[^\]]*\][ \t]*$/gm,
+    (_match, head: string) => `${head}Recorded by the research-first protocol run`,
+  );
 }
 
 describe("research-first protocol is wired into /qfai-discussion", () => {
@@ -127,6 +154,21 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         expect(template, `04_Sources.md storage slot is missing "${key}"`).toContain(key);
       }
     });
+
+    it(`${label}: the completion matrix carries the condition for every pack`, async () => {
+      // SKILL.md points at the matrix as the full completion logic, so a
+      // condition that lives only in SKILL.md is invisible to anyone reading
+      // the matrix — non-UI packs included.
+      const matrix = await readFile(
+        path.join(discussionRoot, "references", "discussion-completion-matrix.md"),
+        "utf-8",
+      );
+      const allPacks = section(matrix, "## All Packs");
+
+      expect(allPacks).toContain("Research Summary");
+      expect(allPacks).toContain("research-first-protocol.md");
+      expect(section(matrix, "## Non-UI Packs")).toContain("All Packs");
+    });
   }
 
   for (const protocolPath of protocolPaths) {
@@ -139,10 +181,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
   it("the shipped slot is structurally complete for validateResearchSummary", async () => {
     // A heading alone is not enough: the validator parses the YAML lists under
     // it, so a slot the parser cannot read would be as vacuous as no slot.
-    const template = await readFile(
-      path.join(discussionRoots[0] ?? "", "templates", "04_Sources.md"),
-      "utf-8",
-    );
+    const template = await readShippedTemplate();
     const issues = await validateResearchSummary(await seedPack(template), defaultConfig);
     const codes = issues.map((item) => item.code);
 
@@ -154,23 +193,74 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
   });
 
   it("reports the unfilled slot until the protocol has actually run", async () => {
-    const template = await readFile(
-      path.join(discussionRoots[0] ?? "", "templates", "04_Sources.md"),
-      "utf-8",
-    );
+    const template = await readShippedTemplate();
     const issues = await validateResearchSummary(await seedPack(template), defaultConfig);
+    const codes = issues.map((item) => item.code);
 
-    // The shipped `published: YYYY-MM-DD` placeholder is the fill-me-in signal.
-    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-006");
+    // Both fill-me-in signals: the date and every bracketed placeholder.
+    expect(codes).toContain("QFAI-RESEARCH-006");
+    expect(codes).toContain("QFAI-RESEARCH-012");
   });
 
-  it("validates clean once the placeholders are filled in", async () => {
-    const template = await readFile(
-      path.join(discussionRoots[0] ?? "", "templates", "04_Sources.md"),
-      "utf-8",
+  it("still fails when only the date was refreshed", async () => {
+    // The gate has to demand a protocol run, not a plausible-looking date: a
+    // pack whose title / url / BP / AP / finding / reason are untouched
+    // template text has not researched anything.
+    const template = await readShippedTemplate();
+    const issues = await validateResearchSummary(
+      await seedPack(fillDateOnly(template)),
+      defaultConfig,
     );
-    const filled = template.replaceAll("published: YYYY-MM-DD", `published: ${today()}`);
+    const placeholder = issues.find((item) => item.code === "QFAI-RESEARCH-012");
+
+    expect(placeholder, "date-only edit must not pass the Research Summary gate").toBeDefined();
+    for (const key of ["title", "url", "category", "description", "finding", "reason"]) {
+      expect(placeholder?.message, `placeholder "${key}" is not reported`).toContain(key);
+    }
+  });
+
+  it("validates clean once every placeholder is replaced with real data", async () => {
+    const template = await readShippedTemplate();
+    const issues = await validateResearchSummary(
+      await seedPack(fillEveryPlaceholder(template)),
+      defaultConfig,
+    );
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("rejects a reflection list that records no apply decision", async () => {
+    // The prose under the slot names `action: apply` as the rule; matching it
+    // there instead of in the list would make QFAI-RESEARCH-003 unreachable.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "      action: apply",
+      "      action: defer",
+    );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+
+    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-003");
+  });
+
+  it("rejects a source_id that resolves to no source entry", async () => {
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replaceAll(
+      "source_id: SRC-0001",
+      "source_id: SRC-0404",
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+
+    expect(issues.map((item) => item.code)).toContain("QFAI-RESEARCH-013");
+  });
+
+  it("ignores an abandoned older pack once a newer one exists", async () => {
+    // Every generated pack ships the slot, so a pack the team walked away from
+    // must not keep `--profile discussion` red forever.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    const stalePack = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(stalePack, { recursive: true });
+    await writeFile(path.join(stalePack, "04_Sources.md"), template, "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
 
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });

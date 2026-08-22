@@ -4,6 +4,7 @@ import path from "node:path";
 import fg from "fast-glob";
 
 import type { QfaiConfig } from "../config.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -11,11 +12,16 @@ const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const SOURCE_ENTRY_RE = /^\s*-\s*id:\s*(\S+)/gm;
 const REFLECTION_APPLY_RE = /action:\s*apply/i;
 const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+/** ```yaml fence inside the stored section — the prose around it is not data. */
+const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
+/** `key: [fill me in]` — a shipped template placeholder that was never replaced. */
+const PLACEHOLDER_FIELD_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*\[[^\]]*\][ \t]*$/gm;
+/** `source_id:` reference carried by best_practices / anti_patterns / reflection entries. */
+const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(\S+)[ \t]*$/gm;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
-  const files = await fg(pattern, { absolute: true });
+  const files = await collectResearchSummaryFiles(root, config);
 
   for (const filePath of files) {
     let content: string;
@@ -31,8 +37,13 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     const section = extractResearchSummarySection(content);
     if (!section) continue;
 
+    // Only the fenced YAML payload is data. The prose that the shipped template
+    // wraps around it explains the rules ("at least one entry must carry
+    // action: apply") and must never be able to satisfy them.
+    const yaml = extractYamlPayload(section);
+
     // Validate only entries under sources:, not other lists that may also use "- id:".
-    const sourceEntries = extractSourceEntries(section);
+    const sourceEntries = extractSourceEntries(yaml);
     const sourceIds = sourceEntries.map((entry) => entry.id);
     if (sourceEntries.length === 0) {
       issues.push(
@@ -108,7 +119,32 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       }
     }
 
-    const bestPracticesCount = countYamlListItems(section, "best_practices");
+    const placeholderKeys = collectPlaceholderKeys(yaml);
+    if (placeholderKeys.length > 0) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-012",
+          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run`,
+          "error",
+          rel,
+          "researchSummary.placeholder",
+        ),
+      );
+    }
+
+    for (const unresolved of collectUnresolvedSourceIds(yaml, sourceIds)) {
+      issues.push(
+        issue(
+          "QFAI-RESEARCH-013",
+          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}`,
+          "error",
+          rel,
+          "researchSummary.sourceIdReference",
+        ),
+      );
+    }
+
+    const bestPracticesCount = countYamlListItems(yaml, "best_practices");
     if (bestPracticesCount === 0) {
       issues.push(
         issue(
@@ -121,7 +157,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    const antiPatternsCount = countYamlListItems(section, "anti_patterns");
+    const antiPatternsCount = countYamlListItems(yaml, "anti_patterns");
     if (antiPatternsCount === 0) {
       issues.push(
         issue(
@@ -134,9 +170,10 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    // Check reflection.apply presence
-    const hasApply = REFLECTION_APPLY_RE.test(section);
-    const reflectionCount = countYamlListItems(section, "reflection");
+    // Check reflection.apply presence — inside the reflection list only.
+    const reflectionBlock = extractYamlListBlock(yaml, "reflection") ?? "";
+    const hasApply = REFLECTION_APPLY_RE.test(reflectionBlock);
+    const reflectionCount = countYamlListItems(yaml, "reflection");
     if (reflectionCount === 0) {
       issues.push(
         issue(
@@ -159,7 +196,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    if (reflectionCount > 0 && !/\baction:\s*(apply|reject|defer)\b/i.test(section)) {
+    if (reflectionCount > 0 && !/\baction:\s*(apply|reject|defer)\b/i.test(reflectionBlock)) {
       issues.push(
         issue(
           "QFAI-RESEARCH-009",
@@ -170,7 +207,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
-    if (reflectionCount > 0 && !/\breason:\s*.+/i.test(section)) {
+    if (reflectionCount > 0 && !/\breason:\s*.+/i.test(reflectionBlock)) {
       issues.push(
         issue(
           "QFAI-RESEARCH-010",
@@ -184,6 +221,68 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   }
 
   return issues;
+}
+
+/**
+ * Files the Research Summary gate reads. Every generated pack now ships the
+ * storage slot, so scanning the whole discussion tree would let an abandoned
+ * pack keep the gate red forever; like the sibling discussion validators this
+ * one looks at the latest pack, falling back to the flat discussion root for
+ * layouts that keep no `discussion-<timestamp>` directory at all.
+ */
+async function collectResearchSummaryFiles(root: string, config: QfaiConfig): Promise<string[]> {
+  const discussionRoot = path.resolve(root, config.paths.discussionDir);
+  let scanRoot = discussionRoot;
+  try {
+    scanRoot = (await findLatestDiscussionPackDir(discussionRoot)) ?? discussionRoot;
+  } catch {
+    scanRoot = discussionRoot;
+  }
+
+  const pattern = path.posix.join(scanRoot.replace(/\\/g, "/"), "**/*.md");
+  try {
+    return await fg(pattern, { absolute: true });
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * The fenced YAML blocks of the stored section, or the whole section when it
+ * carries none (packs written before the template shipped a fence).
+ */
+function extractYamlPayload(section: string): string {
+  const blocks = [...section.matchAll(YAML_FENCE_RE)].map((match) => match[1] ?? "");
+  return blocks.length > 0 ? blocks.join("\n") : section;
+}
+
+/** Keys whose value is still a `[bracketed]` template placeholder. */
+function collectPlaceholderKeys(yaml: string): string[] {
+  const keys = new Set<string>();
+  for (const match of yaml.matchAll(PLACEHOLDER_FIELD_RE)) {
+    const key = match[1];
+    if (key) keys.add(key);
+  }
+  return [...keys];
+}
+
+/** `source_id` values that no `sources[].id` in the same summary resolves. */
+function collectUnresolvedSourceIds(yaml: string, sourceIds: readonly string[]): string[] {
+  if (sourceIds.length === 0) {
+    return [];
+  }
+
+  const known = new Set(sourceIds);
+  const unresolved = new Set<string>();
+  for (const match of yaml.matchAll(SOURCE_ID_REF_RE)) {
+    const value = match[1];
+    // A placeholder value is already reported as QFAI-RESEARCH-012.
+    if (!value || value.startsWith("[") || known.has(value)) {
+      continue;
+    }
+    unresolved.add(value);
+  }
+  return [...unresolved];
 }
 
 function extractResearchSummarySection(content: string): string | null {
