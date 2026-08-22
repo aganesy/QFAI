@@ -14,6 +14,15 @@ workflow-hygiene work, and it changed the shipped workflow templates. Two conseq
 - **"the subject does not move" is no longer a promise this stage can make.** It applies to the stage —
   which broke it once, in round 17, and will not again — but not to the branch. Pin every measurement to
   `7fbac2d3` explicitly. Two of you already do this by habit; this round it is the rule.
+
+  **Amended after the first attempt at this round, which its `completion-reviewer` found incoherent** 
+  before dying on a session limit: three of the record's count guards read the WORKING TREE, and this
+  round's pack directory now exists on disk while `7fbac2d3`'s record still says eighteen. Pinning
+  those three to the subject makes them fail for a reason that is not a defect. So: **pin CODE to
+  `7fbac2d3`, and measure the record's pack and response counts at `19b751ca`**, the commit that
+  opened this pack — because opening it is what moves them. `git diff 7fbac2d3 19b751ca -- packages/qfai/`
+  is empty, so nothing else is affected by the choice. That observation is kept in the pack as
+  `R02_completion-reviewer.partial-first-attempt.md`.
 - **If you find something that belongs to `b0f9d443` rather than to this stage's work, report it anyway**
   and say whose it is. It ships to the same adopters.
 
