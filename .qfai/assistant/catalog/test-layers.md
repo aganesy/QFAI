@@ -467,26 +467,29 @@ Treat these as review signals in the same class as volume floors — worth a fin
 - a very low `test_` functions per file ratio in a module that carries many obligations
 - a single selector whose recorded runtime grows monotonically across RED rounds
 
-## Test stub detection (QFAI-TEST-001 / QFAI-TEST-002)
+## Test stub detection (QFAI-TEST-001 / -002 / -003)
 
-`QFAI-TEST-001` reports the silent-placeholder construct of each
+`QFAI-TEST-001` (error) reports the silent-placeholder construct of each
 supported stack:
 
-| Extensions           | Construct                                                                                                    |
-| -------------------- | ------------------------------------------------------------------------------------------------------------ |
-| `.ts` / `.js` family | `it.todo(` / `test.todo(` / `describe.todo(` (error); `it.skip(` / `test.skip(` / `describe.skip(` (warning) |
-| `.py`                | `pytest.skip(`, `@pytest.mark.skip/skipif/xfail`, `@unittest.skip*`                                          |
-| `.go`                | `t.Skip*(`                                                                                                   |
-| `.java` / `.kt`      | `@Disabled` / `@Ignore`                                                                                      |
-| `.rs`                | `#[ignore]`                                                                                                  |
-| `.rb`                | a line starting `skip` / `pending`                                                                           |
-| `.cs`                | `[Ignore` / `Skip = "`                                                                                       |
+| Extensions           | Construct                                                           |
+| -------------------- | ------------------------------------------------------------------- |
+| `.ts` / `.js` family | `it.todo(` / `test.todo(` / `describe.todo(`                        |
+| `.py`                | `pytest.skip(`, `@pytest.mark.skip/skipif/xfail`, `@unittest.skip*` |
+| `.go`                | `t.Skip*(`                                                          |
+| `.java` / `.kt`      | `@Disabled` / `@Ignore`                                             |
+| `.rs`                | `#[ignore]`                                                         |
+| `.rb`                | a line starting `skip` / `pending`                                  |
+| `.cs`                | `[Ignore` / `Skip = "`                                              |
 
-Every dialect is an `error` except the JS/TS `.skip` form. A `.todo` is a bare
-declaration and can only ever mean work not done; a `.skip` keeps its body, is
-what `npx qfai atdd scaffold` emits for a skeleton awaiting implementation,
-and can be waived per path in `.qfai/waivers.yml` — which a waiver aimed at
-an `error` rule cannot be.
+`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` /
+`test.skip(` / `describe.skip(`, chained `.each` spellings included. It is its
+own rule, not a graded-down `QFAI-TEST-001`: a waiver is judged against the
+highest severity its rule produced in the run, so sharing one code would let a
+single `.todo` promote the pair to `error` and take the per-path waiver in
+`.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
+keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton
+awaiting implementation), so drop the modifier rather than delete the test.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a

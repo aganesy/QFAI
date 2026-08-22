@@ -1,5 +1,5 @@
 /**
- * Test stub validator (QFAI-TEST-001 / QFAI-TEST-002).
+ * Test stub validator (QFAI-TEST-001 / QFAI-TEST-002 / QFAI-TEST-003).
  *
  * Detects the silent-placeholder construct of each supported stack — `it.todo`
  * and `it.skip` (plus the `test.*` / `describe.*` spellings) in vitest/jest,
@@ -8,23 +8,30 @@
  * `[Ignore]` in .NET. They neither pass nor fail, so they do not block CI by
  * default and rot as stale work-not-done markers.
  *
- * The vitest/jest `.skip` form is reported as a `warning`, not an `error`, and
- * that asymmetry is deliberate. A `.todo` is a bare declaration — it can only
- * ever mean work not done. A `.skip` keeps its body, and it is what
- * `qfai atdd scaffold` emits for a skeleton the operator is expected to
- * graduate, so an `error` would fail `qfai validate --fail-on error` on the
- * scaffold's own output before a line of it had been written. `warning` also
- * keeps the finding waivable: `waivers.ts` rejects any waiver aimed at an
- * `error` rule, which would leave a project parking a suite mid-change no
- * option but `forbidTestTodoStubs: false` — switching the whole gate off.
+ * `QFAI-TEST-001` (error) is the stub proper. The vitest/jest `.skip` form
+ * carries its **own** code, `QFAI-TEST-003` (warning), and that split is
+ * deliberate on both axes:
+ *
+ * - severity: a `.todo` is a bare declaration and can only ever mean work not
+ *   done. A `.skip` keeps its body, and it is what `qfai atdd scaffold` emits
+ *   for a skeleton the operator is expected to graduate, so an `error` would
+ *   fail `qfai validate --fail-on error` on the scaffold's own output before a
+ *   line of it had been written.
+ * - code: `waivers.ts` grades a waiver against the **highest** severity its
+ *   rule produced in the run (`buildRuleSeverityIndex`) and rejects any waiver
+ *   aimed at an `error` rule (`QFAI-WAIVER-002`). Had both forms shared
+ *   `QFAI-TEST-001`, a single `.todo` anywhere in the repo would promote the
+ *   whole rule to `error` and take the per-path waiver away from the `.skip`
+ *   findings — the remediation this validator advertises. A separate code
+ *   keeps the warning waivable no matter what else the run found.
  *
  * `QFAI-TEST-002` (info) names extensions with no dialect, so a clean run on an
  * unsupported stack is not mistaken for evidence of no stubs.
  *
- * This validator closes the gap by emitting an `error` for each stub
- * found, making qfai validate / CI reject them. Projects that need to
- * migrate gradually can set `validation.testStrategy.forbidTestTodoStubs: false`
- * in qfai.config.yaml.
+ * This validator closes the gap by emitting a finding for each stub found,
+ * making qfai validate / CI reject the error-severity ones. Projects that need
+ * to migrate gradually can set
+ * `validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.
  */
 
 import { readFile } from "node:fs/promises";
@@ -67,20 +74,37 @@ type StubDialect = {
    */
   label?: (match: RegExpMatchArray) => string;
   /**
-   * Severity of one match. Defaults to `error`, which is what every
-   * skip-shaped dialect carries. Only the JS dialect overrides it, to grade
-   * its `.skip` form down to `warning` — see the module docstring.
+   * Rule code + severity of one match. Defaults to {@link STUB_ERROR}, which is
+   * what every skip-shaped dialect carries. Only the JS dialect overrides it,
+   * to route its `.skip` form to the waivable warning rule — see the module
+   * docstring.
    */
-  severity?: (match: RegExpMatchArray) => IssueSeverity;
+  grade?: (match: RegExpMatchArray) => StubGrade;
 };
+
+/** The rule a matched construct is filed under, with its severity. */
+type StubGrade = {
+  code: "QFAI-TEST-001" | "QFAI-TEST-003";
+  severity: IssueSeverity;
+};
+
+const STUB_ERROR: StubGrade = { code: "QFAI-TEST-001", severity: "error" };
+const SKIPPED_TEST_WARNING: StubGrade = { code: "QFAI-TEST-003", severity: "warning" };
 
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
     extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"],
-    pattern: /\b(it|test|describe)\.(todo|skip)\s*\(/g,
+    // `(?:\.\w+)*` covers the chained spellings — `test` + `.skip` + `.each`
+    // and the `it` / `describe` equivalents. They put a `.` where the bare
+    // form puts its `(`, so a pattern anchored straight onto the open paren
+    // let an unconditionally skipped parameterized suite through unreported.
+    // The trailing character class accepts the tagged-template call form
+    // (`.each` followed by a template literal) as well as the parenthesised
+    // one.
+    pattern: /\b(it|test|describe)\.(todo|skip)\b(?:\.\w+)*\s*[(`]/g,
     runner: "vitest/jest",
     label: (match) => `${match[1]}.${match[2]}`,
-    severity: (match) => (match[2] === "skip" ? "warning" : "error"),
+    grade: (match) => (match[2] === "skip" ? SKIPPED_TEST_WARNING : STUB_ERROR),
   },
   {
     extensions: [".py"],
@@ -107,28 +131,42 @@ function collectStubIssues(relFile: string, content: string, dialect: StubDialec
     const lineNumber = i + 1;
     for (const match of line.matchAll(dialect.pattern)) {
       const matchedKind = dialect.label ? dialect.label(match) : match[0].trim();
-      const severity = dialect.severity ? dialect.severity(match) : "error";
+      const grade = dialect.grade ? dialect.grade(match) : STUB_ERROR;
+      const isSkip = grade.code === "QFAI-TEST-003";
       // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
       // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
       // this. file is kept as the bare repo path so emitGitHub / waiver path
       // matchers (matchFindingPath in waivers.ts) work correctly; the line
       // number is carried in `loc.line`.
       const stubIssue = issue(
-        "QFAI-TEST-001",
-        `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
-          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
-          `Implement the body or delete the stub.`,
-        severity,
+        grade.code,
+        isSkip
+          ? `Skipped test found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+              `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
+              `Drop the skip modifier to put it back in the run.`
+          : `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+              `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
+              `Implement the body or delete the stub.`,
+        grade.severity,
         relFile,
         "validation.testStrategy.forbidTestTodoStubs",
         [matchedKind],
         "canonical",
-        "Implement the test body, or delete the stub entirely. " +
-          (severity === "warning"
-            ? "A deliberately parked suite can be waived per path in .qfai/waivers.yml. "
-            : "") +
-          "If you need to temporarily opt out of this check, set " +
-          "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
+        // A `.skip` keeps its body, so "delete the stub" is the wrong first
+        // move here: followed literally it throws away a working test. The
+        // normal fix is to remove the modifier; the waiver is for the case
+        // where the suite is parked on purpose.
+        isSkip
+          ? "Remove the skip modifier so the test runs again — restore " +
+              "`it` / `test` / `describe`, implementing the body first if it is " +
+              "still empty. Do not delete a test that already has one. If the " +
+              "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
+              ".qfai/waivers.yml; setting " +
+              "`validation.testStrategy.forbidTestTodoStubs: false` in " +
+              "qfai.config.yaml turns the whole check off instead."
+          : "Implement the test body, or delete the stub entirely. " +
+              "If you need to temporarily opt out of this check, set " +
+              "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
       );
       stubIssue.loc = { line: lineNumber };
       issues.push(stubIssue);
@@ -197,7 +235,7 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
     issues.push(
       issue(
         "QFAI-TEST-002",
-        `テストスタブ検出の対象外な拡張子があります: ${extensions.join(", ")}。これらのファイルは QFAI-TEST-001 の対象外なので、クリーンな結果はスタブ不在の証拠になりません`,
+        `テストスタブ検出の対象外な拡張子があります: ${extensions.join(", ")}。これらのファイルは QFAI-TEST-001 / QFAI-TEST-003 の対象外なので、クリーンな結果はスタブ不在の証拠になりません`,
         "info",
         root,
         "validation.testStrategy.stubDialectCoverage",

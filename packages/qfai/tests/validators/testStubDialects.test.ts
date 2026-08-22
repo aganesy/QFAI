@@ -151,7 +151,7 @@ describe("the opt-out still turns the whole validator off", () => {
   });
 });
 
-describe("the vitest/jest dialect also matches its stack's skip form", () => {
+describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule", () => {
   // Six of the seven dialects matched their stack's *skip* construct while the
   // JS/TS entry matched `.todo` alone, so `it.skip` / `test.skip` /
   // `describe.skip` — the form a developer actually writes to park a suite
@@ -171,7 +171,7 @@ describe("the vitest/jest dialect also matches its stack's skip form", () => {
   it("reports every skip spelling, one finding per occurrence", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
-      const stubs = issues.filter((i) => i.code === "QFAI-TEST-001");
+      const stubs = issues.filter((i) => i.code === "QFAI-TEST-003");
       expect(stubs).toHaveLength(3);
       expect(stubs.map((i) => i.loc?.line)).toEqual([3, 4, 5]);
     });
@@ -180,37 +180,83 @@ describe("the vitest/jest dialect also matches its stack's skip form", () => {
   it("keeps refs on the exact construct so waivers and grouping stay stable", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
-      const refs = issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.refs?.[0]);
+      const refs = issues.filter((i) => i.code === "QFAI-TEST-003").map((i) => i.refs?.[0]);
       expect(refs).toEqual([`it${SKIP}`, `test${SKIP}`, `describe${SKIP}`]);
     });
   });
 
-  it(`grades ${SKIP} as a warning while ${TODO} stays an error`, async () => {
+  it(`files ${SKIP} under its own warning rule while ${TODO} stays an error`, async () => {
     // A `.todo` is a bare declaration and can only mean work not done. A
     // `.skip` keeps its body and is what `qfai atdd scaffold` emits, so an
-    // `error` would fail the scaffold's own output on sight — and `waivers.ts`
-    // refuses any waiver aimed at an `error` rule, leaving a project no way to
-    // park a suite short of switching the gate off entirely.
+    // `error` would fail the scaffold's own output on sight.
+    //
+    // The separate *code* matters as much as the severity: `waivers.ts`
+    // grades a waiver against the highest severity its rule produced in the
+    // run (`buildRuleSeverityIndex`) and rejects any waiver aimed at an
+    // `error` rule. Sharing `QFAI-TEST-001` would let this file's single
+    // `.todo` promote the whole rule to `error` and take the per-path waiver
+    // — the remediation the `.skip` finding advertises — away with it.
     await withTests({ "tests/a.test.ts": `${JS_STUB}${JS_SKIPS}` }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
-      const bySeverity = new Map(
-        issues
-          .filter((i) => i.code === "QFAI-TEST-001")
-          .map((i) => [i.refs?.[0] ?? "", i.severity] as const),
+      const graded = new Map(
+        issues.map((i) => [i.refs?.[0] ?? "", { code: i.code, severity: i.severity }] as const),
       );
-      expect(bySeverity.get(`it${TODO}`)).toBe("error");
-      expect(bySeverity.get(`it${SKIP}`)).toBe("warning");
-      expect(bySeverity.get(`describe${SKIP}`)).toBe("warning");
+      expect(graded.get(`it${TODO}`)).toEqual({ code: "QFAI-TEST-001", severity: "error" });
+      expect(graded.get(`it${SKIP}`)).toEqual({ code: "QFAI-TEST-003", severity: "warning" });
+      expect(graded.get(`describe${SKIP}`)).toEqual({
+        code: "QFAI-TEST-003",
+        severity: "warning",
+      });
+      // The gate `qfai-implement`'s FINAL CHECKLIST reads stays todo-only.
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(1);
     });
   });
 
   it("names the skip form in the message, not the todo form", async () => {
     await withTests({ "tests/a.test.ts": JS_SKIPS }, async (root) => {
       const issues = await validateTestTodoStubs(root, CONFIG);
-      const first = issues.find((i) => i.code === "QFAI-TEST-001");
+      const first = issues.find((i) => i.code === "QFAI-TEST-003");
       expect(first?.message).toContain(`it${SKIP}`);
       expect(first?.message).not.toContain(TODO);
       expect(first?.message).toContain("vitest/jest");
+    });
+  });
+
+  it("tells the operator to drop the modifier, not to delete the test", async () => {
+    // `.skip` keeps its body, so the `.todo` remediation ("delete the stub")
+    // followed literally throws away a working test.
+    await withTests({ "tests/a.test.ts": `${JS_STUB}${JS_SKIPS}` }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipAction = issues.find((i) => i.code === "QFAI-TEST-003")?.suggested_action ?? "";
+      expect(skipAction).toContain("Remove the skip modifier");
+      expect(skipAction).not.toContain("delete the stub");
+      expect(skipAction).toContain("QFAI-TEST-003");
+      const todoAction = issues.find((i) => i.code === "QFAI-TEST-001")?.suggested_action ?? "";
+      expect(todoAction).toContain("delete the stub");
+    });
+  });
+
+  it(`also matches the chained ${SKIP}.each spellings`, async () => {
+    // The chained `.each` form puts a `.` where the bare form puts its `(`,
+    // so a pattern anchored straight onto the open paren let an
+    // unconditionally skipped parameterized suite through unreported.
+    const chained = [
+      `test${SKIP}.each([[1], [2]])("case %i", (n) => {});`,
+      `describe${SKIP}.each([[1]])("suite %i", () => {});`,
+      `it${SKIP}.each\`
+      a
+      \`("tagged", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": chained }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([
+        `test${SKIP}`,
+        `describe${SKIP}`,
+        `it${SKIP}`,
+      ]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
     });
   });
 
@@ -221,7 +267,9 @@ describe("the vitest/jest dialect also matches its stack's skip form", () => {
         "tests/b.test.ts": "const rest = unit.skip(2);\n",
       },
       async (root) => {
-        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+        const codes = await stubCodes(root);
+        expect(codes).not.toContain("QFAI-TEST-001");
+        expect(codes).not.toContain("QFAI-TEST-003");
       },
     );
   });

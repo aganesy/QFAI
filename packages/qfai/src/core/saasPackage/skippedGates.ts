@@ -38,7 +38,7 @@ export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, 
   {
     validateAtddCodeTraceability: ["QFAI-ATDD-*"],
     validateTddList: ["TDDLIST_*"],
-    validateTestTodoStubs: ["QFAI-TEST-001"],
+    validateTestTodoStubs: ["QFAI-TEST-*"],
     validateTraceabilityIntegrity: ["QFAI-TRACE-*"],
   };
 
