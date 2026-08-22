@@ -52,7 +52,7 @@ async function implementPhases(rel: string): Promise<Phase[]> {
 }
 
 describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
-  it("routes qa-gatekeeper into a phase where no production code exists yet", async () => {
+  it("routes qa-gatekeeper into a phase where the row's predicate does not exist yet", async () => {
     const phases = await implementPhases(rel);
     const red = phases.find((p) => p.id === "red");
     expect(red, "no `red` phase: the RED observation has nowhere to happen").toBeDefined();
@@ -115,9 +115,13 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
   it("splits the handoff contract into a RED and a GREEN submission", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
+    // Predicate-scoped, not "no production code exists": Phase Red step 3a puts
+    // the seam in the production tree *before* the RED is taken, so the older
+    // phrasing made the contract unsatisfiable on every new-surface row.
     expect(flat).toContain(
-      "submits the RED run to `qa-gatekeeper` **while no production code exists**",
+      "submits the RED run to `qa-gatekeeper` **before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
     );
+    expect(flat).not.toContain("**while no production code exists**");
     // The old text asked for one combined "RED/GREEN execution evidence"
     // submission, which is only satisfiable after the fact.
     expect(flat).not.toContain("Implementation agent submits RED/GREEN execution evidence");

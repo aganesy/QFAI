@@ -78,11 +78,18 @@ the row's own evidence; nothing in the calling work order substitutes for it.
 The producer's Phase Red step 3a requires one for a surface that does not exist
 yet, so on a new-surface row the RED is necessarily observed with it in place.
 Accept it when all three hold: it resolves the symbol or route the test reaches
-for, it implements no predicate, and it answers with a status the row does not
-contract for. "No production code exists" is **not** one of the conditions
-above and must not be read into them — what the gate measures is that the
-failure is the row's own assertion, taken before any code implementing the
-row's predicate was written. See
+for, it implements no predicate, and it answers with something the row does not
+contract for. The third condition takes the seam's own form: a
+**registered-route** seam answers with a status the row does not contract for,
+while a **module, export or signature** seam — the form step 3a requires for a
+`Unit` / `Component` row whose test imports a new symbol — has no status to
+answer with and satisfies it by returning a placeholder value the row's
+predicate does not own. Requiring the status form of a module seam is what sent
+a correctly observed assertion-level RED on a non-HTTP new-symbol row to REVISE,
+leaving it unable to reach Phase Green at all. "No production code exists" is
+**not** one of the conditions above and must not be read into them — what the
+gate measures is that the failure is the row's own assertion, taken before any
+code implementing the row's predicate was written. See
 `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md` and
 `.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`.
 

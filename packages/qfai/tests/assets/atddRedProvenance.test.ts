@@ -2474,9 +2474,20 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
       provenance.indexOf("1. **Observed RED (preferred).**"),
     );
     expect(flat(preamble)).toContain(
-      '**What the `qa-gatekeeper` RED gate confirms — on every branch.** Not "no production code exists"',
+      '**What the `qa-gatekeeper` RED gate confirms on an `observed-red` row.** Not "no production code exists"',
     );
     expect(flat(preamble)).toContain("A step 1 seam is inside that state, not a breach of it");
+    // Scoped to branch 1, not asserted of all three: branch 2 observes its
+    // failure by mutating a predicate that is already implemented, and branch 3
+    // observes no RED at all, so a universal reading would REVISE every
+    // legitimate falsifiability run.
+    expect(flat(preamble)).toContain(
+      "**That precondition is branch 1's; it is not a gate on all three.**",
+    );
+    expect(flat(preamble)).toContain(
+      "Each of those branches states its own gate condition where it is defined below.",
+    );
+    expect(flat(preamble)).not.toContain("RED gate confirms — on every branch");
     // And branch 2 defers to it rather than holding a second statement of it.
     expect(flat(provenance)).not.toContain(
       'What the gatekeeper confirms is not "no production code exists"',
@@ -2510,7 +2521,17 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
     // With the three properties that make it decidable from the artifact.
     expect(flatGate).toContain("it resolves the symbol or route the test reaches for");
     expect(flatGate).toContain("it implements no predicate");
-    expect(flatGate).toContain("it answers with a status the row does not contract for");
+    expect(flatGate).toContain("it answers with something the row does not contract for");
+    // The third property takes the seam's own form. Stated as a status for
+    // every seam, a `Unit` / `Component` row whose step 3a seam is a module or
+    // export — which returns no status at all — could never satisfy it, so a
+    // correctly observed assertion-level RED was REVISEd by construction.
+    expect(flatGate).toContain(
+      "**registered-route** seam answers with a status the row does not contract for",
+    );
+    expect(flatGate).toContain(
+      "**module, export or signature** seam — the form step 3a requires for a `Unit` / `Component` row whose test imports a new symbol — has no status to answer with and satisfies it by returning a placeholder value the row's predicate does not own",
+    );
     expect(flatGate).toContain(
       '"No production code exists" is **not** one of the conditions above',
     );
@@ -2530,6 +2551,12 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
       "obtain confirmation **before** any code implementing the row's predicate exists — the step 3a seam does not count",
     );
     expect(implement).not.toContain("**before** any production code exists");
+    // Including the `Handoff Contracts` restatement, which is the form an
+    // implementation agent reads as its own obligation.
+    expect(implement).toContain(
+      "submits the RED run to `qa-gatekeeper` **before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
+    );
+    expect(implement).not.toContain("**while no production code exists**");
 
     const routing = flat(await read(tree, "assistant/manifest/agent-routing.yml"));
     expect(routing).toContain("row's predicate exists (the step 1 seam does not count)");

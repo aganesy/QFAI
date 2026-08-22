@@ -35,17 +35,26 @@ than as completed work.
 
 Take the first that applies, and record which one in the evidence file.
 
-**What the `qa-gatekeeper` RED gate confirms — on every branch.** Not "no
+**What the `qa-gatekeeper` RED gate confirms on an `observed-red` row.** Not "no
 production code exists", but that the failure is an assertion inside this row's
 selector, naming the predicate the row owns, observed **before any code
 implementing that predicate was written**. A step 1 seam is inside that state,
 not a breach of it: it resolves the symbol or route, implements no predicate,
-and answers with a status the row does not contract for
+and answers with something the row does not contract for — a sentinel status for
+a registered-route seam, a placeholder value for a module / export / signature
+one, which has no status to answer with
 (`../../qfai-implement/references/red-admissibility.md`). So is a surface that
 already existed and was wrong — there the tree the RED is observed against is
 the one before the fix. Read "production code" in step 4 and in
 `qfai-implement/SKILL.md` Phase Red with this meaning: code that implements the
 row's predicate, never the seam.
+
+**That precondition is branch 1's; it is not a gate on all three.** Branch 2
+observes its failure by mutating a predicate that is already implemented — that
+_is_ what falsifiability measures — and branch 3 records that no RED was
+observable at all. Applied literally to them it would REVISE every legitimate
+falsifiability run and every exception. Each of those branches states its own
+gate condition where it is defined below.
 
 1. **Observed RED (preferred).** Write the journey or API test **against the
    current tree**, before this cycle builds any surface it needs.
@@ -194,9 +203,10 @@ row's predicate, never the seam.
    still run — `delivery-planner` still approves the slice before the RED is
    confirmed, and `qa-gatekeeper` still passes it, because the handover table
    requires that PASS on every `observed-red` entry. What that gate confirms is
-   stated in the preamble above and holds unchanged here: an assertion inside
-   this row's selector, naming the predicate the row owns, observed **against
-   the tree before the fix**. Record that pair, get the
+   stated in the preamble above and holds unchanged for a row taken this way —
+   it is recorded as `observed-red`, so the preamble's condition is its
+   condition: an assertion inside this row's selector, naming the predicate the
+   row owns, observed **against the tree before the fix**. Record that pair, get the
    PASS, hand the fix to `/qfai-implement` Phase Green, and take the GREEN
    from the corrected surface. Record the branch as `observed-red` with a note
    that the surface existed and was wrong. Choosing branch 2 from existence alone sends a real,
