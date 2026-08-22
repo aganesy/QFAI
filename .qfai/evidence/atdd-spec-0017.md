@@ -2888,7 +2888,25 @@ What is not satisfied:
 
 - the stage's own gate `validate --profile atdd --fail-on error --spec 0017` exits 1 — `error=1`,
   `QFAI-ATDD-112` on eight TCs. (This list opened with "`US-0017-0007` is uncovered … the scoped gate
-  is `error=2`" until round 14, in the section that certifies.);
+  is `error=2`" until round 14, in the section that certifies.)
+
+  **The same finding is what holds the repository's required `build` context**, whose `tdd`-profile
+  step runs at `--root .`; `main` is green on that gate, so the condition is this branch's. Every
+  route to clearing it was checked rather than assumed, and each is closed for a stated reason:
+
+  - **a waiver cannot reach it.** `.qfai/waivers.yml` states the rule in its own header —
+    "Waivers apply to `warning` and `info` findings only. A waiver aimed at an `error` is a
+    configuration error and fails the run." `QFAI-ATDD-112` is an `error`, so the `TDDLIST-001`
+    path the skill names for a parked row does not apply to the gate the row's absence produces;
+  - **weakening the profile or `--fail-on` is forbidden by name** in this skill's CRITICAL
+    CONSTRAINTS;
+  - **covering the eight now is forbidden by the rows themselves.** Six are `blocked`, and
+    `CR-20260818-0007`'s note says what implementing anyway would be: "choosing the rule's meaning
+    rather than applying it".
+
+  So the red gate is the correct signal for a spec with four undecided change requests, and the
+  only thing that clears it is deciding them. Recorded here so the next round does not re-derive
+  the three closed routes;
 - **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
   `/qfai-implement` to write rather than what it has written;
