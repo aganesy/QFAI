@@ -406,7 +406,12 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const classCAt = text.indexOf("**Class C — property:");
     expect(classCAt, "class C's paragraph must be findable").toBeGreaterThan(-1);
     const afterClassC = text.slice(classCAt + 1);
-    const classCStop = afterClassC.search(/^(?:\*\*Class |## )/m);
+    // ANY heading level terminates the region, not an enumerated set of them. Each of these three
+    // terminators was correct for today's document and one heading away from round 17's defect —
+    // a region that ran past its section because the pattern did not match the heading that ended
+    // it. "The region is part of the claim" was written into the record as a lesson while three
+    // terminators still enumerated levels.
+    const classCStop = afterClassC.search(/^(?:\*\*Class |#{1,6} )/m);
     const classCBody = classCStop === -1 ? afterClassC : afterClassC.slice(0, classCStop);
     // The coordinates AND the reason after them. Matching the coordinates alone made the roster a list
     // of names: round 18 deleted a reason, swapped two reasons between members, and wrote coordinates
@@ -456,7 +461,9 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const classCStart = text.indexOf("**Class C — property:");
     expect(classCStart, "class C's paragraph must be findable").toBeGreaterThan(-1);
     const afterC = text.slice(classCStart + 1);
-    const classCEnd = afterC.search(/^(?:\*\*Class |## )/m);
+    // Same rule as the forward half above; two copies of one terminator is the shape this file keeps
+    // finding, so they are corrected together.
+    const classCEnd = afterC.search(/^(?:\*\*Class |#{1,6} )/m);
     const classCReasons = classCEnd === -1 ? afterC : afterC.slice(0, classCEnd);
     const inClassCSection = new Set(
       [...classCReasons.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
@@ -615,7 +622,12 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // anywhere in the section. The two defects were one edit apart: an anchor with nothing to anchor
     // to. This pin covers the one row whose section states a score per column as a bullet; the other
     // rows argue their scores in prose, which no pattern can pair with a cell.
-    const rowSection = /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{3} |$)/.exec(text)?.[1] ?? "";
+    // ANY heading level terminates the region, not an enumerated set of them. Each of these three
+    // terminators was correct for today's document and one heading away from round 17's defect —
+    // a region that ran past its section because the pattern did not match the heading that ended
+    // it. "The region is part of the claim" was written into the record as a lesson while three
+    // terminators still enumerated levels.
+    const rowSection = /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{1,6} |$)/.exec(text)?.[1] ?? "";
     expect(rowSection.length, "the row's justification section must be findable").toBeGreaterThan(
       0,
     );

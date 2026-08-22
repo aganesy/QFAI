@@ -284,7 +284,12 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // narrowing the NEEDLE instead, which lost `29 escape mechanisms`, a spelling the version before it
     // caught. The region and the needle are two problems; fixing one with the other lost ground.
     const sectionStart = prose.lastIndexOf("### ", prose.indexOf(stated?.[0] ?? ""));
-    const sectionEnd = prose.slice(sectionStart + 1).search(/\n#{2,4} /);
+    // ANY heading level terminates the region, not an enumerated set of them. Each of these three
+    // terminators was correct for today's document and one heading away from round 17's defect —
+    // a region that ran past its section because the pattern did not match the heading that ended
+    // it. "The region is part of the claim" was written into the record as a lesson while three
+    // terminators still enumerated levels.
+    const sectionEnd = prose.slice(sectionStart + 1).search(/\n#{1,6} /);
     const section = prose.slice(
       sectionStart === -1 ? 0 : sectionStart,
       sectionEnd === -1 ? prose.length : sectionStart + 1 + sectionEnd,

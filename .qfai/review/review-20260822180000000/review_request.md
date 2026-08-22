@@ -22,7 +22,7 @@ workflow-hygiene work, and it changed the shipped workflow templates. Two conseq
   `7fbac2d3`, and measure the record's pack and response counts at `19b751ca`**, the commit that
   opened this pack — because opening it is what moves them. `git diff 7fbac2d3 19b751ca -- packages/qfai/`
   is empty, so nothing else is affected by the choice. That observation is kept in the pack as
-  `R02_completion-reviewer.partial-first-attempt.md`.
+  `predecessor-partial_completion-reviewer.md`.
 - **If you find something that belongs to `b0f9d443` rather than to this stage's work, report it anyway**
   and say whose it is. It ships to the same adopters.
 
@@ -84,3 +84,12 @@ Write to `.qfai/review/review-20260822180000000/R0N_<role>.md`, in small appends
 
 **Do not modify the subject.** Plant, measure, restore what you planted from a copy you made first, and
 report. If a plant cannot be restored, say which file and stop.
+
+## Amended a second time, after round 19's reports landed
+
+The predecessor's partial was filed as `R02_completion-reviewer.partial-first-attempt.md`, which matches
+`/^R0\d+_.*\.md$/` — the pattern `stageEvidenceCounts.test.ts` counts reviewer responses with. Three
+reviewers, four matches: at the next round-open the record would have had to certify one more response
+than there were reviewers, and attribute a verdict to a file that reached none. It is renamed
+`predecessor-partial_completion-reviewer.md`, which the counter does not match and the recursive seal
+still covers. Found by this round's `completion-reviewer` as `M2`.
