@@ -430,7 +430,9 @@ completing every branch-1 RED in P1b first would leave several deliberate
 failures open at once, and every row's checkpoint runs the full suite
 (`../../qfai-implement/references/checkpoint-verification.md`). A second deliberate
 RED left open elsewhere fails the first row's checkpoint — and that row is then
-stranded at `refactor`, which Phase Red does not re-select.
+stranded at `refactor`, which Phase Red does not re-select — only the next
+invocation's preflight does (`../../qfai-implement/SKILL.md`, Phase: Stage 0 +
+Preflight step 3), so the row costs a whole extra pass to recover.
 
 **P1c — discharge branch 1, one row at a time.** Branch 1 ends with a
 deliberately failing test and no production code, and this stage does not write
