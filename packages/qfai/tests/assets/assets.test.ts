@@ -443,9 +443,30 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toMatch(/hard and\s+non-waivable/);
       expect(generatorRef).toMatch(/there is no\s+Reviewer override/);
       // The reader must also learn why a hand-written `[]` does not work.
-      expect(generatorRef).toMatch(/re-scanned before a stop\s+is honoured/);
+      // The re-scan guarantee is scoped to the CONVERGENCE stop:
+      // `prototypingIterate` only calls
+      // `recomputeFinalIterDesignMdViolations` when `shouldStop()`
+      // returned "axes-exceptional", so a max-iterations stop must not be
+      // advertised as re-scanned. `certify` is what closes that path.
+      expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
+      expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
+      expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
+      expect(generatorRef).toMatch(/certify` re-scans every final HTML file\s+unconditionally/);
       expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
+      expect(reviewerRef).toMatch(/on a convergence stop/);
       expect(reviewerRef).toMatch(/gate is non-waivable/);
+
+      // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
+      // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
+      // on any mismatch, so "widen DESIGN.md" is not a mid-loop escape
+      // hatch. The prompt must route a brand change through a refreeze +
+      // cycle-0 restart instead.
+      expect(generatorRef).toMatch(
+        /Do\s+\*\*not\*\* edit `DESIGN\.md` to widen the allowlist mid-loop/,
+      );
+      expect(generatorRef).toMatch(/exits 2 with a\s+hash mismatch/);
+      expect(generatorRef).toMatch(/refreeze the lock via `\/qfai-sdd`/);
+      expect(generatorRef).toMatch(/restart the loop from\s+`--cycle 0`/);
     }
   });
 
@@ -467,6 +488,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     );
     expect(scanner).toMatch(/hard and non-waivable/);
     expect(scanner).toMatch(/no\s+\*?\s*Reviewer override/);
+    // Same scoping as the prompt half: the iterate-side re-scan covers the
+    // convergence stop only; certify is the unconditional backstop.
+    expect(scanner).toMatch(/CONVERGENCE stop/);
+    expect(scanner).toMatch(/`max-iterations` stop skips that re-scan/);
+    expect(scanner).toMatch(/unconditionally/);
   });
 
   it("keeps qfai-prototyping SKILL.md concise enough for agent execution", async () => {

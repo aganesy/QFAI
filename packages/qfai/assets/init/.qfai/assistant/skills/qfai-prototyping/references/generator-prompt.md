@@ -55,11 +55,23 @@ The compliance gate scans rendered HTML — `<style>` blocks, inline
 four categories of forbidden literals. The gate is **hard and
 non-waivable**: any finding blocks convergence, and there is no
 Reviewer override. `designMdViolations` is injected by the static
-scanner, and the accepted iteration's HTML is re-scanned before a stop
-is honoured, so a hand-written `[]` in the Reviewer report is
-discarded. The only ways past a finding are to remove the literal from
-the HTML, or to widen `DESIGN.md` so the value becomes an allowed
-token.
+scanner. On a **convergence** stop (all four axes exceptional) the
+accepted iteration's HTML is re-scanned before the stop is honoured,
+so a hand-written `[]` in the Reviewer report is discarded and the
+loop keeps iterating. A **max-iterations** stop skips that re-scan —
+it reports an exhausted budget, not a clean bill of health — but
+`npx qfai prototyping certify` re-scans every final HTML file
+unconditionally and exits 2 on any finding, so no route seals a
+certificate over a violation.
+
+Within a frozen run the only way past a finding is to change the HTML:
+use a token already declared in `DESIGN.md`, or drop the literal. Do
+**not** edit `DESIGN.md` to widen the allowlist mid-loop — every cycle
+≥ 1 compares live `DESIGN.md`, `DESIGN.md.lock.yaml` and the cycle-0
+cached sha256 before anything else, so the next iterate exits 2 with a
+hash mismatch. A genuine brand change is a separate operation:
+refreeze the lock via `/qfai-sdd`, then restart the loop from
+`--cycle 0`.
 
 ### 1. color literal ban
 

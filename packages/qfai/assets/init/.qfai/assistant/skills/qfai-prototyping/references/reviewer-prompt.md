@@ -42,9 +42,10 @@ type Review = {
 
 `designMdViolations` is filled by the static gate. Leave the field as
 `[]` unless the runtime injects pre-computed violations. You cannot
-waive a finding by writing `[]` yourself: the accepted iteration's HTML
-is re-scanned before a stop is honoured, and the re-scan result wins.
-The gate is non-waivable — see `generator-prompt.md`.
+waive a finding by writing `[]` yourself: on a convergence stop the
+accepted iteration's HTML is re-scanned and the re-scan result wins,
+and `npx qfai prototyping certify` re-scans unconditionally before it
+seals. The gate is non-waivable — see `generator-prompt.md`.
 
 ## 4 axes
 
