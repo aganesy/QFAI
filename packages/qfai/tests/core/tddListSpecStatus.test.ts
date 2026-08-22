@@ -292,6 +292,12 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
       // `TDDLIST_BLOCKED_MISSING_REF` only checks the cell is non-empty.
       expect(action).toContain("Blocked-By");
       expect(action).toContain("TDDLIST_BLOCKED_MISSING_REF");
+      // An in-progress row's Status / DR-ID / Evidence describe a run against
+      // the retired obligation; carried over they claim the inheritor's new
+      // TC/US was evidenced by work that never referenced it.
+      expect(action).toContain("Status: todo");
+      expect(action).toContain("DR-ID");
+      expect(action).toContain("Evidence");
     });
   });
 });
