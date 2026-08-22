@@ -25,6 +25,13 @@
 > `D`-prefixed precisely so they cannot be mistaken for spec IDs, and the `_policies`
 > lower-layer-ID rule does not apply to them (it covers spec-local 4-digit IDs only).
 >
+> **Imported spec sets (no discussion pack)** carry the evidence pair instead:
+> `import-lite-<ts>#<REQ-ID>` — the basename of the import-lite evidence file Stage 0 wrote,
+> minus the `.md`, then the requirement ID as the imported material names it (its `## Sources`
+> anchor when that material has no IDs). Both halves stay required. See
+> `references/spec-traceability-rules.md`. Do not write `-` here and do not invent a discussion
+> ID: on this route no pack exists to hold one.
+>
 > **Packs written before the `D` prefix** carry unprefixed IDs (`US-001`, `AC-001-01`).
 > Copy those verbatim too: `discussion-YYYYMMDDhhmmssSSS#US-001`. Do NOT invent a `DUS-`
 > form for them — that ID does not exist in the pack, so the `Source` would resolve to

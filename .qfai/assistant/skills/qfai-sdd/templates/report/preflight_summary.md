@@ -3,8 +3,9 @@
 ## Status
 
 - status: <ready | blocked>
-- source: discussion-pack
+- source: <discussion-pack | import-lite>
 - selected discussion-pack: <path | (not found)>
+- import-lite evidence: <path | (n/a)>
 
 ## Blockers
 

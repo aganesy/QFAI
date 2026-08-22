@@ -29,6 +29,10 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL_REL = "assistant/skills/qfai-sdd/SKILL.md";
 const TEMPLATE_REL = "assistant/skills/qfai-sdd/templates/evidence/import-lite.md";
 const TRIAGE_REL = "assistant/skills/qfai-sdd/references/sdd-triage.md";
+const TRACE_REL = "assistant/skills/qfai-sdd/references/spec-traceability-rules.md";
+const US_REL = "assistant/skills/qfai-sdd/templates/specs/spec/02_User-stories.md";
+const AC_REL = "assistant/skills/qfai-sdd/templates/specs/spec/03_Acceptance-Criteria.md";
+const SUMMARY_REL = "assistant/skills/qfai-sdd/templates/report/preflight_summary.md";
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -126,6 +130,64 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       expect(template).toContain("entrypoint: qfai-sdd");
       // `import-lite` is the mode, not a skill anyone can invoke.
       expect(template).not.toContain("entrypoint: import-lite");
+    });
+
+    it(`${tree}: name reservation is atomic, not list-then-write`, async () => {
+      // "List the directory, take a free name" is not a reservation: two runs
+      // inside the same second both see the same name free and the later write
+      // erases the earlier run's trail. The claim has to be the create itself.
+      for (const rel of [TEMPLATE_REL, SKILL_REL]) {
+        const doc = flat(await read(tree, rel));
+        expect(doc, `${rel} does not require an exclusive create`).toContain("exclusive create");
+        expect(doc, `${rel} does not say to retry the counter`).toMatch(/retry|until the name/i);
+      }
+    });
+
+    it(`${tree}: the Metadata output_path is the resolved path, not a fixed default`, async () => {
+      // Under a `paths.discussionDir` override the file does not live at the
+      // default path, so a hard-coded value would make the audit trail lie
+      // about where the trail itself is.
+      const template = flat(await read(tree, TEMPLATE_REL));
+      const start = template.indexOf("## Metadata");
+      expect(start, "the Metadata heading moved").toBeGreaterThanOrEqual(0);
+      // `## Sources` is quoted in the prose above Metadata, so search forward.
+      const metadata = template.slice(start, template.indexOf("## Sources", start));
+      expect(metadata).toContain("output_path: <");
+      expect(metadata).toContain("paths.discussionDir");
+    });
+
+    it(`${tree}: an evidence file is not left behind when no input source exists`, async () => {
+      // Stage 0 persists before Stage 1 can stop, so without this rule an
+      // input-less `import-lite-*` file survives and silences the very code
+      // that should have reported the missing input source.
+      const skill = flat(await read(tree, SKILL_REL));
+      expect(skill).toContain("User provided excerpt");
+      expect(skill).toMatch(/delete it if the run then stops/i);
+      const triage = flat(await read(tree, TRIAGE_REL));
+      expect(triage).toMatch(/delete the evidence file/i);
+    });
+
+    it(`${tree}: the skill says the packaged preflight API does not take this route`, async () => {
+      // The exported API blocks on a missing pack and always stamps
+      // `source: discussion-pack`, so this branch is agent-driven only and the
+      // summary has somewhere truthful to record an import-lite input.
+      const skill = flat(await read(tree, SKILL_REL));
+      expect(skill).toContain("runSddPreflight");
+      const summary = flat(await read(tree, SUMMARY_REL));
+      expect(summary).toContain("import-lite");
+      expect(summary).not.toContain("source: discussion-pack");
+    });
+
+    it(`${tree}: import-lite items have a Source form of their own`, async () => {
+      // Stage 1's input is the evidence file, but the downstream provenance
+      // fields only defined the discussion-pack pair — leaving an agent to
+      // write `-` or fabricate a pack ID.
+      for (const rel of [TRACE_REL, US_REL, AC_REL, TRIAGE_REL]) {
+        const doc = flat(await read(tree, rel));
+        expect(doc, `${rel} does not define the import-lite Source pair`).toContain(
+          "import-lite-<ts>#<REQ-ID>",
+        );
+      }
     });
 
     it(`${tree}: Stage 1 has a defined intake when Stage 0 took the import-lite route`, async () => {

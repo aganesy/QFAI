@@ -323,13 +323,29 @@ not this case: the Stage 0 stop rule still applies — complete the pack, never 
 
 The `-<ts>` suffix is required, not decorative: the check matches `import-lite-*.md` by basename, so
 a copy kept under the template's own name is not seen. Stamp the run to the second
-(`YYYYMMDDTHHmmss`), and if that name is already taken append `-<n>` until it is free — one file per
-import run, never an overwrite of an earlier one. This artifact is a pointer for preflight, never
-requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
+(`YYYYMMDDTHHmmss`) and claim the name with an exclusive create (`wx` / `O_EXCL`) — listing the
+directory and picking a free name is not a reservation, so two runs inside the same second would
+both pick the same name and the later write would erase the earlier run's trail. When the exclusive
+create fails because the file exists, append `-<n>`, raise it and retry until one create succeeds —
+one file per import run, never an overwrite of an earlier one.
+
+Create it only once at least one `## Sources` entry or a `## User provided excerpt` is in hand, and
+delete it if the run then stops for want of an input source: an otherwise empty `import-lite-*` file
+silences `QFAI-IMPLITE-001` while leaving preflight with nothing to read. This artifact is a pointer
+for preflight, never requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
+
+This route is the agent-driven Stage 0 only; the packaged `runSddPreflight` API does not implement
+it. That function reports a missing pack as a blocker and always stamps `source: discussion-pack`,
+so it cannot take this branch — write `.qfai/report/preflight_summary.md` by hand here, with
+`source: import-lite` and the evidence path on the `import-lite evidence:` line, so the summary
+names its real input source instead of a pack that does not exist.
 
 On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file
 instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` /
 `07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs.
+US and AC items this route writes carry the evidence pair `Source: import-lite-<ts>#<REQ-ID>` in
+place of the `<pack-id>#<discussion-id>` one; the form is defined in
+`references/spec-traceability-rules.md`.
 
 The paths above are the defaults. When `qfai.config.yaml` overrides `paths.specsDir` or
 `paths.discussionDir`, resolve them first and write under those: the check reads specs from the
