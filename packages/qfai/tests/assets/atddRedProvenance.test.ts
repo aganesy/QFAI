@@ -1538,7 +1538,10 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(revision).toContain("**gate item 10 recomputes it from the pack**");
     expect(revision).toContain("**not** in any reviewer's audit subject");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("`Review pack seal` is recomputed here");
+    expect(implement).toContain("Every `Review pack seal` the entry carries");
+    expect(implement).toContain(
+      "is recomputed here from the `review-<timestamp>/` directory it names",
+    );
   });
 
   it("leaves the final status out of the stage subject", async () => {

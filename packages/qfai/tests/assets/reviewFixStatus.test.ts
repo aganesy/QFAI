@@ -154,6 +154,29 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       );
     });
 
+    it(`${relativePath}: the oracle-proof producer is per round, not per item`, async () => {
+      // Round 2 rewrites the code round 1's mutation targeted, so a re-used
+      // proof shows nothing about the new pass.
+      const oracle = await read(relativePath, "references/oracle-strength.md");
+      expect(flat(oracle)).toContain("Per **round**, alongside that round's RED/GREEN pair");
+      expect(flat(oracle)).toContain(
+        "One mutation per round — not one per item, and never round 1's re-used",
+      );
+      expect(oracle).not.toContain("One mutation per item.");
+    });
+
+    it(`${relativePath}: every attempt's seal is produced and recomputed`, async () => {
+      // Sealing only the attempt that closed the round left the earlier packs
+      // editable with nothing recomputing over them.
+      const revision = await read(relativePath, "references/evidence-revision.md");
+      expect(flat(revision)).toContain(
+        "**A round that was reviewed more than once carries one pair per attempt**",
+      );
+      expect(flat(revision)).toContain("**Gate item 10 recomputes every seal the entry carries**");
+      const skill = await read(relativePath, "SKILL.md");
+      expect(skill).toContain("Every `Review pack seal` the entry carries");
+    });
+
     it(`${relativePath}: review is requested from refactor, so REVISE has a legal edge`, async () => {
       const skill = await read(relativePath, "SKILL.md");
       // "After GREEN" left a REVISE landing on `green`, which has no
