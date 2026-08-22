@@ -28,6 +28,8 @@ const IMPLEMENT = "assistant/skills/qfai-implement";
 const SKILL = `${IMPLEMENT}/SKILL.md`;
 const DEFINITION = `${IMPLEMENT}/references/ui-affecting.md`;
 const POLICY = `${IMPLEMENT}/references/parallelization-policy.md`;
+const VOLUME = `${IMPLEMENT}/references/volume-policy.md`;
+const STRUCTURE = "assistant/catalog/structure.md";
 const ROUTING = "assistant/manifest/agent-routing.yml";
 
 /** How every site names the definition. One string, checked everywhere. */
@@ -60,17 +62,68 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
 
       // Every clause is keyed to a ledger column or a declared path, and the
       // `Owning module` clause is guarded because that column is optional.
-      expect(definition).toContain("`Layer` is `Component`");
       expect(definition).toContain("`Owning module`");
       expect(definition).toContain("`Test file`");
-      expect(definition).toContain("catalog/structure.md");
-      expect(definition).toContain(".qfai/contracts/ui/*.yaml");
+      expect(definition).toContain("catalog/structure.md#ui-surface-paths-ssot");
       expect(definition).toContain("only when the ledger declares one");
 
       // No clause is waivable, which is the property the four rival phrasings
       // did not have.
       expect(definition).toContain("waivable");
-      expect(definition).toContain("Nothing outside those four clauses");
+      expect(definition).toContain("Nothing outside those three clauses");
+    });
+
+    it(`${tree}: Component alone is not the trigger`, async () => {
+      const definition = await read(tree, DEFINITION);
+
+      // L2 is "collaboration with a port through a fake / in-memory adapter"
+      // (catalog/test-layers.md#l2-component) — on a backend-only project every
+      // Component row would have demanded rendered evidence for screens that do
+      // not exist.
+      expect(definition).toContain("**`Layer` is `Component` is not a clause.**");
+      expect(definition).toContain("catalog/test-layers.md#l2-component");
+    });
+
+    it(`${tree}: the obligation clause covers API rows and is written-down only`, async () => {
+      const definition = await read(tree, DEFINITION);
+
+      // An `API` row carries `-` in TC-Refs by contract and stores its
+      // obligation in CON-API-Refs, so a response body a screen renders is
+      // reachable through no other clause.
+      expect(definition).toContain("`CON-API-Refs`");
+
+      // "resolves to" was unevaluable: the shipped UI contract schema has no
+      // obligation field, so two agents could answer the same row differently.
+      // The link has to be a literal occurrence in one of two named places.
+      expect(definition).toContain("The link must be **written down**");
+      expect(definition).toContain("occurs verbatim inside a declared UI");
+      expect(definition).toContain("verbatim in the obligation's own source entry");
+    });
+
+    it(`${tree}: UI contracts are discovered the way the tooling discovers them`, async () => {
+      const definition = await read(tree, DEFINITION);
+
+      // `readUiContractScreenContracts` / `validateScreenIdCasing` walk
+      // `<paths.contractsDir>/ui/**\/*.{yaml,yml}`. A fixed
+      // `.qfai/contracts/ui/*.yaml` would drop `.yml` contracts, the per-spec
+      // subdirectory layout and every repointed contractsDir.
+      expect(definition).toContain("`*.yaml` **and** `*.yml`");
+      expect(definition).toContain("`<contractsDir>/ui/**` **recursively**");
+      expect(definition).toContain("`paths.contractsDir`");
+      // The fixed path survives only as the named anti-pattern.
+      expect(definition).toContain("Reading only `.qfai/contracts/ui/*.yaml` would silently drop");
+    });
+
+    it(`${tree}: structure.md declares UI paths in a machine-checkable form`, async () => {
+      const structure = await read(tree, STRUCTURE);
+
+      // Clauses 1 and 2 match against a declaration; before this section the
+      // template had no place to write one, so "matches a UI path" had no
+      // referent at all.
+      expect(structure).toContain("## UI surface paths (SSOT)");
+      expect(structure).toContain("ui_paths:");
+      expect(structure).toContain("one repo-root-relative POSIX glob per");
+      expect(structure).toContain("references/ui-affecting.md");
     });
 
     it(`${tree}: a row that skips item 9 still leaves an artifact`, async () => {
@@ -89,6 +142,40 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       expect(evidenceLine).toContain("n/a (not UI-affecting)");
       expect(evidenceLine).toContain(REFERENCE);
       expect(evidenceLine).toContain("Never blank");
+
+      // Item 9 asks for the deciding clause, so the evidence field has to have
+      // somewhere to put it.
+      expect(definition).toContain("`PASS (clause N)`");
+      expect(evidenceLine).toContain("PASS (clause N)");
+    });
+
+    it(`${tree}: rows finished before the field existed are not retro-blocked`, async () => {
+      const definition = await read(tree, DEFINITION);
+      const skill = await read(tree, SKILL);
+
+      // `done` rows are skipped on re-execution, so a blank cell on one of them
+      // has no repair path — "Never blank" has to scope to rows this run
+      // advances.
+      expect(definition).toContain("### Rows completed before this field existed");
+      expect(definition).toContain("retroactively blocked");
+
+      const evidenceLine = skill
+        .split(/\r?\n/)
+        .find((line) => line.startsWith("- `Prototype parity`"));
+      expect(evidenceLine).toContain("this run takes through the gate");
+      expect(evidenceLine).toContain("#rows-completed-before-this-field-existed");
+    });
+
+    it(`${tree}: the volume policy's T3 tier routes on the same predicate`, async () => {
+      const volume = await read(tree, VOLUME);
+
+      // "Changes UI behavior or rendered output" was a second, wider test: a row
+      // could owe product-surface-reviewer there and record
+      // `n/a (not UI-affecting)` at item 9, making both running and skipping the
+      // review a rule violation.
+      expect(volume).not.toContain("Changes UI behavior or rendered output");
+      expect(volume).toContain(`UI-affecting (\`${REFERENCE}\`)`);
+      expect(volume).toContain("T3 and gate item 9 route on the **same** predicate");
     });
 
     it(`${tree}: gate item 9 names the definition it depends on`, async () => {

@@ -23,6 +23,27 @@
   - <convention 1>
   - <convention 2>
 
+## UI surface paths (SSOT)
+
+The only declaration of which paths render a user-visible surface.
+`/qfai-implement` reads this section — and nothing else — to decide whether a
+ledger row is UI-affecting
+(`.qfai/assistant/skills/qfai-implement/references/ui-affecting.md`), so leaving
+it on the placeholder makes that decision unevaluable and lets two agents answer
+the same row differently.
+
+Syntax, so the reader is mechanical: one repo-root-relative POSIX glob per
+bullet, backticked, nothing else on the line. A path cell matches when any glob
+matches it after normalising separators to `/`. Write the single bullet `none`
+when the project has no UI surface at all — that is a statement the reader
+accepts, not a gap.
+
+ui_paths:
+
+- `<src/ui/**>`
+- `<src/components/**>`
+- `<tests/e2e/**>`
+
 ## Quality gates (SSOT)
 
 - format: <formatter>
