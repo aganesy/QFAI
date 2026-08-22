@@ -126,9 +126,92 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(findings[0]?.message).toContain("Quality gates (SSOT) (1)");
   });
 
+  it("counts a bare TBD in a table cell and on a line of its own", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        "| Milestone | Description |",
+        "| --------- | ----------- |",
+        "| TBD       | TBD         |",
+        "",
+        "## Open questions",
+        "",
+        "TBD",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Milestones (2)");
+    expect(findings[0]?.message).toContain("Open questions (1)");
+  });
+
+  it("ignores a placeholder that has been commented out", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "tech.md",
+      [
+        "# Tech Steering",
+        "",
+        "## Standard commands (copy-paste)",
+        "",
+        "- Test: `pnpm test`",
+        "<!-- dropped: - Bench: `<bench command>` -->",
+        "<!--",
+        "- Docs: <doc command>",
+        "-->",
+        "",
+      ].join("\n"),
+    );
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
+  it("accepts a non-HTTP URI autolink as a filled value", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "manifest.md",
+      [
+        "# Manifest",
+        "",
+        "## Contacts",
+        "",
+        "- Hotline: <tel:+1-212-555-0100>",
+        "- Standard: <urn:isbn:9780262033848>",
+        "- Issues: <mailto:team@example.com>",
+        "",
+      ].join("\n"),
+    );
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
   it("does not report a steering file that is absent", async () => {
     const root = await newRoot();
 
     expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
+  it("skips a catalog entry that is not a regular file instead of failing", async () => {
+    const root = await newRoot();
+    // A directory where `tech.md` belongs: `readFile` answers `EISDIR`, which
+    // the rule declines the same way it declines absence — it is a layout
+    // fault, not unfilled content.
+    await mkdir(path.join(root, ".qfai", "assistant", "catalog", "tech.md"), { recursive: true });
+    await seedShipped(root, "product.md");
+
+    const findings = await steeringFindings(root);
+
+    expect(findings.map((found) => path.basename(found.file ?? ""))).toEqual(["product.md"]);
   });
 });

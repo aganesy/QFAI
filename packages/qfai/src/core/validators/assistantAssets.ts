@@ -1,9 +1,12 @@
-import { access, readFile } from "node:fs/promises";
+import { constants } from "node:fs";
+import type { FileHandle } from "node:fs/promises";
+import { access, open, readFile } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
+import { hasErrnoCode } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
@@ -27,15 +30,36 @@ const STEERING_CATALOG_FILES = ["manifest.md", "product.md", "structure.md", "te
  * An unreplaced angle-bracket placeholder, e.g. `<test command>`.
  *
  * Deliberately narrow: the inner text may not span a line or nest another
- * bracket, and the negative lookahead drops closing tags (`</p>`), comments
- * and doctypes (`<!-- -->`). Autolinks and mail addresses are filtered in
- * {@link isPlaceholderToken} rather than in the pattern, so the reason each
- * exclusion exists stays readable. Known limitation: a genuine inline HTML
- * tag written into a steering file (`<br>`) still matches — these four files
- * are prose templates, and the alternative (a keyword allow-list) would miss
- * the placeholders the templates actually ship.
+ * bracket, and the negative lookahead drops closing tags (`</p>`) and
+ * doctypes. HTML **comments** are not excluded here — the lookahead only
+ * declined the opening `<!--`, leaving a commented-out `<obsolete command>`
+ * inside it to match as the next token and fail a finished catalog under
+ * `--strict`; whole comment spans are blanked by
+ * {@link stripHtmlComments} before any line is scanned. Autolinks and mail
+ * addresses are filtered in {@link isPlaceholderToken} rather than in the
+ * pattern, so the reason each exclusion exists stays readable. Known
+ * limitation: a genuine inline HTML tag written into a steering file
+ * (`<br>`) still matches — these four files are prose templates, and the
+ * alternative (a keyword allow-list) would miss the placeholders the
+ * templates actually ship.
  */
 const PLACEHOLDER_TOKEN_PATTERN = /<(?![/!])([^<>\n]{1,120})>/g;
+
+/** An HTML comment, however many lines it spans. */
+const HTML_COMMENT_PATTERN = /<!--[\s\S]*?-->/g;
+
+/**
+ * A CommonMark URI autolink body: `scheme:` then no whitespace or brackets.
+ *
+ * `<https://...>` is covered by this too, but so are `<tel:+1-212-555-0100>`
+ * and `<urn:isbn:978...>`, which carry neither `://` nor an `@` and were
+ * counted as unfilled slots — a false `QFAI-ASSETS-003` for any project whose
+ * steering values are non-HTTP URIs.
+ */
+const URI_AUTOLINK_PATTERN = /^[A-Za-z][A-Za-z0-9+.-]{1,31}:[^\s<>]*$/;
+
+/** A CommonMark email autolink body, e.g. `<team@example.com>`. */
+const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 /** A level-2 heading, which is the unit `/qfai-configure` fills section by section. */
 const SECTION_HEADING_PATTERN = /^##\s+(.*\S)\s*$/;
@@ -45,6 +69,33 @@ const PREAMBLE_SECTION = "(preamble)";
 
 /** `- Key: value` / `- value`, with the bullet and any `Key:` label stripped. */
 const BULLET_VALUE_PATTERN = /^\s*[-*]\s+(?:[^:`]{1,60}:\s*)?(.*)$/;
+
+/** A markdown table row: `| a | b |`. Its cells carry values of their own. */
+const TABLE_ROW_PATTERN = /^\s*\|.*\|\s*$/;
+
+/**
+ * Read-only, and non-blocking where the platform defines it.
+ *
+ * Opening a FIFO for reading blocks until a writer appears. Windows has no
+ * `O_NONBLOCK`, and no FIFOs in this sense either, so plain read-only there.
+ */
+const OPEN_READ_FLAGS =
+  typeof constants.O_NONBLOCK === "number"
+    ? constants.O_RDONLY | constants.O_NONBLOCK
+    : constants.O_RDONLY;
+
+/**
+ * Errno codes that mean "there is no readable catalog file here", which this
+ * rule skips because it is about unfilled content, not about layout.
+ *
+ * `ENOENT` is plain absence. The rest say something that is not a regular
+ * file occupies the path: `ENXIO` is the non-blocking open of a writer-less
+ * FIFO, `EISDIR` a directory, `ENOTDIR` a non-directory ancestor, `ELOOP` a
+ * symlink cycle. Every other code — `EACCES`, `EIO`, `EMFILE` — is a read
+ * that failed for a reason the operator needs to see, and propagates rather
+ * than passing off as a filled-in catalog.
+ */
+const SKIPPABLE_READ_CODES = new Set(["ENOENT", "ENXIO", "EISDIR", "ENOTDIR", "ELOOP"]);
 
 export async function validateAssistantAssets(root: string, config: QfaiConfig): Promise<Issue[]> {
   const skillsDir = resolvePath(root, config, "skillsDir");
@@ -169,10 +220,8 @@ async function collectSteeringPlaceholderIssues(assistantDir: string): Promise<I
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
     const filePath = path.join(assistantDir, "catalog", fileName);
-    let content: string;
-    try {
-      content = await readFile(filePath, "utf-8");
-    } catch {
+    const content = await readSteeringFile(filePath);
+    if (content === null) {
       continue;
     }
     const sections = collectSteeringPlaceholders(content);
@@ -198,13 +247,54 @@ async function collectSteeringPlaceholderIssues(assistantDir: string): Promise<I
   return issues;
 }
 
+/**
+ * One catalog file's text, or `null` when nothing readable is at that path.
+ *
+ * Opened rather than `readFile`'d, for two reasons the plain read got wrong:
+ *
+ * - A FIFO at `catalog/tech.md` made the read **block until a writer
+ *   appeared**, hanging `validate --profile full` / `verify` outright. The
+ *   `O_NONBLOCK` open answers `ENXIO` instead, and the `isFile()` check on
+ *   the handle's own `fstat` — the same inode that is about to be read —
+ *   declines every other non-regular file.
+ * - `catch {}` treated *every* failure as "the file is absent", so an
+ *   `EACCES` from a restrictive ACL or a transient `EIO` silently dropped
+ *   `QFAI-ASSETS-003` for that file. Only {@link SKIPPABLE_READ_CODES} skips
+ *   now; anything else propagates.
+ */
+async function readSteeringFile(filePath: string): Promise<string | null> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const stats = await handle.stat();
+    if (!stats.isFile()) return null;
+    return await handle.readFile("utf-8");
+  } catch (error) {
+    if (hasErrnoCode(error) && SKIPPABLE_READ_CODES.has(error.code)) return null;
+    throw error;
+  } finally {
+    await handle?.close();
+  }
+}
+
 type SteeringPlaceholderSection = { section: string; count: number; firstLine: number };
+
+/**
+ * Comment spans replaced by spaces, keeping every line break in place.
+ *
+ * A commented-out slot is not work left to do, and blanking rather than
+ * deleting keeps `firstLine` and the enclosing `## ` section pointing at the
+ * same rows the operator sees in their editor.
+ */
+function stripHtmlComments(content: string): string {
+  return content.replace(HTML_COMMENT_PATTERN, (span) => span.replace(/[^\n]/g, " "));
+}
 
 /** Placeholder counts per `## ` section, in document order. */
 function collectSteeringPlaceholders(content: string): SteeringPlaceholderSection[] {
   const bySection = new Map<string, { count: number; firstLine: number }>();
   let section = PREAMBLE_SECTION;
-  const lines = content.split(/\r?\n/);
+  const lines = stripHtmlComments(content).split(/\r?\n/);
   for (const [index, line] of lines.entries()) {
     const heading = SECTION_HEADING_PATTERN.exec(line);
     if (heading?.[1] !== undefined) {
@@ -229,7 +319,7 @@ function collectSteeringPlaceholders(content: string): SteeringPlaceholderSectio
   }));
 }
 
-/** Unfilled slots on one line: `<...>` tokens, else a bare `TODO`/`TBD` value. */
+/** Unfilled slots on one line: `<...>` tokens, else bare `TODO`/`TBD` values. */
 function countUnfilledMarkers(line: string): number {
   let count = 0;
   for (const match of line.matchAll(PLACEHOLDER_TOKEN_PATTERN)) {
@@ -241,7 +331,7 @@ function countUnfilledMarkers(line: string): number {
   if (count > 0) {
     return count;
   }
-  return isBareTodoValue(line) ? 1 : 0;
+  return countBareTodoValues(line);
 }
 
 function isPlaceholderToken(inner: string): boolean {
@@ -249,9 +339,12 @@ function isPlaceholderToken(inner: string): boolean {
   if (trimmed.length === 0) {
     return false;
   }
-  // `<https://example.com>` and `<user@example.com>` are markdown autolinks —
-  // filled content, not a slot still waiting for one.
-  if (trimmed.includes("://") || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+  // `<https://example.com>`, `<tel:+1-212-555-0100>`, `<urn:isbn:978...>` and
+  // `<team@example.com>` are markdown autolinks — filled content, not a slot
+  // still waiting for one. Matched on the autolink *syntax* (a scheme, then
+  // no whitespace) rather than on `://`, so a project whose steering values
+  // use a non-HTTP scheme is not told its catalog is unfilled.
+  if (URI_AUTOLINK_PATTERN.test(trimmed) || EMAIL_AUTOLINK_PATTERN.test(trimmed)) {
     return false;
   }
   // Every shipped slot is prose or a slot name, so it carries a letter. Keeps
@@ -259,19 +352,35 @@ function isPlaceholderToken(inner: string): boolean {
   return /[A-Za-z]/.test(trimmed);
 }
 
-/** `- Key: TBD` / `- TODO` — the "placeholder-only text" the baseline names. */
-function isBareTodoValue(line: string): boolean {
-  const match = BULLET_VALUE_PATTERN.exec(line);
-  const raw = match?.[1];
-  if (raw === undefined) {
-    return false;
+/**
+ * Bare `TODO` / `TBD` values on one line, in whichever shape the file uses.
+ *
+ * A bullet (`- Key: TBD`) was the only shape recognised at first, so the
+ * Milestones **table** the shipped `product.md` actually carries read as
+ * filled once someone typed `| TBD | TBD |` into it, and a section body left
+ * as a lone `TBD` line passed the same way. All three are the "placeholder-
+ * only text" the Stage 0 baseline names, so all three are counted — per cell
+ * for a table row, since each cell is its own value.
+ */
+function countBareTodoValues(line: string): number {
+  if (TABLE_ROW_PATTERN.test(line)) {
+    // `| a | b |` splits to a leading and a trailing empty string; both are
+    // whitespace-only and are declined by the length check below.
+    return line.split("|").filter((cell) => isUnfilledValue(cell)).length;
   }
+  const bullet = BULLET_VALUE_PATTERN.exec(line)?.[1];
+  return isUnfilledValue(bullet ?? line) ? 1 : 0;
+}
+
+/** `TBD` / `` `TODO` `` — text that is a placeholder keyword and nothing else. */
+function isUnfilledValue(raw: string): boolean {
   const value = raw
     .trim()
     .replace(/^`+|`+$/g, "")
     .trim();
-  // The shared regex also matches an empty string, but an empty bullet is a
-  // list marker rather than an unfilled slot, so only real text is judged.
+  // The shared regex also matches an empty string, but an empty bullet or
+  // table cell is layout rather than an unfilled slot, so only real text is
+  // judged.
   return value.length > 0 && TODO_PLACEHOLDER_RE.test(value);
 }
 
