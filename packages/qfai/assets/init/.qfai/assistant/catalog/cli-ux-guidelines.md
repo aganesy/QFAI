@@ -23,7 +23,7 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 
 例:
 
-- `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/contracts/design/design-tokens.yaml)`
+- `[error] QFAI-DT-002 Circular reference detected: semantic.color.primary (.qfai/contracts/design/design-tokens.yaml) refs=semantic.color.primary`
 - `[error] QFAI-MOCK-002 External URL reference in HTML Mock: https://cdn.example.com/style.css (.qfai/specs/spec-0001/01_Spec.md)`
 
 `severity` が `error` の issue には、上記の行に続けてインデント付きの詳細行が出力される:
@@ -36,10 +36,26 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
   fix: <suggested action>
 ```
 
-全 issue の出力後に集計行が 1 行出力される:
+- 各行は 2 スペースのインデント + `<label>: ` + 値
+- 値が複数行の場合、2 行目以降は値の開始位置（`2 + <label> の文字数 + 2` スペース）に揃えた継続行として出力される。詳細ブロックは常に 5 行とは限らない
+
+継続行の例（`fix` の値が 2 行の場合）:
+
+```text
+  fix: 1 行目のテキスト
+       2 行目以降は値の開始位置に揃う
+```
+
+全 issue の出力後に集計行が 1 行出力される。`counts` は `suppressed=true` の issue を含まない:
 
 ```text
 counts: info=<n> warning=<n> error=<n>
+```
+
+集計行の直後に、この実行の run log 出力先が 1 行出力される（text 形式の最終行）:
+
+```text
+run-log: <path>
 ```
 
 > **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
