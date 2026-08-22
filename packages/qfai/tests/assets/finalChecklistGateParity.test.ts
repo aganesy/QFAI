@@ -61,18 +61,75 @@ function gateItemNumbers(skill: string): number[] {
   return numbers;
 }
 
+interface ChecklistBox {
+  /** The box and its hanging-indent continuation lines, joined. */
+  readonly text: string;
+  /** Indices into the checklist's lines that the box occupies. */
+  readonly lines: readonly number[];
+}
+
+/**
+ * The task-list boxes only. Surrounding prose is excluded on purpose: the
+ * invariant is "every gate item has a box", so a number mentioned in narration
+ * must not count as coverage.
+ */
+function checklistBoxes(checklist: string): ChecklistBox[] {
+  const boxes: ChecklistBox[] = [];
+  let text: string | null = null;
+  let lines: number[] = [];
+  const flush = (): void => {
+    if (text !== null) {
+      boxes.push({ text, lines });
+    }
+    text = null;
+    lines = [];
+  };
+  checklist.split(/\r?\n/).forEach((line, index) => {
+    if (/^\s*- \[[ xX]\]\s/.test(line)) {
+      flush();
+      text = line.trim();
+      lines = [index];
+      return;
+    }
+    if (text !== null && /^\s+\S/.test(line)) {
+      text = `${text} ${line.trim()}`;
+      lines.push(index);
+      return;
+    }
+    flush();
+  });
+  flush();
+  return boxes;
+}
+
 /** Every gate item number a checklist box claims to cover. */
 function citedGateItems(checklist: string): Set<number> {
   const cited = new Set<number>();
-  for (const match of checklist.matchAll(/gate items?\s+([\d,\s]*\d)/g)) {
-    for (const part of (match[1] ?? "").split(",")) {
-      const value = Number(part.trim());
-      if (Number.isInteger(value)) {
-        cited.add(value);
+  for (const box of checklistBoxes(checklist)) {
+    for (const match of box.text.matchAll(/gate items?\s+([\d,\s]*\d)/g)) {
+      for (const part of (match[1] ?? "").split(",")) {
+        const value = Number(part.trim());
+        if (Number.isInteger(value)) {
+          cited.add(value);
+        }
       }
     }
   }
   return cited;
+}
+
+/** The checklist with the boxes covering `item` deleted, prose left intact. */
+function withoutBoxesCovering(checklist: string, item: number): string {
+  const lines = checklist.split(/\r?\n/);
+  const dropped = new Set<number>();
+  for (const box of checklistBoxes(checklist)) {
+    if (citedGateItems(box.text).has(item)) {
+      for (const index of box.lines) {
+        dropped.add(index);
+      }
+    }
+  }
+  return lines.filter((_, index) => !dropped.has(index)).join("\n");
 }
 
 const readSkill = async (dir: string): Promise<string> =>
@@ -94,6 +151,17 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     const cited = citedGateItems(await readChecklist(dir));
     const uncovered = numbers.filter((n) => !cited.has(n));
     expect(uncovered).toEqual([]);
+  });
+
+  it("counts a gate item as covered only from a box, never from prose", async () => {
+    // Otherwise a number mentioned in narration keeps an item "covered" after
+    // its box is deleted — deleting the per-row checkpoint box left item 12
+    // cited by the spec-level box's explanation of why it does not apply.
+    const checklist = await readChecklist(dir);
+    for (const n of gateItemNumbers(await readSkill(dir))) {
+      const cited = citedGateItems(withoutBoxesCovering(checklist, n));
+      expect([...cited], `gate item ${n} survives its box's deletion`).not.toContain(n);
+    }
   });
 
   it("asks for both reviewer verdicts and their evidence append", async () => {
@@ -130,6 +198,21 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
       "Spec-level checkpoint verification ran against the terminal ledger",
     );
     expect(checklist).toContain("`Checkpoint verification seal` recomputes");
+    // A correctly sealed FAIL is still a FAIL: "ran" alone would let a
+    // non-zero formatter / linter / type-check result through.
+    expect(checklist).toContain("terminal ledger and **passed**");
+  });
+
+  it("scopes each waiver and exception to what its gate item actually grants", async () => {
+    const checklist = await readChecklistProse(dir);
+    // `red-not-observable.md` waives item 4 only — GREEN must still be observed.
+    expect(checklist).toContain(
+      "the waiver reaches the **minimal-code clause only** (gate item 4)",
+    );
+    // Gate item 10's marker-based legacy evidence location stays valid.
+    expect(checklist).toContain("`Pre-split-evidence: implement`");
+    // Gate item 12 is not boundary-only: off a boundary the narrow suite carries it.
+    expect(checklist).toContain("narrow relevant suite from Phase: Refactor step 2");
   });
 
   it("states the derivation rule that keeps the two in sync", async () => {

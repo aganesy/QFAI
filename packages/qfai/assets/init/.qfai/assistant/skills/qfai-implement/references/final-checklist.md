@@ -20,9 +20,11 @@ this file — the sweep would then pass on work the gate rejects.
 - [ ] Green phase: minimal code was written, `qa-gatekeeper` confirmed the test passes, **and**
       `Oracle proof` (or `equivalent-mutant` naming the weaker contract clause) is recorded, reverted,
       and absent from the commit — exit code 0 alone does not distinguish a discriminating test from
-      one that cannot fail (gate items 4, 5, `oracle-strength.md`). Waived on the _RED not observable_
-      path, where the `Satisfied-by` row already implements the predicate and its falsifiability
-      mutation already satisfies `Oracle proof`.
+      one that cannot fail (gate items 4, 5, `oracle-strength.md`). On the _RED not observable_ path
+      the waiver reaches the **minimal-code clause only** (gate item 4): the `Satisfied-by` row
+      already implements the predicate, and its falsifiability mutation already satisfies
+      `Oracle proof`. The observed GREEN on the reverted tree is still required there — every other
+      gate item is unchanged on that path (gate item 5, `red-not-observable.md`).
 - [ ] Refactor phase: code improved with tests still passing, and GREEN re-confirmed after the
       refactor (gate item 6).
 - [ ] `completion-reviewer` and `implementation-reviewer` returned PASS for every row advanced this
@@ -32,13 +34,18 @@ this file — the sweep would then pass on work the gate rejects.
 - [ ] Every UI-affecting row carries a `product-surface-reviewer` prototype-parity PASS (gate item 9).
 - [ ] `test-list.md` statuses are accurate **and** each row's `Evidence` anchor resolves to a fresh
       entry in the file its `Layer` owns, with `Review pack seal` and each `Audited evidence hash`
-      recomputed (gate item 10).
-- [ ] Checkpoint verification passed for every row that sits on a checkpoint boundary, and each
-      `Checkpoint verification seal` recomputes over the recorded command, result and revision
-      (gate item 12).
-- [ ] Spec-level checkpoint verification ran against the terminal ledger and its
-      `Checkpoint verification seal` recomputes — that boundary has no row, so gate item 12
-      never runs for it
+      recomputed — **except** an `E2E` / `API` row carrying the `Pre-split-evidence: implement`
+      marker, whose `implement-<spec-id>.md` anchor is the accepted legacy location; requiring the
+      ATDD file there would leave an already-complete row permanently ungateable (gate item 10).
+- [ ] Checkpoint verification passed for **every** row advanced this run — the **full** suite where
+      the row sits on a checkpoint boundary, the narrow relevant suite from Phase: Refactor step 2
+      (the touched module plus its reverse-dependency closure, or the package fallback when that
+      walk cannot be completed) where it does not — and each `Checkpoint verification seal`
+      recomputes over the recorded command, result and revision (gate item 12).
+- [ ] Spec-level checkpoint verification ran against the terminal ledger and **passed** — a non-zero
+      formatter, linter, type-check or test result fails this box however correctly the record was
+      sealed — and its `Checkpoint verification seal` recomputes. That boundary has no row, so the
+      per-row checkpoint item above never runs for it
       (`checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
 - [ ] No backward transitions occurred — other than an approved Change Request reset, the
       one the lifecycle sanctions (`execution-ledger.md#allowed-transitions`). A resumption, an
