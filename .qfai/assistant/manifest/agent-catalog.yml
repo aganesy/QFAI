@@ -1463,8 +1463,13 @@ agents:
       a correctly observed assertion-level RED on a non-HTTP new-symbol row to REVISE,
       leaving it unable to reach Phase Green at all. "No production code exists" is
       **not** one of the conditions above and must not be read into them — what the
-      gate measures is that the failure is the row's own assertion, taken before any
-      code implementing the row's predicate was written. See
+      gate measures is that the failure is the row's own assertion, taken against a
+      tree that does not yet make that assertion pass. The step 3a seam leaves such a
+      tree; so does a **surface that already exists and implements the row's predicate
+      wrongly** — a correct test fails against it on its first run, which
+      `red-provenance.md` routes to branch 1 as an `observed-red` and requires this
+      gate to PASS on the conditions above, the tree it was observed against being the
+      one before the fix. See
       `.qfai/assistant/skills/qfai-implement/references/red-admissibility.md` and
       `.qfai/assistant/skills/qfai-atdd/references/red-provenance.md#the-three-branches-must`.
 

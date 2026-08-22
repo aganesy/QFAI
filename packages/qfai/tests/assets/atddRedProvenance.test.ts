@@ -2542,6 +2542,34 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
     );
   });
 
+  it("leaves an existing wrong implementation inside the RED gate's precondition", async () => {
+    // `red-provenance.md` sends a correct test that fails against an existing,
+    // buggy surface to branch 1 and requires a `qa-gatekeeper` PASS on it. Read
+    // as "taken before any code implementing the row's predicate was written",
+    // the gate's own text excluded exactly that row — the predicate is
+    // implemented there, only wrongly — so the branch it is told to pass was
+    // unreachable from the text it is handed.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = gatekeeper.slice(
+      gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+      gatekeeper.indexOf("**Accept a GREEN**"),
+    );
+    const flatGate = flat(redGate);
+    expect(flatGate).toContain(
+      "the failure is the row's own assertion, taken against a tree that does not yet make that assertion pass",
+    );
+    expect(flatGate).toContain(
+      "so does a **surface that already exists and implements the row's predicate wrongly**",
+    );
+    expect(flatGate).not.toContain(
+      "taken before any code implementing the row's predicate was written",
+    );
+    // And it says which verdict that case takes, so the gate does not have to
+    // be reconciled with the producer contract by the reader.
+    expect(flatGate).toContain("routes to branch 1 as an `observed-red`");
+    expect(flatGate).toContain("the tree it was observed against being the one before the fix");
+  });
+
   it("keeps the seam out of the precondition in both skills and the routing map", async () => {
     // `qfai-implement/SKILL.md` reproduced both halves and cited both
     // references from the same phase, and `agent-routing.yml` restated the
