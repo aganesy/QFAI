@@ -81,6 +81,26 @@ function resolveReportPaths(
 }
 
 /**
+ * True when an explicit `--in` file carries the scope the run was asked for.
+ *
+ * `--in` hands `runReport` a `ValidationResult` verbatim — `issues`, `counts`,
+ * SC coverage and the waiver aggregates are whatever the producing run
+ * computed. Scoping the output *name* does nothing to that body, so
+ * `report --spec 0004 --in <repo-wide validate.json>` wrote sibling specs'
+ * findings into `report.spec-0004.md`. Re-filtering the input is not a way out
+ * either: `waivers.suppressed.byWaiver` attributes each suppression to a waiver
+ * id the surviving `Issue` no longer names, so that aggregate cannot be
+ * recomputed from the file alone and the report would still be part repo-wide.
+ *
+ * The provenance that does exist is the filename `validate --spec` writes, so
+ * that is what is checked — same basename, any directory, which keeps `--in`
+ * useful for a slice whose validate result lives outside `outDir`.
+ */
+function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: string): boolean {
+  return path.basename(inputPath) === path.basename(scopedValidateJsonPath);
+}
+
+/**
  * The ENOENT guidance for a missing validate result.
  *
  * A scoped run reads `validate.spec-<ids>.json`, so the unscoped text — "run
@@ -177,6 +197,24 @@ export async function runReport(options: ReportOptions): Promise<void> {
   } else {
     const input = options.inputPath ?? paths.validateJsonPath;
     const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
+    if (
+      options.inputPath !== undefined &&
+      specIds.length > 0 &&
+      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath)
+    ) {
+      const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+      error(
+        [
+          `qfai report: --in の validate 結果が --spec の scope と一致しません: ${inputPath}`,
+          `--spec 付きの report は counts / issues / SC coverage / waiver 集計を入力ファイルからそのまま採用するため、repo 全体や別 spec の結果を渡すと scope 外の結果が出力に混ざります。`,
+          `${path.basename(paths.validateJsonPath)} という名前の scoped な validate 結果を指定してください。例:`,
+          `  qfai validate ${specArgs}`,
+          `  qfai report ${specArgs}`,
+        ].join("\n"),
+      );
+      process.exitCode = 2;
+      return;
+    }
     try {
       validation = await readValidationResult(inputPath);
     } catch (err) {

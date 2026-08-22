@@ -295,6 +295,90 @@ describe("report", { timeout: 15000 }, () => {
     expect(scoped.issues.some((issue) => (issue.file ?? "").includes("spec-0003"))).toBe(false);
   });
 
+  it("refuses an --in whose scope does not match --spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const specsRoot = path.join(root, ".qfai", "specs");
+    for (const specName of ["spec-0003", "spec-0004"]) {
+      const specDir = path.join(specsRoot, specName);
+      await mkdir(specDir, { recursive: true });
+      await writeFile(path.join(specDir, "01_Spec.md"), `# ${specName}\n`, "utf-8");
+    }
+
+    // A repo-wide validate result: its counts / issues / SC coverage cover
+    // every spec, and `--in` adopts them verbatim.
+    await runValidate({ root, strict: false, failOn: "never", format: "github" });
+
+    const messages: string[] = [];
+    const stderrSpy = vi.spyOn(process.stderr, "write").mockImplementation((chunk: unknown) => {
+      messages.push(String(chunk));
+      return true;
+    });
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({
+        root,
+        format: "md",
+        specIds: ["0004"],
+        inputPath: path.join(".qfai", "report", "validate.json"),
+      });
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+      stderrSpy.mockRestore();
+    }
+
+    const combined = messages.join("\n");
+    expect(combined).toContain("validate.spec-0004.json");
+    // The scoped name must not be written from an unscoped body.
+    await expect(
+      readFile(path.join(root, ".qfai", "report", "report.spec-0004.md"), "utf-8"),
+    ).rejects.toThrow();
+  });
+
+  it("accepts a relocated --in that still carries the requested scope", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+    const specDir = path.join(root, ".qfai", "specs", "spec-0004");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# spec-0004\n", "utf-8");
+
+    await runValidate({
+      root,
+      strict: false,
+      failOn: "never",
+      format: "github",
+      specIds: ["0004"],
+    });
+
+    const reportRoot = path.join(root, ".qfai", "report");
+    const scopedInput = path.join(reportRoot, "validate.spec-0004.json");
+    const relocated = path.join(root, "custom", "validate.spec-0004.json");
+    await mkdir(path.dirname(relocated), { recursive: true });
+    await writeFile(relocated, await readFile(scopedInput, "utf-8"), "utf-8");
+    await rm(scopedInput, { force: true });
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await runReport({
+        root,
+        format: "md",
+        specIds: ["0004"],
+        inputPath: path.relative(root, relocated),
+      });
+      expect(process.exitCode).not.toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    const scopedReport = await readFile(path.join(reportRoot, "report.spec-0004.md"), "utf-8");
+    expect(scopedReport).toContain("# QFAI Report");
+  });
+
   it("points a missing scoped input at the matching scoped validate command", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
