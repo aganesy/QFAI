@@ -684,6 +684,87 @@ describe("applyWaivers", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // A validator may aggregate several files into one file-less finding
+  // (`uiDefinitionConsistency` raises one QFAI-CONSISTENCY-002 per screen id
+  // across every UI Contract), so a waiver scoped to a single file must not
+  // reach it — only an explicitly repo-wide glob does.
+  it("does not let a narrow scope.paths waiver suppress a finding with no file", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-15",
+          "    rule: QFAI-CONSISTENCY-002",
+          "    scope:",
+          '      paths: [".qfai/contracts/ui/a.yaml"]',
+          '    reason: "one screen of one contract"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-CONSISTENCY-002",
+          rule: "uiDefinitionConsistency.screenAlignment",
+          severity: "info",
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.issues.find((item) => item.code === "QFAI-CONSISTENCY-002")?.suppressed).toBe(
+        undefined,
+      );
+      expect(result.waivers.suppressed.total).toBe(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The repo-wide glob need not be the only entry: `.some()` over scope.paths.
+  it("suppresses a finding with no file when scope.paths mixes a narrow glob with '**/*'", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-16",
+          "    rule: QFAI-CONSISTENCY-002",
+          "    scope:",
+          '      paths: [".qfai/contracts/ui/a.yaml", "**/*"]',
+          '    reason: "repo-wide screen alignment is advisory here"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const findings: Issue[] = [
+        buildIssue({
+          code: "QFAI-CONSISTENCY-002",
+          rule: "uiDefinitionConsistency.screenAlignment",
+          severity: "info",
+        }),
+      ];
+      const result = await applyWaivers(root, findings);
+
+      expect(result.waivers.active).toHaveLength(1);
+      expect(result.issues.find((item) => item.code === "QFAI-CONSISTENCY-002")?.suppressed).toBe(
+        true,
+      );
+      expect(result.waivers.suppressed.byWaiver["WVR-20260208-16"]).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
 
 async function createRoot(): Promise<string> {
