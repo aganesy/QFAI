@@ -93,6 +93,39 @@ describe("validateSpecStatus", () => {
     expect(validateSpecStatus(parsed, SPEC_PATH, KNOWN)).toEqual([]);
   });
 
+  it("emits QFAI-STATUS-006 for a date that does not exist", () => {
+    // The shape regex accepts `2026-02-30`, which rolls over to March 2. The
+    // date is the only field between a `deprecated` bullet and a whole ledger
+    // dropping out of the gate, so it has to name a day that happened.
+    for (const value of ["2026-02-30", "9999-99-99", "2025-02-29"]) {
+      const parsed = parse(`${HEADER}- Status: deprecated\n- Deprecated-at: ${value}\n`);
+      const issues = validateSpecStatus(parsed, SPEC_PATH, KNOWN);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-STATUS-006"]);
+    }
+    // A leap day that did happen still passes.
+    const leap = parse(`${HEADER}- Status: deprecated\n- Deprecated-at: 2024-02-29\n`);
+    expect(validateSpecStatus(leap, SPEC_PATH, KNOWN)).toEqual([]);
+  });
+
+  it("emits QFAI-STATUS-001 for a Status bullet that is only in the body", () => {
+    // `QFAI-STATUS-001` places the bullet in the header block. Read from the
+    // whole document, a `- Status: active` quoted under `## Notes` silenced
+    // the rule for a spec that never declared one.
+    const parsed = parse(`${HEADER}\n## Notes\n\nSUPERSEDE writes:\n\n- Status: active\n`);
+    const issues = validateSpecStatus(parsed, SPEC_PATH, KNOWN);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-STATUS-001"]);
+  });
+
+  it("does not let a header Status borrow its companion from the body", () => {
+    // `Superseded-by` illustrated in a prose section is an example, not this
+    // spec's — without it the header declaration is incomplete.
+    const parsed = parse(
+      `${HEADER}- Status: superseded\n\n## Notes\n\n- Superseded-by: spec-0099\n`,
+    );
+    const issues = validateSpecStatus(parsed, SPEC_PATH, KNOWN);
+    expect(issues.map((issue) => issue.code)).toEqual(["QFAI-STATUS-003"]);
+  });
+
   it("reads past a fenced sample of the SUPERSEDE bullets", () => {
     const parsed = parse(
       `${HEADER}\`\`\`markdown\n- Status: deprecated\n- Deprecated-at: 2026-05-02\n\`\`\`\n\n- Status: active\n`,

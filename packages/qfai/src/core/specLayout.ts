@@ -5,6 +5,7 @@ import { isEnoent } from "./fs/errno.js";
 import {
   isLifecycleDeclarationComplete,
   parseSpecLifecycle,
+  type SpecLifecycle,
   type SpecStatus,
 } from "./parse/spec.js";
 
@@ -152,10 +153,11 @@ export type SpecEntry = {
    *
    * Absent for a spec with no bullet, an unparseable value, an unreadable spec
    * file, a retirement missing the companion field it requires
-   * (`Superseded-by` / `Deprecated-at`), or a `Superseded-by` naming a spec
-   * that does not exist. Every one of those is reported by its own rule
-   * (`QFAI-STATUS-001` … `-006`), and a caller that branches on the lifecycle
-   * must treat them all as still current.
+   * (`Superseded-by` / `Deprecated-at`), or a `Superseded-by` that names no
+   * spec able to inherit the work — a spec that does not exist, the spec
+   * itself, or one that is itself retired. Every one of those is reported by
+   * its own rule (`QFAI-STATUS-001` … `-006`), and a caller that branches on
+   * the lifecycle must treat them all as still current.
    */
   status?: SpecStatus;
   // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
@@ -283,58 +285,85 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       });
     }),
   );
-  // The same id set `validateSpecStatus` builds for `QFAI-STATUS-004`, so a
-  // `Superseded-by` is judged against the spec set both readers see.
-  const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
-  const withStatus = await Promise.all(
+  // Every spec's declaration is read before any of them is resolved: a
+  // `superseded` spec retires only if some *other*, still-current spec is
+  // there to inherit its work, and that is a question about the neighbour's
+  // declaration, not its own.
+  const declarations = new Map<string, SpecLifecycle | undefined>();
+  await Promise.all(
     entries.map(async (entry) => {
-      const status = await readSpecStatus(entry.specMetaPath, knownSpecIds);
-      return status === undefined ? entry : { ...entry, status };
+      declarations.set(`spec-${entry.specNumber}`, await readSpecLifecycle(entry.specMetaPath));
     }),
   );
+  const withStatus = entries.map((entry) => {
+    const status = resolveSpecStatus(`spec-${entry.specNumber}`, declarations);
+    return status === undefined ? entry : { ...entry, status };
+  });
   return withStatus.sort((a, b) => a.dir.localeCompare(b.dir));
 }
 
 /**
- * Read one spec's actionable lifecycle status from disk.
+ * Read one spec's lifecycle declaration from disk, as written.
  *
- * A spec file that cannot be read yields no status rather than an exception:
- * the layout collector is the entry point for the very validators that report a
- * missing or unreadable spec file, so throwing here would replace those
- * findings with a crash.
- *
- * An incomplete retirement yields no status either — see
- * {@link isLifecycleDeclarationComplete}. The gate lives here rather than in
- * each consumer so that every reader of `SpecEntry.status` retires a spec on
- * the same evidence.
- *
- * A `superseded` spec whose `Superseded-by` names no spec in `knownSpecIds`
- * stays current for the same reason. SUPERSEDE retires a spec by moving its
- * obligations to the successor, so a successor that does not exist means the
- * work moved nowhere: demoting the ledger there would drop every outstanding
- * row out of the gate with no spec left owing it. `QFAI-STATUS-004` reports
- * the dangling reference, but only under `--profile full` — `--profile tdd`
- * runs `validateTddList` without `validateSpecPacks`, which is exactly the
- * profile the completion gate uses.
+ * A spec file that cannot be read yields no declaration rather than an
+ * exception: the layout collector is the entry point for the very validators
+ * that report a missing or unreadable spec file, so throwing here would replace
+ * those findings with a crash.
  */
-async function readSpecStatus(
-  specMetaPath: string,
-  knownSpecIds: ReadonlySet<string>,
-): Promise<SpecStatus | undefined> {
+async function readSpecLifecycle(specMetaPath: string): Promise<SpecLifecycle | undefined> {
   let md: string;
   try {
     md = await readFile(specMetaPath, "utf-8");
   } catch {
     return undefined;
   }
-  const lifecycle = parseSpecLifecycle(md);
+  return parseSpecLifecycle(md);
+}
+
+/**
+ * The lifecycle a caller may act on, or `undefined` when the spec has to keep
+ * being treated as current.
+ *
+ * An absent or unparseable `Status:` yields nothing, and so does an incomplete
+ * retirement — see {@link isLifecycleDeclarationComplete}. The gate lives here
+ * rather than in each consumer so that every reader of `SpecEntry.status`
+ * retires a spec on the same evidence.
+ *
+ * `superseded` additionally requires a successor that can actually inherit the
+ * work. SUPERSEDE retires a spec by moving its obligations to another one, so
+ * a `Superseded-by` that names nothing, names the spec itself, or names a spec
+ * that is itself retired means the obligations moved nowhere — and demoting
+ * the ledger would drop every outstanding row out of the gate with no spec
+ * left owing it. `QFAI-STATUS-004` reports a dangling reference, but only
+ * under `--profile full`; `--profile tdd` runs `validateTddList` without
+ * `validateSpecPacks`, and that is the profile the completion gate uses.
+ */
+function resolveSpecStatus(
+  specId: string,
+  declarations: ReadonlyMap<string, SpecLifecycle | undefined>,
+): SpecStatus | undefined {
+  const lifecycle = declarations.get(specId);
   if (lifecycle === undefined || !isLifecycleDeclarationComplete(lifecycle)) {
     return undefined;
   }
-  if (lifecycle.status === "superseded" && !knownSpecIds.has(lifecycle.supersededBy ?? "")) {
+  if (lifecycle.status !== "superseded") {
+    return lifecycle.status;
+  }
+  const successorId = lifecycle.supersededBy;
+  if (successorId === undefined || successorId === specId || !declarations.has(successorId)) {
     return undefined;
   }
-  return lifecycle.status;
+  // A successor that declares a retirement of its own cannot be the spec the
+  // work landed on — whether or not that declaration is complete enough to
+  // retire the successor in turn. Following the chain instead would have to
+  // handle cycles; refusing here needs no such reasoning, and the operator's
+  // fix is the same either way: point `Superseded-by` at the spec that owns
+  // the work now.
+  const successor = declarations.get(successorId);
+  if (successor !== undefined && successor.status !== "active") {
+    return undefined;
+  }
+  return "superseded";
 }
 
 export async function collectMissingRequiredFiles(

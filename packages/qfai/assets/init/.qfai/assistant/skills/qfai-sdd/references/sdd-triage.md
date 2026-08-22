@@ -212,9 +212,18 @@ Retiring a spec retires its execution ledger with it, so move the work
    bound to the retired spec's user story. Build both correspondences
    from the successor's `06_Test-Cases.md` and `02_User-stories.md`; if
    it has no TC or US for a migrated row, add one there first.
-3. Leave `done` rows where they are — they are the historical record of
+3. Renumber each migrated row to a `TDD-ID` the successor's ledger does
+   not already use. `TDD-NNNN` is ledger-local, not spec-namespaced, so
+   two ledgers that both start at `TDD-0001` collide the moment a row is
+   copied: the migrated row fails `TDDLIST_DUPLICATE_ID` (`error`) in
+   the successor while the source row it came from is already demoted to
+   `info` — the work ends up gated nowhere.
+4. Leave `done` rows where they are — they are the historical record of
    what the retired spec delivered.
-4. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+5. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+   `Superseded-by` must name an **active** spec other than the source;
+   pointing it at a missing, self- or already-retired spec leaves the
+   source gating, because nothing inherited its rows.
 
 `validate` demotes every ledger finding on a non-active spec to `info`,
 matching the rule above that triage ignores such specs. That is what

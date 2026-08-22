@@ -154,6 +154,24 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/Layer=E2E/);
   });
 
+  it("tells the migration to renumber TDD-IDs in the successor", async () => {
+    // `TDD-NNNN` is ledger-local, so two ledgers both starting at `TDD-0001`
+    // collide on copy: the migrated row fails `TDDLIST_DUPLICATE_ID` while the
+    // source row is already demoted to `info`.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/TDDLIST_DUPLICATE_ID/);
+    expect(ref).toMatch(/TDD-ID/);
+  });
+
+  it("requires Superseded-by to name an active spec other than the source", async () => {
+    // A missing, self- or already-retired successor inherits nothing, so the
+    // source keeps gating — the operator has to know that before rewriting
+    // `Status:`.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/Superseded-by/);
+    expect(ref).toMatch(/\*\*active\*\*/);
+  });
+
   it("documents the append-first principle and impact cascade", async () => {
     const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
     expect(ref).toMatch(/append-first/i);

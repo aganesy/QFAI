@@ -94,8 +94,39 @@ export function extractBulletField(md: string, name: string): string | undefined
 
 /** `Superseded-by` names a spec directory in four-digit form. */
 export const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
-/** `Deprecated-at` is an ISO calendar date: `2026-05-02`. */
+/** The shape of `Deprecated-at`. Shape only — see {@link isValidDeprecatedAt}. */
 export const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * Whether `Deprecated-at` names a date that exists.
+ *
+ * The shape regex alone accepts `2026-02-30` and `9999-99-99`, and a retirement
+ * date is not decoration: it is the only field standing between a
+ * `deprecated` / `removed` bullet and a whole ledger dropping out of the gate.
+ * Round-tripping through UTC catches the rollover (`2026-02-30` becomes
+ * `2026-03-02`), the same way `waivers.ts` and `worklogSurface.ts` check the
+ * dates they act on.
+ */
+export function isValidDeprecatedAt(value: string): boolean {
+  const match = DEPRECATED_AT_RE.exec(value);
+  if (match === null) {
+    return false;
+  }
+  const [yearText, monthText, dayText] = value.split("-");
+  const year = Number.parseInt(yearText ?? "", 10);
+  const month = Number.parseInt(monthText ?? "", 10);
+  const day = Number.parseInt(dayText ?? "", 10);
+  // `setUTCFullYear` rather than `Date.UTC`, which maps a 0..99 year into the
+  // 1900s. The four-digit regex already excludes that, so this is only
+  // insurance against the shape ever loosening.
+  const probe = new Date(0);
+  probe.setUTCFullYear(year, month - 1, day);
+  return (
+    probe.getUTCFullYear() === year &&
+    probe.getUTCMonth() === month - 1 &&
+    probe.getUTCDate() === day
+  );
+}
 
 /** The lifecycle declaration of a spec: its `Status:` bullet and companions. */
 export type SpecLifecycle = {
@@ -184,7 +215,7 @@ export function isLifecycleDeclarationComplete(lifecycle: SpecLifecycle): boolea
       return lifecycle.supersededBy !== undefined && SUPERSEDED_BY_RE.test(lifecycle.supersededBy);
     case "deprecated":
     case "removed":
-      return lifecycle.deprecatedAt !== undefined && DEPRECATED_AT_RE.test(lifecycle.deprecatedAt);
+      return lifecycle.deprecatedAt !== undefined && isValidDeprecatedAt(lifecycle.deprecatedAt);
   }
 }
 
@@ -268,12 +299,17 @@ export function parseSpec(md: string, file: string): ParsedSpec {
     parsed.specId = specId;
   }
 
-  // Read the lifecycle bullets from the masked document. `validateSpecStatus`
-  // is the rule that answers for them, and it has to see what the spec says,
-  // not what a retired declaration parked in an HTML comment or a fenced
-  // example of the SUPERSEDE bullets says. Only these three fields are masked:
+  // Read the lifecycle bullets from the masked header block — the same text
+  // `parseSpecLifecycle` reads, so `validateSpecStatus` and every caller that
+  // branches on `SpecEntry.status` answer for one declaration.
+  //
+  // `QFAI-STATUS-001` places the bullet in the header block, so a `- Status:`
+  // quoted in a prose section is an example: taken as the spec's own, it
+  // silenced that rule for a spec that never declared a status, and let a
+  // header `Status: superseded` borrow its `Superseded-by` from an
+  // illustration further down. Only these three fields are scoped this way —
   // the BR scan above walks the raw lines because it reports line numbers.
-  const lifecycleSource = maskNonSpecRegions(md);
+  const lifecycleSource = specHeaderBlock(md);
   const statusRaw = extractBulletField(lifecycleSource, "Status");
   if (statusRaw !== undefined) {
     parsed.statusRaw = statusRaw;

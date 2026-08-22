@@ -19,6 +19,9 @@ const ROWS = [
 
 type Issues = Awaited<ReturnType<typeof validateTddList>>;
 
+/** The successor's own lifecycle bullet, when a case needs it retired too. */
+type SuccessorState = boolean | string;
+
 /** Write the layered skeleton every spec in these fixtures needs. */
 async function writeSpecPack(specsRoot: string, dirName: string, body: string): Promise<string> {
   const specDir = path.join(specsRoot, dirName);
@@ -34,15 +37,16 @@ async function writeSpecPack(specsRoot: string, dirName: string, body: string): 
  * A spec whose ledger owes both a warning (`TDDLIST_EXCEPTION_PARKED`) and an
  * error (`TDDLIST_EVIDENCE_EMPTY`), with the `Status:` bullet under test.
  *
- * `spec-0002` exists alongside it unless `successor: false` says otherwise, so
- * a `Superseded-by: spec-0002` names a spec that can inherit the rows. The
+ * `spec-0002` exists alongside it as an active spec unless `successor` says
+ * otherwise — `false` leaves it out, a string replaces its lifecycle bullets —
+ * so a `Superseded-by: spec-0002` names a spec that can inherit the rows. The
  * assertion sees only spec-0001's findings — the successor has no ledger of
  * its own and its `TDDLIST_MISSING` is not what any of these cases is about.
  */
 async function withSpecStatus(
   statusBullets: readonly string[],
   assertion: (issues: Issues) => void,
-  options: { successor?: boolean } = {},
+  options: { successor?: SuccessorState } = {},
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-spec-status-"));
   try {
@@ -52,11 +56,13 @@ async function withSpecStatus(
       "spec-0001",
       ["# SPEC-0001 Sample", "", ...statusBullets, ""].join("\n"),
     );
-    if (options.successor !== false) {
+    const successor = options.successor ?? true;
+    if (successor !== false) {
+      const bullets = typeof successor === "string" ? successor : "- Status: active";
       await writeSpecPack(
         specsRoot,
         "spec-0002",
-        ["# SPEC-0002 Successor", "", "- Status: active", ""].join("\n"),
+        ["# SPEC-0002 Successor", "", bullets, ""].join("\n"),
       );
     }
     await mkdir(path.join(specDir, "tdd"), { recursive: true });
@@ -160,6 +166,36 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     );
   });
 
+  it("does not retire a spec that supersedes itself", async () => {
+    // The source cannot inherit its own obligations, so nothing moved.
+    await withSpecStatus(["- Status: superseded", "- Superseded-by: spec-0001"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+  });
+
+  it("does not retire a spec whose successor is itself retired", async () => {
+    // A retired successor is not a spec anyone will implement the rows in;
+    // following the chain instead would have to reason about cycles.
+    await withSpecStatus(
+      ["- Status: superseded", "- Superseded-by: spec-0002"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+      { successor: "- Status: deprecated\n- Deprecated-at: 2026-01-01" },
+    );
+  });
+
+  it("does not retire a spec on a Deprecated-at that is not a real date", async () => {
+    // `2026-02-30` passes the shape regex and rolls over to March 2. A
+    // retirement date nobody can audit is not a retirement.
+    await withSpecStatus(["- Status: deprecated", "- Deprecated-at: 2026-02-30"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+    await withSpecStatus(["- Status: removed", "- Deprecated-at: 9999-99-99"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+  });
+
   it("ignores a retirement parked in an HTML comment or a fenced sample", async () => {
     // Both are how a rewrite keeps what it replaced, and both sit in the
     // header block above the live bullet. Unmasked, the hidden declaration
@@ -197,6 +233,8 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
       // downstream catches one copied out of the retired spec's namespace.
       expect(action).toContain("US-Refs");
       expect(action).toContain("02_User-stories.md");
+      // `TDD-NNNN` is ledger-local: a copied one collides in the successor.
+      expect(action).toContain("TDDLIST_DUPLICATE_ID");
     });
   });
 });

@@ -37,7 +37,7 @@ import {
   resolveTestCaseTable,
 } from "../specPackParsers.js";
 import {
-  DEPRECATED_AT_RE,
+  isValidDeprecatedAt,
   parseSpec,
   SPEC_STATUS_VALUES,
   SUPERSEDED_BY_RE,
@@ -284,17 +284,17 @@ export function validateSpecStatus(
           "01_Spec.md に `- Deprecated-at: YYYY-MM-DD` を設定してください。",
         ),
       );
-    } else if (!DEPRECATED_AT_RE.test(parsed.deprecatedAt)) {
+    } else if (!isValidDeprecatedAt(parsed.deprecatedAt)) {
       issues.push(
         issue(
           "QFAI-STATUS-006",
-          `Deprecated-at の形式が不正です: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
+          `Deprecated-at が実在する日付ではありません: ${parsed.deprecatedAt} (期待: YYYY-MM-DD)`,
           "error",
           specMdPath,
           "specStatus.deprecatedAt.format",
           [parsed.deprecatedAt],
           "canonical",
-          "Deprecated-at を `YYYY-MM-DD` 形式に修正してください。",
+          "Deprecated-at を実在する暦日の `YYYY-MM-DD` 形式に修正してください。",
         ),
       );
     }
