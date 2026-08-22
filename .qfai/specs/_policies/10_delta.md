@@ -787,3 +787,19 @@
 - New / updated shipped surfaces (SKILL.md `## Default Autopilot Policy` sections, `references/*.md` realignments, `handoff.ts` schema doc) MUST pass the layer 1/2/3 leakage guard. Per-skill `manifest.json` is consumer-authored (under the consuming project's `.qfai/assistant/skills/<skill>/manifest.json`); `skillManifestProbe.ts` reads it from the consumer tree, so it is NOT bundled under `assets/init/...`.
 - New authoring-zone contract files under `.qfai/contracts/cli/` are NOT in `package.json#files`.
 - `.qfai/evidence/prototyping/mutation-log.jsonl` is git-ignored by default (mirrors `.qfai/evidence/prototyping/`); `.qfai/evidence/decisions/` is tracked as a governance record (negated in the managed `.gitignore` block); neither is distributed.
+
+## 2026-08-22 — UPDATE:MODIFY — drop `companyName` from the hard-required autopilot bucket
+
+- Operation: UPDATE:MODIFY (policy-only; no CAP / REQ / spec ID added or renumbered)
+- Subject:
+  - `_policies/08_Decisions.md` DR-0269 Statement — hard-required bucket enumeration
+  - `_policies/06_Glossary.md` "autopilot policy" row — same enumeration
+- Change: hard-required は `companyName` / brand intent / `primarySpecId` の 3 項目から、brand intent / `primarySpecId` の 2 項目に縮小。
+- Rationale: hard-required は「default 不可能ゆえ着手前に必ず訊く」bucket であり、1 項目 = 1 回の確定 prompt。`companyName` は配布ツリー上に consumer が存在しない (template slot / artifact section / `references/*.md` のいずれからも読まれない) ため、同 section が宣言する 0-1 prompt 予算を無条件に消費するだけだった。
+- Cascade:
+  - `spec-0015/01_Spec.md` / `03_Acceptance-Criteria.md` / `04_Business-Rules.md` — 同一列挙の同期。該当 AC / BR の spec ローカル ID は `spec-0015/09_delta.md` が記録する (`_policies` は spec ローカル ID を参照しない)
+  - `assets/init/.qfai/assistant/skills/qfai-*/SKILL.md` 7 件の `## Default Autopilot Policy` から該当 bullet を削除し、root `.qfai/` mirror へ同期
+  - `packages/qfai/src/core/validators/autopilotPolicy.ts` の JSDoc 列挙を同期
+- Approval: 非 approval-gated。UPDATE:MODIFY は `_policies/11_Slice-Policy.md` §Triage の AskUserQuestion 対象外 (CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE のみ) のため、AskUserQuestion テンプレートは起動していない。
+- ID 安定性: DR-0269 は renumber せず statement のみ改訂。spec-0015 側の AC / BR も ID 据え置き (詳細は `spec-0015/09_delta.md`)。
+- 配布物影響: 配布サーフェス (`assets/init/.qfai/assistant/skills/qfai-*/SKILL.md`) の本文のみ。内部 ID / version marker の増減なし。

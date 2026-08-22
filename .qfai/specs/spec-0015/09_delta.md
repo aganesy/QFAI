@@ -102,3 +102,17 @@ Pack: `.qfai/discussion/discussion-20260527075558258/` (CHG-006). Wave A scaffol
 - Open questions: OQ-0160 / OQ-0162 / OQ-0163 resolved by the cited DRs; OQ-0119 remains carry-forward deferred (prompt-augmentation timing not resolved).
 - 01_Spec.md: Status remains `active`; governance behavior copied down to Consumer View; Relevant Requirements + US range (→0015) updated.
 - Approved By: yusuke_senaga (pin-implied under feature/v1.9.2)
+
+## 2026-08-22 — hard-required autopilot bucket の `companyName` 削除
+
+Upstream: `_policies/10_delta.md` § 2026-08-22 (policy-only UPDATE:MODIFY — DR-0269 statement / 06_Glossary.md)。本 spec は同一列挙の cascade 先。
+
+| Operation     | Sub-op | Target                                                                             | Source (REQ) | Rationale                                                                | DR-Ref  | Status |
+| ------------- | ------ | ---------------------------------------------------------------------------------- | ------------ | ------------------------------------------------------------------------ | ------- | ------ |
+| UPDATE:MODIFY | MODIFY | AC-0015-0015 / BR-0015-0010 / 01_Spec.md (Cross-skill governance behavior CHG-006) | REQ-0160     | hard-required から consumer 不在の `companyName` を削除し DR-0269 と同期 | DR-0269 | PASS   |
+
+- Change: hard-required の列挙を `companyName` / brand intent / `primarySpecId` から brand intent / `primarySpecId` に縮小。`R-AUTOPILOT-POLICY-MISSING` の trigger 条件 (section 欠落 / bucket 部分欠落) は不変。
+- Rationale: `companyName` は配布ツリーに consumer が無く、hard-required の「着手前に必ず訊く」コストだけを払っていた。auto-decide と違い hard-required は縮小も widening も許さない固定集合なので、集合そのものを改訂した。
+- Regression: `packages/qfai/tests/assets/assets.test.ts` — 配布 SKILL.md 7 件の hard-required bucket が pinned 2 項目を「両方含み、それ以外を含まない」ことを双方向に検査。
+- ID 安定性: US / AC / BR / EX / TC いずれも renumber なし。新規 append なし。
+- Approved By: yusuke_senaga (issue #753)

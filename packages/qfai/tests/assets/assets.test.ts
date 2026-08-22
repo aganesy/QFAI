@@ -1703,7 +1703,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 
-  it("keeps the hard-required autopilot bucket to entries a shipped asset consumes", async () => {
+  it("pins the hard-required autopilot bucket to exactly the entries a shipped asset consumes", async () => {
     // `hard-required` is defined as "no default possible; must be supplied
     // before proceeding", so every entry costs a guaranteed prompt out of the
     // 0-1 budget the same section opens by declaring. `companyName` bought
@@ -1711,6 +1711,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // the shipped tree ever read it, so the prompt had no consumer. Pin the
     // bucket to the entries that do have one — `brand intent` (routed to root
     // DESIGN.md front-matter by qfai-discussion) and `primarySpecId`.
+    //
+    // Unlike auto-decide, AC-0015-0015 / BR-0015-0010 let a skill neither
+    // widen NOR narrow this bucket, so the assertion runs both ways: no entry
+    // outside the pinned set, and no pinned entry missing.
     const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
       cwd: templateQfaiDir,
       absolute: false,
@@ -1718,28 +1722,38 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(skillDocs.length, "no shipped qfai-* SKILL.md matched").toBeGreaterThan(5);
 
     const offenders: string[] = [];
+    const missing: string[] = [];
     for (const relativePath of skillDocs.sort()) {
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
       const entries = extractHardRequiredEntries(content);
       expect(entries.length, `${relativePath} has no hard-required bucket`).toBeGreaterThan(0);
+      const normalized = entries.map((entry) => entry.toLowerCase());
       for (const entry of entries) {
-        if (!HARD_REQUIRED_ALLOWED.some((allowed) => entry.toLowerCase().includes(allowed))) {
+        const lowered = entry.toLowerCase();
+        if (!HARD_REQUIRED_ENTRIES.some((required) => lowered.includes(required))) {
           offenders.push(`${relativePath}: ${entry}`);
+        }
+      }
+      for (const required of HARD_REQUIRED_ENTRIES) {
+        if (!normalized.some((entry) => entry.includes(required))) {
+          missing.push(`${relativePath}: ${required}`);
         }
       }
     }
 
     expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
+    expect(missing, "hard-required bucket dropped an entry the AC/BR still require").toEqual([]);
   });
 });
 
 /**
- * Entries the shipped tree actually consumes: `brand intent` reaches root
- * DESIGN.md front-matter via qfai-discussion, and `primarySpecId` selects the
- * spec every skill operates on. Matched as a lowercase substring so the
- * bullets stay free to carry backticks and qualifiers.
+ * The exact hard-required set the shipped tree consumes: `brand intent`
+ * reaches root DESIGN.md front-matter via qfai-discussion, and
+ * `primarySpecId` selects the spec every skill operates on. Matched as a
+ * lowercase substring so the bullets stay free to carry backticks and
+ * qualifiers. Every shipped SKILL.md must list both and nothing else.
  */
-const HARD_REQUIRED_ALLOWED: readonly string[] = ["brand intent", "primaryspecid"];
+const HARD_REQUIRED_ENTRIES: readonly string[] = ["brand intent", "primaryspecid"];
 
 /**
  * Collect the bullets nested under the `- hard-required:` line of a
