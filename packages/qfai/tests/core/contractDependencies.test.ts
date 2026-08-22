@@ -229,6 +229,39 @@ describe("the declaration itself is distinguishable from its absence", () => {
     expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": "-"'))).toBe(true);
     expect(hasDependencyDeclaration(json(""))).toBe(false);
   });
+
+  it("does not accept a JSON array holding no contract id", () => {
+    // `["TBD"]` states no apply order: nothing to check referentially, so
+    // accepting it would leave the order undetermined and unreported.
+    const json = (value: string): string =>
+      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
+    expect(hasDependencyDeclaration(json('["TBD"]'))).toBe(false);
+    expect(hasDependencyDeclaration(json("[null]"))).toBe(false);
+    expect(hasDependencyDeclaration(json('["CON-API-0002"]'))).toBe(true);
+  });
+
+  it("ignores `Depends on:` written as prose in a YAML body", () => {
+    // Without a comment marker the line is documentation, not a declaration —
+    // and an OpenAPI `description` is where a *runtime* reference gets
+    // explained, which this key must never list.
+    const body = [
+      "# QFAI-CONTRACT-ID: CON-API-0001",
+      "openapi: 3.0.0",
+      "info:",
+      "  description: |",
+      "    Depends on: CON-API-0002 at request time.",
+      "",
+    ].join("\n");
+    expect(extractDeclaredDependencies(body, "api-0001.yaml")).toEqual([]);
+    expect(hasDependencyDeclaration(body, "api-0001.yaml")).toBe(false);
+  });
+
+  it("ignores an `x-qfai-depends-on` nested below the top level", () => {
+    const body = ["openapi: 3.0.0", "paths:", "  /orders:", "    x-qfai-depends-on: []", ""].join(
+      "\n",
+    );
+    expect(hasDependencyDeclaration(body, "api-0001.yaml")).toBe(false);
+  });
 });
 
 describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
@@ -293,6 +326,30 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
       async (root) => {
         const issues = await validateContracts(root, defaultConfig);
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-015");
+      },
+    );
+  });
+
+  it("warns on a YAML contract whose only `Depends on:` is body prose", async () => {
+    await withContracts(
+      {
+        api: {
+          "a.yaml": [
+            "# QFAI-CONTRACT-ID: CON-API-0001",
+            "openapi: 3.0.0",
+            "info:",
+            "  description: |",
+            "    Depends on: CON-API-0002 at request time.",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
+        expect(found?.refs).toEqual(["CON-API-0001"]);
+        // The prose id must not reach the referential lane either.
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
       },
     );
   });

@@ -25,8 +25,9 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
   table necessarily becomes N cross-referencing files. State the resulting
   composition rather than leaving every consumer to reconstruct it from the DDL:
   - `db/`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003` (or `-`)
-  - `api/` / `ui/`: `x-qfai-depends-on: [CON-API-0002]`, YAML flow or block
-    form, or the same key as a JSON array in a `.json` contract
+  - `api/` / `ui/`: a top-level `x-qfai-depends-on: [CON-API-0002]`, YAML flow
+    or block form. An `api/` contract may also be `.json`, with the same key as
+    a JSON array; `ui/` collects `.yaml` / `.yml` only.
   - Mirror the same list in `_policies/05_Contracts.md`'s `Depends On` column.
   - **Apply order only.** A reference resolved at run time — a deferred foreign
     key, an endpoint another calls during a request — is not an apply-order

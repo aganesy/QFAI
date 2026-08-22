@@ -244,12 +244,14 @@ function validateDependsOnColumn(filePath: string, text: string, index: Contract
 
   for (const table of parseIndexTables(text)) {
     const headerKeys = table.headers.map((column) => normalizeHeaderKey(column));
-    // Only the shipped contract-index shape is held to this: a table without a
-    // `Declared ID` column is some other table that happens to name contracts.
-    if (!headerKeys.includes(DECLARED_ID_HEADER_KEY)) {
+    // A table with no canonical-id column at all is some other table that
+    // happens to name contracts. `Contract ID` counts alongside `Declared ID`:
+    // a spec-pack `11_Contracts.md` heads the column that way, and holding only
+    // one spelling to the rules left the other free to drop `Depends On`.
+    const declaredIdColumn = headerKeys.findIndex((key) => CANONICAL_ID_HEADER_KEYS.has(key));
+    if (declaredIdColumn < 0) {
       continue;
     }
-    const declaredIdColumn = headerKeys.indexOf(DECLARED_ID_HEADER_KEY);
     if (!declaresCanonicalContractIds(table, declaredIdColumn)) {
       continue;
     }
@@ -292,16 +294,23 @@ function validateDependsOnColumn(filePath: string, text: string, index: Contract
  * to exactly one canonical contract id; an empty cell and the `-` placeholder
  * are neutral.
  *
- * Neutral rows alone decide nothing, and a table with **no** rows is all
- * neutral: a Design table that happens to be empty looked exactly like the
- * shipped `0 items` API table, so dropping `Depends On` from it raised
- * `QFAI-CONTRACT-032` for a table that owes no apply order. When no row states
- * an id either way, the enclosing section heading decides — `### API Contracts`
- * and its DB / UI siblings are the tables these rules were written for, and
- * that is what keeps the empty shipped template under the column check.
+ * The verdict is by **evidence, not unanimity**. One canonical row makes the
+ * table a contract index even if a sibling row is mistyped: requiring every row
+ * to resolve let a single typo disqualify the table, hiding a dropped
+ * `Depends On` column and every other row's disagreement behind the one
+ * `QFAI-CONTRACT-034` the typo earns. The mistyped row is simply skipped by the
+ * row check, which needs an id it can resolve.
+ *
+ * With no canonical row and at least one foreign one, the table indexes another
+ * artifact kind by slug and owes no apply order. With no row stating an id
+ * either way — a table with no rows at all included — the enclosing heading
+ * decides: an empty Design table is indistinguishable from the shipped
+ * `0 items` API table by its rows, and only `### API Contracts` and its DB / UI
+ * siblings are the tables these rules were written for.
  */
 function declaresCanonicalContractIds(table: IndexTable, declaredIdColumn: number): boolean {
-  let statesAnId = false;
+  let canonicalRows = 0;
+  let foreignRows = 0;
 
   for (const row of table.rows) {
     const cell = (row.cells[declaredIdColumn] ?? "").trim();
@@ -310,13 +319,20 @@ function declaresCanonicalContractIds(table: IndexTable, declaredIdColumn: numbe
     }
     const ids = new Set<string>();
     extractCellContractIds(cell, ids);
-    if (ids.size !== 1) {
-      return false;
+    if (ids.size === 1) {
+      canonicalRows++;
+    } else {
+      foreignRows++;
     }
-    statesAnId = true;
   }
 
-  return statesAnId || CANONICAL_CONTRACT_HEADING_RE.test(table.heading);
+  if (canonicalRows > 0) {
+    return true;
+  }
+  if (foreignRows > 0) {
+    return false;
+  }
+  return CANONICAL_CONTRACT_HEADING_RE.test(table.heading);
 }
 
 function validateDependsOnRows(

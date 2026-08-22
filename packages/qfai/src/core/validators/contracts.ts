@@ -287,7 +287,7 @@ function validateDependencyDeclaration(text: string, ids: string[], file: string
   if (ids.length !== 1) {
     return [];
   }
-  if (hasDependencyDeclaration(text)) {
+  if (hasDependencyDeclaration(text, file)) {
     return [];
   }
   const id = ids[0] ?? "";

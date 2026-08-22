@@ -367,6 +367,56 @@ describe("the contract index's Depends On column", () => {
     }
   });
 
+  it("keeps checking the rest of a table around one mistyped row", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedDbContract(root, "CON-DB-0001");
+      await seedApiContract(root, "CON-API-0001", ["CON-DB-0001"]);
+      // One unresolvable `Declared ID` used to disqualify the whole table, so
+      // the next row's disagreement with its own contract file went unreported.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-002 | /api/typo | CON API 0002 | `.qfai/contracts/api/api-0002.yaml` | - | typo |",
+        indexRow("-"),
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-033");
+
+      expect(issue?.refs).toEqual(["CON-API-0001", "CON-DB-0001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("holds a spec-pack `Contract ID` table to the same column rule", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedSpecPack(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "spec-0001", "11_Contracts.md"),
+        [
+          "# 11 Contracts",
+          "",
+          "| Contract ID | Type | File |",
+          "| ----------- | ---- | ---- |",
+          "| CON-API-0001 | API | `.qfai/contracts/api/api-0001-sample.yaml` |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(true);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-034")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves a table that indexes another artifact kind by slug alone", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {

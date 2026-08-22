@@ -44,7 +44,8 @@
 
 - `Depends On` lists the contracts that must be applied **before** this one, as
   `CON-*` ids, or `-` when none. It mirrors the `-- Depends on:` line in a
-  `.sql` contract and the `x-qfai-depends-on` key in a `.yaml` / `.json` one.
+  `.sql` contract and the top-level `x-qfai-depends-on` key in a `.yaml` one
+  (or in an API `.json` one).
 - A runtime reference is not an apply-order dependency. `QFAI-CONTRACT-011`
   forces a multi-table schema into N files, so this column is the only place the
   resulting composition is stated; without it every consumer reconstructs the

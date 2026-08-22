@@ -57,7 +57,7 @@ async function indexContractFiles(files: string[], index: ContractIndex): Promis
     const text = await readFile(file, "utf-8");
     // One file declares one id (`QFAI-CONTRACT-011`), so its dependency list
     // belongs to that id without ambiguity.
-    const dependencies = extractDeclaredDependencies(text);
+    const dependencies = extractDeclaredDependencies(text, file);
     extractDeclaredContractIds(text).forEach((id) => {
       record(index, id, file);
       if (dependencies.length === 0) return;

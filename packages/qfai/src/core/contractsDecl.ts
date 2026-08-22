@@ -43,15 +43,51 @@ export function stripContractDeclarationLines(text: string): string {
  * listed — the apply graph is acyclic by construction, while the runtime graph
  * legitimately is not.
  */
-const DEPENDS_ON_COMMENT_RE = /^\s*(?:#|\/\/|--|\*)?\s*Depends on:\s*(.+?)\s*$/gim;
-const DEPENDS_ON_YAML_FLOW_RE = /^[ \t]*x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*$/im;
-const DEPENDS_ON_YAML_BLOCK_RE =
-  /^[ \t]*x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
+/**
+ * The comment marker is required, and the key must sit at column 0.
+ *
+ * Both anchors keep a *declaration* distinct from *prose about* one. With the
+ * marker optional, a line reading `Depends on: CON-API-0002` inside an OpenAPI
+ * `description: |` block — the natural place to explain a **runtime** reference,
+ * which this key must never list — counted as the file's apply-order
+ * declaration: it suppressed `QFAI-CONTRACT-015` and fed its ids to the index
+ * mirror. A YAML mapping key is top-level only when unindented, so an
+ * `x-qfai-depends-on` nested under some path is likewise not this file's
+ * declaration.
+ */
+const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+?)[ \t]*$/gim;
+const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*$/im;
+const DEPENDS_ON_YAML_BLOCK_RE = /^x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
 const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
 /** The explicit ways to write "nothing must be applied before this contract". */
 const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
 /** Non-global on purpose: a `/g` regex carries `lastIndex` between `exec` calls. */
-const DEPENDS_ON_YAML_SCALAR_RE = /^[ \t]*x-qfai-depends-on:[ \t]*(\S[^\n]*?)[ \t]*$/im;
+const DEPENDS_ON_YAML_SCALAR_RE = /^x-qfai-depends-on:[ \t]*(\S[^\n]*?)[ \t]*$/im;
+
+/**
+ * Which idiom a contract file is allowed to declare in.
+ *
+ * A `.sql` contract declares in a comment and a `.yaml` / `.json` one declares
+ * with the key; accepting both in both directions is what let an OpenAPI body
+ * line masquerade as a declaration. `any` is the answer when the caller has no
+ * path to judge by, which keeps the parsers usable on a bare string.
+ */
+type DeclarationLane = "comment" | "structured" | "any";
+
+function laneFor(file: string | undefined): DeclarationLane {
+  if (file === undefined) {
+    return "any";
+  }
+  const dot = file.lastIndexOf(".");
+  const extension = dot < 0 ? "" : file.slice(dot).toLowerCase();
+  if (extension === ".sql") {
+    return "comment";
+  }
+  if (extension === ".yaml" || extension === ".yml" || extension === ".json") {
+    return "structured";
+  }
+  return "any";
+}
 /** The declaration key itself, for the JSON lane where regexes cannot reach. */
 const DEPENDS_ON_KEY = "x-qfai-depends-on";
 
@@ -107,34 +143,42 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
 /**
  * Whether a JSON `x-qfai-depends-on` value states an apply order.
  *
- * An array — `[]` included — is a statement: `[]` is the JSON spelling of "no
- * dependencies". A string is only a statement when it is one of the explicit
- * "none" spellings; a non-empty list of ids has already been answered by
- * `extractDeclaredDependencies`.
+ * Only the **empty** array is a statement on its own — it is the JSON spelling
+ * of "nothing must be applied first". A non-empty array states an apply order
+ * only if `extractDeclaredDependencies` found contract ids in it, which the
+ * caller has already asked; accepting any array would let `["TBD"]` or `[null]`
+ * suppress `QFAI-CONTRACT-015` while `QFAI-CONTRACT-014` saw no id to check,
+ * leaving the apply order undetermined and the file unreported. A string counts
+ * only as one of the explicit "none" spellings.
  */
 function statesJsonDependencies(value: unknown): boolean {
   if (Array.isArray(value)) {
-    return true;
+    return value.length === 0;
   }
   return typeof value === "string" && DEPENDS_ON_NONE_VALUE_RE.test(value.trim());
 }
 
-export function extractDeclaredDependencies(text: string): string[] {
+export function extractDeclaredDependencies(text: string, file?: string): string[] {
+  const lane = laneFor(file);
   const found = new Set<string>();
   const push = (blob: string): void => {
     for (const match of blob.matchAll(CONTRACT_ID_TOKEN)) {
       found.add(match[0].toUpperCase());
     }
   };
-  for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
-    push(match[1] ?? "");
+  if (lane !== "structured") {
+    for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
+      push(match[1] ?? "");
+    }
   }
-  const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
-  if (flow) push(flow[1] ?? "");
-  const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
-  if (block) push(block[1] ?? "");
-  const json = readJsonDependsOn(text);
-  if (json && json.value !== undefined) push(JSON.stringify(json.value));
+  if (lane !== "comment") {
+    const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
+    if (flow) push(flow[1] ?? "");
+    const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
+    if (block) push(block[1] ?? "");
+    const json = readJsonDependsOn(text);
+    if (json && json.value !== undefined) push(JSON.stringify(json.value));
+  }
   return Array.from(found).sort();
 }
 
@@ -154,14 +198,20 @@ export function extractDeclaredDependencies(text: string): string[] {
  * value counts: contract ids, or one of the explicit "none" spellings (`-`,
  * `[]`, `none`).
  */
-export function hasDependencyDeclaration(text: string): boolean {
-  if (extractDeclaredDependencies(text).length > 0) {
+export function hasDependencyDeclaration(text: string, file?: string): boolean {
+  const lane = laneFor(file);
+  if (extractDeclaredDependencies(text, file).length > 0) {
     return true;
   }
-  for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
-    if (DEPENDS_ON_NONE_VALUE_RE.test((match[1] ?? "").trim())) {
-      return true;
+  if (lane !== "structured") {
+    for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
+      if (DEPENDS_ON_NONE_VALUE_RE.test((match[1] ?? "").trim())) {
+        return true;
+      }
     }
+  }
+  if (lane === "comment") {
+    return false;
   }
   const json = readJsonDependsOn(text);
   if (json) {
