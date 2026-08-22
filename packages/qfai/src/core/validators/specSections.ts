@@ -1,10 +1,12 @@
-import { readdir, readFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { parseHeadings } from "../parse/markdown.js";
 import { collectSpecEntries } from "../specLayout.js";
+import { maskNonSpecRegions } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -32,7 +34,17 @@ export async function validateSpecSections(root: string, config: QfaiConfig): Pr
   // A layered spec keeps Objective / Constraints / Glossary in the shared
   // `_policies` pack, so a heading that lives there satisfies every spec that
   // depends on it. Read once rather than per spec.
-  const sharedDirs = new Set(entries.map((entry) => entry.sharedDir));
+  //
+  // Only a layered spec earns that exemption. A `spec-pack` or `legacy` pack
+  // owns its own Objective / Glossary / Constraints files, and the required-file
+  // gates likewise only consult `_policies` for layered entries
+  // (`collectMissingLayeredSharedRequiredFiles` returns early otherwise). During
+  // a migration the two layouts coexist under one `specs/`, so honouring
+  // `_policies` for every entry would let a legacy pack that lost its own
+  // heading pass here while the file gate still calls it incomplete.
+  const sharedDirs = new Set(
+    entries.filter((entry) => entry.layout === "layered").map((entry) => entry.sharedDir),
+  );
   const sharedHeadings = new Set<string>();
   for (const sharedDir of sharedDirs) {
     for (const heading of await collectPackHeadings(sharedDir)) {
@@ -43,8 +55,9 @@ export async function validateSpecSections(root: string, config: QfaiConfig): Pr
   const issues: Issue[] = [];
   for (const entry of entries) {
     const present = await collectPackHeadings(entry.dir);
+    const shared = entry.layout === "layered" ? sharedHeadings : EMPTY_HEADINGS;
     const missing = required.filter(
-      (section) => !present.has(section.key) && !sharedHeadings.has(section.key),
+      (section) => !present.has(section.key) && !shared.has(section.key),
     );
     if (missing.length === 0) {
       continue;
@@ -53,6 +66,9 @@ export async function validateSpecSections(root: string, config: QfaiConfig): Pr
   }
   return issues;
 }
+
+/** Stand-in for "this layout has no shared pack", so the filter stays one shape. */
+const EMPTY_HEADINGS: ReadonlySet<string> = new Set<string>();
 
 type RequiredSection = {
   /** The heading as the operator wrote it in `qfai.config.yaml`. */
@@ -107,6 +123,12 @@ function headingKey(title: string): string {
  *
  * Top level only: `tdd/` and other sub-directories hold execution ledgers, not
  * the spec definition, so a heading there must not satisfy the gate.
+ *
+ * Fenced samples and HTML comments are blanked first (`maskNonSpecRegions`).
+ * These documents illustrate their own format, so a template inside a
+ * ` ```markdown ` fence routinely carries the very headings the gate requires;
+ * counting one would let a spec that never wrote the section satisfy a strict
+ * required-heading list.
  */
 async function collectPackHeadings(dir: string): Promise<Set<string>> {
   const headings = new Set<string>();
@@ -115,21 +137,51 @@ async function collectPackHeadings(dir: string): Promise<Set<string>> {
     if (text.length === 0) {
       continue;
     }
-    for (const heading of parseHeadings(text)) {
+    for (const heading of parseHeadings(maskNonSpecRegions(text))) {
       headings.add(headingKey(heading.title));
     }
   }
   return headings;
 }
 
+/**
+ * Top-level `.md` entries of a pack, symlinks included.
+ *
+ * A `Dirent` describes the LINK, not its target, so `isFile()` is false for
+ * every symlink — and the required-file gate already accepts a link that
+ * resolves to a regular file (`listExistingNames` in `specLayout.ts`). Skipping
+ * them here would make one pack complete for the file gate yet missing its
+ * headings for this one.
+ */
 async function listMarkdownFiles(dir: string): Promise<string[]> {
+  let entries: Dirent[];
   try {
-    const entries = await readdir(dir, { withFileTypes: true });
-    return entries
-      .filter((entry) => entry.isFile() && entry.name.toLowerCase().endsWith(".md"))
-      .map((entry) => path.join(dir, entry.name));
+    entries = await readdir(dir, { withFileTypes: true });
   } catch {
     return [];
+  }
+  const files: string[] = [];
+  for (const entry of entries) {
+    if (!entry.name.toLowerCase().endsWith(".md")) {
+      continue;
+    }
+    const filePath = path.join(dir, entry.name);
+    if (entry.isFile()) {
+      files.push(filePath);
+      continue;
+    }
+    if (entry.isSymbolicLink() && (await resolvesToFile(filePath))) {
+      files.push(filePath);
+    }
+  }
+  return files;
+}
+
+async function resolvesToFile(target: string): Promise<boolean> {
+  try {
+    return (await stat(target)).isFile();
+  } catch {
+    return false;
   }
 }
 

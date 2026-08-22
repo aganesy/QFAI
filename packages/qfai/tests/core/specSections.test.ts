@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -102,6 +102,62 @@ describe("validateSpecSections", () => {
       const issues = await validateSpecSections(root, configRequiring(["Scope"]));
 
       expect(issues.map((entry) => entry.file)).toEqual([path.join(specsRoot, "spec-0001")]);
+    });
+  });
+
+  it("does not count a heading that only appears inside a fenced sample", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(
+        specsRoot,
+        "0001",
+        "# spec-0001\n\n" +
+          "テンプレート例:\n\n" +
+          "```markdown\n## Risks\n\n- 例\n```\n\n" +
+          "<!--\n## Risks\n-->\n",
+      );
+
+      const issues = await validateSpecSections(root, configRequiring(["Risks"]));
+
+      expect(issues.map((entry) => entry.refs)).toEqual([["Risks"]]);
+    });
+  });
+
+  it("does not let the shared pack cover a legacy spec pack", async () => {
+    await withProject(async (root, specsRoot) => {
+      const legacyDir = path.join(specsRoot, "spec-0001");
+      await mkdir(legacyDir, { recursive: true });
+      await writeFile(path.join(legacyDir, "spec.md"), "# spec-0001\n", "utf-8");
+      await seedSpec(specsRoot, "0002", "# spec-0002\n");
+      await writeFile(
+        path.join(specsRoot, "_policies", "07_Constraints.md"),
+        "# 07 Constraints\n\n## Constraints\n",
+        "utf-8",
+      );
+
+      const issues = await validateSpecSections(root, configRequiring(["Constraints"]));
+
+      // spec-0002 is layered, so `_policies` still covers it; the legacy pack
+      // owns its own Constraints file and must carry the heading itself.
+      expect(issues.map((entry) => entry.file)).toEqual([legacyDir]);
+    });
+  });
+
+  it("reads a top-level Markdown file that is a symlink", async () => {
+    await withProject(async (root, specsRoot) => {
+      const dir = await seedSpec(specsRoot, "0001", "# spec-0001\n");
+      const target = path.join(root, "external-scope.md");
+      await writeFile(target, "# external\n\n## Scope\n", "utf-8");
+      try {
+        await symlink(target, path.join(dir, "03_Scope.md"), "file");
+      } catch {
+        // Windows without developer mode refuses symlink creation; the
+        // behaviour under test is unreachable there.
+        return;
+      }
+
+      const issues = await validateSpecSections(root, configRequiring(["Scope"]));
+
+      expect(issues).toEqual([]);
     });
   });
 
