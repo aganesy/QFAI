@@ -356,13 +356,8 @@ const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
  */
 const DR_RECORD_DIR = path.join(".qfai", "decisions");
 
-/**
- * `DR-<id>[-<slug>].md`, where the id is the declaration.
- *
- * The filename is read rather than the body: a record that cites a neighbouring
- * decision in its prose must not thereby declare it.
- */
-const DR_RECORD_FILE = /^(DR-\d{4}(?:-\d{4})?)(?:-.*)?\.md$/i;
+/** A spec-scoped `DR-<spec>-<seq>`, with the spec it belongs to captured. */
+const DR_SPEC_SCOPED_ID = /^DR-(\d{4})-\d{4}$/i;
 
 /** Every location a `DR-*` may be declared in, for the unresolved-DR message. */
 const DR_SEARCHED_LOCATIONS = [
@@ -379,43 +374,91 @@ function toPosixRel(value: string): string {
 }
 
 /**
- * Every `DR-*` declared as a standalone record under `.qfai/decisions/`.
+ * The names of the regular files under `.qfai/decisions/`.
  *
  * An absent directory is the common case (no anomaly has been recorded yet) and
  * an unreadable one must not fail the whole ledger check, so both yield an
- * empty set.
+ * empty list. Directories are dropped rather than named: a directory called
+ * `DR-0270-envelope.md/` would otherwise satisfy the existence check that the
+ * Decision Record itself is supposed to satisfy. A symlink is resolved, so a
+ * record kept elsewhere and linked in still counts.
  */
-async function collectRecordDirDrIds(root: string): Promise<Set<string>> {
-  const declared = new Set<string>();
+async function collectRecordFileNames(root: string): Promise<string[]> {
   const dir = path.join(root, DR_RECORD_DIR);
-  let entries: string[];
+  let entries;
   try {
-    entries = await readdir(dir);
+    entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    return declared;
+    return [];
   }
-  for (const entry of entries) {
-    const id = DR_RECORD_FILE.exec(entry)?.[1];
-    if (id !== undefined) declared.add(id.toUpperCase());
-  }
-  return declared;
+  const names = await Promise.all(
+    entries.map(async (entry) => {
+      if (entry.isFile()) return entry.name;
+      if (!entry.isSymbolicLink()) return null;
+      try {
+        return (await stat(path.join(dir, entry.name))).isFile() ? entry.name : null;
+      } catch {
+        return null;
+      }
+    }),
+  );
+  return names.filter((name): name is string => name !== null);
 }
 
 /**
- * Every `DR-*` declared for this spec: its own `07_Decisions.md`, the shared
- * `_policies/08_Decisions.md`, and the standalone records under
- * `.qfai/decisions/`.
+ * Whether a standalone record file declares the `DR-*` the ledger cites.
+ *
+ * The documented name is `DR-<id>-<slug>.md` and its grammar is ambiguous:
+ * `DR-0270-2026-envelope.md` reads either as the policy-level `DR-0270` with
+ * the slug `2026-envelope`, or as the spec-scoped `DR-0270-2026` with the slug
+ * `envelope`. Parsing an id out of the filename has to pick one reading, and
+ * picking the longest left the ledger's own `DR-0270` unresolved. Matching from
+ * the cited id instead lets either reading resolve — the safe direction for a
+ * warning whose subject is only whether the record exists.
+ *
+ * The filename is what is read, never the body: a record that cites a
+ * neighbouring decision in its prose must not thereby declare it.
+ */
+function recordFileDeclares(fileName: string, drId: string): boolean {
+  const name = fileName.toLowerCase();
+  const id = drId.toLowerCase();
+  return name === `${id}.md` || (name.startsWith(`${id}-`) && name.endsWith(".md"));
+}
+
+/**
+ * Whether a standalone record may declare this `DR-*` for the spec in hand.
+ *
+ * `.qfai/decisions/` is shared by every spec, whereas `DR-<spec>-<seq>` is
+ * spec-scoped by construction — before the directory joined the search set the
+ * only spec-scoped source was the spec's own `07_Decisions.md`. Honouring the
+ * scope keeps spec-0002 from resolving `DR-0001-0003` against spec-0001's
+ * record; policy-level `DR-<id>` records stay shared by all of them.
+ */
+function isRecordInSpecScope(drId: string, specNumber: string): boolean {
+  const scoped = DR_SPEC_SCOPED_ID.exec(drId);
+  return scoped === null || scoped[1] === specNumber;
+}
+
+/**
+ * A predicate over the `DR-*` declared for this spec: its own
+ * `07_Decisions.md`, the shared `_policies/08_Decisions.md`, and the standalone
+ * records under `.qfai/decisions/`.
  *
  * All three are read, not one: a policy-level decision is cited from spec
  * ledgers, and the Drift Protocol sends an implement-stage anomaly record to
  * `.qfai/decisions/` precisely because the upstream files are off limits there.
+ *
+ * It is a predicate rather than a set because the record directory is resolved
+ * from the cited id — see `recordFileDeclares` for why the filename cannot be
+ * parsed into one unambiguously.
  */
-async function collectDeclaredDrIds(
+async function buildDrDeclarationResolver(
   specDir: string,
   specsRoot: string,
   root: string,
-): Promise<Set<string>> {
-  const declared = await collectRecordDirDrIds(root);
+  specNumber: string,
+): Promise<(drId: string) => boolean> {
+  const declared = new Set<string>();
   const files = [
     ...DR_DECLARATION_FILES.map((name) => path.join(specDir, name)),
     path.join(specsRoot, DR_POLICY_DECLARATION_FILE),
@@ -427,7 +470,13 @@ async function collectDeclaredDrIds(
       declared.add(match[0].toUpperCase());
     }
   }
-  return declared;
+  const recordFiles = await collectRecordFileNames(root);
+  return (drId) => {
+    const id = drId.toUpperCase();
+    if (declared.has(id)) return true;
+    if (!isRecordInSpecScope(id, specNumber)) return false;
+    return recordFiles.some((fileName) => recordFileDeclares(fileName, id));
+  };
 }
 
 /**
@@ -1060,7 +1109,7 @@ async function validateSpecTddList(
   }
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
-  const declaredDrIds = await collectDeclaredDrIds(specDir, specsRoot, root);
+  const isDrDeclared = await buildDrDeclarationResolver(specDir, specsRoot, root, specNumber);
   {
     for (const ref of ledgerRows()) {
       const rowIdxLabel = ref.label;
@@ -1112,7 +1161,7 @@ async function validateSpecTddList(
       const wellFormed = drTokens
         .map((token) => token.toUpperCase())
         .filter((token) => DR_ID_FORMAT.test(token));
-      const unresolved = wellFormed.filter((token) => !declaredDrIds.has(token));
+      const unresolved = wellFormed.filter((token) => !isDrDeclared(token));
       if (unresolved.length > 0) {
         issues.push(
           issue(

@@ -37,6 +37,8 @@ type Fixture = {
   policyDecisions?: string;
   /** Filenames created under `.qfai/decisions/` — the Drift Protocol's record home. */
   decisionRecords?: string[];
+  /** Directory names created under `.qfai/decisions/`, which declare nothing. */
+  decisionDirs?: string[];
 };
 
 async function run(
@@ -73,6 +75,9 @@ async function run(
         "# record\n\nSupersedes DR-0009-0009.\n",
         "utf-8",
       );
+    }
+    for (const name of fixture.decisionDirs ?? []) {
+      await mkdir(path.join(root, ".qfai", "decisions", name), { recursive: true });
     }
     await writeFile(
       path.join(specDir, "tdd", "test-list.md"),
@@ -183,6 +188,39 @@ describe("the DR-ID resolves to a Decisions file", () => {
     const found = await codes({
       drId: "DR-0009-0009",
       decisionRecords: ["DR-0001-0003-park-the-row.md"],
+    });
+    expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("resolves a policy-level id whose slug opens with four digits", async () => {
+    // `DR-0270-2026-envelope.md` is the documented `DR-<id>-<slug>.md` for
+    // `DR-0270`, but the filename grammar also reads it as the spec-scoped
+    // `DR-0270-2026`. Parsing the longest id out of the name took the second
+    // reading and left the ledger's own `DR-0270` unresolved.
+    const found = await codes({
+      drId: "DR-0270",
+      decisionRecords: ["DR-0270-2026-envelope.md"],
+    });
+    expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("does not resolve another spec's scoped record", async () => {
+    // `.qfai/decisions/` is shared by every spec while `DR-<spec>-<seq>` is
+    // scoped to the spec in its first segment, so spec-0001 must not resolve
+    // `DR-0002-0003` against the record spec-0002 filed.
+    const found = await codes({
+      drId: "DR-0002-0003",
+      decisionRecords: ["DR-0002-0003-park-the-row.md"],
+    });
+    expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+  });
+
+  it("does not accept a directory named like a record", async () => {
+    // The finding asks whether the Decision Record exists; a directory whose
+    // name matches is not one, and reading `readdir` names alone said it was.
+    const found = await codes({
+      drId: "DR-0270",
+      decisionDirs: ["DR-0270-envelope-taxonomy.md"],
     });
     expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
   });
