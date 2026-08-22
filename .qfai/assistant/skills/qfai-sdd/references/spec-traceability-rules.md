@@ -217,12 +217,17 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - `TDD-ID` must match `TDD-NNNN` and be unique within the spec. Because that
   uniqueness is per spec, the record that authorised a retirement — the approved
   `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal
-  `/qfai-sdd` reseed, the driving `CR-*` on a Drift Protocol owner rerun — names
+  `/qfai-sdd` reseed, that spec's `UPDATE:MODIFY` row when the TC survives but its
+  `Level` leaves coverage and no `UPDATE:REMOVE` row was raised, the driving `CR-*`
+  on a Drift Protocol owner rerun — names
   the row as `<spec-id>/TDD-NNNN`: a bare `TDD-0001` cannot be told from another
   spec's once both rows are deleted. That record also carries the deleted row's
-  `Evidence` cell verbatim, because the evidence file it pointed at falls under
+  `Evidence` cell verbatim **and the body of the `### TDD-NNNN` section it
+  anchors to**, because the evidence file it pointed at falls under
   the `.qfai/evidence/*` line of the QFAI-managed `.gitignore` block and is not
-  re-included. A retired `TDD-ID` is **never reused**: allocate the next one
+  re-included — a transcribed pointer with no transcribed body resolves to
+  nothing in a clean checkout. The same record names what happens to the deleted
+  row's test, which no skill removes on its own. A retired `TDD-ID` is **never reused**: allocate the next one
   above the highest the spec has ever issued, counting the ones those records
   retired, so a new row's `Evidence` anchor cannot land on a retired cycle's
   `### TDD-NNNN` section in the same evidence file. The validator only sees the

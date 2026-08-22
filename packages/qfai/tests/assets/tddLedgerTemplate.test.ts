@@ -260,7 +260,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // one unconditionally would either strand the stale row or manufacture a
       // duplicate CR for a change the operator has already approved.
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("**Normal `/qfai-sdd` reseed.**");
+      expect(template).toContain("**Normal `/qfai-sdd` reseed, TC deleted upstream.**");
       expect(template).toContain("**Drift Protocol owner rerun.**");
       expect(template).toContain("Do not open a `CR-*` for a deletion Triage already approved.");
 
@@ -306,6 +306,78 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(cr).toContain("`<spec-id>/TDD-NNNN` — `<that row's Evidence cell, verbatim>`");
       expect(cr).toContain("resets and retirements listed separately");
       expect(cr).not.toContain("- `<TDD-NNNN>`, `<TDD-NNNN>`, …");
+    });
+
+    it(`${tree}: retiring a row assigns its test an owner before the row goes`, async () => {
+      // The row is the only thing that names the test: `/qfai-sdd` does not
+      // edit test code and `/qfai-implement` only selects rows the ledger still
+      // holds, so a `done` row deleted without a disposition leaves a test
+      // asserting a retired behaviour with no owner and no traceable origin.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Deleting the row does not delete the test it drove.**");
+      expect(template).toContain("assign that\ntest an owner in the same record");
+      expect(template).toContain("delete only the named selector");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Deleting a row does not delete its test");
+
+      // The CR — one of the two records — has a slot for that disposition.
+      const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
+      expect(cr).toContain("Name the test's disposition here too");
+    });
+
+    it(`${tree}: a TC that leaves coverage without being deleted has a record too`, async () => {
+      // `sdd-triage.md` encodes "the TC survives, its `Level` changed" as
+      // `UPDATE:MODIFY`; only a deleted item is `UPDATE:REMOVE`. Naming the
+      // removal record as `UPDATE:REMOVE`-only would leave this reseed path
+      // pointing at a Triage row that was never raised.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Normal `/qfai-sdd` reseed, TC deleted upstream.**");
+      expect(template).toContain("**Normal `/qfai-sdd` reseed, TC no longer a coverage target.**");
+      expect(template).toContain("That `UPDATE:MODIFY` row is the");
+
+      const triage = await read(tree, "assistant/skills/qfai-sdd/references/sdd-triage.md");
+      expect(triage).toContain("Now-obsolete US/AC/BR/EX/TC → **UPDATE:REMOVE**");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("so that `UPDATE:MODIFY` row is the record instead");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("`Level` leaves coverage and no `UPDATE:REMOVE` row was raised");
+    });
+
+    it(`${tree}: the retirement record carries the evidence body, not just the anchor`, async () => {
+      // The `Evidence` cell is a pointer (`references/execution-ledger.md`
+      // caps it at the one-word outcomes plus an anchor) into a file the
+      // managed `.gitignore` excludes. Transcribing the pointer alone puts an
+      // unresolvable reference in the tracked record, so the `### TDD-NNNN`
+      // body has to come with it.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "**and with it\nthe body of the `### TDD-NNNN` section that cell anchors to**",
+      );
+      expect(template).toContain("the RED/GREEN commands and their output");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "and with it the body of the `### TDD-NNNN` section that cell anchors to",
+      );
+
+      const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
+      expect(cr).toContain("paste the body of the `### TDD-NNNN`");
+      expect(cr).toContain("the\ntranscribed `### TDD-NNNN` evidence body");
     });
 
     it(`${tree}: the encodings the guidance rules out are the ones validateTddList rejects`, async () => {

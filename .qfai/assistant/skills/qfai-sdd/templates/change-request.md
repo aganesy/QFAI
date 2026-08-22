@@ -122,14 +122,19 @@ union of the open CRs' blocked sets.
    - Retire (delete the row; its TC is gone upstream or is no longer a coverage
      target):
      `<spec-id>/TDD-NNNN` — `<that row's Evidence cell, verbatim>`, …
-     Copy the `Evidence` cell in: it is a pointer into
+     Copy the `Evidence` cell in **and paste the body of the `### TDD-NNNN`
+     section it anchors to below this list**: the cell is only a pointer into
      `.qfai/evidence/implement-<spec-id>.md` (`atdd-<spec-id>.md` for an
      `Integration` / `API` / `E2E` row), which the managed `.gitignore` block
-     excludes, so this CR is the tracked record of the cycle. A retired
-     `TDD-ID` is never reused.
+     excludes, so without the body this CR records a reference a clean checkout
+     cannot resolve. A retired `TDD-ID` is never reused.
+     Name the test's disposition here too — `<delete tests/x.test.ts "selector">`
+     or `<re-point at spec-id/TDD-NNNN>` — because deleting the row leaves the
+     test itself untouched and unowned.
      A retirement carried out by `/qfai-sdd` under an approved `UPDATE:REMOVE`
-     Triage row belongs in that row's `09_delta.md` instead; do not open a CR
-     to re-approve it.
+     Triage row belongs in that row's `09_delta.md` instead (an `UPDATE:MODIFY`
+     row's, when the TC survives a `Level` change out of coverage); do not open
+     a CR to re-approve it.
 
 ## Resolution
 
@@ -137,6 +142,7 @@ union of the open CRs' blocked sets.
 Filled in when Status leaves `open`. Record what was actually done: the owner
 skill that was rerun and the upstream artifacts it updated, and the ledger rows
 touched as `<spec-id>/TDD-NNNN` — resets and retirements listed separately,
-each retirement carrying the `Evidence` value its deleted row held. Set
-`Applied at` in the header once this section is true.
+each retirement carrying the `Evidence` value its deleted row held, the
+transcribed `### TDD-NNNN` evidence body, and what became of that row's test.
+Set `Applied at` in the header once this section is true.
 -->

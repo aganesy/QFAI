@@ -36,13 +36,33 @@ down: `validateTddList` scores **every** schema-complete table in this file, so
 a row moved under a `## Retired` heading is still read as a ledger row, and a
 trimmed-down copy of it raises `TDDLIST_REQUIRED_COLUMN_MISSING` instead.
 
+**Deleting the row does not delete the test it drove.** Before removing a row
+whose `Test file` and `Selector` name a test that already exists, assign that
+test an owner in the same record, as an explicit downstream action: delete the
+test, or re-point it at a surviving obligation (another row's `TDD-ID`, or a
+`QFAI:` ATDD annotation per `.qfai/assistant/catalog/test-layers.md`).
+`/qfai-sdd` does not edit test code and `/qfai-implement` only selects rows the
+ledger still holds, so a test left unassigned has no owner at all: it keeps
+asserting a retired behaviour until some later change makes the full suite fail,
+with nothing left to trace it back to. When the `Test file` is shared with live
+rows, delete only the named selector and re-check that the selectors those rows
+still name are present in the file afterwards.
+
 Record the removal where the authorisation for it already lives. Which record
 that is depends on how the reseed was reached:
 
-- **Normal `/qfai-sdd` reseed.** The `UPDATE:REMOVE` Triage row was approved by
-  AskUserQuestion and persisted to `09_delta.md` (`_policies/10_delta.md` for a
-  cross-spec row), so that row is the record and Phase 2b just carries out what
-  it approved. Do not open a `CR-*` for a deletion Triage already approved.
+- **Normal `/qfai-sdd` reseed, TC deleted upstream.** The `UPDATE:REMOVE` Triage
+  row was approved by AskUserQuestion and persisted to `09_delta.md`
+  (`_policies/10_delta.md` for a cross-spec row), so that row is the record and
+  Phase 2b just carries out what it approved.
+  Do not open a `CR-*` for a deletion Triage already approved.
+- **Normal `/qfai-sdd` reseed, TC no longer a coverage target.** The TC itself
+  survives with a changed `Level`, so Triage emits `UPDATE:MODIFY` for it and no
+  `UPDATE:REMOVE` row exists to point at. That `UPDATE:MODIFY` row is the
+  record: name the retired `<spec-id>/TDD-NNNN` in it, together with the
+  coverage change that dropped the row. `UPDATE:MODIFY` is approval-free as an
+  operation, so this path opens no `CR-*` either — do not attach the deletion to
+  an `UPDATE:REMOVE` row that was never raised.
 - **Drift Protocol owner rerun.** No Triage ran, so the driving `CR-*` is the
   record: outside a `/qfai-sdd` reseed, removing a row is an upstream change
   and takes the Change Request path.
@@ -55,15 +75,19 @@ issued, counting the ones those retirement records name, so a new row's
 `Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section
 (`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`).
 
-Copy the deleted row's `Evidence` cell into that record verbatim. `Evidence` is
+Copy the deleted row's `Evidence` cell into that record verbatim — **and with it
+the body of the `### TDD-NNNN` section that cell anchors to**. `Evidence` is
 only a pointer into the evidence file this row's `Layer` owns —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
 for an `Integration`, `API` or `E2E` row — and the QFAI-managed `.gitignore`
 block excludes `.qfai/evidence/*` while re-including only `decisions/`,
 `change-request-*.md`, `decision-*.md` and `coverage-depth-*.md`.
-In the default layout neither evidence file is tracked, so once the row is gone
-the transcribed pointer is what a clean checkout, CI or a second operator can
-still read. A project that tracks those evidence files keeps both.
+In the default layout neither evidence file is tracked, so the pointer alone
+leaves a clean checkout, CI or a second operator holding a reference nothing can
+resolve: the RED/GREEN commands and their output, and the reviewer verdicts,
+have to come across as well or the cycle's audit record dies with the row. A
+project that does track those evidence files may cite the section instead of
+transcribing it, since the pointer still resolves there.
 
 ## Ledger
 
