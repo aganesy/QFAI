@@ -96,7 +96,7 @@ verdicts. The ledger cell records the outcome and says where to read the proof.
 There is **one** legal shape, and it is capped at **240 characters**:
 
 ```
-RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<short-rev> -> <anchor>
+RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<revision> -> <anchor>
 ```
 
 ```
@@ -104,8 +104,13 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
 ```
 
 - `RED:` — how the failing observation was obtained. `falsifiability` is the
-  falsifiability argument for a row whose RED cannot be observed directly;
-  `n-a` is a row that owes no RED (an ATDD-owned or documentation row).
+  argument recorded for a row whose RED cannot be observed directly
+  (`red-not-observable.md`); `n-a` is a row that owes no RED at all — a
+  documentation row, and nothing else. **`n-a` is not available on an
+  ATDD-owned row**: "ATDD-owned rows" below says of `E2E` / `API` /
+  `Integration` that "There is no waiver here", and routes the case that looks
+  like one — a journey whose surface the same cycle just built — to
+  `falsifiability`. The validator rejects it there per `Layer`.
 - `GREEN:` — `pass` is the only legal value. A row that is not green does not
   carry evidence yet, and its `Status` says so.
 - `ORACLE:` — whether the oracle was **proved** or established by an
@@ -113,9 +118,22 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   made invisible: under no fixed name, no gate could count its coverage.
 - `TIER:` — **optional**, and reserved. Write it only when the project has
   adopted a tier vocabulary.
-- `REV:` — the short revision the run was taken at (`evidence-revision.md`).
-- `-> <anchor>` — the heading in the evidence file, and nothing after it.
-  Backticks around the anchor are allowed.
+- `REV:` — the revision the run was taken at, in the two spellings
+  `evidence-revision.md` defines and no others: a git rev (7-64 hex), or
+  `working-tree+<sha256>` for an observation taken against an uncommitted
+  tree. The reviewer-response gate reads the same two, so one value serves
+  both.
+- `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<heading>`:
+  the evidence file this row's `Layer` owns, and the heading of **this item's**
+  entry in it. The fragment is required — a pointer to the file alone does not
+  say which item's proof to read. Backticks around the anchor are allowed.
+
+Nothing follows the anchor, with **one** exception: an `E2E` / `API` row that
+completed before the ATDD evidence split carries the compatibility marker
+`Pre-split-evidence: implement` after it, which `qfai-implement/SKILL.md`
+completion item 10 requires and reads. It is legal in the grammar for that
+reason — a `done` row cannot re-observe a RED, so it can neither drop the
+marker nor earn a new anchor.
 
 Everything else the cell used to carry belongs in the evidence file the anchor
 names. This is a move, not a deletion.
@@ -326,7 +344,9 @@ a spec's surfaces often run before the journey is written, and a test written
 after its surface passes on the first run. So:
 
 - **There is no waiver here.** `todo -> red` still requires an admissible RED,
-  and a first-run pass is still not one.
+  and a first-run pass is still not one. The Evidence grammar enforces it:
+  `RED:n-a` is not a legal provenance on these three layers, so a row that
+  never obtained RED cannot record a conforming pointer.
 - **The falsifiability path is the answer, not `exception`.**
   `red-not-observable.md` already defines the substitute — record
   `Satisfied-by`, mutate the predicate the journey asserts on, watch this row's

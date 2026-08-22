@@ -3,6 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
+import { REVISION_FORM_SOURCE } from "../evidenceRevision.js";
 import { collectSpecEntries } from "../specLayout.js";
 import { maskNonSpecRegions, parseFirstMarkdownTable } from "../specPackParsers.js";
 import {
@@ -256,6 +257,60 @@ function hasCommandShape(evidence: string): boolean {
 }
 
 /**
+ * The anchor half of the pointer: which evidence file, and where in it.
+ *
+ * A trailing `[^\s`]+` accepted **any** non-empty token, so
+ * `… REV:a1b2c3d -> garbage` satisfied the grammar and a `done` row with no
+ * resolvable proof behind it passed unreported — the one thing the pointer
+ * exists to prevent. The two file names are the ones the evidence split
+ * defines (`execution-ledger.md#atdd-owned-rows`): `implement-<spec-id>.md`
+ * for the rows `qfai-implement` runs itself, `atdd-<spec-id>.md` for the
+ * `E2E` / `API` / `Integration` rows `/qfai-atdd` authors. The `#fragment` is
+ * what makes the pointer per-item rather than per-spec, so it is required.
+ *
+ * The directory is fixed rather than configurable: `paths` has no
+ * `evidenceDir` key and every shipped skill writes `.qfai/evidence/`
+ * (`dbContractExecutability.ts#EVIDENCE_REL_DIR`).
+ *
+ * This checks the pointer's **shape**, not that the file and heading exist —
+ * `qfai validate` reads the spec pack, and the evidence tree is routinely
+ * git-ignored, so a resolution check would report every project that keeps its
+ * evidence out of version control.
+ */
+const EVIDENCE_ANCHOR =
+  "\\.qfai/evidence/(?:implement|atdd)-[A-Za-z0-9][\\w.-]*\\.md#[A-Za-z0-9][\\w.-]*";
+
+/**
+ * The one thing permitted after the anchor.
+ *
+ * `qfai-implement/SKILL.md` completion item 10 **requires** the marker
+ * `Pre-split-evidence: implement` in the `Evidence` cell of an `E2E` / `API`
+ * row that reached `done` or `review-fix` before the ATDD evidence split, and
+ * that is how the gate tells a legacy row from one written to the wrong file.
+ * A grammar that ended at the anchor made every row carrying the marker the
+ * gate demands permanently malformed: a `done` row has no legal transition
+ * that would let it re-observe a RED, so it can neither drop the marker nor
+ * earn a new anchor, and the only remaining exit was a standing waiver.
+ */
+const EVIDENCE_COMPAT_MARKER = "(?:\\s+Pre-split-evidence:\\s*implement)?";
+
+/**
+ * How the failing observation was obtained, per `Layer`.
+ *
+ * `n-a` — the row owes no RED — is available to the rows `qfai-implement`
+ * runs itself, where a documentation-only row genuinely has none. It is **not**
+ * available on an ATDD-owned row: `execution-ledger.md#atdd-owned-rows` says
+ * of exactly those rows "There is no waiver here", and routes the case that
+ * looks like one (a journey whose surface the same cycle just built, so its
+ * test passes on the first run) to the falsifiability path instead. Accepting
+ * `n-a` there let an `E2E` row record `RED:n-a GREEN:pass …` and reach `done`
+ * having never obtained RED provenance at all — the specific hole the split
+ * was introduced to close.
+ */
+const RED_PROVENANCE_ANY = "fail|falsifiability|n-a";
+const RED_PROVENANCE_ATDD = "fail|falsifiability";
+
+/**
  * The one legal shape of an `Evidence` cell.
  *
  * `execution-ledger.md#evidence-cell-contract` declared the cell a **pointer,
@@ -274,11 +329,34 @@ function hasCommandShape(evidence: string): boolean {
  * settled; reserving the slot lets it land as a token later without a second
  * grammar, while requiring it today would gate on a rule that does not exist.
  *
+ * `REV:` takes the two spellings `evidence-revision.md` defines and no others
+ * (`evidenceRevision.ts`) — including `working-tree+<sha256>` for an
+ * observation taken against an uncommitted tree, which the gate that reads the
+ * same value on the review side already accepts.
+ *
  * Everything the oversized cells carry today already belongs in the evidence
  * file the anchor points at, so this moves content rather than deleting it.
  */
-const EVIDENCE_CELL_GRAMMAR =
-  /^RED:(?:fail|falsifiability|n-a)\s+GREEN:pass\s+ORACLE:(?:proved|equivalent-mutant)(?:\s+TIER:T[1-3])?\s+REV:[0-9A-Za-z][\w.-]*\s+->\s+`?[^\s`]+`?$/;
+function buildEvidenceGrammar(redProvenance: string): RegExp {
+  return new RegExp(
+    `^RED:(?:${redProvenance})\\s+GREEN:pass\\s+ORACLE:(?:proved|equivalent-mutant)` +
+      `(?:\\s+TIER:T[1-3])?\\s+REV:${REVISION_FORM_SOURCE}\\s+->\\s+` +
+      `(?:\`${EVIDENCE_ANCHOR}\`|${EVIDENCE_ANCHOR})${EVIDENCE_COMPAT_MARKER}$`,
+  );
+}
+
+const EVIDENCE_CELL_GRAMMAR = buildEvidenceGrammar(RED_PROVENANCE_ANY);
+const EVIDENCE_CELL_GRAMMAR_ATDD = buildEvidenceGrammar(RED_PROVENANCE_ATDD);
+
+/**
+ * Layers whose tests `/qfai-atdd` authors, so whose RED provenance comes from
+ * that stage. `Integration` is among them because `QFAI-ATDD-112` covers every
+ * `L3` TC — and every TC with no declared `Level` — from `tests/integration/**`
+ * and that stage's P4 writes those tests.
+ *
+ * Lower-case membership, like the other layer sets: normalize before `has()`.
+ */
+const ATDD_OWNED_LAYERS = new Set(["e2e", "api", "integration"]);
 
 /**
  * The cap, in characters, on an `Evidence` cell.
@@ -301,9 +379,19 @@ const EVIDENCE_CELL_MAX_CHARS = 240;
 export const EVIDENCE_CELL_MALFORMED_RULE_ID = "TDDLIST-007";
 export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "TDDLIST-008";
 
+/** The anchor as an operator reads it, for the finding message. */
+const EVIDENCE_ANCHOR_TEXT = ".qfai/evidence/<implement|atdd>-<spec-id>.md#<heading>";
+
 /** The grammar as an operator reads it, for the finding message. */
-const EVIDENCE_CELL_GRAMMAR_TEXT =
-  "RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<short-rev> -> <anchor>";
+function evidenceGrammarText(redProvenance: string): string {
+  return (
+    `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
+    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${EVIDENCE_ANCHOR_TEXT}`
+  );
+}
+
+const EVIDENCE_CELL_GRAMMAR_TEXT = evidenceGrammarText(RED_PROVENANCE_ANY);
+const EVIDENCE_CELL_GRAMMAR_TEXT_ATDD = evidenceGrammarText(RED_PROVENANCE_ATDD);
 
 /**
  * Test directories a `Layer` value implies. `null` means the layer has no
@@ -1336,7 +1424,17 @@ async function validateSpecTddList(
     // outgrew the cap did so by holding prose — but a cap breach and a grammar
     // breach on one cell are one defect to fix, and reporting both would make
     // the cap read as a second, separate obligation.
-    const isPointer = EVIDENCE_CELL_GRAMMAR.test(evidence);
+    //
+    // The `Layer` decides which RED provenances are legal: an ATDD-owned row
+    // has no `n-a` (`RED_PROVENANCE_ATDD`). `hasPointerShape` stays the
+    // permissive test on purpose — a cell rejected only for its provenance is
+    // still structurally a pointer, so it must not also be reported as prose
+    // by the status-only rule below.
+    const layer = cell(ref, "Layer").trim().toLowerCase();
+    const atddOwned = ATDD_OWNED_LAYERS.has(layer);
+    const grammarText = atddOwned ? EVIDENCE_CELL_GRAMMAR_TEXT_ATDD : EVIDENCE_CELL_GRAMMAR_TEXT;
+    const hasPointerShape = EVIDENCE_CELL_GRAMMAR.test(evidence);
+    const isPointer = atddOwned ? EVIDENCE_CELL_GRAMMAR_ATDD.test(evidence) : hasPointerShape;
     if (evidence.length > EVIDENCE_CELL_MAX_CHARS) {
       issues.push(
         issue(
@@ -1347,20 +1445,28 @@ async function validateSpecTddList(
           EVIDENCE_CELL_OVERSIZE_RULE_ID,
           undefined,
           "change",
-          `Evidence 列は証跡ファイルへの pointer です。コマンドと出力は \`.qfai/evidence/\` 配下のファイルに移し、セルには \`${EVIDENCE_CELL_GRAMMAR_TEXT}\` の形だけを ${EVIDENCE_CELL_MAX_CHARS} 文字以内で書いてください。`,
+          `Evidence 列は証跡ファイルへの pointer です。コマンドと出力は \`.qfai/evidence/\` 配下のファイルに移し、セルには \`${grammarText}\` の形だけを ${EVIDENCE_CELL_MAX_CHARS} 文字以内で書いてください。`,
         ),
       );
     } else if (!isPointer) {
+      // Naming the real cause matters here: a cell that is a well-formed
+      // pointer everywhere except its provenance would otherwise be reported
+      // against the full grammar, sending the author to look for a typo.
+      const provenanceOnly = hasPointerShape;
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_CELL_MALFORMED",
-          `Evidence for spec-${specNumber} ${rowLabel} does not match the pointer grammar "${EVIDENCE_CELL_GRAMMAR_TEXT}": "${evidence}"`,
+          provenanceOnly
+            ? `Evidence for spec-${specNumber} ${rowLabel} uses RED:n-a on an ATDD-owned Layer="${cell(ref, "Layer")}" row, which owes an observed RED or a falsifiability argument — "There is no waiver here" (execution-ledger.md#atdd-owned-rows): "${evidence}"`
+            : `Evidence for spec-${specNumber} ${rowLabel} does not match the pointer grammar "${grammarText}": "${evidence}"`,
           "warning",
           relPath,
           EVIDENCE_CELL_MALFORMED_RULE_ID,
           undefined,
           "change",
-          `Evidence 列は \`${EVIDENCE_CELL_GRAMMAR_TEXT}\` の一形だけを許します（例: \`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-<spec-id>.md#tdd-0001\`）。散文は anchor 先の証跡ファイルに移してください。`,
+          provenanceOnly
+            ? `E2E / API / Integration 行の RED provenance は \`/qfai-atdd\` が産みます。\`RED:n-a\` は使えません — 観測した RED なら \`RED:fail\`、観測できない場合は \`references/red-not-observable.md\` の falsifiability 手順を踏んで \`RED:falsifiability\` にしてください。`
+            : `Evidence 列は \`${grammarText}\` の一形だけを許します（例: \`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-spec-0001.md#tdd-0001\`）。散文は anchor 先の証跡ファイルに移してください。`,
         ),
       );
     }
@@ -1368,7 +1474,7 @@ async function validateSpecTddList(
     // A conforming pointer names its verdict as `GREEN:pass` and carries no
     // command, so the status-only rule would reject the exact shape the
     // grammar mandates. The grammar is the stronger statement, so it wins.
-    if (isPointer) continue;
+    if (hasPointerShape) continue;
 
     // Only a cell that *claims a verdict* can be status-only evidence. A cell
     // holding some other note without a command is under-specified, but

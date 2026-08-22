@@ -50,7 +50,27 @@ Required columns, in the order used above:
 | Selector  | Test selector/description for targeted execution             |
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
-| Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+| Evidence  | A **pointer** to the proof, in one shape (below), max 240 ch |
+
+The `Evidence` cell is a pointer, **not** the payload: a command and its output
+pasted into a table cell either ends the row at a newline or splits it at a
+pipe, both silently. The commands, their output and the reviewer verdicts live
+in `.qfai/evidence/implement-<spec-id>.md` — or `atdd-<spec-id>.md` for an
+`Integration` / `API` / `E2E` row — and the cell says where to read them:
+
+```
+RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<revision> -> <anchor>
+```
+
+```
+RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0001`
+```
+
+`RED:n-a` is **not** available on an `Integration` / `API` / `E2E` row — those
+owe an observed RED or a falsifiability argument. Anything else raises
+`TDDLIST_EVIDENCE_CELL_MALFORMED` / `TDDLIST_EVIDENCE_CELL_OVERSIZE`; the full
+grammar is in
+`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

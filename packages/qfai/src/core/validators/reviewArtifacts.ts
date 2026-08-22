@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
+import { REVISION_FORM } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -14,16 +15,9 @@ const ALLOWED_VERSIONS = new Set(["1.0", "2.0"]);
 const ALLOWED_ROSTER_STATUS = new Set(["PASS", "FAIL", "NA"]);
 const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 
-/**
- * The two forms `evidence-revision.md` defines, and nothing else.
- *
- * A git rev — abbreviated or full — or `working-tree+` and the SHA-256 the
- * four-step content-address procedure produces. The length is the point: a
- * short suffix is what a `git status --porcelain` digest looks like, and that
- * spelling is forbidden because it does not move when the file under review is
- * edited, which is the one thing the field exists to detect.
- */
-const REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
+// The two forms `evidence-revision.md` defines, and nothing else. Shared with
+// the `REV:` token of the ledger `Evidence` grammar (`tddList.ts`), because the
+// two values are compared against each other — see `evidenceRevision.ts`.
 
 export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");

@@ -40,11 +40,13 @@ const HEADER = `# TDD Execution Ledger
 | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
 | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |`;
 
-function ledger(rows: Array<{ status: string; evidence: string; tddId?: string }>): string {
+function ledger(
+  rows: Array<{ status: string; evidence: string; tddId?: string; layer?: string }>,
+): string {
   const body = rows
     .map(
       (r, i) =>
-        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | Unit | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
+        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | ${r.layer ?? "Unit"} | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
     )
     .join("\n");
   return `${HEADER}\n${body}\n`;
@@ -246,24 +248,43 @@ describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
  * strongest obligation in the contract — the oracle proof — had no reserved
  * token at all, so no gate could count its coverage.
  */
-const POINTER =
-  "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`";
+const ANCHOR = ".qfai/evidence/implement-spec-0001.md#tdd-0001";
+const POINTER = `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`${ANCHOR}\``;
+
+/** The SHA-256 the uncommitted-tree procedure in `evidence-revision.md` yields. */
+const CONTENT_HASH = "e".repeat(64);
 
 describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
   for (const evidence of [
     // The legacy prose shape: a real command and a real result, in no grammar.
     "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed",
     // ORACLE is the token the whole grammar exists to make countable.
-    "RED:fail GREEN:pass REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    `RED:fail GREEN:pass REV:a1b2c3d -> \`${ANCHOR}\``,
     // A token present but off-vocabulary is malformed, not accepted prose.
-    "RED:fail GREEN:pass ORACLE:maybe REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
-    "RED:probably GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    `RED:fail GREEN:pass ORACLE:maybe REV:a1b2c3d -> \`${ANCHOR}\``,
+    `RED:probably GREEN:pass ORACLE:proved REV:a1b2c3d -> \`${ANCHOR}\``,
     // Out of order is a second shape, and there is only one legal shape.
-    "GREEN:pass RED:fail ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    `GREEN:pass RED:fail ORACLE:proved REV:a1b2c3d -> \`${ANCHOR}\``,
     // The anchor is what makes the cell a pointer; without it there is none.
     "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d",
     // Trailing prose after the anchor reopens the cell to the payload.
     `${POINTER} and the reviewer agreed`,
+    // A `REV:` outside the two spellings `evidence-revision.md` defines. The
+    // review-side gate rejects the same value, so accepting it here would let
+    // a ledger name a revision no reviewer response can ever match.
+    `RED:fail GREEN:pass ORACLE:proved REV:HEAD -> \`${ANCHOR}\``,
+    `RED:fail GREEN:pass ORACLE:proved REV:working-tree+abc1234 -> \`${ANCHOR}\``,
+    // The anchor must be a resolvable pointer, not any non-empty token: this
+    // is what let a `done` row carry no proof at all and still validate.
+    "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> garbage",
+    // A file outside the evidence tree, and one inside it under neither
+    // producing stage's name, are both unresolvable as this row's proof.
+    "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `notes/scratch.md#tdd-0001`",
+    "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/impl.md#tdd-0001`",
+    // The file without a fragment names the spec's evidence, not this item's.
+    `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/implement-spec-0001.md\``,
+    // One backtick is an unbalanced span, not an anchor.
+    `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`${ANCHOR}`,
   ]) {
     it(`reports "${evidence.slice(0, 48)}"`, async () => {
       await withProject(async (root) => {
@@ -277,8 +298,18 @@ describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
     POINTER,
     // `TIER:` is optional: the Tier obligation is owned elsewhere, so the
     // grammar reserves it a slot without demanding it yet.
-    "RED:n-a GREEN:pass ORACLE:equivalent-mutant TIER:T2 REV:9f3c1de -> .qfai/evidence/impl.md#tdd-0002",
-    "RED:falsifiability GREEN:pass ORACLE:proved TIER:T3 REV:0ab12cd -> .qfai/evidence/impl.md#tdd-0003",
+    `RED:n-a GREEN:pass ORACLE:equivalent-mutant TIER:T2 REV:9f3c1de -> ${ANCHOR}`,
+    `RED:falsifiability GREEN:pass ORACLE:proved TIER:T3 REV:0ab12cd -> ${ANCHOR}`,
+    // An observation taken against an uncommitted tree. `evidence-revision.md`
+    // defines this spelling and the reviewer-response gate accepts it, so a
+    // grammar that forbade `+` made the one legal form of a legitimate
+    // observation permanently malformed.
+    `RED:fail GREEN:pass ORACLE:proved REV:working-tree+${CONTENT_HASH} -> ${ANCHOR}`,
+    // The compatibility marker completion item 10 requires on an E2E/API row
+    // that finished before the ATDD evidence split. Such a row cannot
+    // re-observe a RED, so a grammar ending at the anchor left it no exit but
+    // a standing waiver.
+    `${POINTER} Pre-split-evidence: implement`,
   ]) {
     it(`accepts "${evidence.slice(0, 48)}"`, async () => {
       await withProject(async (root) => {
@@ -288,6 +319,85 @@ describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
       });
     });
   }
+
+  // `execution-ledger.md#atdd-owned-rows`: "There is no waiver here". A row
+  // whose test `/qfai-atdd` authors owes an observed RED or a falsifiability
+  // argument, so `RED:n-a` — which the other layers may use for a row that
+  // owes no RED — must not let it reach `done` with no provenance at all.
+  it("rejects RED:n-a on an ATDD-owned row", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([
+          {
+            status: "done",
+            layer: "Integration",
+            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/atdd-spec-0001.md#tdd-0001\``,
+          },
+        ]),
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      // One defect, one finding: the cell is still shaped like a pointer, so
+      // the status-only rule must not also read its `GREEN:pass` as prose.
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+    });
+  });
+
+  it("names the provenance as the cause on an ATDD-owned row", async () => {
+    await withProject(async (root) => {
+      await runOn(
+        root,
+        ledger([
+          {
+            status: "done",
+            layer: "Integration",
+            tddId: "TDD-0042",
+            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/atdd-spec-0001.md#tdd-0001\``,
+          },
+        ]),
+      );
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(found?.message).toContain("RED:n-a");
+      expect(found?.message).toContain("TDD-0042");
+    });
+  });
+
+  for (const provenance of ["fail", "falsifiability"]) {
+    it(`accepts RED:${provenance} on an ATDD-owned row`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([
+            {
+              status: "done",
+              layer: "Integration",
+              evidence: `RED:${provenance} GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/atdd-spec-0001.md#tdd-0001\``,
+            },
+          ]),
+        );
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  // The layer rule is a restriction on the ATDD-owned layers only: a row this
+  // skill runs itself may genuinely owe no RED.
+  it("keeps RED:n-a legal on a row qfai-implement runs itself", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([
+          {
+            status: "done",
+            layer: "Unit",
+            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> ${ANCHOR}`,
+          },
+        ]),
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
 
   // A conforming pointer names a verdict by construction (`GREEN:pass`) and
   // carries no command, so the status-only gate would reject the very shape
