@@ -367,5 +367,36 @@ describe("parseArgs", () => {
       expect(parsed.invalid).toBe(true);
       expect(parsed.options.invalidExitCode).toBe(2);
     });
+
+    // A leading unknown option is consumed by `command = args.shift()`
+    // before the flag loop, so it used to reach main.ts's
+    // unknown-command branch, which sets no exit code (exit 0).
+    it("rejects an unknown option in the command position", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["--bogus"], cwd);
+      expect(parsed.command).toBeNull();
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus"]);
+      expect(parsed.options.invalidExitCode).toBe(2);
+    });
+
+    it("still keeps a leading --help/-h a clean help request", () => {
+      const cwd = process.cwd();
+      for (const token of ["--help", "-h"]) {
+        const parsed = parseArgs([token], cwd);
+        expect(parsed.command).toBeNull();
+        expect(parsed.invalid).toBe(false);
+        expect(parsed.options.help).toBe(true);
+        expect(parsed.options.unknownFlags).toEqual([]);
+      }
+    });
+
+    it("collects a leading unknown option together with later ones", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["--bogus", "--also-bogus"], cwd);
+      expect(parsed.command).toBeNull();
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.unknownFlags).toEqual(["--bogus", "--also-bogus"]);
+    });
   });
 });

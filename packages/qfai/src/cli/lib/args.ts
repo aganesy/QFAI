@@ -199,6 +199,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     options.help = true;
   };
 
+  // 先頭トークンが `--` で始まる場合、それはコマンド名ではなく未知
+  // オプションである。`command = args.shift()` で取り除かれるため下の
+  // フラグループには到達せず、ここで捕まえないと main.ts の
+  // unknown-command 分岐に落ちて exit 0 になってしまう
+  // (`qfai --bogus`)。`--help` / `-h` は直前の分岐で null 化済み。
+  if (command !== null && command.startsWith("--")) {
+    options.unknownFlags.push(command);
+    markInvalid();
+    command = null;
+  }
+
   if (command === "guardrails") {
     const candidate = args[0];
     if (candidate && !candidate.startsWith("--")) {
