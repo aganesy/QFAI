@@ -336,7 +336,8 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // re-observe.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any production code exists",
+      "Submit that run — the RED pair and its assertion-stripped run — to `qa-gatekeeper` " +
+        "(routing phase `red`) before any production code exists",
     );
     expect(provenance).toContain("Stage gate **P1b** is where steps 1-4 happen.");
   });

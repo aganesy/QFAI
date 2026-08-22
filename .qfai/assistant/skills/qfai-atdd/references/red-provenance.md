@@ -132,6 +132,23 @@ Take the first that applies, and record which one in the evidence file.
       later — Phase Green does not touch those files — so it is what makes the
       freshness claim checkable rather than asserted.
 
+      **Take the assertion-stripped run here, before step 4 submits the
+      pair.** The handover table below requires `RED assertion-stripped result`
+      on every `observed-red` entry, and nothing downstream supplies it: the
+      consumer's `/qfai-implement` step 3b consumes a handed-over row **without
+      running its own step 4**, which is the only place that skill strips a RED.
+      A row handed over without it therefore owes a field no later step takes,
+      and `qa-gatekeeper` REVISEs it on absence — so a journey with a perfectly
+      natural RED stops here for want of a run this stage could have made in the
+      same minute. Neutralize every assertion this row's selector executes,
+      re-run the RED command unchanged, confirm it **passes**, record the strip
+      diff and that output, and **restore the test immediately**. The procedure,
+      the compilable neutralization for languages that reject unused locals, and
+      the reject conditions are the one in
+      `../../qfai-implement/references/red-admissibility.md` — do not restate
+      them here. Before step 4, because the gatekeeper judges the entry as it
+      stands and this field is inside its audit subject.
+
       **Both are recorded when observed, never reconstructed.**
       `/qfai-implement` Phase Green changes the tree, and its completion gate
       requires the handed-over RED to name the revision it was taken at
@@ -151,8 +168,9 @@ Take the first that applies, and record which one in the evidence file.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any
-      production code exists, and wait for PASS.** `qfai-implement/SKILL.md`
+   4. **Submit that run — the RED pair and its assertion-stripped run — to
+      `qa-gatekeeper` (routing phase `red`) before any production code exists,
+      and wait for PASS.** `qfai-implement/SKILL.md`
       requires an independent reviewer to confirm the RED while the surface is
       still absent; a confirmation sought after it is built is post-hoc
       self-attestation of a state nobody can re-observe. Record the verdict
@@ -162,7 +180,8 @@ Take the first that applies, and record which one in the evidence file.
       phase `acceptance-test-engineer` and no backend or frontend agent. The
       surface is built by `/qfai-implement` Phase Green from this handover, and
       the GREEN pair is recorded there. Branch 1's output is the RED pair, its
-      `qa-gatekeeper` PASS, and the `Oracle proof` plan.
+      assertion-stripped run, its `qa-gatekeeper` PASS, and the `Oracle proof`
+      plan.
 
    Stage gate **P1b** is where steps 1-4 happen.
 

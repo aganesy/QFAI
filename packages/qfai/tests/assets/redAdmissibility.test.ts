@@ -85,7 +85,90 @@ describe.each(TREES)("%s", (tree) => {
     );
     // The obligation must also be reachable at the point of action, not only
     // in the field list the reviewers audit.
-    expect(skill).toContain("record that run as `RED assertion-stripped result`");
+    expect(skill).toContain("record both as `RED assertion-stripped result`");
+  });
+
+  it("defines a strip that still compiles, so a Go row can obtain the field", async () => {
+    // `assert.Equal(t, want, got)` deleted outright leaves `want`, `got` and
+    // the assert import unused — a build error in Go, in Rust under
+    // deny(warnings) and in a linted Java build. The reject condition above
+    // reads that as "the stripped run still fails", so the deletion wording
+    // made the field unobtainable for a perfectly ordinary RED.
+    const doc = await read(tree, ADMISSIBILITY);
+    expect(doc).toContain("### A neutralization that still compiles");
+    expect(doc).toContain("every symbol and import the original test used is still used");
+    expect(doc).toContain("`_ = want; _ = got` in Go");
+    // A build error is a botched strip, not criterion 4's answer — and not an
+    // exemption from the field either.
+    expect(doc).toContain(
+      "A stripped run that fails to build, collect or resolve is a **botched strip**, " +
+        "not a criterion-4 failure.",
+    );
+    // The procedure's own step 1 must not still say "delete".
+    expect(doc).toContain("**Neutralize every assertion** the row's `Selector` executes");
+  });
+
+  it("records the strip before the restore, and that the selector actually ran", async () => {
+    // The gatekeeper reads this field after the restore, when the stripped
+    // tree no longer exists. A passing line alone is equally producible by a
+    // skipped selector, a deleted test body, an expectation moved to whatever
+    // the code returns, or a production edit.
+    const doc = await read(tree, ADMISSIBILITY);
+    expect(doc).toContain("**Take the diff before the restore.**");
+    expect(doc).toContain("A diff that reaches anything else");
+    expect(doc).toContain("show the row's `Selector` **executing and passing**");
+    const gate = await read(tree, GATEKEEPER);
+    expect(gate).toContain("**Judge the strip, not only its exit code.**");
+    expect(gate).toContain("REVISE when the diff is absent, when it touches production source");
+    // And the producer's contract must ask for the diff, or nothing takes it.
+    expect(await read(tree, SKILL)).toContain(
+      "the **strip diff** taken before the restore, its **passing** output",
+    );
+  });
+
+  it("grandfathers a round whose RED was observed before the field existed", async () => {
+    // A row resumed at green / refactor / review-fix has a Round 1 RED taken
+    // under the previous contract and its production code already in the tree,
+    // so the stripped run is no longer takeable. Required retroactively, the
+    // field strands a legitimately evidenced row — and contradicts the same
+    // file's "Nothing existing becomes non-conformant".
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).toContain("## A round whose RED predates a field");
+    expect(doc).toContain("Nothing existing becomes non-conformant.");
+    expect(doc).toContain("records the field as `pre-contract`");
+    // Narrow, or it is a bypass: only a round that already has its GREEN pair.
+    expect(doc).toContain(
+      "It is admissible **only** on a round that already holds a complete GREEN pair.",
+    );
+    expect(doc).toContain(
+      "`pre-contract` on a RED being submitted for `red`-phase review is a REVISE",
+    );
+    const gate = await read(tree, GATEKEEPER);
+    expect(gate).toContain("**`pre-contract` is the one admissible absence.**");
+    expect(gate).toContain(
+      "Accept it **only** on a round that already holds a complete GREEN pair",
+    );
+  });
+
+  it("makes the ATDD producer take the stripped run its handover form requires", async () => {
+    // The handover table requires the field on every observed-red entry, and
+    // /qfai-implement step 3b consumes such a row without running its own
+    // step 4 — the only place that skill strips a RED. So branch 1 has to take
+    // it, or a natural ATDD RED reaches the gatekeeper structurally incomplete.
+    const doc = await read(tree, PROVENANCE);
+    expect(doc).toContain(
+      "**Take the assertion-stripped run here, before step 4 submits the pair.**",
+    );
+    expect(doc).toContain("consumes a handed-over row **without running its own step 4**");
+    // One procedure, not a restatement that can drift from the canonical one.
+    expect(doc).toContain(
+      "the reject conditions are the one in " +
+        "`../../qfai-implement/references/red-admissibility.md` — do not restate them here",
+    );
+    // And it must reach the gatekeeper with the pair it is judged on.
+    expect(doc).toContain(
+      "**Submit that run — the RED pair and its assertion-stripped run — to `qa-gatekeeper`",
+    );
   });
 
   it("makes the field per round, since each round strips its own RED", async () => {

@@ -74,13 +74,31 @@ the row's own evidence; nothing in the calling work order substitutes for it.
 - when the `Selector` holds several entries, each entry's failure was observed
   separately. One aggregate run is not a RED for several entries;
 - `RED assertion-stripped result` records the `RED command` re-run with the
-  row's assertions deleted and shows it **passing**. The criteria above are
+  row's assertions neutralized and shows it **passing**. The criteria above are
   readable off the recorded failure; this one is a counterfactual, so
   `RED failure mode: assertion` reads identically whether it was checked or
   skipped and nothing else on the row distinguishes the two. REVISE when it is
   absent, when the stripped run still fails, or when its command differs from
   the `RED command`. A `falsifiability` row has no RED pair to strip — its
   mutation run answers this.
+- **Judge the strip, not only its exit code.** You read this field after the
+  restore, so the passing output on its own is equally producible by a skipped
+  selector, a deleted test body, an expectation moved to whatever the code
+  returns, or a production edit — and you cannot tell any of them from a strip.
+  Require the **strip diff** taken before the restore, over the row's
+  `Test file` and the test-owned artifacts it reads, and require the output to
+  show the row's `Selector` **executing and passing**. REVISE when the diff is
+  absent, when it touches production source, an expected-value fixture or the
+  `Selector` itself, or when the run collected nothing, filtered to zero tests
+  or reports the selector skipped. A build or collection error in the stripped
+  run is a botched strip, not a criterion-4 failure: send it back to be
+  re-taken in the compilable form, do not accept the build error as the result.
+- **`pre-contract` is the one admissible absence.** A round whose RED was
+  observed before this field existed cannot produce the run — the production
+  code is already in the tree — so `references/round-evidence.md` grandfathers
+  it against the round's `RED revision`. Accept it **only** on a round that
+  already holds a complete GREEN pair. On a RED routed here at phase `red` it
+  is a REVISE: that submission is the moment the stripped run is takeable.
 
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite

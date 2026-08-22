@@ -19,9 +19,11 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: RED result` — the failure output (result completeness is
   best-effort; truncated output is acceptable)
 - `Round N: RED assertion-stripped result` — the same command re-run with the
-  row's assertions deleted and its **passing** output, the test restored
-  immediately. Per round because each round's RED is taken on its own tree and
-  is stripped there (`red-admissibility.md`)
+  row's assertions neutralized, the strip diff and its **passing** output, the
+  test restored immediately. Per round because each round's RED is taken on its
+  own tree and is stripped there (`red-admissibility.md`). A round whose RED
+  predates this field records `pre-contract` instead — see
+  **A round whose RED predates a field**
 - `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
   — **in place of the RED pair** on a `falsifiability` row. It is that row's
   RED observation, so it sits where the RED pair sits and takes the same prefix;
@@ -55,6 +57,30 @@ second round showed they describe a round's RED, not the row's.
 A single-round item satisfies the contract with `Round 1: ...` and no
 reviewer-verdict line, which is the same content the previous one-pair
 contract required. Nothing existing becomes non-conformant.
+
+## A round whose RED predates a field
+
+That last sentence binds fields added later, and
+`RED assertion-stripped result` is the first of them. A row resumed at `green`,
+`refactor` or `review-fix` after the canonical skills were updated has a
+Round 1 RED taken under the previous contract, and the run the field asks for is
+no longer takeable there: the production code that makes the test pass is in
+the tree, so a stripped run would pass for a reason that says nothing about
+the assertions, and the failure it would have to be taken against is gone.
+Required retroactively, the field would leave a legitimately evidenced row
+unable to finish, with no migration and no way back.
+
+Such a round records the field as `pre-contract`, with the round's
+`RED revision` as its warrant, and is not reopened:
+
+`Round 1: RED assertion-stripped result: pre-contract — RED observed at <revision>, before this field`
+
+It is admissible **only** on a round that already holds a complete GREEN pair.
+A round still at RED can take the stripped run now and therefore must — so
+`pre-contract` on a RED being submitted for `red`-phase review is a REVISE,
+whatever the row's `Status`, and a round this cycle opens never qualifies. It
+grandfathers an observation that has already happened; it is not a value a
+round may choose.
 
 ## Where the rounds happen
 
