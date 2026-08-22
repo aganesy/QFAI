@@ -78,11 +78,25 @@ through `06_Test-Cases.md`). A legacy spec-pack project carries a single
 the layered layout never produces it, so do not reference it in a layered
 project. `drift-protocol.md` lists the legacy SSOT files it belongs to.
 
+The `→ Tests` hop branches by test layer — a test answers the obligation its
+own layer owns, and only that one:
+
+- `TC-* → Unit / Component / Integration tests`
+- `US-* → E2E tests`
+- `CON-API-* → API tests`
+
+`catalog/test-layers.md` fixes the directory each ID type is answered from. An
+E2E or API test must not carry a `TC-*` annotation: the execution ledger rejects
+that placement (`TDDLIST_OBLIGATION_LAYER_MISMATCH`) and does not count it
+towards TC coverage, so a `TC-*` reference from those layers breaks the chain
+instead of completing it.
+
 Whenever practical, reference:
 
 - requirement IDs
 - spec section anchors
-- layered item IDs (`US-*`, `AC-*`, `BR-*`, `EX-*`, `TC-*`)
+- layered item IDs (`US-*`, `AC-*`, `BR-*`, `EX-*`, `TC-*`) and the contract IDs
+  the API layer answers (`CON-API-*`)
 
 ---
 

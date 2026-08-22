@@ -65,6 +65,26 @@ describe("the traceability chain names only hops the layered layout produces", (
       }
     });
 
+    it(`${tree}: Article V branches the Tests hop by layer`, async () => {
+      const constitution = await read(tree, "assistant/constitution/constitution.md");
+      const article = constitution.slice(
+        constitution.indexOf("## Article V "),
+        constitution.indexOf("## Article VI "),
+      );
+      // A single `TC → Tests` hop cannot hold for E2E/API: those layers owe
+      // `US-*` / `CON-API-*` and a `TC-*` on them raises
+      // TDDLIST_OBLIGATION_LAYER_MISMATCH, so following the Article would
+      // either leave the chain open or add a reference the validator rejects.
+      for (const binding of [
+        "`TC-* → Unit / Component / Integration tests`",
+        "`US-* → E2E tests`",
+        "`CON-API-* → API tests`",
+      ]) {
+        expect(article).toContain(binding);
+      }
+      expect(article).toContain("TDDLIST_OBLIGATION_LAYER_MISMATCH");
+    });
+
     for (const rel of CHAIN_RESTATEMENTS) {
       it(`${tree}: ${rel} does not restate the superseded chain`, async () => {
         const normalized = normalizeArrows(await read(tree, rel));
