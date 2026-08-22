@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
-import { findImportLiteEvidence } from "./importLiteEvidence.js";
+import { resolveImportLiteEntrypoint } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 
@@ -51,16 +51,20 @@ export async function runSddPreflight(
   const blockers = resolvePreflightBlockers(readiness);
 
   if (blockers.length > 0) {
-    // No discussion pack at all is the one shape the import-lite entrypoint
-    // covers. A pack that exists but is incomplete stays blocked: dropping an
-    // evidence file must not become a way to skip a half-finished pack.
-    const importLiteEvidencePath =
-      readiness.latestPackDir === null ? await findImportLiteEvidence(root) : null;
+    // `resolveImportLiteEntrypoint` gates the fallback to the shape the shipped
+    // Stage 0 step describes: specs already exist and there is no discussion
+    // pack at all (a pack that exists but is incomplete or misnamed still
+    // blocks — evidence is an entrypoint, never an override).
+    const importLiteEvidencePath = await resolveImportLiteEntrypoint(root, config);
     if (importLiteEvidencePath !== null) {
       return await completeReadyPreflight({
         source: "import-lite",
         selectedInputPath: importLiteEvidencePath,
-        reqSourcePath: importLiteEvidencePath,
+        // The shipped template is an explicit pointer artifact, "not
+        // requirement/spec SSOT", so it carries no REQ ids. Counting them would
+        // report a confident `0` for a project whose requirements live in the
+        // specs; the count is genuinely unknown on this path.
+        importedReqCount: null,
         summaryPath,
         openQuestions: carryOverOpenQuestions,
         // `/qfai-discussion` is not the follow-up here — the input source is
@@ -92,11 +96,12 @@ export async function runSddPreflight(
   }
 
   const selectedInputPath = readiness.latestPackDir;
+  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md");
 
   return await completeReadyPreflight({
     source: "discussion-pack",
     selectedInputPath,
-    reqSourcePath: selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md"),
+    importedReqCount: countReqIds(reqPath === null ? "" : await readSafe(reqPath)),
     summaryPath,
     openQuestions: carryOverOpenQuestions,
     nextCommands,
@@ -104,27 +109,25 @@ export async function runSddPreflight(
 }
 
 /**
- * Count the imported REQ ids of the selected input, write the ready summary and
- * return the result. Shared by both sources so `preflight_summary.md` and the
- * returned record cannot drift apart between them.
+ * Write the ready summary and return the result. Shared by both sources so
+ * `preflight_summary.md` and the returned record cannot drift apart between
+ * them. `importedReqCount: null` means "not countable from this input source"
+ * and renders as `unknown` rather than a confident zero.
  */
 async function completeReadyPreflight(input: {
   source: SddPreflightSource;
   selectedInputPath: string | null;
-  reqSourcePath: string | null;
+  importedReqCount: number | null;
   summaryPath: string;
   openQuestions: string[];
   nextCommands: string[];
 }): Promise<SddPreflightResult> {
-  const reqText = input.reqSourcePath === null ? "" : await readSafe(input.reqSourcePath);
-  const reqCount = countReqIds(reqText);
-
   await writeFile(
     input.summaryPath,
     `${buildReadyPreflightSummary({
       source: input.source,
       selectedInputPath: input.selectedInputPath,
-      importedReqCount: reqCount,
+      importedReqCount: input.importedReqCount,
       openQuestions: input.openQuestions,
     })}\n`,
     "utf-8",
@@ -134,7 +137,7 @@ async function completeReadyPreflight(input: {
     status: "ready",
     source: input.source,
     selectedInputPath: input.selectedInputPath,
-    importedReqCount: reqCount,
+    importedReqCount: input.importedReqCount,
     openQuestions: input.openQuestions,
     blockers: [],
     nextCommands: input.nextCommands,
@@ -217,7 +220,7 @@ function buildBlockedPreflightSummary(input: {
 function buildReadyPreflightSummary(input: {
   source: SddPreflightSource;
   selectedInputPath: string | null;
-  importedReqCount: number;
+  importedReqCount: number | null;
   openQuestions: string[];
 }): string {
   const openQuestions =
@@ -236,7 +239,7 @@ function buildReadyPreflightSummary(input: {
     "",
     "## Requirement Intake",
     "",
-    `- Imported REQ count: ${input.importedReqCount}`,
+    `- Imported REQ count: ${input.importedReqCount ?? "unknown"}`,
     "",
     "## Open Questions (Carry-over)",
     "",

@@ -263,3 +263,85 @@ describe("QFAI-IMPLITE-001 CLI output", () => {
     expect(output).toContain("fix:");
   });
 });
+
+describe("import-lite entrypoint eligibility", () => {
+  // Dropping an evidence file must not let a brand-new project skip
+  // `/qfai-discussion`: the entrypoint is defined for projects that already
+  // carry specs.
+  it("does not apply to a project with no spec packs", async () => {
+    const root = await newRoot();
+    await seedEvidence(root, "import-lite.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.source).toBe("discussion-pack");
+  });
+
+  // A misnamed pack is an input source that has to be repaired
+  // (`QFAI-DPACK-005`), not one the evidence file may paper over. It leaves
+  // `latestPackDir` null, so a null check alone would have let it through.
+  it("does not apply when a non-canonical discussion pack exists", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite.md");
+    await mkdir(path.join(root, ".qfai", "discussion", "discussion-latest"), { recursive: true });
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.blockers.some((item) => item.includes("discussion-latest"))).toBe(true);
+  });
+
+  // The shipped template is a pointer artifact, explicitly "not
+  // requirement/spec SSOT", so it carries no REQ ids. Counting them reported a
+  // confident `0` for a project whose requirements live in its specs.
+  it("reports the imported REQ count as unknown, not zero", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("ready");
+    expect(result.importedReqCount).toBeNull();
+    const summary = await readFile(result.preflightSummaryPath, "utf-8");
+    expect(summary).toContain("Imported REQ count: unknown");
+  });
+
+  // Lexicographic order does not rank `import-lite-<ts>.md` above
+  // `import-lite.md` — the separator sorts against the extension dot — so the
+  // newest record has to be selected by its parsed timestamp.
+  it("prefers the newest timestamped evidence over the template filename", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite.md");
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    await seedEvidence(root, "import-lite-20260501000000000.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.selectedInputPath).toContain("import-lite-20260501000000000.md");
+  });
+});
+
+describe("QFAI-DPACK-001 vs the import-lite entrypoint", () => {
+  // The final gate (`validate --profile verify --fail-on error`) runs the
+  // discussion validators unconditionally. Reporting a missing pack as an error
+  // on exactly the projects the preflight declares ready left them unable to
+  // ever reach DoD.
+  it("does not fire on an eligible import-lite project", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    const result = await validateProject(root, undefined, { profile: "full" });
+    expect(result.issues.map((found) => found.code)).not.toContain("QFAI-DPACK-001");
+  });
+
+  it("still fires when the project has no import-lite evidence", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    const result = await validateProject(root, undefined, { profile: "full" });
+    expect(result.issues.map((found) => found.code)).toContain("QFAI-DPACK-001");
+  });
+});
