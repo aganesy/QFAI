@@ -13,6 +13,7 @@ import {
   readlink,
   rename,
   rm,
+  rmdir,
   symlink,
   writeFile,
 } from "node:fs/promises";
@@ -1964,11 +1965,28 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
  * 生成物と誤認されてファイルごと消える。出荷された wrapper では委譲行が
  * 常に桁 0 から始まるので、前後の空白を許す理由がない。CRLF の `\r` だけは
  * split で落ちる。
+ *
+ * fenced code block の中も見ない。字下げなしでも ``` で囲めば「引用」であり、
+ * 旧 wrapper の中身を自分の doc に転記しただけの自作 command が生成物として
+ * 消えていた。qfai が配った wrapper は委譲行を fence の中に置かない。
  */
 function hasDelegationLine(body: string, stem: string): boolean {
   const delegations = new Set(DELEGATION_LINES(stem));
-  return body.split(/\r?\n/).some((line) => delegations.has(line));
+  let fenced = false;
+  for (const line of body.split(/\r?\n/)) {
+    if (FENCE_RE.test(line)) {
+      fenced = !fenced;
+      continue;
+    }
+    if (!fenced && delegations.has(line)) {
+      return true;
+    }
+  }
+  return false;
 }
+
+/** Markdown の code fence 行 (``` / ~~~、字下げ可、情報文字列可)。 */
+const FENCE_RE = /^\s{0,3}(?:`{3,}|~{3,})/;
 
 /**
  * 出荷実績のある委譲行の全形。
@@ -2042,10 +2060,15 @@ const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
  * が `--force` でディレクトリごと消えていた。init が張るのは canonical tree へ
  * 解決される symlink だけなので、これは必要条件 — ただし十分条件ではないため、
  * 呼び出し側で {@link RETIRED_SKILL_IDS} と併せて判定する。
+ *
+ * リンク先は canonical tree の **同名の子** でなければならない。init が張る
+ * のは常に `<id> -> .qfai/assistant/skills/<id>` であり、
+ * `qfai-spec -> .../skills/my-skill` のような alias はプロジェクトが自分で
+ * 作ったものなので、canonical tree 内を指すというだけで消してはいけない。
  */
-async function linksIntoCanonicalSkills(
+async function linksIntoCanonicalSkill(
   entryPath: string,
-  canonicalSkillsDir: string,
+  canonicalSkill: string,
 ): Promise<boolean> {
   let target: string;
   try {
@@ -2054,9 +2077,7 @@ async function linksIntoCanonicalSkills(
     // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
     return false;
   }
-  const resolved = path.resolve(path.dirname(entryPath), target);
-  const rel = path.relative(canonicalSkillsDir, resolved);
-  return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
+  return path.resolve(path.dirname(entryPath), target) === path.resolve(canonicalSkill);
 }
 
 /**
@@ -2084,36 +2105,34 @@ async function linksIntoCanonicalSkills(
  * 名前が引退済み id と一致しないためそもそもここへ来ない。prune は repair
  * より先に走るので、消すと前回の失敗した修復が残した唯一の控えを失う。
  */
-async function isInitWrittenSkillWrapper(
+async function classifyInitWrittenSkillWrapper(
   entry: Dirent,
   entryPath: string,
   canonicalSkillsDir: string,
-): Promise<boolean> {
+): Promise<"link" | "directory" | null> {
+  const canonicalSkill = path.join(canonicalSkillsDir, entry.name);
   if (entry.isSymbolicLink()) {
-    return linksIntoCanonicalSkills(entryPath, canonicalSkillsDir);
+    return (await linksIntoCanonicalSkill(entryPath, canonicalSkill)) ? "link" : null;
   }
   if (entry.isDirectory()) {
     const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
-    return doc !== null && hasDelegationLine(doc, entry.name);
+    return doc !== null && hasDelegationLine(doc, entry.name) ? "directory" : null;
   }
   if (!entry.isFile()) {
-    return false;
+    return null;
   }
   // flatten された link は「git が展開したリンク先そのもの」であり、それ以外
   // ではない。近傍の {@link isFlattenedLink} と同じく byte-exact で比べる —
   // 内容を解決してみて canonical tree の中に落ちれば十分、としてしまうと
   // `echo '../../.qfai/assistant/skills/qfai-spec' > .claude/skills/qfai-spec`
   // で作られた手書きファイルや、`//` や `./` を含む別綴りまで消える。
-  const expected = path.relative(
-    path.dirname(entryPath),
-    path.join(canonicalSkillsDir, entry.name),
-  );
+  const expected = path.relative(path.dirname(entryPath), canonicalSkill);
   try {
-    return await isFlattenedLink(entryPath, expected);
+    return (await isFlattenedLink(entryPath, expected)) ? "link" : null;
   } catch {
     // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
     // ここで throw すると prune の途中で init 全体が落ちる。
-    return false;
+    return null;
   }
 }
 
@@ -2160,13 +2179,27 @@ async function pruneStaleQfaiWrappers(
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);
-      if (!(await isInitWrittenSkillWrapper(entry, entryPath, canonicalSkillsDir))) {
+      const kind = await classifyInitWrittenSkillWrapper(entry, entryPath, canonicalSkillsDir);
+      if (kind === null) {
         continue;
       }
 
-      removed.push(entryPath);
+      if (kind === "link") {
+        removed.push(entryPath);
+        if (!dryRun) {
+          await rm(entryPath, { recursive: true, force: true });
+        }
+        continue;
+      }
+
+      // ディレクトリ形式では所有権を証明できたのは `SKILL.md` だけ。プロジェクト
+      // がそこへ自前の reference やメモを足していることがあり、ディレクトリごと
+      // 再帰削除するとそれも失う。生成物だけ消して、空になったときだけ殻を畳む。
+      const doc = path.join(entryPath, "SKILL.md");
+      removed.push(doc);
       if (!dryRun) {
-        await rm(entryPath, { recursive: true, force: true });
+        await rm(doc, { force: true });
+        await removeIfEmpty(entryPath);
       }
     }
   }
@@ -2178,6 +2211,24 @@ async function pruneStaleQfaiWrappers(
   // Manual removal is required when a canonical agent is deleted.
 
   return removed;
+}
+
+/**
+ * 空ならそのディレクトリを消す。中身が残っていれば何もしない。
+ *
+ * `ENOTEMPTY` / `EEXIST` は「プロジェクトのファイルが残っている」という
+ * 正常な結果であり、失敗ではない。
+ */
+async function removeIfEmpty(dir: string): Promise<void> {
+  try {
+    await rmdir(dir);
+  } catch (error: unknown) {
+    const code = (error as NodeJS.ErrnoException | null)?.code;
+    if (code === "ENOTEMPTY" || code === "EEXIST" || code === "ENOENT") {
+      return;
+    }
+    throw error;
+  }
 }
 
 async function pruneMatchingEntries(

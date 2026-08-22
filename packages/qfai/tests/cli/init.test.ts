@@ -625,6 +625,89 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps a project's files beside a retired directory wrapper it prunes", async () => {
+    // Ownership was proved for `SKILL.md` and nothing else. A project that
+    // added notes or scripts to the same directory keeps them, and the
+    // directory survives with them — only an emptied shell is folded away.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".codex", "skills", "qfai-spec");
+      await mkdir(stale, { recursive: true });
+      await writeFile(
+        path.join(stale, "SKILL.md"),
+        "- .qfai/assistant/skills/qfai-spec/SKILL.md\n",
+        "utf-8",
+      );
+      await writeFile(path.join(stale, "our-notes.md"), "our notes\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(path.join(stale, "SKILL.md"))).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(stale, "our-notes.md"), "utf-8")).toBe("our notes\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project alias symlink that borrows a retired skill name", async () => {
+    // init always links `<id> -> .qfai/assistant/skills/<id>`. A link at a
+    // retired name pointing at some other canonical entry is an alias the
+    // project made, and "the target is somewhere in the tree" deleted it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
+      const alias = path.join(root, ".claude", "skills", "qfai-spec");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"),
+        alias,
+        "dir",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expectSymlink(alias);
+      expect(await readFile(path.join(alias, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project command that quotes the delegation line inside a code fence", async () => {
+    // A fence is a quotation whether or not it is indented. qfai never puts
+    // the delegation inside one, so a doc that reproduces the retired
+    // wrapper's body is not the wrapper.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper used to say:",
+        "",
+        "```md",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("removes the pre-symlink directory wrapper of a retired skill", async () => {
     // Releases before the symlink recut copied `<integration>/<id>/SKILL.md`
     // as a real directory. Pruning only symlinks left those behind on an
