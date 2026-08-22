@@ -580,22 +580,34 @@ async function describeUnsafeManifestPath(
 
 /**
  * `true` when `dir` is inside `destRoot` once every symlink on the way to both
- * is resolved. A path that cannot be resolved counts as outside: `init` has no
- * way to tell where a write would land, and the merge is skippable.
+ * is resolved.
+ *
+ * A path that is simply **absent** passes: the manifest layer is missing, which
+ * the read reports as nothing to merge (and `--dry-run` reaches here before the
+ * create-only copy has made anything). A path that exists and cannot be
+ * resolved does not: `init` has no way to tell where a write would land, and
+ * the merge is skippable.
  */
 async function resolvesInsideRoot(destRoot: string, dir: string): Promise<boolean> {
   const [rootReal, dirReal] = await Promise.all([safeRealpath(destRoot), safeRealpath(dir)]);
-  if (rootReal === null || dirReal === null) return false;
-  const rel = path.relative(rootReal, dirReal);
+  if (rootReal.kind === "missing" || dirReal.kind === "missing") return true;
+  if (rootReal.kind !== "resolved" || dirReal.kind !== "resolved") return false;
+  const rel = path.relative(rootReal.real, dirReal.real);
   if (rel === "") return true;
   return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
 }
 
-async function safeRealpath(target: string): Promise<string | null> {
+type RealpathOutcome =
+  | { kind: "resolved"; real: string }
+  | { kind: "missing" }
+  | { kind: "unresolvable" };
+
+/** The resolved path, or why it could not be resolved. */
+async function safeRealpath(target: string): Promise<RealpathOutcome> {
   try {
-    return await realpath(target);
-  } catch {
-    return null;
+    return { kind: "resolved", real: await realpath(target) };
+  } catch (err: unknown) {
+    return isEnoent(err) ? { kind: "missing" } : { kind: "unresolvable" };
   }
 }
 

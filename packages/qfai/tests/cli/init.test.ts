@@ -806,6 +806,24 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // The merge runs after the create-only copy, but `--dry-run` copies nothing,
+  // so the manifest layer is legitimately absent there. An absent path is not
+  // an unsafe one: it is simply nothing to merge into, and warning about it
+  // would put a write-safety diagnostic on every `--force --dry-run`.
+  it("--force --dry-run reports no routing warning when there is no manifest yet", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dry-"));
+    try {
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: true, yes: true });
+      });
+
+      expect(captured).not.toContain("W-ROUTING");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // An `lstat` on the manifest — like `O_NOFOLLOW` — answers for the last path
   // component only. A project whose whole `manifest/` directory is a link out
   // of the tree has a perfectly ordinary file at the end of it, so both checks
