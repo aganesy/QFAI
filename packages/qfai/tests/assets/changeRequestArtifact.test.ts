@@ -265,11 +265,28 @@ describe("a Change Request is a defined artifact", () => {
       const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
       expect(drift).toContain(
         "| `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | " +
-          "the `09_delta.md` of every spec that references the contract, or " +
-          "`_policies/10_delta.md` when the change is cross-spec |",
+          "the `09_delta.md` of every spec that references the contract; " +
+          "`_policies/10_delta.md` when the change is cross-spec, and also when " +
+          "no spec references the contract at all |",
       );
       expect(drift).toContain("**A contract CR records in the delta only.**");
       expect(drift).toContain("`--contract` runs Stage 0 + Phase 0 + Phase 4");
+    });
+
+    it(`${tree}: a contract decision is minted at the layer its blast radius reaches`, async () => {
+      // `_policies/08_Decisions.md` is reserved for cross-spec decisions, so a
+      // contract that only one spec references must not have its decision
+      // promoted to shared SSOT (and a whole-project rerun) to record it.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain(
+        "mint the `DR-*` where its blast radius lies — `spec-*/07_Decisions.md` " +
+          "when exactly one spec references the contract, `_policies/08_Decisions.md` " +
+          "when more than one does or none does",
+      );
+      expect(drift).toContain(
+        "Sending a single-spec decision to the policy layer promotes it to shared " +
+          "SSOT the policy template reserves for cross-spec decisions",
+      );
     });
 
     it(`${tree}: a CR that mints no Decision Record writes the delta only`, async () => {

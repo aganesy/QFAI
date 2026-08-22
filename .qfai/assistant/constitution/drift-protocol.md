@@ -192,11 +192,11 @@ ratifies a comparison the author knew was fabricated.
 
    Invocation and CR-reference destination by artifact class:
 
-   | Upstream artifact    | Invocation                      | CR reference lands in                                                                                                  |
-   | -------------------- | ------------------------------- | ---------------------------------------------------------------------------------------------------------------------- |
-   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           | `spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`                               |
-   | `_policies/**`       | `/qfai-sdd` (no argument)       | `_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`                         |
-   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | the `09_delta.md` of every spec that references the contract, or `_policies/10_delta.md` when the change is cross-spec |
+   | Upstream artifact    | Invocation                      | CR reference lands in                                                                                                                                                     |
+   | -------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           | `spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`                                                                                  |
+   | `_policies/**`       | `/qfai-sdd` (no argument)       | `_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`                                                                            |
+   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | the `09_delta.md` of every spec that references the contract; `_policies/10_delta.md` when the change is cross-spec, and also when no spec references the contract at all |
 
    Two consequences of that table are load-bearing:
    - **The delta write is unconditional; the Decisions write is not.** The CR ID
@@ -208,9 +208,13 @@ ratifies a comparison the author knew was fabricated.
      authoring a layout the template does not define.
    - **A contract CR records in the delta only.** `--contract` runs Stage 0 +
      Phase 0 + Phase 4, and no Decisions file is in that scope. If the contract
-     change also forces a decision, that decision is policy-level: mint the
-     `DR-*` by rerunning the CR's `_policies/**` row as well, not by widening
-     the contract rerun.
+     change also forces a decision, mint the `DR-*` where its blast radius
+     lies — `spec-*/07_Decisions.md` when exactly one spec references the
+     contract, `_policies/08_Decisions.md` when more than one does or none
+     does — by rerunning that artifact's own row of this table, not by widening
+     the contract rerun. Sending a single-spec decision to the policy layer
+     promotes it to shared SSOT the policy template reserves for cross-spec
+     decisions, and costs a full `/qfai-sdd` rerun to record.
 
    Mode — the CR's "approved actions" field MUST name one:
    - **`confirm-only`** — re-read the artifact and confirm it already satisfies
