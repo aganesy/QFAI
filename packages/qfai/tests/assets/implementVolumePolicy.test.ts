@@ -69,7 +69,9 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
 
       // The skill body sends the reader to the column, not to `Evidence`.
       const skill = unwrap(await read(tree, SKILL));
-      expect(skill).toContain("take each row's **risk tier** from its `Tier` column (blank is T1)");
+      expect(skill).toContain(
+        "take each row's **risk tier** from its own ledger table's `Tier` column (blank is T1; a table lacking that column derives per row)",
+      );
     });
 
     it(`${tree}: an unescalated row defaults to T1, an absent column does not`, async () => {
@@ -84,10 +86,29 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       // A legacy ledger predating the column is not silently downgraded.
       expect(section).toContain("An absent column is not a claim of T1");
       expect(ledger).toContain(
-        "A ledger carrying **no** `Tier` column predates the column and is not covered by that default",
+        "A ledger **table** carrying no `Tier` column is not covered by that default",
       );
       // The criticality tie-break moved upstream; it did not soften.
       expect(section).toContain("apply the criticality tie-break below");
+    });
+
+    it(`${tree}: the missing column is judged per ledger table, not per file`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      const ledger = unwrap(await read(tree, LEDGER));
+
+      // `/qfai-implement` appends a ledger table per change request
+      // (`tddHelpers.collectLedgerTables`), so a file-wide "has a Tier column?"
+      // test lets a seeded table vouch for an unseeded neighbour: those rows
+      // carry no Tier cell at all, yet would read as blank, and blank is T1.
+      // An authz or contract row would be batched instead of reviewed per row.
+      expect(section).toContain("The column is read per ledger table, not per file.");
+      expect(section).toContain("`/qfai-implement` appends a table per change request");
+      expect(section).toContain(
+        "A ledger **table** whose header carries no `Tier` is not covered by that default",
+      );
+      expect(section).toContain("a sibling table's column does not stand in for the missing one");
+      expect(ledger).toContain("read the header of the table the row lives in, not the file");
+      expect(ledger).toContain("Derive the tier of every row in that table before processing it");
     });
 
     it(`${tree}: permits batched review with a bounded unit`, async () => {

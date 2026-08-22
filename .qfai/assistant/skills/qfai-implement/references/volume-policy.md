@@ -33,10 +33,16 @@ a tier kept there cannot be read before the work it sizes, which is what left
 T1 unreachable.
 
 A row whose `Tier` cell is blank or `-` is **T1**: the tier is seeded upstream
-now, so an unescalated row is one the seeder found no reason to escalate. A
-ledger carrying **no** `Tier` column predates the column — derive each row's
-tier from the table above before processing it and apply the criticality
-tie-break below. An absent column is not a claim of T1.
+now, so an unescalated row is one the seeder found no reason to escalate.
+
+**The column is read per ledger table, not per file.** `/qfai-implement` appends
+a table per change request, so one `test-list.md` can hold a freshly seeded
+table beside one that predates the column. A ledger **table** whose header
+carries no `Tier` is not covered by that default — derive the tier of every row
+in _that_ table from the table above before processing it and apply the
+criticality tie-break below, whatever a neighbouring table declares. An absent
+column is not a claim of T1, and a sibling table's column does not stand in for
+the missing one.
 
 ### Criticality outranks connectedness
 

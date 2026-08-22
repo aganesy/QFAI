@@ -33,9 +33,11 @@ consumer needs the answer _before_ it starts the row.
   `volume-policy.md#criticality-outranks-connectedness`.
 - **Blank or `-` means `T1`.** The default runs this way round only because the
   tier is seeded rather than claimed: a row nobody escalated is a row nobody
-  found a reason to escalate. A ledger carrying **no** `Tier` column predates
-  the column and is not covered by that default — derive each row's tier before
-  processing it.
+  found a reason to escalate. A ledger **table** carrying no `Tier` column is
+  not covered by that default — read the header of the table the row lives in,
+  not the file, because `/qfai-implement` appends a table per change request and
+  a seeded table can sit beside one that predates the column. Derive the tier of
+  every row in that table before processing it.
 - **Never record it in `Evidence`.** That cell is a pointer, not the payload
   ("Evidence cell contract" below), and it is written last, by the agent whose
   ceremony the tier was supposed to size. A tier kept there cannot be read

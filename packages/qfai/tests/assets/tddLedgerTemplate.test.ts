@@ -16,6 +16,12 @@ const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.m
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
+/**
+ * Collapse markdown soft wraps so assertions pin wording, not the column at
+ * which the sentence happened to break.
+ */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
+
 /** Splits a markdown table row into trimmed cells. */
 const cells = (row: string): string[] =>
   row
@@ -63,6 +69,37 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain("**Seed `Tier` with the\n   row**");
+    });
+
+    it(`${tree}: the ledger FORMAT SSOT carries Tier so Phase 2b cannot drop it`, async () => {
+      // The template points at `spec-traceability-rules.md` for the full rules
+      // and `qfai-sdd/SKILL.md` makes it required reading before any artifact
+      // is written. A column absent from that list reads as non-standard, and
+      // the agent that omits it un-seeds the tier the template just seeded.
+      const rules = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/spec-traceability-rules.md"),
+      );
+      expect(rules).toContain("Optional columns: `Tier`, `US-Refs`, `CON-API-Refs`, `Blocked-By`");
+      expect(rules).toContain("Legal values `T1`, `T2`, `T3`, or `-`");
+      expect(rules).toContain("raises `TDDLIST_UNKNOWN_TIER`");
+      // Optionality, value range and owner — all three, in the SSOT.
+      expect(rules).toContain("seeded at Phase 2b beside `Layer` and never written by");
+      expect(rules).toContain("Do not drop the column as non-standard");
+    });
+
+    it(`${tree}: a raised Tier reopens the row instead of inheriting T1 evidence`, async () => {
+      // Phase 2b is re-run per change request. Without this, a TC whose tier
+      // is corrected upward keeps `done` and the batched T1 reviewer trail, so
+      // the per-row and product-surface turns the new tier owes never run.
+      const checklists = unwrap(
+        await read(tree, "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md"),
+      );
+      expect(checklists).toContain("Re-derive `Tier` on every re-run");
+      expect(checklists).toContain("it overrides the delta rule above");
+      expect(checklists).toContain(
+        "return `Status` to `todo`, clear the now-void `Evidence`, and record the driving `CR-*` in `DR-ID`",
+      );
+      expect(checklists).toContain("A **lowered** tier keeps `Status` and `Evidence`");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {
