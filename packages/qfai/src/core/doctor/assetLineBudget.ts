@@ -1,5 +1,5 @@
-import { createReadStream } from "node:fs";
-import { access, readdir } from "node:fs/promises";
+import { createReadStream, type Dirent } from "node:fs";
+import { access, lstat, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
@@ -33,9 +33,10 @@ export const ASSISTANT_ASSET_EXTENSIONS: readonly string[] = [".md", ".yml", ".y
 export const LINE_BUDGET_EXEMPT: ReadonlyMap<string, string> = new Map([
   [
     "assistant/manifest/agent-catalog.yml",
-    "Generated, not authored: it is derived from `assistant/agents/<id>.md`, one " +
-      "entry per agent, and the agent-catalog test asserts it matches those " +
-      "sources. Splitting it would mean splitting the agent roster it mirrors.",
+    "A roster, not prose: one entry per agent, mirroring `assistant/agents/<id>.md`. " +
+      "Its length tracks the number of agents — shipped, or adjusted through " +
+      "`qfai-configure` — so there is no topic to move out; splitting it would " +
+      "mean splitting the agent roster itself.",
   ],
 ]);
 
@@ -110,7 +111,11 @@ export type AssistantAssetBudgetReport = {
   exempt: ExemptAssistantAsset[];
   /** Files that could not be read; reported rather than silently passed. */
   unreadable: string[];
-  /** Directories that could not be listed; their contents were never measured. */
+  /**
+   * Paths whose contents were never measured: a directory that could not be
+   * listed, or an entry whose type could not be determined at all — the latter
+   * may be a directory, so it is reported rather than assumed to be neither.
+   */
   unscannable: string[];
 };
 
@@ -138,9 +143,36 @@ function toQfaiRelativePath(assistantDir: string, absolute: string): string {
 
 type AssistantAssetScan = {
   files: string[];
-  /** Directories whose listing failed (permission, or removed mid-scan). */
+  /**
+   * Paths the walk could not descend into or classify: a directory whose
+   * listing failed (permission, or removed mid-scan), or an entry whose type
+   * neither `readdir` nor `lstat` could report.
+   */
   unscannable: string[];
 };
+
+/**
+ * True when `readdir` reported no type for the entry.
+ *
+ * `withFileTypes: true` fills the type from the directory entry only when the
+ * filesystem supplies one. NFS, several FUSE mounts and other network
+ * filesystems answer `DT_UNKNOWN`, and then *every* predicate on the Dirent is
+ * false — an ordinary file and an ordinary directory both look like "neither".
+ * A walk that only asks `isFile()` / `isDirectory()` drops them silently, so a
+ * whole subtree of oversized assets goes unmeasured while the report still says
+ * `ok`. Such an entry has to be resolved with a `lstat` instead.
+ */
+function hasUnknownType(entry: Dirent): boolean {
+  return !(
+    entry.isFile() ||
+    entry.isDirectory() ||
+    entry.isSymbolicLink() ||
+    entry.isBlockDevice() ||
+    entry.isCharacterDevice() ||
+    entry.isFIFO() ||
+    entry.isSocket()
+  );
+}
 
 /**
  * Walks the assistant tree without the repository-wide default ignore list.
@@ -153,8 +185,8 @@ type AssistantAssetScan = {
  * A directory that cannot be listed is recorded instead of thrown: doctor is a
  * diagnostic and must still print its other checks when one subtree is locked
  * or is removed while the scan runs. Symlinked directories are not followed —
- * `Dirent.isDirectory()` is false for a link — so the walk stays inside the
- * real assistant tree.
+ * neither `Dirent.isDirectory()` nor `lstat().isDirectory()` is true for a link
+ * — so the walk stays inside the real assistant tree.
  */
 async function scanAssistantAssets(assistantDir: string): Promise<AssistantAssetScan> {
   const files: string[] = [];
@@ -170,11 +202,27 @@ async function scanAssistantAssets(assistantDir: string): Promise<AssistantAsset
     }
     for (const entry of entries) {
       const absolute = path.join(dir, entry.name);
-      if (entry.isDirectory()) {
+      let isDirectory = entry.isDirectory();
+      let isFile = entry.isFile();
+      if (hasUnknownType(entry)) {
+        // `lstat`, not `stat`: resolving the type must not start following
+        // links the typed path deliberately leaves alone.
+        try {
+          const stats = await lstat(absolute);
+          isDirectory = stats.isDirectory();
+          isFile = stats.isFile();
+        } catch {
+          // Unknown and unresolvable — it may be a directory full of assets,
+          // so record it as unmeasured instead of dropping it.
+          unscannable.push(toQfaiRelativePath(assistantDir, absolute));
+          continue;
+        }
+      }
+      if (isDirectory) {
         await visit(absolute);
         continue;
       }
-      if (!entry.isFile()) {
+      if (!isFile) {
         continue;
       }
       const ext = path.extname(entry.name).toLowerCase();

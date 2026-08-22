@@ -33,11 +33,12 @@ measures it and reports every file over the ceiling as `assets.lineBudget`. The
 ceiling is a backstop, not the rule: a file approaching it is a signal to move a
 section out, not to raise the number.
 
-One shipped file is exempt, and only because it is generated rather than
-authored: `assistant/manifest/agent-catalog.yml` is derived from
-`assistant/agents/<id>.md`, one entry per agent, so splitting it would mean
-splitting the roster it mirrors. `npx qfai doctor` names it under `exempt` with
-that reason. No authored file has an exemption.
+One shipped file is exempt, and only because it is a roster rather than prose:
+`assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
+`assistant/agents/<id>.md`, so its length tracks the number of agents — whether
+shipped or adjusted through `qfai-configure` — and splitting it would mean
+splitting the roster itself. `npx qfai doctor` names it under `exempt` with that
+reason. No prose asset has an exemption.
 
 ## User Questions (AskUserQuestion Protocol)
 

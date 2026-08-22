@@ -44,6 +44,19 @@ vi.mock("node:fs", async (importOriginal) => {
  */
 const UNPROBEABLE_ROOT = "qfai-unprobeable-";
 
+/**
+ * Marker for a root that answers `readdir` without entry types.
+ *
+ * NFS, some FUSE mounts and other network filesystems return `DT_UNKNOWN`, so
+ * every `Dirent` predicate is false for ordinary files and directories alike.
+ * No local filesystem reproduces that, so the type is stripped by marker — the
+ * same injection style as the read and probe failures above.
+ */
+const UNTYPED_ROOT = "qfai-untyped-";
+
+/** An entry inside an untyped root whose `lstat` also fails. */
+const UNSTATTABLE_ASSET = "qfai-unstattable-fixture.md";
+
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFsPromises>();
   return {
@@ -56,6 +69,33 @@ vi.mock("node:fs/promises", async (importOriginal) => {
         throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
       }
       return actual.access(target, mode);
+    },
+    readdir: async (target: string, options?: { withFileTypes?: true }) => {
+      if (options?.withFileTypes !== true) {
+        return actual.readdir(target);
+      }
+      const entries = await actual.readdir(target, { withFileTypes: true });
+      if (!String(target).includes(UNTYPED_ROOT)) {
+        return entries;
+      }
+      return entries.map((entry) => ({
+        name: entry.name,
+        parentPath: target,
+        path: target,
+        isFile: () => false,
+        isDirectory: () => false,
+        isSymbolicLink: () => false,
+        isBlockDevice: () => false,
+        isCharacterDevice: () => false,
+        isFIFO: () => false,
+        isSocket: () => false,
+      }));
+    },
+    lstat: async (target: string) => {
+      if (String(target).endsWith(UNSTATTABLE_ASSET)) {
+        throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+      }
+      return actual.lstat(target);
     },
   };
 });
@@ -70,6 +110,15 @@ import {
 
 async function withTempRoot(fn: (root: string) => Promise<void>): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-asset-budget-"));
+  try {
+    await fn(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function withUntypedRoot(fn: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), UNTYPED_ROOT));
   try {
     await fn(root);
   } finally {
@@ -231,6 +280,43 @@ describe("checkAssistantAssetLineBudget", () => {
           lines: ASSISTANT_ASSET_MAX_LINES + 2,
         },
       ]);
+    });
+  });
+
+  it("stats entries whose type readdir could not report instead of dropping them", async () => {
+    await withUntypedRoot(async (root) => {
+      // On a filesystem that answers DT_UNKNOWN, isFile()/isDirectory() are both
+      // false for a plain directory and a plain file. Skipping those left whole
+      // subtrees unmeasured while the report still said `ok`.
+      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 4);
+      await writeAsset(root, "catalog/test-layers.md", 10);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.status).toBe("over_budget");
+      expect(report.oversized).toEqual([
+        {
+          path: "assistant/skills/qfai-demo/SKILL.md",
+          lines: ASSISTANT_ASSET_MAX_LINES + 4,
+        },
+      ]);
+      expect(report.scanned).toBe(2);
+      expect(report.unscannable).toEqual([]);
+    });
+  });
+
+  it("records an entry whose type it cannot resolve instead of passing it silently", async () => {
+    await withUntypedRoot(async (root) => {
+      await writeAsset(root, "catalog/test-layers.md", 10);
+      // Type unknown and the lstat that would settle it fails: the entry may be
+      // a directory of oversized assets, so it counts as unmeasured.
+      await writeAsset(root, `catalog/${UNSTATTABLE_ASSET}`, 10);
+
+      const report = await checkAssistantAssetLineBudget(root);
+
+      expect(report.status).toBe("incomplete");
+      expect(report.unscannable).toEqual([`assistant/catalog/${UNSTATTABLE_ASSET}`]);
+      expect(report.scanned).toBe(1);
     });
   });
 
