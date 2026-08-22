@@ -245,7 +245,7 @@ In scope: E2E, API, Integration. Out of scope: Unit and Component
 
 ## Volume Signals (mandatory, not gates)
 
-E2E = required `US-*`, API = declared `CON-API-*`, Integration = required `TC-*`.
+Every row counts this spec's own obligations: E2E = required `US-*`, API = the `CON-API-*` this spec references (`CON-API-Refs`), Integration = required `TC-*` routing to `tests/integration/**` (`L3` or no `Level`). `L1`/`L2` owe nothing here; an `L4`/`L5` TC counts in the row its `Level` routes it to.
 `E2E_s` / `API_s` / `INT_s`, their bands, and what a low or high one obliges: **`references/volume-signals.md`**.
 A `Signal` cell is never a copy of its `Raw count`; never fail on a signal value alone.
 

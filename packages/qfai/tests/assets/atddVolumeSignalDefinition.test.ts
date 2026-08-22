@@ -1,9 +1,14 @@
 import { readFile } from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-const repoRoot = path.resolve(process.cwd(), "..", "..");
+// Anchored to this file, not to `process.cwd()`: the reads below must resolve
+// the same way whether the suite is launched from the repo root, from
+// `packages/qfai`, or by an IDE runner with its own CWD.
+// tests/assets/<this file> -> packages/qfai -> packages -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const read = (tree: string, rel: string): Promise<string> =>
@@ -43,13 +48,48 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expectPhrase(signals, "**A `Signal` cell that repeats its own `Raw count` is\nwrong**");
     });
 
+    it(`${tree}: every term of the total is counted in the same scope`, async () => {
+      // `#US` / `#TC` are per-spec but `.qfai/contracts/**` has no spec owner,
+      // so an unscoped `#CON` would let a sibling spec's contract move this
+      // spec's signal and break the spec-to-spec comparison the column is for.
+      const signals = await read(tree, SIGNALS);
+      expectPhrase(signals, "counted in **one scope: the spec this run was invoked on**");
+      expectPhrase(signals, "the `CON-API-*` **this spec references**");
+      expectPhrase(signals, "the repository-wide\ndeclared set is **not** this number");
+      // The Integration numerator is the layer this skill owns, not every TC:
+      // L1/L2 owe nothing here and L4/L5 route to another row.
+      expectPhrase(
+        signals,
+        "required `TC-*` of this spec that route to `tests/integration/**`: declared `Level` `L3`/`Integration`, or no declared `Level`",
+      );
+      expectPhrase(signals, "excluded from `#TC` and from `total`");
+      expectPhrase(signals, "never in `#TC`");
+
+      const skill = await read(tree, SKILL);
+      expectPhrase(skill, "the `CON-API-*` this spec references (`CON-API-Refs`)");
+      expectPhrase(skill, "Integration = required `TC-*` routing to `tests/integration/**`");
+    });
+
     it(`${tree}: "low or high" names the band it is judged against`, async () => {
       const signals = await read(tree, SIGNALS);
       expectPhrase(signals, "A signal is **low or high** when it falls outside its band");
       for (const row of ["| `E2E_s` | 5–25 |", "| `API_s` | 10–40 |", "| `INT_s` | 40–80 |"]) {
         expect(flat(signals)).toContain(row);
       }
-      expectPhrase(signals, "write the options and a recommendation in that\nrow's `Notes`");
+      expectPhrase(
+        signals,
+        "record the observed value and the reason the spec\nis shaped that way in that row's `Notes`",
+      );
+      // The worked example must satisfy the formula printed two sections up
+      // (`round(100 * 6 / 9)` = 67), or a run has two answers for one input.
+      expectPhrase(
+        signals,
+        "`E2E_s`\n67 / `INT_s` 22: six of this spec's nine obligations are `US-*`",
+      );
+      // `catalog/test-layers.md` forbids re-shaping a distribution to make it
+      // read better, so the out-of-band advice must not recommend re-filing.
+      expectPhrase(signals, "**Never re-file an obligation to move the number.**");
+      expect(signals).not.toMatch(/re-file .* as `TC-\*`/);
     });
 
     it(`${tree}: the band is declared non-gating and cites the catalog`, async () => {
@@ -64,8 +104,18 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expect(signals).toContain("maxE2eScenarioRatio");
       expectPhrase(signals, "not over these obligation counts");
 
+      // The band and the volume SSOT must agree: the catalog says qfai ships no
+      // default threshold, so it has to carry the band itself as non-gating
+      // rather than leave a required reference publishing one it denies.
       const catalog = await read(tree, "assistant/catalog/test-layers.md");
       expect(catalog).toContain("## Volume policy");
+      expectPhrase(catalog, "**A non-gating reference band.**");
+      expectPhrase(catalog, "skills/qfai-atdd/references/volume-signals.md");
+      expectPhrase(catalog, "no validator reads it, no value of it fails a run");
+      expectPhrase(
+        catalog,
+        "It is not a configured threshold and does not become one\n  by being observed.",
+      );
     });
 
     it(`${tree}: the skill keeps the table and routes to the definition`, async () => {
