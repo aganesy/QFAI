@@ -167,8 +167,9 @@ shipped half of NFR-0012, belong to `spec-0003`.
   That tree is version-control-ignored (OC-7), so every number must also be quoted in the
   pull-request description and in the spec's decision record (NFR-0001, NFR-0004, `DSC-015`,
   `DSC-017`).
-- Sources: SRC-0001..SRC-0027 in the pack's `04_Sources.md`. Mechanisms adopted from
-  `the reference kit` are adopted as design patterns, never as vendored files (LC-1).
+- Sources: SRC-0001..SRC-0027 in the pack's `04_Sources.md`. The reference implementation is
+  a private repository, is not named in any tracked file, and its mechanisms are adopted as
+  design patterns, never as vendored files (LC-1).
 
 ## Relevant Requirements
 

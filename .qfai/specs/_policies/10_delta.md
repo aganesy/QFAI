@@ -795,7 +795,7 @@
 
 - ApprovedBy: user@2026-08-05
 - Discussion pack: `.qfai/discussion/discussion-20260804173914356/` (REQ-0001..0025, NFR-0001..0016, 28 DTC, OQ 22 / 0 open / 4 deferred)
-- Upstream request: adopt the layered GitHub Actions test-workflow scaffold proven in `the reference kit` into both QFAI's own CI and the workflow templates QFAI ships through `qfai init`.
+- Upstream request: adopt a layered GitHub Actions test-workflow scaffold, proven in a sibling AI-driven-development kit, into both QFAI's own CI and the workflow templates QFAI ships through `qfai init`. The reference implementation is a private repository and is not named here; only the design patterns crossed over.
 - Resolves deferred `OQ-0015` (spec and capability allocation) from that pack.
 
 ### DR-0275: revoke the `spec-0017` / `CAP-0017` permanent-gap reservation
