@@ -78,7 +78,7 @@ Scored in the **Business rule coverage** table below the matrix, one row per
 spans several `TC`s and one `TC` realizes several `BR-*`, so it has no matrix
 row to sit in and gets its own table in the same file.
 
-- [ ] Every BR-\* referenced in 04_Business-Rules.md has at least one positive and one negative test case.
+- [ ] Every active BR-\* declared in 04_Business-Rules.md has at least one positive and one negative test case.
 - [ ] Conditional business rules have test cases for each branch.
 
 ## 8. Oracle Strength (オラクル強度)
@@ -123,10 +123,14 @@ below read. Write it once, in its own file, and link it from the stage evidence.
 
 ### Business rule coverage (§7)
 
-One row per `BR-*` referenced in `04_Business-Rules.md`, in the same file,
-directly under the matrix. Omit the table only when the spec declares no
-`BR-*`, and say so in its place. Its cells are ❌-accounted exactly like the
-matrix cells: an unjustified ❌ here is the same REVISE.
+One row per **active** `BR-*` of `04_Business-Rules.md` — a rule that carries a
+`BR-ID` row in that file's Rule Table, or its own heading — in the same file,
+directly under the matrix. A `BR-*` that survives there only in prose recording
+its removal or supersession is history, not an obligation: it gets no row, and
+demanding positive/negative cases for a deleted rule would REVISE a correct
+ATDD. Omit the table only when the spec declares no active `BR-*`, and say so
+in its place. Its cells are ❌-accounted exactly like the matrix cells: an
+unjustified ❌ here is the same REVISE.
 
 | BR ID   | Positive case | Negative case | Conditional branches | Covering TC | Status |
 | ------- | ------------- | ------------- | -------------------- | ----------- | ------ |
@@ -134,11 +138,17 @@ matrix cells: an unjustified ❌ here is the same REVISE.
 
 ### Evaluation criteria
 
-- **PASS**: All cells in both tables are ✅ or ⚠️ with documented rationale for partial coverage.
+- **Only the mark cells are scored.** `US/TC ID`, `BR ID`, `Covering TC` and
+  `Status` hold identifiers and the row verdict, not marks. PASS and REVISE
+  below read the matrix's category columns and the business rule table's
+  `Positive case` / `Negative case` / `Conditional branches` columns; a
+  reference value such as `BR-0001` or `TC-0001` in a non-scored cell is never
+  a missing ✅, or no row filled in as templated could ever pass.
+- **PASS**: All scored cells in both tables are ✅ or ⚠️ with documented rationale for partial coverage.
 - **Oracle strength is not waivable by category coverage.** A row whose eight
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.
-- **REVISE**: Any cell in either table is ❌ without an explicit justification (e.g., Decision Record).
+- **REVISE**: Any scored cell in either table is ❌ without an explicit justification (e.g., Decision Record).
 - **A justification counts only where it survives.** It goes under the matrix in
   `.qfai/evidence/coverage-depth-<spec-id>.md`, naming the cell, why the
   obligation is not coverable at this layer, and the `DR-*` or `CR-*` that
@@ -148,7 +158,12 @@ matrix cells: an unjustified ❌ here is the same REVISE.
 ### Usage
 
 - `test-design-analyst`: Produce this matrix and its business rule table when defining coverage obligations. Flag ❌ cells in either as gaps.
-- `qa-gatekeeper`: Verify the matrix and its business rule table exist and no unjustified ❌ cells remain in either. Read
+- `qa-gatekeeper`: Verify the matrix exists and no unjustified ❌ scored cells
+  remain in it. Require the business rule table **only when the spec declares an
+  active `BR-*`** — where none is declared, the stated omission is the correct
+  form and not a missing table. Where it is required, read the spec's
+  `04_Business-Rules.md` and reconcile: every active `BR-ID` owns a row, and a
+  table of ✅ rows that silently drops a declared rule is a REVISE. Read
   `.qfai/evidence/coverage-depth-<spec-id>.md`; a matrix that exists only in an
   uncommitted stage-evidence file is a missing matrix.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.

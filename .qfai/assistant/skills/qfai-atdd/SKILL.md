@@ -115,7 +115,7 @@ Use the shared schema.
 - Final completion gate MUST be delegated to an independent `completion-reviewer`.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
-  - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either;
+  - Coverage Depth Matrix and its business rule coverage table are reviewed and no unjustified `❌` cells remain in either; that table is reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input — every active `BR-ID` of its Rule Table owns a row, and a table of only `✅` rows that drops a declared rule is a REVISE, not a PASS (a spec declaring no active `BR-*` states the omission instead of carrying the table);
   - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
@@ -303,7 +303,7 @@ Notes:
 - Forbidden references remain.
 - Tests exist but were never executed.
 - Validation evidence is missing or failing.
-- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares `BR-*`, or contains unjustified ❌ cells in either table (normal-path-only coverage is incomplete).
+- Coverage Depth Matrix is missing, omits the business rule coverage table on a spec that declares `BR-*`, or contains unjustified ❌ cells in either table, or that table drops an active `BR-ID` declared in `04_Business-Rules.md` (normal-path-only coverage is incomplete).
 - A ledger row was advanced past `todo` with none of the three forms — no observed RED, no falsifiability evidence, and no `DR-*`.
 - A row was sent to `exception` without a `DR-*` recording why **both** branches were unavailable. "The surface was built earlier in this cycle" is not such a reason.
 

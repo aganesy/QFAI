@@ -106,7 +106,55 @@ describe.each(TREES)("%s", (tree) => {
     const checklist = flat(await read(tree, CHECKLIST));
     expect(checklist).toContain("an unjustified ❌ here is the same REVISE");
     expect(checklist).toContain(
-      "**REVISE**: Any cell in either table is ❌ without an explicit justification",
+      "**REVISE**: Any scored cell in either table is ❌ without an explicit justification",
+    );
+  });
+
+  it("scores marks only, so a templated BR row can pass", async () => {
+    // `BR ID` and `Covering TC` hold references, so a gate stated over "all
+    // cells" could never be satisfied by a business rule row filled in as the
+    // template prescribes.
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("**Only the mark cells are scored.**");
+    expect(checklist).toContain(
+      "**PASS**: All scored cells in both tables are ✅ or ⚠️ with documented rationale",
+    );
+    expect(checklist).not.toContain("**PASS**: All cells in both tables are ✅");
+  });
+
+  it("scopes the business rule table to active declarations", async () => {
+    // A spec whose `04_Business-Rules.md` keeps a retired rule as prose history
+    // must not owe positive/negative cases for it.
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("One row per **active** `BR-*` of `04_Business-Rules.md`");
+    expect(checklist).toContain(
+      "prose recording its removal or supersession is history, not an obligation",
+    );
+    expect(checklist).not.toContain("One row per `BR-*` referenced in `04_Business-Rules.md`");
+    expect(checklist).toContain(
+      "Every active BR-\\* declared in 04_Business-Rules.md has at least one positive and one negative test case.",
+    );
+  });
+
+  it("asks the gatekeeper for the table only where BR-* are declared", async () => {
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain(
+      "Require the business rule table **only when the spec declares an active `BR-*`**",
+    );
+    expect(checklist).toContain(
+      "read the spec's `04_Business-Rules.md` and reconcile: every active `BR-ID` owns a row",
+    );
+  });
+
+  it("gives the reviewer gate the BR source to reconcile against", async () => {
+    // Without `04_Business-Rules.md` as a reviewer input, a table listing only
+    // the rules the analyst remembered is all ✅ and passes.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain(
+      "reconciled against the spec's `04_Business-Rules.md`, which the reviewer work order MUST carry as an input",
+    );
+    expect(skill).toContain(
+      "that table drops an active `BR-ID` declared in `04_Business-Rules.md`",
     );
   });
 
