@@ -36,8 +36,27 @@ const CONSUMER_ROOTS = ["packages/qfai/assets/init", "."];
 
 const AGENT_SELECTION = ".qfai/assistant/constitution/agent-selection.md";
 
+/**
+ * The file `agent-selection.md` now sends MCP questions to. A pointer is only
+ * honest if what it lands on is itself reachable: this skill's "MCP
+ * Integration" section names a configuration-template directory per server,
+ * and those directories used to sit in `packages/qfai/assets/mcp-templates`,
+ * outside the init payload — shipped in the tarball, copied into no project.
+ * Following the constitution therefore ran straight into a second unresolvable
+ * reference, which is the defect this file exists to keep out.
+ */
+const MCP_GUIDANCE = ".qfai/assistant/skills/web-research/SKILL.md";
+
 /** A backticked, slash-bearing markdown path — how this tree cites a file. */
 const CITED_MARKDOWN_PATH = /`([^`\s]+\/[^`\s]+\.md)`/g;
+
+/**
+ * A "Configuration templates: `<dir>`" line in the MCP guidance. Only the
+ * template directories are asserted: the same section also names runtime
+ * output roots (`.qfai/evidence/...`, `.qfai/cache/...`) that the skill
+ * creates when it runs and that no payload is expected to contain.
+ */
+const CITED_TEMPLATE_DIR = /^Configuration templates:\s+`([^`\s]+)`\s*$/gm;
 
 async function assistantMarkdown(consumerRoot: string): Promise<string[]> {
   const cwd = path.join(repoRoot, consumerRoot, ".qfai");
@@ -68,6 +87,23 @@ describe.each(CONSUMER_ROOTS)("%s", (consumerRoot) => {
       .map((match) => match[1])
       .filter((cited) => !existsSync(path.join(base, cited)));
 
+    expect([...new Set(dangling)].sort()).toEqual([]);
+  });
+
+  it("ships every MCP template directory the guidance it points at names", async () => {
+    const base = path.join(repoRoot, consumerRoot);
+    const raw = await readFile(path.join(base, MCP_GUIDANCE), "utf-8");
+    const cited = [...raw.matchAll(CITED_TEMPLATE_DIR)]
+      .map((match) => match[1])
+      .filter((entry): entry is string => entry !== undefined);
+
+    // Guard the regex itself: three servers are documented, and a silent zero
+    // match would make the assertion below pass without checking anything.
+    expect(cited.length).toBeGreaterThanOrEqual(3);
+
+    const dangling = cited.filter(
+      (entry) => !existsSync(path.join(base, entry.replace(/\/+$/, ""))),
+    );
     expect([...new Set(dangling)].sort()).toEqual([]);
   });
 

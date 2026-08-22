@@ -1,0 +1,6 @@
+[mcp.brave-search]
+command = "npx"
+args = ["-y", "@modelcontextprotocol/server-brave-search@0.6.2"]
+
+[mcp.brave-search.env]
+BRAVE_API_KEY = "${BRAVE_API_KEY}"
