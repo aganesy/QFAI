@@ -469,9 +469,10 @@ subset (`name`, `description`, `tools`) compatible with Claude Code and GitHub C
 while Codex consumes mirrored `.codex/agents/*.toml` profiles.
 If wrapper assets drift from canonical skills, rerun `npx qfai init --force` to resync.
 `--force` deletes as well as overwrites: it removes the command and prompt wrappers earlier releases
-installed under `.claude/commands/` and `.github/prompts/`, and skill symlinks in the integration
-directories that no longer point at a shipped skill. Files it did not write — a project's own slash
-command, prompt file or skill — are left in place, whatever they are named.
+installed under `.claude/commands/` and `.github/prompts/` — recognised by the delegation line they
+carry, not by their name — and the skill symlinks it installed for skills QFAI no longer ships. Files
+it did not write — a project's own slash command, prompt file or skill, including one published from
+a project-authored `.qfai/assistant/skills/` entry — are left in place, whatever they are named.
 
 ## Contributing (for QFAI maintainers)
 

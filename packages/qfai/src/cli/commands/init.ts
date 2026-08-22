@@ -1910,13 +1910,65 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
   "qfai-verify",
 ]);
 
-/** `name` が `suffix` を落とすと {@link LEGACY_WRAPPER_STEMS} に載るか。 */
-function isLegacyWrapperName(name: string, suffix: string): boolean {
+/**
+ * その wrapper を init が書いたと本文が証明するか。
+ *
+ * stem は「過去に qfai がその名前を使った」ことしか示さない。プロジェクトが
+ * 自分で `.claude/commands/qfai-spec.md` を書いた場合も、旧 wrapper を自前の
+ * 内容に差し替えた場合も、名前だけで消せばユーザのコンテンツを失う。qfai が
+ * 配ってきた wrapper は例外なく「同じ stem の canonical doc」への参照を本文に
+ * 持つ (`@.qfai/assistant/prompts/<stem>.md` あるいは
+ * `.qfai/assistant/skills/<stem>/SKILL.md`) — 出荷された全世代の wrapper が
+ * そうなっている。この参照が生成物である証拠であり、これを持たないファイルは
+ * stem が一致しても触らない。
+ */
+async function isInitWrittenWrapper(dir: string, name: string, suffix: string): Promise<boolean> {
   if (!name.endsWith(suffix)) {
     return false;
   }
-  return LEGACY_WRAPPER_STEMS.has(name.slice(0, -suffix.length));
+  const stem = name.slice(0, -suffix.length);
+  if (!LEGACY_WRAPPER_STEMS.has(stem)) {
+    return false;
+  }
+
+  let body: string;
+  try {
+    body = await readFile(path.join(dir, name), "utf-8");
+  } catch {
+    // 読めないものは「qfai が書いたと証明できないもの」であり、保存側に倒す。
+    return false;
+  }
+
+  return (
+    body.includes(`.qfai/assistant/prompts/${stem}.md`) ||
+    body.includes(`.qfai/assistant/skills/${stem}/SKILL.md`)
+  );
 }
+
+/**
+ * かつて出荷され、いまの roster から外れた skill id。
+ *
+ * init が wrapper symlink を張るのは出荷 roster の skill だけなので、
+ * 「出荷中」でも「引退済み」でもない名前のリンクは init の生成物ではない。
+ * プロジェクトが自前の `.qfai/assistant/skills/my-skill/` を持つことは
+ * 許可されており (`integrationSurface.ts` の `canonicalSkillIds` 参照)、
+ * それを `.claude/skills/my-skill` から symlink するのは正当な運用なので、
+ * リンク先が canonical tree 内であることだけを根拠に消してはいけない。
+ */
+const RETIRED_SKILL_IDS: ReadonlySet<string> = new Set([
+  "qfai-discuss",
+  "qfai-pr",
+  "qfai-prototyping-full-harness",
+  "qfai-require",
+  "qfai-scenario-test",
+  "qfai-sdd-planning",
+  "qfai-sdd-refinement",
+  "qfai-spec",
+  "qfai-tdd-green",
+  "qfai-tdd-red",
+  "qfai-tdd-refactor",
+  "qfai-unit-test",
+]);
 
 /**
  * その entry が init の張った skill symlink か — 名前ではなくリンク先で判定する。
@@ -1924,9 +1976,9 @@ function isLegacyWrapperName(name: string, suffix: string): boolean {
  * 所有権の証拠は名前ではない。`qfai-` は予約された prefix ではなく、canonical
  * roster 自身が `web-research` という prefix を持たない skill を含む。名前で
  * 判定していたため、プロジェクトが自分で用意した `.claude/skills/qfai-deploy`
- * が `--force` でディレクトリごと消えていた。init が書いたと証明できるのは
- * `.qfai/assistant/skills/` 配下へ解決される symlink だけなので、prune の対象も
- * それに限る。
+ * が `--force` でディレクトリごと消えていた。init が張るのは canonical tree へ
+ * 解決される symlink だけなので、これは必要条件 — ただし十分条件ではないため、
+ * 呼び出し側で {@link RETIRED_SKILL_IDS} と併せて判定する。
  */
 async function linksIntoCanonicalSkills(
   entryPath: string,
@@ -1952,18 +2004,19 @@ async function pruneStaleQfaiWrappers(
   const canonical = new Set(canonicalSkills);
   const removed: string[] = [];
 
-  // 1. Remove the .claude/commands/*.md wrappers qfai itself once shipped
+  // 1. Remove the .claude/commands/*.md wrappers qfai itself once wrote
   await pruneMatchingEntries(
     path.join(destRoot, ".claude", "commands"),
-    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".md"),
+    async (entry, dir) => entry.isFile() && (await isInitWrittenWrapper(dir, entry.name, ".md")),
     removed,
     dryRun,
   );
 
-  // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once shipped
+  // 2. Remove the .github/prompts/*.prompt.md wrappers qfai itself once wrote
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "prompts"),
-    (entry) => entry.isFile() && isLegacyWrapperName(entry.name, ".prompt.md"),
+    async (entry, dir) =>
+      entry.isFile() && (await isInitWrittenWrapper(dir, entry.name, ".prompt.md")),
     removed,
     dryRun,
   );
@@ -1985,6 +2038,11 @@ async function pruneStaleQfaiWrappers(
         continue;
       }
       if (canonical.has(entry.name)) {
+        continue;
+      }
+      // 出荷中でも引退済みでもない名前は init が wrapper を張った skill では
+      // ない — プロジェクトが自前の canonical skill へ張ったリンクなので残す。
+      if (!RETIRED_SKILL_IDS.has(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);
@@ -2010,7 +2068,7 @@ async function pruneStaleQfaiWrappers(
 
 async function pruneMatchingEntries(
   dir: string,
-  predicate: (entry: Dirent) => boolean,
+  predicate: (entry: Dirent, dir: string) => Promise<boolean>,
   removed: string[],
   dryRun: boolean,
 ): Promise<void> {
@@ -2019,7 +2077,7 @@ async function pruneMatchingEntries(
   }
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
-    if (!predicate(entry)) {
+    if (!(await predicate(entry, dir))) {
       continue;
     }
     const target = path.join(dir, entry.name);

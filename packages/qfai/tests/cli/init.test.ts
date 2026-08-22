@@ -39,6 +39,22 @@ const REQUIRED_SKILLS = [
 
 const execFile = promisify(execFileCb);
 
+/**
+ * A wrapper body shaped like the ones qfai used to ship: the delegation line
+ * pointing at the canonical doc of the same stem is what marks the file as
+ * init's own, so prune keys on it rather than on the basename.
+ */
+function legacyWrapperBody(stem: string): string {
+  return [
+    "---",
+    `description: "QFAI: ${stem}"`,
+    "---",
+    "Follow the canonical QFAI prompt exactly:",
+    `@.qfai/assistant/prompts/${stem}.md`,
+    "",
+  ].join("\n");
+}
+
 async function expectSymlink(linkPath: string): Promise<void> {
   const stat = await lstat(linkPath);
   expect(stat.isSymbolicLink()).toBe(true);
@@ -491,10 +507,10 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
-      await writeFile(deprecatedClaude, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedGithub, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedCanonicalClaude, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedCanonicalGithub, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedClaude, legacyWrapperBody("qfai-spec"), "utf-8");
+      await writeFile(deprecatedGithub, legacyWrapperBody("qfai-spec"), "utf-8");
+      await writeFile(deprecatedCanonicalClaude, legacyWrapperBody("qfai-configure"), "utf-8");
+      await writeFile(deprecatedCanonicalGithub, legacyWrapperBody("qfai-configure"), "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -539,16 +555,64 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  it("still removes a skill symlink pointing at a skill that is no longer shipped", async () => {
-    // The link target is the proof init wrote it, so a retired skill's wrapper
-    // is still pruned — the cleanup the prefix test used to provide.
+  it("keeps a project's own command at a basename qfai once shipped", async () => {
+    // A stem qfai used in the past says nothing about who owns the file today:
+    // the project may have written its own `qfai-spec.md`, or replaced the old
+    // wrapper with content of its own. Only the delegation line to the
+    // canonical doc of the same stem proves init wrote it.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const stale = path.join(root, ".claude", "skills", "qfai-retired");
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-spec.prompt.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await writeFile(command, "our own spec workflow\n", "utf-8");
+      await writeFile(prompt, "our own spec prompt\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe("our own spec workflow\n");
+      expect(await readFile(prompt, "utf-8")).toBe("our own spec prompt\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project's own skill symlink into its own canonical skill", async () => {
+    // A project may author `.qfai/assistant/skills/my-skill/` and publish it by
+    // hand — `integrationSurface.ts` allows exactly that. The link target is in
+    // the canonical tree, so target alone cannot be the ownership test.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
+      const link = path.join(root, ".claude", "skills", "my-skill");
+      await symlink(path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"), link, "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expectSymlink(link);
+      expect(await readFile(path.join(link, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still removes a skill symlink pointing at a skill that is no longer shipped", async () => {
+    // `qfai-spec` was a shipped skill and is not one now, so a link init left
+    // behind for it is still pruned — the cleanup the prefix test provided.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".claude", "skills", "qfai-spec");
       await symlink(
-        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-retired"),
+        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-spec"),
         stale,
         "dir",
       );

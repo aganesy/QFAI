@@ -186,13 +186,19 @@ describe(
       try {
         await captureStdout(() => runInit({ dir: tmpDir, force: false, dryRun: false, yes: true }));
 
-        // Place old-style wrappers, under a basename qfai itself once shipped,
-        // alongside one the project chose for itself.
+        // Place an old-style wrapper qfai itself wrote — a shipped basename
+        // whose body still delegates to the canonical doc of the same stem —
+        // alongside a file the project wrote for itself.
+        const shipped = [
+          "Follow the canonical QFAI prompt exactly:",
+          "@.qfai/assistant/prompts/qfai-spec.md",
+          "",
+        ].join("\n");
         await mkdir(path.join(tmpDir, ".claude", "commands"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"), "old");
+        await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-spec.md"), shipped);
         await writeFile(path.join(tmpDir, ".claude", "commands", "qfai-old.md"), "mine");
         await mkdir(path.join(tmpDir, ".github", "prompts"), { recursive: true });
-        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"), "old");
+        await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-spec.prompt.md"), shipped);
         await writeFile(path.join(tmpDir, ".github", "prompts", "qfai-old.prompt.md"), "mine");
 
         await captureStdout(() => runInit({ dir: tmpDir, force: true, dryRun: false, yes: true }));
