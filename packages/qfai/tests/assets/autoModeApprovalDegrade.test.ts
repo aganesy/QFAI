@@ -39,7 +39,11 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       expect(flattened).toContain("**`--auto` covers Stage 1 classification only.**");
       // Without the scope boundary the two MUST-level rules stay contradictory.
       expect(flattened).toContain("This is a scope boundary, not an exception to rule 4.");
-      expect(flattened).toContain("**An approval-required row suspends `--auto` for that row.**");
+      expect(flattened).toContain("**Never ask while `--auto` is active.**");
+      // Rule 4 binds the whole invocation, so a present operator changes nothing.
+      expect(flattened).toContain(
+        "Whether an operator is present makes no difference — the no-question contract is what the caller bought with the flag.",
+      );
     });
 
     it(`${tree}: SKILL.md forbids a fabricated approver and names the stop`, async () => {
@@ -47,8 +51,12 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
 
       expect(flattened).toContain("**Never synthesize an `Approved By` value.**");
       expect(flattened).toContain("an invented approver is a false audit record");
-      expect(flattened).toContain("**With no operator present, stop the stage.**");
-      expect(flattened).toContain("write a `blocker` work-log entry");
+      expect(flattened).toContain("**Stop the stage and hand the run back.**");
+      // Awaiting an approval is `consultation-needed`, not a stuck skill.
+      expect(flattened).toContain("write a `consultation-needed` work-log entry");
+      expect(flattened).toContain("**The kind is `consultation-needed`, not `blocker`.**");
+      expect(flattened).toContain("the user's approval releases this stop");
+      expect(flattened).not.toContain("write a `blocker` work-log entry");
       // The error is the report of a suspended run, not a gate to route around.
       expect(flattened).toContain(
         "The resulting `QFAI-TRIAGE-005` errors are the reported state of a suspended run",
@@ -74,6 +82,9 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
         "Repair: obtain the approval through AskUserQuestion, record the approver in `Approved By`, and rerun the stage.",
       );
       expect(flattened).toContain("`../SKILL.md#--auto-and-approval-required-rows`");
+      expect(flattened).toContain("no question may be asked at all");
+      expect(flattened).toContain("write a `consultation-needed` work-log entry");
+      expect(flattened).toContain("hand the run back for a rerun without `--auto`");
       expect(flattened).toContain("never synthesize an approver");
     });
 
@@ -81,14 +92,18 @@ describe("`--auto` has a stated precedence against approval-required Triage rows
       const flattened = flat(await read(tree, TRIAGE));
 
       expect(flattened).toContain(
-        "Under `--auto` the row leaves `--auto` scope: ask when an operator is present, and otherwise stop at step 7.",
+        "Under `--auto` the row leaves `--auto` scope and no question may be asked — not through AskUserQuestion and not in plain text, operator present or not — so stop at step 7 instead.",
       );
       expect(flattened).toContain(
         "the column records who authorized the operation, so an invented approver is a false audit record",
       );
       expect(flattened).toContain("Stopping here is a reportable outcome, not a failure to repair");
+      expect(flattened).toContain("write a `consultation-needed` work-log entry");
       expect(flattened).toContain(
         "report the `QFAI-TRIAGE-005` errors as the reason the run stopped",
+      );
+      expect(flattened).toContain(
+        "Under `--auto`, also ask for a rerun without `--auto` so the approvals can be collected.",
       );
     });
   }

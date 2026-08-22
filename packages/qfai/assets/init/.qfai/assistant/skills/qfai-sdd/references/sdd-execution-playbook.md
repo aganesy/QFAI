@@ -54,7 +54,9 @@ Detailed procedure: `sdd-triage.md`.
 - Triage rows requiring approval but lacking `Approved By`
   - Repair: obtain the approval through AskUserQuestion, record the approver in
     `Approved By`, and rerun the stage. Under `--auto` the row leaves `--auto`
-    scope (`../SKILL.md#--auto-and-approval-required-rows`); with no operator
-    present, keep `Approved By` as `-`, write a `blocker` work-log entry naming
-    every unapproved row, and hand the run back — never synthesize an approver.
+    scope and no question may be asked at all
+    (`../SKILL.md#--auto-and-approval-required-rows`): keep `Approved By` as
+    `-`, write a `consultation-needed` work-log entry naming every unapproved
+    row, and hand the run back for a rerun without `--auto` — never synthesize
+    an approver.
 - Validate errors that point to unresolved source-layer gaps
