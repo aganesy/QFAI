@@ -2893,22 +2893,32 @@ What is not satisfied:
   `QFAI-ATDD-112` on eight TCs. (This list opened with "`US-0017-0007` is uncovered … the scoped gate
   is `error=2`" until round 14, in the section that certifies.)
 
-  **The same finding is what holds the repository's required `build` context**, whose `tdd`-profile
-  step runs at `--root .`; `main` is green on that gate, so the condition is this branch's. Every
-  route to clearing it was checked rather than assumed, and each is closed for a stated reason:
-  - **a waiver cannot reach it.** `.qfai/waivers.yml` states the rule in its own header —
-    "Waivers apply to `warning` and `info` findings only. A waiver aimed at an `error` is a
-    configuration error and fails the run." `QFAI-ATDD-112` is an `error`, so the `TDDLIST-001`
-    path the skill names for a parked row does not apply to the gate the row's absence produces;
-  - **weakening the profile or `--fail-on` is forbidden by name** in this skill's CRITICAL
-    CONSTRAINTS;
+  **And two of the eight cannot be cleared before this pull request merges, by construction.**
+  `TDD-0069` and `TDD-0070` rest on `EX-0017-0053`, which requires three consecutive green
+  aggregate-verdict runs quoted by run identifier. `ci-pass` derives its verdict from `build`, `build`
+  fails on `QFAI-ATDD-112`, and `QFAI-ATDD-112` names `TC-0017-0069` among its eight. The row waits on
+  a run that is gated on the annotation the row would justify — `CR-20260820-0012`, whose recommended
+  option 5 says in as many words that it "does not close `TDD-0069` on its own", and whose option 4 is
+  **merge first, then satisfy it**. That option exists because the cycle has no pre-merge exit.
+
+  So the four decisions below are not a choice about whether to unblock CI before merging. For six of
+  the eight they are; for the last two the choice is option 4 or nothing, and a reviewer should know
+  that before reading a red check as a defect.
+
+  Checked four ways rather than assumed, and recorded so no later round re-derives them:
+  - **a waiver cannot reach it.** `.qfai/waivers.yml` states the rule in its own header — "Waivers
+    apply to `warning` and `info` findings only. A waiver aimed at an `error` is a configuration error
+    and fails the run." `QFAI-ATDD-112` is an `error`, so the `TDDLIST-001` path this skill names for a
+    parked row does not apply to the gate that row's absence produces;
+  - **weakening the profile or `--fail-on` is forbidden by name** in this skill's CRITICAL CONSTRAINTS;
   - **covering the eight now is forbidden by the rows themselves.** Six are `blocked`, and
     `CR-20260818-0007`'s note says what implementing anyway would be: "choosing the rule's meaning
-    rather than applying it".
-
-  So the red gate is the correct signal for a spec with four undecided change requests, and the
-  only thing that clears it is deciding them. Recorded here so the next round does not re-derive
-  the three closed routes;
+    rather than applying it";
+  - **the rule's presence in the `tdd` profile is deliberate, not a leak.** `validate.ts:493-500`
+    carries the reason in source: "`qfai-implement` names `--profile tdd` as its only completion gate,
+    and it is the stage that creates test-routing obligations. Without this the profile was
+    structurally incapable of observing QFAI-ATDD-111/112/113/121/122." `main` runs the identical step
+    and passes it, so the condition is this branch's and the gate is not the thing to change.
 
 - **both rows are still `todo` in the ledger.** `tdd/test-list.md:107-108`, `DR-ID: -`,
   `Blocked-By: -`. Nothing has moved, and the two statuses below are what the handover asks
