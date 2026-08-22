@@ -204,15 +204,20 @@ describe("the DR-ID resolves to a Decisions file", () => {
     expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
   });
 
-  it("does not resolve another spec's scoped record", async () => {
-    // `.qfai/decisions/` is shared by every spec while `DR-<spec>-<seq>` is
-    // scoped to the spec in its first segment, so spec-0001 must not resolve
-    // `DR-0002-0003` against the record spec-0002 filed.
+  it("resolves a scoped record whose first segment is another spec's number", async () => {
+    // Pairing the leading segment with the citing spec's own number is the
+    // convention the shipped `07_Decisions.md` template recommends, and that
+    // same template states validation checks the shape, not the match. A
+    // declaration in `07_Decisions.md` is read that way, so requiring the match
+    // for a standalone record alone would make an id's validity depend on where
+    // it was declared — and would leave the implement stage, which may write
+    // nowhere but `.qfai/decisions/`, only the forbidden upstream write or a
+    // waiver.
     const found = await codes({
       drId: "DR-0002-0003",
       decisionRecords: ["DR-0002-0003-park-the-row.md"],
     });
-    expect(found).toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
+    expect(found).not.toContain("TDDLIST_EXCEPTION_UNRESOLVED_DR");
   });
 
   it("does not accept a directory named like a record", async () => {

@@ -356,9 +356,6 @@ const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
  */
 const DR_RECORD_DIR = path.join(".qfai", "decisions");
 
-/** A spec-scoped `DR-<spec>-<seq>`, with the spec it belongs to captured. */
-const DR_SPEC_SCOPED_ID = /^DR-(\d{4})-\d{4}$/i;
-
 /** Every location a `DR-*` may be declared in, for the unresolved-DR message. */
 const DR_SEARCHED_LOCATIONS = [
   ...DR_DECLARATION_FILES,
@@ -374,22 +371,56 @@ function toPosixRel(value: string): string {
 }
 
 /**
- * The names of the regular files under `.qfai/decisions/`.
+ * Every `DR-*` one standalone record filename declares, upper-cased.
+ *
+ * The documented name is `DR-<id>-<slug>.md`, whose grammar is ambiguous
+ * whenever the slug itself opens with four digits (a year, say): the name then
+ * reads either as a policy-level `DR-<id>` carrying that whole slug, or as a
+ * spec-scoped `DR-<spec>-<seq>` carrying the rest of it. Parsing one id out of
+ * the filename has to pick a reading, and picking the longest left the
+ * policy-level id the ledger actually cites unresolved. Both readings are
+ * indexed instead — the safe direction for a warning whose subject is only
+ * whether the record exists.
+ *
+ * The filename is what is read, never the body: a record that cites a
+ * neighbouring decision in its prose must not thereby declare it.
+ */
+function recordFileDeclaredIds(fileName: string): string[] {
+  const name = fileName.toUpperCase();
+  if (!name.endsWith(".MD")) return [];
+  const match = /^(DR-\d{4})(?:-(\d{4}))?(?=$|-)/.exec(name.slice(0, -".MD".length));
+  if (match === null) return [];
+  const policyLevel = match[1];
+  const sequence = match[2];
+  // Group 1 is not optional, so this only satisfies `noUncheckedIndexedAccess`.
+  if (policyLevel === undefined) return [];
+  return sequence === undefined ? [policyLevel] : [policyLevel, `${policyLevel}-${sequence}`];
+}
+
+/**
+ * The `DR-*` declared by the standalone records under `.qfai/decisions/`.
+ *
+ * Collected once per validation and shared by every spec's resolver: the
+ * directory is shared too, so reading it per spec re-`stat`ed the same symlinks
+ * and re-scanned the same names once for each spec. Indexing the ids also turns
+ * an exception row's lookup into a hash probe rather than a scan over every
+ * record file.
  *
  * An absent directory is the common case (no anomaly has been recorded yet) and
  * an unreadable one must not fail the whole ledger check, so both yield an
- * empty list. Directories are dropped rather than named: a directory called
+ * empty set. Directories are dropped rather than indexed: a directory called
  * `DR-<id>-<slug>.md/` would otherwise satisfy the existence check that the
  * Decision Record itself is supposed to satisfy. A symlink is resolved, so a
  * record kept elsewhere and linked in still counts.
  */
-async function collectRecordFileNames(root: string): Promise<string[]> {
+async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<string>> {
+  const ids = new Set<string>();
   const dir = path.join(root, DR_RECORD_DIR);
   let entries;
   try {
     entries = await readdir(dir, { withFileTypes: true });
   } catch {
-    return [];
+    return ids;
   }
   const names = await Promise.all(
     entries.map(async (entry) => {
@@ -402,62 +433,35 @@ async function collectRecordFileNames(root: string): Promise<string[]> {
       }
     }),
   );
-  return names.filter((name): name is string => name !== null);
-}
-
-/**
- * Whether a standalone record file declares the `DR-*` the ledger cites.
- *
- * The documented name is `DR-<id>-<slug>.md`, whose grammar is ambiguous
- * whenever the slug itself opens with four digits (a year, say): the name then
- * reads either as a policy-level `DR-<id>` carrying that whole slug, or as a
- * spec-scoped `DR-<spec>-<seq>` carrying the rest of it. Parsing an id out of
- * the filename has to pick one reading, and picking the longest left the
- * policy-level id the ledger actually cites unresolved. Matching from the cited
- * id instead lets either reading resolve — the safe direction for a warning
- * whose subject is only whether the record exists.
- *
- * The filename is what is read, never the body: a record that cites a
- * neighbouring decision in its prose must not thereby declare it.
- */
-function recordFileDeclares(fileName: string, drId: string): boolean {
-  const name = fileName.toLowerCase();
-  const id = drId.toLowerCase();
-  return name === `${id}.md` || (name.startsWith(`${id}-`) && name.endsWith(".md"));
-}
-
-/**
- * Whether a standalone record may declare this `DR-*` for the spec in hand.
- *
- * `.qfai/decisions/` is shared by every spec, whereas `DR-<spec>-<seq>` is
- * spec-scoped by construction — before the directory joined the search set the
- * only spec-scoped source was the spec's own `07_Decisions.md`. Honouring the
- * scope keeps one spec from resolving a `DR-<spec>-<seq>` another spec filed;
- * policy-level `DR-<id>` records stay shared by all of them.
- */
-function isRecordInSpecScope(drId: string, specNumber: string): boolean {
-  const scoped = DR_SPEC_SCOPED_ID.exec(drId);
-  return scoped === null || scoped[1] === specNumber;
+  for (const name of names) {
+    if (name === null) continue;
+    for (const id of recordFileDeclaredIds(name)) ids.add(id);
+  }
+  return ids;
 }
 
 /**
  * A predicate over the `DR-*` declared for this spec: its own
  * `07_Decisions.md`, the shared `_policies/08_Decisions.md`, and the standalone
- * records under `.qfai/decisions/`.
+ * records under `.qfai/decisions/` (already indexed in `recordIds`).
  *
  * All three are read, not one: a policy-level decision is cited from spec
  * ledgers, and the Drift Protocol sends an implement-stage anomaly record to
  * `.qfai/decisions/` precisely because the upstream files are off limits there.
  *
- * It is a predicate rather than a set because the record directory is resolved
- * from the cited id — see `recordFileDeclares` for why the filename cannot be
- * parsed into one unambiguously.
+ * A record resolves whatever its first segment is. Pairing the leading segment
+ * of a `DR-<spec>-<seq>` with the citing spec's own number is the convention the
+ * shipped `07_Decisions.md` template recommends, and the same template states
+ * that validation checks the shape and not the match — as it does for a
+ * declaration in `07_Decisions.md` itself. Scoping only the record directory
+ * would make an id's validity depend on where it was declared, and would leave
+ * the implement stage, which may write nowhere else, with no way to clear the
+ * finding but the forbidden upstream write or a waiver.
  */
 async function buildDrDeclarationResolver(
   specDir: string,
   specsRoot: string,
-  root: string,
-  specNumber: string,
+  recordIds: ReadonlySet<string>,
 ): Promise<(drId: string) => boolean> {
   const declared = new Set<string>();
   const files = [
@@ -471,12 +475,9 @@ async function buildDrDeclarationResolver(
       declared.add(match[0].toUpperCase());
     }
   }
-  const recordFiles = await collectRecordFileNames(root);
   return (drId) => {
     const id = drId.toUpperCase();
-    if (declared.has(id)) return true;
-    if (!isRecordInSpecScope(id, specNumber)) return false;
-    return recordFiles.some((fileName) => recordFileDeclares(fileName, id));
+    return declared.has(id) || recordIds.has(id);
   };
 }
 
@@ -647,10 +648,19 @@ function tcNotCoveredWithoutLedger(
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
+  // `.qfai/decisions/` is one shared directory, so it is read once here and
+  // handed to each spec rather than re-scanned per spec.
+  const recordIds = await collectDeclaredRecordIds(root);
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
+    const specIssues = await validateSpecTddList(
+      root,
+      entry.dir,
+      entry.specNumber,
+      specsRoot,
+      recordIds,
+    );
     issues.push(...specIssues);
   }
 
@@ -662,6 +672,7 @@ async function validateSpecTddList(
   specDir: string,
   specNumber: string,
   specsRoot: string,
+  recordIds: ReadonlySet<string>,
 ): Promise<Issue[]> {
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
@@ -1110,7 +1121,7 @@ async function validateSpecTddList(
   }
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves
-  const isDrDeclared = await buildDrDeclarationResolver(specDir, specsRoot, root, specNumber);
+  const isDrDeclared = await buildDrDeclarationResolver(specDir, specsRoot, recordIds);
   {
     for (const ref of ledgerRows()) {
       const rowIdxLabel = ref.label;
