@@ -116,10 +116,18 @@ describe.each(TREES)("%s", (tree) => {
     // template prescribes.
     const checklist = flat(await read(tree, CHECKLIST));
     expect(checklist).toContain("**Only the mark cells are scored.**");
-    expect(checklist).toContain(
-      "**PASS**: All scored cells in both tables are ✅ or ⚠️ with documented rationale",
-    );
+    expect(checklist).toContain("**PASS**: All scored cells in both tables are ✅, ⚠️");
     expect(checklist).not.toContain("**PASS**: All cells in both tables are ✅");
+  });
+
+  it("lets the templated `n/a` branch cell pass", async () => {
+    // `Conditional branches` is scored and its template offers `n/a`, so a PASS
+    // stated as "✅ or ⚠️" alone locked out every unconditional BR-*.
+    const checklist = flat(await read(tree, CHECKLIST));
+    expect(checklist).toContain("for partial coverage, or `n/a`.");
+    expect(checklist).toContain(
+      "an unconditional `BR-*` has no branches to cover — and is the templated value of `Conditional branches`",
+    );
   });
 
   it("scopes the business rule table to active declarations", async () => {
@@ -128,8 +136,9 @@ describe.each(TREES)("%s", (tree) => {
     const checklist = flat(await read(tree, CHECKLIST));
     expect(checklist).toContain("One row per **active** `BR-*` of `04_Business-Rules.md`");
     expect(checklist).toContain(
-      "prose recording its removal or supersession is history, not an obligation",
+      "or its own heading **without a `Status:` retiring it** (`superseded`, `retired`, `removed`, `deprecated`)",
     );
+    expect(checklist).toContain("Neither form is an obligation, so neither gets a row");
     expect(checklist).not.toContain("One row per `BR-*` referenced in `04_Business-Rules.md`");
     expect(checklist).toContain(
       "Every active BR-\\* declared in 04_Business-Rules.md has at least one positive and one negative test case.",

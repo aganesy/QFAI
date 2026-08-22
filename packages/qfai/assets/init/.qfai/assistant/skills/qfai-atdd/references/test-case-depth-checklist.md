@@ -124,13 +124,15 @@ below read. Write it once, in its own file, and link it from the stage evidence.
 ### Business rule coverage (§7)
 
 One row per **active** `BR-*` of `04_Business-Rules.md` — a rule that carries a
-`BR-ID` row in that file's Rule Table, or its own heading — in the same file,
-directly under the matrix. A `BR-*` that survives there only in prose recording
-its removal or supersession is history, not an obligation: it gets no row, and
-demanding positive/negative cases for a deleted rule would REVISE a correct
-ATDD. Omit the table only when the spec declares no active `BR-*`, and say so
-in its place. Its cells are ❌-accounted exactly like the matrix cells: an
-unjustified ❌ here is the same REVISE.
+`BR-ID` row in that file's Rule Table, or its own heading **without a `Status:`
+retiring it** (`superseded`, `retired`, `removed`, `deprecated`) — in the same
+file, directly under the matrix. Retirement is recorded either way: some specs
+delete the rule and keep a prose note, others keep the heading and stamp its
+status. Neither form is an obligation, so neither gets a row — demanding
+positive/negative cases for a rule the spec already replaced would REVISE a
+correct ATDD. Omit the table only when the spec declares no active `BR-*`, and
+say so in its place. Its cells are ❌-accounted exactly like the matrix cells:
+an unjustified ❌ here is the same REVISE.
 
 | BR ID   | Positive case | Negative case | Conditional branches | Covering TC | Status |
 | ------- | ------------- | ------------- | -------------------- | ----------- | ------ |
@@ -144,7 +146,12 @@ unjustified ❌ here is the same REVISE.
   `Positive case` / `Negative case` / `Conditional branches` columns; a
   reference value such as `BR-0001` or `TC-0001` in a non-scored cell is never
   a missing ✅, or no row filled in as templated could ever pass.
-- **PASS**: All scored cells in both tables are ✅ or ⚠️ with documented rationale for partial coverage.
+- **PASS**: All scored cells in both tables are ✅, ⚠️ with documented rationale
+  for partial coverage, or `n/a`. `n/a` says the category does not exist for
+  this row — an unconditional `BR-*` has no branches to cover — and is the
+  templated value of `Conditional branches`; it is not a coverage gap and never
+  needs a justification. Use it only where the obligation is absent, not where
+  it is unmet: an uncovered category is ❌.
 - **Oracle strength is not waivable by category coverage.** A row whose eight
   category cells are ✅ and whose Oracle strength cell is ❌ is a REVISE: it has
   cases in every category and no evidence that any of them can fail.
