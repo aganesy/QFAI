@@ -1953,8 +1953,21 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
     return false;
   }
 
+  return hasDelegationLine(body, stem);
+}
+
+/**
+ * 本文のどれかの行が、その stem の委譲行と **バイト単位で** 一致するか。
+ *
+ * 行を trim して比べるとインデントが無視され、自作 command が Markdown の
+ * コード例として `    @.qfai/assistant/prompts/qfai-spec.md` を書いただけで
+ * 生成物と誤認されてファイルごと消える。出荷された wrapper では委譲行が
+ * 常に桁 0 から始まるので、前後の空白を許す理由がない。CRLF の `\r` だけは
+ * split で落ちる。
+ */
+function hasDelegationLine(body: string, stem: string): boolean {
   const delegations = new Set(DELEGATION_LINES(stem));
-  return body.split(/\r?\n/).some((line) => delegations.has(line.trim()));
+  return body.split(/\r?\n/).some((line) => delegations.has(line));
 }
 
 /**
@@ -2041,15 +2054,6 @@ async function linksIntoCanonicalSkills(
     // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
     return false;
   }
-  return resolvesIntoCanonicalSkills(entryPath, target, canonicalSkillsDir);
-}
-
-/** そのリンク先文字列が canonical skills tree の中を指すか。 */
-function resolvesIntoCanonicalSkills(
-  entryPath: string,
-  target: string,
-  canonicalSkillsDir: string,
-): boolean {
   const resolved = path.resolve(path.dirname(entryPath), target);
   const rel = path.relative(canonicalSkillsDir, resolved);
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
@@ -2090,27 +2094,27 @@ async function isInitWrittenSkillWrapper(
   }
   if (entry.isDirectory()) {
     const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
-    if (doc === null) {
-      return false;
-    }
-    const delegations = new Set(DELEGATION_LINES(entry.name));
-    return doc.split(/\r?\n/).some((line) => delegations.has(line.trim()));
+    return doc !== null && hasDelegationLine(doc, entry.name);
   }
   if (!entry.isFile()) {
     return false;
   }
-  // flatten された link。内容は「リンク先そのもの」なので、余計な行を持つ
-  // ファイルは対象外 — プロジェクトのメモが同じパスを 1 行書いていた場合に
-  // 消さないための条件でもある。
-  const flattened = await readWrapperEvidence(entryPath);
-  if (flattened === null) {
+  // flatten された link は「git が展開したリンク先そのもの」であり、それ以外
+  // ではない。近傍の {@link isFlattenedLink} と同じく byte-exact で比べる —
+  // 内容を解決してみて canonical tree の中に落ちれば十分、としてしまうと
+  // `echo '../../.qfai/assistant/skills/qfai-spec' > .claude/skills/qfai-spec`
+  // で作られた手書きファイルや、`//` や `./` を含む別綴りまで消える。
+  const expected = path.relative(
+    path.dirname(entryPath),
+    path.join(canonicalSkillsDir, entry.name),
+  );
+  try {
+    return await isFlattenedLink(entryPath, expected);
+  } catch {
+    // 読めないものは「qfai のものだと証明できないもの」であり、保存側に倒す。
+    // ここで throw すると prune の途中で init 全体が落ちる。
     return false;
   }
-  const target = flattened.trim();
-  if (target === "" || /[\r\n]/.test(target)) {
-    return false;
-  }
-  return resolvesIntoCanonicalSkills(entryPath, target, canonicalSkillsDir);
 }
 
 async function pruneStaleQfaiWrappers(

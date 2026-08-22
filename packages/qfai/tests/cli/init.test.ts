@@ -704,21 +704,28 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  it("keeps a project note at a retired basename that merely mentions the target", async () => {
-    // The flattened form is the target and nothing else. A note that names the
-    // canonical path in a sentence is not a link, and deleting it would be the
-    // same over-reach the prefix walk made.
+  it("keeps a hand-written file at a retired basename that spells the target its own way", async () => {
+    // The flattened form is byte-for-byte what git expands, and nothing else.
+    // A file somebody wrote by hand — a trailing newline from `echo`, a `./`
+    // git never emits — is not that, and resolving the content instead of
+    // comparing it would delete both.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const note = path.join(root, ".claude", "skills", "qfai-spec");
-      const body = "we used to symlink ../../.qfai/assistant/skills/qfai-spec here\n";
-      await writeFile(note, body, "utf-8");
+      const echoed = path.join(root, ".claude", "skills", "qfai-spec");
+      const echoedBody = "../../.qfai/assistant/skills/qfai-spec\n";
+      await writeFile(echoed, echoedBody, "utf-8");
+
+      const respelt = path.join(root, ".agents", "skills", "qfai-spec");
+      const respeltBody = "../.././.qfai/assistant/skills/qfai-spec";
+      await mkdir(path.dirname(respelt), { recursive: true });
+      await writeFile(respelt, respeltBody, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      expect(await readFile(note, "utf-8")).toBe(body);
+      expect(await readFile(echoed, "utf-8")).toBe(echoedBody);
+      expect(await readFile(respelt, "utf-8")).toBe(respeltBody);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
@@ -762,6 +769,35 @@ describe("qfai init", { timeout: 60000 }, () => {
       await mkdir(path.dirname(command), { recursive: true });
       const body =
         "Our spec flow. Do NOT read .qfai/assistant/prompts/qfai-spec.md — it is gone.\n";
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project command that quotes the delegation line in an indented code block", async () => {
+    // In every generation qfai shipped, the delegation starts at column 0.
+    // Comparing trimmed lines made an indented markdown code sample — the
+    // natural way for a project to document what the old wrapper contained —
+    // read as the wrapper itself.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper used to say:",
+        "",
+        "    @.qfai/assistant/prompts/qfai-spec.md",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
       await writeFile(command, body, "utf-8");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
