@@ -214,6 +214,31 @@ describe("doctor assets.lineBudget check", () => {
     });
   });
 
+  it("names each oversized file and its line count in the message itself", async () => {
+    await withTempRoot(async (root) => {
+      await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 7);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+      const check = data.checks.find((entry) => entry.id === "assets.lineBudget");
+      const message = check?.message ?? "";
+
+      // The default `qfai doctor` run is the text formatter, which prints only
+      // `message`; `details` is JSON-only. Both files, their measured counts and
+      // the repair guidance must therefore survive into the message.
+      expect(message).toContain(
+        `assistant/skills/qfai-demo/SKILL.md (${ASSISTANT_ASSET_MAX_LINES + 1} 行)`,
+      );
+      expect(message).toContain(
+        `assistant/constitution/long-rule.md (${ASSISTANT_ASSET_MAX_LINES + 7} 行)`,
+      );
+      expect(message).toContain("references/");
+      expect(message).toContain("同じレイヤー内");
+      // One finding must stay one line so severity-grep readers are unaffected.
+      expect(message).not.toContain("\n");
+    });
+  });
+
   it("keeps skill guidance off non-skill assets", async () => {
     await withTempRoot(async (root) => {
       await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 1);
@@ -240,6 +265,8 @@ describe("doctor assets.lineBudget check", () => {
 
       expect(check?.severity).toBe("warning");
       expect(check?.details?.["unreadable"]).toEqual([`assistant/catalog/${UNREADABLE_ASSET}`]);
+      // Text readers need the unmeasured path too, not just its count.
+      expect(check?.message).toContain(`assistant/catalog/${UNREADABLE_ASSET}`);
     });
   });
 

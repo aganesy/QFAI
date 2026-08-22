@@ -39,7 +39,10 @@ import { validateSddDesignContractReadiness } from "./validators/designContractR
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
 import { probeSkillManifestRuntimeDeps } from "./doctor/skillManifestProbe.js";
-import { checkAssistantAssetLineBudget } from "./doctor/assetLineBudget.js";
+import {
+  checkAssistantAssetLineBudget,
+  type OversizedAssistantAsset,
+} from "./doctor/assetLineBudget.js";
 
 export type DoctorSeverity = "ok" | "info" | "warning" | "error";
 export type DoctorProfile = "prototyping";
@@ -553,32 +556,64 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     };
   }
 
-  const unmeasured = report.unreadable.length + report.unscannable.length;
+  const unmeasuredPaths = [...report.unreadable, ...report.unscannable];
+  const unmeasured = unmeasuredPaths.length;
 
   if (report.status === "incomplete") {
+    const incompleteActions = [
+      "読み取れなかったパスの権限・存在を確認してから doctor を再実行する",
+    ];
     return {
       id: "assets.lineBudget",
       severity: "warning",
       title,
-      message: `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした`,
+      message:
+        `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした: ` +
+        `${unmeasuredPaths.join(", ")}${formatNextActionHint(incompleteActions)}`,
       details: {
         ...details,
-        nextActions: ["読み取れなかったパスの権限・存在を確認してから doctor を再実行する"],
+        nextActions: incompleteActions,
       },
     };
   }
 
-  const unmeasuredNote = unmeasured > 0 ? `（うち ${unmeasured} 件は読み取れず未検査）` : "";
+  const unmeasuredNote =
+    unmeasured > 0
+      ? `（ほかに ${unmeasured} 件は読み取れず未検査: ${unmeasuredPaths.join(", ")}）`
+      : "";
+  const nextActions = assetLineBudgetNextActions(report.oversized);
   return {
     id: "assets.lineBudget",
     severity: "warning",
     title,
-    message: `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています${unmeasuredNote}`,
+    message:
+      `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています: ` +
+      `${formatOversizedAssets(report.oversized)}${unmeasuredNote}${formatNextActionHint(nextActions)}`,
     details: {
       ...details,
-      nextActions: assetLineBudgetNextActions(report.oversized),
+      nextActions,
     },
   };
+}
+
+/**
+ * Renders the offending files into `check.message` itself.
+ *
+ * The default `qfai doctor` run is the text formatter, and that formatter
+ * prints only `check.message` — `details` reaches nobody who did not pass
+ * `--format json`. The shipped baseline promises the ordinary command reports
+ * every file over the ceiling, so the paths and their measured line counts
+ * belong in the message. Same shape as `skill.runtimeDependencies`: the whole
+ * list, comma-joined on one line, so the severity-grep readers downstream still
+ * see exactly one line per finding.
+ */
+function formatOversizedAssets(oversized: ReadonlyArray<OversizedAssistantAsset>): string {
+  return oversized.map((entry) => `${entry.path} (${entry.lines} 行)`).join(", ");
+}
+
+/** Appends the repair guidance so text readers get it, not only JSON readers. */
+function formatNextActionHint(actions: ReadonlyArray<string>): string {
+  return actions.length > 0 ? ` — 対処: ${actions.join(" / ")}` : "";
 }
 
 /**
