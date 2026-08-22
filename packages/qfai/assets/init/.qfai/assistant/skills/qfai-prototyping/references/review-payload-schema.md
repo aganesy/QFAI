@@ -59,7 +59,8 @@ type ReviewerPayload = {
   }[];
   wallTimeSec: number; // non-negative finite; Reviewer-measured
   softWarnings: {
-    timeBudget: boolean; // true iff wallTimeSec > 300 (5 min per spec)
+    // enforced: must equal `wallTimeSec > 300` (5 min per spec)
+    timeBudget: boolean;
   };
 };
 ```
@@ -69,19 +70,19 @@ bounded prose.
 
 ## Field rules
 
-| Field                        | Rule                                                                                                      |
-| ---------------------------- | --------------------------------------------------------------------------------------------------------- |
-| `specId` / `screenId`        | non-empty strings                                                                                         |
-| `cycle`                      | integer, `0..9`; both bounds are enforced                                                                 |
-| `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                                                   |
-| `retryCount`                 | non-negative integer                                                                                      |
-| `ordinalAxes`                | all 4 axes required, each an ordinal verdict; no extra axis                                               |
-| `impressions`                | all 6 `*Feel` fields required, each a string of at most 200 words                                         |
-| `layoutAntiPatternsDetected` | array of strings; empty array required for convergence                                                    |
-| `designMdViolations`         | array of `{kind, found}` (element closed: no other key); filled by the static gate; empty for convergence |
-| `wallTimeSec`                | non-negative finite number; informational, no upper bound                                                 |
-| `softWarnings`               | required, closed, single boolean key `timeBudget`                                                         |
-| `softWarnings.timeBudget`    | `wallTimeSec > 300` (the per-spec cap is 300 seconds = 5 min/spec)                                        |
+| Field                        | Rule                                                                                                                                                                                                               |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `specId` / `screenId`        | non-empty strings                                                                                                                                                                                                  |
+| `cycle`                      | integer, `0..9`; both bounds are enforced                                                                                                                                                                          |
+| `sessionStatus`              | exactly one of `ok` / `retryExhausted` / `launchFailed`                                                                                                                                                            |
+| `retryCount`                 | non-negative integer                                                                                                                                                                                               |
+| `ordinalAxes`                | all 4 axes required, each an ordinal verdict; no extra axis                                                                                                                                                        |
+| `impressions`                | all 6 `*Feel` fields required, each a string of at most 200 words                                                                                                                                                  |
+| `layoutAntiPatternsDetected` | array of strings; empty array required for convergence                                                                                                                                                             |
+| `designMdViolations`         | array of `{kind, found}` (element closed: no other key); filled by the static gate; empty for convergence                                                                                                          |
+| `wallTimeSec`                | non-negative finite number; informational, no upper bound                                                                                                                                                          |
+| `softWarnings`               | required, closed, single boolean key `timeBudget`                                                                                                                                                                  |
+| `softWarnings.timeBudget`    | derived, not free-standing: must equal `wallTimeSec > 300` (per-spec cap 300 s = 5 min/spec). The parser rejects a payload where the two disagree, so an over-budget session cannot be persisted with the flag off |
 
 `menuReachabilityFeel` describing an unreachable menu entry is
 accepted — the `*Feel` fields are qualitative critique, not gates.
@@ -114,9 +115,12 @@ exponential backoff (`base * 2^attemptIndex` ms, `base = 250`).
 Who records which status:
 
 - The Reviewer records `sessionStatus` itself whenever it can still
-  write a payload for the pair — a session that completed is `ok`; one
-  that only came up after failed attempts records `retryExhausted` with
-  the `retryCount` actually consumed.
+  write a payload for the pair. A session that completed is `ok` —
+  including one that only succeeded after earlier failed attempts;
+  record the retries consumed in `retryCount` and leave
+  `sessionStatus: "ok"`. Never write `retryExhausted` on a run that
+  produced a session: that value means every attempt failed, and the
+  CLI-side dispatcher likewise reports a late success as `ok`.
 - When the pair never produced a session at all, no payload is written:
   the CLI-side dispatch persists `<screen>.review.json` only on a
   successful attempt, so a `launchFailed` / fully-exhausted pair leaves
@@ -129,6 +133,22 @@ Playwright hard-stop leaves the pair without one and
 certify reads every payload it does find and rejects the run the same
 way when one fails this schema — a present-but-unparsable payload is
 not evidence.
+
+## What certify checks per payload (all exit 64)
+
+1. The file exists for every (spec, screen) pair in the frozen set.
+2. It parses against this closed schema.
+3. Its `specId` / `screenId` / `cycle` match the pair and the accepted
+   iteration directory it is stored under. A valid payload copied in
+   from another screen, spec, or cycle reviews something else and is
+   rejected — write each payload for the pair it is filed under.
+4. It is converged on its own terms: all 4 `ordinalAxes` are
+   `exceptional` and `layoutAntiPatternsDetected` /
+   `designMdViolations` are both empty. Convergence is an AND over
+   every pair, so a `weak` axis or a single unresolved violation
+   rejects the run even when `prototyping.json#reviewerGate.result` is
+   already `PASS` — the payloads are the evidence behind that summary,
+   and certify refuses to seal a certificate over the contradiction.
 
 `impressions.*` prose is not deterministic and MUST NOT be asserted for
 exact equality. The stable surfaces are `ordinalAxes.*`,

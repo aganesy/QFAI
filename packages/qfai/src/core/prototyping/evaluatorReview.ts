@@ -388,6 +388,16 @@ const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
 
 const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudget"]);
 
+/**
+ * Per-spec Reviewer wall-time cap in seconds (5 min/spec), as declared
+ * by the shipped reference
+ * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
+ * §Field rules). `softWarnings.timeBudget` is `true` iff `wallTimeSec`
+ * exceeds this cap — the parser enforces that relation so a payload
+ * cannot record a 301-second session with the warning switched off.
+ */
+export const REVIEWER_TIME_BUDGET_SEC = 300;
+
 function isReviewerSessionStatus(value: unknown): value is ReviewerSessionStatus {
   return (
     typeof value === "string" && (REVIEWER_SESSION_STATUSES as readonly string[]).includes(value)
@@ -574,7 +584,9 @@ function pushDmvErrors(
  *   - `designMdViolations` required as array of `{kind, found}`
  *   - `wallTimeSec` required as a non-negative finite number
  *   - `softWarnings` required as a closed nested object with the
- *     single boolean key `timeBudget`
+ *     single boolean key `timeBudget`, which must equal
+ *     `wallTimeSec > {@link REVIEWER_TIME_BUDGET_SEC}` (the reference
+ *     defines the flag as derived, not free-standing)
  *   - any extra top-level / nested key is rejected (closed schema;
  *     `designMdViolations[]` elements included — `{kind, found}` only;
  *     protects against typos and schema drift). The legacy flat
@@ -706,6 +718,24 @@ export function parseEvaluatorReview(input: unknown): ParseReviewerPayloadResult
   for (const key of Object.keys(input)) {
     if (!REVIEWER_PAYLOAD_KNOWN_KEYS.has(key)) {
       errors.push(`unknown field: ${key}`);
+    }
+  }
+
+  // `softWarnings.timeBudget` is not free-standing state: the shipped
+  // reference defines it as `wallTimeSec > REVIEWER_TIME_BUDGET_SEC`.
+  // Type-checking the boolean alone let a 301-second session persist
+  // `timeBudget: false` and carry the over-budget evidence through
+  // certify unflagged, so validate the relation here (only once both
+  // operands are themselves valid — otherwise the type errors above
+  // already describe the payload).
+  if (wallTimeSec !== null && softWarnings !== null) {
+    const expected = wallTimeSec > REVIEWER_TIME_BUDGET_SEC;
+    if (softWarnings.timeBudget !== expected) {
+      errors.push(
+        `softWarnings.timeBudget must be ${String(expected)} for wallTimeSec ` +
+          `${String(wallTimeSec)} (true iff wallTimeSec > ${String(REVIEWER_TIME_BUDGET_SEC)}; ` +
+          `got ${String(softWarnings.timeBudget)})`,
+      );
     }
   }
 

@@ -341,6 +341,149 @@ describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.js
   // live under their own TCs).
 });
 
+// Parsing a payload proves it is well-formed, not that it reviewed the
+// pair it is filed under, nor that what it found supports the summary
+// PASS. Both gaps sealed a certificate over evidence that does not
+// back it.
+describe("qfai prototyping certify (per-screen payload identity + convergence)", () => {
+  it("exits 64 when a schema-valid payload was copied from another screen", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    // `settings.review.json` holds a valid payload for `home` — the
+    // settings surface was never reviewed.
+    await seedReviewJson(root, "spec-0012", "settings", 1, reviewPayload("spec-0012", "home"));
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-0012/settings.review.json"))).toBe(true);
+      expect(messages.some((m) => m.includes('screenId "home"'))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when a payload was copied from another spec", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home", 1, reviewPayload("spec-0007", "home"));
+    await seedReviewJson(root, "spec-0012", "settings");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes('specId "spec-0007"'))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when a payload reviews an earlier cycle than the accepted iteration", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    // Stored under iter-01 (the accepted iteration) but recorded at
+    // cycle 0 — stale evidence carried forward.
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "settings",
+      1,
+      reviewPayload("spec-0012", "settings", { cycle: 0 }),
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(
+        messages.some((m) => m.includes("cycle 0 is not the accepted iteration index 1")),
+      ).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when reviewerGate says PASS but a payload's axes are below exceptional", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "settings",
+      1,
+      reviewPayload("spec-0012", "settings", { axis: "weak" }),
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("contradict convergence"))).toBe(true);
+      expect(messages.some((m) => m.includes("ordinalAxes.usability"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when a payload still carries layout anti-patterns or DESIGN.md violations", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "home",
+      1,
+      reviewPayload("spec-0012", "home", {
+        layoutAntiPatternsDetected: ["lap-001-saas-dashboard"],
+      }),
+    );
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "settings",
+      1,
+      reviewPayload("spec-0012", "settings", {
+        designMdViolations: [{ kind: "color", found: "#FF00FF" }],
+      }),
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("lap-001-saas-dashboard"))).toBe(true);
+      expect(messages.some((m) => m.includes("designMdViolations is non-empty"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+});
+
 describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred over legacy specsCovered)", () => {
   // QFAI:SPEC-0012:TC-0012-0399
   it("iterates the cycle-0-frozen multi-spec set (frozenSpecsCovered) — not the legacy single-spec specsCovered — when both fields are present", async () => {

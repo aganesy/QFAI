@@ -1,26 +1,43 @@
 /**
- * Schema-valid `<screen>.review.json` fixture.
+ * Schema-valid, converged `<screen>.review.json` fixture.
  *
  * `qfai prototyping certify` parses every per-(spec × screen) review
  * payload it finds against the shipped reviewer payload reference
  * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`),
- * so certify fixtures cannot use a placeholder object any more — a
- * present-but-unparsable payload is a coverage rejection (exit 64).
- * One definition here keeps the certify suites in lock-step with
+ * checks that its `(specId, screenId, cycle)` identifies the pair and
+ * accepted iteration it is stored under, and re-derives convergence
+ * from it — so certify fixtures cannot use a placeholder object any
+ * more. One definition here keeps the certify suites in lock-step with
  * `parseEvaluatorReview`.
+ *
+ * Defaults describe a converged payload at the accepted iteration the
+ * certify fixtures use (`iter-01`); overrides exist so a test can aim a
+ * single field at one gate.
  */
-export function reviewPayload(specId: string, screenId: string): string {
+export type ReviewPayloadOverrides = {
+  readonly cycle?: number;
+  readonly axis?: "weak" | "acceptable" | "strong" | "exceptional";
+  readonly layoutAntiPatternsDetected?: readonly string[];
+  readonly designMdViolations?: ReadonlyArray<{ kind: string; found: string }>;
+};
+
+export function reviewPayload(
+  specId: string,
+  screenId: string,
+  overrides: ReviewPayloadOverrides = {},
+): string {
+  const axis = overrides.axis ?? "exceptional";
   return JSON.stringify({
     specId,
     screenId,
-    cycle: 1,
+    cycle: overrides.cycle ?? 1,
     sessionStatus: "ok",
     retryCount: 0,
     ordinalAxes: {
-      informationArchitecture: "strong",
-      navigationFlow: "strong",
-      usability: "strong",
-      functionality: "strong",
+      informationArchitecture: axis,
+      navigationFlow: axis,
+      usability: axis,
+      functionality: axis,
     },
     impressions: {
       operability: "Controls respond predictably.",
@@ -30,8 +47,8 @@ export function reviewPayload(specId: string, screenId: string): string {
       acceptanceCriteriaFeel: "Criteria are observable.",
       menuReachabilityFeel: "Every menu entry is reachable.",
     },
-    layoutAntiPatternsDetected: [],
-    designMdViolations: [],
+    layoutAntiPatternsDetected: overrides.layoutAntiPatternsDetected ?? [],
+    designMdViolations: overrides.designMdViolations ?? [],
     wallTimeSec: 42,
     softWarnings: { timeBudget: false },
   });

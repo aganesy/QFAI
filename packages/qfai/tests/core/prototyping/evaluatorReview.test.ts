@@ -5,6 +5,7 @@ import {
   ORDINAL_AXES,
   PROSE_CRITIQUE_MAX_WORDS,
   PROSE_CRITIQUE_MIN_WORDS,
+  REVIEWER_TIME_BUDGET_SEC,
   buildEvaluatorReview,
   countWords,
   parseEvaluatorReview,
@@ -776,8 +777,13 @@ describe("parseEvaluatorReview — menuReachabilityFeel non-failure (TC-0012-038
 // nested form.
 describe("parseEvaluatorReview — softWarnings.timeBudget (TC-0012-0387)", () => {
   it("accepts softWarnings.timeBudget = true and surfaces it on the parsed payload", () => {
+    // `timeBudget` is derived from `wallTimeSec`, so the over-budget
+    // wall time has to come with it.
     const result = parseEvaluatorReview(
-      baseReviewerPayload({ softWarnings: { timeBudget: true } }),
+      baseReviewerPayload({
+        wallTimeSec: REVIEWER_TIME_BUDGET_SEC + 1,
+        softWarnings: { timeBudget: true },
+      }),
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
@@ -958,7 +964,9 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
       baseReviewerPayload({
         cycle: 3,
         retryCount: 1,
-        wallTimeSec: 42.7,
+        // Over the 300 s per-spec cap, so `timeBudget: true` is the
+        // value the derived rule requires.
+        wallTimeSec: 420.7,
         softWarnings: { timeBudget: true },
       }),
     );
@@ -966,7 +974,59 @@ describe("parseEvaluatorReview — new required fields (cycle / retryCount / wal
     if (!result.ok) return;
     expect(result.review.cycle).toBe(3);
     expect(result.review.retryCount).toBe(1);
-    expect(result.review.wallTimeSec).toBe(42.7);
+    expect(result.review.wallTimeSec).toBe(420.7);
     expect(result.review.softWarnings.timeBudget).toBe(true);
+  });
+});
+
+// The shipped reference defines `softWarnings.timeBudget` as
+// `wallTimeSec > REVIEWER_TIME_BUDGET_SEC`, not as free-standing state.
+// Type-checking the boolean alone let a 301-second session persist
+// `timeBudget: false` and carry over-budget evidence through certify
+// unflagged.
+describe("parseEvaluatorReview — softWarnings.timeBudget is derived from wallTimeSec", () => {
+  it("rejects an over-budget session that switched the warning off", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        wallTimeSec: REVIEWER_TIME_BUDGET_SEC + 1,
+        softWarnings: { timeBudget: false },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => e.includes("softWarnings.timeBudget must be true"))).toBe(
+      true,
+    );
+  });
+
+  it("rejects an in-budget session that switched the warning on", () => {
+    const result = parseEvaluatorReview(
+      baseReviewerPayload({
+        wallTimeSec: REVIEWER_TIME_BUDGET_SEC,
+        softWarnings: { timeBudget: true },
+      }),
+    );
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.errors.some((e) => e.includes("softWarnings.timeBudget must be false"))).toBe(
+      true,
+    );
+  });
+
+  it("accepts both consistent combinations, with the cap itself in budget", () => {
+    const atCap = parseEvaluatorReview(
+      baseReviewerPayload({
+        wallTimeSec: REVIEWER_TIME_BUDGET_SEC,
+        softWarnings: { timeBudget: false },
+      }),
+    );
+    expect(atCap.ok).toBe(true);
+    const overCap = parseEvaluatorReview(
+      baseReviewerPayload({
+        wallTimeSec: REVIEWER_TIME_BUDGET_SEC + 0.5,
+        softWarnings: { timeBudget: true },
+      }),
+    );
+    expect(overCap.ok).toBe(true);
   });
 });

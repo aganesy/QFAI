@@ -10,9 +10,12 @@
  *   - root DESIGN.md parses, and the latest iteration HTML contains zero
  *     DESIGN.md violations (color / font / radius / shadow drift)
  *   - on the per-spec layout, every `<screen>.review.json` required by
- *     the frozen set both EXISTS and parses against the shipped
- *     reviewer payload schema (closed schema; a malformed payload is
- *     the same coverage rejection as a missing one)
+ *     the frozen set EXISTS, parses against the shipped reviewer
+ *     payload schema (closed schema), carries the `(specId, screenId,
+ *     cycle)` of the pair and accepted iteration it is stored under,
+ *     and is itself converged (4 axes `exceptional`, no layout
+ *     anti-patterns, no DESIGN.md violations). All four failures are
+ *     the same coverage rejection (exit 64) as a missing payload.
  *
  * `certify --check` re-computes evidence digests against the stored
  * certificate and exits non-zero on drift. The check ALSO re-hashes the
@@ -58,7 +61,11 @@ import {
   findDesignMdViolations,
   type DesignMdViolation,
 } from "../../core/prototyping/designMdViolations.js";
-import { parseEvaluatorReview } from "../../core/prototyping/evaluatorReview.js";
+import {
+  ORDINAL_AXES,
+  parseEvaluatorReview,
+  type ReviewerPayload,
+} from "../../core/prototyping/evaluatorReview.js";
 import {
   resolvePrimaryPrototypingSpec,
   resolveSurfaceUnion,
@@ -661,7 +668,14 @@ export async function runPrototypingCertify(
       );
     } else {
       const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
-      const invalidPayloads: Array<{ expectedPath: string; errors: string[] }> = [];
+      const invalidPayloads: PayloadFailure[] = [];
+      // A payload can be schema-perfect and still not be evidence for
+      // the pair it is filed under (copied from another spec / screen /
+      // cycle), or contradict the summary PASS it is supposed to
+      // support. Keep the three rejection reasons in separate buckets
+      // so the operator diagnostic names the actual defect class.
+      const mismatchedPayloads: PayloadFailure[] = [];
+      const unconvergedPayloads: PayloadFailure[] = [];
       // codex r3270911400 (P1, chatgpt-codex-connector): the previous
       // optimisation pre-built a per-spec map from `screenContracts.sourceRef`
       // and used it whenever the indexed entry was non-empty, only
@@ -713,10 +727,23 @@ export async function runPrototypingCertify(
           // (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`)
           // declares the payload a CLOSED schema whose violation is a
           // hard failure, so parse it here with the same parser the
-          // reference documents.
-          const payloadErrors = await collectReviewPayloadErrors(abs);
-          if (payloadErrors.length > 0) {
-            invalidPayloads.push({ expectedPath: rel, errors: payloadErrors });
+          // reference documents — then check that what parsed actually
+          // reviewed THIS pair at THIS cycle and agrees with the
+          // reviewerGate PASS that got us here.
+          const audit = await auditReviewPayload(abs, {
+            specDirName,
+            screenId: screen.screenId,
+            cycle: acceptedIterationIndex,
+          });
+          if (audit.schemaErrors.length > 0) {
+            invalidPayloads.push({ expectedPath: rel, errors: audit.schemaErrors });
+            continue;
+          }
+          if (audit.identityErrors.length > 0) {
+            mismatchedPayloads.push({ expectedPath: rel, errors: audit.identityErrors });
+          }
+          if (audit.convergenceErrors.length > 0) {
+            unconvergedPayloads.push({ expectedPath: rel, errors: audit.convergenceErrors });
           }
         }
       }
@@ -743,29 +770,59 @@ export async function runPrototypingCertify(
         return 64;
       }
       if (invalidPayloads.length > 0) {
-        error(
+        reportPayloadFailures(
           "qfai prototyping certify: accepted iteration " +
             `${acceptedIterDir} has ${invalidPayloads.length} review.json payload(s) that ` +
             "do not satisfy the reviewer payload schema " +
             "(.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md):",
+          invalidPayloads,
         );
-        // Same bounded-stderr policy as the missing-pair branch above:
-        // cap the rendered diagnostics so a large frozen set cannot
-        // flood the operator's terminal.
-        let renderedErrors = 0;
-        for (const entry of invalidPayloads.slice(0, 20)) {
-          error(`  - ${entry.expectedPath}:`);
-          for (const detail of entry.errors) {
-            if (renderedErrors >= 20) break;
-            error(`      ${detail}`);
-            renderedErrors += 1;
-          }
-          if (renderedErrors >= 20) break;
-        }
         // A malformed payload is the same evidence gap as a missing
         // one — the (spec, screen) pair carries no parsable review —
         // so it shares the coverage rejection code (exit 64) instead
         // of introducing a third exit code for the same class.
+        return 64;
+      }
+      // A schema-valid payload copied in from another screen, another
+      // spec, or an earlier cycle parses cleanly while reviewing
+      // something else entirely. The payload's own
+      // `(specId, screenId, cycle)` discriminators exist precisely to
+      // make that detectable, so hold them against the pair and the
+      // accepted iteration this file is filed under.
+      if (mismatchedPayloads.length > 0) {
+        reportPayloadFailures(
+          "qfai prototyping certify: accepted iteration " +
+            `${acceptedIterDir} has ${mismatchedPayloads.length} review.json payload(s) whose ` +
+            "(specId, screenId, cycle) identity does not match the (spec, screen) pair and " +
+            "accepted iteration they are stored under — a payload copied from another pair or " +
+            "cycle is not evidence for this one:",
+          mismatchedPayloads,
+        );
+        // Same class as a missing payload: the pair still carries no
+        // review of ITS OWN surface.
+        return 64;
+      }
+      // `reviewerGate.result === "PASS"` is a summary claim (gated
+      // above); the per-screen payloads are the evidence behind it.
+      // Convergence is an AND over every (spec, screen) pair — all 4
+      // ordinal axes `exceptional`, `layoutAntiPatternsDetected` and
+      // `designMdViolations` both empty (see
+      // `core/prototyping/iteration.ts::allFourAxesExceptional` /
+      // `shouldStopAcrossSpecs`) — so a payload that fails it
+      // contradicts the summary, and sealing the certificate on top of
+      // that contradiction is exactly the drift certify exists to stop.
+      if (unconvergedPayloads.length > 0) {
+        reportPayloadFailures(
+          "qfai prototyping certify: prototyping.json#reviewerGate.result is PASS but accepted " +
+            `iteration ${acceptedIterDir} has ${unconvergedPayloads.length} review.json ` +
+            "payload(s) that contradict convergence (every (spec, screen) pair needs all 4 " +
+            "ordinal axes `exceptional` with layoutAntiPatternsDetected and designMdViolations " +
+            "empty):",
+          unconvergedPayloads,
+        );
+        // Non-converged per-screen evidence is the same evidence-gap
+        // class as a missing or unparsable payload: the pair has no
+        // review that supports certification.
         return 64;
       }
     }
@@ -1915,32 +1972,146 @@ async function loadJson(filePath: string): Promise<unknown> {
  * checks elsewhere; certify's strict gates upstream (lock-unreadable,
  * stale-iter-readdir) catch the broader permission-flip vector.
  */
+/** One rejected `<screen>.review.json` and why it was rejected. */
+type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly string[] };
+
+/** The (spec, screen, cycle) triple a payload is filed under. */
+type ReviewPayloadExpectation = {
+  readonly specDirName: string;
+  readonly screenId: string;
+  readonly cycle: number;
+};
+
 /**
- * Read one `<screen>.review.json` and validate it against the shipped
+ * The three independent ways one `<screen>.review.json` can fail
+ * certification: it does not parse, it parses but reviews a different
+ * (spec, screen, cycle), or it parses and contradicts the convergence
+ * the summary PASS asserts. Each list is empty when that check passed.
+ */
+type ReviewPayloadAudit = {
+  readonly schemaErrors: readonly string[];
+  readonly identityErrors: readonly string[];
+  readonly convergenceErrors: readonly string[];
+};
+
+/**
+ * Read one `<screen>.review.json` and audit it against the shipped
  * reviewer payload reference
  * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`)
- * via {@link parseEvaluatorReview}.
+ * via {@link parseEvaluatorReview}, then against the pair it is filed
+ * under and the convergence rule.
  *
- * Returns the aggregated schema violations; an empty array means the
- * payload parses cleanly. Unreadable / non-JSON files are reported as
- * a single violation rather than thrown, so one corrupt payload cannot
- * abort the sweep over the remaining (spec, screen) pairs.
+ * Unreadable / non-JSON files are reported as a single schema
+ * violation rather than thrown, so one corrupt payload cannot abort
+ * the sweep over the remaining (spec, screen) pairs. Identity and
+ * convergence are only evaluated on a payload that parsed — otherwise
+ * there are no trustworthy fields to compare.
  */
-async function collectReviewPayloadErrors(absPath: string): Promise<string[]> {
+async function auditReviewPayload(
+  absPath: string,
+  expected: ReviewPayloadExpectation,
+): Promise<ReviewPayloadAudit> {
   let raw: string;
   try {
     raw = await readFile(absPath, "utf-8");
   } catch (err) {
-    return [`unreadable: ${err instanceof Error ? err.message : String(err)}`];
+    return schemaOnlyAudit(`unreadable: ${err instanceof Error ? err.message : String(err)}`);
   }
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
   } catch (err) {
-    return [`invalid JSON: ${err instanceof Error ? err.message : String(err)}`];
+    return schemaOnlyAudit(`invalid JSON: ${err instanceof Error ? err.message : String(err)}`);
   }
   const result = parseEvaluatorReview(parsed);
-  return result.ok ? [] : [...result.errors];
+  if (!result.ok) {
+    return { schemaErrors: [...result.errors], identityErrors: [], convergenceErrors: [] };
+  }
+  return {
+    schemaErrors: [],
+    identityErrors: collectIdentityMismatches(result.review, expected),
+    convergenceErrors: collectConvergenceContradictions(result.review),
+  };
+}
+
+function schemaOnlyAudit(message: string): ReviewPayloadAudit {
+  return { schemaErrors: [message], identityErrors: [], convergenceErrors: [] };
+}
+
+/**
+ * Compare the payload's own `(specId, screenId, cycle)` discriminators
+ * with the pair and accepted iteration it is stored under. `specId` is
+ * normalised first so both the bare `NNNN` and the fully-qualified
+ * `spec-NNNN` spellings the frozen set allows compare equal.
+ */
+function collectIdentityMismatches(
+  review: ReviewerPayload,
+  expected: ReviewPayloadExpectation,
+): string[] {
+  const errors: string[] = [];
+  if (normalizeSpecDirName(review.specId) !== expected.specDirName) {
+    errors.push(`specId "${review.specId}" does not identify ${expected.specDirName}`);
+  }
+  if (review.screenId !== expected.screenId) {
+    errors.push(`screenId "${review.screenId}" is not the declared screen "${expected.screenId}"`);
+  }
+  if (review.cycle !== expected.cycle) {
+    errors.push(
+      `cycle ${String(review.cycle)} is not the accepted iteration index ${String(expected.cycle)}`,
+    );
+  }
+  return errors;
+}
+
+/**
+ * Re-derive per-pair convergence from the payload itself, mirroring
+ * `core/prototyping/iteration.ts::allFourAxesExceptional`: all 4
+ * ordinal axes `exceptional`, no layout anti-patterns, no DESIGN.md
+ * violations. Every returned string names one reason this pair is not
+ * converged.
+ */
+function collectConvergenceContradictions(review: ReviewerPayload): string[] {
+  const errors: string[] = [];
+  for (const axis of ORDINAL_AXES) {
+    const verdict = review.ordinalAxes[axis];
+    if (verdict !== "exceptional") {
+      errors.push(`ordinalAxes.${axis} is "${verdict}", not "exceptional"`);
+    }
+  }
+  if (review.layoutAntiPatternsDetected.length > 0) {
+    errors.push(
+      `layoutAntiPatternsDetected is non-empty: ${review.layoutAntiPatternsDetected.join(", ")}`,
+    );
+  }
+  if (review.designMdViolations.length > 0) {
+    errors.push(
+      `designMdViolations is non-empty: ${review.designMdViolations
+        .map((v) => `${v.kind}=${v.found}`)
+        .join(", ")}`,
+    );
+  }
+  return errors;
+}
+
+/**
+ * Render one rejection class to stderr under `heading`.
+ *
+ * Same bounded-stderr policy as the missing-pair branch: cap the
+ * rendered per-payload details so a large frozen set cannot flood the
+ * operator's terminal.
+ */
+function reportPayloadFailures(heading: string, failures: readonly PayloadFailure[]): void {
+  error(heading);
+  let renderedErrors = 0;
+  for (const entry of failures.slice(0, 20)) {
+    error(`  - ${entry.expectedPath}:`);
+    for (const detail of entry.errors) {
+      if (renderedErrors >= 20) break;
+      error(`      ${detail}`);
+      renderedErrors += 1;
+    }
+    if (renderedErrors >= 20) break;
+  }
 }
 
 async function fileExists(absPath: string): Promise<boolean> {
