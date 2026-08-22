@@ -163,6 +163,17 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/TDD-ID/);
   });
 
+  it("tells the migration to repoint Blocked-By at the renumbered rows", async () => {
+    // `Blocked-By` may name another row as `spec-NNNN:TDD-MMMM`, so renumbering
+    // without rewriting it leaves the migrated work waiting on a row of the
+    // retired ledger — and `TDDLIST_BLOCKED_MISSING_REF` only checks the cell
+    // is non-empty, so nothing reports the broken reference.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/Blocked-By/);
+    expect(ref).toMatch(/TDDLIST_BLOCKED_MISSING_REF/);
+    expect(ref).toMatch(/spec-NNNN:TDD-MMMM/);
+  });
+
   it("requires Superseded-by to name an active spec other than the source", async () => {
     // A missing, self- or already-retired successor inherits nothing, so the
     // source keeps gating — the operator has to know that before rewriting

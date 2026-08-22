@@ -24,6 +24,25 @@ describe("extractBulletField", () => {
   it("ignores values inside other lines", () => {
     expect(extractBulletField("Notes: irrelevant Status: hidden", "Status")).toBeUndefined();
   });
+
+  it("does not read a wrapped value off the next line", () => {
+    // `- Status:` with the value on the following line is not the
+    // `- Name: value` bullet the rule asks for; accepting it would retire a
+    // spec on a declaration `QFAI-STATUS-001` never saw.
+    expect(extractBulletField("- Status:\ndeprecated\n", "Status")).toBeUndefined();
+    expect(extractBulletField("- Deprecated-at:\n  2026-01-01\n", "Deprecated-at")).toBeUndefined();
+  });
+
+  it("fails closed on an empty bullet even when a later one has a value", () => {
+    // The first bullet is the spec's declaration; an empty one is a missing
+    // value, not an invitation to look further down the document.
+    expect(extractBulletField("- Status:\n\n- Status: active\n", "Status")).toBeUndefined();
+  });
+
+  it("still reads a value written on the bullet's own line", () => {
+    expect(extractBulletField("  -  Status  :  superseded  \n", "Status")).toBe("superseded");
+    expect(extractBulletField("- Status: active\r\n", "Status")).toBe("active");
+  });
 });
 
 describe("parseSpec status fields", () => {

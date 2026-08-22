@@ -73,19 +73,32 @@ export type ParsedSpec = {
   deprecatedAt?: string;
 };
 
+/** Horizontal whitespace — everything `\s` covers except a line break. */
+const H_SPACE = "[^\\S\\r\\n]";
+
 /**
  * Extract a bullet field value from a markdown spec header block of the form
- * `- Name: value`. Returns undefined when the bullet is absent or marked as
- * placeholder ("-").
+ * `- Name: value`. Returns undefined when the bullet is absent, empty, or
+ * marked as placeholder ("-").
+ *
+ * The value is read from the bullet's own line and nowhere else: every
+ * separator here is horizontal-only, so a `- Status:` with nothing after the
+ * colon cannot reach across the line break and adopt whatever the next line
+ * happens to say. That matters because the same extraction decides whether a
+ * whole ledger stops gating — `- Status:` followed by a bare `deprecated`
+ * line is not the `- Name: value` bullet `QFAI-STATUS-001` asks for, and
+ * accepting it would retire the spec on a declaration no validator could
+ * report. An empty or wrapped bullet therefore fails closed, leaving the spec
+ * current and its missing value to `QFAI-STATUS-001`.
  */
 export function extractBulletField(md: string, name: string): string | undefined {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`^\\s*-\\s*${escaped}\\s*:\\s*(.+?)\\s*$`, "im");
+  const re = new RegExp(`^${H_SPACE}*-${H_SPACE}*${escaped}${H_SPACE}*:([^\\r\\n]*)$`, "im");
   const match = re.exec(md);
-  if (!match?.[1]) {
+  if (match === null) {
     return undefined;
   }
-  const value = match[1].trim();
+  const value = (match[1] ?? "").trim();
   if (value === "-" || value.length === 0) {
     return undefined;
   }

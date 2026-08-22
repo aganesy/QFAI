@@ -330,9 +330,10 @@ async function readSpecLifecycle(specMetaPath: string): Promise<SpecLifecycle | 
  * retires a spec on the same evidence.
  *
  * `superseded` additionally requires a successor that can actually inherit the
- * work. SUPERSEDE retires a spec by moving its obligations to another one, so
- * a `Superseded-by` that names nothing, names the spec itself, or names a spec
- * that is itself retired means the obligations moved nowhere — and demoting
+ * work — one declaring `Status: active` for itself. SUPERSEDE retires a spec by
+ * moving its obligations to another one, so a `Superseded-by` that names
+ * nothing, names the spec itself, or names a spec that is retired or declares
+ * no readable lifecycle means the obligations moved nowhere — and demoting
  * the ledger would drop every outstanding row out of the gate with no spec
  * left owing it. `QFAI-STATUS-004` reports a dangling reference, but only
  * under `--profile full`; `--profile tdd` runs `validateTddList` without
@@ -350,17 +351,22 @@ function resolveSpecStatus(
     return lifecycle.status;
   }
   const successorId = lifecycle.supersededBy;
-  if (successorId === undefined || successorId === specId || !declarations.has(successorId)) {
+  if (successorId === undefined || successorId === specId) {
     return undefined;
   }
-  // A successor that declares a retirement of its own cannot be the spec the
-  // work landed on — whether or not that declaration is complete enough to
-  // retire the successor in turn. Following the chain instead would have to
-  // handle cycles; refusing here needs no such reasoning, and the operator's
-  // fix is the same either way: point `Superseded-by` at the spec that owns
-  // the work now.
+  // Only an explicit `Status: active` successor is accepted. A successor that
+  // declares a retirement of its own is not the spec the work landed on —
+  // whether or not that declaration is complete enough to retire the successor
+  // in turn — and neither is one whose lifecycle could not be read at all: a
+  // missing, unreadable or unparseable `01_Spec.md` is a directory nobody has
+  // shown to be current, and `readSpecLifecycle` reports every one of those the
+  // same way, as no declaration. Trusting the directory's mere existence would
+  // demote the source's whole ledger on the strength of a folder name.
+  // Following the chain instead would have to handle cycles; refusing here
+  // needs no such reasoning, and the operator's fix is the same either way:
+  // point `Superseded-by` at the spec that owns the work now.
   const successor = declarations.get(successorId);
-  if (successor !== undefined && successor.status !== "active") {
+  if (successor === undefined || successor.status !== "active") {
     return undefined;
   }
   return "superseded";

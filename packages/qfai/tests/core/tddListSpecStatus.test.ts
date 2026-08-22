@@ -185,6 +185,39 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     );
   });
 
+  it("does not retire a spec whose successor declares no readable lifecycle", async () => {
+    // The successor directory exists, but its `01_Spec.md` has no `Status:` at
+    // all — the same evidence `readSpecLifecycle` returns for a missing or
+    // unreadable file. Nothing has shown that spec to be current, so the
+    // obligations have no home and the source keeps gating.
+    await withSpecStatus(
+      ["- Status: superseded", "- Superseded-by: spec-0002"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+      { successor: "" },
+    );
+    await withSpecStatus(
+      ["- Status: superseded", "- Superseded-by: spec-0002"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+      { successor: "- Status: retired" },
+    );
+  });
+
+  it("does not retire a spec whose lifecycle value is wrapped onto the next line", async () => {
+    // `- Status:` / `deprecated` on two lines is not the `- Name: value`
+    // bullet `QFAI-STATUS-001` asks for. Read as one, it would demote the
+    // whole ledger under `--profile tdd`, where no status validator runs.
+    await withSpecStatus(
+      ["- Status:", "deprecated", "- Deprecated-at:", "2026-01-01"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
   it("does not retire a spec on a Deprecated-at that is not a real date", async () => {
     // `2026-02-30` passes the shape regex and rolls over to March 2. A
     // retirement date nobody can audit is not a retirement.
@@ -235,6 +268,10 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
       expect(action).toContain("02_User-stories.md");
       // `TDD-NNNN` is ledger-local: a copied one collides in the successor.
       expect(action).toContain("TDDLIST_DUPLICATE_ID");
+      // A renumbered row leaves every `Blocked-By` that named it dangling, and
+      // `TDDLIST_BLOCKED_MISSING_REF` only checks the cell is non-empty.
+      expect(action).toContain("Blocked-By");
+      expect(action).toContain("TDDLIST_BLOCKED_MISSING_REF");
     });
   });
 });
