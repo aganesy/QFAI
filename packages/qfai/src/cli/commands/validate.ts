@@ -936,7 +936,11 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
-  "QFAI-BPAP-001": "Every BP/AP rule file under `.qfai/contracts/design/` is readable.",
+  // `paths.contractsDir` is configurable, so the expected state names the file
+  // by role rather than pinning the default location: a project that moved its
+  // contracts must not be told to repair a directory it does not use. The
+  // offending path is already on the finding's `target:` line.
+  "QFAI-BPAP-001": "Every BP/AP rule file in the contracts `design/` directory is readable.",
   "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
   "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
   "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
@@ -948,6 +952,8 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
   "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
   "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
+  "QFAI-SKILLS-001":
+    "`.qfai/assistant/skills/**` matches the skill assets shipped by the installed QFAI version.",
 };
 
 /**
@@ -960,8 +966,12 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-001":
     "Restore read access to the file, or delete it if it is no longer part of the rule set.",
   "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
+  // QFAI-BPAP-001/002/003 fire on both `best-practices*.yaml` and
+  // `anti-patterns*.yaml`, so the example ID has to stay neutral: spelling
+  // `BP-0001` here would walk an anti-pattern author straight into
+  // QFAI-BPAP-007, which demands the `AP-XXXX` form.
   "QFAI-BPAP-003":
-    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` ...); a mapping at the root is not a rule set.",
+    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` in a best-practices file, `- id: AP-0001` in an anti-patterns file); a mapping at the root is not a rule set.",
   "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
   "QFAI-BPAP-005":
     "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
@@ -975,6 +985,11 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // Only the mirror value-mismatch path passes a `suggested_action`; the
+  // missing-key paths (mirror block, legacy checklist key, component guidance)
+  // do not, so the code needs a catalog entry that covers all of them.
+  "QFAI-DCON-005":
+    "Add the design-system.yaml entry the message names — the `visual.*` mirror block, the legacy `checklist.*` key, or the component-guidance block — then rerun validate.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

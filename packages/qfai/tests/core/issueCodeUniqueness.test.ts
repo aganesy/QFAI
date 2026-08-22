@@ -11,7 +11,7 @@ import {
   resolveIssueExpected,
   resolveIssueFix,
 } from "../../src/cli/commands/validate.js";
-import { collectIssueCodeUsage } from "../helpers/issueCodes.js";
+import { type IssueCodeUsage, collectIssueCodeUsage } from "../helpers/issueCodes.js";
 
 async function collectTsFiles(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -169,6 +169,11 @@ describe("issue code uniqueness", () => {
 // sets below record the codes that are still generic today. They may only
 // shrink: the tests keep a newly added code from shipping without a decision,
 // and fail when an entry is written but the code stays listed here.
+//
+// The census behind them counts every emission site, including `Issue` object
+// literals and codes whose `suggested_action` is passed on only some of their
+// call sites — both were invisible to the first cut of the helper, so the lists
+// were re-baselined once to name the codes that hole had been hiding.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
@@ -211,6 +216,10 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-CRIT-009",
   "QFAI-CRIT-010",
   "QFAI-DB-002",
+  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
+  "QFAI-DOC-CONVERGENCE-MISSING",
+  "QFAI-DOC-VOCABULARY-CONTRADICTION",
+  "QFAI-DOC-VOCABULARY-PROHIBITED",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -233,6 +242,11 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
+  "QFAI-GR-001",
+  "QFAI-GR-003",
+  "QFAI-GR-004",
+  "QFAI-GR-005",
+  "QFAI-GR-008",
   "QFAI-ID-001",
   "QFAI-LAYER-100",
   "QFAI-LAYER-101",
@@ -332,11 +346,17 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-TRIAGE-006",
   "QFAI-WAIVER-001",
   "QFAI-WAIVER-002",
+  "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-CERTIFY-VERIFY-CIRCULAR",
+  "R-EVIDENCE-MUTATION-UNLOGGED",
+  "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
+  "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
+  "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
+  "R-SKILL-MANIFEST-DRIFT",
   "TDDLIST_BLOCKED_MISSING_REF",
   "TDDLIST_COVERAGE_LAYER_MISMATCH",
   "TDDLIST_DUPLICATE_ID",
@@ -354,6 +374,9 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "TDDLIST_TEST_FILE_MISSING",
   "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
+  "UIX-VAL-DS-READ-ERROR",
+  "UIX-VAL-DS01",
+  "UIX-VAL-DS02",
   "W-SKILL-DOC-BROKEN-REF",
   "W-STALE-REFERENCE",
 ]);
@@ -381,6 +404,7 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-CONTRACT-021",
   "QFAI-DCON-009",
   "QFAI-DCON-012",
+  "QFAI-DCON-013",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-004",
@@ -403,6 +427,11 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
+  "QFAI-GR-001",
+  "QFAI-GR-003",
+  "QFAI-GR-004",
+  "QFAI-GR-005",
+  "QFAI-GR-008",
   "QFAI-ID-001",
   "QFAI-LAYER-100",
   "QFAI-LAYER-101",
@@ -485,11 +514,17 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-TRACE-123",
   "QFAI-WAIVER-001",
   "QFAI-WAIVER-002",
+  "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-CERTIFY-VERIFY-CIRCULAR",
+  "R-EVIDENCE-MUTATION-UNLOGGED",
+  "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
+  "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
+  "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
+  "R-SKILL-MANIFEST-DRIFT",
   "TDDLIST_DUPLICATE_ID",
   "TDDLIST_EXCEPTION_MISSING_DR",
   "TDDLIST_INVALID_ID",
@@ -497,6 +532,7 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "TDDLIST_INVALID_STATUS",
   "TDDLIST_REQUIRED_COLUMN_MISSING",
   "TDDLIST_TABLE_MISSING",
+  "TDDLIST_TC_NOT_COVERED",
   "TDDLIST_TEST_FILE_MISSING",
   "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
@@ -504,9 +540,7 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "W-STALE-REFERENCE",
 ]);
 
-async function collectErrorCapableUsage(): Promise<
-  Map<string, { errorCapable: boolean; hasSuggestedAction: boolean }>
-> {
+async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> {
   const usage = await collectIssueCodeUsage(path.resolve(__dirname, "../../src"));
   return new Map([...usage].filter(([, entry]) => entry.errorCapable));
 }
@@ -521,10 +555,12 @@ describe("issue report metadata", () => {
     expect(missing).toEqual([]);
   });
 
-  it("every error-capable issue code has a remediation source or is pending", async () => {
+  it("every error-capable issue code has a remediation source at every call site or is pending", async () => {
     const usage = await collectErrorCapableUsage();
     const missing = [...usage]
-      .filter(([code, entry]) => !entry.hasSuggestedAction && !(code in ISSUE_FIX_BY_CODE))
+      .filter(
+        ([code, entry]) => !entry.everyErrorSiteHasSuggestedAction && !(code in ISSUE_FIX_BY_CODE),
+      )
       .map(([code]) => code)
       .filter((code) => !PENDING_FIX_CATALOG_CODES.has(code))
       .sort();
@@ -541,7 +577,7 @@ describe("issue report metadata", () => {
         (code) =>
           !usage.has(code) ||
           code in ISSUE_FIX_BY_CODE ||
-          (usage.get(code)?.hasSuggestedAction ?? false),
+          (usage.get(code)?.everyErrorSiteHasSuggestedAction ?? false),
       )
       .sort();
     expect({ staleExpected, staleFix }).toEqual({ staleExpected: [], staleFix: [] });
