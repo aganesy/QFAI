@@ -43,6 +43,7 @@
 import { spawnSync } from "node:child_process";
 import {
   mkdtemp,
+  mkdir,
   readFile,
   readdir,
   lstat,
@@ -72,6 +73,9 @@ import {
   ALLOWED_INIT_PATHS,
   ALLOWED_INIT_ROOT_ASSETS,
   ALLOWED_PROVENANCE_SHAPE,
+  BUILD_DECORATION,
+  LIVE_DECORATIONS,
+  INERT_DECORATIONS,
   ALLOWED_WORKFLOW_SHAPE,
   ALLOWED_JOB_SHAPE,
   ALLOWED_SHELLS,
@@ -761,6 +765,85 @@ describe(
           "stale entry is a claim about a file that does not exist",
       ).toEqual([]);
       expect(flagged, "a template-root asset that something would run").toEqual([]);
+    });
+
+    it("agrees with bash about which decorations actually run a build", async () => {
+      // **The oracle that has found every defect in this file, committed.**
+      //
+      // Round 19's gate stated the residual precisely: the differential test asserts that `codeMask`
+      // and `refusals()` AGREE, so a fault common to both leaves it green, and the `inert` list —
+      // the half meant to anchor the mask to reality — anchors it to shapes the stage asserted are
+      // inert rather than to bash. Nothing in the committed suite ran a shell. The only instrument
+      // that has ever falsified this file is a reviewer's fake bundler on `PATH`, and it "lives in
+      // reviewer scratch and is deleted at the end of each round".
+      //
+      // So it lives here now. A fake `npx` records its arguments and exits 0; each decoration goes
+      // through `bash -c` with the marker cleared first; a `live` row must leave the marker and an
+      // `inert` row must not. The corpora are the same objects the differential test reads — a second
+      // copy would have put the two instruments back on separate evidence, which is the divergence
+      // this whole file is a record of.
+      //
+      // Running it found two rows misfiled on the day it was written: `build_once() { … }` defined a
+      // function bash never entered, and `if [ -f package.json ]` is live only where that file exists.
+      const bashAt = spawnSync("bash", ["-c", "printf ok"], { encoding: "utf-8" });
+      if (bashAt.error !== undefined || bashAt.stdout.trim() !== "ok") {
+        // No POSIX shell here. Skipping is honest; pretending the corpus was verified is not.
+        expect(bashAt.error, "bash is unavailable, so this oracle did not run").toBeDefined();
+        return;
+      }
+
+      const lab = await mkdtemp(path.join(os.tmpdir(), "qfai-e2e-spec0017-oracle-"));
+      try {
+        const bin = path.join(lab, "bin");
+        const marker = path.join(lab, "ran.txt");
+        await mkdir(bin, { recursive: true });
+        await writeFile(
+          path.join(bin, "npx"),
+          `#!/bin/sh\nprintf '%s\\n' "npx $*" >> ${marker.split(path.sep).join("/")}\nexit 0\n`,
+          { mode: 0o755 },
+        );
+        // The `if [ -f package.json ]` row is live only where that file exists, which is the context
+        // it models; a lab without one measures the lab. `GITHUB_OUTPUT` is pointed inside the lab so
+        // that no decoration writes outside it.
+        await writeFile(path.join(lab, "package.json"), "{}\n");
+        const env = {
+          ...process.env,
+          PATH: `${bin}${path.delimiter}${process.env["PATH"] ?? ""}`,
+          GITHUB_OUTPUT: path.join(lab, "github-output.txt"),
+        };
+
+        const misfiled: string[] = [];
+        for (const [shapes, mustRun] of [
+          [LIVE_DECORATIONS, true],
+          [INERT_DECORATIONS, false],
+        ] as const) {
+          for (const shape of shapes) {
+            await rm(marker, { force: true });
+            spawnSync("bash", ["-c", shape.replace("%s", BUILD_DECORATION)], {
+              cwd: lab,
+              env,
+              encoding: "utf-8",
+              timeout: 30000,
+            });
+            const ran = await access(marker).then(
+              () => true,
+              () => false,
+            );
+            if (ran !== mustRun) {
+              misfiled.push(
+                `${mustRun ? "live" : "inert"} but bash ${ran ? "RAN" : "did not run"} it: ${JSON.stringify(shape)}`,
+              );
+            }
+          }
+        }
+        expect(
+          misfiled,
+          "a decoration filed against what bash actually does with it. `live` and `inert` are claims " +
+            "about a shell, and this is the only assertion in the suite that asks the shell",
+        ).toEqual([]);
+      } finally {
+        await rm(lab, { recursive: true, force: true });
+      }
     });
 
     it("ships no lane that runs its own bundler build", async () => {

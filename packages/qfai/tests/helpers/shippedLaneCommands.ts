@@ -1170,6 +1170,82 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * The build token every decoration below carries, and the two corpora that say where bash runs it.
+ *
+ * **They live in the helper because two instruments read them.** `shippedLaneCommands.test.ts` uses
+ * them for the differential — if the mask says a build is code, the scan must refuse it — and
+ * `spec0017LayeredCiScaffoldE2E.test.ts` runs every one of them through real bash with a fake bundler
+ * on `PATH`, which is the only oracle that has ever found a defect in this file. Round 19's gate
+ * observed that this oracle "lives in reviewer scratch and is deleted at the end of each round"; it is
+ * committed now, and a second copy of the corpora would have put the two instruments back on separate
+ * evidence, which is the divergence this whole file is a record of.
+ */
+export const BUILD_DECORATION = "npx tsup";
+
+// Decorations that put a build at a CODE position in bash, one per construct this file has been
+// wrong about. Each `%s` is where the build goes.
+export const LIVE_DECORATIONS: ReadonlyArray<string> = [
+  "%s",
+  "echo a && %s",
+  "echo a ; %s",
+  "echo a | %s",
+  "echo a\n%s",
+  'echo "quoted" && %s',
+  "echo 'quoted' && %s",
+  "echo a\\> | %s",
+  "echo a\\>| %s",
+  "echo $'a\\'' && %s",
+  'echo "$(echo \\")" ; %s',
+  "echo x <\\ #y & %s",
+  'echo x > "$GITHUB_OUTPUT" | %s',
+  "read v <<EOF\ndata\nEOF\n%s",
+  "read v <<'EOF'\ndata\nEOF\n%s",
+  "read v <<\\EOF\ndata\nEOF\n%s",
+  "case $x in *) %s ;; esac",
+  "if [ -f package.json ]; then %s; fi",
+  // CALLED, not merely defined. Round 19 executed every row here and this one did not run:
+  // bash defines a function body and does not enter it, so the row asserted an execution that
+  // never happened. The construct it exists for — a build inside a function body — is intact.
+  "build_once() { %s; }; build_once",
+  "( %s )",
+  "read v <<EOF\n$(%s)\nEOF",
+  // Round 19. The delimiter scan breaks on `<`/`>`/`(`, and nothing asserted it: reverting that
+  // one character class passed the whole file.
+  "read v <<EOF>/dev/null\ndata\nEOF\n%s",
+  // …and the eleventh spelling, found by executing with a fake bundler on PATH. `codeMask` marked
+  // a here-document's data non-code and then kept WALKING it, so the `"` on the data line drove
+  // the quote state for everything after: the separators vanished, the alternation lookahead
+  // reached the `)`, and a real pipe read as a `case` arm. One character of DATA disarmed the
+  // scan for the rest of the body.
+  'read v <<E\n"\nE\necho a | %s ")"',
+  'read v <<E\n"\nE\n%s',
+  "read v <<EOF\n`%s`\nEOF",
+];
+
+// …and decorations that put it where bash never runs it. The mask must agree that they are not
+// code, and — round 19 — the scan must not refuse them either. Fail-closed used to be allowed
+// here as an unstated blanket, which left the OTHER walk unasserted at exactly these positions:
+// reverting `commandsOf`'s half of the process-substitution fix passed the entire file. It is
+// enumerated now, like everything else this file decides, and the list is empty.
+export const INERT_DECORATIONS: ReadonlyArray<string> = [
+  "echo '%s'",
+  'echo "%s"',
+  "# %s",
+  "echo a # %s",
+  "read v <<'EOF'\n%s\nEOF",
+  // Round 19. A QUOTED delimiter makes its data literal, so a substitution inside it never runs.
+  // Only `commandsOf` read `quoted`; `codeMask` did not, and called this data code.
+  "read v <<'EOF'\n$(%s)\nEOF",
+  // `<<\EOF` is bash's third spelling of a quoted delimiter. The subject said so and nothing
+  // checked it: dropping `quoted = true` from the backslash branch passed the whole file.
+  "read v <<\\EOF\n$(%s)\nEOF",
+  // bash performs NO process substitution inside double quotes — `"<(cmd)"` is literal text.
+  // Both walks guarded on `quote !== "'"`, which admitted it.
+  'echo "<(%s)"',
+  'echo ">(%s)"',
+];
+
+/**
  * Every file in the template ROOT — the source `qfai init` copies verbatim, before anything else.
  *
  * `ALLOWED_INIT_PATHS` pins the initialised OUTPUT and excludes the eight instruction trees, because

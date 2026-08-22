@@ -30,6 +30,9 @@ import {
   bodyDigest,
   commandsOf,
   HARMLESS_PROGRAMS,
+  BUILD_DECORATION,
+  LIVE_DECORATIONS,
+  INERT_DECORATIONS,
   invocationOf,
   invocationsOf,
   maskOf,
@@ -409,68 +412,9 @@ describe("the shipped-lane allowlist", () => {
     // wrong, so a misfiled row would have this test certifying an escape rather than catching one.
     // `.qfai/evidence/atdd-spec-0017.md` records the marker output for each. Do not add a row here
     // from reading; add it from a run.
-    const BUILD = "npx tsup";
-    // Decorations that put a build at a CODE position in bash, one per construct this file has been
-    // wrong about. Each `%s` is where the build goes.
-    const live = [
-      "%s",
-      "echo a && %s",
-      "echo a ; %s",
-      "echo a | %s",
-      "echo a\n%s",
-      'echo "quoted" && %s',
-      "echo 'quoted' && %s",
-      "echo a\\> | %s",
-      "echo a\\>| %s",
-      "echo $'a\\'' && %s",
-      'echo "$(echo \\")" ; %s',
-      "echo x <\\ #y & %s",
-      'echo x > "$GITHUB_OUTPUT" | %s',
-      "read v <<EOF\ndata\nEOF\n%s",
-      "read v <<'EOF'\ndata\nEOF\n%s",
-      "read v <<\\EOF\ndata\nEOF\n%s",
-      "case $x in *) %s ;; esac",
-      "if [ -f package.json ]; then %s; fi",
-      // CALLED, not merely defined. Round 19 executed every row here and this one did not run:
-      // bash defines a function body and does not enter it, so the row asserted an execution that
-      // never happened. The construct it exists for — a build inside a function body — is intact.
-      "build_once() { %s; }; build_once",
-      "( %s )",
-      "read v <<EOF\n$(%s)\nEOF",
-      // Round 19. The delimiter scan breaks on `<`/`>`/`(`, and nothing asserted it: reverting that
-      // one character class passed the whole file.
-      "read v <<EOF>/dev/null\ndata\nEOF\n%s",
-      // …and the eleventh spelling, found by executing with a fake bundler on PATH. `codeMask` marked
-      // a here-document's data non-code and then kept WALKING it, so the `"` on the data line drove
-      // the quote state for everything after: the separators vanished, the alternation lookahead
-      // reached the `)`, and a real pipe read as a `case` arm. One character of DATA disarmed the
-      // scan for the rest of the body.
-      'read v <<E\n"\nE\necho a | %s ")"',
-      'read v <<E\n"\nE\n%s',
-      "read v <<EOF\n`%s`\nEOF",
-    ];
-    // …and decorations that put it where bash never runs it. The mask must agree that they are not
-    // code, and — round 19 — the scan must not refuse them either. Fail-closed used to be allowed
-    // here as an unstated blanket, which left the OTHER walk unasserted at exactly these positions:
-    // reverting `commandsOf`'s half of the process-substitution fix passed the entire file. It is
-    // enumerated now, like everything else this file decides, and the list is empty.
-    const inert = [
-      "echo '%s'",
-      'echo "%s"',
-      "# %s",
-      "echo a # %s",
-      "read v <<'EOF'\n%s\nEOF",
-      // Round 19. A QUOTED delimiter makes its data literal, so a substitution inside it never runs.
-      // Only `commandsOf` read `quoted`; `codeMask` did not, and called this data code.
-      "read v <<'EOF'\n$(%s)\nEOF",
-      // `<<\EOF` is bash's third spelling of a quoted delimiter. The subject said so and nothing
-      // checked it: dropping `quoted = true` from the backslash branch passed the whole file.
-      "read v <<\\EOF\n$(%s)\nEOF",
-      // bash performs NO process substitution inside double quotes — `"<(cmd)"` is literal text.
-      // Both walks guarded on `quote !== "'"`, which admitted it.
-      'echo "<(%s)"',
-      'echo ">(%s)"',
-    ];
+    const BUILD = BUILD_DECORATION;
+    const live = LIVE_DECORATIONS;
+    const inert = INERT_DECORATIONS;
     // A shape may not hide a second build: `indexOf` measures the FIRST, so "here it is dead, here it
     // is live" would be scored at the wrong one, silently.
     const ambiguous = live

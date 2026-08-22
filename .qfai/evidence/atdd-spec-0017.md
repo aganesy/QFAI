@@ -292,7 +292,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Work performed (what changed, where)
 
-- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 12 tests across 8
+- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 13 tests across 8
   annotated describes, one describe per covered user story, plus a block comment where
   `US-0017-0007`'s was, recording why the claim was withdrawn rather than leaving its absence to be
   inferred
@@ -363,7 +363,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 
 ```text
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
-  -> Tests 12 passed (12), exit 0
+  -> Tests 13 passed (13), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
@@ -2052,7 +2052,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 19: the e2e figure is 1476 and the integration+unit figure 1239.
+round 19: the e2e figure is 1477 and the integration+unit figure 1239.
 
 **And the integration+unit figure moved — but not for the reason this paragraph gave for a round, and
 the figure it replaced had been wrong since round 15.** A concurrent session pushed `b0f9d443` onto this
@@ -2076,7 +2076,7 @@ touching it was written one commit after this stage moved it.
 
 **And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — for
 integration+unit, 99 against passed and 118 against passed-plus-skipped; for e2e, 564 and 580. It holds
-at round 12's `1216` / `1117`, at today's e2e `1476` / `912`, and at
+at round 12's `1216` / `1117`, at today's e2e `1477` / `913`, and at
 today's `1239` / `1140`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
 the record said **1220**: one high for the whole of rounds 15 to 18, in the block whose first sentence is
 "re-run after the last artifact changed". The re-measurement that replaced it did not detect that,
@@ -2102,7 +2102,7 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 912
+e2e callsites at this tree: 913
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -2141,7 +2141,7 @@ mode, for the third time.
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1476 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1477 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1239 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
@@ -2634,9 +2634,20 @@ existence matches the list it is filed under.
   writes a `package.json` into its lab, and `GITHUB_OUTPUT` points into the lab too, so nothing in the
   corpus writes outside it.
 
-The obligation is written into the test's own block comment: **a row is added from a run, not from a
-reading.** A stronger form — generating the corpus from bash at test time — is not portable to this
-repository's Windows CI and is not proposed.
+**And the harness is committed rather than deleted with the round.** Round 19's gate stated the residual
+exactly: the differential test asserts that two instruments in one file AGREE, so a fault common to both
+leaves it green, and the `inert` half — meant to anchor the mask to reality — anchored it to shapes the
+stage asserted were inert. Nothing in the committed suite ran a shell. "The only oracle that has ever
+found a defect in this file lives in reviewer scratch and is deleted at the end of each round."
+
+It is now a test in `spec0017LayeredCiScaffoldE2E.test.ts`, under `US-0017-0004`, and the two corpora
+moved into the helper so both instruments read the same objects — a second copy would have put them
+back on separate evidence, which is what this file is a record of. It skips, loudly, where no POSIX
+shell resolves; CI is `ubuntu-latest` and Git Bash answers here, so it runs in both places.
+
+Falsified four ways, each restored from a copy taken first: an inert shape filed as live, a live shape
+filed as inert, a comment filed as live, and reverting the `build_once` correction above. All four
+redden, and each names which side of the claim bash disagrees with.
 
 ### The full profile
 
