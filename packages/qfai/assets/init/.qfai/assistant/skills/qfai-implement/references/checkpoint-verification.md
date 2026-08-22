@@ -20,7 +20,7 @@ Run all of the following from the repository root, in order. Substitute the proj
 the placeholders; record the literal commands actually executed in evidence.
 
 1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
-   the ledger's `Selector`. Three runner-specific decisions, and all three must be made from the
+   the ledger's `Selector`. Four runner-specific decisions, and all four must be made from the
    ledger row:
 
    **a. The name option.** The `Selector` is a test NAME, and every common runner takes a name
@@ -59,10 +59,28 @@ the placeholders; record the literal commands actually executed in evidence.
    of the row's tests. This is the same rule Phase Red applies to a RED observation, for the same
    reason. So **emit one command per entry**, run all of them, and record every one of them in
    `Checkpoint verification command`. A glob entry is translated into the runner's own name language
-   rather than passed literally — `test_rejects_expired_token_*` is `-t 'test_rejects_expired_token_'`
-   for vitest or jest, `-k 'test_rejects_expired_token_'` for pytest and
-   `-run '^test_rejects_expired_token_'` for `go test`; when no exact translation exists, enumerate
-   the test names the glob covers and emit one command per name.
+   rather than passed literally, and **only where that language can anchor the prefix**: `go test`
+   takes an RE2 regex, so `test_rejects_expired_token_*` is `-run '^test_rejects_expired_token_'`;
+   vitest and jest match a regex against the full test name, so `-t '^test_rejects_expired_token_'`,
+   which holds only while the entry names a top-level test — under a `describe` the name the pattern
+   sees starts with the `describe` title, so the anchor no longer matches. pytest's `-k` is a
+   substring expression with no anchor and therefore has **no** exact translation:
+   `-k 'test_rejects_expired_token_'` also collects `test_other_test_rejects_expired_token_shadow`,
+   passing the checkpoint on a test the row never named. Wherever no exact translation exists —
+   pytest, and any nested vitest/jest name — enumerate the test names the glob covers and emit one
+   command per name.
+
+   **d. The option that makes the run visible.** Step 1 is judged on its recorded output, not its
+   exit code (see Pass criteria), so each command has to print the name of every test it ran. Most
+   runners suppress that by default: `pytest -k '<Selector>'` prints `test_sample.py . [100%]` and
+   `go test -run '<Selector>'` prints `ok example.com/pkg` — neither names a test, so a run that
+   selected the row's test would be indistinguishable from one that selected nothing, and every
+   checkpoint would FAIL. Add the runner's own option — `-v` for pytest ("Increase verbosity") and
+   for `go test` ("log all tests as they are run"), `--reporter=verbose` for vitest, `--verbose`
+   for jest — so the commands in b read `pytest <Test file> -v -k '<Selector>'` and
+   `go test ./<dir of Test file> -v -run '<Selector>'`. If a runner has no such option, record
+   instead the runner-specific count of tests it reports as selected or run, and treat a count of
+   zero as the FAIL that a nameless exit 0 would otherwise hide.
 
 2. The full test suite — `<test runner>` with no file filter and no test-name option.
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
@@ -103,7 +121,9 @@ reports zero `QFAI-TEST-001` findings. **Step 1 is not settled by its exit code.
 per-entry runs passes only when the recorded output names that entry as having run — the same thing
 `qa-gatekeeper` demands of a GREEN ("A full-suite pass that does not name the row's selector is not
 a GREEN for that row"). A run that selected zero tests exits 0 and satisfies nothing, so an exit 0
-whose output names no test is a FAIL. Any non-zero exit is a FAIL: for a per-item checkpoint the
+whose output names no test is a FAIL. That output is what decision **d** buys: without the runner's
+verbose option a passing run prints no name either, so read this criterion against a command that
+carries it (or against the selected/run count `d` falls back to), never against a default-quiet one. Any non-zero exit is a FAIL: for a per-item checkpoint the
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
 

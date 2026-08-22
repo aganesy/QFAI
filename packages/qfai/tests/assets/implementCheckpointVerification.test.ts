@@ -124,9 +124,28 @@ describe("qfai-implement checkpoint verification contract", () => {
       // A glob is not a shell glob to any of these runners.
       expect(reference).toContain("translated into the runner's own name language");
       expect(reference).toContain("-run '^test_rejects_expired_token_'");
-      // The third decision is announced where the other two are counted.
+      // The added decisions are announced where the earlier ones are counted.
       expect(reference).not.toContain("Two runner-specific decisions");
-      expect(reference).toContain("Three runner-specific decisions");
+      expect(reference).not.toContain("Three runner-specific decisions");
+      expect(reference).toContain("Four runner-specific decisions");
+    }
+  });
+
+  // `-k` is a substring expression, so a prefix glob translated into it also
+  // collects names that merely embed the prefix — the checkpoint would pass on a
+  // test the row never named.
+  it("keeps a glob's prefix semantics when translating it per runner", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("only where that language can anchor the prefix");
+      expect(reference).toContain("-t '^test_rejects_expired_token_'");
+      expect(reference).not.toContain("-k 'test_rejects_expired_token_' for pytest");
+      expect(reference).toMatch(/pytest's `-k` is a\s+substring expression with no anchor/);
+      expect(reference).toContain("test_other_test_rejects_expired_token_shadow");
+      expect(reference).toMatch(/pytest, and any nested vitest\/jest name — enumerate/);
     }
   });
 
@@ -141,6 +160,24 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(reference).toContain("**Step 1 is not settled by its exit code.**");
       expect(reference).toContain("the recorded output names that entry as having run");
       expect(reference).toMatch(/an exit 0\s+whose output names no test is a FAIL/);
+    }
+  });
+
+  // pytest and `go test` print no test name by default, so the criterion above
+  // would FAIL every correct run unless the command asks for the names.
+  it("makes step 1's command print the names it ran", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("**d. The option that makes the run visible.**");
+      expect(reference).toContain("pytest <Test file> -v -k '<Selector>'");
+      expect(reference).toContain("go test ./<dir of Test file> -v -run '<Selector>'");
+      expect(reference).toContain("--reporter=verbose");
+      expect(reference).toContain("--verbose");
+      // The fallback for a runner with no such option.
+      expect(reference).toMatch(/count of tests it reports as selected or run/);
     }
   });
 
