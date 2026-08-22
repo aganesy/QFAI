@@ -128,8 +128,13 @@ The two that need their reasoning stated rather than asserted:
   established from outside.
 - **`CR-20260820-0012`'s own rejected options are not reintroduced.** Option 1 (narrow the signal to
   the affected lanes), option 2 (exempt a spec's in-flight TCs from the fatal gate), option 3 (waive
-  the row) and option 4 (merge first, then satisfy it) all stay rejected: `TDD-0069` is `blocked` with
-  a `Blocked-By`, no gate was narrowed, no waiver was requested, and nothing was merged.
+  the row) and option 4 (merge first, then satisfy it) all stay rejected: no gate was narrowed, no
+  waiver was requested, and nothing was merged. **This sentence also said "`TDD-0069` is `blocked` with
+  a `Blocked-By`" until round 18, and that has never been true** — the ledger has the row `todo` with
+  `Blocked-By: -`, and `git log -S` finds no revision where it was otherwise. It was the wrong evidence
+  for option 3 as well as false: what rejects a waiver is that none was requested. The gate found it in
+  the one section of this record that is a mandatory confirmation, and it matters to that gate's own
+  work, because Phase Red reads the `Blocked-By` cell to decide whether a row is skippable.
 
   **Option 2 has lost every stated ground it had, and this stage cannot supply another.** Its second
   reason was withdrawn during that CR's own review. Its first — that `QFAI-ATDD-111` has no ledger rows
@@ -147,7 +152,11 @@ The two that need their reasoning stated rather than asserted:
   removing the support for a sentence elsewhere. That is the cost of correcting a record in place, and
   the reason a correction has to be followed to whatever cites it.
 
-**No RE-OPEN is required.**
+**No RE-OPEN is required for eight of the nine rejected options.** Option 2 of `CR-20260820-0012`
+is the exception and is handed to that CR's owner above: its rejection has lost every stated ground,
+which is not the same as the option being right and is not this stage's to decide. The bare sentence
+stood here for a round after the bullet above it said it may not — round 18 found the two in the
+same section contradicting each other.
 
 ## Decisions made (with rationale)
 
@@ -477,7 +486,8 @@ files — a number derived once and then described as derived.**
 - **A1.** The retracted-claims guard's own docstring said "two entries left this list in round 8" and
   named a reason; all three current entries measure at zero occurrences, so the note described a state
   two rounds gone. A stale prose claim inside the instrument built to stop stale prose claims, and
-  structurally invisible to it, because `GOVERNANCE` holds records and not the guards that read them.
+  structurally invisible to it, because `GOVERNANCE` HELD records and not the guards that read them
+  — true when written, and false since round 15 widened it to this stage's own source files.
   The comment now states the membership RULE — "absent from every governance file", which the assertion
   re-measures on every run — instead of the history, so there is nothing left to go stale.
 - **A2.** Three figures were derived in `coverage-depth-spec-0017.md` and retyped here, where nothing
@@ -2466,7 +2476,7 @@ The forty-eight, by rule, with the round sealed:
 
 ```text
 QFAI-REVIEW-007   44   summary.json missing or misusing `revision_form`
-QFAI-REVIEW-004    2   review pack layout
+QFAI-REVIEW-004    1   review pack layout
 QFAI-REVIEW-005    1   review pack layout
 QFAI-ATDD-111      1   unscoped: 11 US across four specs, of which this spec owns NONE
 QFAI-ATDD-112      1   unscoped: 15 TCs across four specs, of which it owns 8
@@ -2497,8 +2507,10 @@ decision to record an open question instead of spending five minutes closing it.
 `QFAI-REVIEW-004` / `-005` are against **a review pack that is not yet sealed** — a pack cannot satisfy
 the layout contract until its last reviewer has landed and it has been sealed. Round 17's gate found this
 sentence attributing them to "this stage's own in-flight pack" while the pack they named was round 13's,
-abandoned since `b62adfa1` and never sealed because its three reviewers died before writing: a pack that
-clears itself never. It is sealed now, which is why the count above is 48. Round 4's gatekeeper found
+abandoned since `b62adfa1` because its three reviewers died before writing. **And round 18 found the
+sentence that replaced it backwards**: round 13's pack was not sealed by that correction and still holds
+only a request, so it is one of the packs in both of those errors rather than a cleared one. What moves
+the count to 48 is the CURRENT round being sealed, not round 13. Round 4's gatekeeper found
 this undisclosed, and it is the same class of gap as the two packs that were missing `summary.json`:
 masked in CI only because the `tdd` step fails first on the scoped gate's error, which was `error=2` when
 this was written and is `error=1` now.

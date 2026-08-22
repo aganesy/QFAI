@@ -376,11 +376,21 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const afterClassC = text.slice(classCAt + 1);
     const classCStop = afterClassC.search(/^(?:\*\*Class |## )/m);
     const classCBody = classCStop === -1 ? afterClassC : afterClassC.slice(0, classCStop);
-    const namedInProse = new Set(
-      [...classCBody.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
-        (match) => `${match[1] ?? ""}/${match[2] ?? ""}`,
-      ),
-    );
+    // The coordinates AND the reason after them. Matching the coordinates alone made the roster a list
+    // of names: round 18 deleted a reason, swapped two reasons between members, and wrote coordinates
+    // with no reason at all — every one of the three green. What class C claims is that each member has
+    // ITS OWN reason, so the bullet must carry a bolded one and the reasons must be distinct.
+    const reasons = new Map<string, string>();
+    for (const match of classCBody.matchAll(
+      /^- `(US-0017-\d{4})`\s*×\s*`([^`]+)`\s*—\s*\*\*([^*]+)\*\*/gm,
+    )) {
+      reasons.set(`${match[1] ?? ""}/${match[2] ?? ""}`, (match[3] ?? "").trim());
+    }
+    const namedInProse = new Set(reasons.keys());
+    expect(
+      [...new Set(reasons.values())].length,
+      "each class C member needs its own reason, and two members sharing one is a reason for neither",
+    ).toBe(reasons.size);
     const classC = members
       .filter((member) => member.className === "C")
       .map((member) => `${member.row}/${member.column}`);
@@ -569,7 +579,11 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       // contradicting the table passed — and a section that states one column's score twice is
       // exactly the state this pin exists to catch.
       const all = [
-        ...rowSection.matchAll(new RegExp(`^- \\*\\*${column} \`([^\`]+)\`\\*\\*`, "gm")),
+        // Any bullet marker, any indent, inside a blockquote or not. Anchoring `^- ` alone let `* `,
+        // `  - `, `> - ` and a tab-indented bullet each carry a contradicting score through green.
+        ...rowSection.matchAll(
+          new RegExp(`^[ \\t>]*[-*+] \\*\\*${column} \`([^\`]+)\`\\*\\*`, "gm"),
+        ),
       ].map((match) => match[1] ?? "");
       if (all.length > 1) {
         disagreeing.push(`${column}: the section states it ${String(all.length)} times`);

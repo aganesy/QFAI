@@ -520,7 +520,8 @@ describe(
       // arbitrary code, with all seven projects and `ci:lint` green.
       //
       // Two questions, because the surface has two halves. WHICH files arrive, outside the four
-      // agent-instruction trees, is a nine-entry list and is pinned. WHAT KIND of file arrives anywhere,
+      // agent-instruction trees, is a six-entry list and is pinned by path and by content. WHAT KIND of
+      // file arrives anywhere,
       // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be
       // a file a package manager or a shell executes.
       const root = await project();

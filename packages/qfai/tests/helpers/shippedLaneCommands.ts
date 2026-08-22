@@ -996,7 +996,7 @@ export function fileDigest(raw: Buffer): string {
 }
 
 /**
- * The adopter-facing files `qfai init` writes, outside the four agent-instruction trees.
+ * The adopter-facing files `qfai init` writes, outside the eight agent-instruction trees.
  *
  * The shape pins cover `.github/workflows/**` and nothing else, and `qfai init` writes more than
  * workflows. Round 17's gate planted a `package.json` carrying a `preinstall` and an `.npmrc` into the
@@ -1036,7 +1036,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
 
-/** The four trees excluded from the path pin, and excluded from nothing else. */
+/** The eight trees excluded from the PATH pin, and excluded from nothing else — the kind rule reads them. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
   ".qfai/",
   ".claude/",

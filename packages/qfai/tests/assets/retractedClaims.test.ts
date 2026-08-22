@@ -327,7 +327,7 @@ const RETIRED: readonly string[] = [
   // The previous version of this comment said "two entries left this list in round 8" and named a
   // reason. Round 10 measured all three current entries at zero occurrences, so the note described a
   // state two rounds gone — a stale prose claim inside the instrument built to stop stale prose claims,
-  // and structurally invisible to it, because `GOVERNANCE` holds records and not the guards that read
+  // and structurally invisible to it, because `GOVERNANCE` held records and not the guards that read
   // them. Stating the rule instead of the history removes the thing that could go stale.
   "P1d has run three times",
   "transition itself is still owed a P1d PASS",

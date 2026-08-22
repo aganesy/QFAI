@@ -226,7 +226,10 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // FENCED regions removed, and a row must have the columns of a row. The first version read any
     // line beginning `| ` + a backticked path, so a fenced sample carrying the path satisfied it
     // with the real table row deleted — a check over prose that prose can satisfy by accident.
-    const unfenced = section.replace(/^```[\s\S]*?^```/gm, "");
+    // BOTH fence markers. Stripping only backticks let a `~~~`-fenced decoy table satisfy this with
+    // the real row deleted — and the sibling guard in this same stage's work already carried the
+    // tilde form, so this was one rule in two copies with only one of them corrected.
+    const unfenced = section.replace(/^(?:```|~~~)[\s\S]*?^(?:```|~~~)/gm, "");
     // And the TABLE, found by its header row, rather than any pipe-line in the section: round 17
     // deleted the real row and satisfied this with a sentence two paragraphs below it. Third version,
     // third time vacuous, and the third time for the same reason — the check read a wider region than
@@ -294,14 +297,19 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // numeral up to three words from `mechanisms`, so `29 of the 31 mechanisms` satisfied it while
     // stating two numbers — and a true sentence added in a different section reddened a row whose own
     // claim is scoped to one. A claim about a section is checked over that section.
+    // The section ends at the next heading of ANY level. Ending it at `\n### ` did not stop at a `## `,
+    // so the "section" ran 186 lines across three headings — a true corpus size elsewhere reddened this
+    // row and two false ones inside the region passed. And the previous repair answered that by
+    // narrowing the NEEDLE instead, which lost `29 escape mechanisms`, a spelling the version before it
+    // caught. The region and the needle are two problems; fixing one with the other lost ground.
     const sectionStart = prose.lastIndexOf("### ", prose.indexOf(stated?.[0] ?? ""));
-    const sectionEnd = prose.indexOf("\n### ", sectionStart + 1);
+    const sectionEnd = prose.slice(sectionStart + 1).search(/\n#{2,4} /);
     const section = prose.slice(
       sectionStart === -1 ? 0 : sectionStart,
-      sectionEnd === -1 ? prose.length : sectionEnd,
+      sectionEnd === -1 ? prose.length : sectionStart + 1 + sectionEnd,
     );
     const sites = [
-      ...section.matchAll(/(\d+) mechanisms?\b/g),
+      ...section.matchAll(/(\d+)(?:\s+\S+){0,2}\s+mechanisms?\b/g),
       ...section.matchAll(/mechanisms? (?:pinned|held)[^.]{0,24}?(\d+)\b/g),
       ...section.matchAll(/lets all (\d+) through/g),
       ...section.matchAll(/with all (\d+) listed/g),
