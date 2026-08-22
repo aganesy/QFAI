@@ -215,8 +215,8 @@ Mechanically, so it can be checked rather than judged:
 
 Consequences:
 
-- An item's four verdicts (gate items 3, 5, 7, 8) MUST all name the **same**
-  revision. Verdicts from different revisions do not compose into a ruling about
+- An item's verdicts (gate items 3, 5, 7, 8, and 9 on a row a UI-affecting
+  clause routed) MUST all name the **same** revision. Verdicts from different revisions do not compose into a ruling about
   one state — the earlier ones ruled on code that no longer exists.
 - **The exception is item 3, on every row, above under _A transient
   observation names its own revision_.** A RED is observed before the code that

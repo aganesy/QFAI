@@ -75,13 +75,19 @@ describe("evidence and verdicts carry a revision", () => {
       );
     });
 
-    it(`${tree}: gate item 10 requires the four observations to agree`, async () => {
+    it(`${tree}: gate item 10 requires the observations to agree`, async () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
         // Article-free: the clause now opens a sentence of its own, after the
         // `Audited evidence hash` rule that addresses what the revision leaves out.
-        "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+        // Item 9 joins the set on a row a UI-affecting clause routed: its verdict
+        // carries a `Reviewed revision` too, and excluding it from the agreement
+        // rule is what let a parity PASS taken against an older surface stand.
+        "item's sub-agent observations (items 3, 5, 7, 8, and 9 on a row a clause routed) all name the **same** revision",
+      );
+      expect(flat(await read(tree, REFERENCE))).toContain(
+        "An item's verdicts (gate items 3, 5, 7, 8, and 9 on a row a UI-affecting clause routed) MUST all name the **same** revision.",
       );
     });
 
