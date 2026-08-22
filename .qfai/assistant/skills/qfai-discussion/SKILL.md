@@ -49,9 +49,9 @@ UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, 
 ## Required Process
 
 1. Run the core interview for concept, scope, stakeholders, and constraints.
-2. Run Inception Deck and include at least one Mermaid diagram.
-3. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
-4. Run `.qfai/assistant/constitution/research-first-protocol.md`, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there.
+2. Run `.qfai/assistant/constitution/research-first-protocol.md` before any other artifact is authored, record its `research_summary` output in the `## Research Summary` section of `04_Sources.md`, then register source traceability there. Its `best_practices` / `anti_patterns` are inputs to every step below, not a late fill-in.
+3. Run Inception Deck and include at least one Mermaid diagram.
+4. Run Story Workshop, capture user stories and user flows; HTML+CSS mock is optional fallback only.
 5. Capture scope, REQ, NFR, glossary, constraints, and policies.
 6. Run Example Mapping and capture `Example Seeds`.
 7. Update `11_OQ-Register.md`, resolve OQs until open count is zero, and move deferred items to `13_Deferred.md`.

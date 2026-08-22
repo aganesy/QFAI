@@ -22,12 +22,9 @@ const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
 /** `key: [fill me in]` — a shipped template placeholder that was never replaced. */
 const PLACEHOLDER_FIELD_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*\[[^\]]*\][ \t]*$/gm;
 /** `source_id:` reference carried by best_practices / anti_patterns / reflection entries. */
-const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(\S+)[ \t]*$/gm;
-/** `id:` of a list entry — anchored so `source_id:` is not mistaken for it. */
-const ENTRY_ID_RE = /^[ \t]*(?:-[ \t]*)?id:[ \t]*(\S+)/im;
-const REFLECTION_APPLY_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*apply\b/im;
-/** `action:` carrying one of the three decisions the protocol allows. */
-const REFLECTION_ACTION_RE = /^[ \t]*(?:-[ \t]*)?action:[ \t]*(?:apply|reject|defer)\b/im;
+const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(.*)$/gm;
+/** The decisions `reflection[].action` is allowed to record. */
+const REFLECTION_ACTIONS = new Set(["apply", "reject", "defer"]);
 /** The required pack file that holds the `## Research Summary` storage slot. */
 const RESEARCH_SUMMARY_FILE = "04_Sources.md";
 /** Output Schema fields every `best_practices[]` / `anti_patterns[]` entry carries. */
@@ -39,7 +36,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const issues: Issue[] = [];
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target));
-  issues.push(...(await checkStorageSlotPresence(root, target.activePackDir)));
+  issues.push(...(await checkStorageSlotPresence(root, target)));
 
   for (const filePath of target.files) {
     let content: string;
@@ -64,7 +61,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
 
     const sourceEntries = splitYamlListEntries(yaml, "sources");
     const sourceIds = sourceEntries
-      .map((entry) => ENTRY_ID_RE.exec(entry)?.[1] ?? "")
+      .map((entry) => readScalarField(entry, "id") ?? "")
       .filter((id) => id.length > 0);
     if (sourceEntries.length === 0) {
       issues.push(
@@ -209,7 +206,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // entry by entry: a single complete entry must not satisfy the required
     // fields on behalf of its siblings.
     const reflectionEntries = splitYamlListEntries(yaml, "reflection");
-    const hasApply = reflectionEntries.some((entry) => REFLECTION_APPLY_RE.test(entry));
+    const hasApply = reflectionEntries.some((entry) => readReflectionAction(entry) === "apply");
     if (reflectionEntries.length === 0) {
       issues.push(
         issue(
@@ -278,7 +275,7 @@ function checkReflectionEntries(rel: string, entries: readonly string[]): Issue[
         ),
       );
     }
-    if (!REFLECTION_ACTION_RE.test(entry)) {
+    if (readReflectionAction(entry) === null) {
       issues.push(
         issue(
           "QFAI-RESEARCH-009",
@@ -314,6 +311,14 @@ type ResearchSummaryScanTarget = {
    * retro-failing a pack nobody is working on.
    */
   activePackDir: string | null;
+  /**
+   * Whether a `04_Sources.md` that cannot be read at all is this gate's to
+   * report. `validateDiscussionPackReadiness` (QFAI-DPACK-002) only inspects
+   * the LATEST pack, so an active pointer pinned to an OLDER pack that lost
+   * the file is reported by nobody else — there, the missing storage slot is
+   * QFAI-RESEARCH-014's finding.
+   */
+  reportMissingStorageFile: boolean;
   /** Discussion root, used to anchor pack-level findings. */
   discussionRoot: string;
   /** `currentId` that is set but does not resolve to exactly one pack on disk. */
@@ -344,7 +349,7 @@ async function resolveResearchSummaryScanTarget(
   config: QfaiConfig,
 ): Promise<ResearchSummaryScanTarget> {
   const discussionRoot = path.resolve(root, config.paths.discussionDir);
-  const base = { discussionRoot, brokenPointer: null } as const;
+  const base = { discussionRoot, brokenPointer: null, reportMissingStorageFile: false } as const;
 
   let currentId: string | null = null;
   try {
@@ -356,7 +361,12 @@ async function resolveResearchSummaryScanTarget(
   if (currentId !== null) {
     try {
       const active = await resolveActiveDiscussionPack(root);
-      return { ...base, files: [storageFileOf(active)], activePackDir: active };
+      return {
+        ...base,
+        files: [storageFileOf(active)],
+        activePackDir: active,
+        reportMissingStorageFile: !(await isLatestDiscussionPack(discussionRoot, active)),
+      };
     } catch (error) {
       return {
         ...base,
@@ -401,6 +411,21 @@ function storageFileOf(packDir: string): string {
   return path.join(packDir, RESEARCH_SUMMARY_FILE);
 }
 
+/**
+ * Whether `packDir` is the pack `validateDiscussionPackReadiness` inspects.
+ * A pack that is NOT the latest one gets no required-file check from anybody
+ * else, so this gate has to cover its storage file itself.
+ */
+async function isLatestDiscussionPack(discussionRoot: string, packDir: string): Promise<boolean> {
+  let latest: string | null = null;
+  try {
+    latest = await findLatestDiscussionPackDir(discussionRoot);
+  } catch {
+    return false;
+  }
+  return latest !== null && path.resolve(latest) === path.resolve(packDir);
+}
+
 async function collectMarkdownFiles(scanRoot: string): Promise<string[]> {
   const pattern = path.posix.join(scanRoot.replace(/\\/g, "/"), "**/*.md");
   try {
@@ -437,23 +462,29 @@ function describeBrokenPointer(root: string, target: ResearchSummaryScanTarget):
  * be skipped by the per-file loop and pass `--profile discussion --fail-on
  * error` with no research at all.
  *
- * A `04_Sources.md` that is missing outright is QFAI-DPACK-002's finding, not
- * this gate's, so an unreadable file is left alone.
+ * A `04_Sources.md` that is missing outright is QFAI-DPACK-002's finding only
+ * while the active pack is also the LATEST pack — the single pack
+ * `inspectLatestDiscussionPack` looks at. When `qfai discussion use` pins an
+ * older pack, nothing else checks that pack's required files, so an unreadable
+ * storage file there is reported here instead of passing silently.
  */
 async function checkStorageSlotPresence(
   root: string,
-  activePackDir: string | null,
+  target: ResearchSummaryScanTarget,
 ): Promise<Issue[]> {
+  const { activePackDir } = target;
   if (activePackDir === null) {
     return [];
   }
 
-  const target = storageFileOf(activePackDir);
+  const storageFile = storageFileOf(activePackDir);
   let content: string;
   try {
-    content = await readFile(target, "utf-8");
+    content = await readFile(storageFile, "utf-8");
   } catch {
-    return [];
+    return target.reportMissingStorageFile
+      ? [storageSlotIssue(root, storageFile, "the file is missing or unreadable")]
+      : [];
   }
 
   const hasHeading = RESEARCH_SUMMARY_HEADING_RE.test(content);
@@ -463,15 +494,17 @@ async function checkStorageSlotPresence(
   }
 
   const detail = hasHeading ? "the section is empty" : 'no "## Research Summary" heading';
-  return [
-    issue(
-      "QFAI-RESEARCH-014",
-      `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
-      "error",
-      path.relative(root, target).replace(/\\/g, "/"),
-      "researchSummary.storageSlotMissing",
-    ),
-  ];
+  return [storageSlotIssue(root, storageFile, detail)];
+}
+
+function storageSlotIssue(root: string, storageFile: string, detail: string): Issue {
+  return issue(
+    "QFAI-RESEARCH-014",
+    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
+    "error",
+    path.relative(root, storageFile).replace(/\\/g, "/"),
+    "researchSummary.storageSlotMissing",
+  );
 }
 
 /**
@@ -502,8 +535,12 @@ function collectUnresolvedSourceIds(yaml: string, sourceIds: readonly string[]):
   const known = new Set(sourceIds);
   const unresolved = new Set<string>();
   for (const match of yaml.matchAll(SOURCE_ID_REF_RE)) {
-    const value = match[1];
-    // A placeholder value is already reported as QFAI-RESEARCH-012.
+    // Compare the parsed scalar, not the literal text: a serializer that
+    // quotes `id: "SRC-0001"` but leaves `source_id: SRC-0001` bare writes the
+    // same value twice, and the reference must still resolve.
+    const value = normalizeScalar(match[1] ?? "");
+    // A placeholder value is already reported as QFAI-RESEARCH-012; an empty
+    // one is reported as a missing required field.
     if (!value || value.startsWith("[") || known.has(value)) {
       continue;
     }
@@ -526,18 +563,50 @@ function extractResearchSummarySection(content: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
-/** `field:` present with something after the colon, anywhere in the entry. */
+/**
+ * The scalar written after `field:` inside the entry, or `null` when the key
+ * is absent. The key is anchored to the start of a line (with an optional list
+ * marker) so `source_id:` is never mistaken for `id:`.
+ */
+function readScalarField(entry: string, field: string): string | null {
+  const match = new RegExp(`^[ \\t]*(?:-[ \\t]*)?${field}:[ \\t]*(.*)$`, "im").exec(entry);
+  return match ? normalizeScalar(match[1] ?? "") : null;
+}
+
+/**
+ * A single-line YAML scalar as YAML itself would read it: surrounding quotes
+ * removed, a trailing ` # comment` dropped, and the null spellings folded to
+ * the empty string. Testing the raw text instead would accept `title: ""` and
+ * `reason: null` as filled in, and would compare `"SRC-0001"` against
+ * `SRC-0001` as two different values.
+ */
+function normalizeScalar(raw: string): string {
+  const text = raw.trim();
+  const quoted = /^(["'])([\s\S]*)\1$/.exec(text);
+  if (quoted) {
+    return (quoted[2] ?? "").trim();
+  }
+  const uncommented = text.replace(/[ \t]+#.*$/, "").trim();
+  return uncommented === "~" || /^null$/i.test(uncommented) ? "" : uncommented;
+}
+
+/** `field:` present with a non-empty YAML scalar value, anywhere in the entry. */
 function hasNonEmptyField(entry: string, field: string): boolean {
-  return new RegExp(`^[ \\t]*(?:-[ \\t]*)?${field}:[ \\t]*\\S`, "im").test(entry);
+  const value = readScalarField(entry, field);
+  return value !== null && value.length > 0;
+}
+
+/** `action:` of a reflection entry when it records one of the allowed decisions. */
+function readReflectionAction(entry: string): string | null {
+  const value = readScalarField(entry, "action")?.toLowerCase() ?? "";
+  return REFLECTION_ACTIONS.has(value) ? value : null;
 }
 
 /** Names an entry in a finding message by its `id` / `source_id`, else index. */
 function describeEntry(key: string, entry: string, index: number): string {
-  const ref = ENTRY_ID_RE.exec(entry)?.[1] ?? SOURCE_ID_OF_ENTRY_RE.exec(entry)?.[1];
+  const ref = readScalarField(entry, "id") || readScalarField(entry, "source_id");
   return ref ? `${key}[${index}] (${ref})` : `${key}[${index}]`;
 }
-
-const SOURCE_ID_OF_ENTRY_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(\S+)/im;
 
 function extractYamlListBlock(section: string, key: string): string | null {
   const lines = section.split(/\r?\n/);

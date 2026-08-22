@@ -157,6 +157,15 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       expect(required).toContain("research-first-protocol.md");
       expect(required).toContain("## Research Summary");
       expect(required).toContain("04_Sources.md");
+      // The constitution defines this as the protocol run at the start of the
+      // work, so it must precede the artifacts meant to consume its findings.
+      // Placed after them it degrades into a summary filled in at the end.
+      expect(required.indexOf("research-first-protocol.md")).toBeLessThan(
+        required.indexOf("Inception Deck"),
+      );
+      expect(required.indexOf("research-first-protocol.md")).toBeLessThan(
+        required.indexOf("Story Workshop"),
+      );
     });
 
     it(`${label}: completion cannot be declared without the stored summary`, async () => {
@@ -304,6 +313,51 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     await usePack(root, "discussion-20260202000000000");
     const onNewer = await validateResearchSummary(root, defaultConfig);
     expect(onNewer.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("reports a pinned older pack whose 04_Sources.md is gone", async () => {
+    // `validateDiscussionPackReadiness` (QFAI-DPACK-002) only inspects the
+    // NEWEST pack, so a pointer pinned to an older pack that lost the storage
+    // file is nobody else's finding: the gate has to report it here or the
+    // pinned session passes with no research file at all.
+    const template = await readShippedTemplate();
+    const root = await seedPack(fillEveryPlaceholder(template), "discussion-20260202000000000");
+    await mkdir(path.join(root, ".qfai", "discussion", "discussion-20260101000000000"), {
+      recursive: true,
+    });
+    await usePack(root, "discussion-20260101000000000");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
+
+    expect(slotMissing?.severity).toBe("error");
+    expect(slotMissing?.file).toContain("discussion-20260101000000000");
+  });
+
+  it("resolves source_id references by scalar value, not by quoting", async () => {
+    // A YAML serializer may quote `sources[].id` and leave the references
+    // bare. Both spell the same scalar, so QFAI-RESEARCH-013 must not fire.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      "    - id: SRC-0001",
+      '    - id: "SRC-0001"',
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("rejects YAML-empty values in required fields", async () => {
+    // `title: ""` / `reason: null` carry no content, so a summary that writes
+    // them has not recorded a protocol run either.
+    const filled = fillEveryPlaceholder(await readShippedTemplate())
+      .replace(/^([ \t]+)title: Recorded by the research-first protocol run$/m, '$1title: ""')
+      .replace(/^([ \t]+)reason: Recorded by the research-first protocol run$/m, "$1reason: null");
+    const codes = (await validateResearchSummary(await seedPack(filled), defaultConfig)).map(
+      (item) => item.code,
+    );
+
+    expect(codes).toContain("QFAI-RESEARCH-004"); // sources[].title
+    expect(codes).toContain("QFAI-RESEARCH-010"); // reflection[].reason
   });
 
   it("requires action and reason on every reflection entry, not just one", async () => {
