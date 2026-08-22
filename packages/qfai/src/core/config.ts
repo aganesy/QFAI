@@ -44,16 +44,17 @@ export type QfaiValidationConfig = {
      */
     forbidTestTodoStubs: boolean;
     /**
-     * @deprecated 読み取り側が存在しない dead knob のため撤去した。
-     * YAML ローダーは旧キーを無視して読み込みを継続し、この型も次の major
-     * まで optional の互換シムとして残す。`defaultConfig` / `loadConfig` は
-     * 値を埋めないので、実行時は常に `undefined` になる。
+     * @deprecated 検証側の読み取り箇所が存在しない dead knob。true にしても
+     * 診断は出ない。shipped な `qfai.config.yaml` からは除外済みで、次の
+     * major で型からも削除する。paths.promptsDir と同じ扱いで、それまでは
+     * 既定値・パースともに従来どおり維持する (公開型なので既存の
+     * TypeScript 利用者が `boolean` として参照できる状態を保つ)。
      */
-    requireLayerTags?: boolean;
+    requireLayerTags: boolean;
     /**
      * @deprecated `testStrategy.requireLayerTags` と同じ扱い。
      */
-    requireSizeTags?: boolean;
+    requireSizeTags: boolean;
   };
   traceability: {
     brMustHaveSc: boolean;
@@ -201,6 +202,8 @@ export const defaultConfig: QfaiConfig = {
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
       forbidTestTodoStubs: true,
+      requireLayerTags: false,
+      requireSizeTags: false,
     },
     traceability: {
       brMustHaveSc: true,
@@ -441,6 +444,25 @@ function normalizeValidation(
         testStrategyRaw?.forbidTestTodoStubs,
         base.testStrategy.forbidTestTodoStubs,
         "validation.testStrategy.forbidTestTodoStubs",
+        configPath,
+        issues,
+      ),
+      // Deprecated compat shim: no validator reads either flag, but the type is
+      // public, so keep parsing them until the next major instead of handing a
+      // `undefined` back to a caller that used to get its configured value.
+      requireLayerTags: readBoolean(
+        testStrategyRaw?.requireLayerTags,
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated requireLayerTags
+        base.testStrategy.requireLayerTags,
+        "validation.testStrategy.requireLayerTags",
+        configPath,
+        issues,
+      ),
+      requireSizeTags: readBoolean(
+        testStrategyRaw?.requireSizeTags,
+        // eslint-disable-next-line @typescript-eslint/no-deprecated -- read deprecated requireSizeTags
+        base.testStrategy.requireSizeTags,
+        "validation.testStrategy.requireSizeTags",
         configPath,
         issues,
       ),

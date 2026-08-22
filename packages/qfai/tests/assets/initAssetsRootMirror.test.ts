@@ -41,6 +41,14 @@ const initRootConfig = path.join(
 );
 const rootConfig = path.join(repoRoot, "qfai.config.yaml");
 
+/**
+ * `validation.testStrategy` keys kept on the public type and on
+ * `defaultConfig` only so existing TypeScript consumers keep compiling. No
+ * validator reads them; they must never reappear in a shipped
+ * `qfai.config.yaml`.
+ */
+const DEPRECATED_TEST_STRATEGY_KEYS = new Set(["requireLayerTags", "requireSizeTags"]);
+
 /** Every file under `dir`, as paths relative to `dir`, with `/` separators. */
 async function collectFiles(dir: string, base: string = dir): Promise<string[]> {
   const collected: string[] = [];
@@ -137,13 +145,24 @@ describe("init assets root mirror", () => {
   // The shipped `testStrategy` block used to declare `requireLayerTags` and
   // `requireSizeTags`, which nothing outside `config.ts` ever read, and to omit
   // `forbidTestTodoStubs`, the one key a validator actually gates on. Hold the
-  // shipped surface equal to the surface the loader resolves, so every key an
-  // operator can see in the file is a key that can change an outcome.
+  // shipped surface equal to the LIVE surface the loader resolves, so every key
+  // an operator can see in the file is a key that can change an outcome. The
+  // two retired knobs stay on `defaultConfig` purely as a deprecated compat
+  // shim for TypeScript consumers of the public `QfaiValidationConfig` type
+  // (same treatment as `paths.promptsDir`, which is likewise unshipped), so
+  // they are excluded here rather than seeded back into a fresh project.
   it("ships a testStrategy block whose keys the config loader resolves", async () => {
-    const liveKeys = Object.keys(defaultConfig.validation.testStrategy).sort();
+    const liveKeys = Object.keys(defaultConfig.validation.testStrategy)
+      .filter((key) => !DEPRECATED_TEST_STRATEGY_KEYS.has(key))
+      .sort();
     expect(liveKeys, "forbidTestTodoStubs is the live gate and must stay resolvable").toContain(
       "forbidTestTodoStubs",
     );
+    for (const key of DEPRECATED_TEST_STRATEGY_KEYS) {
+      expect(liveKeys, `${key} is deprecated and must not be advertised as live`).not.toContain(
+        key,
+      );
+    }
 
     for (const [label, filePath] of [
       ["init asset", initRootConfig],

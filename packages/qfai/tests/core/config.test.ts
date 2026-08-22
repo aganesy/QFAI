@@ -289,9 +289,12 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
 describe("testStrategy key surface", () => {
   // Issue #408: `requireLayerTags` / `requireSizeTags` were declared, defaulted
   // and parsed here but read by nothing, so flipping either one changed no
-  // outcome. They are gone; a project that still carries them from an older
-  // `qfai init` must keep loading cleanly instead of hitting a config issue.
-  it("ignores the retired requireLayerTags / requireSizeTags keys", async () => {
+  // outcome. They are off the shipped `qfai.config.yaml` and `evaluateStrategyTags`
+  // is gone, but the keys survive on the public `QfaiValidationConfig` type as a
+  // deprecated compat shim (same treatment as `paths.promptsDir`): a project
+  // that still carries them must keep loading cleanly AND keep resolving the
+  // value it set, not `undefined`.
+  it("still resolves the deprecated requireLayerTags / requireSizeTags keys", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-retired-tags-"));
     try {
       await writeFile(
@@ -312,17 +315,22 @@ describe("testStrategy key surface", () => {
         "forbidTestTodoStubs",
         "maxE2eScenarioCount",
         "maxE2eScenarioRatio",
+        "requireLayerTags",
+        "requireSizeTags",
       ]);
+      expect(config.validation.testStrategy.requireLayerTags).toBe(true);
+      expect(config.validation.testStrategy.requireSizeTags).toBe(true);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
 
   // `QfaiValidationConfig` is re-exported from the package root, so a
-  // TypeScript consumer that still writes or reads the two retired keys must
-  // keep compiling until the next major: they stay as deprecated optional
-  // properties. Reading one yields `undefined`, never a parsed value.
-  it("keeps the retired keys assignable and readable on the public type", async () => {
+  // TypeScript consumer that constructs one of these objects or reads either
+  // key into a `boolean` must keep compiling until the next major. Both stay
+  // required `boolean`, and an absent key still falls back to `false` rather
+  // than to `undefined`.
+  it("keeps the deprecated keys a required boolean on the public type", async () => {
     const legacy: QfaiValidationConfig["testStrategy"] = {
       maxE2eScenarioRatio: null,
       maxE2eScenarioCount: null,
@@ -330,17 +338,17 @@ describe("testStrategy key surface", () => {
       requireLayerTags: true,
       requireSizeTags: true,
     };
-    expect(legacy.requireLayerTags).toBe(true);
-    expect(legacy.requireSizeTags).toBe(true);
+    const enabled: boolean = legacy.requireLayerTags;
+    expect(enabled).toBe(true);
 
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-legacy-type-"));
     try {
       await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
 
       const { config } = await loadConfig(root);
-      const resolved: QfaiValidationConfig["testStrategy"] = config.validation.testStrategy;
-      expect(resolved.requireLayerTags).toBeUndefined();
-      expect(resolved.requireSizeTags).toBeUndefined();
+      const resolved: boolean = config.validation.testStrategy.requireSizeTags;
+      expect(resolved).toBe(false);
+      expect(config.validation.testStrategy.requireLayerTags).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
