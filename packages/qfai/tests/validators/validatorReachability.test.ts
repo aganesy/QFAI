@@ -251,13 +251,51 @@ async function collectReachable(): Promise<Set<string>> {
   return reachable;
 }
 
+const FINDINGS_ARRAY = /\bIssue\[\]/;
+
+/**
+ * Named types that carry findings. Not every validator returns `Issue[]`
+ * directly — `validatePrototypingSkillContent` returns a `SkillValidationResult`
+ * with an `issues` member, and both validators this PR deleted had that same
+ * shape — so a rule that only reads the annotation text would exempt exactly
+ * the family it is meant to police.
+ */
+async function collectFindingsTypes(): Promise<Set<string>> {
+  const names = new Set<string>();
+  for (const file of await walkTsFiles(path.join(packageRoot, "src"))) {
+    const sourceFile = await parseSource(file);
+    if (sourceFile === null) {
+      continue;
+    }
+    for (const statement of sourceFile.statements) {
+      if (ts.isInterfaceDeclaration(statement)) {
+        const carries = statement.members.some(
+          (member) =>
+            ts.isPropertySignature(member) &&
+            member.type !== undefined &&
+            FINDINGS_ARRAY.test(member.type.getText(sourceFile)),
+        );
+        if (carries) {
+          names.add(statement.name.text);
+        }
+      } else if (
+        ts.isTypeAliasDeclaration(statement) &&
+        FINDINGS_ARRAY.test(statement.type.getText(sourceFile))
+      ) {
+        names.add(statement.name.text);
+      }
+    }
+  }
+  return names;
+}
+
 /**
  * Exported functions that can emit findings, identified by their declared
  * return type rather than by a name prefix: `run*`, `detect*` and `check*`
  * validators exist too, and a prefix rule would exempt exactly the modules this
  * PR deleted.
  */
-function findingsEntries(sourceFile: ts.SourceFile): string[] {
+function findingsEntries(sourceFile: ts.SourceFile, findingsTypes: ReadonlySet<string>): string[] {
   const names: string[] = [];
   for (const statement of sourceFile.statements) {
     if (!ts.isFunctionDeclaration(statement) || statement.name === undefined) {
@@ -266,8 +304,12 @@ function findingsEntries(sourceFile: ts.SourceFile): string[] {
     const isExported = statement.modifiers?.some(
       (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
     );
+    if (isExported !== true) {
+      continue;
+    }
     const returnType = statement.type?.getText(sourceFile) ?? "";
-    if (isExported === true && /\bIssue\[\]/.test(returnType)) {
+    const awaited = returnType.replace(/^Promise<([\s\S]*)>$/, "$1").trim();
+    if (FINDINGS_ARRAY.test(returnType) || findingsTypes.has(awaited)) {
       names.push(statement.name.text);
     }
   }
@@ -420,6 +462,7 @@ describe("validator reachability", () => {
   it("every findings entry in a reachable module is dispatched, not merely loaded", async () => {
     const reachable = await collectReachable();
     const modules = await collectValidatorModules();
+    const findingsTypes = await collectFindingsTypes();
 
     // Only modules the graph reaches: one that is not loaded at all is already
     // covered by `KNOWN_UNREACHABLE`, and pinning it twice would mean deleting
@@ -430,7 +473,7 @@ describe("validator reachability", () => {
       if (sourceFile === null || !reachable.has(file)) {
         continue;
       }
-      for (const name of findingsEntries(sourceFile)) {
+      for (const name of findingsEntries(sourceFile, findingsTypes)) {
         owners.set(name, file);
       }
     }
