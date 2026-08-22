@@ -357,6 +357,48 @@ export function isStillPlaceholder(fileBody: string, tcId: string): boolean {
   );
 }
 
+/**
+ * Tells whether a file is still the PRISTINE skeleton `dialect` emits for
+ * `tcId` — nothing of the operator's has landed in it.
+ *
+ * Stricter than `isStillPlaceholder`, and deliberately so: that predicate is a
+ * two-marker heuristic, and the JS/TS skeleton carries the
+ * `TODO: implement assertion for <TC>` line TWICE (once above `it.skip`, once
+ * inside it). An operator who replaces the inner TODO with a real assertion
+ * but leaves the outer one — and the sentinel header — still satisfies
+ * `isStillPlaceholder`. Deleting on that signal destroys their assertions.
+ *
+ * "Pristine" is therefore judged on the EXECUTABLE body: every line from the
+ * first non-comment, non-blank one onward must be byte-for-byte the dialect's
+ * own `buildBody(tcId)`. The comment header above it is skipped rather than
+ * compared, because its reference lines (`// AC refs: ...`) track the spec's
+ * Test-Cases catalogue and legitimately differ from the run that wrote the
+ * file. CRLF and trailing whitespace are normalised so a checkout that
+ * rewrote line endings is not mistaken for operator work.
+ */
+export function isPristineSkeleton(
+  fileBody: string,
+  tcId: string,
+  dialect: ScaffoldDialect,
+): boolean {
+  if (!isStillPlaceholder(fileBody, tcId)) {
+    return false;
+  }
+  const lines = fileBody.replace(/\r\n/g, "\n").split("\n");
+  let start = 0;
+  while (start < lines.length) {
+    const line = (lines[start] ?? "").trim();
+    if (line === "" || line.startsWith(dialect.commentPrefix)) {
+      start += 1;
+      continue;
+    }
+    break;
+  }
+  const actual = lines.slice(start).join("\n").replace(/\s+$/, "");
+  const expected = dialect.buildBody(tcId).join("\n").replace(/\s+$/, "");
+  return actual === expected;
+}
+
 export type EmitSkeletonResult = {
   /** Absolute destination path. */
   destPath: string;
@@ -486,6 +528,25 @@ export async function isFilePlaceholder(filePath: string, tcId: string): Promise
   try {
     const body = await readFile(filePath, "utf-8");
     return isStillPlaceholder(body, tcId);
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * On-disk form of `isPristineSkeleton` — the predicate the CLI deletes on.
+ *
+ * Fails CLOSED: an unreadable or missing file is reported as "not pristine",
+ * so a read error can never be the reason a file is removed.
+ */
+export async function isFilePristineSkeleton(
+  filePath: string,
+  tcId: string,
+  dialect: ScaffoldDialect,
+): Promise<boolean> {
+  try {
+    const body = await readFile(filePath, "utf-8");
+    return isPristineSkeleton(body, tcId, dialect);
   } catch {
     return false;
   }

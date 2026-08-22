@@ -271,16 +271,25 @@ describe("the scaffold writes in the language the gate reads", () => {
  * extension, so a name the project's own runner never collects would still have
  * cleared the coverage gate — a test that never runs, reported as coverage.
  */
-/** A pristine skeleton body for `TC-0001-0001`, in the pre-dialect JS shape. */
+/**
+ * A pristine skeleton body for `TC-0001-0001`, byte-for-byte what the
+ * pre-dialect writer emitted — the TODO marker included TWICE, once above
+ * `it.skip` and once inside it. A simplified one-TODO fixture cannot express
+ * the case below where the inner TODO has been implemented and the outer one
+ * has not, which is exactly the file the retirement pass must not delete.
+ */
 const LEGACY_TS_PLACEHOLDER = [
   "// QFAI:SPEC-0001:TC-0001-0001",
   "// QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+  "// AC refs: AC-0001-0001",
   "",
   'import { describe, it } from "vitest";',
   "",
   'describe("TC-0001-0001", () => {',
   "  // TODO: implement assertion for TC-0001-0001",
-  '  it.skip("pending — scaffold placeholder", () => {});',
+  '  it.skip("pending — scaffold placeholder", () => {',
+  "    // TODO: implement assertion for TC-0001-0001",
+  "  });",
   "});",
   "",
 ].join("\n");
@@ -348,6 +357,52 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it("matches the whole destination path, not the basename alone", () => {
+    // `src/**/test_*.py` admits the pytest NAME this writer emits, so a
+    // basename-only comparison resolved happily and wrote
+    // `tests/integration/spec-0001/test_tc_0001_0001.py` — a path those globs
+    // do not cover, so the project's own test scan never collects it.
+    // `QFAI-ATDD-112` widens to the bare extension and counts the annotation
+    // regardless, so filling the placeholder in cleared the coverage gate with
+    // a test that never ran.
+    const scaffoldDir = "tests/integration/spec-0001";
+    expect(resolveScaffoldDialect(["src/**/test_*.py"], { scaffoldDir }).outcome).toBe(
+      "naming-mismatch",
+    );
+    // The same globs still resolve when the destination is not compared, so
+    // the whole-path check is the strictly stronger one.
+    expect(resolveScaffoldDialect(["src/**/test_*.py"]).outcome).toBe("resolved");
+    // And a glob that DOES reach the scaffold directory still resolves.
+    const reached = resolveScaffoldDialect(["tests/**/test_*.py"], { scaffoldDir });
+    expect(reached.outcome).toBe("resolved");
+  });
+
+  it("names the rejected destination path in the refusal", async () => {
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["src/**/test_*.py"]) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        expect(errors.join("\n")).toContain("tests/integration/spec-0001/test_<tc_id>.py");
+        // Nothing was written: a refusal that still emitted the file would
+        // clear QFAI-ATDD-112 with a test the runner never collects.
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
   it("succeeds on an unsupported stack when the spec has no L3 TC to emit", async () => {
     // The dialect refusal is about output this command would have written. A
     // spec whose TCs are all L1/L2 produces none, so a sweep over many specs
@@ -402,11 +457,48 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     );
   });
 
+  it("keeps an old file whose INNER TODO was implemented and outer one left", async () => {
+    // The two-marker `isStillPlaceholder` heuristic says "placeholder" here:
+    // the sentinel is present and the outer `// TODO: implement assertion for
+    // ...` line above `it.skip` was never touched. Deleting on that signal
+    // destroys the assertion the operator wrote inside the test body.
+    const implemented = LEGACY_TS_PLACEHOLDER.replace(
+      "    // TODO: implement assertion for TC-0001-0001",
+      "    expect(1).toBe(1);",
+    );
+    expect(implemented).toContain("  // TODO: implement assertion for TC-0001-0001");
+    expect(implemented).toContain("QFAI-SCAFFOLD-PLACEHOLDER");
+    await withProject(
+      {
+        "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS),
+        "tests/integration/spec-0001/TC-0001-0001.test.ts": implemented,
+      },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(0);
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts"),
+            "utf-8",
+          ),
+        ).resolves.toContain("expect(1).toBe(1)");
+        expect(errors.join("\n")).toMatch(/earlier naming convention/);
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
   it("keeps an old file that has a real assertion, and says so", async () => {
     const implemented = LEGACY_TS_PLACEHOLDER.replace(
-      "  // TODO: implement assertion for TC-0001-0001",
-      "  expect(1).toBe(1);",
-    );
+      '  it.skip("pending — scaffold placeholder", () => {',
+      '  it("runs", () => {',
+    ).replace("    // TODO: implement assertion for TC-0001-0001", "    expect(1).toBe(1);");
     await withProject(
       {
         "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS),

@@ -19,15 +19,17 @@
  *   1. the derived EXTENSION set picks the dialect AND the emitted extension —
  *      a `tests/**\/*.test.js` project gets `.test.js`, not `.test.ts`, which
  *      the scan (`**\/*.{feature,js,markdown,md}`) would never open;
- *   2. the configured BASENAME shapes pick between that dialect's naming
- *      conventions — a project whose globs only allow `*_test.py` gets
- *      `<tc>_test.py`, not `test_<tc>.py`. The scan widens to the bare
- *      extension and would have counted the annotation either way, so an
- *      un-collectable file would have cleared `QFAI-ATDD-112` while never
- *      running once.
+ *   2. the configured PATHS pick between that dialect's naming conventions — a
+ *      project whose globs only allow `*_test.py` gets `<tc>_test.py`, not
+ *      `test_<tc>.py`, and a project whose globs cover `src/**` only gets
+ *      nothing at all, because the writer's own
+ *      `<testsDir>/integration/<spec-id>/` is not a directory those globs
+ *      reach. The scan widens to the bare extension and would have counted the
+ *      annotation either way, so an un-collectable file would have cleared
+ *      `QFAI-ATDD-112` while never running once.
  *
- * When no naming this writer knows matches the configured shapes, the caller
- * refuses rather than emitting a test nothing executes.
+ * When no path this writer would produce matches the configured globs, the
+ * caller refuses rather than emitting a test nothing executes.
  */
 
 import { deriveTestFileExtensions } from "../atddTraceability.js";
@@ -226,23 +228,39 @@ export const SCAFFOLD_PLACEHOLDER_GLOBS: readonly string[] = Array.from(
   new Set(SCAFFOLD_DIALECTS.map((dialect) => dialect.placeholderGlob)),
 );
 
+/** One skeleton this writer could have emitted for a TC, with its dialect. */
+export type ScaffoldSkeletonCandidate = {
+  /** Basename the naming convention produces for the TC. */
+  readonly fileName: string;
+  /** The dialect that would have written it — its body shape and comment prefix. */
+  readonly dialect: ScaffoldDialect;
+};
+
 /**
- * Every basename this writer can emit for one TC, across every dialect and
+ * Every skeleton this writer can emit for one TC, across every dialect and
  * naming convention.
  *
  * Used by the command to find skeletons an EARLIER run left under a different
  * convention: once the dialect follows the config, a project scaffolded before
  * that (or before its globs changed) has a `<TC>.test.ts` next to the new
  * `test_<tc>.py` for the same TC, and `D-SCAFFOLD-PLACEHOLDER` globs both.
+ *
+ * The dialect travels with the basename because retiring one of those files
+ * requires knowing the body it was born with: only a skeleton still identical
+ * to what its own dialect emits may be deleted.
  */
-export function scaffoldFileNameCandidates(tcId: string): string[] {
-  return Array.from(
-    new Set(
-      SCAFFOLD_DIALECTS.flatMap((dialect) =>
-        dialect.namings.map((naming) => naming.fileName(tcId)),
-      ),
-    ),
-  );
+export function scaffoldSkeletonCandidates(tcId: string): ScaffoldSkeletonCandidate[] {
+  const seen = new Set<string>();
+  const candidates: ScaffoldSkeletonCandidate[] = [];
+  for (const template of SCAFFOLD_DIALECTS) {
+    for (const naming of template.namings) {
+      const fileName = naming.fileName(tcId);
+      if (seen.has(fileName)) continue;
+      seen.add(fileName);
+      candidates.push({ fileName, dialect: bindNaming(template, naming) });
+    }
+  }
+  return candidates;
 }
 
 /** Outcome of matching a project's configured globs against this table. */
@@ -251,10 +269,15 @@ export type ScaffoldDialectResolution =
   /** Extensions were recovered, but qfai has no skeleton shape for any of them. */
   | { readonly outcome: "unsupported-stack" }
   /**
-   * The stack is known, but every basename this writer would emit for it is
-   * excluded by the project's own globs — so the file would be scanned by
-   * `QFAI-ATDD-112` (which widens to the bare extension) while never being
-   * collected by the runner. Coverage cleared by a test that never runs.
+   * The stack is known, but every path this writer would emit for it is
+   * excluded by the project's own globs — whether by its basename convention
+   * or, when the destination is known, by the directory it lands in. Either
+   * way the file would be scanned by `QFAI-ATDD-112` (which widens to the bare
+   * extension) while never being collected by the runner: coverage cleared by
+   * a test that never runs.
+   *
+   * `shapes` name the whole destination path when one was supplied, and the
+   * basename shape alone when it was not.
    */
   | { readonly outcome: "naming-mismatch"; readonly shapes: readonly string[] };
 
@@ -329,12 +352,14 @@ function splitGlobAlternatives(inner: string): string[] {
 }
 
 /**
- * Compile one glob basename into regex source.
+ * Compile one glob into regex source.
  *
  * Handles the constructs fast-glob's own matcher does inside a single path
  * segment: `*`, `?`, brace alternation `{a,b}`, and the extglob forms
  * `@(a|b)`, `?(a|b)`, `*(a|b)`, `+(a|b)`, `!(a|b)`. Alternatives are compiled
- * recursively, so a wildcard nested in a group keeps its meaning.
+ * recursively, so a wildcard nested in a group keeps its meaning. The
+ * cross-segment globstar `**` is handled too, so a whole configured glob —
+ * directories included — can be matched against a whole candidate path.
  *
  * Extglob support is not cosmetic: `tests/**\/*.@(test|spec).ts` is a valid and
  * common fast-glob pattern that the emitted `<TC-ID>.test.ts` satisfies. An
@@ -344,7 +369,7 @@ function splitGlobAlternatives(inner: string): string[] {
  * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
  * lazy segment wildcard — so this matcher agrees with fast-glob there too.
  */
-function compileBasenameGlob(pattern: string): string {
+function compileGlob(pattern: string): string {
   let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
@@ -352,7 +377,7 @@ function compileBasenameGlob(pattern: string): string {
       const close = findGroupClose(pattern, index + 1, "(", ")");
       if (close !== -1) {
         const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close))
-          .map((alternative) => compileBasenameGlob(alternative.trim()))
+          .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source +=
           char === "!"
@@ -361,6 +386,27 @@ function compileBasenameGlob(pattern: string): string {
         index = close;
         continue;
       }
+    }
+    if (char === "*" && pattern[index + 1] === "*") {
+      // Globstar, only when it occupies a whole segment — picomatch degrades
+      // `a**b` to a single `*`, and so does this.
+      const precededByBoundary = index === 0 || pattern[index - 1] === "/";
+      const afterIndex = index + 2;
+      if (precededByBoundary && afterIndex >= pattern.length) {
+        source += "[^/]*(?:/[^/]*)*";
+        index = afterIndex - 1;
+        continue;
+      }
+      if (precededByBoundary && pattern[afterIndex] === "/") {
+        // `**/` matches zero or more whole segments, so `tests/**\/*.py` still
+        // matches `tests/a.py`.
+        source += "(?:[^/]*/)*";
+        index = afterIndex;
+        continue;
+      }
+      source += "[^/]*";
+      index = afterIndex - 1;
+      continue;
     }
     if (char === "*") {
       source += "[^/]*";
@@ -374,7 +420,7 @@ function compileBasenameGlob(pattern: string): string {
       const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
         const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
-          .map((alternative) => compileBasenameGlob(alternative.trim()))
+          .map((alternative) => compileGlob(alternative.trim()))
           .join("|");
         source += `(?:${alternatives})`;
         index = close;
@@ -386,20 +432,47 @@ function compileBasenameGlob(pattern: string): string {
   return source;
 }
 
-/**
- * Compile one glob basename (`*.test.ts`, `*_test.py`, `*.@(test|spec).ts`)
- * into a matcher for a candidate filename.
- *
- * Deliberately basename-only: the directory half of `testFileGlobs` describes
- * where a project keeps its hand-written tests, while the scaffold's own
- * directory is fixed by `QFAI-ATDD-112` (`<testsDir>/integration/<spec-id>/`).
- * Matching whole paths would refuse a project whose only glob is, say,
- * `packages/*\/tests/**\/*.test.ts` — whose naming convention the writer
- * satisfies perfectly.
- */
-function basenameMatcher(pattern: string): RegExp {
-  return new RegExp(`^${compileBasenameGlob(pattern)}$`, "i");
+/** `./tests/**\/*.py` -> `tests/**\/*.py`; backslashes folded to POSIX. */
+function normalizeGlobPath(value: string): string {
+  return value.replace(/\\/g, "/").replace(/^\.\//, "");
 }
+
+/**
+ * Compile one configured glob into a matcher for a candidate path.
+ *
+ * When the caller knows where the skeleton will be written, the WHOLE glob is
+ * matched against the WHOLE repo-relative path. Matching the basename alone
+ * was not enough: a project whose globs are `src/**\/test_*.py` accepts the
+ * `test_<tc>.py` name, so the writer emitted
+ * `tests/integration/<spec-id>/test_<tc>.py` — a path those globs do not
+ * cover, and therefore a file the project's own test scan never collects.
+ * `QFAI-ATDD-112` widens to the bare extension and counted the annotation
+ * anyway, so filling the placeholder in cleared the coverage gate with a test
+ * that never ran — the exact outcome this selection exists to prevent, one
+ * axis over.
+ *
+ * The basename-only form remains for callers with no destination in hand
+ * (`scaffoldDir` omitted): it is the weaker check, never the wrong one.
+ */
+function globMatcher(pattern: string, matchWholePath: boolean): RegExp {
+  const normalized = normalizeGlobPath(pattern);
+  const source = matchWholePath ? normalized : globBasename(normalized);
+  return new RegExp(`^${compileGlob(source)}$`, "i");
+}
+
+/** Where the writer will put the skeleton, when the caller knows it. */
+export type ScaffoldDialectOptions = {
+  /**
+   * Repo-relative POSIX directory the skeleton lands in
+   * (`tests/integration/<spec-id>`). Given, the configured globs are matched
+   * against the full destination path rather than its basename alone.
+   *
+   * Omitted when the destination is not expressible relative to the repo root
+   * (an absolute `paths.testsDir` pointing outside it), where a whole-path
+   * comparison against repo-relative globs would be meaningless.
+   */
+  readonly scaffoldDir?: string;
+};
 
 /**
  * Pick the skeleton dialect — and the naming convention within it — for a
@@ -412,7 +485,13 @@ function basenameMatcher(pattern: string): RegExp {
  */
 export function resolveScaffoldDialect(
   testFileGlobs: readonly string[],
+  options: ScaffoldDialectOptions = {},
 ): ScaffoldDialectResolution {
+  const scaffoldDir =
+    options.scaffoldDir === undefined ? undefined : normalizeGlobPath(options.scaffoldDir);
+  /** The path the writer would produce for `fileName`, as the globs see it. */
+  const candidatePath = (fileName: string): string =>
+    scaffoldDir === undefined || scaffoldDir === "" ? fileName : `${scaffoldDir}/${fileName}`;
   const extensions = deriveTestFileExtensions(testFileGlobs);
   if (extensions.size === 0) {
     // Same fallback the scan takes (`DEFAULT_TEST_FILE_GLOB`), so an
@@ -429,12 +508,18 @@ export function resolveScaffoldDialect(
   // to a `tests/**\/*.test.js` project put the file inside the scanned
   // directory with an extension `deriveAtddFilePattern` never opens.
   const candidates = template.namings.filter((naming) => extensions.has(naming.extension));
-  const matchers = testFileGlobs.map((glob) => basenameMatcher(globBasename(glob)));
+  const matchWholePath = scaffoldDir !== undefined && scaffoldDir !== "";
+  const matchers = testFileGlobs.map((glob) => globMatcher(glob, matchWholePath));
   const chosen = candidates.find((naming) =>
-    matchers.some((matcher) => matcher.test(naming.fileName(PROBE_TC_ID))),
+    matchers.some((matcher) => matcher.test(candidatePath(naming.fileName(PROBE_TC_ID)))),
   );
   if (chosen === undefined) {
-    return { outcome: "naming-mismatch", shapes: candidates.map((naming) => naming.shape) };
+    // The shapes name the whole destination when one is known, so the refusal
+    // says which path the globs rejected rather than only which basename.
+    return {
+      outcome: "naming-mismatch",
+      shapes: candidates.map((naming) => candidatePath(naming.shape)),
+    };
   }
   return { outcome: "resolved", dialect: bindNaming(template, chosen) };
 }

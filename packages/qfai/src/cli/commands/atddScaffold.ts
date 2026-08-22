@@ -27,7 +27,7 @@ import {
 import {
   buildSkeleton,
   emitSkeleton,
-  isFilePlaceholder,
+  isFilePristineSkeleton,
   parseTestCases,
   scaffoldDestPath,
   SCAFFOLD_LAYER_DIR,
@@ -35,7 +35,7 @@ import {
 } from "../../core/atdd/scaffold.js";
 import {
   resolveScaffoldDialect,
-  scaffoldFileNameCandidates,
+  scaffoldSkeletonCandidates,
   SCAFFOLD_RUNNERS,
   type ScaffoldDialect,
 } from "../../core/atdd/scaffoldDialect.js";
@@ -98,12 +98,14 @@ function unsupportedStackMessage(testFileGlobs: readonly string[], testsDir: str
 
 /**
  * Operator-facing refusal for a stack whose extension this command knows but
- * whose configured basename convention it cannot satisfy.
+ * whose configured globs cover none of the paths it would write.
  *
  * `QFAI-ATDD-112` widens to the bare extension, so a `test_<tc>.py` written to
- * a project whose globs only allow `*_test.py` WOULD have cleared the coverage
- * gate — while never being collected by the runner. Refusing keeps the gate
- * honest instead of clearing it with a test that never executes.
+ * a project whose globs only allow `*_test.py` — or whose globs cover `src/**`
+ * and not the writer's own `<testsDir>/integration/<spec-id>/` — WOULD have
+ * cleared the coverage gate while never being collected by the runner.
+ * Refusing keeps the gate honest instead of clearing it with a test that never
+ * executes.
  */
 function namingMismatchMessage(
   shapes: readonly string[],
@@ -111,11 +113,11 @@ function namingMismatchMessage(
   testsDir: string,
 ): string {
   return (
-    `qfai atdd scaffold: none of the skeleton names this command emits ` +
+    `qfai atdd scaffold: none of the skeleton paths this command would write ` +
     `(${shapes.join(", ")}) match validation.traceability.testFileGlobs ` +
     `(${testFileGlobs.join(", ")}), so the generated file would clear QFAI-ATDD-112 ` +
     `— which widens to the bare extension — while your runner never collected it. ` +
-    `Add a glob that admits one of those names, or author these TCs by hand under ` +
+    `Add a glob that admits one of those paths, or author these TCs by hand under ` +
     `${testsDir}/${SCAFFOLD_HOME_KIND}/<spec-id>/, keeping their ` +
     `QFAI:SPEC-XXXX:TC-YYYY annotations.`
   );
@@ -125,7 +127,7 @@ function namingMismatchMessage(
 type SupersededPlaceholders = {
   /** Pristine placeholders this run deleted. */
   removed: string[];
-  /** Files left alone because a real assertion had landed in them. */
+  /** Files left alone because their body is no longer the pristine skeleton. */
   progressed: string[];
   /** Placeholders that could not be deleted (message included). */
   failed: string[];
@@ -139,8 +141,14 @@ type SupersededPlaceholders = {
  * (or before its globs changed) keeps a `<TC>.test.ts` next to the new
  * `test_<tc>.py`. `D-SCAFFOLD-PLACEHOLDER` globs both shapes, so the stale one
  * goes on being reported — and implementing the new test never clears it.
- * Only a file still carrying this command's own placeholder markers is
- * removed; one with a real assertion is left for the operator to port.
+ *
+ * Only a file that is still the PRISTINE skeleton its own dialect emits is
+ * removed. The two-marker `isStillPlaceholder` heuristic is not enough here:
+ * the JS/TS skeleton carries the `TODO: implement assertion for <TC>` line
+ * TWICE (above `it.skip` and inside it), so an operator who replaced the inner
+ * one with a real assertion and left the outer TODO and the sentinel in place
+ * still satisfies it — and this `rm` would have deleted their assertions.
+ * Anything the operator touched is kept and named on stderr for them to port.
  */
 async function dropSupersededPlaceholders(
   root: string,
@@ -150,13 +158,13 @@ async function dropSupersededPlaceholders(
   keepFileName: string,
 ): Promise<SupersededPlaceholders> {
   const result: SupersededPlaceholders = { removed: [], progressed: [], failed: [] };
-  for (const candidate of scaffoldFileNameCandidates(entry.tcId)) {
-    if (candidate === keepFileName || !existingNames.has(candidate)) {
+  for (const { fileName, dialect } of scaffoldSkeletonCandidates(entry.tcId)) {
+    if (fileName === keepFileName || !existingNames.has(fileName)) {
       continue;
     }
-    const absolute = path.join(scaffoldDir, candidate);
+    const absolute = path.join(scaffoldDir, fileName);
     const relative = path.relative(root, absolute).replace(/\\/g, "/");
-    if (!(await isFilePlaceholder(absolute, entry.tcId))) {
+    if (!(await isFilePristineSkeleton(absolute, entry.tcId, dialect))) {
       result.progressed.push(relative);
       continue;
     }
@@ -388,7 +396,25 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // never going to be written to. An unsupported stack is only an error when
   // there is L3 output it would have blocked.
   const testFileGlobs = config.validation.traceability.testFileGlobs;
-  const resolution = resolveScaffoldDialect(testFileGlobs);
+  // Read once, before the first emit: every basename already in the scaffold
+  // directory, so a skeleton an earlier run wrote for the same TC under a
+  // different naming convention can be retired instead of duplicated.
+  const scaffoldDir = path.resolve(options.root, testsDirRel, SCAFFOLD_LAYER_DIR, specId);
+  // The globs are matched against the WHOLE destination path, not the basename
+  // alone: `src/**\/test_*.py` admits the pytest NAME this writer emits while
+  // covering none of `tests/integration/<spec-id>/`, so the emitted file would
+  // clear `QFAI-ATDD-112` (which widens to the bare extension) without the
+  // project's own test scan ever collecting it.
+  //
+  // An absolute `paths.testsDir` outside the repo has no repo-relative form to
+  // compare against repo-relative globs, so the check falls back to the
+  // basename there rather than refusing on a comparison it cannot make.
+  const scaffoldDirRel = path.relative(options.root, scaffoldDir).replace(/\\/g, "/");
+  const comparable = !scaffoldDirRel.startsWith("..") && !path.isAbsolute(scaffoldDirRel);
+  const resolution = resolveScaffoldDialect(
+    testFileGlobs,
+    comparable ? { scaffoldDir: scaffoldDirRel } : {},
+  );
   if (resolution.outcome === "unsupported-stack") {
     // Refuse rather than mislead: a skeleton in a language qfai has no shape
     // for would be uncounted the same way, only silently.
@@ -403,10 +429,6 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
 
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
 
-  // Read once, before the first emit: every basename already in the scaffold
-  // directory, so a skeleton an earlier run wrote for the same TC under a
-  // different naming convention can be retired instead of duplicated.
-  const scaffoldDir = path.resolve(options.root, testsDirRel, SCAFFOLD_LAYER_DIR, specId);
   const existingNames = await readScaffoldDirNames(scaffoldDir);
 
   const outcomes: PerTcOutcome[] = [];
@@ -447,10 +469,10 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   for (const outcome of outcomes) {
     if (outcome.superseded.progressed.length > 0) {
       writeErr(
-        `qfai atdd scaffold: ${outcome.entry.tcId} also has an implemented test under an ` +
-          `earlier naming convention (${outcome.superseded.progressed.join(", ")}). It does not ` +
-          `match this project's configured test globs, so it counts for nothing — port its ` +
-          `assertion into ${outcome.destRel} and delete it.`,
+        `qfai atdd scaffold: ${outcome.entry.tcId} also has an edited test file under an ` +
+          `earlier naming convention (${outcome.superseded.progressed.join(", ")}), so it was ` +
+          `kept rather than retired. It does not match this project's configured test globs, so ` +
+          `it counts for nothing — port whatever it holds into ${outcome.destRel} and delete it.`,
       );
     }
     if (outcome.superseded.failed.length > 0) {
