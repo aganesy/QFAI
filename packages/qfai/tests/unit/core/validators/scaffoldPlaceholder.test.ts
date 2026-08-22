@@ -65,9 +65,13 @@ async function seedPythonScaffold(specId: string, tcId: string): Promise<void> {
     `# QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.`,
     `# AC refs: AC-0008-0001`,
     "",
-    `def test_${snake}() -> None:`,
-    `    # TODO: implement assertion for ${tcId}`,
-    `    raise NotImplementedError("pending — scaffold placeholder")`,
+    `import unittest`,
+    "",
+    "",
+    `class Test_${tcId.replace(/-/g, "_")}(unittest.TestCase):`,
+    `    def test_${snake}(self) -> None:`,
+    `        # TODO: implement assertion for ${tcId}`,
+    `        raise NotImplementedError("pending — scaffold placeholder")`,
     "",
   ].join("\n");
   await writeFile(path.join(dir, `test_${snake}.py`), body, "utf-8");

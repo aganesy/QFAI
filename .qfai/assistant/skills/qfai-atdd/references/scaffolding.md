@@ -12,15 +12,19 @@ The skeleton's language is derived from
 `qfai.config.yaml#validation.traceability.testFileGlobs` — the same key
 `QFAI-ATDD-112` derives its scan extensions from, so the file the command
 writes is always a file the gate reads. A JS/TS glob set (and the unconfigured
-default) gets a `vitest` body; a Python one gets a `pytest` body. A stack with
-neither is refused with a non-zero exit naming the derived pattern: author
-those TCs by hand in `tests/integration/<spec-id>/`, keeping the
-`QFAI:SPEC-XXXX:TC-YYYY` annotation.
+default) gets a `vitest` body; a Python one gets a `unittest.TestCase`
+subclass, which pytest **and** `python -m unittest discover` both collect —
+the globs name an extension, never a runner, and a module-level `def test_...`
+that unittest never collects would let you clear the gate with zero tests run.
+A stack with neither is refused with a non-zero exit naming the derived
+pattern: author those TCs by hand in `tests/integration/<spec-id>/`, keeping
+the `QFAI:SPEC-XXXX:TC-YYYY` annotation.
 
 The file **name** follows the same key one level finer. The extension is one
 the globs actually admit (`tests/**/*.test.js` gets `.test.js`, not `.test.ts`),
 and the basename follows the configured convention — `test_<tc_id>.py` or
-`<tc_id>_test.py`, `<TC-ID>.test.ts` or `<TC-ID>.spec.ts`. `QFAI-ATDD-112`
+`<tc_id>_test.py`, `<TC-ID>.test.ts` or `<TC-ID>.spec.ts`; extglob patterns
+(`*.@(test|spec).ts`) are read the way fast-glob reads them. `QFAI-ATDD-112`
 widens to the bare extension, so a name your runner does not collect would
 clear the coverage gate with a test that never runs; when no name the command
 can emit matches your globs, it refuses instead. A skeleton an earlier run

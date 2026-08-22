@@ -89,6 +89,17 @@ function toSnakeCase(tcId: string): string {
 }
 
 /**
+ * `TC-0001-0002` -> `Test_TC_0001_0002` — the class holding the skeleton.
+ *
+ * Not PEP8's CapWords, deliberately: the TC id has to stay readable in the
+ * failure output, and the `Test` prefix is what pytest's default
+ * `python_classes` looks for.
+ */
+function toTestClassName(tcId: string): string {
+  return `Test_${tcId.replace(/-/g, "_")}`;
+}
+
+/**
  * JS/TS extensions in emit preference order. `ts` leads so an unconfigured
  * project — and a project that allows several — keeps the output it had.
  */
@@ -125,7 +136,7 @@ const JS_TS_DIALECT: ScaffoldDialectTemplate = {
 
 const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   id: "python",
-  runner: "pytest",
+  runner: "pytest (unittest-compatible)",
   commentPrefix: "#",
   // Both pytest collector conventions; the glob and the namings below are the
   // same two shapes, so `D-SCAFFOLD-PLACEHOLDER` reads exactly the emitted
@@ -149,10 +160,25 @@ const PYTHON_DIALECT: ScaffoldDialectTemplate = {
   // hand the operator, from the command itself, a finding the same tool
   // forbids. An unimplemented obligation is left in the Red state TDD expects
   // instead — `D-SCAFFOLD-PLACEHOLDER` still tracks and escalates it.
+  //
+  // The skeleton is a `unittest.TestCase` rather than a module-level
+  // `def test_...`, because `testFileGlobs` names extensions, never runners:
+  // `.py` alone cannot tell pytest from unittest, and `python -m unittest
+  // discover` collects NO module-level function. A bare `def test_...` would
+  // therefore have let a unittest project retire the TODO and the sentinel —
+  // clearing `QFAI-ATDD-112` and `D-SCAFFOLD-PLACEHOLDER` on the annotation
+  // alone — while the obligation had never once been executed. A TestCase
+  // subclass is collected by BOTH runners, so no runner detection (or extra
+  // config the operator would have to supply) is needed to keep the gate
+  // honest.
   buildBody: (tcId) => [
-    `def test_${toSnakeCase(tcId)}() -> None:`,
-    `    # TODO: implement assertion for ${tcId}`,
-    `    raise NotImplementedError(${JSON.stringify(PLACEHOLDER_REASON)})`,
+    `import unittest`,
+    "",
+    "",
+    `class ${toTestClassName(tcId)}(unittest.TestCase):`,
+    `    def test_${toSnakeCase(tcId)}(self) -> None:`,
+    `        # TODO: implement assertion for ${tcId}`,
+    `        raise NotImplementedError(${JSON.stringify(PLACEHOLDER_REASON)})`,
   ],
 };
 
@@ -251,24 +277,91 @@ function globBasename(glob: string): string {
 }
 
 /**
- * Compile one glob basename (`*.test.ts`, `*_test.py`, `*.{ts,tsx}`) into a
- * matcher for a candidate filename.
- *
- * Deliberately basename-only: the directory half of `testFileGlobs` describes
- * where a project keeps its hand-written tests, while the scaffold's own
- * directory is fixed by `QFAI-ATDD-112` (`<testsDir>/integration/<spec-id>/`).
- * Matching whole paths would refuse a project whose only glob is, say,
- * `packages/*\/tests/**\/*.test.ts` — whose naming convention the writer
- * satisfies perfectly.
- *
- * Alternatives inside `{...}` are treated as literals; no configured glob in
- * practice nests a wildcard there, and over-matching is the safe direction (it
- * accepts a naming rather than refusing one).
+ * Extglob prefixes fast-glob (picomatch) accepts, mapped to the regex
+ * quantifier each applies to its own alternation. `!` is a negation rather
+ * than a quantifier and is expanded separately below.
  */
-function basenameMatcher(pattern: string): RegExp {
-  let source = "^";
+const EXTGLOB_QUANTIFIERS: Readonly<Record<string, string>> = {
+  "@": "",
+  "?": "?",
+  "*": "*",
+  "+": "+",
+};
+
+/** Index of the `closer` balancing the opener at `open`, or -1 when unterminated. */
+function findGroupClose(pattern: string, open: number, opener: string, closer: string): number {
+  let depth = 0;
+  for (let index = open; index < pattern.length; index += 1) {
+    const char = pattern[index];
+    if (char === opener) {
+      depth += 1;
+    } else if (char === closer) {
+      depth -= 1;
+      if (depth === 0) return index;
+    }
+  }
+  return -1;
+}
+
+/**
+ * Split a group's interior on its top-level separators. `,` (braces) and `|`
+ * (extglob) are both accepted in both group kinds: no real glob relies on the
+ * other one being a literal, and conflating them keeps one splitter.
+ */
+function splitGlobAlternatives(inner: string): string[] {
+  const parts: string[] = [];
+  let depth = 0;
+  let current = "";
+  for (const char of inner) {
+    if (char === "(" || char === "{") {
+      depth += 1;
+    } else if (char === ")" || char === "}") {
+      depth -= 1;
+    } else if ((char === "," || char === "|") && depth === 0) {
+      parts.push(current);
+      current = "";
+      continue;
+    }
+    current += char;
+  }
+  parts.push(current);
+  return parts;
+}
+
+/**
+ * Compile one glob basename into regex source.
+ *
+ * Handles the constructs fast-glob's own matcher does inside a single path
+ * segment: `*`, `?`, brace alternation `{a,b}`, and the extglob forms
+ * `@(a|b)`, `?(a|b)`, `*(a|b)`, `+(a|b)`, `!(a|b)`. Alternatives are compiled
+ * recursively, so a wildcard nested in a group keeps its meaning.
+ *
+ * Extglob support is not cosmetic: `tests/**\/*.@(test|spec).ts` is a valid and
+ * common fast-glob pattern that the emitted `<TC-ID>.test.ts` satisfies. An
+ * escape-everything matcher declared it a `naming-mismatch` and made the
+ * command exit 1 on an ordinary TypeScript project.
+ *
+ * `!(a|b)` uses picomatch's own expansion — a negative lookahead followed by a
+ * lazy segment wildcard — so this matcher agrees with fast-glob there too.
+ */
+function compileBasenameGlob(pattern: string): string {
+  let source = "";
   for (let index = 0; index < pattern.length; index += 1) {
     const char = pattern[index] ?? "";
+    if (pattern[index + 1] === "(" && "@?*+!".includes(char)) {
+      const close = findGroupClose(pattern, index + 1, "(", ")");
+      if (close !== -1) {
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 2, close))
+          .map((alternative) => compileBasenameGlob(alternative.trim()))
+          .join("|");
+        source +=
+          char === "!"
+            ? `(?:(?!(?:${alternatives}))[^/]*?)`
+            : `(?:${alternatives})${EXTGLOB_QUANTIFIERS[char] ?? ""}`;
+        index = close;
+        continue;
+      }
+    }
     if (char === "*") {
       source += "[^/]*";
       continue;
@@ -278,20 +371,34 @@ function basenameMatcher(pattern: string): RegExp {
       continue;
     }
     if (char === "{") {
-      const close = pattern.indexOf("}", index);
+      const close = findGroupClose(pattern, index, "{", "}");
       if (close !== -1) {
-        const alternatives = pattern
-          .slice(index + 1, close)
-          .split(",")
-          .map((alternative) => escapeRegExp(alternative.trim()));
-        source += `(?:${alternatives.join("|")})`;
+        const alternatives = splitGlobAlternatives(pattern.slice(index + 1, close))
+          .map((alternative) => compileBasenameGlob(alternative.trim()))
+          .join("|");
+        source += `(?:${alternatives})`;
         index = close;
         continue;
       }
     }
     source += escapeRegExp(char);
   }
-  return new RegExp(`${source}$`, "i");
+  return source;
+}
+
+/**
+ * Compile one glob basename (`*.test.ts`, `*_test.py`, `*.@(test|spec).ts`)
+ * into a matcher for a candidate filename.
+ *
+ * Deliberately basename-only: the directory half of `testFileGlobs` describes
+ * where a project keeps its hand-written tests, while the scaffold's own
+ * directory is fixed by `QFAI-ATDD-112` (`<testsDir>/integration/<spec-id>/`).
+ * Matching whole paths would refuse a project whose only glob is, say,
+ * `packages/*\/tests/**\/*.test.ts` — whose naming convention the writer
+ * satisfies perfectly.
+ */
+function basenameMatcher(pattern: string): RegExp {
+  return new RegExp(`^${compileBasenameGlob(pattern)}$`, "i");
 }
 
 /**

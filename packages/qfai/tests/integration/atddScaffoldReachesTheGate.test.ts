@@ -201,6 +201,40 @@ describe("the scaffold writes in the language the gate reads", () => {
     );
   });
 
+  it("emits a Python skeleton `python -m unittest discover` also collects", async () => {
+    // `testFileGlobs` names extensions, never runners: `.py` alone cannot tell
+    // pytest from unittest. A module-level `def test_...` is collected by
+    // pytest only, so a unittest project could retire the TODO and the
+    // sentinel — clearing QFAI-ATDD-112 and D-SCAFFOLD-PLACEHOLDER on the
+    // annotation alone — while the obligation had never once been executed.
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS) },
+      async (root) => {
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: () => {},
+        });
+        expect(code).toBe(0);
+        const body = await readFile(
+          path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+          "utf-8",
+        );
+        expect(body).toContain("import unittest");
+        // A TestCase subclass is collected by BOTH runners, so the skeleton
+        // needs no runner detection to stay honest.
+        expect(body).toMatch(/^class Test_TC_0001_0001\(unittest\.TestCase\):$/m);
+        expect(body).toMatch(/^ {4}def test_tc_0001_0001\(self\) -> None:$/m);
+        // Still Red by exception, not by a silent skip: QFAI-TEST-001 reports
+        // `pytest.skip` / `@unittest.skip` as an error.
+        expect(body).toContain("raise NotImplementedError");
+        expect(body).not.toMatch(/@(?:unittest|pytest)\.(?:mark\.)?skip/);
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
   it("refuses on a stack it has no skeleton shape for instead of writing an unread file", async () => {
     await withProject(
       { "qfai.config.yaml": CONFIG_WITH_GLOBS(["spec/**/*_spec.rb"]) },
@@ -258,6 +292,27 @@ describe("the scaffold writes a name the project's own runner collects", () => {
     expect(dialect.extension).toBe("js");
     const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
     expect(dest.replace(/\\/g, "/")).toContain("/spec-0001/TC-0001-0001.test.js");
+  });
+
+  it("reads the fast-glob extglob form instead of refusing a plain TS project", () => {
+    // `tests/**/*.@(test|spec).ts` is a valid fast-glob pattern that the
+    // `<TC-ID>.test.ts` this writer emits satisfies. A matcher that escaped
+    // `@`, `(`, `|` and `)` as literals called it a `naming-mismatch`, so the
+    // command exited 1 on an ordinary TypeScript project.
+    const dialect = requireDialect(["tests/**/*.@(test|spec).ts"]);
+    expect(dialect.id).toBe("js-ts");
+    const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
+    expect(dest.replace(/\\/g, "/")).toContain("/spec-0001/TC-0001-0001.test.ts");
+  });
+
+  it("interprets the extglob rather than ignoring it", () => {
+    // The other half of the same claim: `+(check|probe)_*.py` admits neither
+    // pytest convention this writer emits, so the honest outcome is still a
+    // refusal — an extglob that merely matched everything would have written
+    // a file the runner never collects.
+    expect(resolveScaffoldDialect(["tests/**/+(check|probe)_*.py"]).outcome).toBe(
+      "naming-mismatch",
+    );
   });
 
   it("follows the configured pytest basename convention", () => {
