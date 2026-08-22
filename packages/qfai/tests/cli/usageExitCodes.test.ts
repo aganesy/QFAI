@@ -62,6 +62,42 @@ describe("qfai --help exit-code section", () => {
     expect(section).toMatch(/guardrails[\s\S]*使用法エラー/);
   });
 
+  it("records the non-usage exit codes the other commands actually return", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    // guardrails check reports 検査エラー with 1, not only 0 / 2.
+    expect(section).toMatch(
+      new RegExp(`guardrails[\\s\\S]*?${EXIT_CODES.findings} = check で検査エラー`),
+    );
+    // report / show-spec exit 2 on a missing or unreadable input file — the
+    // catch-all "1 = 使用法エラー" row would misreport them.
+    expect(section).toMatch(
+      new RegExp(`report\\s+${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} =`),
+    );
+    expect(section).toMatch(
+      new RegExp(`prototyping show-spec\\s+${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} =`),
+    );
+    expect(section).toContain("--check の証明書 digest・gate mismatch");
+  });
+
+  it("splits --check-convergence from the ordinary iterate row", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    expect(section).toContain("prototyping iterate --check-convergence");
+    expect(section).toMatch(new RegExp(`--check-convergence[\\s\\S]*?${EXIT_CODES.ok} = 収束済み`));
+  });
+
+  it("does not advertise the reviewer hard-stop that no CLI path returns", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    // `shouldStop()` never inspects review.json#sessionStatus, so 64 from
+    // `prototyping iterate` is always convergence today.
+    expect(section).not.toMatch(/hard-stop/i);
+  });
+
   it("keeps the rendered section in sync with the EXIT_CODES constants", () => {
     const section = formatExitCodesSection();
 

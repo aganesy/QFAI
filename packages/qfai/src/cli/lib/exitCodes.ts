@@ -7,16 +7,28 @@
  * Consumers installing qfai from npm have no access to the framework's
  * own CLI contracts, which makes `--help` the only reachable statement
  * of this mapping.
+ *
+ * The block documents what the CLI *currently returns*, not what the
+ * contracts reserve: a code path that is specified but not yet wired to
+ * a command stays out of the table until it can actually be observed.
  */
 export const EXIT_CODES = {
   /** 成功 / fail-on 閾値未満 (prototyping iterate では「継続」)。 */
   ok: 0,
-  /** validate / doctor: --fail-on 閾値に到達。使用法エラーの既定値でもある。 */
+  /**
+   * validate / doctor / preflight: --fail-on 閾値に到達。
+   * guardrails check: 検査エラーを検出。
+   * 使用法エラーおよび実行時エラーの既定値でもある (guardrails を除く)。
+   */
   findings: 1,
-  /** 入力 / lock drift エラー。guardrails では使用法エラーもこの値。 */
+  /**
+   * 入力 / lock drift エラー。guardrails では使用法エラーも、
+   * report / prototyping show-spec では入力ファイルの欠落 / 破損も、
+   * prototyping certify では証明書 mismatch / 品質ゲート拒否もこの値。
+   */
   inputError: 2,
   /**
-   * prototyping: STOP — iterate は収束 / reviewer hard-stop、
+   * prototyping: STOP — iterate は収束 (全 4 軸 exceptional)、
    * certify は review.json のカバレッジ不足に同じ拒否クラスとして使う。
    */
   prototypingConverged: 64,
@@ -44,27 +56,51 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   },
   {
     label: "guardrails",
-    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力エラー / 使用法エラー`],
+    lines: [
+      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = check で検査エラーを検出,`,
+      `${EXIT_CODES.inputError} = 入力エラー / 使用法エラー`,
+    ],
+  },
+  {
+    label: "report",
+    lines: [
+      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力 validate.json の欠落 (--in / config 既定)`,
+    ],
   },
   {
     label: "prototyping iterate",
     lines: [
       `${EXIT_CODES.ok} = 継続 (次 cycle へ), ${EXIT_CODES.inputError} = 入力 / lock drift エラー,`,
-      `${EXIT_CODES.prototypingConverged} = STOP: 収束 または reviewer hard-stop,`,
+      `${EXIT_CODES.prototypingConverged} = STOP: 収束 (全 4 軸 exceptional),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: バジェット枯渇 (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify 失敗`,
     ],
   },
   {
+    label: "prototyping iterate --check-convergence",
+    lines: [
+      `${EXIT_CODES.ok} = 収束済み, ${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む)`,
+    ],
+  },
+  {
     label: "prototyping certify",
     lines: [
-      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力エラー,`,
+      `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.inputError} = 入力エラー / 品質ゲート拒否 (validate エラー, verify 不合格,`,
+      `      DESIGN.md 違反) / --check の証明書 digest・gate mismatch,`,
       `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落)`,
     ],
   },
   {
+    label: "prototyping show-spec",
+    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`],
+  },
+  {
     label: "その他のコマンド",
-    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = 使用法エラー`],
+    lines: [
+      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = 使用法エラー / 実行時エラー`,
+      "(init / discussion / audit log / handoff upgrade / atdd scaffold)",
+    ],
   },
 ];
 
@@ -89,9 +125,17 @@ function padLabel(label: string): string {
 }
 
 function formatRow(row: ExitCodeRow): string {
+  const continuationIndent = `  ${" ".repeat(LABEL_WIDTH)}`;
+  // ラベルが列幅を超える場合は 1 行使い切り、説明を次行から揃える。
+  // 桁揃えを壊してまで 1 行に押し込むより読みやすい。
+  if (displayWidth(row.label) >= LABEL_WIDTH) {
+    return [`  ${row.label}`, ...row.lines.map((line) => `${continuationIndent}${line}`)].join(
+      "\n",
+    );
+  }
   const [first, ...rest] = row.lines;
   const head = `  ${padLabel(row.label)}${first ?? ""}`;
-  const continuation = rest.map((line) => `  ${" ".repeat(LABEL_WIDTH)}${line}`);
+  const continuation = rest.map((line) => `${continuationIndent}${line}`);
   return [head, ...continuation].join("\n");
 }
 
