@@ -12,6 +12,7 @@ roles:
     devops-ci-engineer,
     completion-reviewer,
     qa-gatekeeper,
+    implementation-reviewer,
   ]
 routing-profile: runtime-heavy
 mode: evidence-focused

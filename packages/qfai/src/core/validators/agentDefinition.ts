@@ -10,6 +10,7 @@ import {
   emptySkillRouting,
   recordRoutedAgents,
   validateSkillRoles,
+  type ProfileSelection,
   type SkillRouting,
 } from "./skillRoles.js";
 import { exists, issue } from "./utils.js";
@@ -497,12 +498,13 @@ async function validateProfiles(
   reviewerIds: Set<string>,
   issues: Issue[],
   root: string,
-): Promise<Map<string, Set<string>>> {
+): Promise<Map<string, ProfileSelection>> {
   const rel = manifestRelativePath(profilesPath, root);
-  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-015`
-  // needs this side of the manifest too before it can call a declared role
-  // unreachable.
-  const selections = new Map<string, Set<string>>();
+  // A profile selects reviewers a phase list never names, so `QFAI-AGENT-014`
+  // and `QFAI-AGENT-015` need this side of the manifest too — the first before
+  // it can call a profile-selected reviewer undeclared, the second before it
+  // can call a declared role unreachable.
+  const selections = new Map<string, ProfileSelection>();
   try {
     const parsed: unknown = parseYaml(await readFile(profilesPath, "utf-8"));
     if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
@@ -575,16 +577,23 @@ async function validateProfiles(
   return selections;
 }
 
-/** Every reviewer a profile can select, required or conditional alike. */
-function collectProfileReviewers(always: unknown, conditional: unknown): Set<string> {
-  const reviewers = new Set<string>();
-  for (const value of [always, conditional]) {
+/**
+ * Every reviewer a profile can select, each kept with how firmly it binds:
+ * `always_required` is dispatched on every run, so omitting it from a skill's
+ * `roles:` is an error, while `conditional_required` is a warning.
+ */
+function collectProfileReviewers(always: unknown, conditional: unknown): ProfileSelection {
+  const reviewers: ProfileSelection = new Map();
+  for (const [value, binding] of [
+    [conditional, "conditional"],
+    [always, "required"],
+  ] as const) {
     if (!Array.isArray(value)) {
       continue;
     }
     for (const entry of value) {
       if (typeof entry === "string" && entry.length > 0) {
-        reviewers.add(entry);
+        reviewers.set(entry, binding);
       }
     }
   }

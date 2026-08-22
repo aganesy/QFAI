@@ -80,19 +80,37 @@ export function parseAgentFrontmatter(content: string): AgentFrontmatterParseRes
 }
 
 /**
- * The `roles:` list a skill declares in its own frontmatter.
+ * What a skill's own frontmatter declares about who may act inside it.
  *
- * `agent-routing.yml` and this list both say who may act inside a skill, and
- * until `QFAI-AGENT-014` / `QFAI-AGENT-015` nothing compared them. Reading it
- * here rather than in the validator keeps the frontmatter delimiter a single
- * expression, shared with `parseAgentFrontmatter`.
+ * `roles` is `undefined` when the frontmatter carries no `roles:` key at all,
+ * which is deliberately different from declaring an empty list: only the
+ * latter is a claim the validator can hold a routing manifest against.
  *
- * `undefined` — no frontmatter, unparseable frontmatter, or no `roles:` key —
- * means "this skill makes no declaration", which is deliberately different
- * from declaring an empty list: only the latter is a claim the validator can
- * hold a routing manifest against.
+ * `rolesError` is set instead when the key IS present but is not a list of
+ * non-empty strings. Folding that case into "no declaration" let one notation
+ * slip (`roles: completion-reviewer`, valid YAML but a scalar) silently
+ * disable both `QFAI-AGENT-014` and `QFAI-AGENT-015` for the skill, so even a
+ * missing mandatory routed agent passed as success.
  */
-export function parseSkillRoles(content: string): string[] | undefined {
+export type SkillFrontmatter = {
+  roles?: string[];
+  rolesError?: string;
+  routingProfile?: string;
+};
+
+/**
+ * The frontmatter fields that bind a skill to `agent-routing.yml`.
+ *
+ * That manifest and a skill's `roles:` both say who may act inside the skill,
+ * and until `QFAI-AGENT-014` / `QFAI-AGENT-015` nothing compared them. Reading
+ * them here rather than in the validator keeps the frontmatter delimiter a
+ * single expression, shared with `parseAgentFrontmatter`.
+ *
+ * `undefined` — no frontmatter block, unparseable frontmatter, or frontmatter
+ * that is not a mapping — means the file makes no declaration this rule can
+ * adjudicate at all.
+ */
+export function parseSkillFrontmatter(content: string): SkillFrontmatter | undefined {
   const match = content.match(FRONTMATTER_PATTERN);
   const rawFrontmatter = match?.[1];
   if (!rawFrontmatter) {
@@ -110,16 +128,29 @@ export function parseSkillRoles(content: string): string[] | undefined {
     return undefined;
   }
 
-  const roles = (parsed as Record<string, unknown>).roles;
-  if (!Array.isArray(roles)) {
-    return undefined;
+  const root: Record<string, unknown> = { ...parsed };
+  const rawProfile = root["routing-profile"];
+  const declared = readDeclaredRoles(root.roles);
+  if (typeof rawProfile === "string" && rawProfile.trim().length > 0) {
+    return { ...declared, routingProfile: rawProfile.trim() };
   }
+  return declared;
+}
 
+/** The `roles:` half of {@link parseSkillFrontmatter}. */
+function readDeclaredRoles(roles: unknown): Pick<SkillFrontmatter, "roles" | "rolesError"> {
+  if (roles === undefined) {
+    return {};
+  }
+  if (!Array.isArray(roles)) {
+    return { rolesError: "frontmatter.roles must be a list of agent ids" };
+  }
   const names: string[] = [];
   for (const entry of roles) {
-    if (typeof entry === "string" && entry.trim().length > 0) {
-      names.push(entry.trim());
+    if (typeof entry !== "string" || entry.trim().length === 0) {
+      return { rolesError: "frontmatter.roles must contain only non-empty agent ids" };
     }
+    names.push(entry.trim());
   }
-  return names;
+  return { roles: names };
 }
