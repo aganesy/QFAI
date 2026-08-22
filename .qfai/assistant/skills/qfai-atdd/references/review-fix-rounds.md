@@ -1,10 +1,12 @@
 # A `review-fix` row comes back here for a new RED
 
 `/qfai-implement` Phase Red step 3b sends a `review-fix` row back when the
-blocking reviewer's REVISE asks for a change to the acceptance test itself: that
-skill does not author these tests and its `red` phase has no
-`acceptance-test-engineer`. The three branches above define the **first**
-handoff of a `todo` row, so this one needs its own contract.
+blocking reviewer's REVISE asks for a change to the acceptance test itself: an
+acceptance test is **this** skill's owned artifact and is never edited there
+(that skill's Non-goals), whatever `agent-routing.yml` routes into any
+`qfai-implement` phase — the rule is ownership, not who happens to be
+available, so it survives a routing change. The three branches above define the
+**first** handoff of a `todo` row, so this one needs its own contract.
 
 - **Invocation.** Named by `TDD-ID`, with the reviewer's REVISE and its round
   number. The row stays at `review-fix` throughout — this stage writes no

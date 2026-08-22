@@ -786,6 +786,21 @@ describe.each(TREES)("%s (the handoff survives ledger order and time)", (tree) =
     expect(implement).not.toContain("has nobody here to do it");
   });
 
+  it("states the same handback reason on the receiving side of the contract", async () => {
+    // The handback is a two-sided contract, and the receiving stage's two
+    // references are what its reader opens. While they still justified the
+    // return by "`/qfai-implement`'s `red` phase has no
+    // `acceptance-test-engineer`", the same routing change that invalidated the
+    // sending side would have left the receiver holding a reason that no longer
+    // held — with nothing in either file to say the rule is ownership.
+    for (const rel of [REVIEW_FIX, PROVENANCE]) {
+      const ref = flat(await read(tree, rel));
+      expect(ref, rel).toContain("an acceptance test is **this** skill's owned artifact");
+      expect(ref, rel).toContain("the rule is ownership, not who happens to be available");
+      expect(ref, rel).not.toContain("`red` phase has no `acceptance-test-engineer`");
+    }
+  });
+
   it("keeps cross-spec obligations in the row's own evidence file", async () => {
     const cross = flat(
       await read(tree, "assistant/skills/qfai-implement/references/cross-spec-ownership.md"),
