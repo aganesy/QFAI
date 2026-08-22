@@ -37,6 +37,7 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  WORKLOG_ENTRY_STATUSES,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
@@ -314,8 +315,10 @@ function buildProjectSteeringReadmeBody(): string {
 }
 
 function buildProjectSteeringEntryTemplate(): string {
-  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS (SSOT)
-  // so the template cannot drift from the validator.
+  // Section headings are sourced from HANDOFF_REQUIRED_SECTIONS and the
+  // status enum from WORKLOG_ENTRY_STATUSES (both SSOT in assistantPaths.ts)
+  // so neither can drift from the validator.
+  const statusEnum = WORKLOG_ENTRY_STATUSES.join(" | ");
   const handoffBodyLines = HANDOFF_REQUIRED_SECTIONS.flatMap((heading) => [
     heading,
     "",
@@ -325,7 +328,7 @@ function buildProjectSteeringEntryTemplate(): string {
   return [
     "---",
     "id: 2026-MM-DD-kebab-case-id   # required; kebab-case ASCII; matches filename stem",
-    "status: active                 # required; enum: active | handoff | archived",
+    `status: active                 # required; enum: ${statusEnum}`,
     "kind: decision                 # required; see .qfai/assistant/catalog/worklog-entry.schema.md",
     "created: YYYY-MM-DD            # required; ISO-8601 date",
     "updated: YYYY-MM-DD            # required; ISO-8601 date; >= created",

@@ -24,6 +24,17 @@ const CONTRACT = ".qfai/contracts/cli/qfai-init.md";
 const INIT_SRC = "packages/qfai/src/cli/commands/init.ts";
 const SEED_BUILDERS = ["buildProjectSteeringReadmeBody", "buildProjectSteeringEntryTemplate"];
 
+/**
+ * The layers above the contract that state the same distribution fact. If only
+ * the contract were corrected, these would keep pointing auditors at the
+ * non-existent path and the SSOT would stay mutually exclusive.
+ */
+const POLICY_LAYERS = [
+  ".qfai/specs/_policies/05_Contracts.md",
+  ".qfai/specs/_policies/07_Constraints.md",
+  ".qfai/specs/_policies/10_delta.md",
+];
+
 const readRepo = (rel: string): Promise<string> => readFile(path.join(repoRoot, rel), "utf-8");
 
 const exists = async (rel: string): Promise<boolean> => {
@@ -48,6 +59,19 @@ describe("qfai init contract: steering seed provenance", () => {
     expect(await exists("packages/qfai/assets/init/.qfai/steering")).toBe(false);
   });
 
+  it("keeps the policy layers above the contract on the same distribution fact", async () => {
+    for (const rel of POLICY_LAYERS) {
+      const doc = flat(await readRepo(rel));
+
+      expect(doc, `${rel} still names the non-existent seed directory`).not.toContain(
+        "assets/init/.qfai/steering",
+      );
+      // Each of the three states where the seed comes from; all three must
+      // agree with the contract that it is built, not copied.
+      expect(doc, `${rel} no longer says where the seed comes from`).toContain("dist/");
+    }
+  });
+
   it("locates the two seed bodies in the source that builds them", async () => {
     const contract = flat(await readRepo(CONTRACT));
 
@@ -65,8 +89,10 @@ describe("qfai init contract: steering seed provenance", () => {
     // if it were unconditional.
     expect(contract).toContain("post-build guard run");
     expect(contract).toContain("lint-only run skips `dist/` by design");
-    // The layer that does cover the bodies unconditionally.
+    // The layer that covers the bodies regardless of build state — but only
+    // when its vitest project runs, which the contract must not overstate.
     expect(contract).toContain("packages/qfai/tests/integration/distributedSurfaceLeakage.test.ts");
+    expect(contract).toContain("`integration` vitest project");
   });
 
   it("keeps the builders it names resolvable in init.ts", async () => {

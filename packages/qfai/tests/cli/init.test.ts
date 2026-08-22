@@ -26,6 +26,7 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
+import { WORKLOG_ENTRY_STATUSES } from "../../src/core/paths/assistantPaths.js";
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -1361,6 +1362,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(tplBody).toMatch(/id:\s*2026-MM-DD-kebab-case-id/);
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
+      // The status enum is derived from the same SSOT the validator reads
+      // (WORKLOG_ENTRY_STATUSES), so seed and validator cannot drift.
+      expect(tplBody).toContain(`enum: ${WORKLOG_ENTRY_STATUSES.join(" | ")}`);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
