@@ -106,7 +106,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。加えて qfai 提供の通常ファイル .github/copilot-instructions.md・.github/instructions/**（code-review / principles のレビュー指示）・統合ディレクトリの README.md も shipped テンプレートで再生成するため、これらへのローカル編集は失われます（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
@@ -1178,6 +1178,18 @@ async function syncIntegrationWrappers(
       copied.push(dest);
       if (!options.dryRun) {
         await mkdir(path.dirname(dest), { recursive: true });
+        // Replace the entry, not whatever it points at. `pathExists` is
+        // lstat-based, so `alreadyExists` is true for a symlink here — and
+        // `writeFile` follows one. A `--force` refresh would then rewrite the
+        // link's target, which for a link out of the project is a file this
+        // command was never asked to touch (and for a dangling link is a file
+        // it silently creates elsewhere). Unlink first so `dest` is recreated
+        // as a regular file, the same remove-then-recreate `ensureSymlink`
+        // performs for a wrapper it must replace.
+        const existingEntry = alreadyExists ? await safeLstat(dest) : undefined;
+        if (existingEntry?.isSymbolicLink()) {
+          await rm(dest, { recursive: true, force: true });
+        }
         const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
         let content: string;
         try {

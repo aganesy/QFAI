@@ -837,6 +837,38 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force replaces an instructions symlink instead of writing through it", async () => {
+    // `writeFile` follows a symlink, so refreshing without unlinking first
+    // would rewrite the link's target — a file outside the project that init
+    // was never asked to touch.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const escapee = path.join(outside, "shared-review-rules.md");
+      await writeFile(escapee, "someone-elses-file\n", "utf-8");
+      const linked = path.join(instrDir, "code-review.instructions.md");
+      try {
+        await symlink(escapee, linked, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The link is gone, replaced by a regular file holding the template.
+      expect((await lstat(linked)).isSymbolicLink()).toBe(false);
+      expect(await readFile(linked, "utf-8")).toContain("[BLOCKER]");
+      // And the file the link pointed at is untouched.
+      expect(await readFile(escapee, "utf-8")).toBe("someone-elses-file\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0004
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
