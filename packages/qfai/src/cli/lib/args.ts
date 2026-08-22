@@ -157,6 +157,9 @@ export type ParsedArgs = {
 /** `qfai prototyping <action>` のサブコマンド名。 */
 type PrototypingAction = NonNullable<ParsedArgs["options"]["prototypingAction"]>;
 
+/** `qfai guardrails <action>` のサブコマンド名。 */
+type GuardrailsAction = NonNullable<ParsedArgs["options"]["guardrailsAction"]>;
+
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     root: cwd,
@@ -204,6 +207,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       return false;
     }
     const action = options.prototypingAction;
+    return action !== undefined && actions.includes(action);
+  };
+
+  /**
+   * `qfai guardrails <action>` 版の flag-ownership guard。
+   * action トークンも flag loop より前に確定するため、ループ内から安全に
+   * 呼べる (`--max` は extract、`--keyword` は list/extract のみが読む)。
+   */
+  const ownedByGuardrails = (...actions: GuardrailsAction[]): boolean => {
+    if (command !== "guardrails") {
+      return false;
+    }
+    const action = options.guardrailsAction;
     return action !== undefined && actions.includes(action);
   };
 
@@ -306,30 +322,45 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
-  for (let i = 0; i < args.length; i += 1) {
+  /**
+   * Value-token consumption for every value-taking flag arm below.
+   * The cursor advances the moment a value token exists — before the arm
+   * decides whether the flag is used on an owning command — so rule 1 / 2 of
+   * the flag-handling contract holds by construction rather than by each arm
+   * remembering a trailing `i += 1`.
+   */
+  let i = 0;
+  const consumeOptionValue = (): string | null => {
+    const next = args[i + 1];
+    if (!next || next.startsWith("--")) {
+      return null;
+    }
+    i += 1;
+    return next;
+  };
+
+  for (; i < args.length; i += 1) {
     const arg = args[i];
     switch (arg) {
       case "--root":
         {
-          const next = readOptionValue(args, i);
+          const next = consumeOptionValue();
           if (next === null) {
             markInvalid();
             break;
           }
           options.root = next;
           options.rootExplicit = true;
-          i += 1;
         }
         break;
       case "--dir":
         {
-          const next = readOptionValue(args, i);
+          const next = consumeOptionValue();
           if (next === null) {
             markInvalid();
             break;
           }
           options.dir = next;
-          i += 1;
         }
         break;
       case "--force":
@@ -345,7 +376,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.upgradeAssistantTree = true;
         break;
       case "--format": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           // `--format` は値必須。欠落時はヘルプ表示（ただし次オプションは食わない）。
           markInvalid();
@@ -353,7 +384,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (command === "prototyping" && options.prototypingAction !== "preflight") {
           markInvalid();
-          i += 1;
           break;
         }
         if (command === "discussion") {
@@ -362,7 +392,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           } else {
             markInvalid();
           }
-          i += 1;
           break;
         }
         if (command === "audit") {
@@ -371,33 +400,37 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           } else {
             markInvalid();
           }
-          i += 1;
           break;
         }
         if (!applyFormatOption(command, next, options)) {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--active":
-        if (command === "discussion") {
+        // usage(): `discussion list --active` のみ。`discussion use <id>`
+        // は値を読まないので、そちらに付いた --active は誤指定。
+        if (command === "discussion" && options.discussionAction === "list") {
           options.discussionActive = true;
         } else {
           markInvalid();
         }
         break;
       case "--strict":
-        options.strict = true;
+        // usage(): validate 専用。report / doctor では runReport /
+        // runDoctor が strict を読まないため、黙って捨てずに拒否する。
+        if (command === "validate") {
+          options.strict = true;
+        } else {
+          markInvalid();
+        }
         break;
       case "--phase":
         markInvalid();
-        if (readOptionValue(args, i) !== null) {
-          i += 1;
-        }
+        consumeOptionValue();
         break;
       case "--profile": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -412,7 +445,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--clean": {
@@ -432,19 +464,24 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--fail-on": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
+          markInvalid();
+          break;
+        }
+        // usage(): validate / doctor / prototyping preflight のみが
+        // failOn を読む。report 等に付けても runReport は無視するため拒否。
+        if (command !== "validate" && command !== "doctor" && !ownedByPrototyping("preflight")) {
           markInvalid();
           break;
         }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
         }
-        i += 1;
         break;
       }
       case "--out": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -459,11 +496,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--in": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -473,7 +509,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--run-validate":
@@ -484,7 +519,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--base-url": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -494,11 +529,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--path": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -508,40 +542,41 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--max": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
         }
         const parsed = Number.parseInt(next, 10);
-        if (command !== "guardrails" || Number.isNaN(parsed)) {
+        // usage(): `guardrails extract` のみ。runGuardrails は list /
+        // check パスで max を読まないため、そこでは誤指定として拒否する。
+        if (!ownedByGuardrails("extract") || Number.isNaN(parsed)) {
           markInvalid();
         } else {
           options.guardrailsMax = parsed;
         }
-        i += 1;
         break;
       }
       case "--keyword": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
         }
-        if (command === "guardrails") {
+        // usage(): `guardrails list/extract` のみ。check パスは
+        // runGuardrails が keyword フィルタ前に early return する。
+        if (ownedByGuardrails("list", "extract")) {
           options.guardrailsKeyword = next;
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--platform": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -551,27 +586,27 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--target-url": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
         }
-        // `doctor --profile prototyping` も同じ targetUrl 診断を通すため
-        // owner に含める (usage(): prototyping preflight/iterate + doctor)。
+        // `doctor --profile prototyping` だけが同じ targetUrl 診断を通す
+        // (main.ts: profile !== "prototyping" の doctor には渡らない)。
+        // --profile は後続トークンにも置けるため、doctor 側の profile 検査
+        // は flag loop 後の post-loop guard で行う。
         if (command === "doctor" || ownedByPrototyping("preflight", "iterate")) {
           options.prototypingTargetUrl = next;
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--cycle": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -582,7 +617,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           options.prototypingCycle = parsed;
         }
-        i += 1;
         break;
       }
       case "--check": {
@@ -596,7 +630,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--license-patch": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -606,11 +640,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--primary-spec-id": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -620,7 +653,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--check-convergence": {
@@ -669,7 +701,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         break;
       }
       case "--skeleton-mode": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -681,11 +713,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--mode": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -697,17 +728,19 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       // Flag-handling contract — governs EVERY command-specific arm of
       // this switch, not a named subset. (Genuinely global flags —
-      // `--root`, `--dir`, `--force`, `--yes`, `--dry-run`, `--strict`,
-      // `--fail-on`, `--help` — are exempt because they have no owning
-      // command.)
-      //   1. A value-taking flag always reads and consumes its value
-      //      token via `readOptionValue(args, i)` + `i += 1`. A missing
-      //      value (`null`) is a parse error → `markInvalid()`.
+      // `--root`, `--dir`, `--force`, `--yes`, `--dry-run`, `--help` —
+      // are exempt because they have no owning command. `--strict` and
+      // `--fail-on` are NOT global: `usage()` scopes them to validate
+      // and to validate / doctor / prototyping preflight respectively,
+      // so they carry owner tests like every other arm.)
+      //   1. A value-taking flag always reads its value token via
+      //      `consumeOptionValue()`, which advances the cursor as part
+      //      of the read. A missing value (`null`) is a parse error →
+      //      `markInvalid()`.
       //   2. When the flag is used on a command / subcommand that does
       //      NOT own it, also call `markInvalid()` so the misuse is
       //      surfaced rather than silently dropped. The value token is
@@ -724,7 +757,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       // same goal; this contract block plus the unified shape below
       // resolves the asymmetry.
       case "--spec": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -737,11 +770,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--scope": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -757,11 +789,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--upgrade-scope": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -775,11 +806,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--operator": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -789,11 +819,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--clause": {
-        const next = readOptionValue(args, i);
+        const next = consumeOptionValue();
         if (next === null) {
           markInvalid();
           break;
@@ -803,7 +832,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           markInvalid();
         }
-        i += 1;
         break;
       }
       case "--help":
@@ -815,6 +843,17 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     }
   }
 
+  // `--target-url` on doctor is only honored by the built-in prototyping
+  // profile (main.ts gates it on `options.profile === "prototyping"`).
+  // `--profile` may appear after `--target-url`, so the pairing can only be
+  // judged here, once every token has been read.
+  if (
+    command === "doctor" &&
+    options.prototypingTargetUrl !== undefined &&
+    options.profile !== "prototyping"
+  ) {
+    markInvalid();
+  }
   if (command === "guardrails" && !options.help && !options.guardrailsAction) {
     markInvalid();
   }
@@ -834,14 +873,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   return { command, invalid, options };
-}
-
-function readOptionValue(args: string[], index: number): string | null {
-  const next = args[index + 1];
-  if (!next || next.startsWith("--")) {
-    return null;
-  }
-  return next;
 }
 
 function parseNonNegativeInteger(value: string): number | null {

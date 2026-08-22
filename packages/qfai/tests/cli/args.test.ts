@@ -477,6 +477,92 @@ describe("parseArgs", () => {
       expect(check.options.prototypingCheckOnly).toBeUndefined();
     });
 
+    it("rejects guardrails flags used on a non-owning guardrails action", () => {
+      const cwd = process.cwd();
+
+      // runGuardrails reads `max` only on the extract path.
+      const listMax = parseArgs(["guardrails", "list", "--max", "0"], cwd);
+      expect(listMax.invalid).toBe(true);
+      expect(listMax.options.guardrailsMax).toBeUndefined();
+
+      // `check` returns before the keyword filter is applied.
+      const checkKeyword = parseArgs(["guardrails", "check", "--keyword", "foo"], cwd);
+      expect(checkKeyword.invalid).toBe(true);
+      expect(checkKeyword.options.guardrailsKeyword).toBeUndefined();
+
+      const extractMax = parseArgs(["guardrails", "extract", "--max", "0"], cwd);
+      expect(extractMax.invalid).toBe(false);
+      expect(extractMax.options.guardrailsMax).toBe(0);
+
+      const listKeyword = parseArgs(["guardrails", "list", "--keyword", "foo"], cwd);
+      expect(listKeyword.invalid).toBe(false);
+      expect(listKeyword.options.guardrailsKeyword).toBe("foo");
+    });
+
+    it("accepts --active only on `discussion list`", () => {
+      const cwd = process.cwd();
+      const parsed = parseArgs(["discussion", "use", "discussion-1", "--active"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.discussionActive).toBeUndefined();
+      expect(parsed.options.discussionId).toBe("discussion-1");
+    });
+
+    it("accepts doctor --target-url only with the built-in prototyping profile", () => {
+      const cwd = process.cwd();
+
+      const bare = parseArgs(["doctor", "--target-url", "https://x/"], cwd);
+      expect(bare.invalid).toBe(true);
+
+      // A skill profile does not run the targetUrl probe either.
+      const skillProfile = parseArgs(
+        ["doctor", "--profile", "qfai-sdd", "--target-url", "https://x/"],
+        cwd,
+      );
+      expect(skillProfile.invalid).toBe(true);
+
+      // The pairing is judged after the loop, so `--profile` may follow.
+      const trailingProfile = parseArgs(
+        ["doctor", "--target-url", "https://x/", "--profile", "prototyping"],
+        cwd,
+      );
+      expect(trailingProfile.invalid).toBe(false);
+      expect(trailingProfile.options.prototypingTargetUrl).toBe("https://x/");
+    });
+
+    it("rejects --strict / --fail-on on commands that never read them", () => {
+      const cwd = process.cwd();
+
+      const reportStrict = parseArgs(["report", "--strict"], cwd);
+      expect(reportStrict.invalid).toBe(true);
+      expect(reportStrict.options.strict).toBe(false);
+
+      const reportFailOn = parseArgs(["report", "--fail-on", "warning", "--format", "json"], cwd);
+      expect(reportFailOn.invalid).toBe(true);
+      expect(reportFailOn.options.failOn).toBeUndefined();
+      expect(reportFailOn.options.reportFormat).toBe("json");
+
+      const validateStrict = parseArgs(["validate", "--strict", "--fail-on", "warning"], cwd);
+      expect(validateStrict.invalid).toBe(false);
+      expect(validateStrict.options.strict).toBe(true);
+      expect(validateStrict.options.failOn).toBe("warning");
+
+      const preflight = parseArgs(["prototyping", "preflight", "--fail-on", "error"], cwd);
+      expect(preflight.invalid).toBe(false);
+      expect(preflight.options.failOn).toBe("error");
+
+      const doctorFailOn = parseArgs(["doctor", "--fail-on", "warning"], cwd);
+      expect(doctorFailOn.invalid).toBe(false);
+      expect(doctorFailOn.options.failOn).toBe("warning");
+
+      // `prototyping iterate` does not thread failOn into its runner.
+      const iterateFailOn = parseArgs(
+        ["prototyping", "iterate", "--cycle", "0", "--fail-on", "warning"],
+        cwd,
+      );
+      expect(iterateFailOn.invalid).toBe(true);
+      expect(iterateFailOn.options.failOn).toBeUndefined();
+    });
+
     it("keeps every guarded flag valid on its owning command", () => {
       const cwd = process.cwd();
 
