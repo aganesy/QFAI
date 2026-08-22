@@ -17,10 +17,13 @@ these `taskFidelity` keys with concrete values:
   four reachable states (default / hover / focused / disabled), with a
   pass/fail observation per state?
 
-This document is the SSOT for the list: the keywords named above are
-exactly the ones the validator (`QFAI-CRIT-009`) requires and the ones
-the `--capture` template emitter seeds, so the keyword set cannot
-silently drift between the three surfaces.
+This list mirrors what the CLI enforces; it does not define it. The
+required set is compiled into `npx qfai` — the validator
+(`QFAI-CRIT-009`) and the `--capture` template emitter both read it from
+there, never from this file, so adding a keyword here changes the
+guidance but not what `npx qfai validate` accepts. If this page and the
+validator's error text disagree, report it as a QFAI bug rather than
+treating the list as a local customization point.
 
 ## Canonical markdown structure
 

@@ -186,6 +186,51 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations.filter((v) => v.pattern === "framework-source-path")).toEqual([]);
   });
 
+  it("flags framework source paths inside YAML comment lines", async () => {
+    // A `# ...` line is not runtime data, but it still ships verbatim via
+    // `qfai init` and is read by a human — a framework path there reaches
+    // the user as an unopenable citation exactly like a markdown line.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/manifest"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/manifest/rules.yml"),
+      [
+        "# See core/prototyping/evaluatorReview.ts for the axis list",
+        "# Example: see spec-0042 for context",
+        "rules: []",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    expect(violations.map((v) => v.pattern)).toEqual(["framework-source-path"]);
+    expect(violations[0]?.line).toBe(1);
+  });
+
+  it("does NOT flag core/cli paths that belong to a URL", async () => {
+    // `https://example.com/core/api.ts` is an external document, not a
+    // citation of this framework's tree; a bare `core/api.ts` on the same
+    // page still is.
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/catalog"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/catalog/links.md"),
+      [
+        "Background reading: <https://example.com/core/api.ts> and",
+        "[the sample](https://example.com/src/cli/main.ts).",
+        "The axes live in `core/prototyping/evaluatorReview.ts`.",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    const frameworkPaths = violations.filter((v) => v.pattern === "framework-source-path");
+    expect(frameworkPaths).toHaveLength(1);
+    expect(frameworkPaths[0]?.line).toBe(3);
+  });
+
   it("does NOT flag YAML comment lines (parser ignores them)", async () => {
     const root = await newTempDir();
     await mkdir(path.join(root, "assets/init/.qfai"), { recursive: true });

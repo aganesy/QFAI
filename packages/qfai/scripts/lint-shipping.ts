@@ -51,6 +51,15 @@ type PatternRule = {
    *     after a build (PR #206 review Ntbp option B).
    */
   appliesTo: ReadonlyArray<Target>;
+  /**
+   * Run this rule on YAML comment lines too. Comment lines are skipped
+   * for every other rule (a YAML parser discards them, so an ID inside
+   * `# ...` is a citation, not an install-site assumption) — but the
+   * comment text itself still ships verbatim via `qfai init` and is
+   * read by humans, so rules about what a READER can open must not be
+   * skipped there.
+   */
+  scanYamlComments?: boolean;
 };
 
 /** The rule's own flags, plus `g`. Never a bare `"g"` — see the call sites. */
@@ -95,12 +104,21 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // open — and inside a template that a project adopts as its own policy
     // it becomes a false statement about that project's layout.
     name: "framework-source-path",
-    re: /packages\/qfai\/|\b(?:src\/)?(?:core|cli)\/[A-Za-z0-9_./-]*\.ts\b/,
+    // The `(?<!:\/\/\S*)` guard keeps the relative-path arm off URLs:
+    // `https://example.com/core/api.ts` is an external document, not a
+    // citation of this framework's tree (PR #1019 review). The
+    // `packages/qfai/` arm carries no such guard — that literal names
+    // the framework's own source even inside a link.
+    re: /packages\/qfai\/|(?<!:\/\/\S*)\b(?:src\/)?(?:core|cli)\/[A-Za-z0-9_./-]*\.ts\b/,
     suggestion:
-      "Shipped assets must not cite framework source paths (`packages/qfai/**`, `core/*.ts`, `cli/*.ts`) — they do not exist after `qfai init`. Inline the value, point at a shipped `.qfai/assistant/**` document, or name the CLI command that enforces the rule.",
+      'Shipped assets must not cite framework source paths (`packages/qfai/**`, `core/*.ts`, `cli/*.ts`) — they do not exist after `qfai init`. Inline the value, point at a shipped `.qfai/assistant/**` document, or name the CLI command that enforces the rule. For a path that is deliberately the reader\'s own, add a `qfai-shipping:allow reason="..."` pragma on the preceding line (in markdown, inside an HTML comment).',
     // Applies to documentation AND runtime data: both are copied verbatim
     // into the consuming repo, where the cited path resolves to nothing.
     appliesTo: ["init-runtime", "init-doc"],
+    // A YAML `# ...` line ships verbatim and is read by humans, so a
+    // framework path inside one reaches the user as an unopenable
+    // citation just like a markdown line does.
+    scanYamlComments: true,
   },
   // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
   // internal-version leakage in src JSDoc BEFORE it ships via
@@ -361,11 +379,17 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     }
     // YAML files: comment lines are not runtime data; the parser ignores
     // them. References inside `# ...` are authority citation, not
-    // install-site assumptions.
+    // install-site assumptions — EXCEPT for rules flagged
+    // `scanYamlComments`, which are about what a human reader can open.
+    // Those comments ship verbatim via `qfai init`, so they keep running
+    // here (PR #1019 review).
     const isYaml = absolutePath.endsWith(".yaml") || absolutePath.endsWith(".yml");
-    if (isYaml && YAML_COMMENT_LINE_RE.test(line)) continue;
+    const lineRules =
+      isYaml && YAML_COMMENT_LINE_RE.test(line)
+        ? applicableRules.filter((rule) => rule.scanYamlComments === true)
+        : applicableRules;
 
-    for (const rule of applicableRules) {
+    for (const rule of lineRules) {
       // Find all matches per line — a single line may contain multiple IDs
       // (e.g. "Implements TC-0012-0290 and AC-0012-0175.").
       const globalRe = new RegExp(rule.re.source, "g");

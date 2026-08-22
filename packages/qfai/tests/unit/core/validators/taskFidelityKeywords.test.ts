@@ -68,5 +68,15 @@ describe("TC-0012-0477: QFAI-CRIT-009 required-keyword set is named in validator
     // The doc shows example markdown structure so authors can copy.
     expect(doc).toMatch(/```/);
     expect(doc.toLowerCase()).toContain("taskfidelity");
+
+    // Both directions: the doc's `## Required keywords` bullet list must
+    // name the constant's keywords AND nothing else. Containment alone
+    // let a keyword added to the doc only (which the validator never
+    // enforces, because it reads the constant) ship as a silent
+    // divergence between the shipped page and the CLI.
+    const section = doc.split(/^## Required keywords$/m)[1]?.split(/^## /m)[0] ?? "";
+    expect(section).not.toBe("");
+    const documented = [...section.matchAll(/^- `([a-z0-9_]+)`/gm)].map((m) => m[1]);
+    expect([...documented].sort()).toEqual([...TASK_FIDELITY_REQUIRED_KEYWORDS].sort());
   });
 });
