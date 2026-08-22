@@ -44,6 +44,16 @@ type Seed = {
   stageEvidence?: string;
   /** Root `.gitignore`; defaults to the managed block `qfai init` writes. */
   gitignore?: string;
+  /** Body of `.qfai/evidence/.gitignore` — the legacy nested file — or absent. */
+  nestedEvidenceGitignore?: string;
+  /**
+   * Declares `CON-API-0001` and annotates it from `tests/api/**`, the shape an
+   * API-only spec has: no `TC-*` anywhere, because `test-layers.md` forbids one
+   * there.
+   */
+  apiTest?: boolean;
+  /** Body of `.qfai/specs/spec-0001/tdd/test-list.md`, or absent. */
+  ledger?: string;
 };
 
 async function seedProject(seed: Seed): Promise<string> {
@@ -71,6 +81,11 @@ async function seedProject(seed: Seed): Promise<string> {
     "utf-8",
   );
 
+  if (seed.ledger !== undefined) {
+    await mkdir(path.join(specDir, "tdd"), { recursive: true });
+    await writeFile(path.join(specDir, "tdd", "test-list.md"), seed.ledger, "utf-8");
+  }
+
   if (seed.annotated ?? true) {
     const testDir = path.join(root, "tests", "integration", "spec-0001");
     await mkdir(testDir, { recursive: true });
@@ -81,8 +96,28 @@ async function seedProject(seed: Seed): Promise<string> {
     );
   }
 
+  if (seed.apiTest ?? false) {
+    const apiContractDir = path.join(root, ".qfai", "contracts", "api");
+    await mkdir(apiContractDir, { recursive: true });
+    await writeFile(
+      path.join(apiContractDir, "widgets.yaml"),
+      "# QFAI-CONTRACT-ID: CON-API-0001\nopenapi: 3.1.0\npaths: {}\n",
+      "utf-8",
+    );
+    const apiTestDir = path.join(root, "tests", "api");
+    await mkdir(apiTestDir, { recursive: true });
+    await writeFile(
+      path.join(apiTestDir, "widgets.test.ts"),
+      "/* QFAI:CON-API-0001 */\nit('contracts', () => {});\n",
+      "utf-8",
+    );
+  }
+
   const evidenceDir = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceDir, { recursive: true });
+  if (seed.nestedEvidenceGitignore !== undefined) {
+    await writeFile(path.join(evidenceDir, ".gitignore"), seed.nestedEvidenceGitignore, "utf-8");
+  }
   if (seed.matrix !== undefined) {
     await writeFile(path.join(evidenceDir, "coverage-depth-spec-0001.md"), seed.matrix, "utf-8");
   }
@@ -106,7 +141,8 @@ const LINKED_SECTION = [
   "",
   "## Coverage Depth Matrix",
   "",
-  "See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: 7 / 0 / 0.",
+  // Verbatim the shape `qfai-atdd/SKILL.md` ships in its evidence template.
+  "See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
   "",
   "## Final status (PASS/FAIL) + who confirmed",
   "",
@@ -183,6 +219,75 @@ describe("QFAI-ATDD-132: the matrix must survive `.gitignore`", () => {
 
     expect(codes).toContain("QFAI-ATDD-132");
   });
+
+  it("lets the legacy nested file re-include what a root block without the negation ignores", async () => {
+    // Exactly this repository's state, and every project `qfai init` migrated:
+    // the root block predates `!.qfai/evidence/coverage-depth-*.md`, and the
+    // nested file re-includes the matrix. Git reports it as tracked — reading
+    // the root file alone reported a `QFAI-ATDD-132` that `git check-ignore`
+    // contradicts.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      gitignore: ".qfai/report/*\n.qfai/evidence/*\n",
+      nestedEvidenceGitignore: "*\n!.gitignore\n!coverage-depth-*.md\n",
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-132");
+  });
+
+  it("reports a nested re-ignore that outranks the root negation", async () => {
+    // The other direction, and the one a root-only read silently missed: the
+    // deepest matching file has the last word, so a nested `*` with no
+    // `!coverage-depth-*.md` under it swallows a matrix the managed block
+    // re-included.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      nestedEvidenceGitignore: "*\n!.gitignore\n!decision-*.md\n",
+    });
+
+    expect(codes).toContain("QFAI-ATDD-132");
+  });
+});
+
+describe("QFAI-ATDD-131 over an API-only spec", () => {
+  const API_LEDGER = [
+    "# test-list",
+    "",
+    "## Ledger",
+    "",
+    "| TDD-ID | TC-Refs | US-Refs | CON-API-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |",
+    "| ------ | ------- | ------- | ------------ | ----- | --------- | -------- | ------ | ----- | -------- |",
+    "| TDD-0001 | - | - | CON-API-0001 | API | tests/api/widgets.test.ts | contracts | done | - | GREEN pass |",
+    "",
+  ].join("\n");
+
+  it("reports the missing matrix for a spec whose only ATDD test is an API one", async () => {
+    // `QFAI:CON-API-*` names a contract, never a spec, so `refs.us` / `refs.tc`
+    // stay empty here. The ledger's `CON-API-Refs` cell is what ties the test
+    // back to the spec that owes the matrix.
+    const codes = await codesFor({ annotated: false, apiTest: true, ledger: API_LEDGER });
+
+    expect(codes).toContain("QFAI-ATDD-131");
+  });
+
+  it("stays silent once that spec's matrix is written", async () => {
+    const codes = await codesFor({
+      annotated: false,
+      apiTest: true,
+      ledger: API_LEDGER,
+      matrix: MATRIX,
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-131");
+  });
+
+  it("demands nothing from a ledger row whose contract has no test", async () => {
+    // The bar is the same one the US/TC side applies: a test the scan found,
+    // not an obligation somebody wrote down.
+    const codes = await codesFor({ annotated: false, ledger: API_LEDGER });
+
+    expect(codes).not.toContain("QFAI-ATDD-131");
+  });
 });
 
 describe("QFAI-ATDD-133: the stage evidence links the matrix instead of inlining it", () => {
@@ -199,6 +304,34 @@ describe("QFAI-ATDD-133: the stage evidence links the matrix instead of inlining
     });
 
     expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("reports a link with no totals beside it", async () => {
+    // The section owes both halves. A bare pointer leaves the reviewer with no
+    // coverage summary at all, which is the half the template puts here so the
+    // matrix does not have to be opened to see the shape of the result.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: "# ATDD\n\n## Coverage Depth Matrix\n\nSee coverage-depth-spec-0001.md\n",
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("accepts a bare ⚠ without the variation selector", async () => {
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: ✅ 7 / ⚠ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-133");
   });
 
   it("accepts the template shape: a link plus totals", async () => {
