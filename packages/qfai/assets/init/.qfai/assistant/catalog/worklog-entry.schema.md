@@ -4,8 +4,12 @@
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
 - SSOT modules:
-  - `packages/qfai/src/core/worklog/parseEntry.ts` (pure parser: `string → Result<Entry, SchemaError>`)
-  - `packages/qfai/src/core/worklog/validateLinks.ts` (link-integrity check)
+  - `packages/qfai/src/core/validators/worklogSurface.ts` (frontmatter parser
+    and link-integrity check; both are private helpers of this single module —
+    there is no `core/worklog/` directory. A split into dedicated `parseEntry` /
+    `validateLinks` modules, with the parser exposed as
+    `string → Result<Entry, SchemaError>`, is an intended future decomposition,
+    not a location that exists today)
 
 ## Storage model
 

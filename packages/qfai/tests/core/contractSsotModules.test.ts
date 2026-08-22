@@ -46,6 +46,30 @@ describe("extractSsotModuleEntries", () => {
       { modulePath: "packages/qfai/src/core/prototyping/iteration.ts", line: 6 },
     ]);
   });
+
+  it("ignores a block that only appears inside a fenced code example", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# How to write a contract",
+        "",
+        "Open the contract with the routing block:",
+        "",
+        "```markdown",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/example.ts` (the module that carries the truth)",
+        "```",
+        "",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/real.ts`",
+        "~~~md",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/other-example.ts`",
+        "~~~",
+      ].join("\n"),
+    );
+
+    expect(entries).toEqual([{ modulePath: "packages/qfai/src/core/real.ts", line: 11 }]);
+  });
 });
 
 describe("validateContractSsotModules", () => {
@@ -86,6 +110,52 @@ describe("validateContractSsotModules", () => {
         "- SSOT modules:",
         "  - `src/core/real.ts` (the one module)",
         "  - `src/core`",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an entry that escapes the project root even when the target exists", async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-outside-"));
+    const root = path.join(parent, "project");
+    try {
+      await mkdir(root, { recursive: true });
+      await writeFile(path.join(parent, "outside.ts"), "export const a = 1;\n", "utf-8");
+      await seedContract(root, "qfai-validate.md", [
+        "# CLI Contract: `qfai validate`",
+        "",
+        "- SSOT modules:",
+        "  - `../outside.ts`",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("QFAI-CONTRACT-050");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("プロジェクトルート外");
+      expect(issues[0]?.refs).toContain("../outside.ts");
+      expect(issues[0]?.loc?.line).toBe(4);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a fenced SSOT modules example inside a contract document", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-modules-"));
+    try {
+      await seedContract(root, "README.md", [
+        "# Contract authoring guide",
+        "",
+        "```markdown",
+        "- SSOT modules:",
+        "  - `src/core/imaginary.ts` (example only)",
+        "```",
       ]);
 
       const issues = await validateContractSsotModules(root, defaultConfig);
