@@ -431,7 +431,10 @@ describe("the shipped-lane allowlist", () => {
       "read v <<\\EOF\ndata\nEOF\n%s",
       "case $x in *) %s ;; esac",
       "if [ -f package.json ]; then %s; fi",
-      "build_once() { %s; }",
+      // CALLED, not merely defined. Round 19 executed every row here and this one did not run:
+      // bash defines a function body and does not enter it, so the row asserted an execution that
+      // never happened. The construct it exists for — a build inside a function body — is intact.
+      "build_once() { %s; }; build_once",
       "( %s )",
       "read v <<EOF\n$(%s)\nEOF",
       // Round 19. The delimiter scan breaks on `<`/`>`/`(`, and nothing asserted it: reverting that

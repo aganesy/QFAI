@@ -2602,6 +2602,39 @@ evidence cuts the other way, the counter-example.
    its owner, and option 2's live disposition — and each of those is a deferral WITH its evidence, which
    is the thing this lesson asks for rather than the thing it warns against.
 
+### The differential corpus is executed, not asserted
+
+Round 19's `implementation-reviewer` filed the asymmetry: a `live` row asserts two things — the mask says
+code, and `refusals()` refuses — so a misfiling there costs at most a spurious refusal. An `inert` row
+asserts one, that the mask says NOT code, and **nothing checked the premise that bash does not run it**.
+A wrong `inert` row passes precisely when the mask is also wrong, which is the only case anyone cares
+about: the round-19 escape body filed under `inert` — a plausible reading, since the quote is "inside a
+here-document" — would have had the round's headline instrument certifying the escape.
+
+So every row is now run. A fake `npx` on `PATH` appends its arguments to a marker file and exits 0; each
+decoration goes through `bash -c` with the marker cleared first; the row is correct when the marker's
+existence matches the list it is filed under.
+
+```text
+34 decorations executed under bash
+   25 live    all 25 ran            marker: "npx tsup" (and "npx tsup )" for the round-19 escape)
+    9 inert   none of the 9 ran     marker absent
+```
+
+**Two rows were misfiled and the run is what found them**, which is the whole argument for doing it:
+
+- `build_once() { %s; }` — bash defines a function body and does not enter it, so the row asserted an
+  execution that never happened. It is `build_once() { %s; }; build_once` now, which keeps the construct
+  the row exists for and makes the claim true.
+- `if [ -f package.json ]; then %s; fi` — live only where that file exists, which is the context it
+  models. The first harness ran from a directory without one and measured its own cwd. The harness
+  writes a `package.json` into its lab, and `GITHUB_OUTPUT` points into the lab too, so nothing in the
+  corpus writes outside it.
+
+The obligation is written into the test's own block comment: **a row is added from a run, not from a
+reading.** A stronger form — generating the corpus from bash at test time — is not portable to this
+repository's Windows CI and is not proposed.
+
 ### The full profile
 
 **`validate --profile full` has no single number, and that is the finding.** `build` runs the profile,
