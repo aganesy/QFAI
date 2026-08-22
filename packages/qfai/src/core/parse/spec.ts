@@ -91,7 +91,7 @@ export function extractBulletField(md: string, name: string): string | undefined
   return value;
 }
 
-/** `Superseded-by` names a spec directory: `spec-0042`. */
+/** `Superseded-by` names a spec directory in four-digit form. */
 export const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
 /** `Deprecated-at` is an ISO calendar date: `2026-05-02`. */
 export const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
