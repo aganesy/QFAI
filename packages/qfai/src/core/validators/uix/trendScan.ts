@@ -28,6 +28,27 @@ const GUIDELINE_REQUIRED_FIELDS = [
 
 const PLACEHOLDER_RE = /^(?:tbd|todo|example|lorem|placeholder|n\/a|none)$/i;
 
+/**
+ * The shipped `04_Sources.md` template seeds every field with a bracketed
+ * prompt (`- reference: [Source name or URL]`). Those are unfilled slots, not
+ * project content, so they must fail the same way `TBD` does. A markdown link
+ * (`[text](url)`) is not caught: it does not end at the closing bracket.
+ */
+const BRACKET_PLACEHOLDER_RE = /^\[[^\]]*\]$/;
+
+const LIST_VALUE_SEPARATOR = "; ";
+
+function isPlaceholder(value: string | undefined): boolean {
+  const trimmed = value?.trim() ?? "";
+  if (trimmed === "") {
+    return true;
+  }
+  // A list-valued field is unfilled only when every one of its items is.
+  return trimmed
+    .split(LIST_VALUE_SEPARATOR)
+    .every((part) => PLACEHOLDER_RE.test(part.trim()) || BRACKET_PLACEHOLDER_RE.test(part.trim()));
+}
+
 function trendIssue(
   code: string,
   message: string,
@@ -85,9 +106,42 @@ function parseEntries(categoryBody: string): string[] {
     .filter((entry) => entry.startsWith("#### "));
 }
 
+/**
+ * Reads `- <field>: <value>` from an entry block.
+ *
+ * The shipped template writes some fields — `rule_refs` most notably — as an
+ * indented bullet list on the lines that follow the label, so an empty inline
+ * value falls through to those items instead of reporting the field as blank.
+ * The collected items are joined with `LIST_VALUE_SEPARATOR`.
+ */
 function extractField(entry: string, field: string): string | undefined {
-  const match = new RegExp(`^\\s*-\\s*${field}\\s*:\\s*(.*)$`, "im").exec(entry);
-  return match?.[1]?.trim();
+  const lines = entry.split("\n");
+  const labelRe = new RegExp(`^\\s*-\\s*${field}\\s*:\\s*(.*)$`, "i");
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = labelRe.exec(lines[index] ?? "");
+    if (!match) {
+      continue;
+    }
+    const inline = match[1]?.trim() ?? "";
+    if (inline !== "") {
+      return inline;
+    }
+    const items: string[] = [];
+    for (let next = index + 1; next < lines.length; next += 1) {
+      // Only deeper-indented bullets belong to this field; a sibling `- foo:`
+      // at column 0 ends the list.
+      const nested = /^\s+-\s+(.*)$/.exec(lines[next] ?? "");
+      if (!nested) {
+        break;
+      }
+      const item = nested[1]?.trim() ?? "";
+      if (item !== "") {
+        items.push(item);
+      }
+    }
+    return items.join(LIST_VALUE_SEPARATOR);
+  }
+  return undefined;
 }
 
 export async function validateTrendScan(root: string, _config: QfaiConfig): Promise<Issue[]> {
@@ -151,7 +205,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
     for (const entry of entries) {
       for (const field of REQUIRED_ENTRY_FIELDS) {
         const value = extractField(entry, field);
-        if (!value || PLACEHOLDER_RE.test(value)) {
+        if (isPlaceholder(value)) {
           issues.push(
             trendIssue(
               "UIX-VAL-TREND-FIELD-MISSING",
@@ -168,10 +222,7 @@ export async function validateTrendScan(root: string, _config: QfaiConfig): Prom
   const guidelineCategory = extractCategoryBody(trendSection, "design_guideline_research");
   const guidelineEntries = guidelineCategory ? parseEntries(guidelineCategory) : [];
   const hasConcreteGuidelineEntry = guidelineEntries.some((entry) =>
-    GUIDELINE_REQUIRED_FIELDS.every((field) => {
-      const value = extractField(entry, field);
-      return Boolean(value) && !PLACEHOLDER_RE.test(value ?? "");
-    }),
+    GUIDELINE_REQUIRED_FIELDS.every((field) => !isPlaceholder(extractField(entry, field))),
   );
 
   if (!hasConcreteGuidelineEntry) {
