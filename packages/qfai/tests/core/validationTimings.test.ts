@@ -2,9 +2,9 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
-import { formatTimingOverruns } from "../../src/cli/commands/validate.js";
+import { formatTimingOverruns, runValidate } from "../../src/cli/commands/validate.js";
 import { validateProject } from "../../src/core/validate.js";
 
 const MOCK_DOC = [
@@ -99,5 +99,49 @@ describe("formatTimingOverruns", () => {
         htmlMockBudgetMs: 2000,
       }),
     ).toBe("timings: over budget uiux=2500ms (budget 2000ms) htmlMock=2101ms (budget 2000ms)");
+  });
+
+  it("keeps the reported measurement above the budget it overshot", () => {
+    // Rounding to whole milliseconds printed `uiux=2000ms (budget 2000ms)` —
+    // a line that denies the over-budget branch that produced it.
+    expect(
+      formatTimingOverruns({
+        uiuxMs: 2000.1,
+        uiuxBudgetMs: 2000,
+        htmlMockMs: 4,
+        htmlMockBudgetMs: 2000,
+      }),
+    ).toBe("timings: over budget uiux=2000.1ms (budget 2000ms)");
+    expect(
+      formatTimingOverruns({
+        uiuxMs: 10,
+        uiuxBudgetMs: 2000,
+        htmlMockMs: 0.05,
+        htmlMockBudgetMs: 0.000001,
+      }),
+    ).toBe("timings: over budget htmlMock=0.1ms (budget 0.000001ms)");
+  });
+});
+
+describe("runValidate --format github", () => {
+  it("surfaces an exceeded budget in the GitHub output too", async () => {
+    await withProject(async (root) => {
+      const chunks: string[] = [];
+      const writeSpy = vi
+        .spyOn(process.stdout, "write")
+        .mockImplementation((chunk: string | Uint8Array) => {
+          chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+          return true;
+        });
+      try {
+        await runValidate({ root, strict: false, profile: "prototyping", format: "github" });
+      } finally {
+        writeSpy.mockRestore();
+      }
+
+      // The CI validate gate runs `--format github`; without this line the
+      // overrun only lives in validate.json#timings.
+      expect(chunks.join("")).toMatch(/::notice::timings: over budget htmlMock=/);
+    });
   });
 });

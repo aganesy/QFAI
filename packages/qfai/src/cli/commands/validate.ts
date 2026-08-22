@@ -575,14 +575,40 @@ export function formatTimingOverruns(timings: ValidationTimings | undefined): st
   }
   const parts: string[] = [];
   if (timings.uiuxMs > timings.uiuxBudgetMs) {
-    parts.push(`uiux=${Math.round(timings.uiuxMs)}ms (budget ${timings.uiuxBudgetMs}ms)`);
+    parts.push(
+      `uiux=${formatOverrunMs(timings.uiuxMs, timings.uiuxBudgetMs)}ms ` +
+        `(budget ${timings.uiuxBudgetMs}ms)`,
+    );
   }
   if (timings.htmlMockMs > timings.htmlMockBudgetMs) {
     parts.push(
-      `htmlMock=${Math.round(timings.htmlMockMs)}ms (budget ${timings.htmlMockBudgetMs}ms)`,
+      `htmlMock=${formatOverrunMs(timings.htmlMockMs, timings.htmlMockBudgetMs)}ms ` +
+        `(budget ${timings.htmlMockBudgetMs}ms)`,
     );
   }
   return parts.length > 0 ? `timings: over budget ${parts.join(" ")}` : null;
+}
+
+const MAX_OVERRUN_DECIMALS = 9;
+
+/**
+ * A measurement that already exceeds `budget`, rendered at the coarsest
+ * precision that still reads as larger than the budget.
+ *
+ * Rounding to whole milliseconds unconditionally would print
+ * `uiux=2000ms (budget 2000ms)` for a 2000.1ms run — a diagnostic that
+ * contradicts the over-budget branch it was printed from — and collapse a
+ * fractional custom budget to `0ms (budget 0.1ms)`. So the decimals grow until
+ * the rendered value is strictly greater than the budget.
+ */
+function formatOverrunMs(value: number, budget: number): string {
+  for (let decimals = 0; decimals <= MAX_OVERRUN_DECIMALS; decimals += 1) {
+    const rendered = value.toFixed(decimals);
+    if (Number(rendered) > budget) {
+      return rendered;
+    }
+  }
+  return String(value);
 }
 
 function emitTextRunLog(runLogPath: string): void {
@@ -605,6 +631,7 @@ function emitGitHubOutput(
     dropped,
     jsonPath,
     root,
+    timingOverruns: formatTimingOverruns(result.timings),
     ...status,
   });
 
@@ -645,6 +672,7 @@ function emitGitHubSummary(
     root: string;
     failOn: FailOn;
     willFail: boolean;
+    timingOverruns: string | null;
   },
 ): void {
   const summary = [
@@ -657,6 +685,13 @@ function emitGitHubSummary(
     `result=${options.willFail ? "FAIL" : "PASS"}`,
   ].join(" ");
   process.stdout.write(`${summary}\n`);
+
+  if (options.timingOverruns) {
+    // The measurement is not a finding, so it has no annotation of its own to
+    // ride on; without this line a CI run in `--format github` would only
+    // carry the overrun inside validate.json#timings.
+    process.stdout.write(`::notice::${escapeGitHubCommandValue(options.timingOverruns)}\n`);
+  }
 
   if (options.dropped > 0 || options.omitted > 0) {
     const details = [
