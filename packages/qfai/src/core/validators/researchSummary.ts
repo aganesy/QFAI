@@ -13,10 +13,23 @@ const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const SOURCE_ENTRY_RE = /^\s*-\s*id:\s*(\S+)/gm;
 const REFLECTION_APPLY_RE = /action:\s*apply/i;
 const FULL_DATE_RE = /^\s+published:\s*["']?(\d{4}-\d{2}-\d{2})["']?/m;
+const TITLE_VALUE_RE = /^\s+title:\s*(.*)$/m;
+const URL_VALUE_RE = /^\s+url:\s*(.*)$/m;
+const REASON_VALUE_RE = /^\s*-?\s*reason:\s*(.*)$/gm;
+/**
+ * Scaffolded values that record nothing: bracketed / angled template slots
+ * (`[Source title]`, `<link>`) and the usual "not filled in yet" words. A
+ * required field carrying one of these is unfilled, not answered.
+ */
+const PLACEHOLDER_VALUE_RE = /^(?:\[[^\]]*\]|<[^>]*>|tbd|todo|n\/a|none|placeholder)\.?$/i;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const pattern = path.posix.join(root.replace(/\\/g, "/"), config.paths.discussionDir, "**/*.md");
+  // `paths.discussionDir` may be absolute (packs relocated outside <root>);
+  // resolve it the same way findLatestDiscussionPackDir's caller does, or the
+  // glob would look under <root>/<abs path> and find nothing.
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  const pattern = path.posix.join(normalize(discussionRoot), "**/*.md");
   const files = await fg(pattern, { absolute: true });
   const filesWithHeading = new Set<string>();
 
@@ -29,11 +42,14 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
 
     if (!RESEARCH_SUMMARY_HEADING_RE.test(content)) continue;
-    filesWithHeading.add(normalize(filePath));
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
     const section = extractResearchSummarySection(content);
+    // A heading with an empty body records no protocol, so leave the file
+    // unregistered: the pack reports QFAI-RESEARCH-012 instead of the bare
+    // heading buying silence from every rule below.
     if (!section) continue;
+    filesWithHeading.add(normalize(filePath));
 
     // Validate only entries under sources:, not other lists that may also use "- id:".
     const sourceEntries = extractSourceEntries(section);
@@ -53,22 +69,22 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     for (let i = 0; i < sourceEntries.length; i++) {
       const block = sourceEntries[i]?.block ?? "";
 
-      if (!/^\s+title:\s*.+/m.test(block)) {
+      if (!isFilledValue(TITLE_VALUE_RE.exec(block)?.[1])) {
         issues.push(
           issue(
             "QFAI-RESEARCH-004",
-            `Source entry missing required field "title": ${sourceIds[i] ?? "(unknown)"}`,
+            `Source entry missing or unfilled required field "title": ${sourceIds[i] ?? "(unknown)"}`,
             "error",
             rel,
             "researchSummary.sourceTitle",
           ),
         );
       }
-      if (!/^\s+url:\s*.+/m.test(block)) {
+      if (!isFilledValue(URL_VALUE_RE.exec(block)?.[1])) {
         issues.push(
           issue(
             "QFAI-RESEARCH-005",
-            `Source entry missing required field "url": ${sourceIds[i] ?? "(unknown)"}`,
+            `Source entry missing or unfilled required field "url": ${sourceIds[i] ?? "(unknown)"}`,
             "error",
             rel,
             "researchSummary.sourceUrl",
@@ -174,11 +190,14 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
-    if (reflectionCount > 0 && !/\breason:\s*.+/i.test(section)) {
+    const hasFilledReason = [...section.matchAll(REASON_VALUE_RE)].some((match) =>
+      isFilledValue(match[1]),
+    );
+    if (reflectionCount > 0 && !hasFilledReason) {
       issues.push(
         issue(
           "QFAI-RESEARCH-010",
-          'Each reflection entry should include non-empty "reason"',
+          'Each reflection entry should include non-empty "reason" (template placeholders do not count)',
           "error",
           rel,
           "researchSummary.reflectionReason",
@@ -187,7 +206,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
   }
 
-  const missing = await buildMissingSectionIssue(root, config, files, filesWithHeading);
+  const missing = await buildMissingSectionIssue(root, discussionRoot, files, filesWithHeading);
   if (missing) {
     issues.push(missing);
   }
@@ -199,6 +218,12 @@ function normalize(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 
+/** A required value counts as answered only when it is neither blank nor a template slot. */
+function isFilledValue(value: string | undefined): boolean {
+  const trimmed = (value ?? "").trim();
+  return trimmed.length > 0 && !PLACEHOLDER_VALUE_RE.test(trimmed);
+}
+
 /**
  * Every rule above is skipped when a file carries no heading, so omitting the
  * section entirely used to score zero findings while half-writing it scored
@@ -207,11 +232,10 @@ function normalize(filePath: string): string {
  */
 async function buildMissingSectionIssue(
   root: string,
-  config: QfaiConfig,
+  discussionRoot: string,
   files: readonly string[],
   filesWithHeading: ReadonlySet<string>,
 ): Promise<Issue | null> {
-  const discussionRoot = resolvePath(root, config, "discussionDir");
   const latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
   if (!latestPackDir) {
     return null;

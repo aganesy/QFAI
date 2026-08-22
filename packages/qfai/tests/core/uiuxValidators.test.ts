@@ -314,6 +314,84 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-007");
     expect(codes).not.toContain("QFAI-RESEARCH-008");
     expect(codes).not.toContain("QFAI-RESEARCH-011");
+    // …but an untouched scaffold must not pass as recorded research: every
+    // required value is still a bracketed placeholder.
+    expect(codes).toContain("QFAI-RESEARCH-004");
+    expect(codes).toContain("QFAI-RESEARCH-005");
+    expect(codes).toContain("QFAI-RESEARCH-006");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+  });
+
+  it("rejects template placeholders left in required Research Summary values", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: [Source title]",
+        "    url: [https://example.com/reference]",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - id: BP-0001",
+        "anti_patterns:",
+        "  - id: AP-0001",
+        "reflection:",
+        "  - action: apply",
+        "    reason: [Why this action was chosen]",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-004");
+    expect(codes).toContain("QFAI-RESEARCH-005");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+  });
+
+  it("treats an empty Research Summary section as an unrecorded protocol", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Research Summary", "", "## Trend Scan", "", "- none", ""].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-012");
+  });
+
+  it("finds packs under an absolute discussionDir outside the project root", async () => {
+    const root = await newTempDir();
+    const externalDiscussionRoot = await newTempDir();
+    const packDir = path.join(externalDiscussionRoot, "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const config = {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, discussionDir: externalDiscussionRoot },
+    };
+    const missing = (await validateResearchSummary(root, config)).filter(
+      (item) => item.code === "QFAI-RESEARCH-012",
+    );
+
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.file).toContain("discussion-20260101000000000");
   });
 
   it("does not report a missing Research Summary when there is no discussion pack", async () => {
