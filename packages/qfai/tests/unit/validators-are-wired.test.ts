@@ -12,14 +12,14 @@
  * Implementation strategy:
  *   1. Walk every TS file under src/core/validators/prototyping/
  *   2. Extract every `export function validate*(`
- *   3. Build the "reachable code": validate.ts plus the source bodies of
- *      every file it imports under `./validators/...`, and their imports in
- *      turn (2-hop). This handles the orchestrator pattern where validate.ts
- *      imports `validateStateGate` and the orchestrator internally calls a
- *      sibling validator.
- *   4. Reduce that corpus to executable text — comments, string literals and
- *      `function name(` headers removed — and assert each validator name
- *      appears there as a *call expression*, OR is on the documented
+ *   3. Load the module graph: validate.ts plus every file it imports under
+ *      `./validators/...`, and their imports in turn (2-hop). This reaches the
+ *      orchestrator pattern where validate.ts imports `validateStateGate` and
+ *      the orchestrator internally calls a sibling validator.
+ *   4. Walk that graph one *function body* at a time: validate.ts and every
+ *      loaded module's top-level code are reachable, and a function body joins
+ *      them only once reachable code uses its name. Assert each validator is
+ *      used from what that walk reaches, OR is on the documented
  *      PENDING_WIRING allowlist (existing dead code that requires a
  *      follow-up wiring effort).
  *
@@ -28,8 +28,10 @@
  * doc comment and a name re-exported from the validators barrel as evidence of
  * wiring. Both are non-calls, and `src/core/validators/index.ts` re-exports
  * every prototyping validator by design (the second test below requires it),
- * so the guard could not fail for the situation it was written for. See
- * `tests/helpers/wiringGraph.ts`.
+ * so the guard could not fail for the situation it was written for — and
+ * because that barrel pulls every validator file into the module graph, mere
+ * membership in the graph is not wiring either: one dead validator calling
+ * another must not vouch for it. See `tests/helpers/wiringGraph.ts`.
  */
 import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
@@ -37,7 +39,12 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { isInvoked, stripCommentsAndLiterals, toExecutableCode } from "../helpers/wiringGraph.js";
+import {
+  buildWiringGraph,
+  stripCommentsAndLiterals,
+  type WiringGraph,
+  type WiringModule,
+} from "../helpers/wiringGraph.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -68,8 +75,9 @@ const DEPRECATED_LEGACY_VALIDATORS = new Set<string>([
  * allowlisted here so this guard reports the truth instead of a false green.
  *
  * This list MUST shrink over time and MUST never grow without explicit
- * justification. The sentinel below pins its exact contents so neither a new
- * entry nor a silently stale one goes unnoticed.
+ * justification. The sentinel below pins its exact contents and re-checks that
+ * every entry is still genuinely unwired, so neither a new entry nor an
+ * exemption that has outlived its reason goes unnoticed.
  */
 const PENDING_WIRING: ReadonlySet<string> = new Set<string>(["validateDelegationMapIssues"]);
 
@@ -153,19 +161,22 @@ function localImportSpecifiers(body: string): string[] {
 }
 
 /**
- * Build the "reachable from validate.ts" code by including validate.ts plus
- * every file it imports under `./validators/`, `./prototyping/` or `./uiux/`,
- * and their imports in turn (2-hop). Orchestrators that wrap multiple sibling
- * validators are detected this way.
+ * Build the call graph rooted at validate.ts: validate.ts plus every file it
+ * imports under `./validators/`, `./prototyping/` or `./uiux/`, and their
+ * imports in turn (2-hop). Orchestrators that wrap multiple sibling validators
+ * are detected this way.
  *
- * The result is reduced to executable text: comments, literals and function
- * declaration headers are removed, so only a real call expression can satisfy
- * {@link isInvoked}.
+ * Being *in* that module graph is not wiring. `validators/index.ts` is a barrel
+ * that re-exports every prototyping validator, so every one of those files is
+ * loaded no matter what calls it; a dead validator calling another dead
+ * validator would otherwise make the second look wired. {@link buildWiringGraph}
+ * therefore admits a function body only once code already proven reachable uses
+ * that function — import aliases (`import { validateFoo as runFoo }`) included.
  */
-async function buildReachableCode(): Promise<string> {
+async function buildValidateWiringGraph(): Promise<WiringGraph> {
   const validateBody = await readFile(VALIDATE_TS, "utf-8");
   const visited = new Set<string>();
-  const fragments: string[] = [validateBody];
+  const imported: WiringModule[] = [];
 
   for (const rel of localImportSpecifiers(validateBody)) {
     const resolved = resolveLocalImport(VALIDATE_TS, rel);
@@ -173,30 +184,30 @@ async function buildReachableCode(): Promise<string> {
     visited.add(resolved);
     const body = await readSourceOrUndefined(resolved);
     if (body === undefined) continue;
-    fragments.push(body);
+    imported.push({ file: resolved, source: body });
 
     for (const innerRel of localImportSpecifiers(body)) {
       const innerResolved = resolveLocalImport(resolved, innerRel);
       if (innerResolved === undefined || visited.has(innerResolved)) continue;
       visited.add(innerResolved);
       const innerBody = await readSourceOrUndefined(innerResolved);
-      if (innerBody !== undefined) fragments.push(innerBody);
+      if (innerBody !== undefined) imported.push({ file: innerResolved, source: innerBody });
     }
   }
-  return toExecutableCode(fragments.join("\n"));
+  return buildWiringGraph({ file: VALIDATE_TS, source: validateBody }, imported);
 }
 
 describe("meta-test: prototyping validators are wired into the pipeline", () => {
   it("every public Issue[]-returning validator under validators/prototyping/ is called from validate.ts", async () => {
     const validators = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
-    const reachable = await buildReachableCode();
+    const graph = await buildValidateWiringGraph();
 
     expect(validators.length, "expected at least one public validator").toBeGreaterThan(0);
 
     const unwired: Array<{ name: string; file: string }> = [];
     for (const { name, file } of validators) {
       if (PENDING_WIRING.has(name)) continue;
-      if (!isInvoked(name, reachable)) {
+      if (!graph.isCalled(name)) {
         unwired.push({ name, file });
       }
     }
@@ -236,13 +247,13 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     const defined = new Set(
       (await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR)).map((v) => v.name),
     );
-    const reachable = await buildReachableCode();
+    const graph = await buildValidateWiringGraph();
 
     const missingDefinitions: string[] = [];
     const notCalled: string[] = [];
     for (const [code, name] of CATALOG_OWNERS) {
       if (!defined.has(name)) missingDefinitions.push(`${name} (${code})`);
-      else if (!PENDING_WIRING.has(name) && !isInvoked(name, reachable)) {
+      else if (!PENDING_WIRING.has(name) && !graph.isCalled(name)) {
         notCalled.push(`${name} (${code})`);
       }
     }
@@ -267,5 +278,17 @@ describe("meta-test: prototyping validators are wired into the pipeline", () => 
     );
     const stale = [...PENDING_WIRING].filter((name) => !defined.has(name));
     expect(stale, "PENDING_WIRING names a validator that no longer exists").toEqual([]);
+
+    // The exemption must expire the moment it stops being true. Without this,
+    // wiring validateDelegationMapIssues (#563) would leave a permanent
+    // exemption behind: the main test and CATALOG_OWNERS both skip allowlisted
+    // names, so a later regression that unwires it again would go unnoticed.
+    const graph = await buildValidateWiringGraph();
+    const nowWired = [...PENDING_WIRING].filter((name) => graph.isCalled(name));
+    expect(
+      nowWired,
+      "these validators are wired now — delete them from PENDING_WIRING (and from the " +
+        "expectation above) so the guard starts enforcing their wiring again",
+    ).toEqual([]);
   });
 });
