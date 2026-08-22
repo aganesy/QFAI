@@ -143,7 +143,7 @@ Scenario: Setup exists once and is consumed, not restated
 Scenario: The version is file-derived here, and the mechanism does not leak into the shipped surface
   Given the Node version is duplicated as a workflow-level literal today
   When the shared setup definition reads the version from a file in the repository
-  Then no workflow-level Node version literal remains
+  Then no workflow-level Node version literal remains but the publishing job's declared exception
   And the class of stale-version comment the shipped template exhibits becomes structurally impossible here
   And the shared definition lives outside the shipped asset tree, so pack verification still rejects an actions directory under the shipped GitHub configuration
 

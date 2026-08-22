@@ -1,36 +1,34 @@
 /**
- * Two properties of this repository's OWN workflows. One of them is coverage; the other deliberately is
- * not, and the difference is the point of this header.
+ * Two properties of this repository's OWN workflows, and the history of how each became coverage.
  *
  * `QFAI-ATDD-112` reported eight `TC`s uncovered for eleven rounds and nobody went back to them, because
  * every round's agenda was the previous round's findings. Both of these are about the OWN tree, which is
  * why they were easy to miss: every `tests/e2e/**` file in this package asserts over an adopter's tree
  * built by `qfai init`, so the habit of the suite pointed away from the subject they name.
  *
- * ## `TC-0017-0030` is covered. `TC-0017-0016` is not, and must not be.
+ * ## Both are coverage now. Neither was, while its Change Request was open.
  *
- * I measured the permission departures, found the case's "exactly two" against a tree holding three, wrote
- * the assertion below, registered the annotation, and watched `QFAI-ATDD-112` stop reporting the row.
+ * I measured the permission departures, found `TC-0017-0016`'s "exactly two" against a tree holding
+ * three, wrote the assertion, registered the annotation, and watched `QFAI-ATDD-112` stop reporting the
+ * row.
  *
  * Then I found `CR-20260818-0007` — raised 2026-08-18 by `/qfai-implement`, `Class: intent`,
- * `Status: open`, `Blocked set: spec-0017 TDD-0016 (TC-0017-0016)` — carrying the same three-row table I
- * had just re-derived, and the reason it was raised rather than written:
+ * `Blocked set: spec-0017 TDD-0016 (TC-0017-0016)` — carrying the same three-row table I had just
+ * re-derived, and the reason it was raised rather than written:
  *
  * > `TC-0017-0016` is a `boundary` row, and `06_Test-Cases.md` says a boundary row exists to "fix where
  * > the rule stops". This one is ambiguous at precisely that point, so writing it now would encode my
  * > reading of an undefined term as a hard assertion.
  *
- * The CR **recommends** Option A: the minimal-scope default is the literal `contents: read`, three
- * exceptions are enumerated, and the case's oracle becomes a set equality against them. That is exactly
- * what this test asserts. But `Approved by:` and `Approved option:` are both `-`, and **the gate finding
- * is the signal that the decision is pending.** Discharging it by adopting the recommendation would
- * remove the signal while the choice is still the user's.
+ * So the annotation came back off, and both tests sat here as properties rather than as coverage —
+ * asserting what every option shared, with the gate finding left standing. **Discharging a
+ * pending-decision signal by adopting the recommendation it carries removes the signal while the choice
+ * is still the user's.**
  *
- * So the claim is withdrawn and the test stays. It protects what every option shares — the set of
- * departures is closed and every member deliberate — and it is written against Option A's oracle, so
- * approving A turns it into coverage by restoring one annotation. Approving B (per-job minimum, count two)
- * or C (only the blocks this spec adds) means rewriting the expected set, and the comment on the
- * `describe` says which.
+ * Both are approved as of 2026-08-23 — `CR-20260818-0007` option A, `CR-20260820-0001` option C. Each
+ * test was then rewritten against the approved oracle, falsified by planting the violations it claims to
+ * catch, and only after that re-annotated. The annotation is a claim about the test; nothing in this
+ * repository checks it, so the order is the only thing that makes it true.
  *
  * The near-miss is worth keeping in view: I re-derived a filed CR's measurement, treated it as a new
  * finding, and nearly resolved an open intent question by picking its recommended option. **An open CR
@@ -67,105 +65,237 @@ async function ownWorkflows(): Promise<Workflow[]> {
   return out;
 }
 
-// NOT annotated for `TC-0017-0016`, deliberately. `CR-20260818-0007` is open, `Class: intent`, and its
-// `Blocked set` names `TDD-0016 (TC-0017-0016)`: the term "the minimal-scope default" has two readings and
-// the pack does not choose between them. The CR RECOMMENDS Option A — the default is the literal
-// `contents: read`, three exceptions are enumerated, and the case's oracle becomes a set equality against
-// them — which is exactly what this test asserts. But `Approved by:` and `Approved option:` are both `-`,
-// and the `QFAI-ATDD-112` finding is the signal that the choice is still the user's. Annotating this would
-// discharge that signal by adopting the recommendation, which is not this stage's decision to take.
+// QFAI:SPEC-0017:TC-0017-0016
 //
-// So the test runs and claims nothing. It protects the property every option shares — the set of
-// departures is closed and every member deliberate — and it is written against Option A's oracle, so
-// approving A makes it coverage by adding the annotation back. Approving B (per-job minimum, count two) or
-// C (only the blocks this spec adds) means rewriting the expected set.
+// Annotated as of `CR-20260818-0007`, approved 2026-08-23, **option A**: the minimal-scope default is
+// the literal `permissions: { contents: read }`, and exactly three blocks are declared exceptions.
+// This test was written against that oracle while the CR was open and deliberately carried no
+// annotation, because annotating it then would have discharged the pending-decision signal by adopting
+// a recommendation that was not this stage's to adopt. The decision is made, so the annotation is back.
+//
+// Two things changed with the approval, and both close a laundering path rather than restate the rule.
+//
+// **The comparison is against the literal, not against each file's own baseline.** Relative comparison
+// had a hole: widen `ci.yml`'s workflow-level block to `contents: write` and a NEW job carrying
+// `contents: write` equals its file's baseline and drops out of the departure set silently. The old
+// second loop would have caught the widened baseline, but the set itself under-reported. One fixed
+// literal, one set, no hole.
+//
+// **A missing workflow-level block is a member, not an absence.** Folding it in is what lets the two
+// assertions collapse into one equality without losing the baseline check.
 describe("the own tree's departures from minimal permission scope are a closed set", () => {
-  it("grants no job-level permission block beyond the three that are deliberate", async () => {
+  it("grants no permission block beyond the three that are deliberate", async () => {
     const workflows = await ownWorkflows();
+    // The literal default, serialised the same way every candidate is.
+    const DEFAULT = JSON.stringify({ contents: "read" });
+    // Key order is a property of how the YAML was typed, not of what is granted: `JSON.stringify`
+    // preserves insertion order, so swapping `contents:` and `id-token:` in the source would otherwise
+    // change the string and redden a tree that granted exactly the same thing.
+    const canonical = (value: unknown): string => {
+      if (!isRecord(value)) return JSON.stringify(value);
+      const sorted: Record<string, unknown> = {};
+      for (const key of Object.keys(value).sort()) sorted[key] = value[key];
+      return JSON.stringify(sorted);
+    };
+
     const departures: string[] = [];
+    let jobCount = 0;
     for (const { file, document } of workflows) {
-      // The workflow-level grant is the baseline every job inherits. A job block that RESTATES it is not
-      // a departure — `ci.yml`'s `detect` does exactly that — and counting it would make the assertion
-      // about how the file is written rather than about what is granted.
-      const baseline = JSON.stringify(document["permissions"] ?? null);
+      // `permissions:` is legal at workflow and job level only — never at step level, and a composite
+      // action cannot declare one — so these two loops are the whole surface.
+      const atWorkflow = document["permissions"];
+      if (atWorkflow === undefined) departures.push(`${file}#<workflow>: MISSING`);
+      else if (canonical(atWorkflow) !== DEFAULT) {
+        departures.push(`${file}#<workflow>: ${canonical(atWorkflow)}`);
+      }
+
       const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
       for (const [id, job] of Object.entries(jobs)) {
         if (!isRecord(job)) continue;
+        jobCount += 1;
         const granted = job["permissions"];
+        // Absent means inherited, which is `TC-0017-0014`'s property and not this one. A job that
+        // RESTATES the default — `ci.yml`'s `detect` does — is not a departure either.
         if (granted === undefined) continue;
-        const serialised = JSON.stringify(granted);
-        if (serialised === baseline) continue;
-        departures.push(`${file}#${id}: ${serialised}`);
+        if (canonical(granted) === DEFAULT) continue;
+        departures.push(`${file}#${id}: ${canonical(granted)}`);
       }
     }
 
-    // Exactly this set, by content. A new departure fails; a widened existing one fails; and removing
-    // one fails too, because each is load-bearing and its removal would break the job.
+    // Non-vacuity, both halves. An empty departure set is also what an empty scan produces, and the
+    // file floor alone passes on two documents that parse to `{}`.
+    expect(jobCount, "the own tree must have jobs for this to be about").toBeGreaterThan(0);
+
+    // Set EQUALITY, in both directions. The previous formulation only forbade extras, so deleting
+    // `id-token: write` from `publish` would have passed it.
     expect(
       departures.sort(),
-      "the set of permission grants that depart from the workflow baseline must be closed: a new one, " +
-        "or a widened one, is a supply-chain change someone should read",
+      "the set of permission blocks departing from the literal `{ contents: read }` must be exactly " +
+        "the three declared exceptions: a fourth is a supply-chain change someone should read, and a " +
+        "missing one means a job lost a grant it needs",
     ).toEqual([
-      // The aggregate verdict job computes a result from `needs` and touches nothing.
+      // The aggregate verdict job computes a result from `needs` and touches nothing. Explicit rather
+      // than missing, which is the distinction the `MISSING` record above exists to keep.
       "ci.yml#ci-pass: {}",
-      // Creating a GitHub release writes to the repository. Not named by `TC-0017-0016`, which expects
-      // two departures; see this file's header.
+      // Creating a GitHub Release writes to the repository; this is the minimum that can.
       'release.yml#github-release: {"contents":"write"}',
       // npm provenance needs an OIDC token, which is the one grant `contents` cannot express.
       'release.yml#publish: {"contents":"read","id-token":"write"}',
     ]);
-
-    // And the baseline itself, since "departs from the baseline" says nothing if the baseline is wide.
-    for (const { file, document } of workflows) {
-      expect(document["permissions"], `${file} must default to read-only`).toEqual({
-        contents: "read",
-      });
-    }
   });
 });
 
-// NOT annotated either, and for two reasons rather than one.
+// QFAI:SPEC-0017:TC-0017-0030
 //
-// `CR-20260820-0001` is open, `Class: intent`, `Blocked set: spec-0017 TDD-0030 (TC-0017-0030)`, and the
-// ledger row is `blocked` on it. Three statements cannot all hold: `BR-0017-0027`'s tree-wide prohibition
-// on a workflow-level Node literal, `10_Plan.md` scoping `release.yml` to pins only, and the publish job
-// encoding an npm engine constraint.
+// Annotated as of `CR-20260820-0001`, approved 2026-08-23, **option C**: the prohibition on a
+// workflow-level Node literal stays tree-wide, and the publishing job is exempted explicitly rather than
+// by scoping the rule away from `release.yml`.
 //
-// **And the case's oracle is stronger than what this test checks.** It asks for ZERO workflow-level Node
-// version literals; the tree holds two, in `release.yml`'s `env:` block (`NODE_LTS: "20.19"` and
-// `NODE_PUBLISH: "24"`). The scan below matches `node-version:` only, so it reads `${{ env.NODE_LTS }}` as
-// compliant and never looks at the block the value comes from — which is exactly the conflict the CR was
-// raised about. Annotating this would have certified the case with a test blind to the thing it forbids.
+// **What this replaced was weaker than the case, and the gap was the thing the case is about.** The old
+// scan matched `node-version:` use sites only, so it read the gate's `${{ env.NODE_LTS }}` as compliant
+// and never looked at the `env:` block the value came from — blind to the literal it forbids. Three sets
+// close it:
 //
-// So the scope is stated for what it is: no literal at a `node-version:` USE SITE. A real property,
-// weaker than the case's, and not coverage of it.
-describe("no Node version literal sits at a use site in the own tree", () => {
-  it("reads every use-site Node version from a named source rather than from a literal", async () => {
+// **A. every Node version literal**, found two ways so that neither laundering path works. By name, so a
+// literal left dangling after its use site moved is still caught; and by resolving each use site's
+// `${{ env.X }}` back to its definition, so renaming the key away from `NODE` does not hide it. The two
+// paths agree on the one member, which is why the set is de-duplicated rather than concatenated.
+//
+// **B. every job that establishes a toolchain outside the shared definition.** A value-only rule is
+// satisfiable by inlining `actions/setup-node` with a `node-version-file`, which is drift with no
+// literal in it. This is the half that makes the gate's rewire an assertion rather than a comment.
+//
+// **C. the shared definition reads from a file, and that file carries the constraint.** Without the last
+// clause the indirection is decorative: `node-version-file` pointed at a `package.json` with no
+// `engines.node` resolves to whatever the runner image ships, silently.
+describe("the own tree takes its Node version from one shared definition", () => {
+  it("leaves exactly the publishing job's declared literal and routes every other job through the shared setup", async () => {
     const workflows = await ownWorkflows();
-    const literals: string[] = [];
-    const references: string[] = [];
-    for (const { file } of workflows) {
-      const text = await readFile(path.join(WORKFLOWS, file), "utf8");
-      for (const [index, line] of text.split(/\r?\n/).entries()) {
-        if (line.trim().startsWith("#")) continue;
-        const match = /node-version:\s*(\S.*)$/.exec(line);
-        if (match === null) continue;
-        const value = (match[1] ?? "").trim();
-        // A `${{ ... }}` expression names its source; a bare digit is the literal this forbids.
-        if (/^\$\{\{/.test(value)) references.push(`${file}:${String(index + 1)}: ${value}`);
-        else literals.push(`${file}:${String(index + 1)}: ${value}`);
+
+    // A version-shaped scalar: `24`, `20.19`, `20.19.0`. The YAML parser has already removed the quotes.
+    const VERSION_SHAPE = /^\d+(?:\.\d+){0,2}$/;
+    // `${{ env.NAME }}`, tolerant of the inner spacing nobody writes consistently.
+    const ENV_REFERENCE = /^\$\{\{\s*env\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/;
+    const SHARED_SETUP = "./.github/actions/setup";
+
+    const stepsOf = (owner: unknown): Record<string, unknown>[] => {
+      if (!isRecord(owner)) return [];
+      const steps = owner["steps"];
+      return Array.isArray(steps) ? steps.filter(isRecord) : [];
+    };
+    const named = (env: Record<string, unknown>, where: string, into: Set<string>): void => {
+      for (const [key, value] of Object.entries(env)) {
+        if (!/node/i.test(key)) continue;
+        if (!VERSION_SHAPE.test(String(value))) continue;
+        into.add(`${where}#env.${key}: ${String(value)}`);
+      }
+    };
+
+    const literals = new Set<string>();
+    const inlineSetups: string[] = [];
+    const sharedSetupUsers: string[] = [];
+    const useSites: string[] = [];
+
+    for (const { file, document } of workflows) {
+      const workflowEnv = isRecord(document["env"]) ? document["env"] : {};
+      named(workflowEnv, file, literals);
+
+      const jobs = isRecord(document["jobs"]) ? document["jobs"] : {};
+      for (const [id, job] of Object.entries(jobs)) {
+        const jobEnv = isRecord(job) && isRecord(job["env"]) ? job["env"] : {};
+        named(jobEnv, `${file}#${id}`, literals);
+
+        for (const step of stepsOf(job)) {
+          const uses = typeof step["uses"] === "string" ? step["uses"] : "";
+          if (uses === SHARED_SETUP) sharedSetupUsers.push(`${file}#${id}`);
+          // Set B. A composite action of our own is the sanctioned route; reaching past it to the
+          // upstream action is the drift, whether or not the version beside it is a literal.
+          if (/^actions\/setup-node@/.test(uses)) inlineSetups.push(`${file}#${id}`);
+
+          const withBlock = isRecord(step["with"]) ? step["with"] : {};
+          const declared = withBlock["node-version"];
+          if (declared === undefined) continue;
+          useSites.push(`${file}#${id}`);
+
+          const raw = String(declared).trim();
+          const reference = ENV_REFERENCE.exec(raw);
+          if (reference === null) {
+            // A bare version at the use site, or an expression reading something other than `env`.
+            literals.add(`${file}#${id}#node-version: ${raw}`);
+            continue;
+          }
+          const key = reference[1] ?? "";
+          const resolved = jobEnv[key] ?? workflowEnv[key];
+          if (resolved === undefined) {
+            throw new Error(
+              `${file}#${id} reads env.${key}, which neither the job nor the workflow defines`,
+            );
+          }
+          literals.add(`${file}#env.${key}: ${String(resolved)}`);
+        }
+      }
+    }
+
+    // Set A.
+    expect(
+      [...literals].sort(),
+      "the publishing job's Node literal is the one declared exception (BR-0017-0027): it encodes npm's " +
+        "own engine range for trusted publishing, which no file in this repository expresses. A second " +
+        "literal is a second answer to one question, and the stale one wins as often as not",
+    ).toEqual(["release.yml#env.NODE_PUBLISH: 24"]);
+
+    // Set B, negative half: nothing but `publish` reaches past the shared definition.
+    expect(
+      inlineSetups.sort(),
+      "every job needing a toolchain takes it from the shared definition; `publish` is the exception " +
+        "because it is the one job that deliberately does not run on the repository's own Node",
+    ).toEqual(["release.yml#publish"]);
+
+    // Set B, positive half: the rewire `CR-20260820-0001` option C decided, asserted rather than assumed.
+    expect(
+      sharedSetupUsers,
+      "the release gate must consume the shared definition — it is the job whose drift from `ci.yml` " +
+        "would let a release pass a gate `main` never ran",
+    ).toContain("release.yml#gate");
+
+    // Non-vacuity for all three sets. An empty scan satisfies every emptiness assertion above, and a
+    // sibling pin in this suite was inert at eleven packs for exactly that reason.
+    expect(
+      useSites.length,
+      "the scan must have found the Node use sites whose form it checks",
+    ).toBeGreaterThan(0);
+    expect(
+      sharedSetupUsers.length,
+      "the scan must have found jobs on the shared definition for its absence to mean anything",
+    ).toBeGreaterThan(1);
+
+    // Set C. The shared definition names a file, and names only a file.
+    const parsedAction: unknown = parseYaml(
+      await readFile(path.join(REPO_ROOT, ".github", "actions", "setup", "action.yml"), "utf8"),
+    );
+    const sources: string[] = [];
+    for (const step of stepsOf(isRecord(parsedAction) ? parsedAction["runs"] : undefined)) {
+      const withBlock = isRecord(step["with"]) ? step["with"] : {};
+      for (const key of ["node-version", "node-version-file"]) {
+        if (withBlock[key] !== undefined) sources.push(`${key}: ${String(withBlock[key])}`);
       }
     }
     expect(
-      literals,
-      "a Node version written at the use site is a second source of truth for one answer, which is the " +
-        "drift this forbids",
-    ).toEqual([]);
-    // A floor, because zero literals is also what an empty scan reports — the failure mode that made a
-    // sibling pin inert at eleven packs.
+      sources,
+      "the shared definition must read the version from a file and never from a literal of its own, or " +
+        "it becomes the single place the whole tree is wrong from",
+    ).toEqual(["node-version-file: package.json"]);
+
+    // Set C, second clause: the named file carries what the indirection resolves through.
+    const manifest: unknown = JSON.parse(
+      await readFile(path.join(REPO_ROOT, "package.json"), "utf8"),
+    );
+    const engines = isRecord(manifest) && isRecord(manifest["engines"]) ? manifest["engines"] : {};
     expect(
-      references.length,
-      "the scan must have found the version references it is checking the form of",
-    ).toBeGreaterThan(0);
+      typeof engines["node"] === "string" ? engines["node"] : "",
+      "`node-version-file: package.json` resolves through `engines.node`; with the field absent " +
+        "setup-node reads nothing and the runner image's default Node wins, which is not a decision " +
+        "anyone made",
+    ).toMatch(/\d/);
   });
 });

@@ -6,7 +6,7 @@
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `1` — ratify the three decision records and add the ordering rule
 - Applied at: `-`

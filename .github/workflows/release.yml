@@ -37,15 +37,16 @@ on:
         type: string
 
 env:
-  NODE_LTS: "20.19"
   # Trusted publishing needs npm >= 11.5.1. Pinning Node to that requirement is
   # documented minimum (22.14.0) is not enough: `npm@latest` carries its own
   # engine range — npm 12 wants `^22.22.2 || ^24.15.0 || >=26.0.0` — so the
   # install fails with EBADENGINE before the version check ever runs. Track the
   # current LTS major instead, and let setup-node resolve its newest patch.
   #
-  # Only the publish job runs on it. The gate stays on `NODE_LTS`, which is the
-  # version `engines.node` promises; moving it would stop testing what ships.
+  # Only the publish job runs on it, and it is the ONE workflow-level Node literal this repository
+  # allows (BR-0017-0027). It survives because it encodes npm's engine range for trusted publishing,
+  # which no file in the repository expresses. Every other job, the release gate included, takes its
+  # Node from `./.github/actions/setup`.
   NODE_PUBLISH: "24"
 
 concurrency:
@@ -146,17 +147,16 @@ jobs:
           # opens with — re-running a failed publish for an older tag — could
           # never get past this job.
           fetch-depth: 0
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The one definition of how this repository installs a toolchain (BR-0017-0027). It enables
+      # corepack, resolves Node from `package.json#engines`, re-shims pnpm against the toolcache Node
+      # in that order, and installs frozen. Inlining any of it is what let the gate and `ci.yml` drift.
+      #
+      # This job WAS pinned to `NODE_LTS: "20.19"` — the exact floor `engines.node` declares. It now
+      # resolves to the newest release satisfying `>=20.19.0`, so the gate no longer runs on the floor
+      # itself. That is the trade `.github/actions/setup/action.yml` already records for `ci.yml`:
+      # pinning exactly needs a root-level `.node-version`, which no agent may create without approval.
+      # Restoring exact-floor coverage means creating that file, not re-inlining a literal here.
+      - uses: ./.github/actions/setup
       - name: Run the release gate
         # The same aggregate `main` is held to: SSOT sync, format, lint, types,
         # package tests and pack verification.

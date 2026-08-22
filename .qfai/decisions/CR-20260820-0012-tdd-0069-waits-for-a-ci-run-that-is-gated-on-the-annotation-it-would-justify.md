@@ -6,7 +6,7 @@
 - Raised at: `2026-08-20T23:00:00Z`
 - Class: `defect`
 - Status: `approved`
-- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `5 then 1` — split the conjunction upstream, then narrow the signal
 - Applied at: `-`

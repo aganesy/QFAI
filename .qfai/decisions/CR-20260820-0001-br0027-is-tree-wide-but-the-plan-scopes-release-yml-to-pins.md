@@ -6,10 +6,10 @@
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
 - Status: `approved`
-- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `C` — keep the rule tree-wide and exempt the publish job explicitly
-- Applied at: `-`
+- Applied at: `2026-08-23T00:00:00Z` — release.yml gate rewired onto the shared setup definition; TC-0017-0030 covered
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0030 (TC-0017-0030)`
 

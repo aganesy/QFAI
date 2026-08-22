@@ -6,10 +6,10 @@
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `intent`
 - Status: `approved`
-- Approved by: `user (interactive decision, `/qfai-atdd` session)`
+- Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `A` — define the minimal-scope default as a literal and enumerate three
-- Applied at: `-`
+- Applied at: `2026-08-23T00:00:00Z` — TC-0017-0016 oracle rewritten to option A, falsified, annotated
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0016 (TC-0017-0016)`
 
