@@ -370,9 +370,8 @@ post-escalation verification review of a user-named fix.
        after hashing made the verdict stale on being recorded. There is no
        `### <TDD-ID>` section to extract and no per-row boundary to draw, so the
        rest of the file is the subject; step 2 normalizes it, steps 3 and 4 are
-       unchanged.
-       Without this the final review of such a spec either omitted a required
-       field or PASSed with nothing pinning the evidence it read.
+       unchanged. Without this the final review of such a spec either omitted a
+       required field or PASSed with nothing pinning the evidence it read.
      - **Branch 3** (`exception`): row identity, the obligation reference the
        row's `Layer` selects, the `DR-ID`, and the `DR-*` artifact it names. The
        obligation is what the DR says cannot be observed, so a subject without
@@ -387,13 +386,14 @@ post-escalation verification review of a user-named fix.
        verdict to name the `DR-ID` the row currently carries.
      - **Completion review** (`completion-reviewer` / `implementation-reviewer`):
        the GREEN subject plus `Refactor verify command` / `result`, the
-       `Shared-artifact re-verify` block when the row has one — these reviewers
-       audit the earlier rows' re-runs and re-taken proofs it records, so
-       omitting it let it be edited away without moving either hash — and, from
-       every `#### Round N` block nested in the row's `### <TDD-ID>` section,
-       that block's **phase-authored** fields only: nesting is the attribution;
-       `Round N: reviewer verdict` is theirs, written after reading it, so the
-       whole block put their own line in what they hashed.
+       `Shared-artifact re-verify` block when the row has one — omitting it let
+       the earlier rows' re-runs and re-taken proofs it records be edited away
+       without moving either hash — and, from every `#### Round N` block nested
+       in the row's `### <TDD-ID>` section, that block's **phase-authored**
+       fields only: `Round N: reviewer verdict` is theirs, so the whole block
+       put their own line in what they hashed. A round heading left at `###` is
+       unmigrated evidence, not an absent field: migrate or stop before hashing
+       (`../skills/qfai-implement/references/round-evidence.md`).
 
      A field absent at that point contributes nothing — it is not a placeholder
      and not an error. Nothing written after an observation is in its subject,

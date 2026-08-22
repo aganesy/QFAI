@@ -115,6 +115,44 @@ describe.each(TREES)("%s", (tree) => {
     expect(skill).not.toContain("## Review-fix rounds");
   });
 
+  it("migrates a block an earlier run wrote at `###` instead of dropping it", async () => {
+    // A rework interrupted before this rule comes back with `### Round N`
+    // blocks. An extraction that reads only `#### Round N` skips them without
+    // saying so, and the completion review PASSes over a hash that never
+    // covered those rounds.
+    const round = flat(await read(tree, ROUND_EVIDENCE));
+    expect(round).toContain("**A block an earlier run already wrote at `###`.**");
+    expect(round).toContain("**unmigrated evidence, not an absent field**");
+    expect(round).toContain(
+      "re-nest each `###` round heading at `####` inside the `### TDD-NNNN` section it belongs to",
+    );
+    // A heading-depth move only: no observation is re-taken to do it.
+    expect(round).toContain("no field value changes, no observation is re-taken");
+  });
+
+  it("stops rather than guesses which row an unattributed block belongs to", async () => {
+    const round = flat(await read(tree, ROUND_EVIDENCE));
+    expect(round).toContain("**Attribution has to be certain.**");
+    expect(round).toContain("**stop and report the file**");
+    // Resuming is where the legacy shape is actually met.
+    expect(round).toContain("Migrate any round block the evidence still carries at `###` first");
+  });
+
+  it("makes the ATDD rework path migrate before it writes a new round", async () => {
+    const reviewFix = flat(await read(tree, REVIEW_FIX));
+    expect(reviewFix).toContain("**A round this file already holds at `###`.**");
+    expect(reviewFix).toContain("Re-nest them under their rows **before** writing this round");
+    expect(reviewFix).toContain("hashes a subject that silently omits every earlier round");
+  });
+
+  it("tells the completion reviewer a `###` heading is a stop, not an absent field", async () => {
+    const baseline = flat(await read(tree, BASELINE));
+    expect(baseline).toContain(
+      "A round heading left at `###` is unmigrated evidence, not an absent field: migrate or stop before hashing",
+    );
+    expect(baseline).toContain("`../skills/qfai-implement/references/round-evidence.md`");
+  });
+
   it("declares no round heading at `###` anywhere in the assistant tree", async () => {
     // A single document left at `###` re-opens the ambiguity for every reader
     // that follows it.

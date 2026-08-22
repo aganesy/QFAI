@@ -120,6 +120,14 @@ handoff of a `todo` row, so this one needs its own contract.
   is the record of a first handoff, and a duplicate of it would read as one.
   The row already has an entry; the round goes inside it.
 
+  **A round this file already holds at `###`.** The contract above said `###`
+  until this rule, and a row interrupted mid-rework comes back carrying blocks
+  in that shape. Re-nest them under their rows **before** writing this round —
+  otherwise the completion reviewer, extracting `#### Round N`, hashes a
+  subject that silently omits every earlier round. Stop and report rather than
+  guess when two rows could own one:
+  `../../qfai-implement/references/round-evidence.md` defines both halves.
+
   **Which N.** The REVISE closed the round it was given on, so a fresh RED
   opens the **next** one — round `N+1` where `N` is the round the reviewer
   ruled on. Writing it into the reviewer's own round mixed the original

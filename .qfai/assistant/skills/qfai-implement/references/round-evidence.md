@@ -16,6 +16,24 @@ reworked in the same cycle produce two `### Round 2` blocks that no reader — a
 no audit subject — can attribute to a row. A round block is not a section of the
 evidence template either: the row's entry is its only home.
 
+**A block an earlier run already wrote at `###`.** The contract said `###`
+before this rule, so a row whose rework was interrupted — the operator stopped,
+or the run ended between the `REVISE` and the fix — comes back carrying its
+rounds as the row section's _siblings_. Such a block is **unmigrated evidence,
+not an absent field**: a reader extracting only `#### Round N` skips it in
+silence, so the earlier rounds' RED/GREEN drop out of the completion-review
+subject and the review PASSes over a hash that never covered them, and step 1
+of **Resuming a `review-fix` item** below reads the highest round as lower than
+it is. Migrate before anything reads the file: re-nest each `###` round heading
+at `####` inside the `### TDD-NNNN` section it belongs to. That is a
+heading-depth move and nothing else — no field value changes, no observation is
+re-taken, and no hash that was valid before it stops being valid. **Attribution
+has to be certain.** When more than one row could own the block — several
+`### TDD-NNNN` sections, and nothing in the block naming one — **stop and
+report the file** instead of choosing: a guess writes the round into another
+row's `Audited evidence hash`, which is the exact confusion the nesting exists
+to end.
+
 - `Round N: Revision` — the state this round's observations were made
   against (`evidence-revision.md`)
 - `Round N: RED revision` — the tree that round's RED was observed on, and
@@ -111,12 +129,16 @@ rather than stranded behind newer items.
 
 Resuming a `review-fix` row:
 
-1. Read the round blocks already in the item's evidence and take the highest
+1. Migrate any round block the evidence still carries at `###` first
+   (**Where a block goes** above). An interrupted rework is the case that
+   predates the nesting rule, so it is the one that has them, and every step
+   below reads blocks this one has not moved as if they were not there.
+2. Read the round blocks already in the item's evidence and take the highest
    `Round N`; the reviewer verdict on that round names the finding to fix.
-2. Pick the path the finding calls for: open round `N + 1` and run the
+3. Pick the path the finding calls for: open round `N + 1` and run the
    RED/GREEN cycle when the fix needs new production behaviour, or take the
    behaviour-preserving path above when it does not.
-3. Return the row to `refactor` and re-submit per **Who the rework goes back
+4. Return the row to `refactor` and re-submit per **Who the rework goes back
    to** above.
 
 A `review-fix` row must already have a `Test file` — it reached `refactor`
