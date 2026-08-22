@@ -116,6 +116,12 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
       // contract deferred in that compatible form.
       expect(block).toMatch(/column-0 comment/);
       expect(block).toContain("# x-qfai-status: planned");
+      // The obligation is counted per declared `QFAI-CONTRACT-ID` — one per
+      // file (`QFAI-CONTRACT-011` rejects a second) — and one annotation
+      // satisfies it however many operations the document describes. Counting
+      // per OpenAPI operation overstates the estimate and the DoD alike.
+      expect(block).toContain("QFAI-CONTRACT-ID");
+      expect(block).toMatch(/never the OpenAPI operation/);
     });
 
     it(`${tree}: the read set carries the project-wide opt-in inputs`, async () => {
@@ -135,6 +141,11 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
         // `resolveTitleMarkerSpecs` scans the whole `01_Spec.md`, so a
         // frontmatter-only read set misses a heading-only opt-in.
         expect(body).toMatch(/prototyping …` heading/);
+        // `hasMatchingUiContract` matches the per-spec subdirectory layout on
+        // the `spec-<spec-id>/` ancestor, not on the file name, so a read set
+        // that keeps only basenames cannot see `spec-0002/screens/home.yaml`.
+        expect(body).toMatch(/relative to `<contractsDir>\/ui\/`/);
+        expect(body).toMatch(/not (?:its |just the )basename/);
       }
     });
 
