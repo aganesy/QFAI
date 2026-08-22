@@ -4,7 +4,7 @@ import path from "node:path";
 import { parse as parseYaml } from "yaml";
 
 import type { Issue } from "./types.js";
-import { SUNSETS, isAtOrPastSunset } from "./sunset.js";
+import { SUNSETS, deprecationSeverity, isAtOrPastSunset } from "./sunset.js";
 import { resolveToolVersion } from "./version.js";
 import { isEnoent } from "./fs/errno.js";
 import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/renderEvidenceTypes.js";
@@ -13,11 +13,20 @@ export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
 /**
+ * 廃止された orphanContractsPolicy の値集合。互換フィールドの型注釈はこちらを
+ * 参照する: 公開 alias を参照すると `@typescript-eslint/no-deprecated` が発火し、
+ * 静的解析抑制コメントを足す羽目になるため。この内部型は互換期間の終了
+ * (`SUNSETS.retiredTraceabilityKeys`) とともに削除する。
+ */
+type RetiredOrphanContractsPolicy = "error" | "warning" | "allow";
+
+/**
  * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
  * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
- * が import している場合に型検査が壊れないよう、互換期間中のみ残す。
+ * が import している場合に型検査が壊れないよう、互換期間中のみ残す
+ * (sunset: `SUNSETS.retiredTraceabilityKeys`)。
  */
-export type OrphanContractsPolicy = "error" | "warning" | "allow";
+export type OrphanContractsPolicy = RetiredOrphanContractsPolicy;
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -58,21 +67,23 @@ export type QfaiValidationConfig = {
     unknownContractIdSeverity: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
-     * 読み込み時に QFAI_CONFIG_DEPRECATED 警告が出る。既存の設定オブジェクト
-     * リテラルが型検査を通るよう、互換期間中のみ optional で残す。
+     * 読み込み時に QFAI_CONFIG_DEPRECATED が出る (severity は
+     * `SUNSETS.retiredTraceabilityKeys` を境に warning → error)。既存の設定
+     * オブジェクトリテラルが型検査を通るよう、互換期間中のみ optional で残す。
      */
     brMustHaveSc?: boolean;
     /**
      * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
-     * いるため、この値は読まれない。互換期間中のみ optional で残す。
+     * いるため、この値は読まれない。互換期間中 (sunset:
+     * `SUNSETS.retiredTraceabilityKeys`) のみ optional で残す。
      */
     scNoTestSeverity?: TraceabilitySeverity;
     /**
      * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
-     * この値は読まれない。互換期間中のみ optional で残す。
+     * この値は読まれない。互換期間中 (sunset:
+     * `SUNSETS.retiredTraceabilityKeys`) のみ optional で残す。
      */
-    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the compat field keeps the deprecated alias alive
-    orphanContractsPolicy?: OrphanContractsPolicy;
+    orphanContractsPolicy?: RetiredOrphanContractsPolicy;
   };
 };
 
@@ -304,7 +315,7 @@ function normalizeConfig(
   const atdd = normalizeAtdd(raw.atdd, configPath, issues);
   const base: QfaiConfig = {
     paths: normalizePaths(raw.paths, configPath, issues),
-    validation: normalizeValidation(raw.validation, configPath, issues),
+    validation: normalizeValidation(raw.validation, configPath, issues, toolVersion),
     output: normalizeOutput(raw.output, configPath, issues),
   };
   if (uiux) {
@@ -376,6 +387,7 @@ function normalizeValidation(
   raw: unknown,
   configPath: string,
   issues: Issue[],
+  toolVersion: string,
 ): QfaiValidationConfig {
   const base = defaultConfig.validation;
   if (!raw) {
@@ -420,7 +432,7 @@ function normalizeValidation(
     testStrategyRaw = undefined;
   }
 
-  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues);
+  reportRetiredTraceabilityKeys(traceabilityRaw, configPath, issues, toolVersion);
 
   return {
     failOn: readFailOn(raw.failOn, base.failOn, "validation.failOn", configPath, issues),
@@ -941,9 +953,14 @@ function readTraceabilitySeverity(
 /**
  * `validation.traceability` keys that were declared, defaulted and parsed but
  * that no validator ever read. They are still accepted so an existing config
- * keeps loading, and each one that is still present is named in a warning: a
+ * keeps loading, and each one that is still present is named in a finding: a
  * knob shaped like a gate control that changes nothing is worse than no knob,
  * because it also misreports the gate the code actually runs.
+ *
+ * The acceptance is bounded like every other deprecation in the tool — the
+ * severity comes from {@link SUNSETS.retiredTraceabilityKeys} through
+ * {@link deprecationSeverity}, not from a literal here, so the window ends by
+ * itself instead of warning forever.
  */
 const RETIRED_TRACEABILITY_KEYS = [
   "brMustHaveSc",
@@ -955,10 +972,12 @@ function reportRetiredTraceabilityKeys(
   traceabilityRaw: Record<string, unknown> | undefined,
   configPath: string,
   issues: Issue[],
+  toolVersion: string,
 ): void {
   if (!traceabilityRaw) {
     return;
   }
+  const severity = deprecationSeverity(toolVersion, SUNSETS.retiredTraceabilityKeys);
   for (const key of RETIRED_TRACEABILITY_KEYS) {
     if (traceabilityRaw[key] === undefined) {
       continue;
@@ -968,7 +987,9 @@ function reportRetiredTraceabilityKeys(
         configPath,
         `validation.traceability.${key} は廃止されました。` +
           `どの検証も参照しないため、設定しても挙動は変わりません。` +
+          `互換受理は qfai ${SUNSETS.retiredTraceabilityKeys} で終了します (同版以降は error)。` +
           `qfai.config.yaml から削除してください。`,
+        severity,
       ),
     );
   }
@@ -1236,10 +1257,14 @@ function configIssue(file: string, message: string): Issue {
   };
 }
 
-function configDeprecatedIssue(file: string, message: string): Issue {
+function configDeprecatedIssue(
+  file: string,
+  message: string,
+  severity: "warning" | "error",
+): Issue {
   return {
     code: "QFAI_CONFIG_DEPRECATED",
-    severity: "warning",
+    severity,
     category: "canonical",
     message,
     file,

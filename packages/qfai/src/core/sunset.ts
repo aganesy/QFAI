@@ -35,6 +35,15 @@ export const SUNSETS = {
    * `runId` (`D-DEPRECATED-SCHEMA`).
    */
   legacyPrototypingJsonShape: "1.10.0",
+  /**
+   * `validation.traceability` keys retired because no validator ever read them
+   * (`brMustHaveSc`, `scNoTestSeverity`, `orphanContractsPolicy`). They emitted
+   * no finding at all before 1.10.0, so per OC-63 the one-minor compat window
+   * opens at 1.10.0 — the release that starts warning about them — and closes
+   * here, the same re-pin that row applies to the other never-emitted
+   * deprecations.
+   */
+  retiredTraceabilityKeys: "1.11.0",
 } as const;
 
 type FullSemver = {

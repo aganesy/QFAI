@@ -6,7 +6,8 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
-import { SUNSETS } from "../../src/core/sunset.js";
+import { SUNSETS, deprecationSeverity } from "../../src/core/sunset.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 
 describe("baseBranch config", () => {
   it("loads baseBranch from config YAML", async () => {
@@ -308,13 +309,23 @@ describe("retired validation.traceability keys", () => {
       const { config, issues } = await loadConfig(root);
 
       const deprecated = issues.filter((issue) => issue.code === "QFAI_CONFIG_DEPRECATED");
-      expect(deprecated.map((issue) => issue.severity)).toEqual(["warning", "warning", "warning"]);
+      // Severity is the central sunset's, not a literal: warning inside the
+      // window opened at 1.10.0, error from `SUNSETS.retiredTraceabilityKeys`.
+      const expected = deprecationSeverity(
+        await resolveToolVersion(),
+        SUNSETS.retiredTraceabilityKeys,
+      );
+      expect(deprecated.map((issue) => issue.severity)).toEqual([expected, expected, expected]);
       for (const key of ["brMustHaveSc", "scNoTestSeverity", "orphanContractsPolicy"]) {
         expect(
           deprecated.some((issue) => issue.message.includes(`validation.traceability.${key}`)),
           `expected a deprecation warning naming ${key}`,
         ).toBe(true);
       }
+      // The window's end is stated to the operator, not just enforced silently.
+      expect(
+        deprecated.every((issue) => issue.message.includes(SUNSETS.retiredTraceabilityKeys)),
+      ).toBe(true);
       // The retired keys must not be rejected outright: an existing config still loads,
       // and the key that is actually wired keeps its effect.
       expect(issues.some((issue) => issue.code === "QFAI_CONFIG_INVALID")).toBe(false);
@@ -338,7 +349,10 @@ describe("retired validation.traceability keys", () => {
     for (const declaration of [
       "brMustHaveSc?: boolean;",
       "scNoTestSeverity?: TraceabilitySeverity;",
-      "orphanContractsPolicy?: OrphanContractsPolicy;",
+      // The field points at the internal union, not the `@deprecated` public
+      // alias: referencing the alias here is what forced an
+      // `eslint-disable-next-line @typescript-eslint/no-deprecated`.
+      "orphanContractsPolicy?: RetiredOrphanContractsPolicy;",
     ]) {
       expect(configSource, `expected a deprecated optional ${declaration}`).toContain(declaration);
     }

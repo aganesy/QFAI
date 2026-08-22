@@ -13,10 +13,10 @@
  * Same shape as `validators-are-wired.test.ts`: a text-level reachability check
  * with an explicit, documented allowlist rather than a type-level one. Unlike a
  * bare substring scan, it matches the qualified property access the config path
- * implies (`.traceability.scMustHaveTest`) over sources with comments and
- * quoted strings blanked out, so a same-named local, an unrelated option field,
- * a diagnostic message or a sentence in a doc comment cannot make an inert key
- * look wired.
+ * implies (`.traceability.scMustHaveTest`) over sources with comments, quoted
+ * strings and template-literal text blanked out, so a same-named local, an
+ * unrelated option field, a diagnostic message or a sentence in a doc comment
+ * cannot make an inert key look wired.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -35,15 +35,20 @@ const CONFIG_TS = path.resolve(SRC_ROOT, "core/config.ts");
  * list MUST NOT grow without an issue reference: a new entry means a new knob
  * that lies to the operator.
  *
- * - `requireLayerTags` / `requireSizeTags` — no validator reads them (#408).
- * - `specSections` — `validation.require.specSections` is parsed and shipped
- *   but no section requirement is enforced from it; same class as #408 and
- *   left to that thread rather than fixed here.
+ * Keyed by the FULL config path, not the bare key name: `specSections` exists
+ * under `validation.require` today, and a future `validation.traceability.
+ * specSections` must not inherit this exemption just by sharing a name.
+ *
+ * - `validation.testStrategy.requireLayerTags` / `requireSizeTags` — no
+ *   validator reads them (#408).
+ * - `validation.require.specSections` — parsed and shipped but no section
+ *   requirement is enforced from it; same class as #408 and left to that
+ *   thread rather than fixed here.
  */
 const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
-  ["requireLayerTags", "#408"],
-  ["requireSizeTags", "#408"],
-  ["specSections", "#408 (same class: shipped-but-inert config surface)"],
+  ["validation.testStrategy.requireLayerTags", "#408"],
+  ["validation.testStrategy.requireSizeTags", "#408"],
+  ["validation.require.specSections", "#408 (same class: shipped-but-inert config surface)"],
 ]);
 
 type LeafKey = {
@@ -51,28 +56,96 @@ type LeafKey = {
   readonly key: string;
   /** Owning object key, e.g. `traceability`; `validation` for a direct child. */
   readonly parent: string;
+  /** Full dotted path from the root, e.g. `validation.traceability.scMustHaveTest`. */
+  readonly path: string;
 };
 
 /** Leaf keys of a nested plain-object tree, in declaration order. */
-function collectLeafKeys(value: unknown, parent: string, acc: LeafKey[] = []): LeafKey[] {
+function collectLeafKeys(value: unknown, prefix: string, acc: LeafKey[] = []): LeafKey[] {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return acc;
   }
+  const parent = prefix.slice(prefix.lastIndexOf(".") + 1);
   for (const [key, child] of Object.entries(value)) {
     if (typeof child === "object" && child !== null && !Array.isArray(child)) {
-      collectLeafKeys(child, key, acc);
+      collectLeafKeys(child, `${prefix}.${key}`, acc);
     } else {
-      acc.push({ key, parent });
+      acc.push({ key, parent, path: `${prefix}.${key}` });
     }
   }
   return acc;
 }
 
+/** Index just past the quoted literal opening at `start`. */
+function skipQuoted(source: string, start: number): number {
+  const quote = source[start];
+  let i = start + 1;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === quote || ch === "\n") return i + 1;
+    i += 1;
+  }
+  return i;
+}
+
 /**
- * Blank out line comments, block comments and quoted string literals so a key
- * name mentioned in prose or in a diagnostic message string cannot stand in for
- * a real read. Template literals are left alone: their `${...}` holes are code,
- * and blanking the whole literal would hide a genuine access.
+ * A template literal's raw text is prose exactly like a quoted string — a
+ * diagnostic message may spell out a whole config path — so it is dropped. Only
+ * its `${...}` holes are code, and those are kept and stripped in turn.
+ */
+function readTemplate(source: string, start: number): { end: number; code: string } {
+  let i = start + 1;
+  let code = "";
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "\\") {
+      i += 2;
+      continue;
+    }
+    if (ch === "`") return { end: i + 1, code };
+    if (ch === "$" && source[i + 1] === "{") {
+      const hole = readTemplateHole(source, i + 2);
+      code += ` ${stripCommentsAndStrings(hole.text)} `;
+      i = hole.end;
+      continue;
+    }
+    i += 1;
+  }
+  return { end: i, code };
+}
+
+/** Text of a `${...}` hole whose `${` ends at `start`, brace-matched. */
+function readTemplateHole(source: string, start: number): { end: number; text: string } {
+  let depth = 1;
+  let i = start;
+  while (i < source.length) {
+    const ch = source[i];
+    if (ch === "{") depth += 1;
+    else if (ch === "}") {
+      depth -= 1;
+      if (depth === 0) return { end: i + 1, text: source.slice(start, i) };
+    } else if (ch === '"' || ch === "'") {
+      i = skipQuoted(source, i);
+      continue;
+    } else if (ch === "`") {
+      i = readTemplate(source, i).end;
+      continue;
+    }
+    i += 1;
+  }
+  return { end: i, text: source.slice(start) };
+}
+
+/**
+ * Blank out line comments, block comments, quoted strings and template-literal
+ * text so a key name mentioned in prose or in a diagnostic message cannot stand
+ * in for a real read — a `` `${path} は廃止されました` `` message naming a config
+ * path is not a consumer of it. A template's `${...}` holes are code and
+ * survive.
  *
  * A `/` is only treated as a comment opener when the next character is `/` or
  * `*`, so division survives; a regex literal is copied verbatim like any other
@@ -95,15 +168,14 @@ function stripCommentsAndStrings(source: string): string {
       continue;
     }
     if (ch === '"' || ch === "'") {
-      const quote = ch;
-      i += 1;
-      while (i < source.length && source[i] !== quote) {
-        if (source[i] === "\\") i += 1;
-        if (source[i] === "\n") break;
-        i += 1;
-      }
-      i += 1;
+      i = skipQuoted(source, i);
       out += " ";
+      continue;
+    }
+    if (ch === "`") {
+      const template = readTemplate(source, i);
+      out += ` ${template.code} `;
+      i = template.end;
       continue;
     }
     out += ch;
@@ -118,7 +190,7 @@ function stripCommentsAndStrings(source: string): string {
  * `scMustHaveTest` that could be an unrelated local, an option field of the
  * same name, or a word in a sentence.
  */
-function qualifiedAccessPattern({ key, parent }: LeafKey): RegExp {
+function qualifiedAccessPattern({ key, parent }: Pick<LeafKey, "key" | "parent">): RegExp {
   const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   return new RegExp(`\\.\\s*${escape(parent)}\\s*\\.\\s*${escape(key)}\\b`);
 }
@@ -145,9 +217,9 @@ describe("validation config keys are wired", () => {
     const haystack = sources.map((source) => stripCommentsAndStrings(source)).join("\n");
 
     const unwired = collectLeafKeys(defaultConfig.validation, "validation")
-      .filter((leaf) => !KNOWN_UNWIRED.has(leaf.key))
+      .filter((leaf) => !KNOWN_UNWIRED.has(leaf.path))
       .filter((leaf) => !qualifiedAccessPattern(leaf).test(haystack))
-      .map((leaf) => `${leaf.parent}.${leaf.key}`);
+      .map((leaf) => leaf.path);
 
     expect(
       unwired,
@@ -195,9 +267,45 @@ describe("validation config keys are wired", () => {
 
   it("does not let the unwired allowlist grow silently", () => {
     expect(Array.from(KNOWN_UNWIRED.keys()).sort()).toEqual([
-      "requireLayerTags",
-      "requireSizeTags",
-      "specSections",
+      "validation.require.specSections",
+      "validation.testStrategy.requireLayerTags",
+      "validation.testStrategy.requireSizeTags",
     ]);
+  });
+
+  it("exempts an allowlisted key only under the path it was allowlisted for", () => {
+    // `specSections` is exempt under `validation.require`. A same-named key
+    // added under another parent is a NEW inert knob and must still be checked.
+    const leaves = collectLeafKeys(
+      { require: { specSections: [] }, traceability: { specSections: [] } },
+      "validation",
+    );
+
+    expect(leaves.map((leaf) => leaf.path)).toEqual([
+      "validation.require.specSections",
+      "validation.traceability.specSections",
+    ]);
+    expect(leaves.filter((leaf) => !KNOWN_UNWIRED.has(leaf.path)).map((leaf) => leaf.path)).toEqual(
+      ["validation.traceability.specSections"],
+    );
+  });
+
+  it("does not accept a config path spelled out in a template literal", () => {
+    // A deprecation message naming a key reads exactly like a property access
+    // once the backticks are ignored, so the raw text must be dropped.
+    const leaf = { key: "newKey", parent: "traceability", path: "validation.traceability.newKey" };
+    const message = [
+      "const message = `validation.traceability.newKey は廃止されました`;",
+      "const nested = `${label}: `.concat(`.traceability.newKey`);",
+    ].join("\n");
+
+    expect(qualifiedAccessPattern(leaf).test(stripCommentsAndStrings(message))).toBe(false);
+    expect(
+      qualifiedAccessPattern(leaf).test(
+        stripCommentsAndStrings(
+          "const m = `見つかりません: ${config.validation.traceability.newKey}`;",
+        ),
+      ),
+    ).toBe(true);
   });
 });
