@@ -99,7 +99,7 @@ describe.each(TREES)("%s", (tree) => {
   it("adds a failure-mode field so the distinction is recorded, not inferred", async () => {
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "`RED failure mode` — `assertion` | `expected-error` | `falsifiability`",
+      "`Round N: RED failure mode` — `assertion` | `expected-error` | `falsifiability`",
     );
     expect(skill).toContain("There is no admissible value for a load error");
   });
@@ -130,7 +130,7 @@ describe.each(TREES)("%s", (tree) => {
     // rules of its own; admitting a load error instead would be a second,
     // unaudited escape.
     const doc = await read(tree, ADMISSIBILITY);
-    expect(doc).toContain("`RED failure mode: falsifiability`");
+    expect(doc).toContain("`Round N: RED failure mode: falsifiability`");
     expect(doc).toContain("red-not-observable.md");
     expect(doc).toContain(
       "Never weaken a correct test until it fails in order to manufacture a RED.",
