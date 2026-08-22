@@ -37,6 +37,13 @@ const CONTRACT_MD = path.resolve(
  * Every optional flag `qfai prototyping iterate` accepts, paired with
  * the `ParsedOptions` key `main.ts` forwards it through. `--cycle` is
  * omitted: it is the required positional-equivalent, not an opt-in.
+ *
+ * This table is NOT the source of truth for the flag set — the
+ * `runPrototypingIterate({ ... })` call in `main.ts` is, and
+ * `forwardedOptionKeys()` below derives that set and compares it to
+ * this table in both directions. A flag wired into the CLI without
+ * being added here therefore fails the derivation test, which in turn
+ * forces the SKILL.md / contract scans to cover it.
  */
 const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--target-url", optionKey: "prototypingTargetUrl" },
@@ -50,6 +57,38 @@ const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--skeleton-mode", optionKey: "prototypingSkeletonMode" },
   { flag: "--mode", optionKey: "prototypingMode" },
 ];
+
+/**
+ * Slice the `runPrototypingIterate({ ... })` call site out of
+ * `main.ts`. Throws rather than returning an empty string so a renamed
+ * entry point surfaces as a failure instead of a vacuous pass.
+ */
+function forwardingBlock(main: string): string {
+  const start = main.indexOf("await runPrototypingIterate({");
+  if (start === -1) {
+    throw new Error("main.ts: `await runPrototypingIterate({` call site not found");
+  }
+  const end = main.indexOf("});", start);
+  if (end === -1) {
+    throw new Error("main.ts: `runPrototypingIterate` call site is not terminated");
+  }
+  return main.slice(start, end);
+}
+
+/**
+ * Derive the `ParsedOptions` keys the iterate call site actually
+ * forwards. `prototypingCycle` is dropped: `--cycle` is required, not
+ * an opt-in flag.
+ */
+function forwardedOptionKeys(main: string): string[] {
+  const keys = new Set<string>();
+  for (const match of forwardingBlock(main).matchAll(/options\.([A-Za-z0-9_]+)/g)) {
+    const key = match[1];
+    if (key !== undefined) keys.add(key);
+  }
+  keys.delete("prototypingCycle");
+  return [...keys].sort();
+}
 
 /**
  * Slice SKILL.md from the Step 2-B.1 heading to the next `###`
@@ -68,6 +107,26 @@ function extractStep2B1(content: string): string {
 }
 
 describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () => {
+  it("ITERATE_FLAGS matches the set main.ts actually forwards", async () => {
+    // The bidirectional pin. Without it every scan below walks only the
+    // hard-coded table, so a flag added to `args.ts` + `main.ts` and
+    // documented nowhere would keep the suite green.
+    const main = await readFile(MAIN_TS, "utf-8");
+    const declared = ITERATE_FLAGS.map(({ optionKey }) => optionKey).sort();
+    expect(forwardedOptionKeys(main)).toEqual(declared);
+  });
+
+  it("the help text describes `--force` for the cycle-0 re-seed, not just init", async () => {
+    // Step 2-B.1 tells the agent that `npx qfai --help` wins whenever
+    // the two disagree. If the help keeps calling `--force` an
+    // init-only flag, that precedence rule makes the agent drop the
+    // mandatory cycle-0 re-seed flag and hit the exit-2 refusal.
+    const main = await readFile(MAIN_TS, "utf-8");
+    const usageStart = main.indexOf("function usage(): string {");
+    expect(usageStart).toBeGreaterThan(-1);
+    expect(main.slice(usageStart)).toMatch(/--force\s+prototyping iterate --cycle 0:/);
+  });
+
   it("Step 2-B.1 documents every flag the parser accepts", async () => {
     const section = extractStep2B1(await readFile(SKILL_MD, "utf-8"));
     const missing = ITERATE_FLAGS.filter(({ flag }) => !section.includes(`\`${flag}`)).map(

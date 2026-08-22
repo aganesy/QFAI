@@ -82,10 +82,11 @@ current `DESIGN.md` hash does not match the lock.
 ### Step 2-B.1 — `iterate` flag surface
 
 The flags below extend `npx qfai prototyping iterate`. `--target-url` is
-required at cycle 0; every other flag is opt-in and defaults OFF, so the
-prior invocation pattern is byte-equivalent when no opt-in flag is
-passed. This list is the flag reference for the sub-command — when it and
-`npx qfai --help` disagree, the help text wins and this section is stale.
+required at cycle 0 once at least one UI-bearing spec resolves; every
+other flag is opt-in and defaults OFF, so the prior invocation pattern is
+byte-equivalent when no opt-in flag is passed. This list is the flag
+reference for the sub-command — when it and `npx qfai --help` disagree,
+the help text wins and this section is stale.
 
 - `--capture` — enable PNG / HTML capture per screen each cycle via
   the default Playwright runner (dynamic `import("playwright")`;
@@ -106,22 +107,32 @@ passed. This list is the flag reference for the sub-command — when it and
   `acceptedIterationIndex` set), exits `2` otherwise. No writes,
   no Playwright launches. Use at cycle 9 before recovery.
 - `--target-url <url>` — base URL the capture / review steps drive.
-  Required at cycle 0, and at cycle >= 1 whenever `--capture` is set
-  and a screen `url` is route-relative. Used throughout Step 2-C.
+  Required at cycle 0 whenever at least one UI-bearing spec resolves;
+  the zero-UI cycle-0 no-op exits `0` before this gate, so a project
+  with no UI surface needs no URL. Also required at cycle >= 1 whenever
+  `--capture` is set and a screen `url` is route-relative. Used
+  throughout Step 2-C.
 - `--force` — **required**, not optional, to re-run cycle 0 once an
   `iter-00` exists: the destructive-rerun gate refuses to overwrite it
   otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
   stale `iter-NN` directories. Detail:
   `references/iteration-loop.md#sealed-loop`.
 - `--license-patch <file>` — apply a cycle-0 add-only patch to the
-  license allowlist before it is frozen, appending to the audit ledger
-  so the decision replays. Use instead of hand-editing
-  `frozenLicenseCatalog`, which is a lock-drift exit 2. See
+  license allowlist. The model is immutable baseline + audit overlay:
+  the frozen catalog stays byte-equal to the shipped default and the
+  patch is appended to the audit ledger, from which the effective
+  allowlist is rebuilt on every cycle. Audit and back up the ledger
+  too — the frozen catalog alone omits every added permission. Never
+  hand-edit the frozen catalog; that is a lock-drift exit 2. See
   "License-verify hard-stop (exit 66)" below.
-- `--primary-spec-id <spec-id>` — pin the UI-bearing spec the loop
-  treats as primary at cycle 0 when several candidates resolve.
-  Accepts `NNNN` or `spec-NNNN`; takes precedence over the equivalent
-  `qfai.config.yaml` pin under `prototyping`.
+- `--primary-spec-id <NNNN>` — compatibility escape hatch, not the
+  normal path. Step 2-A runs every UI-bearing spec in one invocation;
+  this flag pins the one spec cycle 0 treats as primary, so it narrows
+  the run and never widens it. Reach for it only when resolution lands
+  on the wrong spec. Accepts digits only (`12`, `0012`, both normalised
+  to `0012`) — a `spec-` prefix is rejected before resolution. Takes
+  precedence over the equivalent `qfai.config.yaml` pin under
+  `prototyping`.
 - `--emit-skeletons` — cycle 0 only: write one placeholder HTML file
   per declared screen as a seed aid, not an alternative output shape.
   Ignored at cycle >= 1. Detail:
@@ -130,10 +141,14 @@ passed. This list is the flag reference for the sub-command — when it and
   `--emit-skeletons` (default `placeholder`). No effect without it.
 - `--mode <convergence|exploration>` — loop posture, default
   `convergence`. `exploration` relaxes the soft-rubric gates to
-  warning, i.e. it changes which gates block, and the posture is
-  persisted per iteration: `npx qfai prototyping certify` exits `2` on
-  any loop that contains an exploration iteration. Never reach for it
-  to clear a failing gate on a loop you intend to certify.
+  warning, i.e. it changes which gates block. It only takes effect at
+  cycle 0: the resolved posture is recorded once on the seed iteration,
+  and passing the flag at cycle >= 1 merely echoes the resolved value —
+  it neither switches the loop into exploration nor clears a recorded
+  one. `npx qfai prototyping certify` exits `2` on any loop that
+  contains an exploration iteration, and the only way back is a fresh
+  `--cycle 0 --force` re-seed. Never reach for it to clear a failing
+  gate on a loop you intend to certify.
 
 ### Step 2-C — Run the Loop
 
