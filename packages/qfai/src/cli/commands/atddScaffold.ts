@@ -14,7 +14,7 @@
  * escalation warning naming the TC and suggesting manual review.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
@@ -27,13 +27,16 @@ import {
 import {
   buildSkeleton,
   emitSkeleton,
+  isFilePlaceholder,
   parseTestCases,
   scaffoldDestPath,
+  SCAFFOLD_LAYER_DIR,
   type TCEntry,
 } from "../../core/atdd/scaffold.js";
 import {
   resolveScaffoldDialect,
-  SCAFFOLD_DIALECTS,
+  scaffoldFileNameCandidates,
+  SCAFFOLD_RUNNERS,
   type ScaffoldDialect,
 } from "../../core/atdd/scaffoldDialect.js";
 import {
@@ -83,7 +86,7 @@ const SCAFFOLD_HOME_KIND = "integration";
  * can act on rather than "unsupported".
  */
 function unsupportedStackMessage(testFileGlobs: readonly string[], testsDir: string): string {
-  const known = SCAFFOLD_DIALECTS.map((dialect) => dialect.runner).join(" / ");
+  const known = SCAFFOLD_RUNNERS.join(" / ");
   return (
     `qfai atdd scaffold: no skeleton dialect for this project's test extensions — ` +
     `validation.traceability.testFileGlobs derives ${deriveAtddFilePattern(testFileGlobs)}, ` +
@@ -91,6 +94,93 @@ function unsupportedStackMessage(testFileGlobs: readonly string[], testsDir: str
     `Author these TCs by hand under ${testsDir}/${SCAFFOLD_HOME_KIND}/<spec-id>/, keeping ` +
     `their QFAI:SPEC-XXXX:TC-YYYY annotations.`
   );
+}
+
+/**
+ * Operator-facing refusal for a stack whose extension this command knows but
+ * whose configured basename convention it cannot satisfy.
+ *
+ * `QFAI-ATDD-112` widens to the bare extension, so a `test_<tc>.py` written to
+ * a project whose globs only allow `*_test.py` WOULD have cleared the coverage
+ * gate — while never being collected by the runner. Refusing keeps the gate
+ * honest instead of clearing it with a test that never executes.
+ */
+function namingMismatchMessage(
+  shapes: readonly string[],
+  testFileGlobs: readonly string[],
+  testsDir: string,
+): string {
+  return (
+    `qfai atdd scaffold: none of the skeleton names this command emits ` +
+    `(${shapes.join(", ")}) match validation.traceability.testFileGlobs ` +
+    `(${testFileGlobs.join(", ")}), so the generated file would clear QFAI-ATDD-112 ` +
+    `— which widens to the bare extension — while your runner never collected it. ` +
+    `Add a glob that admits one of those names, or author these TCs by hand under ` +
+    `${testsDir}/${SCAFFOLD_HOME_KIND}/<spec-id>/, keeping their ` +
+    `QFAI:SPEC-XXXX:TC-YYYY annotations.`
+  );
+}
+
+/** Skeletons an earlier run left for the same TC under a different convention. */
+type SupersededPlaceholders = {
+  /** Pristine placeholders this run deleted. */
+  removed: string[];
+  /** Files left alone because a real assertion had landed in them. */
+  progressed: string[];
+  /** Placeholders that could not be deleted (message included). */
+  failed: string[];
+};
+
+/**
+ * Retire skeletons an earlier run wrote for the same TC under a different
+ * naming convention.
+ *
+ * Once the dialect follows `testFileGlobs`, a project scaffolded before that
+ * (or before its globs changed) keeps a `<TC>.test.ts` next to the new
+ * `test_<tc>.py`. `D-SCAFFOLD-PLACEHOLDER` globs both shapes, so the stale one
+ * goes on being reported — and implementing the new test never clears it.
+ * Only a file still carrying this command's own placeholder markers is
+ * removed; one with a real assertion is left for the operator to port.
+ */
+async function dropSupersededPlaceholders(
+  root: string,
+  scaffoldDir: string,
+  existingNames: ReadonlySet<string>,
+  entry: TCEntry,
+  keepFileName: string,
+): Promise<SupersededPlaceholders> {
+  const result: SupersededPlaceholders = { removed: [], progressed: [], failed: [] };
+  for (const candidate of scaffoldFileNameCandidates(entry.tcId)) {
+    if (candidate === keepFileName || !existingNames.has(candidate)) {
+      continue;
+    }
+    const absolute = path.join(scaffoldDir, candidate);
+    const relative = path.relative(root, absolute).replace(/\\/g, "/");
+    if (!(await isFilePlaceholder(absolute, entry.tcId))) {
+      result.progressed.push(relative);
+      continue;
+    }
+    try {
+      await rm(absolute);
+      result.removed.push(relative);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : String(err);
+      result.failed.push(`${relative} (${message})`);
+    }
+  }
+  return result;
+}
+
+/** Basenames already in the scaffold directory, or empty when it does not exist. */
+async function readScaffoldDirNames(scaffoldDir: string): Promise<Set<string>> {
+  try {
+    return new Set(await readdir(scaffoldDir));
+  } catch {
+    // Missing directory (the common first-run case) or an unreadable one: this
+    // lookup only ever suppresses duplicates, so failing soft costs nothing
+    // the emit path below does not already handle.
+    return new Set<string>();
+  }
 }
 
 function validateSpecId(specId: string): boolean {
@@ -105,6 +195,7 @@ type PerTcOutcome = {
   wrote: boolean;
   alreadyPlaceholder: boolean;
   alreadyProgressed: boolean;
+  superseded: SupersededPlaceholders;
 };
 
 async function processOneTc(
@@ -113,17 +204,28 @@ async function processOneTc(
   entry: TCEntry,
   testsDir: string,
   dialect: ScaffoldDialect,
+  existingNames: ReadonlySet<string>,
 ): Promise<PerTcOutcome> {
   const destPath = scaffoldDestPath(root, specId, entry.tcId, testsDir, dialect);
   const body = buildSkeleton(entry, specId, dialect);
   const result = await emitSkeleton(entry, destPath, body);
   const destRel = path.relative(root, destPath).replace(/\\/g, "/");
+  // After the emit, never before: a stale skeleton is only superseded once its
+  // replacement is on disk.
+  const superseded = await dropSupersededPlaceholders(
+    root,
+    path.dirname(destPath),
+    existingNames,
+    entry,
+    path.basename(destPath),
+  );
   return {
     entry,
     destRel,
     wrote: result.wrote,
     alreadyPlaceholder: result.alreadyPlaceholder,
     alreadyProgressed: result.alreadyProgressed,
+    superseded,
   };
 }
 
@@ -143,14 +245,19 @@ async function updateAttemptCounter(
   return recordScaffoldAttempt(root, specId, outcome.entry.tcId);
 }
 
-function summarizeWrite(outcome: PerTcOutcome): string {
+function summarizeWrite(outcome: PerTcOutcome): string[] {
+  const lines: string[] = [];
   if (outcome.wrote) {
-    return `  + ${outcome.destRel} (skeleton emitted)`;
+    lines.push(`  + ${outcome.destRel} (skeleton emitted)`);
+  } else if (outcome.alreadyProgressed) {
+    lines.push(`  · ${outcome.destRel} (preserved — real assertion detected)`);
+  } else {
+    lines.push(`  · ${outcome.destRel} (preserved — placeholder still present)`);
   }
-  if (outcome.alreadyProgressed) {
-    return `  · ${outcome.destRel} (preserved — real assertion detected)`;
+  for (const removed of outcome.superseded.removed) {
+    lines.push(`  - ${removed} (removed — superseded placeholder for ${outcome.entry.tcId})`);
   }
-  return `  · ${outcome.destRel} (preserved — placeholder still present)`;
+  return lines;
 }
 
 /**
@@ -189,19 +296,6 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // project that relocated testsDir (e.g. to `spec-tests`) emitted
   // scaffolds outside the tree where the rest of QFAI looked for them.
   const testsDirRel = config.paths.testsDir;
-  // The skeleton language comes from the same config key `QFAI-ATDD-112`
-  // derives its scan extensions from. Writing a `.test.ts` on a project whose
-  // globs derive `{feature,markdown,md,py}` put the file inside the scanned
-  // directory with an extension the scan never opens, so the documented happy
-  // path (scaffold -> fill in -> validate) could not clear the obligation the
-  // command exists to discharge — before or after fill-in.
-  const dialect = resolveScaffoldDialect(config.validation.traceability.testFileGlobs);
-  if (dialect === null) {
-    // Refuse rather than mislead: a skeleton in a language qfai has no shape
-    // for would be uncounted the same way, only silently.
-    writeErr(unsupportedStackMessage(config.validation.traceability.testFileGlobs, testsDirRel));
-    return 1;
-  }
   const specDir = path.resolve(options.root, specsDirRel, specId);
   let entries: TCEntry[];
   try {
@@ -281,11 +375,50 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     return 0;
   }
 
+  // The skeleton language comes from the same config key `QFAI-ATDD-112`
+  // derives its scan extensions from. Writing a `.test.ts` on a project whose
+  // globs derive `{feature,markdown,md,py}` put the file inside the scanned
+  // directory with an extension the scan never opens, so the documented happy
+  // path (scaffold -> fill in -> validate) could not clear the obligation the
+  // command exists to discharge — before or after fill-in.
+  //
+  // Resolved AFTER the scope filter, not before it: a spec whose TCs are all
+  // L1/L2 or L4/L5 has nothing for this writer to emit, and refusing there
+  // failed a `qfai atdd scaffold` sweep over many specs on a stack that was
+  // never going to be written to. An unsupported stack is only an error when
+  // there is L3 output it would have blocked.
+  const testFileGlobs = config.validation.traceability.testFileGlobs;
+  const resolution = resolveScaffoldDialect(testFileGlobs);
+  if (resolution.outcome === "unsupported-stack") {
+    // Refuse rather than mislead: a skeleton in a language qfai has no shape
+    // for would be uncounted the same way, only silently.
+    writeErr(unsupportedStackMessage(testFileGlobs, testsDirRel));
+    return 1;
+  }
+  if (resolution.outcome === "naming-mismatch") {
+    writeErr(namingMismatchMessage(resolution.shapes, testFileGlobs, testsDirRel));
+    return 1;
+  }
+  const dialect = resolution.dialect;
+
   const threshold = resolveEscalateThreshold(config.atdd?.scaffoldEscalateCycles);
+
+  // Read once, before the first emit: every basename already in the scaffold
+  // directory, so a skeleton an earlier run wrote for the same TC under a
+  // different naming convention can be retired instead of duplicated.
+  const scaffoldDir = path.resolve(options.root, testsDirRel, SCAFFOLD_LAYER_DIR, specId);
+  const existingNames = await readScaffoldDirNames(scaffoldDir);
 
   const outcomes: PerTcOutcome[] = [];
   for (const entry of entries) {
-    const outcome = await processOneTc(options.root, specId, entry, testsDirRel, dialect);
+    const outcome = await processOneTc(
+      options.root,
+      specId,
+      entry,
+      testsDirRel,
+      dialect,
+      existingNames,
+    );
     outcomes.push(outcome);
   }
 
@@ -304,9 +437,30 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     `qfai atdd scaffold: ${specId} — ${entries.length} TC entr${entries.length === 1 ? "y" : "ies"} processed.`,
   ];
   for (const outcome of outcomes) {
-    summaryLines.push(summarizeWrite(outcome));
+    summaryLines.push(...summarizeWrite(outcome));
   }
   write(summaryLines.join("\n"));
+
+  // A stale skeleton this run could NOT retire is still double-reported by
+  // `D-SCAFFOLD-PLACEHOLDER`, so it is named rather than left to be discovered
+  // through a finding on a file the operator did not ask for.
+  for (const outcome of outcomes) {
+    if (outcome.superseded.progressed.length > 0) {
+      writeErr(
+        `qfai atdd scaffold: ${outcome.entry.tcId} also has an implemented test under an ` +
+          `earlier naming convention (${outcome.superseded.progressed.join(", ")}). It does not ` +
+          `match this project's configured test globs, so it counts for nothing — port its ` +
+          `assertion into ${outcome.destRel} and delete it.`,
+      );
+    }
+    if (outcome.superseded.failed.length > 0) {
+      writeErr(
+        `qfai atdd scaffold: could not remove the superseded placeholder(s) for ` +
+          `${outcome.entry.tcId} (${outcome.superseded.failed.join(", ")}). Delete them by hand, ` +
+          `or D-SCAFFOLD-PLACEHOLDER keeps reporting the TC after ${outcome.destRel} is filled in.`,
+      );
+    }
+  }
 
   // Escalation warnings on stderr.
   for (const tcId of escalations) {

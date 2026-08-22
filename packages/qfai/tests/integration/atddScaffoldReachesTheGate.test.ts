@@ -142,11 +142,11 @@ const COMPOSITE_TC_TABLE = `# 06 Test Cases
 
 /** Narrowing helper — a missing dialect is a test failure, not a fallback. */
 function requireDialect(globs: readonly string[]): ScaffoldDialect {
-  const dialect = resolveScaffoldDialect(globs);
-  if (dialect === null) {
-    throw new Error(`no scaffold dialect resolved for ${globs.join(", ")}`);
+  const resolution = resolveScaffoldDialect(globs);
+  if (resolution.outcome !== "resolved") {
+    throw new Error(`no scaffold dialect resolved for ${globs.join(", ")}: ${resolution.outcome}`);
   }
-  return dialect;
+  return resolution.dialect;
 }
 
 describe("the scaffold writes in the language the gate reads", () => {
@@ -223,6 +223,156 @@ describe("the scaffold writes in the language the gate reads", () => {
             "utf-8",
           ),
         ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+});
+
+/**
+ * Same config key, one resolution finer.
+ *
+ * The extension set picks the dialect; the configured BASENAME shapes pick
+ * between that dialect's naming conventions. `QFAI-ATDD-112` widens to the bare
+ * extension, so a name the project's own runner never collects would still have
+ * cleared the coverage gate — a test that never runs, reported as coverage.
+ */
+/** A pristine skeleton body for `TC-0001-0001`, in the pre-dialect JS shape. */
+const LEGACY_TS_PLACEHOLDER = [
+  "// QFAI:SPEC-0001:TC-0001-0001",
+  "// QFAI-SCAFFOLD-PLACEHOLDER — replace this block with a real assertion.",
+  "",
+  'import { describe, it } from "vitest";',
+  "",
+  'describe("TC-0001-0001", () => {',
+  "  // TODO: implement assertion for TC-0001-0001",
+  '  it.skip("pending — scaffold placeholder", () => {});',
+  "});",
+  "",
+].join("\n");
+
+describe("the scaffold writes a name the project's own runner collects", () => {
+  it("emits the configured JS extension instead of a `.ts` the scan never opens", () => {
+    const dialect = requireDialect(["tests/**/*.test.js"]);
+    expect(dialect.id).toBe("js-ts");
+    expect(dialect.extension).toBe("js");
+    const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
+    expect(dest.replace(/\\/g, "/")).toContain("/spec-0001/TC-0001-0001.test.js");
+  });
+
+  it("follows the configured pytest basename convention", () => {
+    const dialect = requireDialect(["tests/**/*_test.py"]);
+    expect(dialect.id).toBe("python");
+    const dest = scaffoldDestPath("/repo", "spec-0001", "TC-0001-0001", "tests", dialect);
+    // NOT `test_tc_0001_0001.py`: that matches no configured glob, so pytest
+    // would never collect it while QFAI-ATDD-112 counted its annotation.
+    expect(dest.replace(/\\/g, "/")).toContain("/spec-0001/tc_0001_0001_test.py");
+  });
+
+  it("refuses when no name it can emit matches the configured globs", async () => {
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["tests/**/check_*.py"]) },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        expect(errors.join("\n")).toMatch(/match validation\.traceability\.testFileGlobs/);
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("succeeds on an unsupported stack when the spec has no L3 TC to emit", async () => {
+    // The dialect refusal is about output this command would have written. A
+    // spec whose TCs are all L1/L2 produces none, so a sweep over many specs
+    // must not fail on the one that was never going to be scaffolded.
+    await withProject(
+      { "qfai.config.yaml": CONFIG_WITH_GLOBS(["spec/**/*_spec.rb"]) },
+      async (root) => {
+        const out: string[] = [];
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: (message) => out.push(message),
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(0);
+        expect(out.join("\n")).toContain("0 TC entries in scope");
+        expect(errors.join("\n")).not.toMatch(/no skeleton dialect/);
+      },
+      COMPOSITE_TC_TABLE.replace("| TC-0001-0001 | L3 |", "| TC-0001-0001 | L1 |"),
+    );
+  });
+
+  it("retires a placeholder an earlier run wrote under the old naming", async () => {
+    await withProject(
+      {
+        "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS),
+        "tests/integration/spec-0001/TC-0001-0001.test.ts": LEGACY_TS_PLACEHOLDER,
+      },
+      async (root) => {
+        const out: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: (message) => out.push(message),
+          writeErr: () => {},
+        });
+        expect(code).toBe(0);
+        const stale = path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts");
+        // Both shapes are globbed by D-SCAFFOLD-PLACEHOLDER, so leaving the
+        // stale one reports the TC forever after the new file is filled in.
+        await expect(readFile(stale, "utf-8")).rejects.toThrow();
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).resolves.toContain("TC-0001-0001");
+        expect(out.join("\n")).toContain("superseded placeholder");
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("keeps an old file that has a real assertion, and says so", async () => {
+    const implemented = LEGACY_TS_PLACEHOLDER.replace(
+      "  // TODO: implement assertion for TC-0001-0001",
+      "  expect(1).toBe(1);",
+    );
+    await withProject(
+      {
+        "qfai.config.yaml": CONFIG_WITH_GLOBS(PY_TEST_FILE_GLOBS),
+        "tests/integration/spec-0001/TC-0001-0001.test.ts": implemented,
+      },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(0);
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "TC-0001-0001.test.ts"),
+            "utf-8",
+          ),
+        ).resolves.toContain("expect(1).toBe(1)");
+        expect(errors.join("\n")).toMatch(/earlier naming convention/);
       },
       COMPOSITE_TC_TABLE,
     );

@@ -218,6 +218,13 @@ export async function validateScaffoldPlaceholder(
   // Track every (spec, TC) we observed as placeholder this pass so we
   // can reset stale counters at the end.
   const observedKeys = new Set<string>();
+  // The cycle count already recorded for a (spec, TC) THIS pass. One validate
+  // pass is one cycle no matter how many files carry the TC's TODO marker:
+  // a skeleton an earlier `qfai atdd scaffold` wrote under a different naming
+  // convention sits next to the current one, both are globbed here, and
+  // recording per file advanced the counter twice per pass — escalating a
+  // placeholder to `error` in half the configured cycles.
+  const recordedCycles = new Map<string, number>();
   for (const file of files) {
     let body: string;
     try {
@@ -340,9 +347,20 @@ export async function validateScaffoldPlaceholder(
     let counterAvailable = false;
     if (specId !== null) {
       for (const tcId of tcIds) {
-        observedKeys.add(`${specId}:${tcId}`);
+        const key = `${specId}:${tcId}`;
+        observedKeys.add(key);
+        const alreadyRecorded = recordedCycles.get(key);
+        if (alreadyRecorded !== undefined) {
+          // Same pass, second file: reuse the count instead of advancing it.
+          counterAvailable = true;
+          if (alreadyRecorded > maxAttempts) {
+            maxAttempts = alreadyRecorded;
+          }
+          continue;
+        }
         try {
           const next = await recordValidateCycle(root, specId, tcId);
+          recordedCycles.set(key, next);
           counterAvailable = true;
           if (next > maxAttempts) {
             maxAttempts = next;
