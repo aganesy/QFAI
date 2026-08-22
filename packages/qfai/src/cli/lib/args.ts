@@ -336,6 +336,13 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         options.upgradeAssistantTree = true;
         break;
       case "--verbose":
+        // init 専用。ヘルプでもそう公開しているので、他コマンドに付けた
+        // 場合は黙って捨てず誤指定として扱う（自動化が「詳細が出た」と
+        // 誤認したまま成功扱いになるのを防ぐ）。
+        if (command !== "init") {
+          markInvalid();
+          break;
+        }
         options.verbose = true;
         break;
       case "--format": {

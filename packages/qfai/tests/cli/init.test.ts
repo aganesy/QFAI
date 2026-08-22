@@ -880,8 +880,8 @@ describe("qfai init", { timeout: 60000 }, () => {
       const output = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(output).toContain("created:");
-      // Activation guidance proves instructions were included in created
+      expect(output).toContain("written:");
+      // Activation guidance proves instructions were included in the written set
       expect(output).toContain("Copilot コードレビュー用 instructions を作成しました。");
 
       // Case B: Both files exist — re-run
@@ -1301,7 +1301,8 @@ describe("qfai init", { timeout: 60000 }, () => {
       const firstRun = await captureStdout(async () => {
         await runInit({ dir: root, force: false, dryRun: false, yes: true });
       });
-      expect(firstRun).toMatch(/created:\s*\d+/);
+      // The heading is `written` (the list also carries overwrites), not `created`.
+      expect(firstRun).toMatch(/written:\s*\d+/);
       expect(firstRun).toContain("DESIGN.md");
 
       // --verbose expands the skipped list; without it the re-run reports counts only.

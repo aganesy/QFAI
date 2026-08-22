@@ -207,11 +207,6 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
-  // Pin the unified value-taking-flag contract (see args.ts contract
-  // block): when --spec / --scope / --upgrade-scope / --operator /
-  // --clause are used on a subcommand that does NOT accept the flag,
-  // the parser MUST (1) consume the value token so it cannot leak
-  // into the positional stream, AND (2) call markInvalid() so the
   it("parses --verbose for init and defaults it off", () => {
     const cwd = process.cwd();
     const withFlag = parseArgs(["init", "--dir", ".", "--verbose"], cwd);
@@ -223,6 +218,25 @@ describe("parseArgs", () => {
     expect(without.options.verbose).toBe(false);
   });
 
+  // --verbose is published in the help text as an init-only option, so a
+  // misuse must surface rather than be silently dropped: automation that
+  // asked for the expanded list would otherwise get a success exit code and
+  // no detail.
+  it("rejects --verbose on commands other than init", () => {
+    const cwd = process.cwd();
+    for (const command of ["validate", "doctor", "report"]) {
+      const parsed = parseArgs([command, "--verbose"], cwd);
+      expect(parsed.invalid).toBe(true);
+      expect(parsed.options.help).toBe(true);
+      expect(parsed.options.verbose).toBe(false);
+    }
+  });
+
+  // Pin the unified value-taking-flag contract (see args.ts contract
+  // block): when --spec / --scope / --upgrade-scope / --operator /
+  // --clause are used on a subcommand that does NOT accept the flag,
+  // the parser MUST (1) consume the value token so it cannot leak
+  // into the positional stream, AND (2) call markInvalid() so the
   describe("validate --spec", () => {
     it("collects a single --spec value", () => {
       const parsed = parseArgs(["validate", "--spec", "0003"], process.cwd());

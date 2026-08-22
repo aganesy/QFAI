@@ -980,6 +980,16 @@ function listReportPaths(paths: string[], baseDir: string): void {
  * 逆に `skipped` は「ここは何もすることがない」ケースであり、初期化済み
  * ディレクトリへの no-op 再実行では同梱アセット全件がここに入る。既定は
  * カウントのみに畳み、一覧は `--verbose` の背後に置く。
+ *
+ * 見出しが `written` / `would write` なのは、`copied` が新規作成だけの集合
+ * ではないため。`--force` の skills/agents 再生成や `.gitignore` の managed
+ * block 追記は既存ファイルの更新であり、`created` と呼ぶと dry-run の
+ * プレビューが破壊的な上書きを新規作成に見せてしまう。
+ *
+ * 各リストは列挙前に重複排除する。例えば `--upgrade-assistant-tree --dry-run`
+ * では、移行処理が書き込みを抑止したまま移行先を `copied` に積み、その移行先
+ * がまだ存在しないので後続のテンプレートコピーも同じパスを `copied` に積む。
+ * 重複したまま出すと件数が実際の実行とずれる。
  */
 function report(
   copied: string[],
@@ -990,25 +1000,31 @@ function report(
   baseDir: string,
   verbose: boolean,
 ): void {
+  const writtenPaths = [...new Set(copied)];
+  const skippedPaths = [...new Set(skipped)];
+  const removedPaths = [...new Set(removed)];
+
   info(`qfai ${label}: ${dryRun ? "dry-run" : "done"}`);
-  if (copied.length > 0) {
-    info(`  ${dryRun ? "would create" : "created"}: ${copied.length}`);
-    info(dryRun ? "  would create paths:" : "  created paths:");
-    listReportPaths(copied, baseDir);
+  if (writtenPaths.length > 0) {
+    info(`  ${dryRun ? "would write" : "written"}: ${writtenPaths.length}`);
+    info(dryRun ? "  would write paths:" : "  written paths:");
+    listReportPaths(writtenPaths, baseDir);
   }
-  if (skipped.length > 0) {
-    info(`  skipped: ${skipped.length}`);
+  if (skippedPaths.length > 0) {
+    info(`  skipped: ${skippedPaths.length}`);
     if (verbose) {
       info("  skipped paths:");
-      listReportPaths(skipped, baseDir);
+      listReportPaths(skippedPaths, baseDir);
     } else {
       info("  (re-run with --verbose to list the skipped paths)");
     }
   }
-  if (removed.length > 0) {
-    info(`  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removed.length}`);
+  if (removedPaths.length > 0) {
+    info(
+      `  ${dryRun ? "would remove legacy files" : "removed legacy files"}: ${removedPaths.length}`,
+    );
     info(dryRun ? "  would remove paths:" : "  removed paths:");
-    listReportPaths(removed, baseDir);
+    listReportPaths(removedPaths, baseDir);
   }
 }
 
