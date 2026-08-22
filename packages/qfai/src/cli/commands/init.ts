@@ -1886,10 +1886,13 @@ async function collectCanonicalAgentNames(assistantAssetsDir: string): Promise<s
  * wrapper の basename (拡張子を除いた stem)。
  *
  * この 2 ディレクトリへの書き込みは symlink 方式への移行時に廃止され、以降
- * init は一切書き込まない — つまり今そこにあるものは、この閉じた集合に載って
- * いる名前を除いてすべてプロジェクトが自分で置いたものである。`qfai-*` という
- * 開いた glob で消していたため、`.claude/commands/qfai-release.md` のような
- * プロジェクト固有の slash command が `--force` のたびに消えていた。
+ * init は一切書き込まない — つまりこの閉じた集合に載っていない名前は、確実に
+ * プロジェクトが自分で置いたものである。`qfai-*` という開いた glob で消して
+ * いたため、`.claude/commands/qfai-release.md` のようなプロジェクト固有の
+ * slash command が `--force` のたびに消えていた。
+ *
+ * 逆は成り立たない (集合に載っている = qfai が書いた、ではない) ので、削除の
+ * 可否は {@link isInitWrittenWrapper} が本文まで見て決める。
  */
 const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
   "qfai-atdd",
@@ -2021,7 +2024,7 @@ async function pruneStaleQfaiWrappers(
     dryRun,
   );
 
-  // 3. Remove stale skill symlinks — entries whose target proves init wrote them
+  // 3. Remove the skill symlinks init installed for skills no longer shipped
   const canonicalSkillsDir = path.join(destRoot, ".qfai", "assistant", "skills");
   for (const integDir of SKILL_INTEGRATION_DIRS) {
     const fullDir = path.join(destRoot, integDir);
