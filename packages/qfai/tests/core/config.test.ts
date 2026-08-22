@@ -1,6 +1,7 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -320,6 +321,26 @@ describe("retired validation.traceability keys", () => {
       expect(config.validation.traceability.scMustHaveTest).toBe(false);
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the retired keys as deprecated optional types for existing consumers", async () => {
+    // Dropping a key from the runtime config is safe (an old YAML still loads); dropping it
+    // from the exported types is not — a consumer importing `OrphanContractsPolicy` or
+    // building a `QfaiConfig` literal would stop compiling on upgrade. The compat surface
+    // must outlive the runtime removal, so it is guarded here rather than left to review.
+    const configSource = await readFile(
+      path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../src/core/config.ts"),
+      "utf-8",
+    );
+
+    expect(configSource).toMatch(/export type OrphanContractsPolicy =/);
+    for (const declaration of [
+      "brMustHaveSc?: boolean;",
+      "scNoTestSeverity?: TraceabilitySeverity;",
+      "orphanContractsPolicy?: OrphanContractsPolicy;",
+    ]) {
+      expect(configSource, `expected a deprecated optional ${declaration}`).toContain(declaration);
     }
   });
 

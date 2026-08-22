@@ -11,7 +11,12 @@
  * fail here.
  *
  * Same shape as `validators-are-wired.test.ts`: a text-level reachability check
- * with an explicit, documented allowlist rather than a type-level one.
+ * with an explicit, documented allowlist rather than a type-level one. Unlike a
+ * bare substring scan, it matches the qualified property access the config path
+ * implies (`.traceability.scMustHaveTest`) over sources with comments and
+ * quoted strings blanked out, so a same-named local, an unrelated option field,
+ * a diagnostic message or a sentence in a doc comment cannot make an inert key
+ * look wired.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
@@ -41,19 +46,81 @@ const KNOWN_UNWIRED: ReadonlyMap<string, string> = new Map([
   ["specSections", "#408 (same class: shipped-but-inert config surface)"],
 ]);
 
-/** Leaf key names of a nested plain-object tree, in declaration order. */
-function collectLeafKeys(value: unknown, acc: string[] = []): string[] {
+type LeafKey = {
+  /** Bare key name, e.g. `scMustHaveTest`. */
+  readonly key: string;
+  /** Owning object key, e.g. `traceability`; `validation` for a direct child. */
+  readonly parent: string;
+};
+
+/** Leaf keys of a nested plain-object tree, in declaration order. */
+function collectLeafKeys(value: unknown, parent: string, acc: LeafKey[] = []): LeafKey[] {
   if (typeof value !== "object" || value === null || Array.isArray(value)) {
     return acc;
   }
   for (const [key, child] of Object.entries(value)) {
     if (typeof child === "object" && child !== null && !Array.isArray(child)) {
-      collectLeafKeys(child, acc);
+      collectLeafKeys(child, key, acc);
     } else {
-      acc.push(key);
+      acc.push({ key, parent });
     }
   }
   return acc;
+}
+
+/**
+ * Blank out line comments, block comments and quoted string literals so a key
+ * name mentioned in prose or in a diagnostic message string cannot stand in for
+ * a real read. Template literals are left alone: their `${...}` holes are code,
+ * and blanking the whole literal would hide a genuine access.
+ *
+ * A `/` is only treated as a comment opener when the next character is `/` or
+ * `*`, so division survives; a regex literal is copied verbatim like any other
+ * operator run.
+ */
+function stripCommentsAndStrings(source: string): string {
+  let out = "";
+  let i = 0;
+  while (i < source.length) {
+    const ch = source[i];
+    const next = source[i + 1];
+    if (ch === "/" && next === "/") {
+      while (i < source.length && source[i] !== "\n") i += 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      i += 2;
+      while (i < source.length && !(source[i] === "*" && source[i + 1] === "/")) i += 1;
+      i += 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'") {
+      const quote = ch;
+      i += 1;
+      while (i < source.length && source[i] !== quote) {
+        if (source[i] === "\\") i += 1;
+        if (source[i] === "\n") break;
+        i += 1;
+      }
+      i += 1;
+      out += " ";
+      continue;
+    }
+    out += ch;
+    i += 1;
+  }
+  return out;
+}
+
+/**
+ * A key counts as read only when the source performs the qualified property
+ * access the config path implies — `.traceability.scMustHaveTest`, not a bare
+ * `scMustHaveTest` that could be an unrelated local, an option field of the
+ * same name, or a word in a sentence.
+ */
+function qualifiedAccessPattern({ key, parent }: LeafKey): RegExp {
+  const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return new RegExp(`\\.\\s*${escape(parent)}\\s*\\.\\s*${escape(key)}\\b`);
 }
 
 async function collectTsFiles(dir: string, acc: string[] = []): Promise<string[]> {
@@ -75,11 +142,12 @@ describe("validation config keys are wired", () => {
       (file) => path.resolve(file) !== CONFIG_TS,
     );
     const sources = await Promise.all(files.map((file) => readFile(file, "utf-8")));
-    const haystack = sources.join("\n");
+    const haystack = sources.map((source) => stripCommentsAndStrings(source)).join("\n");
 
-    const unwired = collectLeafKeys(defaultConfig.validation).filter(
-      (key) => !KNOWN_UNWIRED.has(key) && !haystack.includes(key),
-    );
+    const unwired = collectLeafKeys(defaultConfig.validation, "validation")
+      .filter((leaf) => !KNOWN_UNWIRED.has(leaf.key))
+      .filter((leaf) => !qualifiedAccessPattern(leaf).test(haystack))
+      .map((leaf) => `${leaf.parent}.${leaf.key}`);
 
     expect(
       unwired,
@@ -92,6 +160,37 @@ describe("validation config keys are wired", () => {
     expect(traceabilityKeys).not.toContain("brMustHaveSc");
     expect(traceabilityKeys).not.toContain("scNoTestSeverity");
     expect(traceabilityKeys).not.toContain("orphanContractsPolicy");
+  });
+
+  it("does not accept a bare key name in prose, a string or a same-named local", () => {
+    const leaf = { key: "enabled", parent: "validation" } as const;
+    const decoys = [
+      "// validation の enabled をいつか読む",
+      "/* enabled */",
+      'issues.push({ rule: "validation.enabled" });',
+      "const enabled = options.enabled;",
+      "return other.enabled;",
+    ].join("\n");
+
+    expect(qualifiedAccessPattern(leaf).test(stripCommentsAndStrings(decoys))).toBe(false);
+    expect(
+      qualifiedAccessPattern(leaf).test(
+        stripCommentsAndStrings("if (config.validation.enabled) return;"),
+      ),
+    ).toBe(true);
+  });
+
+  it("keeps code that lives next to comments and strings", () => {
+    const source = [
+      "// config.validation.traceability.scMustHaveTest はコメント",
+      'const label = "validation.traceability.scMustHaveTest";',
+      "const on = config.validation.traceability.scMustHaveTest;",
+    ].join("\n");
+    const stripped = stripCommentsAndStrings(source);
+
+    expect(stripped).toContain("const on = config.validation.traceability.scMustHaveTest;");
+    expect(stripped).not.toContain("はコメント");
+    expect(stripped).not.toContain('"validation.traceability.scMustHaveTest"');
   });
 
   it("does not let the unwired allowlist grow silently", () => {

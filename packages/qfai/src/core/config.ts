@@ -12,6 +12,12 @@ import { normalizeRenderViewports, type RenderEvidenceConfig } from "./uiux/rend
 export type FailOn = "never" | "warning" | "error";
 export type OutputFormat = "text" | "github";
 export type TraceabilitySeverity = "warning" | "error";
+/**
+ * @deprecated validation.traceability.orphanContractsPolicy は廃止された。
+ * どの検証も参照しないため設定しても挙動は変わらない。既存の TypeScript 利用者
+ * が import している場合に型検査が壊れないよう、互換期間中のみ残す。
+ */
+export type OrphanContractsPolicy = "error" | "warning" | "allow";
 
 export type QfaiPaths = {
   contractsDir: string;
@@ -50,6 +56,23 @@ export type QfaiValidationConfig = {
     testFileGlobs: string[];
     testFileExcludeGlobs: string[];
     unknownContractIdSeverity: TraceabilitySeverity;
+    /**
+     * @deprecated 廃止済み。どの検証も参照しないため設定しても挙動は変わらず、
+     * 読み込み時に QFAI_CONFIG_DEPRECATED 警告が出る。既存の設定オブジェクト
+     * リテラルが型検査を通るよう、互換期間中のみ optional で残す。
+     */
+    brMustHaveSc?: boolean;
+    /**
+     * @deprecated 廃止済み。SC のテスト参照欠落の指摘は severity を固定して
+     * いるため、この値は読まれない。互換期間中のみ optional で残す。
+     */
+    scNoTestSeverity?: TraceabilitySeverity;
+    /**
+     * @deprecated 廃止済み。orphan contract の指摘自体が存在しないため、
+     * この値は読まれない。互換期間中のみ optional で残す。
+     */
+    // eslint-disable-next-line @typescript-eslint/no-deprecated -- the compat field keeps the deprecated alias alive
+    orphanContractsPolicy?: OrphanContractsPolicy;
   };
 };
 
