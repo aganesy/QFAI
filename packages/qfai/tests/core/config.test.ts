@@ -4,7 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { loadConfig } from "../../src/core/config.js";
+import { loadConfig, type QfaiValidationConfig } from "../../src/core/config.js";
 import { SUNSETS } from "../../src/core/sunset.js";
 
 describe("baseBranch config", () => {
@@ -313,6 +313,34 @@ describe("testStrategy key surface", () => {
         "maxE2eScenarioCount",
         "maxE2eScenarioRatio",
       ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `QfaiValidationConfig` is re-exported from the package root, so a
+  // TypeScript consumer that still writes or reads the two retired keys must
+  // keep compiling until the next major: they stay as deprecated optional
+  // properties. Reading one yields `undefined`, never a parsed value.
+  it("keeps the retired keys assignable and readable on the public type", async () => {
+    const legacy: QfaiValidationConfig["testStrategy"] = {
+      maxE2eScenarioRatio: null,
+      maxE2eScenarioCount: null,
+      forbidTestTodoStubs: true,
+      requireLayerTags: true,
+      requireSizeTags: true,
+    };
+    expect(legacy.requireLayerTags).toBe(true);
+    expect(legacy.requireSizeTags).toBe(true);
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-legacy-type-"));
+    try {
+      await writeFile(path.join(root, "qfai.config.yaml"), "{}\n", "utf-8");
+
+      const { config } = await loadConfig(root);
+      const resolved: QfaiValidationConfig["testStrategy"] = config.validation.testStrategy;
+      expect(resolved.requireLayerTags).toBeUndefined();
+      expect(resolved.requireSizeTags).toBeUndefined();
     } finally {
       await rm(root, { recursive: true, force: true });
     }

@@ -43,6 +43,17 @@ export type QfaiValidationConfig = {
      * Set to false to opt out while migrating an existing project.
      */
     forbidTestTodoStubs: boolean;
+    /**
+     * @deprecated 読み取り側が存在しない dead knob のため撤去した。
+     * YAML ローダーは旧キーを無視して読み込みを継続し、この型も次の major
+     * まで optional の互換シムとして残す。`defaultConfig` / `loadConfig` は
+     * 値を埋めないので、実行時は常に `undefined` になる。
+     */
+    requireLayerTags?: boolean;
+    /**
+     * @deprecated `testStrategy.requireLayerTags` と同じ扱い。
+     */
+    requireSizeTags?: boolean;
   };
   traceability: {
     brMustHaveSc: boolean;
