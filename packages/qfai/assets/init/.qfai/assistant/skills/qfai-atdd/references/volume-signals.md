@@ -26,10 +26,10 @@ double-count and `total` is their sum.
   spec references is a repo-level obligation for the end-of-stage run — name it
   in `Notes`, do not count it here.
 - `#TC` — the Integration row: required `TC-*` of this spec that route to
-  `tests/integration/**`, i.e. declared `Level` `L3`/`Integration`, or no
-  declared `Level`. `L1`/`L2` owe nothing to this skill, so they are excluded
-  from `#TC` and from `total`, and `L4`/`L5` sit in the two rows above.
-  Counting every `TC-*` in `#TC` instead would report an Integration share for
+  `tests/integration/**`: declared `Level` `L3`/`Integration`, or no declared
+  `Level`. `L1`/`L2` owe nothing to this skill, so they are excluded from `#TC`
+  and from `total`; `L4`/`L5` are counted in the two rows above, never in
+  `#TC`. Counting every `TC-*` in `#TC` instead would report an Integration share for
   obligations this skill does not own — a spec of one `US-*` and nine `L1` TCs
   would read `INT_s` 90 with no integration obligation at all.
 
