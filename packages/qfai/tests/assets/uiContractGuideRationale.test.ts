@@ -37,8 +37,18 @@ describe.each(QFAI_TREES)("%s ui-contract-guide.md", (tree) => {
     const guide = await readGuide(tree);
     // Both halves of the decision must survive: why the closed triple was
     // chosen, and what the rejected open shape would cost.
-    expect(guide).toContain("without per-project shape negotiation");
+    expect(guide).toContain("validate name a malformed task deterministically");
     expect(guide).toContain("per-project field sprawl");
+  });
+
+  it("describes the consumers the shipped code actually has", async () => {
+    const guide = await readGuide(tree);
+    // `extractPrimaryTasks` keeps only `label`, and `core/atdd/scaffold.ts`
+    // never opens a UI contract, so the guide must not promise that a
+    // structured task reaches ATDD scaffolding today.
+    expect(guide).toContain("Validate is currently the only consumer");
+    expect(guide).not.toContain("ATDD scaffold");
+    expect(guide).not.toContain("ATDD scaffolding");
   });
 
   it("does not defer the rationale to a project-owned decisions file", async () => {
