@@ -445,6 +445,48 @@ async function backupExclusively(destAbs: string): Promise<string | null> {
 }
 
 /**
+ * Fingerprint of the canonical entry, used to tell "the version we hold"
+ * from "a version somebody else wrote since". `null` means no entry.
+ * `lstat` again, so replacing a symlink with a regular file of the same
+ * size counts as a change.
+ */
+type DestStamp = { ino: number; size: number; mtimeMs: number; symlink: boolean };
+
+async function stampDestination(destAbs: string): Promise<DestStamp | null> {
+  try {
+    const stats = await lstat(destAbs);
+    return {
+      ino: stats.ino,
+      size: stats.size,
+      mtimeMs: stats.mtimeMs,
+      symlink: stats.isSymbolicLink(),
+    };
+  } catch (err: unknown) {
+    if (isEnoent(err)) return null;
+    throw err;
+  }
+}
+
+function sameStamp(a: DestStamp | null, b: DestStamp | null): boolean {
+  if (a === null || b === null) return a === b;
+  return a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs && a.symlink === b.symlink;
+}
+
+/**
+ * True iff the entry at `destAbs` is still the one `stamp` describes.
+ * Used on paths that are about to destroy an entry, so an undecidable
+ * answer (a stat that fails for any reason other than "absent") counts
+ * as "not ours" — the caller then leaves the entry alone.
+ */
+async function stillHolds(destAbs: string, stamp: DestStamp | null): Promise<boolean> {
+  try {
+    return sameStamp(stamp, await stampDestination(destAbs));
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Fallback placement for filesystems that reject hard links (FAT, some
  * network mounts). The name is RESERVED with an empty `wx` (`O_EXCL`)
  * create, which is still EXCLUSIVE — an entry that appeared after the
@@ -461,6 +503,23 @@ async function backupExclusively(destAbs: string): Promise<string | null> {
  * leave a partial canonical output behind on failure — survive here
  * because the reservation carries no content and is removed again if
  * the publish fails.
+ *
+ * The publishing `rename` replaces its target unconditionally, so the
+ * reservation is fingerprinted and re-checked immediately before it: a
+ * run that no longer holds its own reservation (another `--force` got
+ * in and completed a canonical handoff there) reports `exists` and
+ * leaves that file alone rather than replacing a finished handoff whose
+ * only backup would be our empty placeholder. The same check gates the
+ * failure cleanup, so a rename that dies never deletes someone else's
+ * file.
+ *
+ * What no filesystem without hard links can offer is an atomic
+ * no-replace placement of a FINISHED file, so between the reservation
+ * and the publish there is a window in which a reader sees an empty
+ * `.qfai/handoff.yaml` where a moment earlier there was none. That
+ * window is inherent to this fallback (a direct payload write has the
+ * same window and adds a torn one), and it exists only on the
+ * fresh-placement path — no prior canonical handoff is at risk.
  */
 async function createExclusively(
   destAbs: string,
@@ -472,12 +531,22 @@ async function createExclusively(
     if (isEexist(err)) return "exists";
     throw err;
   }
+  let reserved: DestStamp | null;
+  try {
+    reserved = await stampDestination(destAbs);
+  } catch (err: unknown) {
+    await removeQuietly(destAbs);
+    throw err;
+  }
+  // Someone finished a canonical handoff over our placeholder: treat it
+  // exactly like an entry that beat us to the name.
+  if (!(await stillHolds(destAbs, reserved))) return "exists";
   try {
     await rename(stagedPath, destAbs);
   } catch (err: unknown) {
-    // Our own empty reservation, and nothing else: removing it leaves
-    // the destination exactly as the probe found it — absent.
-    await removeQuietly(destAbs);
+    // Only ever remove our own empty reservation — that leaves the
+    // destination exactly as the probe found it, absent.
+    if (await stillHolds(destAbs, reserved)) await removeQuietly(destAbs);
     throw err;
   }
   return "placed";
@@ -533,34 +602,6 @@ async function commitFresh(
     return { ok: false, message: describeError(err) };
   }
   return { ok: true, backupRel: null };
-}
-
-/**
- * Fingerprint of the canonical entry, used to tell "the version we
- * backed up" from "a version somebody else wrote since". `null` means
- * no entry. `lstat` again, so replacing a symlink with a regular file
- * of the same size counts as a change.
- */
-type DestStamp = { ino: number; size: number; mtimeMs: number; symlink: boolean };
-
-async function stampDestination(destAbs: string): Promise<DestStamp | null> {
-  try {
-    const stats = await lstat(destAbs);
-    return {
-      ino: stats.ino,
-      size: stats.size,
-      mtimeMs: stats.mtimeMs,
-      symlink: stats.isSymbolicLink(),
-    };
-  } catch (err: unknown) {
-    if (isEnoent(err)) return null;
-    throw err;
-  }
-}
-
-function sameStamp(a: DestStamp | null, b: DestStamp | null): boolean {
-  if (a === null || b === null) return a === b;
-  return a.ino === b.ino && a.size === b.size && a.mtimeMs === b.mtimeMs && a.symlink === b.symlink;
 }
 
 /**
@@ -640,7 +681,15 @@ async function stageExclusively(destAbs: string, body: string): Promise<string> 
       await writeFile(candidate, body, { encoding: "utf-8", flag: "wx" });
       return candidate;
     } catch (err: unknown) {
-      if (!isEexist(err)) throw err;
+      // `wx` CREATES before it writes, so a write that dies partway
+      // (ENOSPC, an I/O error) leaves a truncated staging sibling whose
+      // name never escapes this function — nothing downstream could
+      // ever clean it, and every retry would add another. Remove the
+      // candidate we made before letting the failure out.
+      if (!isEexist(err)) {
+        await removeQuietly(candidate);
+        throw err;
+      }
     }
   }
   throw new Error(`could not reserve an unused staging name near ${base}`);

@@ -33,6 +33,12 @@ const { hooks } = vi.hoisted(() => ({
     /** Runs after every `copyFile` — the backup step of a `--force` run. */
     afterCopyFile: null as null | ((from: string, to: string) => Promise<void>),
     /**
+     * Runs after every SUCCESSFUL `lstat` — the fingerprint step. The
+     * only hook that lands between the fallback's exclusive reservation
+     * and the `rename` that publishes over it.
+     */
+    afterLstat: null as null | ((target: string) => Promise<void>),
+    /**
      * When set, `rename` fails with this errno instead of running —
      * standing in for a publish that dies on a full or failing disk.
      */
@@ -69,6 +75,11 @@ vi.mock("node:fs/promises", async () => {
         throw err;
       }
       await actual.rename(from, to);
+    },
+    lstat: async (target: Parameters<FsPromises["lstat"]>[0]): ReturnType<FsPromises["lstat"]> => {
+      const stats = await actual.lstat(target);
+      if (hooks.afterLstat !== null) await hooks.afterLstat(String(target));
+      return stats;
     },
     copyFile: async (
       from: Parameters<FsPromises["copyFile"]>[0],
@@ -111,6 +122,7 @@ beforeEach(async () => {
   hooks.afterWriteFile = null;
   hooks.beforeRename = null;
   hooks.afterCopyFile = null;
+  hooks.afterLstat = null;
   hooks.renameErrno = null;
   hooks.linkErrno = null;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-handoff-upgrade-race-"));
@@ -120,6 +132,7 @@ afterEach(async () => {
   hooks.afterWriteFile = null;
   hooks.beforeRename = null;
   hooks.afterCopyFile = null;
+  hooks.afterLstat = null;
   hooks.renameErrno = null;
   hooks.linkErrno = null;
   await rm(root, { recursive: true, force: true });
@@ -263,6 +276,64 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     expect(errs.join("\n")).toMatch(/failed to write canonical handoff/);
     // No truncated destination, no staging remnant.
     expect(await exists(path.join(root, ".qfai", "handoff.yaml"))).toBe(false);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual([]);
+  });
+
+  // The link-free fallback reserves the canonical name with an empty
+  // `wx` create, but the `rename` that publishes over it replaces its
+  // target unconditionally. A rival `--force` that completes a real
+  // canonical handoff over that placeholder in the meantime must not be
+  // replaced: its only backup would be our zero-byte reservation.
+  it("refuses when a rival finishes a handoff over the fallback's reservation", async () => {
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    const rival = "companyName: Rival Writer\nsignature: finished-over-the-reservation\n";
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    hooks.linkErrno = "EPERM";
+    // The fingerprint of the reservation is the first successful lstat
+    // of the destination — the probe before it fails with ENOENT. Land
+    // the rival's write between that fingerprint and the publish.
+    let stamps = 0;
+    hooks.afterLstat = async (target) => {
+      if (path.resolve(target) !== destAbs) return;
+      stamps += 1;
+      if (stamps !== 1) return;
+      await writeFile(destAbs, rival, "utf-8");
+    };
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    // The rival's finished handoff is intact and byte-identical.
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe(rival);
+    expect(errs.join("\n")).toMatch(/was created while this upgrade was running/);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  // `wx` creates the staging sibling before it writes to it, so a write
+  // that dies partway leaves a truncated `.tmp-<random>` whose name
+  // never reaches the caller. Every retry would add another orphan.
+  it("removes the staging sibling when the staging write itself fails", async () => {
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    hooks.afterWriteFile = async (target) => {
+      if (!isStagingName(target)) return;
+      const err: NodeJS.ErrnoException = new Error("ENOSPC: no space left on device");
+      err.code = "ENOSPC";
+      throw err;
+    };
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    expect(errs.join("\n")).toMatch(/failed to write canonical handoff/);
+    // No orphaned staging sibling, and no canonical file either.
     expect(await readdir(path.join(root, ".qfai"))).toEqual([]);
   });
 
