@@ -212,7 +212,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - More than one `TDD-*` row MAY reference the same `TC-*` — a TC split across
   several test modules is legitimate. `TDD-ID` uniqueness is the only
   identity constraint.
-- `TDD-ID` must match `TDD-NNNN` and be unique within the spec.
+- `TDD-ID` must match `TDD-NNNN` and be unique within the spec. Because that
+  uniqueness is per spec, a `CR-*` records a retired row as `<spec-id>/TDD-NNNN`
+  — a bare `TDD-0001` cannot be told from another spec's once both rows are
+  deleted. A retired `TDD-ID` is **never reused**: allocate the next one above
+  the highest the spec has ever issued, counting the ones its `CR-*` history
+  retired, so a new row's `Evidence` anchor cannot land on a retired cycle's
+  `### TDD-NNNN` section in the same evidence file. The validator only sees the
+  live ledger, so this one is on the seeding skill.
 - Missing `tdd/test-list.md` is a warning **only when the spec declares no
   coverage-target TC**. If it declares any, the absent file also raises
   `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not

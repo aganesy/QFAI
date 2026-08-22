@@ -34,6 +34,17 @@ const withLedgerRow = (template: string, row: string): string => {
   return lines.join("\n");
 };
 
+/** The `Status` values the template's schema table documents as legal. */
+const schemaStatuses = (template: string): string[] => {
+  const row = template
+    .split(/\r?\n/)
+    .find((line) => line.startsWith("| Status ") && line.includes("`todo`"));
+  if (row === undefined) {
+    throw new Error("the shipped template no longer documents the `Status` column");
+  }
+  return [...cells(row)[1].matchAll(/`([a-z-]+)`/g)].map((match) => match[1]);
+};
+
 /** A ledger row for a TC that `06_Test-Cases.md` does not declare. */
 const deletedTcRow = (tddId: string, status: string): string =>
   `| ${tddId} | TC-0009 | Unit | tests/deleted.test.ts | deleted | ${status} | - | - |`;
@@ -170,6 +181,70 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain("since there is no `retired` status");
+    });
+
+    it(`${tree}: the schema table lists every Status validateTddList accepts`, async () => {
+      // The retirement paragraph points at this table as the list of legal
+      // values, so an incomplete table would have an agent rewrite a legitimate
+      // `blocked` / `review-fix` row into some other state.
+      const template = await read(tree, TEMPLATE);
+      const listed = schemaStatuses(template);
+      expect(listed).toEqual([
+        "todo",
+        "blocked",
+        "red",
+        "green",
+        "refactor",
+        "review-fix",
+        "done",
+        "exception",
+      ]);
+      // A `blocked` row needs its blocker named, which the table alone does not say.
+      expect(template).toContain("`Blocked-By`");
+
+      for (const status of listed) {
+        const codes = await codesFor(withLedgerRow(template, deletedTcRow("TDD-0001", status)));
+        expect(
+          codes.filter((entry) => entry.code === "TDDLIST_INVALID_STATUS"),
+          `the template documents \`${status}\` but validateTddList rejects it`,
+        ).toHaveLength(0);
+      }
+    });
+
+    it(`${tree}: retirement points at the layer's evidence file and a spec-qualified ID`, async () => {
+      // `Evidence` is owned per `Layer`: an Integration/API/E2E row's proof
+      // lives in `atdd-<spec-id>.md`, not `implement-<spec-id>.md` — see
+      // `qfai-implement/references/execution-ledger.md`. And `TDD-ID` is unique
+      // only within its spec, so a CR retiring rows in two specs has to qualify
+      // it. Reusing a retired number would point a fresh row's `Evidence`
+      // anchor at the old cycle's section.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+      expect(template).toContain("Record it as `<spec-id>/TDD-NNNN` (`spec-0001/TDD-0001`)");
+      expect(template).toContain("**never reused**");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `Integration` / `API` / `E2E` row",
+      );
+      expect(checklists).toContain("recorded as `<spec-id>/TDD-NNNN` in the driving `CR-*`");
+      expect(checklists).toContain("A retired `TDD-ID` is never reused");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("A retired `TDD-ID` is **never reused**");
+
+      // The evidence-ownership split the template now mirrors is real.
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
     });
 
     it(`${tree}: the encodings the guidance rules out are the ones validateTddList rejects`, async () => {
