@@ -327,6 +327,13 @@ sets no repository-wide rule on purpose: the rest of the tree keeps whatever
 line-ending policy the project already chose, so seeding the file never
 rewrites product code the framework does not own.
 
+Attributes do not reach backwards. A blob already committed as CRLF stays CRLF
+in the index no matter what the new file declares, so a repository that adopts
+QFAI after the fact migrates the protected paths once — `git add --renormalize
+.qfai` (and `qfai.config.yaml` / `DESIGN.md` if those were committed CRLF),
+recorded as its own commit. Skipping that step only defers the all-lines-changed
+diff to the day someone re-saves one of those files with LF endings.
+
 That seed is create-only, so a project that already had a `.gitattributes`
 keeps its own and a whole-file rewrite on Windows can still flip a protected
 blob from LF to CRLF. Such a diff reads as "all lines changed" and is not

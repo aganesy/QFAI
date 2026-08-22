@@ -866,8 +866,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // The file that declares the repository LF must itself be LF.
     expect(bytes.includes(0x0d), ".gitattributes must not contain CR").toBe(false);
 
-    const rules = bytes
-      .toString("utf-8")
+    const text = bytes.toString("utf-8");
+
+    // Attributes never rewrite a blob that is already in the index, so a
+    // repository that adopts QFAI with protected files already committed as
+    // CRLF stays CRLF until it renormalises once. Seeding the rules without
+    // saying so leaves that project believing it is LF-normalised when it is
+    // not, and the all-lines-changed diff simply waits for the next save.
+    expect(text).toContain("git add --renormalize .qfai");
+
+    const rules = text
       .split("\n")
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith("#"));
@@ -914,6 +922,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
 
     expect(protocol).toContain(".gitattributes");
     expect(protocol).toContain("--ignore-cr-at-eol");
+    // Adopting the seed is not the whole migration for a repository whose
+    // protected blobs are already CRLF; the protocol has to name the one-time
+    // renormalisation too.
+    expect(protocol).toContain("--renormalize");
   });
 
   it("keeps npm README onboarding consistent", async () => {

@@ -136,6 +136,19 @@ describe("validateUpstreamSsotGuard", () => {
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
   });
 
+  it("still flags a protected file whose diff counts no changed lines", async () => {
+    // An added empty contract counts `0 0` in `--numstat`, exactly like the
+    // EOL-only case above. The detector must separate the two by the patch
+    // itself, not by the line counts, or "add the file, fill it next commit"
+    // would walk straight past the guard.
+    const root = await newRepo({ "src/app.ts": "export const a = 1;\n" });
+    await commitEdits(root, { ".qfai/contracts/db/CON-DB-0009.sql": "" });
+
+    const issues = await validateUpstreamSsotGuard(root, config);
+
+    expect(issues.map((i) => i.file)).toEqual([".qfai/contracts/db/CON-DB-0009.sql"]);
+  });
+
   it("ignores ordinary source and test changes", async () => {
     const root = await newRepo({ "src/app.ts": "export const a = 1;\n" });
     await commitEdits(root, {
