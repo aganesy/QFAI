@@ -40,8 +40,8 @@ parsed as the ledger instead and raises eight
 ## Schema
 
 The ledger schema — required columns, the optional `US-Refs` / `CON-API-Refs` /
-`Blocked-By` columns, the `Status` vocabulary, and the `Evidence` cell contract
-— is defined in
+`Blocked-By` / `Owning module` columns, the `Status` vocabulary, and the
+`Evidence` cell contract — is defined in
 `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md#tdd-execution-ledger`.
 
 Do not restate it here. A second copy has nothing keeping it honest: it drifts

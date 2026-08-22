@@ -209,11 +209,44 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
       expect(rules).toContain("## TDD Execution Ledger");
-      expect(rules).toContain("Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`");
+      expect(rules).toContain(
+        "Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `Owning module`",
+      );
       expect(rules).toContain("`Evidence` is a **pointer**");
       expect(rules).toContain(
         "Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,",
       );
+    });
+
+    it(`${tree}: the schema pointer carries the parallel-dispatch seam column`, async () => {
+      // `Owning module` is filled at Phase 2b like any other cell, and
+      // `parallelization-policy.md` cannot evaluate a single allow condition
+      // when the ledger has no such column. An author who reads only the
+      // template and the reference it points at must still learn the column
+      // exists, or every new ledger is born serial-only.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("`Owning module`");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      const ledgerSection = rules.slice(
+        rules.indexOf("## TDD Execution Ledger"),
+        rules.indexOf("## Traceability Ledger"),
+      );
+      expect(ledgerSection).toContain("`Owning module`");
+
+      const seam = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(seam).toContain("| Owning module |");
+      const policy = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/parallelization-policy.md",
+      );
+      expect(policy).toContain("If the ledger carries no `Owning module` column");
     });
 
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {
