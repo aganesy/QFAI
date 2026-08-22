@@ -244,7 +244,13 @@ async function seedAssistantLayers(
     // as well so `--dry-run` reports what a real run would do: on a fresh
     // directory copyTemplateTree has not written anything yet.
     if ((await hasEntries(layerDir)) || (await hasEntries(path.join(assistantAssets, layer)))) {
-      skipped.push(gitkeep);
+      // Report it as skipped only when an existing file is actually being
+      // left in place. A placeholder that was never needed is neither
+      // created nor preserved, and listing its non-existent path under
+      // "skipped paths" would claim init protected a file that is not there.
+      if (await pathExists(gitkeep)) {
+        skipped.push(gitkeep);
+      }
       continue;
     }
     copied.push(gitkeep);

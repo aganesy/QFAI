@@ -1330,9 +1330,16 @@ describe("qfai init", { timeout: 60000 }, () => {
   // QFAI:SPEC-0003:TC-0003-0021 (TDD-0021): 4-layer asset-tree seed
   it("TC-0003-0021 (TDD-0021): seeds the 4 assistant layers and leaves no .gitkeep in a populated layer", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-"));
+    const dryRoot = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0021-dry-"));
+    const layers = ["constitution", "manifest", "catalog", "process"];
     try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      for (const layer of ["constitution", "manifest", "catalog", "process"]) {
+      const dryRun = await captureStdout(async () => {
+        await runInit({ dir: dryRoot, force: false, dryRun: true, yes: true });
+      });
+      const run = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      for (const layer of layers) {
         const layerDir = path.join(root, ".qfai", "assistant", layer);
         const entries = await readdir(layerDir);
         // The shipped assets populate every layer, so a .gitkeep would keep
@@ -1340,9 +1347,16 @@ describe("qfai init", { timeout: 60000 }, () => {
         // prose directory index under that filename).
         expect(entries.length).toBeGreaterThan(0);
         expect(entries).not.toContain(".gitkeep");
+
+        // A placeholder that was never needed is not a preserved file:
+        // neither run may report its path under "skipped paths".
+        const reported = path.join(".qfai", "assistant", layer, ".gitkeep");
+        expect(run).not.toContain(reported);
+        expect(dryRun).not.toContain(reported);
       }
     } finally {
       await rm(root, { recursive: true, force: true });
+      await rm(dryRoot, { recursive: true, force: true });
     }
   });
 
