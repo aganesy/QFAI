@@ -212,6 +212,16 @@ every member's relevant suite on that tree and refreshes all three
 above is unsatisfiable for every member but the last — not because batching
 exempts anything, but because the address was taken too early.
 
+**On a parallel run, item 6 and both reviews are re-taken after the merge.** A
+worker takes all three inside its own worktree, and the merge adds every other
+slice's change, so the address the three share is not the integrated tree's. The
+post-merge step re-runs each merged item's relevant suite, refreshes its
+`Refactor verify` fields and re-requests the two reviews before that item goes
+`done`
+(`parallelization-policy.md#re-verify-each-merged-item-on-the-integrated-tree`).
+Same cause as the T1 case: the observations were taken before the tree the item
+ships on existed.
+
 ## A transient observation names its own revision
 
 **Every RED is one.** A RED is observed before the code that makes it pass

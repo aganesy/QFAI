@@ -147,6 +147,40 @@ passes**:
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 
+## Re-verify each merged item on the integrated tree
+
+Worktree separation puts item 6's post-refactor re-run and the items 7 / 8
+reviews inside the worker's own worktree, so all three name **that** tree's
+address. The merge then adds every other slice's change, and the tree the item
+is delivered on is no longer the tree those three observations describe. Gate
+item 10 reads `Refactor verify revision` and the two `Reviewed revision` values
+as the final tree's address (`references/evidence-revision.md`), so without a
+re-take a merged item either cannot satisfy that rule honestly or carries a PASS
+taken on a tree that no longer exists. The integration verify above does not
+stand in for it: it re-runs the suite, not each item's gate, and it writes
+nothing back into the item's evidence.
+
+So after the merge and its integration verify, and **before any merged item goes
+`done`**:
+
+1. Re-run each merged item's relevant test suite once on the integrated tree and
+   refresh all three of its `Refactor verify` fields — `command`, `result` and
+   `revision` (`references/round-evidence.md`). One narrow run per item; the
+   integration verify is what covers them jointly.
+2. Re-request `completion-reviewer` and `implementation-reviewer` for that item
+   against the same tree, so items 7 and 8 name the address item 6 now carries.
+3. An item whose `Refactor verify revision` already resolves to the integrated
+   tree — nothing landed after its slice — is current as recorded and needs
+   neither step. Record which check was made; do not assume it.
+4. A re-verify that is not GREEN, or a re-review that returns `REVISE`, keeps
+   that item out of `done`: classify it as a failed integration verify
+   (`#failed-integration-verify`) and return the row to `refactor` or
+   `review-fix`. It does not by itself invalidate the other slices.
+
+This is the same re-take a T1 group close performs, for the same reason
+(`volume-policy.md#group-formation-states-and-transitions`): the address was
+taken before the tree the item ships on existed.
+
 ## Coordinated parallel mode (ledger ownership)
 
 When parallel dispatch is authorized, the ledger has one writer:

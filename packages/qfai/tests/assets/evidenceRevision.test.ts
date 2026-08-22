@@ -24,6 +24,7 @@ const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.md";
 const VOLUME = "assistant/skills/qfai-implement/references/volume-policy.md";
+const PARALLEL = "assistant/skills/qfai-implement/references/parallelization-policy.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -64,10 +65,14 @@ describe("evidence and verdicts carry a revision", () => {
         "`Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<content hash>` for an uncommitted tree",
       );
       // The cardinality belongs to `Revision`. `RED test hash` carried it for a
-      // while and so asked for a second hash nothing produces.
+      // while and so asked for a second hash nothing produces. It also has to
+      // name the pair's field: "one more `Revision` for the refactor-verify
+      // pair" read literally produces a second `Revision` and no
+      // `Refactor verify revision`, which is the field item 10 reads.
       expect(skill).toContain(
-        "`Revision` is the field that is per round block and once more for the refactor-verify pair",
+        "`Revision` is the field that is per round block, and the refactor-verify pair's second address is **not** a second `Revision` beside it: it is the separate `Refactor verify revision` field",
       );
+      expect(skill).not.toContain("once more for the refactor-verify pair");
       expect(skill).toContain(
         "`Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision`",
       );
@@ -178,6 +183,31 @@ describe("evidence and verdicts carry a revision", () => {
       );
       expect(skill).toContain(
         "Item 6 stays per member, and the group's close re-takes it on the closed tree",
+      );
+    });
+
+    it(`${tree}: a parallel run re-takes item 6 and the reviews after the merge`, async () => {
+      // A worker takes item 6 and items 7-8 inside its own worktree, so the
+      // three agree on that tree's address and not on the merged trunk's. The
+      // integration verify re-runs the suite; it writes nothing back into the
+      // item's evidence, so without this the item ships a PASS taken on a tree
+      // that no longer exists.
+      const parallel = flat(await read(tree, PARALLEL));
+      const reference = flat(await read(tree, REFERENCE));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(parallel).toContain("## Re-verify each merged item on the integrated tree");
+      expect(parallel).toContain(
+        "refresh all three of its `Refactor verify` fields — `command`, `result` and `revision`",
+      );
+      expect(parallel).toContain(
+        "Re-request `completion-reviewer` and `implementation-reviewer` for that item against the same tree",
+      );
+      expect(reference).toContain(
+        "**On a parallel run, item 6 and both reviews are re-taken after the merge.**",
+      );
+      expect(skill).toContain(
+        "re-take each item's item 6 on the integrated tree and re-request its items 7-8 reviews there",
       );
     });
 
