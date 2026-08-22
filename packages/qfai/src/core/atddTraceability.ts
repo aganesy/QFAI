@@ -128,6 +128,10 @@ export type AtddCodeTraceabilityResult = {
    * Reported at `info` (`QFAI-ATDD-118`) so the deferral stays visible rather
    * than silently shrinking the gate — the same treatment `QFAI-ATDD-114` and
    * `-116` give the two contract kinds.
+   *
+   * Restricted to specs that owe `QFAI-ATDD-111` at all: under surface typing a
+   * non-UI-bearing spec's stories are already outside the E2E gate, so nothing
+   * there is deferred by the marker.
    */
   deferredUsIds: string[];
   specTcIds: Map<string, Set<string>>;
@@ -402,6 +406,7 @@ export async function evaluateAtddCodeTraceability(
   const { active: activeUsIds, deferred: deferredUsIds } = partitionDeclaredUs(
     specUsIds,
     specRefs.usPlanned,
+    uiBearingSpecs,
   );
 
   const missing = buildMissingRefs({
@@ -983,16 +988,25 @@ function partitionMissingTcByObligation(
  * The deferred half is returned as formatted `SPEC-NNNN:US-…` refs — the shape
  * `narrowToScope` filters and the CLI prints — so a `--spec` run reports its own
  * deferrals only, exactly as it does for `QFAI-ATDD-117`.
+ *
+ * Only a spec inside `usObligationScope` can defer anything. A non-UI-bearing
+ * spec's stories are already outside `QFAI-ATDD-111` under surface typing, so
+ * reporting them at `QFAI-ATDD-118` would claim an obligation was suspended
+ * that never existed — and its remediation would tell the implementer to add an
+ * E2E annotation there, the annotation-only E2E that the surface-scope rule
+ * exists to prevent.
  */
 function partitionDeclaredUs(
   specUsIds: Map<string, Set<string>>,
   plannedBySpec: Map<string, Set<string>>,
+  usObligationScope: ReadonlySet<string> | null,
 ): { active: Map<string, Set<string>>; deferred: string[] } {
   const active = new Map<string, Set<string>>();
   const deferred: string[] = [];
   for (const [spec, ids] of specUsIds.entries()) {
     const planned = plannedBySpec.get(spec);
-    if (planned === undefined || planned.size === 0) {
+    const owesE2e = usObligationScope === null || usObligationScope.has(spec);
+    if (planned === undefined || planned.size === 0 || !owesE2e) {
       active.set(spec, ids);
       continue;
     }
@@ -1136,14 +1150,25 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
  * The compound id is admitted as well as the short one: a layered spec pack
  * numbers its stories `US-<spec>-<serial>`, and matching only `US-\d{4}` would
  * leave every real project's stories unable to carry the marker below.
+ *
+ * Any depth from `##` down is a story heading, because the declaring collector
+ * ({@link collectShortIds}) accepts an id at any depth via its loose scan — real
+ * packs write `### US-…` far more often than `## US-…`. Recognising only `##`
+ * here left those stories unable to defer at all, and in an H2/H3 document it
+ * also mis-attributed an H3 story's marker to the preceding H2 story, because
+ * the `###` line neither opened a block nor closed the open one.
  */
-const US_HEADING_RE = /^##\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
+
+/** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
+const ANY_HEADING_RE = /^#{1,6}\s+/;
 
 /**
  * The `x-qfai-status: planned` deferral in user-story meta-line form.
  *
  * The same token both contract kinds use, written as one of the `- Key: value`
- * meta lines a `## US-NNNN` block already carries (`- Parent:`, `- Goal:`).
+ * meta lines a `## US-NNNN` / `### US-NNNN` block already carries (`- Parent:`,
+ * `- Goal:`).
  * Matched on its own line only, and attributed to the block it sits in — a
  * marker written once at the top of the document must not be able to defer
  * every story the file declares, which is the nesting mistake
@@ -1179,9 +1204,10 @@ export function collectPlannedUsIds(rawUsText: string): Set<string> {
       current = heading[1].toUpperCase();
       continue;
     }
-    // Any other `##` heading closes the block; the marker belongs to the story
-    // it is written under, not to whatever story came before it in the file.
-    if (/^##\s+/.test(line.trim())) {
+    // Any other heading closes the block, at every depth: the marker belongs to
+    // the story it is written under, not to whatever story came before it in
+    // the file, and a non-story subsection (`#### Notes`) ends the block too.
+    if (ANY_HEADING_RE.test(line.trim())) {
       current = null;
       continue;
     }

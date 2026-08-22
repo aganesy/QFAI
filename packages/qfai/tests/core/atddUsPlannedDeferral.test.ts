@@ -45,11 +45,29 @@ const TWO_STORIES = userStories(
   ].join("\n"),
 );
 
+/** The same two stories written as `###`, the depth real spec packs use. */
+const TWO_H3_STORIES = userStories(
+  [
+    "### US-0001-0001: covered by this slice",
+    "",
+    "- Parent: CAP-0001",
+    "- Goal: something observable",
+    "",
+    "### US-0001-0002: outside this slice",
+    "",
+    "- Parent: CAP-0001",
+    "- Goal: something not yet built",
+    "",
+  ].join("\n"),
+);
+
 type Project = {
   /** Body of `02_User-stories.md`. */
   us: string;
   /** Test files, keyed by path relative to the project root. */
   tests?: Record<string, string>;
+  /** Extra files, keyed by path relative to the project root; written last. */
+  files?: Record<string, string>;
 };
 
 async function withProject<T>(project: Project, fn: (root: string) => Promise<T>): Promise<T> {
@@ -68,7 +86,7 @@ async function withProject<T>(project: Project, fn: (root: string) => Promise<T>
     ] as const) {
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
-    for (const [rel, body] of Object.entries(project.tests ?? {})) {
+    for (const [rel, body] of Object.entries({ ...project.tests, ...project.files })) {
       const file = path.join(root, rel);
       await mkdir(path.dirname(file), { recursive: true });
       await writeFile(file, body, "utf-8");
@@ -142,6 +160,89 @@ describe("QFAI-ATDD-118 — US deferral by `- x-qfai-status: planned`", () => {
     );
   });
 
+  it("defers an `###` story, the depth real spec packs write", async () => {
+    await withProject(
+      {
+        us: TWO_H3_STORIES.replace(
+          "- Goal: something not yet built",
+          `- Goal: not yet\n${PLANNED}`,
+        ),
+        tests: { "tests/e2e/slice.test.ts": "// QFAI:SPEC-0001:US-0001-0001\n" },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        // The declaring collector accepts an id at any heading depth, so the
+        // marker has to as well — recognising only `##` left every `###` story
+        // unable to defer.
+        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-111");
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001-0002",
+        ]);
+      },
+    );
+  });
+
+  it("attributes a marker under an `###` story to it, not to the `##` story above", async () => {
+    await withProject(
+      {
+        us: userStories(
+          [
+            "## US-0001-0001: an H2 story",
+            "",
+            "- Goal: something observable",
+            "",
+            "### US-0001-0002: an H3 story",
+            "",
+            `- Goal: not yet\n${PLANNED}`,
+            "",
+          ].join("\n"),
+        ),
+        tests: { "tests/e2e/slice.test.ts": "// QFAI:SPEC-0001:US-0001-0001\n" },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        // In a mixed document the `###` line has to close the open `##` block,
+        // or the H3 story's marker silently defers the H2 story above it.
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001-0002",
+        ]);
+        expect(issues.map((entry) => entry.code)).not.toContain("QFAI-ATDD-111");
+      },
+    );
+  });
+
+  it("does not report a deferral for a spec that owes no E2E reference", async () => {
+    await withProject(
+      {
+        us: TWO_H3_STORIES.replace(
+          "- Goal: something not yet built",
+          `- Goal: not yet\n${PLANNED}`,
+        ),
+        tests: { "tests/e2e/slice.test.ts": "// QFAI:SPEC-0001:US-0001-0001\n" },
+        files: {
+          // spec-0001 is the only UI-bearing spec, so the project has opted into
+          // surface typing and spec-0002 is outside `QFAI-ATDD-111` already.
+          ".qfai/specs/spec-0001/01_Spec.md": "---\nsurface_type: ui-bearing\n---\n\n# Spec\n",
+          ".qfai/specs/spec-0002/01_Spec.md": "# Spec\n",
+          ".qfai/specs/spec-0002/02_User-stories.md": userStories(
+            ["### US-0002-0001: not user-facing", "", `- Goal: not yet\n${PLANNED}`, ""].join("\n"),
+          ),
+          ".qfai/specs/spec-0002/03_Acceptance-Criteria.md": "# AC\n",
+          ".qfai/specs/spec-0002/06_Test-Cases.md": "# TC\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        // Nothing was suspended for spec-0002: its stories never owed an E2E
+        // reference, and its remediation would ask for the annotation-only E2E
+        // the surface-scope rule exists to prevent.
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001-0002",
+        ]);
+      },
+    );
+  });
+
   it("ignores a marker written outside a story block", async () => {
     await withProject(
       { us: userStories(`${PLANNED}\n\n${TWO_STORIES.split("\n\n").slice(1).join("\n\n")}`) },
@@ -171,6 +272,15 @@ describe("collectPlannedUsIds", () => {
     );
     // Fenced samples and HTML comments are not the spec — the same masking every
     // other spec-pack collector applies.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("lets a non-story heading close the block", () => {
+    const text = userStories(
+      ["### US-0001: a", "", "- Goal: x", "", "#### Notes", "", PLANNED, ""].join("\n"),
+    );
+    // A heading at any depth ends the story block, so a marker written under a
+    // trailing subsection defers nothing.
     expect(collectPlannedUsIds(text).size).toBe(0);
   });
 
