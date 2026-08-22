@@ -284,11 +284,15 @@ every rule above, but their tests are authored by `/qfai-atdd`
 therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
-**Who seeds them.** `/qfai-sdd` Phase 2b, one `Layer = Integration` row per
-integration-level `TC-*`, alongside the coverage-target rows
-(`references/ledger-preconditions.md#producer`). `TDDLIST_TC_NOT_COVERED` never
-asks for one, because an `L3` TC is not a coverage target — so an absent
-`Integration` row is an unseeded row, not a spec without integration work.
+**Who seeds them.** `/qfai-sdd` Phase 2b, **at least** one `Layer = Integration`
+row per integration-level `TC-*` — `L3`, the word `integration`, or a TC that
+declares no `Level` at all, the same routing `QFAI-ATDD-112` uses — alongside
+the coverage-target rows (`references/ledger-preconditions.md#producer`). A
+matrix-shaped TC is seeded one row per independently observable boundary there,
+because `/qfai-atdd` cannot split a row it may not write
+(`selector-granularity.md`). `TDDLIST_TC_NOT_COVERED` never asks for an `L3`
+row, because an `L3` TC is not a coverage target — so an absent `Integration`
+row is an unseeded row, not a spec without integration work.
 
 `/qfai-atdd` does **not** write production code — `agent-routing.yml` gives its
 implementation phase `acceptance-test-engineer`, who owns acceptance tests, and

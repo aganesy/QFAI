@@ -7,16 +7,43 @@ one.
 
 ## Producer
 
-`/qfai-sdd` Phase 2b seeds this ledger from `06_Test-Cases.md`, in two groups:
+`/qfai-sdd` Phase 2b seeds this ledger from `06_Test-Cases.md`, in two groups.
+**Read each TC's `Level` once and route it to exactly one group** — the groups
+are exclusive, and a TC in both is a TC whose test two skills write.
 
-- **one row per coverage-target TC** — the rows this skill drives end to end,
-  and the only ones `TDDLIST_TC_NOT_COVERED` demands;
+- **one row per coverage-target TC that declares a `Level`** — every declared
+  spelling **What counts as a coverage target** below does not exclude,
+  unrecognised ones included (conservatively a target, and
+  `TDDLIST_UNKNOWN_LEVEL` reports it). These are the rows this skill drives end
+  to end, and the only ones `TDDLIST_TC_NOT_COVERED` demands;
 - **one `Layer = Integration` row per integration-level TC** — a TC whose
-  `Level` is `L3` or the word `integration`. These are ATDD-owned rows
-  (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
+  `Level` is `L3`, the word `integration`, **or is blank**. These are ATDD-owned
+  rows (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
   `/qfai-atdd` and their `Evidence` anchors into
   `.qfai/evidence/atdd-<spec-id>.md`, but the row itself lives here and this
   skill advances it under every rule that file states.
+
+**A blank `Level` belongs to the second group**, because `QFAI-ATDD-112` puts it
+there: the ATDD collector routes a TC with no declared `Level` to
+`tests/integration/**` and that stage's P4 writes the test
+(`qfai-atdd/SKILL.md`, coverage obligations). Seeding it as a first-group row
+instead has this skill and `/qfai-atdd` each write a test for one TC. Its
+`Layer = Integration` row still discharges `TDDLIST_TC_NOT_COVERED`, which asks
+only that **some** row carry the TC in `TC-Refs` and accepts `TC-Refs` on an
+`Integration` row; `TDDLIST_COVERAGE_LAYER_MISMATCH` stays silent too, because an
+undeclared `Level` names no expected layer to disagree with. Declaring the
+`Level` upstream is the better fix — the routing above is what keeps an
+undeclared one owned exactly once until then.
+
+**One row per independently observable boundary, and at least one per TC.**
+"One row" is a floor, not a cap: a matrix-shaped TC — several rejection reasons,
+a status-code matrix, several independent state transitions — is seeded as one
+row per boundary, every row carrying that TC in `TC-Refs`
+(`selector-granularity.md`; `TC-Refs` is many-to-many with `TDD-ID`). For an
+`Integration` TC that split belongs to Phase 2b: `/qfai-atdd` never writes this
+ledger and takes its RED per row at P1b, so a row that reaches it conflating
+several boundaries has no splitter of its own and its RED is invalid by
+construction.
 
 `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:` annotations, not
 ledger rows — they never appear as rows here.
@@ -62,11 +89,15 @@ Never narrow this to a chosen pair of level names. Guidance that names a
 narrower allowlist makes a header-only ledger look truthful and skips the whole
 implementation.
 
-Being a non-target is not being row-less. `integration` / `L3` sits on the
-exclusion list because `TDDLIST_TC_NOT_COVERED` does not gate it, not because
-the ledger has no row for it — it has the ATDD-owned `Layer = Integration` row
-named under **Producer**, and that row is why a spec whose obligations are all
-integration-level is not finished when the gate is quiet.
+This section answers "what does the gate demand a row for", not "what `Layer`
+does the row carry". Being a non-target is not being row-less: `integration` /
+`L3` sits on the exclusion list because `TDDLIST_TC_NOT_COVERED` does not gate
+it, not because the ledger has no row for it — it has the ATDD-owned
+`Layer = Integration` row named under **Producer**, and that row is why a spec
+whose obligations are all integration-level is not finished when the gate is
+quiet. Symmetrically, an **empty** `Level` is a target here and still takes an
+`Integration` row: it is the same one row, seeded by the second group and
+counted by this gate.
 
 ### The outcomes
 

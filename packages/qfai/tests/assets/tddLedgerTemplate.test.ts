@@ -69,7 +69,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
-        "plus **one `Layer = Integration` row per integration-level (`L3`) TC**",
+        "plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,\nor no declared `Level`) TC**",
       );
 
       const preconditions = await read(
@@ -80,7 +80,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain(
-        "**and one `Layer = Integration` row per\n   integration-level (`L3`) TC**",
+        "**and one `Layer = Integration` row per\n   integration-level (`L3`, `integration`, or no declared `Level`) TC**",
       );
 
       const checklists = await read(
@@ -88,7 +88,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "- Add one `Layer = Integration` row per integration-level (`L3`) TC as well",
+        "- Add one `Layer = Integration` row per integration-level (`L3`, `integration`, or **no declared `Level`**) TC as well",
       );
 
       // The consumer of those rows names the same producer, so an agent
@@ -98,6 +98,84 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-implement/references/execution-ledger.md",
       );
       expect(ledger).toContain("**Who seeds them.** `/qfai-sdd` Phase 2b");
+    });
+
+    it(`${tree}: the ATDD side no longer says a fresh spec has none of these rows`, async () => {
+      // Phase 2b now seeds `Layer = Integration` rows, so "a fresh spec has
+      // none of these rows yet" sent `/qfai-atdd` past rows it owns: it
+      // recorded zero and produced no RED provenance, and `/qfai-implement`
+      // Phase Red step 3b leaves a row with no handoff at `todo` — the
+      // producer path this change adds never completes.
+      const atdd = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
+      expect(atdd).not.toContain("A fresh spec has none of these rows yet");
+      expect(atdd).toContain(
+        "**A fresh spec already carries its `Layer = Integration` rows and no `E2E` / `API` row",
+      );
+      expect(atdd).toContain("enumerating them at P1b is this run's work");
+
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance).toContain(
+        "**The `Integration` rows are a different case: they are already there.**",
+      );
+    });
+
+    it(`${tree}: a TC with no declared Level is routed to exactly one group`, async () => {
+      // `classifyCoverageLevel("")` is a coverage target, while
+      // `QFAI-ATDD-112` routes the same TC to `tests/integration/**`. Left in
+      // the first group it is implemented twice — or, read the other way, gets
+      // no `Integration` row for ATDD to hand over.
+      expect(isCoverageTargetLevel("")).toBe(true);
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("**Read each TC's `Level` once and route it to exactly one");
+      expect(preconditions).toContain("`Level` is `L3`, the word `integration`, **or is blank**");
+      expect(preconditions).toContain("**A blank `Level` belongs to the second group**");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("The two groups are exclusive.");
+
+      const testCases = await read(
+        tree,
+        "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
+      );
+      expect(testCases).toContain("**Leave the cell blank and the TC is routed as `L3`**");
+    });
+
+    it(`${tree}: the producer rule allows one row per boundary, not exactly one per TC`, async () => {
+      // `selector-granularity.md` requires a matrix-shaped TC to be split
+      // before RED, and `/qfai-atdd` may not write this ledger — so if Phase
+      // 2b, its only producer, may emit exactly one `Integration` row, nobody
+      // downstream can perform the split the RED depends on.
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain(
+        "**One row per independently observable boundary, and at least one per TC.**",
+      );
+      expect(preconditions).toContain("`/qfai-atdd` never writes this\nledger");
+
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toContain("**at least** one `Layer = Integration`");
+      expect(ledger).toContain("one row per independently observable boundary");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain('- "One row" is a floor in both groups');
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain('**"One row" is a floor, not a cap.**');
     });
 
     it(`${tree}: an integration-level TC alone does not make a header-only ledger truthful`, async () => {

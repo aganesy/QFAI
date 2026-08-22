@@ -7,9 +7,23 @@ Red/Green/Refactor cycle one row at a time.
 ## Producer
 
 Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**,
-plus **one `Layer = Integration` row per integration-level (`L3`) TC**.
-`/qfai-sdd` seeds both at Phase 2b. An empty table below is valid — it means
-the spec declares neither yet, not that the ledger is missing.
+plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,
+or no declared `Level`) TC**. `/qfai-sdd` seeds both at Phase 2b.
+An empty table below is valid — it means the spec declares neither yet, not that
+the ledger is missing.
+
+The two groups are exclusive. A TC that declares no `Level` belongs to the
+second: `QFAI-ATDD-112` routes it to `tests/integration/**`, so seeding it as a
+coverage-target row would have `/qfai-implement` and `/qfai-atdd` each write a
+test for it. That one `Integration` row still covers the TC for
+`TDDLIST_TC_NOT_COVERED`, which asks only that some row carry it in `TC-Refs`.
+
+**"One row" is a floor, not a cap.** A TC that enumerates several rejection
+reasons, a status-code matrix or independent state transitions is seeded one row
+per independently observable boundary, all carrying that TC in `TC-Refs`
+(`.qfai/assistant/skills/qfai-implement/references/selector-granularity.md`).
+Splitting an `Integration` TC is Phase 2b's job: `/qfai-atdd` observes RED per
+row and never writes this ledger.
 
 An `Integration` row is ATDD-owned: `/qfai-atdd` authors its test and its RED
 provenance, and the row's `Evidence` anchors into

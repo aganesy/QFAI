@@ -78,6 +78,18 @@ row too, seeded by the same Phase 2b and ungated, because that row is what puts
 the integration layer in the Red/Green/Refactor cycle. `L4` / `L5` get none —
 they are misfiled as `TC-*` in the first place.
 
+**Leave the cell blank and the TC is routed as `L3`**, not as a coverage target:
+`QFAI-ATDD-112` reads an undeclared `Level` as `<testsDir>/integration/**`, so
+Phase 2b seeds it a `Layer = Integration` row and `/qfai-atdd` writes its test.
+That single row is also what `TDDLIST_TC_NOT_COVERED` counts, so the TC is owed
+exactly once. Declare the `Level` anyway — the routing is a fallback, not a
+substitute for saying which layer the oracle observes.
+
+A `TC-*` that enumerates several rejection reasons, a status-code matrix or
+several independent state transitions gets **one row per boundary**, not one row
+(`.qfai/assistant/skills/qfai-implement/references/selector-granularity.md`).
+Writing it as several `TC-*` rows here is the clearer form.
+
 ### Type column values
 
 - `normal` — Happy path / expected successful behavior.

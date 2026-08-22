@@ -315,18 +315,26 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 ## A spec with no ATDD-owned rows
 
 `/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*` and a
-`Layer = Integration` row per integration-level `TC-*`; `US-*` and `CON-API-*`
-are not row-producing obligations there. A first run therefore finds **zero**
-`Layer = E2E` / `Layer = API` rows, legitimately, and this stage cannot create
-them — it is not the ledger's writer under any circumstance.
+`Layer = Integration` row per integration-level `TC-*` — `L3`, `integration`, or
+a TC declaring no `Level`, the routing `QFAI-ATDD-112` already uses; `US-*` and
+`CON-API-*` are not row-producing obligations there. A first run therefore finds
+**zero** `Layer = E2E` / `Layer = API` rows, legitimately, and this stage cannot
+create them — it is not the ledger's writer under any circumstance.
+
+**The `Integration` rows are a different case: they are already there.** On a
+spec whose TCs are all integration-level, a first run finds them seeded at
+`todo`, and they are this run's rows to give provenance to — the three branches
+below apply to them exactly as they do to an `E2E` row. Reporting them as "zero
+rows, nothing to do" leaves `/qfai-implement` Phase Red step 3b with no handoff
+to consume and every one of them stuck at `todo`.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
 reason and carry on with the obligations.
 
-**Do not raise it as a request for rows.** `/qfai-sdd` Phase 2b seeds one row
-per coverage-target `TC-*`, and the ledger template says in as many words that
+**Do not raise it as a request for rows.** Phase 2b seeds the two groups above
+and nothing else, and the ledger template says in as many words that
 `US-*` and `CON-API-*` are not rows there — so the request returns nothing and
 the spec is handed back and forth for rows no skill may write. Writing them
 here is not the alternative either: that would make this stage a second writer
