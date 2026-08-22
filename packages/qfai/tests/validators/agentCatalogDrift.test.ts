@@ -83,10 +83,7 @@ function catalogWith(developerInstructions: string | undefined): string {
   return `${head}    developer_instructions: |\n${block}\n`;
 }
 
-async function runWith(
-  developerInstructions: string | undefined,
-  agentMarkdown: string = AGENT_MD,
-): Promise<Issue[]> {
+async function runCatalog(catalog: string, agentMarkdown: string = AGENT_MD): Promise<Issue[]> {
   const root = path.join(
     os.tmpdir(),
     `qfai-agent-catalog-drift-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -96,15 +93,22 @@ async function runWith(
   await mkdir(manifest, { recursive: true });
   await mkdir(agents, { recursive: true });
   try {
-    await writeFile(path.join(manifest, "agent-catalog.yml"), catalogWith(developerInstructions));
+    await writeFile(path.join(manifest, "agent-catalog.yml"), catalog);
     await writeFile(path.join(manifest, "agent-routing.yml"), ROUTING);
     await writeFile(path.join(manifest, "review-profiles.yml"), PROFILES);
     await writeFile(path.join(agents, "qa-gatekeeper.md"), agentMarkdown);
-    const issues = await validateAgentDefinition(root, defaultConfig);
-    return issues.filter((entry) => entry.code === "QFAI-AGENT-014");
+    return await validateAgentDefinition(root, defaultConfig);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+async function runWith(
+  developerInstructions: string | undefined,
+  agentMarkdown: string = AGENT_MD,
+): Promise<Issue[]> {
+  const issues = await runCatalog(catalogWith(developerInstructions), agentMarkdown);
+  return issues.filter((entry) => entry.code === "QFAI-AGENT-014");
 }
 
 describe("QFAI-AGENT-014 — agent-catalog developer_instructions drift", () => {
@@ -136,6 +140,36 @@ describe("QFAI-AGENT-014 — agent-catalog developer_instructions drift", () => 
     expect(found[0]?.message).toContain(".qfai/assistant/agents/qa-gatekeeper.md");
     // The finding points at the derived copy — the file the author must fix.
     expect(found[0]?.file).toBe(".qfai/assistant/manifest/agent-catalog.yml");
+  });
+
+  it("ignores a `## Mission` mentioned inside the frontmatter", async () => {
+    // The body starts at the heading *line*, not at the first occurrence of the
+    // string: a description that names the section must not drag the
+    // frontmatter and the title into the comparison.
+    const chatty = AGENT_MD.replace('"Guard the gates."', '"See ## Mission below."');
+    const canonical = chatty.slice(chatty.lastIndexOf("\n## Mission") + 1).trimEnd();
+
+    expect(await runWith(canonical, chatty)).toEqual([]);
+  });
+
+  it("reports a non-string developer_instructions as a catalog shape error", async () => {
+    // `developer_instructions:` with no value parses to null. Dropping it
+    // silently would let the drift rule treat a broken derived copy as an
+    // absent one, and `qfai validate` would say nothing at all.
+    const broken = `agents:
+  - id: qa-gatekeeper
+    kind: reviewer
+    developer_instructions:
+`;
+    const issues = await runCatalog(broken);
+    const shape = issues.filter((entry) => entry.code === "QFAI-AGENT-006");
+
+    expect(shape).toHaveLength(1);
+    expect(shape[0]?.severity).toBe("error");
+    expect(shape[0]?.message).toContain("developer_instructions must be a string");
+    // The entry keeps its identity, so the shape error is the only finding:
+    // the routing and profile rules still see qa-gatekeeper in the catalog.
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-006"]);
   });
 
   it("defers to QFAI-AGENT-005 when the markdown has no ## Mission section", async () => {

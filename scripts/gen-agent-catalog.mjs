@@ -26,16 +26,21 @@
 
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /**
  * `--root` exists so the tests can exercise the drift path on a throwaway
  * fixture. Editing the real assets mid-run would race the other suites that
  * read them (`sync-init-to-root --check` compares that tree against `.qfai/`).
+ *
+ * `fileURLToPath`, not `URL.pathname`: a checkout under a directory with a
+ * space or a non-ASCII character gives a percent-encoded pathname, and joining
+ * that yields a path no file lives at.
  */
 function resolveRoot() {
   const flag = process.argv.find((arg) => arg.startsWith("--root="));
   if (flag !== undefined) return flag.slice("--root=".length);
-  return new URL("..", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1");
+  return fileURLToPath(new URL("..", import.meta.url));
 }
 
 const ROOT = resolveRoot();
@@ -46,7 +51,16 @@ const AGENTS_DIR = join(ASSISTANT, "agents");
 /** Indentation of the `developer_instructions` block scalar contents. */
 const BODY_INDENT = "      ";
 const ENTRY_RE = /^ {2}- id: (\S+)\s*$/;
-const BLOCK_RE = /^ {4}developer_instructions: \|\s*$/;
+/**
+ * A literal block scalar header, including the chomping indicator (`|-`, `|+`)
+ * and an explicit indentation indicator (`|2`). All of those are valid YAML for
+ * the same content, and a header this regex does not recognise would be skipped
+ * silently — the entry would never be compared and `--check` would call a stale
+ * catalog up to date. `UNSUPPORTED_BLOCK_RE` turns every other spelling of the
+ * key (quoted, folded, flow) into a hard failure for the same reason.
+ */
+const BLOCK_RE = /^ {4}developer_instructions: \|[-+]?[0-9]*[-+]?[ \t]*$/;
+const ANY_BLOCK_KEY_RE = /^ {4}developer_instructions:/;
 
 const CHECK_ONLY = process.argv.includes("--check");
 
@@ -64,11 +78,28 @@ function canonicalBody(id) {
     );
   }
   const content = readFileSync(mdPath, "utf-8").replace(/\r\n/g, "\n");
-  const missionIndex = content.indexOf("## Mission");
+  const missionIndex = missionHeadingIndex(content);
   if (missionIndex < 0) {
     throw new Error(`.qfai/assistant/agents/${id}.md has no "## Mission" section`);
   }
   return content.slice(missionIndex).trimEnd();
+}
+
+/**
+ * Offset of the `## Mission` heading *line*, searched past the frontmatter.
+ * A plain `indexOf` matches the string anywhere — a frontmatter description
+ * that merely mentions `## Mission` would move the slice start into the
+ * frontmatter and drag the rest of it, plus the title, into the catalog block.
+ * Returns -1 when no such heading line exists.
+ */
+function missionHeadingIndex(content) {
+  let offset = 0;
+  if (content.startsWith("---\n")) {
+    const close = content.indexOf("\n---", "---\n".length - 1);
+    if (close >= 0) offset = close + 1;
+  }
+  const match = /^## Mission[ \t]*$/m.exec(content.slice(offset));
+  return match === null ? -1 : offset + match.index;
 }
 
 /** Canonical body re-indented as the contents of a `|` block scalar. */
@@ -111,7 +142,16 @@ function regenerate(source) {
     if (entryMatch) currentId = entryMatch[1];
     out.push(line);
     index += 1;
-    if (!BLOCK_RE.test(line)) continue;
+    if (!BLOCK_RE.test(line)) {
+      if (ANY_BLOCK_KEY_RE.test(line)) {
+        throw new Error(
+          `agent-catalog.yml entry "${currentId ?? "?"}" writes developer_instructions as ` +
+            `${line.trim()} — only a literal block scalar (|, |-, |+) is generated, and any ` +
+            "other form would be left uncompared",
+        );
+      }
+      continue;
+    }
     if (currentId === null) {
       throw new Error(`developer_instructions block at line ${index} has no enclosing "- id:"`);
     }

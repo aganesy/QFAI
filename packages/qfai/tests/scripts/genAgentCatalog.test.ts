@@ -145,6 +145,77 @@ describe("gen-agent-catalog", () => {
     });
   });
 
+  it("compares a block written with a chomping indicator", async () => {
+    // `|-` and `|+` are valid YAML for the same block. A generator that only
+    // recognises a bare `|` would skip the entry outright and then report a
+    // stale catalog as up to date.
+    const chomped = STALE_CATALOG.replace(
+      "developer_instructions: |",
+      "developer_instructions: |-",
+    );
+    await withFixture(chomped, AGENT_MD, async (root) => {
+      expect(run(["--check", `--root=${root}`]).status).toBe(1);
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      expect(written).toContain("      - Probe one thing.");
+      expect(written).not.toContain("Probe something else entirely");
+    });
+  });
+
+  it("fails on a developer_instructions form it cannot generate", async () => {
+    // Silently skipping a quoted or folded value would leave that entry
+    // uncompared forever; the drift guard must not have a quiet blind spot.
+    const folded = STALE_CATALOG.replace(
+      /developer_instructions: \|[\s\S]*$/,
+      'developer_instructions: "## Mission"\n',
+    );
+    await withFixture(folded, AGENT_MD, async (root) => {
+      const { status, output } = run([`--root=${root}`]);
+
+      expect(status).toBe(1);
+      expect(output).toContain("developer_instructions");
+    });
+  });
+
+  it("slices at the ## Mission heading line, not at any mention of it", async () => {
+    // A frontmatter description that names the section used to win the
+    // `indexOf`, dragging the frontmatter and the title into the block.
+    const chatty = AGENT_MD.replace('"Probe."', '"See ## Mission below."');
+    await withFixture(STALE_CATALOG, chatty, async (root) => {
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      expect(written).toContain("      ## Mission");
+      expect(written).not.toContain("name: probe-agent");
+      expect(written).not.toContain("# Probe Agent");
+    });
+  });
+
+  it("resolves its own repository root through a path that needs URL encoding", async () => {
+    // `new URL(...).pathname` percent-encodes a space, so a checkout under
+    // "review path/" pointed the script at a directory that does not exist.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gen agent-"));
+    try {
+      const assistant = fixtureAssistant(root);
+      await mkdir(path.join(assistant, "manifest"), { recursive: true });
+      await mkdir(path.join(assistant, "agents"), { recursive: true });
+      await mkdir(path.join(root, "scripts"), { recursive: true });
+      await writeFile(fixtureCatalog(root), STALE_CATALOG, "utf-8");
+      await writeFile(path.join(assistant, "agents", "probe-agent.md"), AGENT_MD, "utf-8");
+      const relocated = path.join(root, "scripts", "gen-agent-catalog.mjs");
+      await writeFile(relocated, await readFile(SCRIPT, "utf-8"), "utf-8");
+
+      // No --root: the script must find the fixture from its own location.
+      const result = spawnSync("node", [relocated, "--check"], { cwd: root, encoding: "utf-8" });
+
+      expect((result.stdout ?? "") + (result.stderr ?? "")).toContain("STALE:");
+      expect(result.status).toBe(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("is wired into sync:ssot so ci:gate sees a stale catalog", async () => {
     // The generator alone changes nothing CI inspects. `sync:ssot` mirrors the
     // assets into the root `.qfai/` tree, and `ci:gate` diffs that tree.

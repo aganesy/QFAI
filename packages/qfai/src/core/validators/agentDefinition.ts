@@ -95,9 +95,17 @@ function manifestRelativePath(absolute: string, root: string): string {
  * same missing heading would only add noise.
  */
 function canonicalAgentBody(markdown: string): string | undefined {
-  const missionIndex = markdown.indexOf("## Mission");
-  if (missionIndex < 0) return undefined;
-  return markdown.slice(missionIndex);
+  const content = markdown.replace(/\r\n/g, "\n");
+  let offset = 0;
+  if (content.startsWith("---\n")) {
+    // Anchor the search past the frontmatter: a description that merely
+    // mentions `## Mission` must not become the start of the body.
+    const close = content.indexOf("\n---", "---\n".length - 1);
+    if (close >= 0) offset = close + 1;
+  }
+  const match = /^## Mission[ \t]*$/m.exec(content.slice(offset));
+  if (match === null) return undefined;
+  return content.slice(offset + match.index);
 }
 
 function normalizeBody(body: string): string {
@@ -130,7 +138,7 @@ function checkDeveloperInstructions(
   issues.push(
     issue(
       "QFAI-AGENT-014",
-      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source, regenerate the catalog block from it`,
+      `${catalogRel} agent "${agent.id}" developer_instructions diverges from the canonical body in ${agentRel}; the markdown file is the source — edit it, then restore the catalog block by copying that file from its "## Mission" heading onward, verbatim`,
       "warning",
       catalogRel,
       "agentDefinition.developerInstructionsDrift",
@@ -318,12 +326,29 @@ async function readCatalog(
         continue;
       }
 
+      // A present-but-non-string block (`null`, a list, a number) is a broken
+      // derived copy, not an absent one. Dropping it silently would make the
+      // drift rule return as if the catalog simply carried no copy, so the
+      // shape error is reported here and the entry keeps its identity for the
+      // remaining per-agent rules.
+      const declared: unknown = agent.developer_instructions;
+      const declaredIsString = typeof declared === "string";
+      if (declared !== undefined && !declaredIsString) {
+        issues.push(
+          issue(
+            "QFAI-AGENT-006",
+            `agent-catalog.yml agents[${index}] developer_instructions must be a string when present`,
+            "error",
+            rel,
+            "agentDefinition.invalidCatalogEntry",
+          ),
+        );
+      }
+
       agents.push({
         id: agent.id,
         kind: agent.kind,
-        ...(typeof agent.developer_instructions === "string"
-          ? { developerInstructions: agent.developer_instructions }
-          : {}),
+        ...(declaredIsString ? { developerInstructions: declared } : {}),
       });
     }
     return agents;
