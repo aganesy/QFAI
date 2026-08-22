@@ -1,10 +1,31 @@
-import { readFile, readdir } from "node:fs/promises";
+import { execFile } from "node:child_process";
+import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import os from "node:os";
 import path from "node:path";
+import process from "node:process";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import type { Issue } from "../../src/core/types.js";
+import {
+  EVIDENCE_MUTATION_PAIRS,
+  detectEvidenceMutationUnlogged,
+} from "../../src/core/validators/evidenceMutationUnlogged.js";
+import { detectHandoffSchemaDrift } from "../../src/core/validators/handoffSchemaDrift.js";
+import {
+  HANDOFF_SCHEMA_REL,
+  HANDOFF_WRITER_PAIRS,
+} from "../../src/core/validators/handoffSchemaPairs.js";
 import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCatalog.js";
+import {
+  MOCK_HREF_PAIRS,
+  MOCK_HREF_TEMPLATE_REL,
+  MOCK_HREF_VALIDATOR_REL,
+} from "../../src/core/validators/mockHrefPairs.js";
+import { detectMockHrefDrift } from "../../src/core/validators/reviewerGate.js";
+import { detectSkillManifestDrift } from "../../src/core/validators/skillManifestDrift.js";
+import { SKILL_MANIFEST_PAIRS } from "../../src/core/validators/skillManifestPairs.js";
 
 // Anchored to this file, not to `process.cwd()`: a runner launched from the
 // repo root would resolve `src/` to a path that does not exist and the walk
@@ -12,6 +33,14 @@ import { JUSTIFICATION_CATALOG } from "../../src/core/validators/justificationCa
 // tests/validators/<this file> -> tests -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const srcRoot = path.join(packageRoot, "src");
+// The pinned pair paths (`packages/qfai/**`) are resolved from here.
+const repoRoot = path.resolve(packageRoot, "..", "..");
+
+/**
+ * A synthetic source tree, keyed by the repo-relative path each file
+ * occupies, whose contents make the owning detector raise its code.
+ */
+type DriftFixture = ReadonlyMap<string, string>;
 
 /**
  * How far a catalog code's AUTOMATIC detection actually reaches.
@@ -29,18 +58,30 @@ const srcRoot = path.join(packageRoot, "src");
  * (`reviewerJustification.ts`) when a Reviewer subagent hand-reports it with
  * an empty `justification:`. The scope is about detection, not about the
  * justification contract — which is why the disclosure text says so.
+ *
+ * `repo-source` and `repo-script` are both PROVEN at runtime below, not
+ * asserted from a path string: the detector is run against a consumer-shaped
+ * root, and the script is executed and its stderr read.
  */
 type LimitedScopeDeclaration =
   | {
       readonly scope: "repo-source";
       /** Module that pins the `packages/qfai/**` paths the detector resolves. */
       readonly gate: string;
+      /** The shipped detector itself — run, not grepped. */
+      readonly detect: (root: string) => Promise<readonly Issue[]>;
+      /** Tree that makes `detect` fire when planted at the paths the gate pins. */
+      readonly driftFixture: () => Promise<DriftFixture>;
       readonly descriptionMarkers: readonly RegExp[];
     }
   | {
       readonly scope: "repo-script";
       /** Unpublished script that raises the code. */
       readonly emitter: string;
+      /** Argv that must drive the script to write the code to stderr. */
+      readonly driftArgs: readonly string[];
+      /** Argv on a compliant input, which must stay silent and exit 0. */
+      readonly cleanArgs: readonly string[];
       readonly descriptionMarkers: readonly RegExp[];
     };
 
@@ -48,6 +89,47 @@ const REPO_SOURCE_MARKERS: readonly RegExp[] = [
   /Scope: repo-source/,
   /empty result in a consuming project's install/,
 ];
+
+/** Placeholder body for the side of a pair that must NOT carry its token. */
+const NO_TOKEN = "// drift fixture: the paired token is deliberately absent here.\n";
+
+async function handoffDriftFixture(): Promise<DriftFixture> {
+  // The schema side must still declare the token the detector keys on, and
+  // that token is module-private — so plant the real schema source rather
+  // than re-encoding its name here.
+  const schema = await readFile(path.join(repoRoot, HANDOFF_SCHEMA_REL), "utf8");
+  const files = new Map<string, string>([[HANDOFF_SCHEMA_REL, schema]]);
+  for (const pair of HANDOFF_WRITER_PAIRS) files.set(pair.writerRel, NO_TOKEN);
+  return files;
+}
+
+function skillManifestDriftFixture(): Promise<DriftFixture> {
+  const files = new Map<string, string>();
+  for (const pair of SKILL_MANIFEST_PAIRS) {
+    files.set(pair.probeImplRel, `export const PROBE = "${pair.probeToken}";\n`);
+    files.set(pair.schemaRel, NO_TOKEN);
+  }
+  return Promise.resolve(files);
+}
+
+function mockHrefDriftFixture(): Promise<DriftFixture> {
+  const drifted = MOCK_HREF_PAIRS.flatMap((pair) => pair.templateDriftTokens).join("\n");
+  return Promise.resolve(
+    new Map<string, string>([
+      [MOCK_HREF_TEMPLATE_REL, `${drifted}\n`],
+      [MOCK_HREF_VALIDATOR_REL, NO_TOKEN],
+    ]),
+  );
+}
+
+function evidenceMutationDriftFixture(): Promise<DriftFixture> {
+  const files = new Map<string, string>();
+  for (const pair of EVIDENCE_MUTATION_PAIRS) {
+    const previous = files.get(pair.sourceRel) ?? NO_TOKEN;
+    files.set(pair.sourceRel, `${previous}${pair.mutationTokens.join("\n")}\n`);
+  }
+  return Promise.resolve(files);
+}
 
 /**
  * Catalog codes whose detection does NOT reach a consuming project.
@@ -71,6 +153,8 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
     {
       scope: "repo-source",
       gate: path.join("src", "core", "validators", "handoffSchemaPairs.ts"),
+      detect: detectHandoffSchemaDrift,
+      driftFixture: handoffDriftFixture,
       descriptionMarkers: REPO_SOURCE_MARKERS,
     },
   ],
@@ -79,6 +163,8 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
     {
       scope: "repo-source",
       gate: path.join("src", "core", "validators", "evidenceMutationUnlogged.ts"),
+      detect: detectEvidenceMutationUnlogged,
+      driftFixture: evidenceMutationDriftFixture,
       descriptionMarkers: REPO_SOURCE_MARKERS,
     },
   ],
@@ -87,6 +173,8 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
     {
       scope: "repo-source",
       gate: path.join("src", "core", "validators", "skillManifestPairs.ts"),
+      detect: detectSkillManifestDrift,
+      driftFixture: skillManifestDriftFixture,
       descriptionMarkers: REPO_SOURCE_MARKERS,
     },
   ],
@@ -95,6 +183,8 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
     {
       scope: "repo-source",
       gate: path.join("src", "core", "validators", "mockHrefPairs.ts"),
+      detect: detectMockHrefDrift,
+      driftFixture: mockHrefDriftFixture,
       descriptionMarkers: REPO_SOURCE_MARKERS,
     },
   ],
@@ -103,6 +193,8 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
     {
       scope: "repo-script",
       emitter: path.join("scripts", "check-pack-locations.mjs"),
+      driftArgs: ["--changed", "docs/review-2026-01-01/PLAN.md"],
+      cleanArgs: ["--changed", ".qfai/review/review-2026-01-01/PLAN.md"],
       descriptionMarkers: [
         /Scope: repo-script/,
         /no detector for this code ships in the published package/,
@@ -209,6 +301,59 @@ async function emittersFor(code: string): Promise<string[]> {
   return hits;
 }
 
+const PACKAGE_PREFIX = "packages/qfai/";
+const ASSET_PREFIX = "assets/init/";
+
+/**
+ * Every place the same file would live in a consuming project: the
+ * package-relative path (a consumer's own tree), the installed copy under
+ * `node_modules/qfai/`, and — for template assets — the `.qfai/` tree that
+ * `qfai init` writes. A detector that grew ANY consumer-owned branch finds
+ * its pair here and fires, which is what the reach probe below asserts on.
+ */
+function consumerShapedPaths(rel: string): string[] {
+  const posix = rel.split(path.sep).join("/");
+  if (!posix.startsWith(PACKAGE_PREFIX)) return [posix];
+  const rest = posix.slice(PACKAGE_PREFIX.length);
+  const out = [rest, `node_modules/qfai/${rest}`];
+  if (rest.startsWith(ASSET_PREFIX)) out.push(rest.slice(ASSET_PREFIX.length));
+  return out;
+}
+
+async function writeTree(root: string, files: Iterable<readonly [string, string]>): Promise<void> {
+  for (const [rel, content] of files) {
+    const abs = path.join(root, rel);
+    await mkdir(path.dirname(abs), { recursive: true });
+    await writeFile(abs, content, "utf8");
+  }
+}
+
+type ScriptRun = { readonly exitCode: number; readonly stderr: string };
+
+/** Run an unpublished repo script and capture what it really wrote to stderr. */
+function runScript(scriptAbs: string, args: readonly string[]): Promise<ScriptRun> {
+  return new Promise<ScriptRun>((resolve, reject) => {
+    execFile(
+      process.execPath,
+      [scriptAbs, ...args],
+      { cwd: packageRoot, encoding: "utf8" },
+      (error, _stdout, stderr) => {
+        if (error === null) {
+          resolve({ exitCode: 0, stderr });
+          return;
+        }
+        // A non-zero exit is the expected outcome for the drift case, so it
+        // resolves; a spawn failure (no `code`) is a real error.
+        if (typeof error.code === "number") {
+          resolve({ exitCode: error.code, stderr });
+          return;
+        }
+        reject(error);
+      },
+    );
+  });
+}
+
 describe("justification catalog: every code ships with its emitter, or says it does not", () => {
   it("counts real issue() call-sites, not comments or dead constants", () => {
     const code = "R-PACK-LOCATION-DRIFT";
@@ -262,24 +407,64 @@ describe("justification catalog: every code ships with its emitter, or says it d
     }
   });
 
-  it("every repo-source code is still gated on package source the consumer does not have", async () => {
+  it("every repo-source detector fires on package source and stays silent on a consumer tree", async () => {
     for (const [code, declared] of LIMITED_SCOPE) {
       if (declared.scope !== "repo-source") continue;
       const hits = await emittersFor(code);
       expect(hits, `${code} lost its shipped emitter — reclassify it`).not.toHaveLength(0);
-      const gate = await readFile(path.join(packageRoot, declared.gate), "utf8");
-      expect(
-        stripComments(gate),
-        `${declared.gate} no longer pins packages/qfai/** paths — ${code} may now reach consumers, so re-check its scope note`,
-      ).toContain("packages/qfai/");
+
+      const fixture = await declared.driftFixture();
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-scope-reach-"));
+      try {
+        // 1. Repo-shaped: the fixture must really drive the detector, or the
+        //    consumer-shaped leg below would pass vacuously.
+        const repoShaped = path.join(root, "repo");
+        await writeTree(repoShaped, fixture);
+        const repoIssues = await declared.detect(repoShaped);
+        expect(
+          repoIssues.map((found) => found.code),
+          `the drift fixture no longer makes ${declared.gate} raise ${code}`,
+        ).toContain(code);
+
+        // 2. Consumer-shaped: the same contents, at every path a consuming
+        //    project owns. Silence here is what "repo-source" claims.
+        const consumerShaped = path.join(root, "consumer");
+        const spread: [string, string][] = [];
+        for (const [rel, content] of fixture) {
+          for (const shaped of consumerShapedPaths(rel)) spread.push([shaped, content]);
+        }
+        await writeTree(consumerShaped, spread);
+        const consumerIssues = await declared.detect(consumerShaped);
+        expect(
+          consumerIssues.map((found) => found.code),
+          `${code} now fires on a consumer-shaped root — it reaches consumers, so reclassify it and drop the scope note from its description`,
+        ).toHaveLength(0);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
     }
   });
 
-  it("every repo-script code still points at a script that emits it, and ships no emitter", async () => {
+  it("every repo-script code is really written to stderr by its script, and ships no emitter", async () => {
     for (const [code, declared] of LIMITED_SCOPE) {
       if (declared.scope !== "repo-script") continue;
-      const script = await readFile(path.join(packageRoot, declared.emitter), "utf8");
-      expect(script, `${declared.emitter} no longer emits ${code}`).toContain(code);
+      const scriptAbs = path.join(packageRoot, declared.emitter);
+
+      // Execute the lane rather than grep it: a `${code}` left behind in
+      // JSDoc or in `--help` prose must not keep this green once the real
+      // finding stops being emitted.
+      const drift = await runScript(scriptAbs, declared.driftArgs);
+      expect(drift.stderr, `${declared.emitter} no longer writes ${code} to stderr`).toContain(
+        code,
+      );
+      expect(drift.exitCode, `${declared.emitter} no longer fails the lane on ${code}`).not.toBe(0);
+
+      const clean = await runScript(scriptAbs, declared.cleanArgs);
+      expect(clean.stderr, `${declared.emitter} raises ${code} on a compliant path`).not.toContain(
+        code,
+      );
+      expect(clean.exitCode, `${declared.emitter} fails the lane on a compliant path`).toBe(0);
+
       const hits = await emittersFor(code);
       expect(
         hits,
