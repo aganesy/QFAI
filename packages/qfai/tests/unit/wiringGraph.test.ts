@@ -232,6 +232,16 @@ describe("buildWiringGraph", () => {
     expect(graph.isCalled("validateFoo")).toBe(false);
   });
 
+  it("is not fooled by a destructured parameter list", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_(
+        "/src/core/validators/prototyping/foo.ts",
+        "export function validateFoo({ root, config }: Options): Issue[] {\n  return validateBar(root);\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateBar")).toBe(false);
+  });
+
   it("carries reachability through an arrow-function orchestrator", () => {
     const graph = buildWiringGraph(
       entry("export function run() {\n  return orchestrate(root);\n}"),

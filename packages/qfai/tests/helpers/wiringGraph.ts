@@ -269,8 +269,9 @@ function nextSignificant(code: string, from: number): number {
 }
 
 /**
- * Finds the `{...}` block that follows a declaration header, skipping a return
- * type written as an object type literal (`function f(): { ok: boolean } {`).
+ * Finds the `{...}` block that follows a declaration header, skipping the
+ * parameter list (whose destructuring patterns are braces of their own) and a
+ * return type written as an object type literal (`function f(): { ok } {`).
  * Returns undefined for a bodyless declaration (an overload signature).
  */
 function findBlockBody(code: string, from: number): { start: number; end: number } | undefined {
@@ -278,6 +279,10 @@ function findBlockBody(code: string, from: number): { start: number; end: number
   while (i < code.length) {
     const ch = code[i] ?? "";
     if (ch === ";") return undefined;
+    if (ch === "(") {
+      i = matchBracket(code, i);
+      continue;
+    }
     if (ch === "{") {
       const end = matchBracket(code, i);
       const after = nextSignificant(code, end);
@@ -384,7 +389,10 @@ export function sliceFunctions(code: string): ModuleSlices {
     if (candidate.index < cursor) continue;
     const body =
       candidate.kind === "function"
-        ? findBlockBody(code, candidate.headerEnd)
+        ? // headerEnd sits just past the `(`, so step back onto it: the
+          // parameter list is skipped whole and a destructured parameter
+          // cannot be mistaken for the body block.
+          findBlockBody(code, candidate.headerEnd - 1)
         : findValueBody(code, candidate.headerEnd);
     if (body === undefined) continue;
     functions.push({ name: candidate.name, code: code.slice(body.start, body.end) });
