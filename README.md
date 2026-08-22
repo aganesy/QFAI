@@ -18,19 +18,26 @@ The agent reads the repository, produces the required artifacts, and iterates un
 ## Release status
 
 - Release posture: runtime truthfulness is enforced.
-- Prototyping is UI-only and runs a multi-spec evolution loop driven by
-  `qfai prototyping iterate --cycle <n>`. The skill resolves every
-  UI-bearing spec in one invocation, freezes that set at cycle 0, and
-  iterates `cycle 0..9` (max 10 cycles) with deterministic stop conditions
-  (exit codes 0 continue / 64 convergence / 65 max-iterations /
-  66 license-verify failure / 2 input or lock drift).
+- Prototyping is UI-only and runs a primary-spec evolution loop driven by
+  `qfai prototyping iterate --cycle <n>`. Each run resolves exactly one
+  primary UI-bearing spec (`prototyping.primarySpecId` in `qfai.config.yaml`,
+  a `surface_type: ui-bearing` marker, or `--primary-spec-id`), freezes it at
+  cycle 0, and iterates `cycle 0..9` (max 10 cycles) with deterministic stop
+  conditions (exit codes 0 continue / 64 convergence / 65 max-iterations /
+  66 license-verify failure / 2 input or lock drift). The full set of
+  UI-bearing specs is frozen at cycle 0 as `frozenSurfaceUnion` and is read
+  only to detect surface drift on later cycles: secondary specs are **not**
+  evaluated by that run, so drive the loop once per spec until the per-spec
+  iteration layout lands.
 - Runtime observation is observed-only (no synthetic 200 / API / DB prototyping coverage).
 - Per-iter evidence is a single `<screen>.review.json` per declared spec ×
   screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
-  `designMdViolations[]`, and `pivotDirective`). Reviewer-emitted
-  `<screen>.review.json` is the only per-cycle artifact — no `screenshot.png`,
-  `index.html`, or `interaction.json`.
+  `designMdViolations[]`, and `pivotDirective`). On the default path the
+  reviewer-emitted `<screen>.review.json` is the only per-cycle artifact; the
+  opt-in `--capture` and `--cycle 0 --emit-skeletons` flags additionally write
+  `<screen>.png` / `<screen>.html` into the same iteration directory. No
+  `interaction.json` is written on any path.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
 <!-- readme-align:ignore-start -->
@@ -102,7 +109,7 @@ npx qfai report
     Use `npx qfai prototyping preflight --target-url <url>` for a focused
     prototyping preflight before the skill starts; it surfaces blocking
     `QFAI-DCON-*` design-contract issues alongside runtime assumptions and resolves a runnable Playwright CLI launcher.
-    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the multi-spec
+    Use `npx qfai prototyping iterate --cycle <n> --target-url <url>` to drive each cycle of the primary-spec
     evolution loop. Exit codes: 0 (continue), 64 (convergence), 65 (max-iterations), 66 (license-verify failure), 2 (input or lock drift).
     Traceability refs inside prototyping evidence must use repo-root-relative concrete artifact refs
     (for example `.qfai/specs/spec-0001/01_Spec.md#L3` or `.qfai/evidence/prototyping/iter-03/home.png`).
@@ -183,9 +190,10 @@ QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills
   in `.qfai/specs/_policies/03_Capabilities.md` before the row is accepted
   (`QFAI-TRIAGE-006`). Every `01_Spec.md` declares a lifecycle
   `Status: active | superseded | deprecated | removed` (`QFAI-STATUS-001..006`).
-- **qfai-prototyping**: Multi-spec parallel design evolution loop. Resolves
-  every UI-bearing spec in one invocation, freezes that set at cycle 0,
-  and iterates each `spec × screen` pair through up to 10 cycles
+- **qfai-prototyping**: Primary-spec design evolution loop. Resolves exactly
+  one primary UI-bearing spec per invocation and freezes it at cycle 0 (the
+  full UI-bearing set is recorded as `frozenSurfaceUnion` for drift detection
+  only), then iterates each `spec × screen` pair through up to 10 cycles
   (`cycle 0..9`) of generate → capture → review with a 4-axis ordinal
   rubric, 6 `*Feel` short-prose impressions (200-word bounded), explicit
   layout anti-pattern detection (`lap-001..lap-008`), DESIGN.md token
