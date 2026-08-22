@@ -167,8 +167,20 @@ const INDENTED_CODE_LINE = /^(?: {4}|\t)/;
 const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
 
 /**
+ * Start of a CommonMark type-1 raw HTML block. These four tags are the ones
+ * whose contents are never parsed as Markdown, and the block runs to its
+ * closing tag regardless of blank lines — unlike `<div>` and friends, which end
+ * at a blank line and do let Markdown resume.
+ */
+const RAW_HTML_BLOCK_START = /^ {0,3}<(?:pre|script|style|textarea)(?=[\s/>]|$)/i;
+
+/** End of a type-1 raw HTML block: any of the four closing tags, per CommonMark. */
+const RAW_HTML_BLOCK_END = /<\/(?:pre|script|style|textarea)>/i;
+
+/**
  * Blanks the regions of a spec document that are not the spec, preserving line
- * count: fenced code blocks, HTML comments, and top-level indented code blocks.
+ * count: fenced code blocks, HTML comments, raw HTML blocks, and top-level
+ * indented code blocks.
  *
  * These documents often illustrate their own format. Without this, an
  * illustrative `## Test Case Table` plus `TC-ID` table inside one is selected as
@@ -186,6 +198,11 @@ const LIST_ITEM_LINE = /^\s*(?:[-*+]|\d+[.)])\s/;
  * document. Comments are stripped before the fence check on a line, so a fence
  * marker that only appears inside a comment does not open a block either.
  *
+ * **Raw HTML blocks are blanked too.** `<pre>`, `<script>`, `<style>` and
+ * `<textarea>` hold literal text, so a `## Risks` line inside one is not a
+ * heading and a `| TC-ID |` row inside one is not a table row — reading either
+ * as spec content lets a document satisfy a gate with markup it never wrote.
+ *
  * **Indented code is recognised only at the top level.** Under a list item,
  * four-space indentation is continuation rather than code, and telling the two
  * apart needs the list's content column. Rather than guess it, a block is code
@@ -197,6 +214,7 @@ export function maskNonSpecRegions(text: string): string {
   let open: { marker: string; length: number } | null = null;
   let inComment = false;
   let inIndentedCode = false;
+  let inRawHtml = false;
   let listOpen = false;
   let prevBlank = true;
 
@@ -206,6 +224,14 @@ export function maskNonSpecRegions(text: string): string {
         const closing = FENCE_LINE.exec(line)?.[1];
         if (closing && closing.charAt(0) === open.marker && closing.length >= open.length) {
           open = null;
+        }
+        return "";
+      }
+
+      if (inRawHtml) {
+        // The closing-tag line belongs to the block, so it is blanked as well.
+        if (RAW_HTML_BLOCK_END.test(line)) {
+          inRawHtml = false;
         }
         return "";
       }
@@ -241,6 +267,12 @@ export function maskNonSpecRegions(text: string): string {
       const fence = FENCE_LINE.exec(masked.text)?.[1];
       if (fence) {
         open = { marker: fence.charAt(0), length: fence.length };
+        return "";
+      }
+
+      if (RAW_HTML_BLOCK_START.test(masked.text)) {
+        // A one-line `<pre>…</pre>` opens and closes on the same line.
+        inRawHtml = !RAW_HTML_BLOCK_END.test(masked.text);
         return "";
       }
       return masked.text;

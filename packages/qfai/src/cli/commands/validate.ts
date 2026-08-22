@@ -408,6 +408,7 @@ const GATE_GROUP_FAMILIES = {
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*", "QFAI-RESEARCH-*", "UIX-VAL-*"],
   sdd: [
     "QFAI-SPACK-*",
+    "QFAI-SPECSECTION-*",
     "QFAI-COV-*",
     "QFAI-ID-*",
     "QFAI-LAYER-*",

@@ -20,15 +20,20 @@ import { issue } from "./utils.js";
  * enforces.
  */
 export async function validateSpecSections(root: string, config: QfaiConfig): Promise<Issue[]> {
-  const required = normalizeRequired(config.validation.require.specSections);
+  const { sections: required, invalid } = normalizeRequired(config.validation.require.specSections);
+  // Report the unusable entries first, and report them even when nothing
+  // usable is left: `specSections: ["##"]` reads as an explicit strict gate
+  // yet normalizes to nothing, so staying silent would present a
+  // mis-configured gate as a satisfied one.
+  const issues: Issue[] = invalid.length > 0 ? [invalidSectionsIssue(invalid)] : [];
   if (required.length === 0) {
-    return [];
+    return issues;
   }
 
   const specsRoot = resolvePath(root, config, "specsDir");
   const entries = await collectSpecEntries(specsRoot);
   if (entries.length === 0) {
-    return [];
+    return issues;
   }
 
   // A layered spec keeps Objective / Constraints / Glossary in the shared
@@ -52,7 +57,6 @@ export async function validateSpecSections(root: string, config: QfaiConfig): Pr
     }
   }
 
-  const issues: Issue[] = [];
   for (const entry of entries) {
     const present = await collectPackHeadings(entry.dir);
     const shared = entry.layout === "layered" ? sharedHeadings : EMPTY_HEADINGS;
@@ -91,28 +95,69 @@ function missingSectionsIssue(specDir: string, missing: RequiredSection[]): Issu
   );
 }
 
+/** An entry of `specSections` that names no heading, kept verbatim for the message. */
+function invalidSectionsIssue(invalid: readonly string[]): Issue {
+  const shown = invalid.map((raw) => JSON.stringify(raw));
+  return issue(
+    "QFAI-SPECSECTION-002",
+    `\`validation.require.specSections\` に見出し名にならない要素があります: ${shown.join(", ")}`,
+    "error",
+    "qfai.config.yaml",
+    "validation.require.specSections",
+    shown,
+    "canonical",
+    "`##` だけ / 空白だけの要素は比較できる見出し名を持たないため、設定にあるのにどの spec も検査されません。`qfai.config.yaml` の `validation.require.specSections` から取り除くか、`Risks` のような実際の見出し名に直してください。",
+  );
+}
+
+type NormalizedRequired = {
+  sections: RequiredSection[];
+  /** Entries whose comparison form is empty — a silently dead gate otherwise. */
+  invalid: string[];
+};
+
 /**
- * Drops blanks and duplicates, keeping the operator's spelling for the message.
- * A heading may be configured with or without its `##` markers.
+ * Splits the configured list into usable sections and unusable entries, keeping
+ * the operator's spelling for the message. A heading may be configured with or
+ * without its `##` markers; duplicates collapse.
+ *
+ * An entry that normalizes to nothing (`"##"`, `"   "`) is NOT dropped
+ * silently: it is returned as `invalid` so the caller can report the
+ * mis-configuration. Dropping it would turn `specSections: ["##"]` into a
+ * gate that is configured yet evaluates nothing.
  */
-function normalizeRequired(sections: readonly string[]): RequiredSection[] {
+function normalizeRequired(sections: readonly string[]): NormalizedRequired {
   const seen = new Set<string>();
   const normalized: RequiredSection[] = [];
+  const invalid: string[] = [];
   for (const raw of sections) {
     const label = raw.trim();
     const key = headingKey(label);
-    if (key.length === 0 || seen.has(key)) {
+    if (key.length === 0) {
+      invalid.push(raw);
+      continue;
+    }
+    if (seen.has(key)) {
       continue;
     }
     seen.add(key);
     normalized.push({ label, key });
   }
-  return normalized;
+  return { sections: normalized, invalid };
 }
 
+/**
+ * The comparison form of a heading.
+ *
+ * The trailing `#` run of `## Risks ##` is an ATX *closing sequence* — the
+ * heading's text is `Risks`, so it has to compare equal to a configured
+ * `Risks`. A closing sequence needs the preceding space (CommonMark), so
+ * `## Risks##` keeps its markers and stays a different heading.
+ */
 function headingKey(title: string): string {
   return title
     .replace(/^#{1,6}\s*/, "")
+    .replace(/\s+#+\s*$/, "")
     .replace(/\s+/g, " ")
     .trim()
     .toLowerCase();
@@ -124,11 +169,12 @@ function headingKey(title: string): string {
  * Top level only: `tdd/` and other sub-directories hold execution ledgers, not
  * the spec definition, so a heading there must not satisfy the gate.
  *
- * Fenced samples and HTML comments are blanked first (`maskNonSpecRegions`).
- * These documents illustrate their own format, so a template inside a
- * ` ```markdown ` fence routinely carries the very headings the gate requires;
- * counting one would let a spec that never wrote the section satisfy a strict
- * required-heading list.
+ * Fenced samples, HTML comments and raw HTML blocks are blanked first
+ * (`maskNonSpecRegions`). These documents illustrate their own format, so a
+ * template inside a ` ```markdown ` fence — or inside a `<pre>` block, where
+ * Markdown is not parsed at all — routinely carries the very headings the gate
+ * requires; counting one would let a spec that never wrote the section satisfy
+ * a strict required-heading list.
  */
 async function collectPackHeadings(dir: string): Promise<Set<string>> {
   const headings = new Set<string>();

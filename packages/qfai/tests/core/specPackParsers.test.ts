@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 
-import { parseFirstMarkdownTable, splitMarkdownRow } from "../../src/core/specPackParsers.js";
+import {
+  maskNonSpecRegions,
+  parseFirstMarkdownTable,
+  splitMarkdownRow,
+} from "../../src/core/specPackParsers.js";
 
 describe("splitMarkdownRow", () => {
   it("splits standard row with single leading/trailing pipes", () => {
@@ -43,5 +47,50 @@ describe("parseFirstMarkdownTable", () => {
     expect(table).toBeDefined();
     expect(table?.headers).toEqual(["Col1", "Col2"]);
     expect(table?.rows).toEqual([["a", "b"]]);
+  });
+});
+
+describe("maskNonSpecRegions", () => {
+  const visible = (text: string): string[] =>
+    maskNonSpecRegions(text)
+      .split("\n")
+      .filter((line) => line.trim().length > 0);
+
+  it("blanks a raw HTML block and everything it holds", () => {
+    const text = [
+      "# doc",
+      "",
+      "<pre>",
+      "## Risks",
+      "| TC-ID | Title |",
+      "</pre>",
+      "",
+      "## Scope",
+    ].join("\n");
+
+    expect(visible(text)).toEqual(["# doc", "## Scope"]);
+    // Line count is preserved so reported line numbers stay accurate.
+    expect(maskNonSpecRegions(text).split("\n")).toHaveLength(8);
+  });
+
+  it("closes a raw HTML block that opens and closes on one line", () => {
+    expect(visible(["<pre>## Risks</pre>", "## Scope"].join("\n"))).toEqual(["## Scope"]);
+  });
+
+  it("leaves a blank-line-terminated HTML block's Markdown alone", () => {
+    // `<div>` is not a type-1 block: the blank line ends it and Markdown
+    // resumes, so blanking `## Scope` here would hide a real heading.
+    expect(visible(["<div>", "", "## Scope", "", "</div>"].join("\n"))).toEqual([
+      "<div>",
+      "## Scope",
+      "</div>",
+    ]);
+  });
+
+  it("does not open a raw HTML block on prose that merely mentions the tag", () => {
+    expect(visible(["Use a `<pre>` block for samples.", "## Scope"].join("\n"))).toEqual([
+      "Use a `<pre>` block for samples.",
+      "## Scope",
+    ]);
   });
 });

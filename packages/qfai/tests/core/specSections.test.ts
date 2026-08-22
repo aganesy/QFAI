@@ -122,6 +122,71 @@ describe("validateSpecSections", () => {
     });
   });
 
+  it("does not count a heading that only appears inside a raw HTML block", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(
+        specsRoot,
+        "0001",
+        "# spec-0001\n\n" + "<pre>\n## Risks\n</pre>\n\n" + "<pre>## Risks</pre>\n",
+      );
+
+      const issues = await validateSpecSections(root, configRequiring(["Risks"]));
+
+      // `<pre>` holds literal text, so neither line is a Markdown heading and
+      // the spec still owes a real Risks section.
+      expect(issues.map((entry) => entry.refs)).toEqual([["Risks"]]);
+    });
+  });
+
+  it("accepts a heading written with an ATX closing sequence", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n## Risks ##\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["Risks"]));
+
+      expect(issues).toEqual([]);
+    });
+  });
+
+  it("keeps a trailing `#` run that is not a closing sequence part of the name", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n## Risks##\n");
+
+      // No space before the run, so CommonMark reads the heading as `Risks##`.
+      const issues = await validateSpecSections(root, configRequiring(["Risks"]));
+
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-SPECSECTION-001"]);
+    });
+  });
+
+  it("reports a configured entry that names no heading instead of dropping it", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["##", "   "]));
+
+      // Nothing usable is left, so without this the gate would be configured
+      // and yet silently evaluate nothing.
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-SPECSECTION-002"]);
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.file).toBe("qfai.config.yaml");
+      expect(issues[0]?.refs).toEqual(['"##"', '"   "']);
+    });
+  });
+
+  it("still evaluates the usable entries alongside an invalid one", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["##", "Scope"]));
+
+      expect(issues.map((entry) => entry.code)).toEqual([
+        "QFAI-SPECSECTION-002",
+        "QFAI-SPECSECTION-001",
+      ]);
+    });
+  });
+
   it("does not let the shared pack cover a legacy spec pack", async () => {
     await withProject(async (root, specsRoot) => {
       const legacyDir = path.join(specsRoot, "spec-0001");
