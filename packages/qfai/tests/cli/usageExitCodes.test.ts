@@ -81,6 +81,33 @@ describe("qfai --help exit-code section", () => {
     expect(section).toContain("--check の証明書 digest・gate mismatch");
   });
 
+  it("names the iterate outcomes that share 0 and 2 with unrelated causes", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const iterateRow = section.slice(
+      section.indexOf("prototyping iterate"),
+      section.indexOf("prototyping iterate --check-convergence"),
+    );
+
+    // 0 is not only "continue": cycle 0 with zero UI-bearing specs is a
+    // terminal no-op, and a loop that keeps going lands on 2 at cycle 1.
+    expect(iterateRow).toMatch(new RegExp(`${EXIT_CODES.ok} = [^\\n]*no-op`));
+    // 2 also covers --auto-serve / --capture runtime failures, which need a
+    // different recovery than fixing inputs.
+    expect(iterateRow).toContain("--auto-serve");
+    expect(iterateRow).toContain("--capture");
+  });
+
+  it("names the certify layout incompatibility that also returns 64", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const certifyRow = section.slice(section.indexOf("prototyping certify"));
+
+    expect(certifyRow).toMatch(
+      new RegExp(`${EXIT_CODES.prototypingConverged} = [^]*?flat layout 非対応`),
+    );
+  });
+
   it("splits --check-convergence from the ordinary iterate row", async () => {
     const help = await captureHelp();
     const section = help.slice(help.indexOf("Exit codes:"));

@@ -271,6 +271,10 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     default:
       error(`Unknown command: ${command}`);
       info(usage());
+      // 未知のトップレベルコマンドも使用法エラー。`--help` の Exit codes
+      // ブロックが「使用法エラー = 1」と案内する以上、ここで exit 0 のまま
+      // 返すとコマンド名の誤記が CI で成功として通ってしまう。
+      process.exitCode = options.invalidExitCode;
       return;
   }
 }

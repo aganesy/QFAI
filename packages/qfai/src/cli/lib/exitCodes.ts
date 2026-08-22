@@ -13,7 +13,11 @@
  * a command stays out of the table until it can actually be observed.
  */
 export const EXIT_CODES = {
-  /** 成功 / fail-on 閾値未満 (prototyping iterate では「継続」)。 */
+  /**
+   * 成功 / fail-on 閾値未満。prototyping iterate では「継続」に加えて、
+   * UI-bearing spec が 1 件も解決されない cycle 0 の terminal no-op
+   * (iteration artifact を作らずに終わる正常スキップ) もこの値。
+   */
   ok: 0,
   /**
    * validate / doctor / preflight: --fail-on 閾値に到達。
@@ -25,11 +29,18 @@ export const EXIT_CODES = {
    * 入力 / lock drift エラー。guardrails では使用法エラーも、
    * report / prototyping show-spec では入力ファイルの欠落 / 破損も、
    * prototyping certify では証明書 mismatch / 品質ゲート拒否もこの値。
+   * prototyping iterate では --auto-serve のサーバ起動失敗や --capture の
+   * runner 拒否 / 例外 / HTML コピー失敗といった実行環境エラーも含む
+   * (入力修正ではなくポート解放・依存修復・権限修正で復旧する)。
    */
   inputError: 2,
   /**
    * prototyping: STOP — iterate は収束 (全 4 軸 exceptional)、
    * certify は review.json のカバレッジ不足に同じ拒否クラスとして使う。
+   * certify のカバレッジ不足には、multi-spec frozen set を legacy flat
+   * layout の accepted iteration で証明しようとした layout 非互換
+   * (per-spec layout への移行、または frozen set の単一 spec 化が必要) も
+   * 含まれる。
    */
   prototypingConverged: 64,
   /** prototyping iterate: STOP — バジェット (max iterations) 枯渇。 */
@@ -70,7 +81,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "prototyping iterate",
     lines: [
-      `${EXIT_CODES.ok} = 継続 (次 cycle へ), ${EXIT_CODES.inputError} = 入力 / lock drift エラー,`,
+      `${EXIT_CODES.ok} = 継続 (次 cycle へ) / UI-bearing spec なしの no-op 終了,`,
+      `${EXIT_CODES.inputError} = 入力 / lock drift エラー, または実行時エラー`,
+      `      (--auto-serve のサーバ起動失敗, --capture の runner 拒否 / I/O 失敗),`,
       `${EXIT_CODES.prototypingConverged} = STOP: 収束 (全 4 軸 exceptional),`,
       `${EXIT_CODES.prototypingBudgetExhausted} = STOP: バジェット枯渇 (max iterations),`,
       `${EXIT_CODES.prototypingLicenseFailure} = STOP: license-verify 失敗`,
@@ -88,7 +101,8 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
       `${EXIT_CODES.ok} = 成功,`,
       `${EXIT_CODES.inputError} = 入力エラー / 品質ゲート拒否 (validate エラー, verify 不合格,`,
       `      DESIGN.md 違反) / --check の証明書 digest・gate mismatch,`,
-      `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落)`,
+      `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落 /`,
+      `      multi-spec frozen set × flat layout 非対応)`,
     ],
   },
   {
