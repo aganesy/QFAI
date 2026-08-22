@@ -171,6 +171,58 @@ describe("validateMermaidEnforcement", () => {
     });
   });
 
+  it("emits error when a mindmap diagram sits in a non-mermaid fence", async () => {
+    await withTempRoot(async (root) => {
+      const filePath = await writeArtifact(
+        root,
+        ".qfai/evidence/mindmap.md",
+        ["# Evidence", "", "```text", "mindmap", "  root((idea))", "```", ""].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-001");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(filePath);
+      expect(error?.message).toContain("detected=text");
+    });
+  });
+
+  it("does not treat prose starting with a diagram keyword as mermaid outside fences", async () => {
+    await withTempRoot(async (root) => {
+      await writeArtifact(
+        root,
+        ".qfai/evidence/prose.md",
+        [
+          "# Evidence",
+          "",
+          "Journey mapping was run with three participants.",
+          "Gantt planning is deferred to the next iteration.",
+          "Flowchart rendering happens in the reviewer's browser.",
+          "Mindmap notes were discarded.",
+          "",
+        ].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      expect(issues).toEqual([]);
+    });
+  });
+
+  it("still flags a bare diagram declaration outside fences", async () => {
+    await withTempRoot(async (root) => {
+      const filePath = await writeArtifact(
+        root,
+        ".qfai/evidence/declaration.md",
+        ["# Evidence", "", "mindmap", "  root((idea))", ""].join("\n"),
+      );
+
+      const issues = await validateMermaidEnforcement(root);
+      const error = issues.find((entry) => entry.code === "QFAI-MMD-002");
+      expect(error?.severity).toBe("error");
+      expect(error?.file).toBe(filePath);
+    });
+  });
+
   it("emits error for a stale discussion pack even when the latest pack is clean", async () => {
     await withTempRoot(async (root) => {
       const stalePath = await writeArtifact(

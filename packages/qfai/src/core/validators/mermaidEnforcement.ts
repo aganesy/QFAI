@@ -23,8 +23,21 @@ const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
   path.join(".qfai", "specs", "_policies", "04_Business-Flow.md"),
   path.join(".qfai", "specs", "_policies", "04_Business-flow.md"),
 ] as const;
+/**
+ * non-mermaid fence の中身を判定する緩い集合。fence の中は散文ではなく
+ * コードなので、行頭キーワードだけで Mermaid と判定してよい。統合前の
+ * fence validator が使っていた構文集合（`mindmap` を含む）と `graph`
+ * directive の和集合。
+ */
 const MERMAID_DIRECTIVE_RE =
-  /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
+  /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|mindmap|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
+/**
+ * fence 外の判定に使う厳格版。`Journey mapping ...` / `Gantt planning ...`
+ * のような通常の成果物文を Mermaid と誤認しないよう、宣言行そのもの
+ * （キーワード単独、または flowchart / graph + direction）だけを拾う。
+ */
+const MERMAID_DECLARATION_RE =
+  /^\s*(?:sequenceDiagram|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|mindmap|flowchart(?:\s+(?:TB|BT|RL|LR|TD))?|graph\s+(?:TB|BT|RL|LR|TD))\s*$/i;
 const FLOW_OR_SEQUENCE_RE = /\b(?:sequenceDiagram|flowchart)\b/i;
 
 type ScanResult = {
@@ -173,7 +186,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
       continue;
     }
 
-    if (MERMAID_DIRECTIVE_RE.test(line)) {
+    if (MERMAID_DECLARATION_RE.test(line)) {
       issues.push(
         issue(
           "QFAI-MMD-002",
