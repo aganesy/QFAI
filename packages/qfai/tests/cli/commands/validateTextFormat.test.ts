@@ -12,7 +12,7 @@
  * `runValidate`, not through the emitter alone.
  */
 
-import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -20,6 +20,9 @@ import { describe, expect, it } from "vitest";
 
 import { captureStdout } from "../../helpers/stdout.js";
 import { emitText, runValidate } from "../../../src/cli/commands/validate.js";
+import { warnIfTruncated } from "../../../src/cli/lib/warnings.js";
+import { loadConfig } from "../../../src/core/config.js";
+import { validateBpApDb } from "../../../src/core/validators/bpApDb.js";
 import type { Issue, ValidationResult } from "../../../src/core/types.js";
 
 const GUIDELINE_PATH = path.resolve(
@@ -291,5 +294,79 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
     } finally {
       await rm(root, { recursive: true, force: true });
     }
+  });
+
+  /**
+   * `QFAI-BPAP-002` forwards the YAML parser's `error.message` verbatim, and that
+   * message carries position information and a source excerpt across several
+   * lines. `emitText` does not normalize it, so one issue prints as several
+   * physical lines — the guideline has to say so or a line-oriented parser
+   * breaks on the first malformed input.
+   */
+  it("keeps a real multi-line issue message renderable from the documented grammar", async () => {
+    const guideline = await readGuideline();
+    const grammar = extractGrammar(guideline);
+    expect(guideline).toContain("`<message>` は改行を含むことがある");
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-multiline-"));
+    try {
+      const designDir = path.join(root, ".qfai", "contracts", "design");
+      await mkdir(designDir, { recursive: true });
+      await writeFile(
+        path.join(designDir, "anti-patterns.yaml"),
+        "- id: AP-0001\n  title: [unclosed\n",
+        "utf-8",
+      );
+
+      const { config } = await loadConfig(root);
+      const issues = await validateBpApDb(root, config);
+      const parseError = issues.find((item) => item.code === "QFAI-BPAP-002");
+      expect(parseError, "the fixture must produce a real YAML parse error").toBeDefined();
+      if (parseError === undefined) return;
+      expect(parseError.message).toContain("\n");
+
+      const output = await captureStdout(async () => {
+        emitText(resultOf([parseError]));
+      });
+      // The whole (multi-line) header block is exactly what the grammar renders,
+      // trailing slots included — they land on the last physical line.
+      expect(output.startsWith(`${renderFromGrammar(grammar, parseError)}\n`)).toBe(true);
+      const header = output.split("\n")[0] ?? "";
+      expect(header.startsWith(`[error] ${parseError.code} `)).toBe(true);
+      expect(header).not.toContain(`(${parseError.file})`);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  /**
+   * `runValidate` calls `warnIfTruncated` before `emitText`, and that warning
+   * goes to stdout. A guideline claiming to be the complete stdout contract has
+   * to declare it, or a conforming parser meets an undeclared line on any repo
+   * whose test-file scan hits the limit.
+   */
+  it("declares the scan-truncation warning line the CLI prints before the issues", async () => {
+    const guideline = await readGuideline();
+    expect(fenceWith(guideline, "file scan truncated").trim()).toBe(
+      "[warn] <command>: file scan truncated: collected <n> files (limit <n>)",
+    );
+
+    const truncated = await captureStdout(async () => {
+      warnIfTruncated(
+        { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
+        "validate",
+      );
+    });
+    expect(truncated).toBe(
+      "[warn] validate: file scan truncated: collected 20001 files (limit 20000)\n",
+    );
+
+    const complete = await captureStdout(async () => {
+      warnIfTruncated(
+        { globs: [], excludeGlobs: [], matchedFileCount: 12, truncated: false, limit: 20000 },
+        "validate",
+      );
+    });
+    expect(complete).toBe("");
   });
 });

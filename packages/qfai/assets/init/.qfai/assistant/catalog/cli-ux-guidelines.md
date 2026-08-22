@@ -20,6 +20,7 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 - `(<file>)` は issue に path がある場合のみ付与される
 - `refs=<refs>` は issue に refs がある場合のみ付与される（カンマ区切り）
 - `suppressed=true` は issue が waiver で抑止されている場合のみ付与される
+- `<message>` は改行を含むことがある（例: `QFAI-BPAP-002` は YAML パーサーの複数行 error message をそのまま保持する）。emitText は改行を正規化しないため、issue 1 件の出力が複数の物理行になり、`(<file>)` 以降の任意スロットは最終物理行に付く。パーサーは `[<severity>] ` で始まらない行を直前 issue の継続行として扱うこと
 
 例:
 
@@ -45,6 +46,15 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
   fix: 1 行目のテキスト
        2 行目以降は値の開始位置に揃う
 ```
+
+テストファイル走査が上限に達した実行では、issue 行より **前** に警告行が 1 行出力される（打ち切られなかった実行では出力されない）:
+
+```text
+[warn] <command>: file scan truncated: collected <n> files (limit <n>)
+```
+
+- `<command>` は `validate` / `report`
+- この行は issue 行の文法に一致しない。`[warn] ` で始まる行を issue として解釈しないこと
 
 全 issue の出力後に集計行が 1 行出力される。`counts` は `suppressed=true` の issue を含まない:
 
