@@ -56,6 +56,7 @@ export async function runSddPreflight(
       `${buildBlockedPreflightSummary({
         selectedDiscussionPack: readiness.latestPackDir,
         blockers,
+        openQuestions: carryOverOpenQuestions,
         nextCommands,
       })}\n`,
       "utf-8",
@@ -107,6 +108,7 @@ function resolvePreflightBlockers(readiness: {
   missingSideArtifacts: string[];
   incompleteFiles: string[];
   blockingOqIds: string[];
+  deferredWithoutDetails: string[];
   prototypingRequired: boolean;
 }): string[] {
   const blockers: string[] = [];
@@ -146,12 +148,28 @@ function resolvePreflightBlockers(readiness: {
     blockers.push(`Blocking OQ（Disposition=open）: ${readiness.blockingOqIds.join(", ")}`);
   }
 
+  // `QFAI-DPACK-007` の preflight 側の等価判定。`validate --profile sdd` は
+  // discussion validator を実行しないため、ここで止めないと deferred の根拠を
+  // 欠いたまま Stage 1 以降へ進んでしまう。
+  if (readiness.deferredWithoutDetails.length > 0) {
+    blockers.push(
+      `11_OQ-Register.md の deferred が 13_Deferred.md に存在しません: ${readiness.deferredWithoutDetails.join(", ")}`,
+    );
+  }
+
   return blockers;
 }
 
+/**
+ * A blocked run keeps the carry-over section too. The summary is the Stage 0
+ * SSOT, so `--assume` findings (and carry-over read back from an earlier
+ * summary) must survive a blocked re-run — dropping the section here would
+ * erase the decision Stage 1 still has to promote.
+ */
 function buildBlockedPreflightSummary(input: {
   selectedDiscussionPack: string | null;
   blockers: string[];
+  openQuestions: string[];
   nextCommands: string[];
 }): string {
   return [
@@ -166,10 +184,18 @@ function buildBlockedPreflightSummary(input: {
     "",
     ...input.blockers.map((item) => `- ${item}`),
     "",
+    "## Open Questions (Carry-over)",
+    "",
+    ...renderCarryOver(input.openQuestions),
+    "",
     "## Next Commands",
     "",
     ...input.nextCommands.map((command) => `- ${command}`),
   ].join("\n");
+}
+
+function renderCarryOver(openQuestions: string[]): string[] {
+  return openQuestions.length > 0 ? openQuestions.map((item) => `- ${item}`) : ["- none"];
 }
 
 function buildReadyPreflightSummary(input: {
@@ -177,8 +203,7 @@ function buildReadyPreflightSummary(input: {
   importedReqCount: number;
   openQuestions: string[];
 }): string {
-  const openQuestions =
-    input.openQuestions.length > 0 ? input.openQuestions.map((item) => `- ${item}`) : ["- none"];
+  const openQuestions = renderCarryOver(input.openQuestions);
 
   return [
     "# Preflight Summary",
@@ -203,9 +228,67 @@ function normalizeTextList(values: string[] | undefined): string[] {
   return (values ?? []).map((value) => value.trim()).filter((value) => value.length > 0);
 }
 
+/**
+ * Requirement intake は `06_REQ.md` が宣言した REQ の件数であり、
+ * `REQ-NNNN` トークンの出現回数ではない。Description が兄弟要件を参照する
+ * （`REQ-0001 に依存` 等）通常の書き方で件数が水増しされると、Stage 1 が
+ * 照合に使う machine-computed 件数が壊れる。`REQ-ID` 列を持つ表があれば
+ * その列の宣言行だけを数え、表を持たない pack では一意な ID を数える。
+ */
 function countReqIds(text: string): number {
+  const fromTable = collectTableReqIds(text);
+  if (fromTable.size > 0) {
+    return fromTable.size;
+  }
+  return collectDistinctReqIds(text).size;
+}
+
+function collectTableReqIds(text: string): Set<string> {
+  const ids = new Set<string>();
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+
+  for (let index = 0; index + 1 < lines.length; index += 1) {
+    const headers = parseTableCells(lines[index] ?? "");
+    const column = headers.findIndex((cell) => /^req[-_\s]?id$/i.test(cell));
+    if (column < 0 || !isTableSeparator(lines[index + 1] ?? "", headers.length)) {
+      continue;
+    }
+
+    for (let row = index + 2; row < lines.length; row += 1) {
+      const cells = parseTableCells(lines[row] ?? "");
+      if (cells.length === 0) {
+        break;
+      }
+      const id = new RegExp(REQ_ID_RE.source).exec(cells[column] ?? "")?.[0];
+      if (id !== undefined) {
+        ids.add(id);
+      }
+    }
+  }
+
+  return ids;
+}
+
+function collectDistinctReqIds(text: string): Set<string> {
   const matcher = new RegExp(REQ_ID_RE.source, REQ_ID_RE.flags);
-  return Array.from(text.matchAll(matcher)).length;
+  return new Set(Array.from(text.matchAll(matcher), (match) => match[0]));
+}
+
+function parseTableCells(line: string): string[] {
+  const trimmed = line.trim();
+  if (!trimmed.startsWith("|")) {
+    return [];
+  }
+  return trimmed
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .map((cell) => cell.trim());
+}
+
+function isTableSeparator(line: string, columnCount: number): boolean {
+  const cells = parseTableCells(line);
+  return cells.length === columnCount && cells.every((cell) => /^:?-{3,}:?$/.test(cell));
 }
 
 async function readSafe(filePath: string): Promise<string> {

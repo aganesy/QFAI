@@ -264,6 +264,35 @@ describe("qfai sdd preflight", () => {
     expect(summary).not.toContain("- none");
   });
 
+  it("keeps --assume carry-over across a blocked re-run", async () => {
+    // A blocked Stage 0 must not eat the decision Stage 1 still has to
+    // promote: the blocked summary carries the section, so the flagless
+    // re-run reads it back instead of writing `- none`.
+    const root = await newTempRoot();
+    const summaryPath = path.join(root, ".qfai", "report", "preflight_summary.md");
+
+    const first = newSinks();
+    expect(
+      await runSddPreflightCommand({
+        root,
+        assumptions: ["W-PENDING-PROMOTION は Stage 1 で昇格させる"],
+        write: first.write,
+        writeErr: first.writeErr,
+      }),
+    ).toBe(1);
+    expect(await readFile(summaryPath, { encoding: "utf-8" })).toContain(
+      "- W-PENDING-PROMOTION は Stage 1 で昇格させる",
+    );
+
+    const second = newSinks();
+    expect(
+      await runSddPreflightCommand({ root, write: second.write, writeErr: second.writeErr }),
+    ).toBe(1);
+    const summary = await readFile(summaryPath, { encoding: "utf-8" });
+    expect(summary).toContain("- W-PENDING-PROMOTION は Stage 1 で昇格させる");
+    expect(summary).not.toContain("- none");
+  });
+
   it("reports the blockers without failing under --fail-on never", async () => {
     const root = await newTempRoot();
     const sinks = newSinks();

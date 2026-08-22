@@ -1,6 +1,6 @@
 # Preflight Summary
 
-Output shape of `npx qfai sdd preflight` (Stage 0 of `/qfai-sdd`). The command writes this file; re-run it instead of filling the form in by hand. `blocked` runs emit Status / Blockers / Next Commands, `ready` runs emit Status / Requirement Intake / Open Questions. Carry-over entries come from `--assume <text>` and are preserved across re-runs, so findings the command does not compute can still live here.
+Output shape of `npx qfai sdd preflight` (Stage 0 of `/qfai-sdd`). The command writes this file; re-run it instead of filling the form in by hand. `blocked` runs emit Status / Blockers / Open Questions / Next Commands, `ready` runs emit Status / Requirement Intake / Open Questions. Carry-over entries come from `--assume <text>` and are preserved across re-runs, so findings the command does not compute can still live here.
 
 ## Status
 
@@ -18,7 +18,7 @@ Output shape of `npx qfai sdd preflight` (Stage 0 of `/qfai-sdd`). The command w
 
 ## Open Questions (Carry-over)
 
-- <ready only: carried-over assumption | none>
+- <carried-over assumption | none>
 
 ## Next Commands
 

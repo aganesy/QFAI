@@ -17,7 +17,7 @@
 
 ## Preflight summary path
 
-- `.qfai/report/preflight_summary.md`
+- `<the summary path npx qfai sdd preflight reported; .qfai/report/preflight_summary.md unless paths.outDir moves it>`
 
 ## Triage decisions
 
