@@ -104,5 +104,8 @@ least one minor ahead of the release that introduces it:
    terminal row satisfies it — otherwise the only remedy left is an
    out-of-lifecycle edit, which the Drift Protocol treats as drift.
 
-Enforcement: `tests/core/sunsetLedger.test.ts` fails when a `RULE_PROMOTIONS`
-key has no consumer outside `sunset.ts` (declared, never wired).
+Enforcement: `tests/core/sunsetLedger.test.ts` fails on either half-landed
+state — a `RULE_PROMOTIONS` key with no consumer outside `sunset.ts` (declared,
+never wired), and a finding code emitted by `src/` that is neither in the frozen
+`tests/core/findingCodeBaseline.ts` nor named by a promotion entry (wired, never
+declared).

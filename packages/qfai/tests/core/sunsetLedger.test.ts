@@ -26,6 +26,7 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
+import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 // tests/core/<this file> -> packages/qfai
 const packageRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -44,6 +45,29 @@ async function collectSources(dir: string): Promise<string[]> {
     }
   }
   return out;
+}
+
+/**
+ * A finding code as written at its `issue(...)` call site — the first argument,
+ * a bare literal. Wrapper helpers that pass a code through are out of the
+ * ratchet's reach on purpose: this is a ratchet, not a proof.
+ */
+const ISSUE_CODE_RE = /\bissue\(\s*\n?\s*"([A-Z][A-Z0-9_.-]{2,})"\s*,/g;
+
+/**
+ * The `RULE_PROMOTIONS` object literal, JSDoc included. A promotion entry names
+ * the finding code it governs in its doc comment, because the key is an
+ * identifier and the value is the version `newRuleSeverity` compares against —
+ * neither can hold `TDDLIST_EVIDENCE_EMPTY`.
+ */
+async function readRulePromotionsBlock(): Promise<string> {
+  const body = await readFile(path.join(SRC, "core", "sunset.ts"), "utf-8");
+  const start = body.indexOf("export const RULE_PROMOTIONS");
+  expect(start, "RULE_PROMOTIONS declaration not found in sunset.ts").toBeGreaterThan(-1);
+  const docStart = body.lastIndexOf("/**", start);
+  const end = body.indexOf("} as const;", start);
+  expect(end, "RULE_PROMOTIONS literal is not closed by `} as const;`").toBeGreaterThan(-1);
+  return body.slice(docStart === -1 ? start : docStart, end);
 }
 
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
@@ -77,6 +101,43 @@ describe("sunset ledger", () => {
     );
 
     expect(unused, `declared in RULE_PROMOTIONS but never read: ${unused.join(", ")}`).toEqual([]);
+  });
+
+  it("every finding code introduced after P7 is named by a RULE_PROMOTIONS entry", async () => {
+    // The other direction, and the one the registry cannot see on its own: the
+    // assertion above iterates `RULE_PROMOTIONS`, so its domain is keys that
+    // already exist — the same structural blindness this file's docstring
+    // charges `sunsetEnforcement.test.ts` with. The failure P7 exists to stop
+    // (a new `issue("NEW_CODE", …, "error", …)` whose promotion was never
+    // registered) writes nothing into the registry, so it has to be found from
+    // the emitting side, measured against a frozen baseline.
+    const codes = new Set<string>();
+    for (const file of await collectSources(SRC)) {
+      const body = await readFile(file, "utf-8");
+      for (const m of body.matchAll(ISSUE_CODE_RE)) {
+        const code = m[1];
+        if (code) codes.add(code);
+      }
+    }
+    expect(
+      codes.size,
+      "no issue codes extracted — did the `issue(...)` shape change?",
+    ).toBeGreaterThan(FINDING_CODES_BEFORE_PROMOTION_POLICY.length);
+
+    // The association is the promotion entry naming its code: `newRuleSeverity`
+    // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
+    const promotions = await readRulePromotionsBlock();
+    const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
+    const unregistered = [...codes]
+      .filter((code) => !baseline.has(code) && !promotions.includes(code))
+      .sort();
+
+    expect(
+      unregistered,
+      `introduced after P7 but given no RULE_PROMOTIONS entry in sunset.ts: ${unregistered.join(", ")} — ` +
+        "a new finding code ships behind a promotion window (docs/design-principles.md P7); " +
+        "do not add it to findingCodeBaseline.ts, which is frozen at the codes that predate the policy",
+    ).toEqual([]);
   });
 
   it("every finding code named by a sunset-bearing constraint row exists in src/", async () => {

@@ -164,8 +164,11 @@ place.** Writing the outcome and its evidence pointer into `Evidence` is not a
 status transition, needs no transition, and is not drift: it records a cycle
 that already ran. Do not move a `done` row backwards to satisfy it — `done` has
 no outgoing edge, and the backward move would be the actual violation. Where the
-run is genuinely gone, say so in the cell (what was run, and that the output was
-not retained) rather than leaving it empty.
+run is genuinely gone, the loss is itself the thing to record: add a backfill
+entry to the evidence file stating what was run and that its output was not
+retained, then point the cell at that entry. The cell stays a pointer — prose
+about a missing run is a payload, and the section above says why a payload in
+the cell corrupts the ledger.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
