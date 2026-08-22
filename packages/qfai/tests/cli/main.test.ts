@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -6,6 +6,7 @@ import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
 import { run } from "../../src/cli/main.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 describe("cli root discovery", { timeout: 15000 }, () => {
   it("finds config in parent when --root is omitted", async () => {
@@ -40,6 +41,46 @@ describe("cli root discovery", { timeout: 15000 }, () => {
       expect(process.exitCode).toBe(1);
     } finally {
       process.exitCode = previousExitCode;
+    }
+  });
+
+  it("keeps guardrails --format json stdout parseable when no config is found", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-json-"));
+    const deltaPath = path.join(root, "18_delta.md");
+    try {
+      await writeFile(
+        deltaPath,
+        [
+          "# SPEC-0001: Delta",
+          "",
+          "## Decision Guardrails",
+          "",
+          "- ID: DG-0001",
+          "  Type: non-goal",
+          "  Guardrail: Do not change the spec layout.",
+          "  Rationale: Spec layout is a hard gate.",
+          "  Reconsider: never",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      let output = "";
+      try {
+        output = await captureStdout(async () => {
+          await run(["guardrails", "list", "--path", deltaPath, "--format", "json"], root);
+        });
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+
+      // The missing-config notice must go to stderr, leaving stdout pure JSON.
+      expect(() => JSON.parse(output)).not.toThrow();
+      expect(output).not.toContain("defaultConfig");
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 

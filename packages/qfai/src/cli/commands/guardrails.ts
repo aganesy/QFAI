@@ -102,6 +102,9 @@ function formatGuardrailsCheckJson(
   const toIssue = (issue: GuardrailIssue): Record<string, unknown> => ({
     ...issue,
     file: toRelativePath(root, issue.file),
+    ...(issue.locations
+      ? { locations: issue.locations.map((location) => toRelativeLocation(root, location)) }
+      : {}),
   });
   const payload = {
     summary: { errors: result.errors.length, warnings: result.warnings.length },
@@ -109,6 +112,13 @@ function formatGuardrailsCheckJson(
     warnings: result.warnings.map(toIssue),
   };
   return JSON.stringify(payload, null, 2);
+}
+
+function toRelativeLocation(
+  root: string,
+  location: { file: string; line: number },
+): { file: string; line: number } {
+  return { file: toRelativePath(root, location.file), line: location.line };
 }
 
 function formatGuardrailsList(
@@ -142,11 +152,19 @@ function runGuardrailsCheck(
     `guardrails check: error=${result.errors.length} warning=${result.warnings.length}`,
   ];
 
-  const formatIssue = (issue: (typeof result.errors)[number]): string => {
+  const formatIssue = (issue: GuardrailIssue): string => {
     const relPath = toRelativePath(root, issue.file);
     const line = issue.line ? `:${issue.line}` : "";
     const id = issue.id ? ` id=${issue.id}` : "";
-    return `[${issue.severity}] ${issue.code} ${issue.message} (${relPath}${line})${id}`;
+    const locations = issue.locations
+      ? ` locations=${issue.locations
+          .map((location) => {
+            const relative = toRelativeLocation(root, location);
+            return `${relative.file}:${relative.line}`;
+          })
+          .join(", ")}`
+      : "";
+    return `[${issue.severity}] ${issue.code} ${issue.message} (${relPath}${line})${id}${locations}`;
   };
 
   result.errors.forEach((issue) => lines.push(formatIssue(issue)));

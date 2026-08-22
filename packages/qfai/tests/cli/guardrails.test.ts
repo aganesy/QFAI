@@ -169,6 +169,75 @@ describe("guardrails command", () => {
     }
   });
 
+  it("relativizes duplicate-ID locations instead of leaking absolute paths", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const deltaPath = path.join(root, "18_delta.md");
+    try {
+      await writeFile(
+        deltaPath,
+        [
+          "# SPEC-0001: Delta",
+          "",
+          "## Decision Guardrails",
+          "",
+          "- ID: DG-0001",
+          "  Type: non-goal",
+          "  Guardrail: First copy.",
+          "  Rationale: Spec layout is a hard gate.",
+          "  Reconsider: never",
+          "",
+          "- ID: DG-0001",
+          "  Type: non-goal",
+          "  Guardrail: Second copy.",
+          "  Rationale: Spec layout is a hard gate.",
+          "  Reconsider: never",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "check",
+          paths: [deltaPath],
+          format: "json",
+        });
+        expect(exitCode).toBe(1);
+      });
+
+      expect(output).not.toContain(root);
+      const parsed: unknown = JSON.parse(output);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("guardrails check --format json must emit an object");
+      }
+      const errors = { ...parsed }.errors;
+      if (!Array.isArray(errors)) {
+        throw new Error("guardrails check --format json must emit errors[]");
+      }
+      expect(errors).toContainEqual(
+        expect.objectContaining({
+          code: "QFAI-GR-008",
+          message: "ID is duplicated: DG-0001",
+          file: "18_delta.md",
+          locations: [
+            { file: "18_delta.md", line: 5 },
+            { file: "18_delta.md", line: 11 },
+          ],
+        }),
+      );
+
+      const text = await captureStdout(async () => {
+        const exitCode = await runGuardrails({ root, action: "check", paths: [deltaPath] });
+        expect(exitCode).toBe(1);
+      });
+      expect(text).not.toContain(root);
+      expect(text).toContain("locations=18_delta.md:5, 18_delta.md:11");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("emits structured JSON for list and extract", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
     const deltaPath = path.join(root, "18_delta.md");

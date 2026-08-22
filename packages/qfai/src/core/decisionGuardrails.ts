@@ -39,6 +39,11 @@ export type GuardrailIssue = {
   file: string;
   line?: number;
   id?: string;
+  /**
+   * Every occurrence behind the issue (currently duplicated-ID errors). Paths
+   * are absolute; CLI formatters relativize them before printing.
+   */
+  locations?: { file: string; line: number }[];
 };
 
 export type GuardrailCheckResult = {
@@ -436,17 +441,24 @@ export function checkDecisionGuardrails(entries: DecisionGuardrailEntry[]): Guar
 
   for (const [id, list] of idMap.entries()) {
     if (list.length > 1) {
-      const locations = list.map((entry) => `${entry.source.file}:${entry.source.line}`).join(", ");
+      const locations = list.map((entry) => ({
+        file: entry.source.file,
+        line: entry.source.line,
+      }));
       const first = list[0];
       const file = first?.source.file ?? "";
       const line = first?.source.line;
       errors.push({
         severity: "error",
         code: "QFAI-GR-008",
-        message: `ID is duplicated: ${id} (${locations})`,
+        // Locations stay structured (see `locations`) instead of being spliced
+        // into the message: an absolute path here would leak the local checkout
+        // into both the text and the JSON payload.
+        message: `ID is duplicated: ${id}`,
         file,
         ...(line !== undefined ? { line } : {}),
         id,
+        locations,
       });
     }
   }

@@ -95,7 +95,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "guardrails":
       {
-        const resolvedRoot = await resolveRoot(options);
+        const resolvedRoot = await resolveRoot(options, options.guardrailsFormat === "json");
         const exitCode = await runGuardrails({
           root: resolvedRoot,
           ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
@@ -346,16 +346,27 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+/**
+ * `machineReadable` keeps stdout reserved for the payload when the command is
+ * about to print JSON: the missing-config notice then goes to stderr so
+ * `qfai <cmd> --format json` stays parseable.
+ */
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  machineReadable = false,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(
-      `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
-    );
+    const notice = `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`;
+    if (machineReadable) {
+      error(notice);
+    } else {
+      warn(notice);
+    }
   }
   return search.root;
 }
