@@ -24,13 +24,29 @@ export type DiscussionOptions = {
   writeErr?: (message: string) => void;
 };
 
-async function resolveDiscussionRoot(root: string): Promise<string> {
-  const { config } = await loadConfig(root);
+type ResolvedDiscussionRoot = {
+  discussionRoot: string;
+  /** `qfai.config.yaml` load/normalize errors, already rendered. */
+  configIssues: string[];
+  configPath: string;
+};
+
+async function resolveDiscussionRoot(root: string): Promise<ResolvedDiscussionRoot> {
+  const { config, issues, configPath } = await loadConfig(root);
   // `path.resolve` (not `path.join`) so an absolute `paths.discussionDir`
   // is honored verbatim. With `path.join`, an absolute config value would
   // be naively concatenated under `<root>` (e.g. `<root>/tmp/discussion`),
   // hiding the configured location from `discussion list --active`.
-  return path.resolve(root, config.paths.discussionDir);
+  return {
+    discussionRoot: path.resolve(root, config.paths.discussionDir),
+    // `loadConfig` swallows a broken config into `defaultConfig` + issues.
+    // Callers that enumerate the resolved root have to see those issues,
+    // otherwise they present the *default* location's contents as if it
+    // were the configured one. A missing file is not an issue (ENOENT
+    // returns an empty list), so this stays quiet on a config-less repo.
+    configIssues: issues.map((issue) => issue.message),
+    configPath,
+  };
 }
 
 type PackListing = { ok: true; packs: LocatedPack[] } | { ok: false; message: string };
@@ -116,7 +132,7 @@ async function runListActive(
   writeErr: (m: string) => void,
 ): Promise<number> {
   const format = options.format ?? "text";
-  const discussionRoot = await resolveDiscussionRoot(options.root);
+  const { discussionRoot } = await resolveDiscussionRoot(options.root);
   const listing = await listPacks(discussionRoot);
   if (!listing.ok) {
     writeErr(`qfai discussion list --active: ${listing.message}`);
@@ -176,7 +192,9 @@ async function runListActive(
  * 0 with an empty payload rather than reusing the `list --active`
  * recovery error. Failing to *read* the root is a different matter: it
  * exits non-zero rather than passing an unreadable directory off as an
- * empty list.
+ * empty list — and so is failing to *resolve* it: a broken
+ * `qfai.config.yaml` aborts the listing instead of enumerating the
+ * default dir as if it were the configured one.
  */
 async function runListPacks(
   options: DiscussionOptions,
@@ -184,7 +202,21 @@ async function runListPacks(
   writeErr: (m: string) => void,
 ): Promise<number> {
   const format = options.format ?? "text";
-  const discussionRoot = await resolveDiscussionRoot(options.root);
+  const { discussionRoot, configIssues, configPath } = await resolveDiscussionRoot(options.root);
+  if (configIssues.length > 0) {
+    // The configured discussion root is unknown, so any listing produced
+    // here would enumerate the *default* dir while claiming to answer
+    // "which packs exist?". Refuse rather than hand back a plausible-
+    // looking but wrong candidate set under exit 0.
+    writeErr(
+      [
+        `qfai discussion list: ${configPath} を読み込めないため一覧を中止しました。`,
+        ...configIssues.map((message) => `  - ${message}`),
+        "設定を修正してから再実行してください。",
+      ].join("\n"),
+    );
+    return 1;
+  }
   const listing = await listPacks(discussionRoot);
   if (!listing.ok) {
     writeErr(`qfai discussion list: ${listing.message}`);

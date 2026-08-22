@@ -339,6 +339,35 @@ describe("bare `discussion list` enumerates packs", () => {
     expect(cap.out).toEqual([]);
     expect(cap.err.join("\n")).toMatch(/cannot enumerate/);
   });
+
+  // `loadConfig` degrades a broken qfai.config.yaml into defaultConfig +
+  // issues. Dropping those issues would make the enumeration answer
+  // "which packs exist?" from the DEFAULT `.qfai/discussion` while the
+  // operator believes they are seeing the configured location — a wrong
+  // candidate set handed back under exit 0. The listing must abort.
+  it("exits non-zero naming the config problem instead of listing the default dir", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    // `paths.discussionDir` typed as a mapping, not a string: loadConfig
+    // records the type error and falls back to `.qfai/discussion`.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  discussionDir:\n    nested: true\n",
+      "utf-8",
+    );
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/qfai\.config\.yaml/);
+    expect(cap.err.join("\n")).toMatch(/paths\.discussionDir/);
+  });
 });
 
 // The tests above drive `runDiscussion` directly, which bypasses
@@ -377,5 +406,37 @@ describe("`discussion list --format json` keeps stdout parseable via the CLI ent
     expect(stderr.join("")).toMatch(/defaultConfig/);
     const body = JSON.parse(stdout.join("")) as { packs?: { id: string }[] };
     expect(body.packs).toEqual([{ id: "discussion-20260101000000000", active: false }]);
+  });
+});
+
+describe("bare `discussion list` rejects an invalid --format at the CLI entry point", () => {
+  // A typo'd `--format` value must not be absorbed by the bare-list
+  // default (`format ?? "text"`) and reported as a successful listing.
+  // `parseArgs` marks the run invalid AND forces `options.help`, so
+  // `run()` returns usage + `invalidExitCode` before the `discussion`
+  // switch arm is ever entered — `runDiscussion` never executes.
+  it("rejects an unsupported --format value instead of listing under exit 0", async () => {
+    const { run } = await import("../../../../src/cli/main.js");
+    const stdout: string[] = [];
+    const originalOut = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    await makePack("discussion-20260101000000000");
+    let exitCode: number | string | undefined;
+    try {
+      process.stdout.write = (chunk: unknown): boolean => {
+        stdout.push(String(chunk));
+        return true;
+      };
+      await run(["discussion", "list", "--format", "yaml"], root);
+      exitCode = process.exitCode;
+    } finally {
+      process.stdout.write = originalOut;
+      process.exitCode = previousExitCode;
+    }
+    expect(exitCode).toBe(1);
+    // Usage, not a pack listing.
+    expect(stdout.join("")).not.toMatch(/discussion-20260101000000000/);
+    expect(stdout.join("")).toMatch(/Commands:/);
   });
 });
