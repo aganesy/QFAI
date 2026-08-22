@@ -42,9 +42,9 @@ Produce a unified 15-file discussion pack plus exploration-first UI sidecars so 
 
 ## UI-bearing Canonical Sidecar Family
 
-UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. They MUST also emit a draft brand SSOT at the **consuming-project root**:
+Every UI-bearing pack must produce, as primary truth: `uiux/40_screen_contracts.md`, `uiux/50_review_input_bundle.md`. Only a pack on a **visual-prototyping surface** (`web`, `mobile`, `desktop` or `mixed`, as `primary_surface` or in `secondary_surfaces`) MUST additionally emit a draft brand SSOT at the **consuming-project root**; a cli-only pack MUST NOT author it:
 
-- `<consuming-project-root>/DESIGN.md` — brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
+- `<consuming-project-root>/DESIGN.md` — **visual-prototyping surfaces only.** Brand SSOT consumed by `/qfai-sdd` (freezes its sha256 in `.qfai/contracts/design/DESIGN.md.lock.yaml`) and by `/qfai-prototyping` (iterates against locked tokens). Brand intent (product intent, brand signals, anti-goals, reference pool framed as deviate-from inputs) lives in front-matter + `# Brand Philosophy` body — no separate per-aspect sidecar.
 
 Root `DESIGN.md` is required only on the visual-prototyping surfaces (`web`, `mobile`, `desktop`, `mixed`), and the test is the whole classified surface set — `primary_surface` **and** every `secondary_surfaces` entry. Only a **cli-only** pack (`primary_surface: cli`, no visual secondary surface) skips it: it stays `ui_bearing: true` and keeps all three screen-level sidecars, but does NOT author root `DESIGN.md`, because `/qfai-prototyping` rejects `cli` and no downstream reader consumes its `visual.*` tokens. `/qfai-sdd` Phase 0 skips the freeze for the same packs. See `references/ui-bearing-playbook.md#visual-prototyping-surfaces-vs-cli`.
 

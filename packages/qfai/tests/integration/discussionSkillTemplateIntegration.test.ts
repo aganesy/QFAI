@@ -265,6 +265,48 @@ describe("discussion skill template integration", () => {
     expect(guard).toMatch(/`\.qfai\/contracts\/ui\/\*\.yaml`/);
   });
 
+  // `/qfai-implement` takes ONE spec from an argument or the queue, while
+  // `.qfai/state.json#discussion.currentId` is repository-wide. Deciding
+  // cli-only from the active pointer alone would strip a web spec of its
+  // DESIGN.md / lock / prototype inputs whenever someone left the pointer on a
+  // CLI pack — and demand them of a CLI spec whenever it points at a web pack.
+  it("qfai-implement の cli-only 判定が実装対象 spec の provenance に紐づく", async () => {
+    const implementSkill = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+      ),
+      "utf-8",
+    );
+    const guard =
+      implementSkill.split(/^## /m).find((s) => s.startsWith("Visual Review Guard")) ?? "";
+    expect(guard, "the cli-only test is not scoped to one spec").toMatch(/per implemented spec/i);
+    // The persisted spec -> pack correspondence is the `Source:` provenance the
+    // spec templates carry, not the runtime pointer.
+    expect(guard).toMatch(/02_User-stories\.md/);
+    expect(guard).toMatch(/Source: discussion-/);
+  });
+
+  // `/qfai-prototyping` rejects `cli`, so a cli item can never produce the
+  // prototype the parity gate compares against. Left unscoped, the completion
+  // checklist makes every cli UI-affecting row permanently un-`done`-able.
+  it("qfai-implement の parity gate が cli を prototype 比較から外している", async () => {
+    const implementSkill = await readFile(
+      path.join(
+        repoRoot,
+        "packages/qfai/assets/init/.qfai/assistant/skills/qfai-implement/SKILL.md",
+      ),
+      "utf-8",
+    );
+    const parityLines = implementSkill
+      .split("\n")
+      .filter((line) => /product-surface-reviewer/.test(line) && /parity/i.test(line));
+    expect(parityLines.length, "no product-surface-reviewer parity line").toBeGreaterThan(0);
+    for (const line of parityLines) {
+      expect(line, `unconditional prototype parity gate -> ${line}`).toMatch(/cli-only/);
+    }
+  });
+
   // Half a carve-out is worse than none: if the Reviewer Gate still demands a
   // root DESIGN.md from `cli`, the pack discussion just exempted is bounced at
   // review instead of at completion.

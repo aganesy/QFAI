@@ -1418,7 +1418,11 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-031");
   });
 
-  it("cli-only pack: the unreplaced `qfai init` sample degrades to a warning", async () => {
+  // Not "degraded to a warning": root DESIGN.md is outside a cli-only
+  // project's contract entirely, so the seeded sample is not the wrong
+  // version of anything. A warning would still fail `--fail-on warning` and
+  // its remediation would demand a brand SSOT nothing in the project reads.
+  it("cli-only pack: the unreplaced `qfai init` sample gate is skipped", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "cli", []);
@@ -1428,8 +1432,20 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     );
     await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    const dcon034 = issues.find((i) => i.code === "QFAI-DCON-034");
-    expect(dcon034?.severity).toBe("warning");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-034");
+  });
+
+  it("web pack keeps the unreplaced-sample gate as an error", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", []);
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("error");
   });
 
   it("cli primary with a visual secondary surface still requires the brand SSOT", async () => {
@@ -1482,12 +1498,27 @@ describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
   });
 
-  it("a dangling active pointer falls back to the newest pack", async () => {
+  // An unset pointer is the ordinary state of a project that never ran
+  // `qfai discussion use`; latest-pack selection is what it already relies on.
+  it("no active pointer falls back to the newest pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+  });
+
+  // A dangling pointer is NOT an unset one: the project pinned a pack and the
+  // pin no longer resolves, so there is no active classification to read.
+  // Falling back to the newest pack here would drop DCON-030/031 on the
+  // strength of a pack nothing selected.
+  it("a dangling active pointer keeps the strict gates, even over a cli pack", async () => {
     const root = await newTempDir();
     await seedUiBearingProject(root);
     await seedClassification(root, "cli", [], "discussion-20260101000000000");
     await writeDiscussionCurrentId(root, "discussion-19990101000000000");
     const issues = await validateSddDesignContractReadiness(root, defaultConfig);
-    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
   });
 });

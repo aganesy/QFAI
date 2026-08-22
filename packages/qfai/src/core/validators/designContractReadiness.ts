@@ -105,7 +105,14 @@ async function validateDesignContractReadinessForStage(
   // Phase 0 freezes the file's sha256 in between. Gated behind
   // `uiContracts.length === 0` the gate could only ever report a freeze
   // that already happened.
-  const sampleIssues = await validateRootDesignMdSample(root, uiBearing && !cliOnly);
+  //
+  // A cli-only project skips the gate outright rather than degrading it to a
+  // warning: the carve-out says root DESIGN.md is not part of its contract at
+  // all, so there is nothing for the seeded sample to be the wrong version
+  // OF. A warning would still fail `validation.failOn: warning` /
+  // `--fail-on warning` runs and its remediation would tell the user to
+  // author a brand SSOT that no reader in this project consumes.
+  const sampleIssues = cliOnly ? [] : await validateRootDesignMdSample(root, uiBearing);
   if (!hasUiContracts) {
     return sampleIssues;
   }
@@ -179,11 +186,22 @@ async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boole
  * be handed DCON-030/031 that Phase 0 never intends to satisfy — and the
  * inverse would silently drop both gates for a visual pack.
  *
- * The pointer is optional, so `ResolveActiveDiscussionPackError` (absent /
- * dangling / duplicate `currentId`) is not a failure: fall back to the newest
- * pack, which is what every project that has never run `qfai discussion use`
- * already relies on. Any other failure (unreadable discussion root) yields
- * `null`, which keeps the gates on.
+ * Only `reason: "unset"` falls back to the newest pack. Never having run
+ * `qfai discussion use` is the ordinary state of a single-pack project, and
+ * every such project already relies on latest-pack selection.
+ *
+ * A `"dangling"` or `"duplicate"` pointer does NOT fall back. Those are
+ * corrupt runtime state that `resolveActiveDiscussionPack` reports as
+ * recoverable errors precisely so nobody re-derives the answer from mtimes:
+ * the project pinned a pack, and the pin no longer resolves. Inferring
+ * "latest" there would hand the carve-out to a pack nothing selected — a
+ * dangling pointer over a newest cli pack would drop DCON-030/031 although no
+ * active classification exists at all. Return `null` instead, which lands on
+ * the strict side (root DESIGN.md required) until
+ * `qfai discussion use <id>` repairs the pointer.
+ *
+ * Any other failure (unreadable discussion root) yields `null` for the same
+ * reason: it can only widen the requirement, never silently drop a gate.
  */
 async function resolveClassificationPackDir(
   root: string,
@@ -192,7 +210,7 @@ async function resolveClassificationPackDir(
   try {
     return await resolveActiveDiscussionPack(root);
   } catch (error) {
-    if (!(error instanceof ResolveActiveDiscussionPackError)) {
+    if (!(error instanceof ResolveActiveDiscussionPackError) || error.reason !== "unset") {
       return null;
     }
   }

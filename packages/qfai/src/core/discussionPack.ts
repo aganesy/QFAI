@@ -174,17 +174,33 @@ export async function findLatestDiscussionPackDir(discussionRoot: string): Promi
 }
 
 /**
+ * Why `resolveActiveDiscussionPack` could not name an active pack.
+ *
+ * The three cases are NOT interchangeable. `"unset"` is the ordinary state of
+ * a project that has never run `qfai discussion use`; `"dangling"` and
+ * `"duplicate"` are corrupt runtime state that only that command can repair.
+ * A consumer that collapses the corrupt cases into the ordinary one silently
+ * substitutes a pack nobody selected.
+ */
+export type ResolveActiveDiscussionPackErrorReason = "unset" | "dangling" | "duplicate";
+
+/**
  * Error thrown by `resolveActiveDiscussionPack` when the runtime-state
  * pointer (`.qfai/state.json#discussion.currentId`) is absent OR
  * resolves to a missing/duplicate pack. The message names each
  * candidate `discussion-*` directory and the literal recovery command
  * `qfai discussion use <id>` so consumers can self-recover without
- * scanning filesystem mtimes.
+ * scanning filesystem mtimes. `reason` carries which of the three cases
+ * fired, so a consumer can tell "never pinned" from "pinned at something
+ * broken".
  */
 export class ResolveActiveDiscussionPackError extends Error {
-  constructor(message: string) {
+  readonly reason: ResolveActiveDiscussionPackErrorReason;
+
+  constructor(message: string, reason: ResolveActiveDiscussionPackErrorReason) {
     super(message);
     this.name = "ResolveActiveDiscussionPackError";
+    this.reason = reason;
   }
 }
 
@@ -220,22 +236,29 @@ export async function resolveActiveDiscussionPack(root: string): Promise<string>
     .sort((left, right) => left.localeCompare(right));
 
   if (currentId === null) {
-    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, null));
+    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, null), "unset");
   }
 
   const matches = candidates.filter((pack) => pack.name === currentId);
   if (matches.length === 0) {
-    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, currentId));
+    throw new ResolveActiveDiscussionPackError(
+      buildRecoveryMessage(candidateNames, currentId),
+      "dangling",
+    );
   }
   if (matches.length > 1) {
     throw new ResolveActiveDiscussionPackError(
       buildDuplicateMessage(candidateNames, currentId, matches.length),
+      "duplicate",
     );
   }
 
   const resolved = matches[0];
   if (!resolved) {
-    throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, currentId));
+    throw new ResolveActiveDiscussionPackError(
+      buildRecoveryMessage(candidateNames, currentId),
+      "dangling",
+    );
   }
   return resolved.path;
 }
