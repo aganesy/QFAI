@@ -46,7 +46,8 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
 
   if (errors.length > 0) {
     errors.forEach((item) => {
-      error(`guardrails: ${item.path}: ${item.message}`);
+      const relative = toRelativePath(root, item.path);
+      error(`guardrails: ${relative}: ${relativizeMessagePaths(root, item.path, item.message)}`);
     });
     if (asJson) {
       info(
@@ -55,7 +56,7 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
           "guardrails: failed to load one or more guardrail sources",
           errors.map((item) => ({
             path: toRelativePath(root, item.path),
-            message: item.message,
+            message: relativizeMessagePaths(root, item.path, item.message),
           })),
         ),
       );
@@ -100,12 +101,13 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
 
 /**
  * Machine-readable encoding for the exit-2 refusals (missing action, load
- * failure, invalid `--max`). Distinct top-level key so consumers can tell a
+ * failure, invalid `--max`, and the parser-level rejections `main.ts` returns
+ * before this command runs). Distinct top-level key so consumers can tell a
  * refusal apart from a `check` payload, whose `errors[]` are guardrail issues.
  * `details[].path` is relativized against the project root like every other
  * path the JSON payloads emit.
  */
-function formatGuardrailsErrorJson(
+export function formatGuardrailsErrorJson(
   code: string,
   message: string,
   details: { path: string; message: string }[] = [],
@@ -118,6 +120,39 @@ function formatGuardrailsErrorJson(
     },
   };
   return JSON.stringify(payload, null, 2);
+}
+
+/**
+ * Node's fs errors splice the absolute path into their own message
+ * (`Error: ENOENT: ... open '<abs>/18_delta.md'`), so relativizing the
+ * structured `path` alone still leaks the local checkout onto stdout and makes
+ * the payload differ between checkouts. Rewrite the target path — and any
+ * other project-root prefix left in the text — to the portable relative form.
+ */
+function relativizeMessagePaths(root: string, target: string, message: string): string {
+  const withTarget = replacePathOccurrences(message, target, toRelativePath(root, target));
+  return replacePathOccurrences(withTarget, root, ".");
+}
+
+/**
+ * Replaces `absolute` with `replacement` in both separator spellings, so a
+ * message quoting a Windows path is caught even when the stored path uses
+ * POSIX separators (and vice versa).
+ */
+function replacePathOccurrences(message: string, absolute: string, replacement: string): string {
+  if (!absolute || !path.isAbsolute(absolute)) {
+    return message;
+  }
+  const variants = new Set([
+    absolute,
+    absolute.replace(/\\/gu, "/"),
+    absolute.replace(/\//gu, "\\"),
+  ]);
+  let result = message;
+  for (const variant of variants) {
+    result = result.split(variant).join(replacement);
+  }
+  return result;
 }
 
 /**

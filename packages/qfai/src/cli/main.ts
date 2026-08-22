@@ -2,7 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runGuardrails } from "./commands/guardrails.js";
+import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
@@ -17,7 +17,20 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
-    info(usage());
+    // A parser rejection never reaches runGuardrails(), so the `--format json`
+    // promise ("stdout stays parseable for every outcome") has to be honoured
+    // here too: usage goes to stderr and stdout carries the refusal envelope.
+    if (invalid && command === "guardrails" && options.guardrailsFormat === "json") {
+      error(usage());
+      info(
+        formatGuardrailsErrorJson(
+          "invalid-arguments",
+          "guardrails: invalid arguments (see usage on stderr)",
+        ),
+      );
+    } else {
+      info(usage());
+    }
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }

@@ -1,11 +1,34 @@
 import { mkdtemp, writeFile, rm } from "node:fs/promises";
+import type * as FsPromises from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { runGuardrails } from "../../src/cli/commands/guardrails.js";
 import { captureStdout } from "../helpers/stdout.js";
+
+/**
+ * Lets a single test make `readFile` fail the way a mid-scan deletion or a
+ * permission error would, without depending on platform-specific fs tricks.
+ */
+const readFileFailure = vi.hoisted(() => ({
+  build: null as ((target: string) => Error) | null,
+}));
+
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  return {
+    ...actual,
+    readFile: async (...args: Parameters<typeof actual.readFile>) => {
+      const target = args[0];
+      if (readFileFailure.build && typeof target === "string") {
+        throw readFileFailure.build(target);
+      }
+      return actual.readFile(...args);
+    },
+  };
+});
 
 describe("guardrails command", () => {
   it("extracts guardrails from --path", async () => {
@@ -350,6 +373,47 @@ describe("guardrails command", () => {
       }
       expect({ ...parsedMax }.error).toEqual(expect.objectContaining({ code: "invalid-max" }));
     } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("relativizes the absolute path inside a read failure message", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    const deltaPath = path.join(root, "18_delta.md");
+    try {
+      await writeFile(deltaPath, "# SPEC-0001: Delta\n", "utf-8");
+      // Node splices the absolute path into its own error message.
+      readFileFailure.build = (target: string): Error =>
+        new Error(`ENOENT: no such file or directory, open '${target}'`);
+
+      const output = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "list",
+          paths: [deltaPath],
+          format: "json",
+        });
+        expect(exitCode).toBe(2);
+      });
+
+      expect(output).not.toContain(root);
+      const parsed: unknown = JSON.parse(output);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("guardrails --format json must emit an object on failure");
+      }
+      expect({ ...parsed }.error).toEqual(
+        expect.objectContaining({
+          code: "load-failed",
+          details: [
+            {
+              path: "18_delta.md",
+              message: "Error: ENOENT: no such file or directory, open '18_delta.md'",
+            },
+          ],
+        }),
+      );
+    } finally {
+      readFileFailure.build = null;
       await rm(root, { recursive: true, force: true });
     }
   });

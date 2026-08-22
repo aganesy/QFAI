@@ -84,6 +84,48 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
+  it("emits a JSON refusal envelope when the parser rejects guardrails --format json", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    let output = "";
+    try {
+      output = await captureStdout(async () => {
+        await run(["guardrails", "extract", "--max", "abc", "--format", "json"], cwd);
+      });
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    // The parser rejects before runGuardrails() is reached, so usage must go to
+    // stderr and stdout must still be parseable.
+    const parsed: unknown = JSON.parse(output);
+    if (typeof parsed !== "object" || parsed === null) {
+      throw new Error("guardrails --format json must emit an object on a parser rejection");
+    }
+    expect({ ...parsed }.error).toEqual(expect.objectContaining({ code: "invalid-arguments" }));
+  });
+
+  it("keeps usage on stdout when a guardrails rejection did not ask for json", async () => {
+    const cwd = process.cwd();
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    let output = "";
+    try {
+      output = await captureStdout(async () => {
+        await run(["guardrails", "extract", "--max", "abc"], cwd);
+      });
+      expect(process.exitCode).toBe(2);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+
+    expect(output).toContain("qfai <command> [options]");
+  });
+
   it("sets exitCode=2 when guardrails args are invalid", async () => {
     const cwd = process.cwd();
 
