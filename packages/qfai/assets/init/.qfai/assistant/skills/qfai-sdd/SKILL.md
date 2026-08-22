@@ -49,7 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
-When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec. Validator: `QFAI-IMPLITE-001`.
+When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)

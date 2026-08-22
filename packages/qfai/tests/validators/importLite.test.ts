@@ -33,6 +33,13 @@ const SKILL_MD = path.join(
   "SKILL.md",
 );
 
+const EVIDENCE_TEMPLATE = path.join(
+  path.dirname(SKILL_MD),
+  "templates",
+  "evidence",
+  "import-lite.md",
+);
+
 const tempDirs: string[] = [];
 
 afterEach(async () => {
@@ -62,10 +69,41 @@ async function seedDiscussionReq(root: string): Promise<void> {
   await writeFile(path.join(packDir, "06_REQ.md"), "# REQ\n", "utf-8");
 }
 
-async function seedEvidence(root: string, fileName: string): Promise<void> {
+/**
+ * A filled-in copy of the shipped template: identifying metadata plus one real
+ * source. A filename match alone is not evidence, so the seed used by every
+ * "input source exists" case has to record something traceable.
+ */
+const FILLED_EVIDENCE = [
+  "# Evidence: import-lite (legacy-import)",
+  "",
+  "## Metadata",
+  "",
+  "- generated_at: 2026-04-01T00:00:00Z",
+  "- author: AI",
+  "- entrypoint: import-lite",
+  "",
+  "## Sources",
+  "",
+  "- URLs: https://example.com/legacy-requirements",
+  "- Local paths:",
+  "",
+  "## User provided excerpt",
+  "",
+  "```text",
+  "<paste if available>",
+  "```",
+  "",
+].join("\n");
+
+async function writeEvidence(root: string, fileName: string, body: string): Promise<void> {
   const evidenceDir = path.join(root, ".qfai", "evidence");
   await mkdir(evidenceDir, { recursive: true });
-  await writeFile(path.join(evidenceDir, fileName), "# Evidence: import-lite\n", "utf-8");
+  await writeFile(path.join(evidenceDir, fileName), body, "utf-8");
+}
+
+async function seedEvidence(root: string, fileName: string): Promise<void> {
+  await writeEvidence(root, fileName, FILLED_EVIDENCE);
 }
 
 async function run(root: string) {
@@ -249,6 +287,98 @@ describe("import-lite evidence filenames", () => {
     expect(selected).not.toBeNull();
     expect(path.basename(selected ?? "")).toBe(" import-lite.md");
     await expect(readFile(selected ?? "", "utf-8")).resolves.toContain("import-lite");
+  });
+});
+
+describe("import-lite evidence content", () => {
+  // A matching filename is not an input source. An empty file, or the shipped
+  // template dropped in untouched, names nothing traceable — yet it cleared
+  // `QFAI-IMPLITE-001` and, through the entrypoint, `QFAI-DPACK-001` too.
+  it("does not accept an empty evidence file", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(root, "import-lite-20260401000000000.md", "");
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+    expect(await findImportLiteEvidence(root)).toBeNull();
+  });
+
+  it("does not accept the shipped template with its placeholders untouched", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      await readFile(EVIDENCE_TEMPLATE, "utf-8"),
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  it("does not accept a filled Sources section without the template metadata", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      ["# Evidence", "", "## Sources", "", "- URLs: https://example.com/spec", ""].join("\n"),
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  // `Assumptions / Missing information` lists what is NOT known, so filling it
+  // in alone still leaves the specs untraceable.
+  it("does not accept assumptions as a substitute for a source", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      (await readFile(EVIDENCE_TEMPLATE, "utf-8"))
+        .replace("<ISO8601>", "2026-04-01T00:00:00Z")
+        .replace("<missing item 1>", "the original ticket is lost"),
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  it("accepts a user excerpt when no source URL is known", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      (await readFile(EVIDENCE_TEMPLATE, "utf-8"))
+        .replace("<ISO8601>", "2026-04-01T00:00:00Z")
+        .replace("<paste if available>", "The importer must keep legacy CSV columns."),
+    );
+    expect(await run(root)).toEqual([]);
+  });
+
+  // Rejection is per candidate, not for the directory: an unusable newest
+  // record must not hide an older one that does record an input source.
+  it("skips a hollow newer record for an older filled one", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    await writeEvidence(root, "import-lite-20260501000000000.md", "");
+
+    const selected = await findImportLiteEvidence(root);
+
+    expect(path.basename(selected ?? "")).toBe("import-lite-20260401000000000.md");
+  });
+
+  // The entrypoint reads the same selector, so a hollow file must not flip the
+  // preflight to `ready` or silence the missing-pack error.
+  it("does not open the preflight entrypoint on a hollow evidence file", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(root, "import-lite-20260401000000000.md", "");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.source).toBe("discussion-pack");
+
+    const validated = await validateProject(root, undefined, { profile: "full" });
+    expect(validated.issues.map((found) => found.code)).toContain("QFAI-DPACK-001");
   });
 });
 

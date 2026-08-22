@@ -49,7 +49,7 @@ export async function validateImportLiteEvidencePresence(
         // following the remedy left the warning standing. Evidence, by
         // contrast, is canonical by design — see IMPORT_LITE_EVIDENCE_DIR_REL.
         `- \`${toRelativePath(root, discussionRoot)}/discussion-*/06_REQ.md\` を用意する`,
-        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<ts>.md\` を生成する`,
+        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<ts>.md\` を生成する（\`generated_at\` / \`entrypoint: import-lite\` を埋め、\`Sources\` か user excerpt に実在の入力源を最低 1 件記録する。テンプレートのプレースホルダのままのファイルは入力源として扱われません）`,
       ].join("\n"),
     ),
   ];

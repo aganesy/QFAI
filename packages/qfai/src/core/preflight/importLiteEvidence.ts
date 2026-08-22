@@ -1,4 +1,4 @@
-import { readdir } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -37,6 +37,15 @@ export function resolveImportLiteEvidenceRoot(root: string): string {
  * Absolute path of the import-lite evidence file to treat as the input source,
  * or `null` when the project has none.
  *
+ * Only files that actually RECORD an input source count. A matching filename
+ * alone is not evidence: an empty file, or the shipped template dropped in with
+ * its placeholders untouched, names nothing traceable, yet it would clear
+ * `QFAI-IMPLITE-001` and — through `resolveImportLiteEntrypoint` — flip the
+ * preflight to `ready` and suppress `QFAI-DPACK-001` as well. Content is
+ * therefore checked before a candidate is accepted, and an unusable record is
+ * skipped rather than selected, so an older filled-in file still wins over a
+ * newer hollow one.
+ *
  * A timestamped record always outranks the untimestamped template filename: a
  * project that kept `import-lite.md` and later added
  * `import-lite-<timestamp>.md` must resolve to the newer record, and plain
@@ -47,10 +56,10 @@ export function resolveImportLiteEvidenceRoot(root: string): string {
  */
 export async function findImportLiteEvidence(root: string): Promise<string | null> {
   const evidenceRoot = resolveImportLiteEvidenceRoot(root);
-  let candidates: EvidenceCandidate[];
+  let named: EvidenceCandidate[];
   try {
     const entries = await readdir(evidenceRoot, { withFileTypes: true });
-    candidates = entries
+    named = entries
       .filter((entry) => entry.isFile())
       .map((entry) => classifyEvidenceName(entry.name))
       .filter((candidate): candidate is EvidenceCandidate => candidate !== null);
@@ -58,6 +67,15 @@ export async function findImportLiteEvidence(root: string): Promise<string | nul
     // ENOENT / EACCES: no readable evidence directory means no evidence.
     return null;
   }
+
+  const usable = await Promise.all(
+    named.map(async (candidate) =>
+      (await recordsAnInputSource(path.join(evidenceRoot, candidate.name))) ? candidate : null,
+    ),
+  );
+  const candidates = usable.filter(
+    (candidate): candidate is EvidenceCandidate => candidate !== null,
+  );
 
   const timestamped = candidates.filter((candidate) => candidate.stamp !== null);
   const untimestamped = candidates.filter((candidate) => candidate.stamp === null);
@@ -107,6 +125,97 @@ function compareTimestampedCandidates(left: EvidenceCandidate, right: EvidenceCa
     return leftStamp.length - rightStamp.length;
   }
   return leftStamp.localeCompare(rightStamp);
+}
+
+async function recordsAnInputSource(filePath: string): Promise<boolean> {
+  try {
+    return recordsImportLiteInputSource(await readFile(filePath, "utf-8"));
+  } catch {
+    // ENOENT / EACCES / EISDIR: a file we cannot read records nothing.
+    return false;
+  }
+}
+
+/** A value still carrying the template's `<...>` angle-bracket placeholder. */
+const PLACEHOLDER_RE = /^<[^>]*>$/;
+
+/**
+ * The `Sources` bullets the template ships with (`- URLs:`, `- Local paths:`).
+ * Stripping the label is what makes the empty template read as empty while
+ * `- URLs: https://example.com/spec` and an indented child bullet both read as
+ * a recorded source.
+ */
+const SOURCE_LABEL_RE = /^(?:urls?|local paths?|paths?|files?)\s*:\s*/i;
+
+const METADATA_SECTION = "metadata";
+const SOURCES_SECTION = "sources";
+const EXCERPT_SECTION = "user provided excerpt";
+
+/**
+ * `true` when the evidence text names something a reader could trace the specs
+ * back to: the template's identifying metadata (`generated_at`, `entrypoint:
+ * import-lite`) plus at least one real entry under `Sources` or a real
+ * `User provided excerpt`. `Assumptions / Missing information` deliberately
+ * does not count — a list of what is missing is not an input source.
+ */
+function recordsImportLiteInputSource(text: string): boolean {
+  const sections = splitSections(text);
+  if (!hasRequiredMetadata(sections.get(METADATA_SECTION) ?? [])) {
+    return false;
+  }
+  return (
+    hasRecordedSource(sections.get(SOURCES_SECTION) ?? []) ||
+    hasRecordedExcerpt(sections.get(EXCERPT_SECTION) ?? [])
+  );
+}
+
+/** Body lines keyed by the lowercased `## ` heading that introduced them. */
+function splitSections(text: string): Map<string, string[]> {
+  const sections = new Map<string, string[]>();
+  let current: string[] | null = null;
+  for (const line of text.split(/\r?\n/)) {
+    const heading = /^#{2,6}\s+(.*)$/.exec(line.trim());
+    if (heading === null) {
+      current?.push(line);
+      continue;
+    }
+    current = [];
+    sections.set((heading[1] ?? "").trim().toLowerCase(), current);
+  }
+  return sections;
+}
+
+function hasRequiredMetadata(lines: string[]): boolean {
+  const fields = new Map<string, string>();
+  for (const line of lines) {
+    const matched = /^-?\s*([A-Za-z_][\w-]*)\s*:\s*(.*)$/.exec(line.trim());
+    if (matched !== null) {
+      fields.set((matched[1] ?? "").toLowerCase(), (matched[2] ?? "").trim());
+    }
+  }
+  const generatedAt = fields.get("generated_at") ?? "";
+  if (generatedAt.length === 0 || PLACEHOLDER_RE.test(generatedAt)) {
+    return false;
+  }
+  return (fields.get("entrypoint") ?? "").toLowerCase() === "import-lite";
+}
+
+function hasRecordedSource(lines: string[]): boolean {
+  return lines.some((line) => {
+    const value = line
+      .trim()
+      .replace(/^[-*+]\s*/, "")
+      .replace(SOURCE_LABEL_RE, "")
+      .trim();
+    return value.length > 0 && !PLACEHOLDER_RE.test(value);
+  });
+}
+
+function hasRecordedExcerpt(lines: string[]): boolean {
+  return lines.some((line) => {
+    const value = line.trim();
+    return value.length > 0 && !value.startsWith("```") && !PLACEHOLDER_RE.test(value);
+  });
 }
 
 /**
