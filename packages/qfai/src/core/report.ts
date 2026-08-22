@@ -521,20 +521,20 @@ export async function createReportData(
   // findings of its own, so run the same pass over these: a finding appended
   // afterwards could be neither suppressed nor downgraded, and a project that
   // keeps an unfilled delta on purpose would have no way to accept it.
-  const deltaScanIssues = await applyWaiversToExtraFindings(
+  const deltaScan = await applyWaiversToExtraFindings(
     resolvedRoot,
     buildDeltaScanIssues(scannedChangeTypeSummary.uncountedDeltaFiles),
   );
   const deltaScanGaps = selectUnwaivedDeltaScanGaps(
     scannedChangeTypeSummary.uncountedDeltaFiles,
-    deltaScanIssues.issues,
+    deltaScan.issues,
   );
   const changeTypeSummary: ReportChangeTypeSummary = {
     ...scannedChangeTypeSummary,
     uncountedDeltaFiles: deltaScanGaps,
   };
-  const reportIssues = [...normalizedValidation.issues, ...deltaScanIssues.issues];
-  const reportCounts = addIssueCounts(normalizedValidation.counts, deltaScanIssues.issues);
+  const reportIssues = [...normalizedValidation.issues, ...deltaScan.issues];
+  const reportCounts = addIssueCounts(normalizedValidation.counts, deltaScan.issues);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -588,7 +588,7 @@ export async function createReportData(
   // cannot see working.
   const suppressedWaivers = mergeSuppressedWaivers(
     waiverState.suppressed,
-    deltaScanIssues.suppressed,
+    deltaScan.suppressed,
   );
   const expiredWaivers = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-WAIVER-003")
