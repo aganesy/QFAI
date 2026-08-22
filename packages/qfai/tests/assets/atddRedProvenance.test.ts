@@ -1113,14 +1113,63 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     );
   });
 
-  it("takes the last advance from Status or the anchor, not from the line moving", async () => {
+  it("takes the last advance from Layer, Status or the anchor, not from the line moving", async () => {
     // A post-split reflow or typo fix on the row's line dated a legacy row's
     // last advance after the split, and the boundary test then refused it the
     // marker it lawfully needs.
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain('**Take "advanced" semantically, not as "the line moved".**');
     expect(migration).toContain("`git show <sha>^:<test-list.md>`");
-    expect(migration).toContain("the newest commit where **either one changed**");
+    expect(migration).toContain("the newest commit where **any of them changed**");
+  });
+
+  it("counts a `Layer` change as an advance, and dates it against the current layer", async () => {
+    // Retyping a Unit/Component row to E2E/API/Integration moves who owns its
+    // evidence: ignored, the walk settles on an older pre-split status update
+    // and marks a row that is ATDD-owned today and never produced a handoff.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**`Layer` counts, because it moves who owns the evidence.**");
+    expect(migration).toContain("the layer the row carries **now**, not the one it carried at `A`");
+  });
+
+  it("follows a merge commit to the parent that actually advanced the row", async () => {
+    // A row completed on a legacy branch before the split looks advanced by the
+    // merge that brought it in, which dates it after the boundary and leaves it
+    // permanently ungateable.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**A merge commit is not an advance in itself.**");
+    expect(migration).toContain("read the row at **every** parent");
+    expect(migration).toContain("the merge only took the change in");
+  });
+
+  it("refuses a row whose advance is still uncommitted", async () => {
+    // `git log -p` sees committed state only, so a row advanced in the working
+    // tree after the split is dated by its previous, possibly pre-split advance.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**Reject an uncommitted advance before any history is read.**");
+    expect(migration).toContain("`git show HEAD:<test-list.md>`");
+    expect(migration).toContain("**Refuse the marker for that row**");
+  });
+
+  it("refuses a row whose last advance the history cannot date", async () => {
+    // An untracked or uncommitted ledger yields no candidate at all; marking
+    // then burns a fingerprint the later commit does not move, so the pass
+    // would skip forever with those rows unmarked.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**No `A` → refuse, do not mark.**");
+    expect(migration).toContain("record no fingerprint");
+    expect(migration).toContain("committing the very same ledger afterwards leaves each blob");
+  });
+
+  it("does not read a diverged boundary as `A` predating the split", async () => {
+    // After several branches update the assistant tree, `B(L)` and `A` can be
+    // siblings: `--is-ancestor` failing then means "not an ancestor", not
+    // "before", and reading it as pre-split marks a post-split row.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`git merge-base --is-ancestor <A> <B(L)>` succeeds");
+    expect(migration).toContain("**Neither succeeds → `A` and `B(L)` have diverged");
+    expect(migration).toContain("Decide from the contract `A` itself was written under instead");
+    expect(migration).toContain("`git show <A>:.qfai/assistant/skills");
   });
 
   it("refuses the marker where the split boundary cannot be proven", async () => {
