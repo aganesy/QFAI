@@ -59,7 +59,7 @@ Before any spec edit:
 2. Classify each REQ/NFR into one of the 8 operations using `_policies/11_Slice-Policy.md`:
    - **CREATE / DELETE / SPLIT / MERGE / SUPERSEDE** (top-level, approval required)
    - **UPDATE:APPEND / UPDATE:MODIFY / UPDATE:REMOVE** (UPDATE:REMOVE also requires approval). The colon-separated form (no space) is the canonical SSOT used by validators (`QFAI-TRIAGE-003`/`004`) and `references/sdd-triage.md`.
-3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md`, then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
+3. **Append-first**: default to UPDATE on an existing active spec whose subject tokens overlap the REQ; walk the impact cascade and add MODIFY/REMOVE rows on companion specs. CREATE only when there is **zero subject-token overlap with any active spec** AND the REQ introduces a genuinely new capability — first add the `CAP-NNNN` row to `_policies/03_Capabilities.md`, then cite it in the CREATE row Rationale (`QFAI-TRIAGE-006`). Under `--auto` that catalog row is not written until the CREATE row is approved — see "User Questions" below. See `references/sdd-triage.md` for the precise APPEND-vs-CREATE algorithm.
 4. Obtain AskUserQuestion approval for every approval-required row. Under `--auto` no
    question is asked and the agent does not self-approve — see "User Questions" below.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
@@ -81,9 +81,12 @@ Validators: `QFAI-STATUS-001..006`.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol`.
 Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 Under `--auto` the baseline's no-question rule wins over that MUST, and it is not a
-licence to self-approve: leave every approval-required row without `Approved By`, stop
-before Phase 0, and report those rows as blockers (`QFAI-TRIAGE-005`). Approval-free rows
-(`UPDATE:APPEND` / `UPDATE:MODIFY`) still proceed on the labelled assumptions.
+licence to self-approve: leave every approval-required row without `Approved By`, write no
+`CAP-NNNN` into `_policies/03_Capabilities.md` for those rows, stop before Phase 0, and
+report them as blockers (`QFAI-TRIAGE-005`). Phase 0 onward is a fixed-order pass over the
+persisted Triage table, so a Change Request carrying even one approval-required row stops
+whole. Approval-free rows (`UPDATE:APPEND` / `UPDATE:MODIFY`) proceed on the labelled
+assumptions only when the batch contains no approval-required row.
 
 ## FORMAT SSOT (Mandatory)
 

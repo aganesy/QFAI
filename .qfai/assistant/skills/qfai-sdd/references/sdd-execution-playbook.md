@@ -34,7 +34,9 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
    concept. The same `Source` ID may legitimately appear on multiple rows.
 4. Obtain AskUserQuestion approval for CREATE / DELETE / SPLIT / MERGE / SUPERSEDE / UPDATE:REMOVE rows.
    Under `--auto` ask nothing and do not self-approve: those rows stay unapproved and
-   trip the stop condition below.
+   trip the stop condition below, no `CAP-NNNN` is written to
+   `_policies/03_Capabilities.md` on their behalf, and the batch stops whole rather
+   than running its approval-free rows ahead of the gate.
 5. Persist the Triage table in `<spec>/09_delta.md` (per-spec) or `_policies/10_delta.md` (cross-spec / policy).
 6. Stop entry to Phase 0 until every approval-required row has an
    approver recorded and every CREATE row cites a registered CAP

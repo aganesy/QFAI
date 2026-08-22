@@ -32,7 +32,13 @@ Concretely, before persisting any Triage row:
    underlying capability is itself new, propose **CREATE**. Add the new
    `CAP-NNNN` to `_policies/03_Capabilities.md` _first_, then cite it in
    the Triage row's Rationale column. `QFAI-TRIAGE-006` will fail the
-   validator otherwise.
+   validator otherwise. Under `--auto` that catalog write is deferred
+   together with the approval it depends on: leave
+   `_policies/03_Capabilities.md` untouched, record the intended
+   `CAP-NNNN` in the Rationale column as a proposal, and let
+   `QFAI-TRIAGE-006` surface next to the missing approver in the same
+   blocker set (steps 5 and 7). An unapproved CREATE row must never leave
+   a new CAP behind in the catalog.
 
 The classifier (`src/core/sddTriage.ts::classifyTriage`) implements an
 append-first fallback: when the REQ's capability does not match exactly,
@@ -116,7 +122,9 @@ and that none were added or dropped — in the `Rationale` column of the
    present an AskUserQuestion with the proposed operation. Record the
    approver in the `Approved By` column. Under `--auto` no question is
    asked and the agent never records itself as the approver: the row
-   stays unapproved and the run stops at step 7.
+   stays unapproved, no catalog or spec write is made on its behalf, and
+   the run stops at step 7. One such row stops the whole batch, because
+   Phase 0 onward is a fixed-order pass over the persisted table.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /

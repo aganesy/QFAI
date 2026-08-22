@@ -38,6 +38,8 @@ the rule. A skill approaching it is a signal to move a section out.
 - State why AskUserQuestion was unavailable.
 - When `--auto` is active, ask nothing: MUST NOT use AskUserQuestion and MUST NOT ask
   via plain text. Proceed with explicit assumptions and record them in the outputs.
+  Proceeding presupposes evidence to assume from — when a step has none, it is a hard
+  blocker: stop there and report it as a blocker instead of asking or guessing.
 
 ## Canonical qfai Launcher (Mandatory)
 

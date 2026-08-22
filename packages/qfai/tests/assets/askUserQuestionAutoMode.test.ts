@@ -143,3 +143,71 @@ describe("--auto suppresses questions in every copy of the protocol", () => {
     });
   }
 });
+
+const SDD_SKILL = "assistant/skills/qfai-sdd/SKILL.md";
+const SDD_TRIAGE = "assistant/skills/qfai-sdd/references/sdd-triage.md";
+const SDD_PLAYBOOK = "assistant/skills/qfai-sdd/references/sdd-execution-playbook.md";
+const SLICE_TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md";
+const CONFIGURE = "assistant/skills/qfai-configure/SKILL.md";
+
+// Suppressing the question is only half the rule: whatever the question was
+// gating must stay ungated too. Each case below pins one write that used to
+// happen *before* the approval it depends on.
+describe("--auto stops at the gate instead of half-applying it", () => {
+  for (const tree of QFAI_TREES) {
+    // The CREATE path adds the CAP row to the catalog _first_. Under `--auto`
+    // the CREATE row is never approved, so an eager catalog write would leave
+    // an orphan CAP behind in a run that is about to stop.
+    it(`${tree}: an unapproved CREATE row writes no CAP into the catalog`, async () => {
+      expectPhrase(
+        await read(tree, SDD_SKILL),
+        "write no\n`CAP-NNNN` into `_policies/03_Capabilities.md` for those rows",
+      );
+      const triage = await read(tree, SDD_TRIAGE);
+      expectPhrase(triage, "leave\n   `_policies/03_Capabilities.md` untouched");
+      expectPhrase(
+        triage,
+        "An unapproved CREATE row must never leave\n   a new CAP behind in the catalog.",
+      );
+      expectPhrase(
+        await read(tree, SDD_PLAYBOOK),
+        "no `CAP-NNNN` is written to\n   `_policies/03_Capabilities.md` on their behalf",
+      );
+    });
+
+    // Phase 0 onward is a fixed-order pass over one persisted table, so a batch
+    // holding both a CREATE and an UPDATE:APPEND cannot both stop and proceed.
+    it(`${tree}: a mixed batch stops whole rather than running its free rows`, async () => {
+      expectPhrase(
+        await read(tree, SDD_SKILL),
+        "Approval-free rows\n(`UPDATE:APPEND` / `UPDATE:MODIFY`) proceed on the labelled\nassumptions only when the batch contains no approval-required row.",
+      );
+      expectPhrase(await read(tree, SDD_TRIAGE), "One such row stops the whole batch");
+    });
+
+    // `_policies/11_Slice-Policy.md` is the runtime SSOT the skill defers to,
+    // and it is seeded from this template. Without the same exception there,
+    // the resolved chain tells the agent to ask and not to ask at once.
+    it(`${tree}: the seeded slice policy carries the same --auto exception`, async () => {
+      expectPhrase(
+        await read(tree, SLICE_TEMPLATE),
+        "Under `--auto` no question is\n   asked and the agent never self-approves",
+      );
+    });
+
+    // "Proceed on explicit assumptions" has no safe reading when the step has
+    // no evidence to assume from; the baseline has to allow a silent stop.
+    it(`${tree}: a hard blocker under --auto stops without asking`, async () => {
+      expectPhrase(
+        await read(tree, OPERATING),
+        "when a step has none, it is a hard\n  blocker: stop there and report it as a blocker instead of asking or guessing.",
+      );
+      const configure = await read(tree, CONFIGURE);
+      expectPhrase(
+        configure,
+        "Under `--auto` do not ask:\n  zero matches leave nothing to assume from",
+      );
+      expectPhrase(configure, "leave `testFileGlobs` unchanged");
+    });
+  }
+});
