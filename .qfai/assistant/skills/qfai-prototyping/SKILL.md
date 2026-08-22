@@ -117,8 +117,10 @@ the help text wins and this section is stale.
   otherwise. Backs `iter-00` up to `iter-00.backup-<ISO>` and clears
   stale `iter-NN` directories. Detail:
   `references/iteration-loop.md#sealed-loop`.
-- `--license-patch <file>` — apply a cycle-0 add-only patch to the
-  license allowlist. The model is immutable baseline + audit overlay:
+- `--license-patch <file>` — apply an add-only patch to the license
+  allowlist. Usable at **any** cycle, not only cycle 0: broaden the
+  catalog mid-loop instead of discarding progress with
+  `--cycle 0 --force`. The model is immutable baseline + audit overlay:
   the frozen catalog stays byte-equal to the shipped default and the
   patch is appended to the audit ledger, from which the effective
   allowlist is rebuilt on every cycle. Audit and back up the ledger
@@ -162,7 +164,7 @@ the help text wins and this section is stale.
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
 `designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown
-license tier, non-HTTPS URL, host mismatch vs the cycle-0 frozen
+license tier, non-HTTPS URL, host mismatch vs the effective
 `sourceHosts`, or missing / empty `attribution` — see "License-verify
 hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
@@ -172,8 +174,10 @@ covers `frozenSurfaceUnion` / `frozenLicenseCatalog` drift on cycle ≥ 1).
 ### License-verify hard-stop (exit 66)
 
 `npx qfai prototyping iterate` exits `66` when an `imageSources[]` entry on
-`prototyping.json` violates the cycle-0 frozen license catalog. The
-verifier rejects five distinct error codes:
+`prototyping.json` violates the **effective** license catalog: the
+immutable `frozenLicenseCatalog` baseline unioned with every
+`licensePatchAudit[]` row. The verifier rejects five distinct error
+codes:
 
 - `license-not-allowlisted` — `source` not in `allowedSources`
 - `license-tier-unknown` — `license` not in `licenseTiers[source]`
@@ -183,14 +187,18 @@ verifier rejects five distinct error codes:
 
 Recovery path (no in-loop retry — the verifier is fail-closed):
 
-1. Inspect `prototyping.json#frozenLicenseCatalog` for the frozen
-   `allowedSources` / `licenseTiers` / `sourceHosts`.
+1. Inspect `prototyping.json#frozenLicenseCatalog` **and**
+   `prototyping.json#licensePatchAudit[]`: the effective
+   `allowedSources` / `licenseTiers` / `sourceHosts` is the baseline
+   plus every audit row. The frozen field alone omits every permission
+   a `--license-patch` already added.
 2. Edit the offending `imageSources[]` entry to use an allowlisted
    source / known tier / HTTPS URL / matching host / non-empty
    attribution. **Do not** edit `frozenLicenseCatalog` mid-loop
    (separate exit-2 lock-drift class).
-3. To change the allowlist, refreeze the catalog by restarting from
-   cycle 0 with the updated stock-photo configuration.
+3. To broaden the allowlist, apply an add-only `--license-patch` at the
+   current cycle — no cycle-0 restart. Only deletions / modifications
+   are rejected and need a `--cycle 0 --force` re-seed.
 
 ### Cycle 9 budget exhaustion
 

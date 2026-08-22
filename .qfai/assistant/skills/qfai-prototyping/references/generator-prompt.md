@@ -219,22 +219,29 @@ target server does with that URL therefore decides the routing shape:
 - **Path routes** (`/settings`) and any `history.pushState` shell need
   a server that rewrites unknown paths to `index.html`. Run one
   yourself and pass `--target-url`; they will 404 under `--auto-serve`.
-- Per-screen files (`--emit-skeletons`, below) are a third option, but
-  only if the contract `route` names the file: `--emit-skeletons` writes
-  `<screenId>.html`, and the static server resolves a URL to a literal
-  path — it does not append `.html`, so a `/settings` route 404s while
-  `/settings.html` serves. `htmlSourceCopy` does not help here: it runs
-  after the capture has already navigated successfully, so it cannot
-  rescue a route the server could not resolve.
+- Per-screen files are a third option, but the files have to sit in the
+  served tree and the contract `route` has to name them: the static
+  server resolves a URL to a literal path under
+  `.qfai/prototypes/iter-NN/` and does not append `.html`, so a
+  `/settings` route 404s while `/settings.html` serves. Note that
+  `--emit-skeletons` does NOT produce these: it writes into the evidence
+  tree, which `--auto-serve` never serves — author (or copy) the
+  per-screen `<screenId>.html` files under `.qfai/prototypes/iter-NN/`
+  yourself. `htmlSourceCopy` does not help here either: it runs after the
+  capture has already navigated successfully, so it cannot rescue a route
+  the server could not resolve.
 
 Pick the routing shape to match the server you will capture against,
 and keep the contract `route` values consistent with it.
 
 Opt-in **seed aid**, not an alternative output shape:
 `npx qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one
-placeholder `.qfai/prototypes/iter-00/<screenId>.html` per declared
-screen, and the `htmlSourceCopy` capture option likewise operates on
-per-screen files. Neither writes an `index.html`.
+placeholder `.qfai/evidence/prototyping/iter-00/<screenId>.html` per
+declared screen — the cycle's `iterationDir(0)`, i.e. the evidence tree,
+not `.qfai/prototypes/`. Do not serve or look for them under
+`prototypes/`. The `htmlSourceCopy` capture option likewise operates on
+per-screen files, but reads them from `.qfai/prototypes/iter-NN/`.
+Neither writes an `index.html`.
 
 An accepted iteration must still carry `iter-NN/index.html`: Handoff
 below copies it to `.qfai/prototypes/final/index.html`, and without it
