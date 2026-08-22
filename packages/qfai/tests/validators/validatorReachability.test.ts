@@ -289,36 +289,104 @@ async function collectFindingsTypes(): Promise<Set<string>> {
   return names;
 }
 
+/** True when a declared return type hands back findings, directly or awaited. */
+function returnsFindings(returnType: string, findingsTypes: ReadonlySet<string>): boolean {
+  const awaited = returnType.replace(/^Promise<([\s\S]*)>$/, "$1").trim();
+  return FINDINGS_ARRAY.test(returnType) || findingsTypes.has(awaited);
+}
+
 /**
- * Exported functions that can emit findings, identified by their declared
+ * The return type of an exported `const` that is itself callable. A validator
+ * written as `export const validateFoo = async (…): Promise<Issue[]> => …` is a
+ * validator in every sense that matters here, so reading only function
+ * declarations would let a whole authoring style in unpoliced: re-export the
+ * module from the barrel and it counts as reached while never being called.
+ *
+ * Known limit: a const annotated with a *named* function-type alias hides its
+ * return type behind that alias, which needs a type checker rather than a
+ * syntax-only walk. No validator is written that way today.
+ */
+function callableReturnType(
+  declaration: ts.VariableDeclaration,
+  sourceFile: ts.SourceFile,
+): string | null {
+  const annotation = declaration.type;
+  if (annotation !== undefined) {
+    return ts.isFunctionTypeNode(annotation) ? annotation.type.getText(sourceFile) : null;
+  }
+
+  const initializer = declaration.initializer;
+  if (
+    initializer !== undefined &&
+    (ts.isArrowFunction(initializer) || ts.isFunctionExpression(initializer)) &&
+    initializer.type !== undefined
+  ) {
+    return initializer.type.getText(sourceFile);
+  }
+  return null;
+}
+
+/**
+ * Exported entry points that can emit findings, identified by their declared
  * return type rather than by a name prefix: `run*`, `detect*` and `check*`
  * validators exist too, and a prefix rule would exempt exactly the modules this
- * PR deleted.
+ * PR deleted. Both `function` declarations and callable `const`s count.
  */
 function findingsEntries(sourceFile: ts.SourceFile, findingsTypes: ReadonlySet<string>): string[] {
   const names: string[] = [];
   for (const statement of sourceFile.statements) {
-    if (!ts.isFunctionDeclaration(statement) || statement.name === undefined) {
-      continue;
-    }
     const isExported = statement.modifiers?.some(
       (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
     );
     if (isExported !== true) {
       continue;
     }
-    const returnType = statement.type?.getText(sourceFile) ?? "";
-    const awaited = returnType.replace(/^Promise<([\s\S]*)>$/, "$1").trim();
-    if (FINDINGS_ARRAY.test(returnType) || findingsTypes.has(awaited)) {
-      names.push(statement.name.text);
+
+    if (ts.isFunctionDeclaration(statement)) {
+      if (statement.name === undefined) {
+        continue;
+      }
+      if (returnsFindings(statement.type?.getText(sourceFile) ?? "", findingsTypes)) {
+        names.push(statement.name.text);
+      }
+      continue;
+    }
+
+    if (!ts.isVariableStatement(statement)) {
+      continue;
+    }
+    for (const declaration of statement.declarationList.declarations) {
+      if (!ts.isIdentifier(declaration.name)) {
+        continue;
+      }
+      const returnType = callableReturnType(declaration, sourceFile);
+      if (returnType !== null && returnsFindings(returnType, findingsTypes)) {
+        names.push(declaration.name.text);
+      }
     }
   }
   return names;
 }
 
-/** Local names this module imports from a relative specifier, values only. */
-function importedLocals(sourceFile: ts.SourceFile): Set<string> {
-  const locals = new Set<string>();
+/**
+ * Values this module imports from a relative specifier, keyed by the name at
+ * the *declaration* site and holding every local name bound to it. The two
+ * differ under `import { validateFoo as runFoo }`: the call site says `runFoo`
+ * while the owner table below is keyed by `validateFoo`, so storing only the
+ * local name would report a genuinely dispatched validator as dead — and the
+ * assertion demands equality, so that is a failing test, not a lenient one.
+ */
+function importedValueBindings(sourceFile: ts.SourceFile): Map<string, Set<string>> {
+  const bindings = new Map<string, Set<string>>();
+  const bind = (declared: string, local: string): void => {
+    const locals = bindings.get(declared);
+    if (locals === undefined) {
+      bindings.set(declared, new Set([local]));
+      return;
+    }
+    locals.add(local);
+  };
+
   for (const statement of sourceFile.statements) {
     if (!ts.isImportDeclaration(statement) || !importHasRuntimeEffect(statement)) {
       continue;
@@ -329,18 +397,19 @@ function importedLocals(sourceFile: ts.SourceFile): Set<string> {
     }
     const clause = statement.importClause;
     if (clause?.name !== undefined) {
-      locals.add(clause.name.text);
+      // A default binding carries no declaration-site name to map it to.
+      bind(clause.name.text, clause.name.text);
     }
-    const bindings = clause?.namedBindings;
-    if (bindings !== undefined && ts.isNamedImports(bindings)) {
-      for (const element of bindings.elements) {
+    const named = clause?.namedBindings;
+    if (named !== undefined && ts.isNamedImports(named)) {
+      for (const element of named.elements) {
         if (!element.isTypeOnly) {
-          locals.add(element.name.text);
+          bind(element.propertyName?.text ?? element.name.text, element.name.text);
         }
       }
     }
   }
-  return locals;
+  return bindings;
 }
 
 /**
@@ -485,14 +554,16 @@ describe("validator reachability", () => {
       if (sourceFile === null) {
         continue;
       }
-      const locals = importedLocals(sourceFile);
+      const bindings = importedValueBindings(sourceFile);
       const references = valueReferences(sourceFile);
       for (const [name, owner] of owners) {
         // Inside the declaring module an internal call is enough — the module
         // is loaded, so an orchestrator there does run. Anywhere else the name
         // must have been imported as a value as well, so that an unrelated
-        // object key of the same name cannot stand in for a call.
-        if (references.has(name) && (owner === file || locals.has(name))) {
+        // object key of the same name cannot stand in for a call; the call is
+        // then looked for under the local name the import bound, alias or not.
+        const callNames = owner === file ? [name] : [...(bindings.get(name) ?? [])];
+        if (callNames.some((callName) => references.has(callName))) {
           dispatched.add(name);
         }
       }
@@ -504,5 +575,55 @@ describe("validator reachability", () => {
     // — or deleted — must go from the pinned list in the same change, or it
     // would go on masking that validator forever.
     expect(undispatched).toEqual([...KNOWN_UNDISPATCHED.keys()].sort());
+  });
+});
+
+/** Parse a literal module so the walkers above can be exercised directly. */
+function parseLiteral(source: string): ts.SourceFile {
+  return ts.createSourceFile("literal.ts", source, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
+}
+
+describe("reachability walkers", () => {
+  const findingsTypes = new Set(["SkillValidationResult"]);
+
+  it("enumerates callable consts, not only function declarations", () => {
+    const sourceFile = parseLiteral(
+      [
+        "export async function validateDeclared(root: string): Promise<Issue[]> { return []; }",
+        "export const validateArrow = async (root: string): Promise<Issue[]> => [];",
+        "export const validateExpression = function (root: string): Issue[] { return []; };",
+        "export const validateAnnotated: (root: string) => SkillValidationResult = () => ({});",
+        "export const NOT_A_VALIDATOR: readonly string[] = [];",
+        "const validateUnexported = async (root: string): Promise<Issue[]> => [];",
+      ].join("\n"),
+    );
+
+    expect(findingsEntries(sourceFile, findingsTypes).sort()).toEqual([
+      "validateAnnotated",
+      "validateArrow",
+      "validateDeclared",
+      "validateExpression",
+    ]);
+  });
+
+  it("maps an aliased import back to the name it was declared under", () => {
+    const sourceFile = parseLiteral(
+      [
+        'import { validateFoo as runFoo, validateBar } from "./validators/index.js";',
+        'import type { validateTyped } from "./validators/index.js";',
+        "export async function run(root: string): Promise<Issue[]> {",
+        "  return [...(await runFoo(root)), ...(await validateBar(root))];",
+        "}",
+      ].join("\n"),
+    );
+
+    const bindings = importedValueBindings(sourceFile);
+    expect([...(bindings.get("validateFoo") ?? [])]).toEqual(["runFoo"]);
+    expect([...(bindings.get("validateBar") ?? [])]).toEqual(["validateBar"]);
+    expect(bindings.has("validateTyped")).toBe(false);
+    expect(bindings.has("runFoo")).toBe(false);
+
+    // The alias is what the call site names, so it is what dispatch must find.
+    expect(valueReferences(sourceFile).has("runFoo")).toBe(true);
   });
 });
