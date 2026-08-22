@@ -1,6 +1,6 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import type { FileHandle } from "node:fs/promises";
-import { mkdir, open, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { mkdir, open, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -21,15 +21,43 @@ const STATE_REL = path.join(".qfai", "state.json");
 /**
  * Advisory-lock tuning. The lock is held only across one
  * read-modify-write of a small JSON file, so the wait budget is short.
- * `LOCK_STALE_MS` bounds how long a lock left behind by a killed
- * process can block other runs.
+ * `LOCK_STALE_MS` is when a lock first becomes a reap *candidate*;
+ * `LOCK_ABANDON_MS` is the backstop for a lock whose recorded owner
+ * cannot be trusted (see {@link reapStaleLock}).
  */
 const LOCK_STALE_MS = 10_000;
+const LOCK_ABANDON_MS = 60_000;
 const LOCK_RETRY_MS = 10;
 const LOCK_TIMEOUT_MS = 5_000;
 
 function stateAbsPath(root: string): string {
   return path.join(root, STATE_REL);
+}
+
+/**
+ * Resolve `target` through symlinks, tolerating a path that does not
+ * exist yet: the deepest existing ancestor is canonicalized and the
+ * missing tail re-joined onto it.
+ *
+ * Keying the lock on raw `path.resolve` output is not enough — the same
+ * project reached once by its real path and once through a symlink
+ * would hash to two different lock names, and both writers would then
+ * sit inside the critical section at the same time.
+ */
+async function realpathBestEffort(target: string): Promise<string> {
+  const absolute = path.resolve(target);
+  let current = absolute;
+  const tail: string[] = [];
+  for (;;) {
+    try {
+      return path.join(await realpath(current), ...tail);
+    } catch {
+      const parent = path.dirname(current);
+      if (parent === current) return absolute;
+      tail.unshift(path.basename(current));
+      current = parent;
+    }
+  }
 }
 
 /**
@@ -41,11 +69,13 @@ function stateAbsPath(root: string): string {
  * untracked file in every consumer repo. Concurrency here is between
  * CLI runs on one machine, which a temp-dir lock covers.
  *
- * Windows paths are case-insensitive, so the key is lowercased there —
- * otherwise `C:\repo` and `c:\repo` would take two different locks.
+ * The key is the symlink-resolved real path so that every alias of one
+ * project maps to one lock. Windows paths are case-insensitive, so the
+ * key is lowercased there — otherwise `C:\repo` and `c:\repo` would
+ * take two different locks.
  */
-function stateLockPath(root: string): string {
-  const resolved = path.resolve(root);
+async function stateLockPath(root: string): Promise<string> {
+  const resolved = await realpathBestEffort(root);
   const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
   const digest = createHash("sha256").update(key).digest("hex").slice(0, 16);
   return path.join(os.tmpdir(), `qfai-state-${digest}.lock`);
@@ -64,15 +94,79 @@ function errorCode(error: unknown): string | null {
   return typeof code === "string" ? code : null;
 }
 
+/** Render an unknown throwable for an error message, without a cast. */
+function describeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
 function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-/** Remove a lock whose holder is gone (mtime older than the stale window). */
+/** Identity stamped into the lock file so a holder can prove it owns it. */
+interface LockOwner {
+  readonly pid: number;
+  readonly token: string;
+}
+
+/** A held state lock: the open handle plus the owner stamped on disk. */
+interface StateLock {
+  readonly handle: FileHandle;
+  readonly owner: LockOwner;
+}
+
+/** Is `pid` still running on this machine? */
+function isProcessAlive(pid: number): boolean {
+  if (!Number.isInteger(pid) || pid <= 0) return false;
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (error) {
+    // EPERM means the process exists but belongs to another user.
+    return errorCode(error) === "EPERM";
+  }
+}
+
+/** Read the owner stamp, or `null` when it is absent / unparsable. */
+async function readLockOwner(lockPath: string): Promise<LockOwner | null> {
+  let raw: string;
+  try {
+    raw = await readFile(lockPath, "utf-8");
+  } catch {
+    return null;
+  }
+  try {
+    const parsed: unknown = JSON.parse(raw);
+    if (!isRecord(parsed)) return null;
+    const { pid, token } = parsed;
+    if (typeof pid !== "number" || typeof token !== "string") return null;
+    return { pid, token };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Remove a lock whose holder is gone.
+ *
+ * An old mtime is not evidence of death: a holder stalled on slow I/O
+ * or suspended by the scheduler keeps its mtime frozen while it is
+ * still inside the critical section, and deleting that lock would admit
+ * a second writer (and let the original holder unlink the newcomer's
+ * lock on release). So an aged lock is only reaped once the pid stamped
+ * inside it is no longer running. `LOCK_ABANDON_MS` is the backstop for
+ * the cases where that pid check cannot be trusted — a recycled pid, or
+ * a lock leaked by this very process.
+ */
 async function reapStaleLock(lockPath: string): Promise<void> {
   try {
     const info = await stat(lockPath);
-    if (Date.now() - info.mtimeMs < LOCK_STALE_MS) return;
+    const age = Date.now() - info.mtimeMs;
+    if (age < LOCK_STALE_MS) return;
+    if (age < LOCK_ABANDON_MS) {
+      const owner = await readLockOwner(lockPath);
+      if (owner !== null && isProcessAlive(owner.pid)) return;
+    }
     await rm(lockPath, { force: true });
   } catch {
     // The lock vanished or is unreadable — the next acquire attempt decides.
@@ -80,38 +174,73 @@ async function reapStaleLock(lockPath: string): Promise<void> {
 }
 
 /**
- * Take the exclusive state lock, or give up and return `null`.
+ * Take the exclusive state lock, or throw.
  *
- * `null` means "proceed unlocked": a lock we cannot take must never
- * turn a counter update into a thrown error, since the callers are a
- * best-effort validator and a CLI pointer write. Degrading to the old
- * lock-free behaviour after a bounded wait is strictly better than
- * failing the run.
+ * Giving up and proceeding unlocked would reopen the exact lost-update
+ * race this module exists to close: the holder that outran our wait
+ * budget resumes, writes back the snapshot it read before us, and our
+ * increment disappears. Refusing to write is the safe failure —
+ * `.qfai/state.json` is bookkeeping, and its callers either surface the
+ * error (`qfai discussion use`, `qfai atdd scaffold`) or degrade to
+ * "counter unavailable" (the scaffold-placeholder validator, which
+ * already catches per-TC state failures).
  */
-async function acquireStateLock(lockPath: string): Promise<FileHandle | null> {
+async function acquireStateLock(lockPath: string): Promise<StateLock> {
+  const owner: LockOwner = { pid: process.pid, token: randomUUID() };
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
   for (;;) {
+    let handle: FileHandle | null = null;
     try {
-      return await open(lockPath, "wx");
+      handle = await open(lockPath, "wx");
     } catch (error) {
-      if (errorCode(error) !== "EEXIST") return null;
-      await reapStaleLock(lockPath);
-      if (Date.now() >= deadline) return null;
-      await delay(LOCK_RETRY_MS);
+      if (errorCode(error) !== "EEXIST") {
+        throw new Error(`qfai: cannot create state lock ${lockPath}: ${describeError(error)}`);
+      }
     }
+    if (handle !== null) return stampLockOwner(lockPath, handle, owner);
+    await reapStaleLock(lockPath);
+    if (Date.now() >= deadline) {
+      throw new Error(
+        `qfai: state lock ${lockPath} is still held after ${LOCK_TIMEOUT_MS}ms; ` +
+          "refusing to update .qfai/state.json without it.",
+      );
+    }
+    await delay(LOCK_RETRY_MS);
   }
 }
 
-async function releaseStateLock(lockPath: string, handle: FileHandle): Promise<void> {
+/** Stamp the owner into a freshly created lock file. */
+async function stampLockOwner(
+  lockPath: string,
+  handle: FileHandle,
+  owner: LockOwner,
+): Promise<StateLock> {
+  const lock: StateLock = { handle, owner };
   try {
-    await handle.close();
+    await handle.writeFile(`${JSON.stringify(owner)}\n`, "utf-8");
+  } catch (error) {
+    await releaseStateLock(lockPath, lock);
+    throw new Error(`qfai: cannot stamp state lock ${lockPath}: ${describeError(error)}`);
+  }
+  return lock;
+}
+
+async function releaseStateLock(lockPath: string, lock: StateLock): Promise<void> {
+  try {
+    await lock.handle.close();
   } catch {
     // Already closed; the unlink below is what matters.
   }
   try {
+    const owner = await readLockOwner(lockPath);
+    if (owner !== null && owner.token !== lock.owner.token) {
+      // Our lock was reaped as abandoned and the path re-taken by
+      // someone else: removing it now would drop *their* lock, not ours.
+      return;
+    }
     await rm(lockPath, { force: true });
   } catch {
-    // Best effort — a leftover lock is reaped as stale by the next writer.
+    // Best effort — a leftover lock is reaped as abandoned by the next writer.
   }
 }
 
@@ -159,6 +288,10 @@ export interface StateMutation<T> {
  * what closes that window — a compare-and-swap on the file contents
  * would leave one.
  *
+ * Throws when the lock cannot be taken: no lock, no write. Callers on
+ * a best-effort path must catch, as the scaffold-placeholder validator
+ * already does.
+ *
  * `mutate` is synchronous on purpose, to keep the critical section to
  * the two filesystem calls this function makes itself. A malformed
  * existing file is treated as empty, matching the read helpers.
@@ -167,8 +300,8 @@ export async function updateState<T>(
   root: string,
   mutate: (current: Record<string, unknown>) => StateMutation<T>,
 ): Promise<T> {
-  const lockPath = stateLockPath(root);
-  const handle = await acquireStateLock(lockPath);
+  const lockPath = await stateLockPath(root);
+  const lock = await acquireStateLock(lockPath);
   try {
     const current = (await readStateObject(root)) ?? {};
     const { next, result } = mutate(current);
@@ -177,9 +310,7 @@ export async function updateState<T>(
     }
     return result;
   } finally {
-    if (handle !== null) {
-      await releaseStateLock(lockPath, handle);
-    }
+    await releaseStateLock(lockPath, lock);
   }
 }
 
