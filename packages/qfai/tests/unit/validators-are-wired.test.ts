@@ -262,16 +262,57 @@ function collectStringLiterals(fileName: string, body: string): string[] {
 }
 
 /**
- * Issue codes a module actually *emits*: the string-literal first argument of
- * an `issue(...)` call, plus any `code: "..."` property in an Issue literal.
+ * `const RULE_ID = "QFAI-..."` bindings, by name. Rule IDs are routinely named
+ * this way (`upstreamSsotGuard.ts:30` exports `UPSTREAM_SSOT_EDIT_RULE_ID` and
+ * passes it to `issue()`), so a literal-only reader would see such a module
+ * emit nothing and drop it from the ATDD family altogether.
+ */
+function collectStringConstants(source: ts.SourceFile): Map<string, string> {
+  const constants = new Map<string, string>();
+  const visit = (node: ts.Node): void => {
+    if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined &&
+      ts.isStringLiteralLike(node.initializer)
+    ) {
+      constants.set(node.name.text, node.initializer.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return constants;
+}
+
+/** The string value of an argument: a literal, or a constant declared in the module. */
+function constantValue(
+  expression: ts.Expression,
+  constants: ReadonlyMap<string, string>,
+): string | undefined {
+  if (ts.isStringLiteralLike(expression)) return expression.text;
+  if (ts.isIdentifier(expression)) return constants.get(expression.text);
+  return undefined;
+}
+
+/**
+ * Issue codes a module actually *emits*: the first argument of an `issue(...)`
+ * call, plus any `code:` property in an Issue literal — as a string literal, or
+ * as an identifier resolved against the module's own string constants.
  *
  * Prose is deliberately invisible here. `scaffoldPlaceholder.ts` and
  * `tddList.ts` both discuss `QFAI-ATDD-112` in comments and in the message text
  * of a `D-SCAFFOLD-*` / `TDDLIST_*` finding while emitting no ATDD code at all —
  * a whole-file text scan counted them as ATDD emitters, so a deletion of the
  * real gate module would have left the guard green on two impostors.
+ *
+ * Known limit: a rule ID *imported* from another module still reads as no code.
+ * No validator does that today, and the `QFAI-ATDD-001` retirement check below
+ * scans every string literal under `src/` precisely so a cross-module constant
+ * cannot smuggle the retired code back in.
  */
 function collectEmittedCodes(fileName: string, body: string): string[] {
+  const source = parse(fileName, body);
+  const constants = collectStringConstants(source);
   const codes = new Set<string>();
   const visit = (node: ts.Node): void => {
     if (
@@ -280,19 +321,16 @@ function collectEmittedCodes(fileName: string, body: string): string[] {
       node.expression.text === "issue"
     ) {
       const first = node.arguments[0];
-      if (first !== undefined && ts.isStringLiteralLike(first)) codes.add(first.text);
+      const code = first === undefined ? undefined : constantValue(first, constants);
+      if (code !== undefined) codes.add(code);
     }
-    if (
-      ts.isPropertyAssignment(node) &&
-      ts.isIdentifier(node.name) &&
-      node.name.text === "code" &&
-      ts.isStringLiteralLike(node.initializer)
-    ) {
-      codes.add(node.initializer.text);
+    if (ts.isPropertyAssignment(node) && ts.isIdentifier(node.name) && node.name.text === "code") {
+      const code = constantValue(node.initializer, constants);
+      if (code !== undefined) codes.add(code);
     }
     ts.forEachChild(node, visit);
   };
-  visit(parse(fileName, body));
+  visit(source);
   return [...codes];
 }
 
@@ -348,10 +386,62 @@ function moduleTopLevelOwner(file: string): string {
   return declId(file, "<module>");
 }
 
+/**
+ * The declaration name a call site names, or `undefined` when syntax alone
+ * cannot say. `adapter.check()` deliberately yields nothing: reducing it to the
+ * bare `check` hands the edge to whatever local `check()` the same file happens
+ * to declare — including one nobody invokes — and a validator called only from
+ * that dead local would read as executed.
+ */
 function calleeName(expression: ts.Expression): string | undefined {
   if (ts.isIdentifier(expression)) return expression.text;
-  if (ts.isPropertyAccessExpression(expression)) return expression.name.text;
   return undefined;
+}
+
+/** Combinators that invoke a callback argument where it stands. */
+const CALLBACK_INVOKING_METHODS: ReadonlySet<string> = new Set<string>([
+  "map",
+  "flatMap",
+  "forEach",
+  "filter",
+  "find",
+  "findIndex",
+  "findLast",
+  "some",
+  "every",
+  "reduce",
+  "sort",
+  "then",
+  "catch",
+  "finally",
+]);
+
+/** A graph node for an unnamed function expression / arrow. */
+function anonymousId(file: string, node: ts.Node): string {
+  return declId(file, `<anonymous@${node.pos}>`);
+}
+
+/**
+ * Whether an unnamed function runs at the point it is written — an IIFE, or the
+ * callback of a combinator that invokes it. `register(() => validateAtddFoo())`
+ * does not qualify: merely handing a closure to someone is not running it, and
+ * folding its body into the caller would report a never-invoked validator as
+ * executed.
+ */
+function invokedInPlace(node: ts.FunctionExpression | ts.ArrowFunction): boolean {
+  let current: ts.Node = node;
+  let parent: ts.Node | undefined = current.parent;
+  while (parent !== undefined && ts.isParenthesizedExpression(parent)) {
+    current = parent;
+    parent = parent.parent;
+  }
+  if (parent === undefined || !ts.isCallExpression(parent)) return false;
+  if (parent.expression === current) return true;
+  if (!parent.arguments.some((argument) => argument === current)) return false;
+  const callee = parent.expression;
+  if (ts.isPropertyAccessExpression(callee)) return CALLBACK_INVOKING_METHODS.has(callee.name.text);
+  if (ts.isIdentifier(callee)) return CALLBACK_INVOKING_METHODS.has(callee.text);
+  return false;
 }
 
 /** `const validateX = async () => {}` / `{ validateX: () => {} }` name their function. */
@@ -508,6 +598,12 @@ function resolveCallee(
   return resolveExport(facts, imported.file, imported.name, new Set<string>());
 }
 
+function addEdge(edges: Map<string, Set<string>>, from: string, to: string): void {
+  const targets = edges.get(from) ?? new Set<string>();
+  targets.add(to);
+  edges.set(from, targets);
+}
+
 /** Add every `caller -> callee` edge in one module to the shared graph. */
 function collectCallEdges(
   facts: ReadonlyMap<string, ModuleFacts>,
@@ -522,17 +618,21 @@ function collectCallEdges(
       nextOwner = declId(module.file, node.name.text);
     } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
       const bound = boundName(node);
-      nextOwner = bound === undefined ? owner : declId(module.file, bound);
+      if (bound !== undefined) {
+        nextOwner = declId(module.file, bound);
+      } else {
+        // An unnamed closure owns its own body. It joins the caller only where
+        // it is actually invoked, so a validator parked in a callback nobody
+        // runs stays unreachable.
+        nextOwner = anonymousId(module.file, node);
+        if (invokedInPlace(node)) addEdge(edges, owner, nextOwner);
+      }
     }
 
     if (ts.isCallExpression(node)) {
       const callee = calleeName(node.expression);
       const target = callee === undefined ? undefined : resolveCallee(facts, module.file, callee);
-      if (target !== undefined) {
-        const targets = edges.get(owner) ?? new Set<string>();
-        targets.add(target);
-        edges.set(owner, targets);
-      }
+      if (target !== undefined) addEdge(edges, owner, target);
     }
     ts.forEachChild(node, (child) => walk(child, nextOwner));
   };
@@ -633,6 +733,32 @@ function executedFromEntry(graph: ExecutionGraph): Set<string> {
  */
 function executedFromAtddProfile(graph: ExecutionGraph): Set<string> {
   return reachableFrom(graph.edges, [declId(VALIDATE_TS, ATDD_PROFILE_ENTRY)]);
+}
+
+/**
+ * Names a barrel actually re-exports, read from its `ExportDeclaration` nodes.
+ * A raw-text regex matched `// export { validateAtddFoo } from "./foo.js";`
+ * just as happily as the live line, so commenting a re-export out left the
+ * validator unreachable through the barrel with the guard still green.
+ */
+function reExportFacts(file: string, body: string): { names: Set<string>; starTargets: string[] } {
+  const facts = moduleFacts(file, body);
+  return { names: new Set<string>(facts.reExports.keys()), starTargets: facts.starReExports };
+}
+
+async function collectReExportedNames(file: string): Promise<Set<string>> {
+  const body = await readFile(file, "utf-8");
+  const { names, starTargets } = reExportFacts(file, body);
+  for (const target of starTargets) {
+    try {
+      const targetBody = await readFile(target, "utf-8");
+      for (const name of collectExportedValidatorNames(target, targetBody)) names.add(name);
+    } catch {
+      // Unresolved star target (directory index, deleted module): it
+      // contributes no exported name, so the barrel check stays strict.
+    }
+  }
+  return names;
 }
 
 type AtddModule = { file: string; codes: string[]; exports: string[] };
@@ -786,6 +912,71 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     expect(reachableFrom(edges, [declId(entry, "runAtddValidators")]).has(sampleDecl)).toBe(false);
   });
 
+  it("a property call does not borrow a same-named local declaration", () => {
+    // `adapter.check()` reduced to a bare `check` handed the edge to the local
+    // `check()` below — which nothing invokes — and the validator it calls read
+    // as executed.
+    const receiver = path.join(SRC_ROOT, "receiver.ts");
+    const edges = buildCallGraph(
+      caller(
+        receiver,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "async function runAtddValidators(adapter) {",
+          "  return adapter.check();",
+          "}",
+          "function check() {",
+          "  return validateAtddSample();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachableFrom(edges, [declId(receiver, "runAtddValidators")]).has(sampleDecl)).toBe(
+      false,
+    );
+    expect(reachableFrom(edges, [declId(receiver, "check")]).has(sampleDecl)).toBe(true);
+  });
+
+  it("a validator parked in an unrun callback is not reachable from its registrar", () => {
+    const registry = path.join(SRC_ROOT, "registry.ts");
+    const edges = buildCallGraph(
+      caller(
+        registry,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "const pending = [];",
+          "function register(task) {",
+          "  pending.push(task);",
+          "}",
+          "async function runAtddValidators() {",
+          "  register(() => validateAtddSample());",
+          "  return [];",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachableFrom(edges, [declId(registry, "runAtddValidators")]).has(sampleDecl)).toBe(
+      false,
+    );
+
+    // A callback a combinator invokes where it stands still counts as running.
+    const mapped = path.join(SRC_ROOT, "mapped.ts");
+    const mappedEdges = buildCallGraph(
+      caller(
+        mapped,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "async function runAtddValidators(specs) {",
+          "  return (await Promise.all(specs.map((spec) => validateAtddSample(spec)))).flat();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachableFrom(mappedEdges, [declId(mapped, "runAtddValidators")]).has(sampleDecl)).toBe(
+      true,
+    );
+  });
+
   it("prose that merely names an ATDD code does not make a module an emitter", () => {
     const proseOnly = [
       "// `QFAI-ATDD-112` stopped demanding an annotation for L1/L2, so this",
@@ -798,6 +989,23 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
 
     const emitter = 'return [issue("QFAI-ATDD-112", "TC lacks a test annotation", "error")];';
     expect(collectEmittedCodes("emitter.ts", emitter)).toEqual(["QFAI-ATDD-112"]);
+  });
+
+  it("a rule ID handed to issue() through a constant is still an emitted code", () => {
+    // `upstreamSsotGuard.ts:30,169` is the live instance of this shape. A
+    // literal-only reader saw no code at all, so an ATDD validator written the
+    // same way dropped out of the family and skipped every check below.
+    const viaConstant = [
+      'const ATDD_RULE_ID = "QFAI-ATDD-999";',
+      'return [issue(ATDD_RULE_ID, "message", "error")];',
+    ].join("\n");
+    expect(collectEmittedCodes("viaConstant.ts", viaConstant)).toEqual(["QFAI-ATDD-999"]);
+
+    const viaCodeProperty = [
+      'const ATDD_RULE_ID = "QFAI-ATDD-998";',
+      "return [{ code: ATDD_RULE_ID, severity: \"error\", message: 'm' }];",
+    ].join("\n");
+    expect(collectEmittedCodes("viaProperty.ts", viaCodeProperty)).toEqual(["QFAI-ATDD-998"]);
   });
 
   it("the ATDD gate module still exists and still emits the routing codes", async () => {
@@ -861,14 +1069,12 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
 
   it("validators/index.ts re-exports every ATDD-emitting validator", async () => {
     const modules = await collectAtddEmittingModules();
-    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+    const reExported = await collectReExportedNames(VALIDATORS_INDEX);
 
     const missing: string[] = [];
     for (const { exports } of modules) {
       for (const name of exports) {
-        if (!new RegExp(String.raw`export\s*\{[^}]*\b${name}\b[^}]*\}\s*from`).test(indexBody)) {
-          missing.push(name);
-        }
+        if (!reExported.has(name)) missing.push(name);
       }
     }
 
@@ -876,6 +1082,19 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       missing,
       `validators/index.ts must re-export every ATDD-emitting validator. Missing: ${missing.join(", ")}`,
     ).toEqual([]);
+  });
+
+  it("a commented-out re-export is not a re-export", () => {
+    const barrel = path.join(VALIDATORS_DIR, "index.ts");
+    const { names } = reExportFacts(
+      barrel,
+      [
+        '// export { validateAtddCommented } from "./commented.js";',
+        '/* export { validateAtddBlock } from "./block.js"; */',
+        'export { validateAtddLive } from "./live.js";',
+      ].join("\n"),
+    );
+    expect([...names]).toEqual(["validateAtddLive"]);
   });
 
   it("QFAI-ATDD-001 stays retired", async () => {
