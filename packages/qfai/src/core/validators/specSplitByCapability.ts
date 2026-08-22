@@ -3,15 +3,18 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const CAP_CELL_RE = /^CAP-\d{4}$/;
-const SPEC_ID_RE = /\bspec-\d{4}\b/i;
+const SPEC_CELL_RE = /^spec-\d{4}$/i;
 const HEADER_CAP_CELL_RE = /cap\s*id/i;
 const HEADER_SPEC_CELL_RE = /(^|[^a-z])spec([^a-z]|$)/i;
-const DELIMITER_CELL_RE = /^:?-{3,}:?$/;
+
+/** Stands in for the declared value in QFAI-SPLIT-106 when the cell is blank. */
+const UNDECLARED_SPEC_CELL = "(未宣言)";
 
 type CapSpecMismatch = {
   capId: string;
@@ -19,13 +22,12 @@ type CapSpecMismatch = {
   derivedSpecId: string;
 };
 
-function splitTableRow(line: string): string[] {
-  return line
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
-}
+type DeclaredSpecColumn = {
+  /** A CAP table carrying a `Spec` header was found at all. */
+  present: boolean;
+  /** CAP cell -> the raw `Spec` cell on that row, blank and malformed included. */
+  cells: Map<string, string>;
+};
 
 /**
  * Reads the optional Spec column of the CAP catalogue table.
@@ -33,51 +35,67 @@ function splitTableRow(line: string): string[] {
  * The column is advisory: row position stays the truth the spec directory
  * names are derived from. Declaring it makes that truth visible and diffable,
  * so a row that moves can be named instead of the specs it re-points.
+ *
+ * Rows are split with the shared {@link splitMarkdownRow}, so a legitimate
+ * escaped pipe inside Statement / Success metrics / Notes does not shift the
+ * cell the Spec column is read from.
+ *
+ * Cells come back raw rather than filtered down to well-formed spec IDs: once
+ * the header exists a blank or malformed cell is itself a finding, and dropping
+ * it here would let an appended row declare nothing and still validate.
  */
-function parseDeclaredSpecIds(markdown: string): Map<string, string> {
-  const declared = new Map<string, string>();
+function parseDeclaredSpecColumn(markdown: string): DeclaredSpecColumn {
+  const cells = new Map<string, string>();
   let specColumn = -1;
+  let present = false;
 
   for (const line of markdown.split(/\r?\n/)) {
-    const trimmed = line.trim();
-    if (!trimmed.startsWith("|")) {
+    if (!looksLikeTableRow(line) || isTableSeparator(line)) {
       continue;
     }
-    const cells = splitTableRow(trimmed);
-    if (cells.every((cell) => DELIMITER_CELL_RE.test(cell))) {
-      continue;
-    }
+    const rowCells = splitMarkdownRow(line);
 
-    const capCell = cells.find((cell) => CAP_CELL_RE.test(cell));
+    const capCell = rowCells.find((cell) => CAP_CELL_RE.test(cell));
     if (!capCell) {
-      if (cells.some((cell) => HEADER_CAP_CELL_RE.test(cell))) {
-        specColumn = cells.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell));
+      if (rowCells.some((cell) => HEADER_CAP_CELL_RE.test(cell))) {
+        specColumn = rowCells.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell));
+        present = present || specColumn >= 0;
       }
       continue;
     }
     if (specColumn < 0) {
       continue;
     }
-    const specMatch = SPEC_ID_RE.exec(cells[specColumn] ?? "");
-    if (specMatch) {
-      declared.set(capCell, specMatch[0].toLowerCase());
-    }
+    cells.set(capCell, rowCells[specColumn] ?? "");
   }
 
-  return declared;
+  return { present, cells };
+}
+
+function normalizeDeclaredSpecCell(cell: string): string {
+  if (SPEC_CELL_RE.test(cell)) {
+    return cell.toLowerCase();
+  }
+  return cell.length === 0 ? UNDECLARED_SPEC_CELL : cell;
 }
 
 function collectCapSpecMismatches(capIds: string[], markdown: string): CapSpecMismatch[] {
-  const declared = parseDeclaredSpecIds(markdown);
-  if (declared.size === 0) {
+  const { present, cells } = parseDeclaredSpecColumn(markdown);
+  if (!present) {
     return [];
   }
 
   const mismatches: CapSpecMismatch[] = [];
   capIds.forEach((capId, index) => {
-    const declaredSpecId = declared.get(capId);
+    const declaredCell = cells.get(capId);
+    if (declaredCell === undefined) {
+      // The CAP is named somewhere other than a row of the table that carries
+      // the column (prose, an appendix table), so there is nothing to compare.
+      return;
+    }
     const derivedSpecId = `spec-${to4(index + 1)}`;
-    if (declaredSpecId !== undefined && declaredSpecId !== derivedSpecId) {
+    const declaredSpecId = normalizeDeclaredSpecCell(declaredCell);
+    if (declaredSpecId !== derivedSpecId) {
       mismatches.push({ capId, declaredSpecId, derivedSpecId });
     }
   });
@@ -146,23 +164,23 @@ export async function validateSpecSplitByCapability(
   }
 
   const mismatches = collectCapSpecMismatches(capIds, capabilityText);
-  if (mismatches.length > 0) {
-    for (const mismatch of mismatches) {
-      issues.push(
-        issue(
-          "QFAI-SPLIT-106",
-          `03_Capabilities.md の Spec 列が行位置と一致しません: ${mismatch.capId} (宣言=${mismatch.declaredSpecId}, 行位置=${mismatch.derivedSpecId})`,
-          "error",
-          capabilitiesPath,
-          "specSplitByCapability.declaredSpec",
-          [mismatch.capId, mismatch.declaredSpecId, mismatch.derivedSpecId],
-        ),
-      );
-    }
-    // 行が動いた時点で以降の spec 単位エラー (103/104/105) は移動の派生でしか
-    // なく、原因である行を隠してしまうため、ここで打ち切る。
-    return issues;
+  for (const mismatch of mismatches) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `03_Capabilities.md の Spec 列が行位置と一致しません: ${mismatch.capId} (宣言=${mismatch.declaredSpecId}, 行位置=${mismatch.derivedSpecId})`,
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.declaredSpec",
+        [mismatch.capId, mismatch.declaredSpecId, mismatch.derivedSpecId],
+      ),
+    );
   }
+  // 不一致行の 105 は 106 の派生 (宣言と行位置がずれている限り必ず立つ) なので、
+  // 原因の行を埋めないよう抑止する。ただし抑止はその行に限る: spec ディレクトリの
+  // 欠落・余剰 (103/104) と、不一致でない行の Parent 破損 (105) は行移動とは独立に
+  // 起こりうるため、ここで打ち切ると利用者が再実行するまで見えなくなる。
+  const mismatchedCapIds = new Set(mismatches.map((mismatch) => mismatch.capId));
 
   const actualSpecIds = new Set(
     layeredEntries.map((entry) => path.basename(entry.dir).toLowerCase()),
@@ -202,6 +220,9 @@ export async function validateSpecSplitByCapability(
   for (let index = 0; index < capIds.length; index += 1) {
     const capId = capIds[index];
     if (!capId) {
+      continue;
+    }
+    if (mismatchedCapIds.has(capId)) {
       continue;
     }
     const specId = `spec-${to4(index + 1)}`;

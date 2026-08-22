@@ -88,6 +88,83 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("keeps reporting spec damage that a moved row does not explain", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // CAP-0009 inserted after CAP-0001 moves CAP-0009 / CAP-0002 off their
+      // declared spec. CAP-0001 and CAP-0004 did not move, so the broken Parent
+      // in spec-0001 and the missing spec-0004 are independent damage.
+      await seedPolicies(root, ["CAP-0001", "CAP-0009", "CAP-0002", "CAP-0004"], {
+        "CAP-0001": "spec-0001",
+        "CAP-0009": "spec-0009",
+        "CAP-0002": "spec-0002",
+        "CAP-0004": "spec-0004",
+      });
+      await seedSpec(root, "0001", "CAP-0007");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const byCode = (code: string) => issues.filter((issue) => issue.code === code);
+
+      expect(byCode("QFAI-SPLIT-106").map((issue) => issue.refs?.[0])).toEqual([
+        "CAP-0009",
+        "CAP-0002",
+      ]);
+      expect(byCode("QFAI-SPLIT-103")[0]?.refs).toEqual(["spec-0004"]);
+      expect(byCode("QFAI-SPLIT-105").map((issue) => issue.refs)).toEqual([
+        ["spec-0001", "CAP-0001"],
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("requires every CAP row to declare a well-formed spec once the Spec column exists", async () => {
+    const cases: Array<{ cell: string; declared: string }> = [
+      { cell: "", declared: "(未宣言)" },
+      { cell: "spec-123", declared: "spec-123" },
+    ];
+    for (const { cell, declared } of cases) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+          "CAP-0001": "spec-0001",
+          "CAP-0002": "spec-0002",
+          "CAP-0003": cell,
+        });
+        await seedSpec(root, "0001", "CAP-0001");
+        await seedSpec(root, "0002", "CAP-0002");
+        await seedSpec(root, "0003", "CAP-0003");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106"]);
+        expect(issues[0]?.refs).toEqual(["CAP-0003", declared, "spec-0003"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("reads the Spec column past an escaped pipe in an earlier cell", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002" },
+        { "CAP-0002": "either \\| or" },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -147,6 +224,7 @@ async function seedPolicies(
   root: string,
   capIds: string[],
   declaredSpecs?: Record<string, string>,
+  notes?: Record<string, string>,
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -155,7 +233,8 @@ async function seedPolicies(
   const capLines = capIds
     .map((capId) => {
       const specCell = declaredSpecs ? ` ${declaredSpecs[capId] ?? ""} |` : "";
-      return `| ${capId} | capability | metric | note |${specCell}`;
+      const note = notes?.[capId] ?? "note";
+      return `| ${capId} | capability | metric | ${note} |${specCell}`;
     })
     .join("\n");
   await writeFile(

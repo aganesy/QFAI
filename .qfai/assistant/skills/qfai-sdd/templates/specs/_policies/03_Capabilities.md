@@ -5,7 +5,10 @@
 - Capabilities are listed in execution order.
 - Spec directories are generated from this order (`spec-0001`, `spec-0002`, ...).
 - Row position is the mapping: inserting or reordering a row re-points every spec
-  directory below it, so a reorder is a rename of all of them plus their `Parent:` lines.
+  directory below it, so a reorder renames each of those directories and updates the
+  matching `Spec:` line in its `01_Spec.md` and the `Spec` column below.
+- `Parent: CAP-*` travels with its capability, so it stays as written — rewriting it
+  during a reorder re-attaches the spec to a different capability.
 - Keep IDs stable once published.
 
 ## CAP Catalog
