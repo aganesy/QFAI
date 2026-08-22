@@ -82,14 +82,24 @@ The `→ Tests` hop branches by test layer — a test answers the obligation its
 own layer owns, and only that one:
 
 - `TC-* → Unit / Component / Integration tests`
+- `CON-DB-* → Integration tests`
 - `US-* → E2E tests`
 - `CON-API-* → API tests`
 
-`catalog/test-layers.md` fixes the directory each ID type is answered from. An
-E2E or API test must not carry a `TC-*` annotation: the execution ledger rejects
-that placement (`TDDLIST_OBLIGATION_LAYER_MISMATCH`) and does not count it
-towards TC coverage, so a `TC-*` reference from those layers breaks the chain
-instead of completing it.
+`catalog/test-layers.md` fixes the directory each ID type is answered from. A
+layer can owe more than one of them: an Integration test answers `TC-*` and, on
+a project with an active DB contract, `CON-DB-*` as well — a `CON-DB-*` with no
+Integration annotation is an error (`QFAI-ATDD-115`).
+
+The ledger and the annotations are two separate rules, and only the first is a
+flat prohibition. `tdd/test-list.md` rejects `TC-Refs` on a `Layer = E2E` /
+`API` row (`TDDLIST_OBLIGATION_LAYER_MISMATCH`), because a `TC-*` obligation
+belongs at L1–L3. A test file's `TC-*` annotation is instead routed by the TC's
+own declared `Level`, so a TC still recorded at `L4` / `L5` is answered from
+`tests/api/**` / `tests/e2e/**` and counted there (`QFAI-ATDD-112`). Do not
+strip those annotations to satisfy the ledger rule — that only removes coverage.
+Re-file the obligation upstream as `CON-API-*` or `US-*`, together with the
+`EX-*` / `BR-*` it derives from, the way `catalog/test-layers.md` prescribes.
 
 Whenever practical, reference:
 

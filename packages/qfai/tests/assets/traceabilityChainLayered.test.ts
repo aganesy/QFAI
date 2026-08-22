@@ -75,14 +75,38 @@ describe("the traceability chain names only hops the layered layout produces", (
       // `US-*` / `CON-API-*` and a `TC-*` on them raises
       // TDDLIST_OBLIGATION_LAYER_MISMATCH, so following the Article would
       // either leave the chain open or add a reference the validator rejects.
+      // `CON-DB-*` is listed too: it is Integration-owned and its absence from
+      // an Integration test is an error, so an exhaustive-looking list that
+      // omits it drops a tracked obligation.
       for (const binding of [
         "`TC-* → Unit / Component / Integration tests`",
+        "`CON-DB-* → Integration tests`",
         "`US-* → E2E tests`",
         "`CON-API-* → API tests`",
       ]) {
         expect(article).toContain(binding);
       }
+      expect(article).toContain("QFAI-ATDD-115");
       expect(article).toContain("TDDLIST_OBLIGATION_LAYER_MISMATCH");
+    });
+
+    it(`${tree}: Article V separates the ledger rule from annotation routing`, async () => {
+      const constitution = await read(tree, "assistant/constitution/constitution.md");
+      const article = constitution.slice(
+        constitution.indexOf("## Article V "),
+        constitution.indexOf("## Article VI "),
+      );
+      // TDDLIST_OBLIGATION_LAYER_MISMATCH binds `tdd/test-list.md` rows only.
+      // A TC still declared at L4/L5 has its annotation routed to
+      // tests/api/** or tests/e2e/** and counted there (QFAI-ATDD-112), so
+      // reading the ledger rule as "strip the annotation" destroys coverage;
+      // the Article must send the author upstream instead.
+      expect(article).toContain("TC-Refs");
+      expect(article).toContain("QFAI-ATDD-112");
+      expect(article.replace(/\s+/g, " ")).toContain("`L4` / `L5`");
+      expect(article.replace(/\s+/g, " ")).toMatch(
+        /Re-file the obligation upstream as `CON-API-\*` or `US-\*`/,
+      );
     });
 
     for (const rel of CHAIN_RESTATEMENTS) {
