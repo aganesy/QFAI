@@ -88,20 +88,21 @@ export async function validateWorklogSurface(
 
   for (const entry of entries) {
     if (entry.frontmatter === null) {
-      // Parse failure → emit schema finding. If the body carries the
-      // <<unreadable: ...>> sentinel from collectWorklogEntries, surface the
-      // underlying read error message instead of the generic phrase.
-      const unreadableMatch = /^<<unreadable: ([\s\S]*?)>>$/.exec(entry.body);
-      const message = unreadableMatch
-        ? `${entry.relativePath}: entry could not be read — ${unreadableMatch[1]}`
-        : `${entry.relativePath}: YAML frontmatter is missing or unparseable.`;
+      // Parse failure → emit schema finding. When `collectWorklogEntries`
+      // could not read the file at all it carries the read error on
+      // `readError`; surface that instead of the generic phrase.
+      const readError = entry.readError;
+      const message =
+        readError !== null
+          ? `${entry.relativePath}: entry could not be read — ${readError}`
+          : `${entry.relativePath}: YAML frontmatter is missing or unparseable.`;
       issues.push(
         issue(
           "W-WORKLOG-SCHEMA",
           message,
           "warning",
           entry.relativePath,
-          unreadableMatch ? "worklogSurface.io.unreadable" : "worklogSurface.schema.parse",
+          readError !== null ? "worklogSurface.io.unreadable" : "worklogSurface.schema.parse",
         ),
       );
       continue;

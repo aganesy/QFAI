@@ -46,6 +46,18 @@ export type WorklogEntry = {
   /** `null` when the file has no parseable frontmatter block. */
   frontmatter: WorklogFrontmatter | null;
   body: string;
+  /**
+   * The read error's message when the file could not be read at all, `null`
+   * otherwise.
+   *
+   * The distinction matters to every caller that draws a conclusion from an
+   * entry's *absence*: a file whose frontmatter is merely malformed is a
+   * work-log the author still wrote, while one that could not be read carries
+   * no information either way. Callers that would otherwise report "no entry
+   * exists" must abstain while this is set — the missing evidence may be
+   * sitting in the file they could not open.
+   */
+  readError: string | null;
 };
 
 /** The `kind` values whose entry records a run that stopped. */
@@ -54,8 +66,9 @@ export const WORKLOG_STOP_KINDS: readonly string[] = ["blocker", "handoff"];
 /**
  * Every `.qfai/steering/**\/*.md` entry under `root`, or `[]` when the surface
  * does not exist. A file that cannot be read is returned with a `null`
- * frontmatter and an `<<unreadable: …>>` body rather than throwing, so one bad
- * entry cannot abort a whole `qfai validate` run.
+ * frontmatter, its read error on `readError` and an `<<unreadable: …>>` body
+ * rather than throwing, so one bad entry cannot abort a whole `qfai validate`
+ * run — see `readError` for what a caller owes that entry.
  */
 export async function collectWorklogEntries(root: string): Promise<WorklogEntry[]> {
   return collectFrom(path.join(root, PROJECT_STEERING_DIR), root);
@@ -115,6 +128,25 @@ export function collectStoppedSpecIds(entries: readonly WorklogEntry[]): Set<str
 }
 
 /**
+ * The entries whose file could not be read at all.
+ *
+ * A caller that concludes "no entry accounts for this stop" from an empty
+ * `collectStoppedSpecIds` result must consult this first: an entry that could
+ * not be opened is silently absent from that set, and reporting the omission
+ * would accuse the author of not writing a record that may well be there.
+ */
+export function unreadableWorklogEntries(
+  entries: readonly WorklogEntry[],
+): Array<{ relativePath: string; detail: string }> {
+  const unreadable: Array<{ relativePath: string; detail: string }> = [];
+  for (const entry of entries) {
+    if (entry.readError === null) continue;
+    unreadable.push({ relativePath: entry.relativePath, detail: entry.readError });
+  }
+  return unreadable;
+}
+
+/**
  * Whether the frontmatter carries the required fields of
  * `worklog-entry.schema.md` in the required shapes.
  *
@@ -128,6 +160,14 @@ function hasStopRecordShape(fm: WorklogFrontmatter): boolean {
   if (typeof fm.status !== "string" || !OPEN_WORKLOG_STATUSES.includes(fm.status)) return false;
   if (typeof fm.blocking !== "boolean") return false;
   if (!Array.isArray(fm.links)) return false;
+  // Required key, `string | null` — `worklogSurface` reports its absence as
+  // `W-WORKLOG-SCHEMA` ("use null when no promotion target"), and that
+  // validator does not run under `--profile tdd`. Without this line a file
+  // missing it counts as a stop record here while being schema-invalid
+  // everywhere else.
+  if (!("promote-to" in fm)) return false;
+  const promoteTo = fm["promote-to"];
+  if (promoteTo !== null && typeof promoteTo !== "string") return false;
   const scope = typeof fm.scope === "string" ? fm.scope.trim() : "";
   if (scope !== "global" && !SPEC_ID.test(scope)) return false;
   for (const field of ["created", "updated"] as const) {
@@ -182,6 +222,7 @@ async function collectFrom(dir: string, baseRoot: string): Promise<WorklogEntry[
         relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
         frontmatter: null,
         body: `<<unreadable: ${detail}>>`,
+        readError: detail,
       });
       continue;
     }
@@ -191,6 +232,7 @@ async function collectFrom(dir: string, baseRoot: string): Promise<WorklogEntry[
       relativePath: path.relative(baseRoot, full).replace(/\\/g, "/"),
       frontmatter: parsed.frontmatter,
       body: parsed.body,
+      readError: null,
     });
   }
 

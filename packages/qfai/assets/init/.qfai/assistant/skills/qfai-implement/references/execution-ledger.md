@@ -187,7 +187,7 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
   Also write the `.qfai/steering/<id>.md` work-log entry for the stop —
   `Blocked-By` names WHAT the row waits on, the entry is what was tried and
-  what the next session picks up. `TDDLIST_BLOCKED_NO_WORKLOG` warns while no
+  what the next session picks up. `TDDLIST_BLOCKED_NO_WORKLOG` errors while no
   open (non-`archived`) `kind: blocker` / `kind: handoff` entry names this spec
   — through its own `scope:`, or through `links:` on a `scope: global` entry.
 - `blocked` -> `todo` (the blocker cleared). This is a **resumption, not a

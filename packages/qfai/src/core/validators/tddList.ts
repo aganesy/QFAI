@@ -30,9 +30,11 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+import type { WorklogEntry } from "../worklogEntries.js";
 import {
   collectStoppedSpecIds,
   collectWorklogEntries,
+  unreadableWorklogEntries,
   WORKLOG_STOP_KINDS,
 } from "../worklogEntries.js";
 import { exists, issue, readSafe } from "./utils.js";
@@ -574,14 +576,86 @@ function blockedWithoutWorklog(
     issue(
       "TDDLIST_BLOCKED_NO_WORKLOG",
       `${String(blockedRowLabels.length)} row(s) in tdd/test-list.md for ${specId} hold Status=blocked (${blockedRowLabels.join(", ")}) but no \`${PROJECT_STEERING_DIR}/\` entry of ${kinds} names ${specId}. The ledger records that the run stopped; nothing records why, or what the next session should pick up`,
-      "warning",
+      "error",
       relPath,
       "tddList.blockedWorklog",
       undefined,
       "change",
-      `\`${PROJECT_STEERING_DIR}/<id>.md\` に work-log エントリを 1 件書いてください（\`.qfai/assistant/catalog/worklog-entry.schema.md\` の schema）。\`kind\` は ${WORKLOG_STOP_KINDS.join(" / ")}、spec との紐付けは \`scope: ${specId}\` または \`links\` への \`${specId}\` 追加です。停止の経緯・試したこと・再開時の次の一手を本文に残します。`,
+      // The two association routes are not interchangeable, and naming `links`
+      // without its condition sent the operator to a fix that leaves the
+      // finding standing: `collectStoppedSpecIds` reads `links` only on a
+      // `scope: global` entry.
+      `\`${PROJECT_STEERING_DIR}/<id>.md\` に work-log エントリを 1 件書いてください（\`.qfai/assistant/catalog/worklog-entry.schema.md\` の schema）。\`kind\` は ${WORKLOG_STOP_KINDS.join(" / ")}、spec との紐付けは \`scope: ${specId}\` にするか、\`scope: global\` のエントリの \`links\` に \`${specId}\` を追加します（\`scope: spec-NNNN\` のエントリの \`links\` は単なる相互参照で、この判定には使われません）。停止の経緯・試したこと・再開時の次の一手を本文に残します。`,
     ),
   ];
+}
+
+/**
+ * The steering surface reduced to the answer the stop check needs, plus the
+ * findings raised by reading it.
+ *
+ * Two failure shapes abstain rather than report, and for the same reason: the
+ * surface gave no answer, and "no entry exists" is a claim only a complete read
+ * can support.
+ *
+ * - The walk itself fails on something other than "the surface is absent"
+ *   (EACCES, a regular file where the directory belongs, an unreadable nested
+ *   folder). This profile is the implement stage's completion gate, and before
+ *   this check existed it did not read the steering surface at all, so the
+ *   failure must not take the ledger validation with it.
+ * - The walk succeeds but one entry file could not be read. That file is
+ *   absent from the index with no trace — `collectWorklogEntries` turns the
+ *   read error into a sentinel entry rather than throwing — so without this the
+ *   spec it accounted for would be reported as an omission on the strength of a
+ *   file nobody managed to open.
+ */
+async function readSteeringIndex(
+  root: string,
+): Promise<{ stoppedSpecIds: StoppedSpecIndex; issues: Issue[] }> {
+  const unreadable = (location: string, detail: string, remedy: string): Issue =>
+    issue(
+      "TDDLIST_WORKLOG_UNREADABLE",
+      `${detail}. Ledger validation continued, but no spec was checked for a work-log entry accounting for its blocked rows`,
+      "warning",
+      location,
+      "tddList.blockedWorklog.unreadable",
+      undefined,
+      "change",
+      `${remedy} 復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。`,
+    );
+
+  let entries: readonly WorklogEntry[];
+  try {
+    entries = await collectWorklogEntries(root);
+  } catch (err: unknown) {
+    const detail = err instanceof Error ? err.message : String(err);
+    return {
+      stoppedSpecIds: null,
+      issues: [
+        unreadable(
+          PROJECT_STEERING_DIR,
+          `\`${PROJECT_STEERING_DIR}/\` could not be read — ${detail}`,
+          `\`${PROJECT_STEERING_DIR}/\` を走査できる状態にしてください（ディレクトリであること、読み取り権限があること）。`,
+        ),
+      ],
+    };
+  }
+
+  const broken = unreadableWorklogEntries(entries);
+  if (broken.length > 0) {
+    return {
+      stoppedSpecIds: null,
+      issues: broken.map((entry) =>
+        unreadable(
+          entry.relativePath,
+          `\`${entry.relativePath}\` could not be read — ${entry.detail}`,
+          `このファイルを読み取れる状態にしてください（読み取り権限、エンコーディング）。`,
+        ),
+      ),
+    };
+  }
+
+  return { stoppedSpecIds: collectStoppedSpecIds(entries), issues: [] };
 }
 
 export async function validateTddList(root: string, config: QfaiConfig): Promise<Issue[]> {
@@ -591,31 +665,9 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
   // Read once for the whole run: the steering surface is project-wide, and one
   // walk per spec would re-read every entry for every ledger.
-  //
-  // A walk that fails on something other than "the surface is absent" (EACCES,
-  // a regular file where the directory belongs, an unreadable nested folder)
-  // must not take the ledger validation with it: this profile is the implement
-  // stage's completion gate, and before this check existed it did not read the
-  // steering surface at all. The failure becomes its own finding and the stop
-  // check abstains.
-  let stoppedSpecIds: StoppedSpecIndex = null;
-  try {
-    stoppedSpecIds = collectStoppedSpecIds(await collectWorklogEntries(root));
-  } catch (err: unknown) {
-    const detail = err instanceof Error ? err.message : String(err);
-    issues.push(
-      issue(
-        "TDDLIST_WORKLOG_UNREADABLE",
-        `\`${PROJECT_STEERING_DIR}/\` could not be read — ${detail}. Ledger validation continued, but no spec was checked for a work-log entry accounting for its blocked rows`,
-        "warning",
-        PROJECT_STEERING_DIR,
-        "tddList.blockedWorklog.unreadable",
-        undefined,
-        "change",
-        `\`${PROJECT_STEERING_DIR}/\` を走査できる状態にしてください（ディレクトリであること、読み取り権限があること）。復旧するまで \`TDDLIST_BLOCKED_NO_WORKLOG\` の判定は行われません。`,
-      ),
-    );
-  }
+  const steering = await readSteeringIndex(root);
+  issues.push(...steering.issues);
+  const stoppedSpecIds = steering.stoppedSpecIds;
 
   for (const entry of entries) {
     const specIssues = await validateSpecTddList(
@@ -1101,9 +1153,15 @@ async function validateSpecTddList(
   // is that account, and this pairs the two observable artifacts rather than
   // asking the agent to self-report.
   //
-  // `warning`, not `error`: `.qfai/steering/` is `.gitignore`d by default, so
-  // a CI checkout can legitimately hold the ledger without the entry that
-  // exists on the author's machine.
+  // `error`, matching `TDDLIST_BLOCKED_MISSING_REF` on the same row. The
+  // command this stage completes on is `validate --profile tdd --fail-on
+  // error`, so a `warning` here would state the obligation and enforce nothing
+  // — the exact shape of the gap this check exists to close. An earlier draft
+  // chose `warning` on the grounds that `.qfai/steering/` is gitignored by
+  // default and a CI checkout would not hold the entry; it is not. The managed
+  // block `qfai init` writes (`core/gitignore.ts`) covers `report`, `evidence`,
+  // `discussion`, `review` and `state.json`, and no steering path, so the
+  // surface is tracked and the omission is visible to ordinary CI.
   issues.push(...blockedWithoutWorklog(blockedRowLabels, specNumber, relPath, stoppedSpecIds));
 
   // Phase 2 – Check 8: Exception rows must have a DR-ID that resolves

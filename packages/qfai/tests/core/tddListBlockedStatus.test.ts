@@ -13,14 +13,39 @@
  * row there would silently close the obligation.
  */
 
+import type * as FsPromises from "node:fs/promises";
 import { mkdir, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
+
+/**
+ * Make one steering entry unreadable, `.qfai/steering/unreadable.md`.
+ *
+ * A single unreadable file is the case the directory-level guard does not
+ * cover, and no portable filesystem trick produces it: POSIX permission bits
+ * are inert on Windows, and every other shape (a directory named `*.md`, a
+ * dangling symlink) is skipped by the walk before it is ever read. Every other
+ * path is delegated to the real module, so the rest of this file still
+ * exercises real I/O.
+ */
+vi.mock("node:fs/promises", async (importOriginal) => {
+  const actual = await importOriginal<typeof FsPromises>();
+  const readFile = async (
+    target: Parameters<typeof actual.readFile>[0],
+    options?: Parameters<typeof actual.readFile>[1],
+  ): Promise<Awaited<ReturnType<typeof actual.readFile>>> => {
+    if (typeof target === "string" && target.replace(/\\/g, "/").endsWith("/unreadable.md")) {
+      throw new Error(`EACCES: permission denied, open '${target}'`);
+    }
+    return await actual.readFile(target, options);
+  };
+  return { ...actual, readFile };
+});
 
 const NINE_COL = `# TDD Execution Ledger
 
@@ -39,7 +64,7 @@ async function run(
   ledger: string,
   steering: SteeringSeed = {},
   opts: { readonly steeringIsRegularFile?: boolean } = {},
-): Promise<Array<{ code: string; severity: string; message: string }>> {
+): Promise<Array<{ code: string; severity: string; message: string; suggested: string }>> {
   const root = path.join(
     os.tmpdir(),
     `qfai-blocked-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -72,21 +97,35 @@ async function run(
       }
     }
     const issues = await validateTddList(root, defaultConfig);
-    return issues.map((i) => ({ code: i.code, severity: i.severity, message: i.message }));
+    return issues.map((i) => ({
+      code: i.code,
+      severity: i.severity,
+      message: i.message,
+      suggested: i.suggested_action ?? "",
+    }));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
 }
 
-/** A minimal, schema-valid work-log entry. */
+/**
+ * A minimal, schema-valid work-log entry.
+ *
+ * Every required frontmatter key of `worklog-entry.schema.md` is present,
+ * `promote-to` included: the stop check counts an entry only when it is a
+ * work-log by the schema, and a helper missing a required key would assert
+ * that gate against a file the schema itself rejects.
+ */
 function entry(fields: {
   id: string;
   kind: string;
   status?: string;
   scope?: string;
   links?: string[];
+  promoteTo?: string | null;
 }): string {
   const links = fields.links ?? [];
+  const promoteTo = fields.promoteTo === undefined ? null : fields.promoteTo;
   return [
     "---",
     `id: ${fields.id}`,
@@ -96,6 +135,7 @@ function entry(fields: {
     "updated: 2026-08-22",
     `scope: ${fields.scope ?? "global"}`,
     "blocking: true",
+    `promote-to: ${promoteTo === null ? "null" : promoteTo}`,
     links.length > 0 ? `links:\n${links.map((l) => `  - ${l}`).join("\n")}` : "links: []",
     "---",
     "",
@@ -191,11 +231,22 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
   // whether `.qfai/steering/` says why.
   const BLOCKED_ROW = `| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | blocked | - | - | CR-20260729-0008 |`;
 
-  it("warns when a blocked row has no steering entry at all", async () => {
+  it("errors when a blocked row has no steering entry at all", async () => {
+    // `error`, not `warning`: the stage completes on
+    // `validate --profile tdd --fail-on error`, so a warning would state the
+    // obligation and gate nothing.
     const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`);
     const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG");
-    expect(found?.severity).toBe("warning");
+    expect(found?.severity).toBe("error");
     expect(found?.message).toContain("spec-0001");
+  });
+
+  it("points `links` at a global entry, the only scope that reads it", async () => {
+    // Adding the spec to `links` on a `scope: spec-NNNN` entry does not clear
+    // the finding, so the advice must not offer it unconditionally.
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`);
+    const found = issues.find((i) => i.code === "TDDLIST_BLOCKED_NO_WORKLOG");
+    expect(found?.suggested).toContain("`scope: global` のエントリの `links`");
   });
 
   it("is satisfied by a kind: blocker entry scoped to the spec", async () => {
@@ -311,5 +362,41 @@ describe("TDDLIST_BLOCKED_NO_WORKLOG — a stop must leave a steering record", (
     expect(codes).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
     // And the rest of the ledger was still validated.
     expect(codes).toContain("TDDLIST_BLOCKED_MISSING_REF");
+  });
+
+  it("is not satisfied by an entry with no `promote-to` key", async () => {
+    // `promote-to` is required by `worklog-entry.schema.md` (string OR null),
+    // and `--profile tdd` never runs `validateWorklogSurface` — so an entry
+    // missing it would count as a stop record here while no profile reports
+    // that it is schema-invalid.
+    const withoutPromoteTo = entry({
+      id: "2026-08-22-stuck",
+      kind: "blocker",
+      scope: "spec-0001",
+    })
+      .split("\n")
+      .filter((line) => !line.startsWith("promote-to:"))
+      .join("\n");
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "2026-08-22-stuck.md": withoutPromoteTo,
+    });
+    expect(issues.map((i) => i.code)).toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+  });
+
+  it("holds the stop judgement when one entry file cannot be read", async () => {
+    // The directory walk succeeded, so the ledger run continues — but the one
+    // file that could not be opened may be exactly the record this stop owes.
+    // Reporting the omission would accuse the author on the strength of
+    // evidence nobody managed to read.
+    const issues = await run(`${NINE_COL}\n${BLOCKED_ROW}\n`, {
+      "unreadable.md": entry({ id: "unreadable", kind: "blocker", scope: "spec-0001" }),
+    });
+    const codes = issues.map((i) => i.code);
+    expect(codes).toContain("TDDLIST_WORKLOG_UNREADABLE");
+    expect(codes).not.toContain("TDDLIST_BLOCKED_NO_WORKLOG");
+    const found = issues.find((i) => i.code === "TDDLIST_WORKLOG_UNREADABLE");
+    // The finding names the file, not just the surface, so the operator knows
+    // which one to repair.
+    expect(found?.message).toContain("unreadable.md");
   });
 });
