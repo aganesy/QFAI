@@ -768,6 +768,70 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // `Buffer.toString("utf-8")` does not fail on bytes that are not UTF-8: it
+  // substitutes U+FFFD for each of them. The YAML still parses, so without a
+  // strict decode the merge would rename the substituted text over the user's
+  // manifest and those bytes would be gone for good.
+  it("--force skips a routing manifest that is not valid UTF-8", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-utf8-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Missing the ATDD `red` phase — so there is something to add — with a
+      // comment carrying a byte sequence no UTF-8 decoder can accept.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const bytes = Buffer.concat([
+        Buffer.from("# owner: ", "utf-8"),
+        Buffer.from([0xff, 0xfe]),
+        Buffer.from(`\n${stale}`, "utf-8"),
+      ]);
+      await writeFile(routingPath, bytes);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Byte for byte what the project had: nothing was substituted and
+      // written back.
+      expect(await readFile(routingPath)).toEqual(bytes);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A manifest `init` cannot open is the same class of problem as one it cannot
+  // parse: the contract is a note and a skipped merge. Letting the read error
+  // out of the merge aborted the whole `--force` run over an optional step.
+  it("--force reports an unreadable routing manifest instead of failing init", async () => {
+    // Needs an unreadable file, which POSIX modes give and root ignores.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-eacces-"));
+    const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      await writeFile(routingPath, stale, "utf-8");
+      await chmod(routingPath, 0o000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // The rest of the run still happened rather than being thrown away.
+      await access(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"));
+      await chmod(routingPath, 0o600);
+      expect(await readFile(routingPath, "utf-8")).toBe(stale);
+    } finally {
+      await chmod(routingPath, 0o600).catch(() => undefined);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // `--force` regenerates `assistant/agents/**` but never the project's
   // `agent-catalog.yml`, so a phase spliced in ahead of an agent the project
   // removed would leave `qfai validate` failing (QFAI-AGENT-008) on a table

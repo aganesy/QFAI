@@ -11,7 +11,6 @@ import {
   readdir,
   readFile,
   readlink,
-  realpath,
   rename,
   rm,
   symlink,
@@ -55,6 +54,11 @@ import {
   type RoutingMergeResult,
   type RoutingMergeWarningKind,
 } from "../../core/manifest/routingPhaseMerge.js";
+import {
+  directoryPinIntact,
+  pinDirectory,
+  resolvesInsideRoot,
+} from "../../core/manifest/manifestWriteGuard.js";
 import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
@@ -452,15 +456,16 @@ async function mergeRequiredRoutingPhases(
 
   const unsafe = await describeUnsafeManifestPath(destRoot, projectPath, rel);
   if (unsafe !== null) return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${unsafe}`];
+  // The directory that just cleared the check, pinned by identity so the
+  // replacement can tell it is still the one that was cleared.
+  const parent = await pinDirectory(path.dirname(projectPath));
 
   const project = await readMergeableManifest(projectPath);
   // The project predates the manifest layer. Not this step's to repair:
   // validate reports the missing manifest (QFAI-AGENT-002).
   if (project.kind === "missing") return [];
   if (project.kind === "unusable") {
-    return [
-      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} is not a regular file of at most ${String(MANIFEST_MAX_BYTES)} bytes; skipped the phase merge.`,
-    ];
+    return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} ${project.reason}.`];
   }
   const template = await readMergeableManifest(templatePath);
   if (template.kind !== "ok") {
@@ -476,7 +481,14 @@ async function mergeRequiredRoutingPhases(
     knownProfiles: await readProjectManifestNames(destRoot, REVIEW_PROFILES_FILE, readProfileNames),
   });
   if (result.content !== null && !dryRun) {
-    await replaceFileAtomically(projectPath, result.content, project.mode);
+    const replaced = await replaceFileAtomically(projectPath, result.content, project.mode, () =>
+      directoryPinIntact(destRoot, parent),
+    );
+    if (!replaced) {
+      return [
+        `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the directory holding ${rel} is no longer the one that passed the write-safety check; skipped the phase merge rather than replace a file that may now be outside the project.`,
+      ];
+    }
   }
   return formatRoutingMergeNotes(result, rel, dryRun);
 }
@@ -524,7 +536,7 @@ async function readProjectManifestNames(
 type ManifestRead =
   | { kind: "ok"; content: string; mode: number }
   | { kind: "missing" }
-  | { kind: "unusable" };
+  | { kind: "unusable"; reason: string };
 
 /**
  * Read a manifest, but only from a regular file of bounded size.
@@ -538,16 +550,55 @@ type ManifestRead =
  *
  * `mode` travels with the content because the atomic replace writes a **new**
  * inode: without it a manifest somebody kept at `0600` would come back `0644`.
+ *
+ * Every failure short of "not there" is `unusable`, never a throw. The contract
+ * for a manifest this step cannot read is a `W-ROUTING-MANIFEST-UNREADABLE`
+ * note and a skipped merge; letting an `EACCES` on one file propagate out of
+ * here would instead abort the whole of `qfai init --force`, throwing away the
+ * skills and agents it had already regenerated over a step that is optional by
+ * construction.
  */
 async function readMergeableManifest(target: string): Promise<ManifestRead> {
+  let pinned: { content: Buffer; mode: number } | null;
   try {
-    const pinned = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
-    return pinned === null
-      ? { kind: "unusable" }
-      : { kind: "ok", content: pinned.content.toString("utf-8"), mode: pinned.mode };
+    pinned = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
   } catch (err: unknown) {
     if (isEnoent(err)) return { kind: "missing" };
-    throw err;
+    return {
+      kind: "unusable",
+      reason: `could not be read (${describeError(err)}); skipped the phase merge`,
+    };
+  }
+  if (pinned === null) {
+    return {
+      kind: "unusable",
+      reason: `is not a regular file of at most ${String(MANIFEST_MAX_BYTES)} bytes; skipped the phase merge`,
+    };
+  }
+  const content = decodeUtf8OrNull(pinned.content);
+  // A lossy decode is not a read. `Buffer.toString("utf-8")` never throws: it
+  // substitutes U+FFFD for every byte sequence it cannot make sense of, so a
+  // manifest carrying some other encoding in a comment or a scalar still parses
+  // as YAML, and the merge would then atomically rename the *substituted* text
+  // over the user's file — losing those bytes with no way back.
+  if (content === null) {
+    return { kind: "unusable", reason: "is not valid UTF-8; skipped the phase merge" };
+  }
+  return { kind: "ok", content, mode: pinned.mode };
+}
+
+/**
+ * The text of `bytes`, or `null` when they are not UTF-8.
+ *
+ * `ignoreBOM` keeps a leading U+FEFF in the string instead of stripping it:
+ * the decoded text is written back, and a silently dropped BOM is the same
+ * unasked-for edit the fatal decode is here to prevent.
+ */
+function decodeUtf8OrNull(bytes: Buffer): string | null {
+  try {
+    return new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(bytes);
+  } catch {
+    return null;
   }
 }
 
@@ -579,39 +630,6 @@ async function describeUnsafeManifestPath(
 }
 
 /**
- * `true` when `dir` is inside `destRoot` once every symlink on the way to both
- * is resolved.
- *
- * A path that is simply **absent** passes: the manifest layer is missing, which
- * the read reports as nothing to merge (and `--dry-run` reaches here before the
- * create-only copy has made anything). A path that exists and cannot be
- * resolved does not: `init` has no way to tell where a write would land, and
- * the merge is skippable.
- */
-async function resolvesInsideRoot(destRoot: string, dir: string): Promise<boolean> {
-  const [rootReal, dirReal] = await Promise.all([safeRealpath(destRoot), safeRealpath(dir)]);
-  if (rootReal.kind === "missing" || dirReal.kind === "missing") return true;
-  if (rootReal.kind !== "resolved" || dirReal.kind !== "resolved") return false;
-  const rel = path.relative(rootReal.real, dirReal.real);
-  if (rel === "") return true;
-  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
-}
-
-type RealpathOutcome =
-  | { kind: "resolved"; real: string }
-  | { kind: "missing" }
-  | { kind: "unresolvable" };
-
-/** The resolved path, or why it could not be resolved. */
-async function safeRealpath(target: string): Promise<RealpathOutcome> {
-  try {
-    return { kind: "resolved", real: await realpath(target) };
-  } catch (err: unknown) {
-    return isEnoent(err) ? { kind: "missing" } : { kind: "unresolvable" };
-  }
-}
-
-/**
  * Replace `target` with `content` without following a symlink at that path and
  * without ever leaving the original truncated.
  *
@@ -623,8 +641,23 @@ async function safeRealpath(target: string): Promise<RealpathOutcome> {
  * over the target instead: `rename` is atomic against the pathname, so any
  * failure before it leaves the original exactly as it was, and it replaces the
  * directory entry rather than writing through whatever that entry points at.
+ *
+ * `stillSafe` is what makes the *pathname* trustworthy. The write-safety check
+ * ran against the parent directory some syscalls ago, and both the temp create
+ * and the `rename` resolve that directory's name again: in a working tree
+ * another process can touch, `manifest/` swapped for a link out of the project
+ * in between would send the replacement there. Node has no `renameat`, so the
+ * directory cannot be held as a descriptor — instead its identity is re-checked
+ * immediately before each of the two operations that trust the name, and a
+ * mismatch aborts the replacement (`false`) rather than following the swap.
  */
-async function replaceFileAtomically(target: string, content: string, mode: number): Promise<void> {
+async function replaceFileAtomically(
+  target: string,
+  content: string,
+  mode: number,
+  stillSafe: () => Promise<boolean>,
+): Promise<boolean> {
+  if (!(await stillSafe())) return false;
   const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
   try {
     // `O_EXCL`: the temp name is ours or nothing is written. It is created
@@ -641,7 +674,12 @@ async function replaceFileAtomically(target: string, content: string, mode: numb
       await handle.close();
     }
     await chmod(temp, mode);
+    if (!(await stillSafe())) {
+      await rm(temp, { force: true });
+      return false;
+    }
     await rename(temp, target);
+    return true;
   } catch (err: unknown) {
     // The temp file is this function's alone — leaving it behind would litter
     // the manifest directory with a partial YAML on every failed merge.
