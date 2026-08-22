@@ -316,6 +316,102 @@ describe("validateCompetitiveReferences", () => {
     expect(incomplete[0]?.message).toContain("local_translation");
   });
 
+  it("reads a mandatory field whose value is an indented block", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    const blockShaped = [
+      "### Reference: Linear",
+      "",
+      "- reference: https://example.com/linear",
+      "- adopted_points:",
+      "  - Progressive disclosure layout for the pack browser.",
+      "  - Single-CTA dominance in the hero.",
+      "- rejected_points: Modal-heavy workflow rejected.",
+      "- local_translation: Status-first detail pane for validate results.",
+      "",
+    ].join("\n");
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([blockShaped, referenceBlock("Stripe"), referenceBlock("Vercel")]),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("still rejects an indented block that holds only template placeholders", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    const placeholderBlock = [
+      "### Reference: Linear",
+      "",
+      "- reference: https://example.com/linear",
+      "- adopted_points:",
+      "  - [What was adopted from this reference and why]",
+      "- rejected_points: Modal-heavy workflow rejected.",
+      "- local_translation: Status-first detail pane for validate results.",
+      "",
+    ].join("\n");
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([placeholderBlock, referenceBlock("Stripe"), referenceBlock("Vercel")]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(1);
+    expect(incomplete[0]?.message).toContain("adopted_points");
+  });
+
+  it("does not accept a near-miss column in place of a mandatory one", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        "| SRC-ID | Competitor | not_adopted_points | rejected_points | local_translation |",
+        "| --- | --- | --- | --- | --- |",
+        ...TABLE_ROWS,
+        "",
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const shortfall = issues.filter((issue) => issue.code === "UIX-VAL-COMPETITIVE-REFS-MIN");
+    expect(shortfall).toHaveLength(1);
+    expect(shortfall[0]?.message).toContain("found 0");
+  });
+
+  it("ignores references that only exist in a fenced sample or an HTML comment", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        "Copy the shape below for each reference:",
+        "",
+        "```markdown",
+        referenceBlock("Linear"),
+        referenceBlock("Stripe"),
+        "```",
+        "",
+        "<!--",
+        referenceBlock("Vercel"),
+        "-->",
+        "",
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    expect(issues.map((issue) => issue.code)).toEqual(["UIX-VAL-COMPETITIVE-REFS-MIN"]);
+    expect(issues[0]?.message).toContain("found 0");
+  });
+
   it("stays silent for non-UI-bearing packs", async () => {
     const root = await newTempDir();
     await createPack(root, false);

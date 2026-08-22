@@ -11,7 +11,7 @@
 import path from "node:path";
 
 import type { QfaiConfig } from "../../config.js";
-import { splitMarkdownRow } from "../../specPackParsers.js";
+import { maskNonSpecRegions, splitMarkdownRow } from "../../specPackParsers.js";
 import type { Issue } from "../../types.js";
 import { isUiBearingSpec } from "../uixDetection.js";
 import { readSafe } from "../utils.js";
@@ -88,9 +88,54 @@ function extractRegistrySection(content: string): string | null {
   return lines.slice(start + 1, end).join("\n");
 }
 
+/**
+ * Indented continuation lines under a field whose value is a block.
+ *
+ * Only the items that are themselves populated are kept, so a block of
+ * bracketed template placeholders stays unpopulated rather than becoming a
+ * long — and therefore "non-empty" — joined string.
+ */
+function collectBlockValue(lines: string[], start: number, indent: number): string | undefined {
+  const items: string[] = [];
+  for (let index = start; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim().length === 0) {
+      break;
+    }
+    if (line.length - line.trimStart().length <= indent) {
+      break;
+    }
+    const item = line.trim().replace(/^[-*+]\s*/, "");
+    if (isPopulated(item)) {
+      items.push(item);
+    }
+  }
+  return items.length > 0 ? items.join("; ") : undefined;
+}
+
+/**
+ * Read one mandatory field out of a reference block.
+ *
+ * The value may sit on the field line (`- adopted_points: <value>`) or, in the
+ * YAML block shape the same template already uses for `rule_refs`, on the
+ * indented lines beneath a bare `- adopted_points:`. Reading only the field
+ * line would report a populated block value as empty.
+ */
 function extractField(entry: string, field: string): string | undefined {
-  const match = new RegExp(`^\\s*-\\s*${field}\\s*:\\s*(.*)$`, "im").exec(entry);
-  return match?.[1]?.trim();
+  const lines = entry.split("\n");
+  const fieldRe = new RegExp(`^(\\s*)-\\s*${field}\\s*:\\s*(.*)$`, "i");
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = fieldRe.exec(lines[index] ?? "");
+    if (!match) {
+      continue;
+    }
+    const inline = (match[2] ?? "").trim();
+    if (inline.length > 0) {
+      return inline;
+    }
+    return collectBlockValue(lines, index + 1, (match[1] ?? "").length);
+  }
+  return undefined;
 }
 
 /** References written as `### Reference: <name>` blocks (the pack template shape). */
@@ -105,11 +150,24 @@ function parseBlockReferences(section: string): CompetitiveReference[] {
     }));
 }
 
+/** Header cell normalised to the `snake_case` shape the field names use. */
+function normalizeHeaderCell(cell: string): string {
+  return cell.replace(/[`*]/g, "").trim().toLowerCase().replace(/\s+/g, "_");
+}
+
+/**
+ * Map each mandatory field to its column.
+ *
+ * The match is **exact** after normalisation: a substring match would accept
+ * `not_adopted_points` or `adopted_points_notes` as the `adopted_points`
+ * column, so a registry that never carries the mandatory column would still
+ * clear the count gate on the values of a differently-named neighbour.
+ */
 function columnIndexes(header: string[]): Map<string, number> | null {
-  const normalized = header.map((cell) => cell.toLowerCase().replace(/\s+/g, "_"));
+  const normalized = header.map(normalizeHeaderCell);
   const indexes = new Map<string, number>();
   for (const field of MANDATORY_FIELDS) {
-    const index = normalized.findIndex((cell) => cell.includes(field));
+    const index = normalized.indexOf(field);
     if (index === -1) {
       return null;
     }
@@ -175,7 +233,12 @@ export async function validateCompetitiveReferences(
   }
 
   const content = await readSafe(path.join(root, "04_Sources.md"));
-  const references = content ? parseReferences(extractRegistrySection(content)) : [];
+  // Fenced samples and HTML comments are documentation, not registry entries:
+  // three complete examples in a fence would otherwise satisfy the minimum on
+  // an empty registry, and an unedited sample would raise a false incomplete.
+  const references = content
+    ? parseReferences(extractRegistrySection(maskNonSpecRegions(content)))
+    : [];
 
   const issues: Issue[] = [];
   for (const reference of references) {
