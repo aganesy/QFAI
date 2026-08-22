@@ -106,6 +106,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `#format-ssot-mandatory` and `#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
+3. **Resume every row left at `refactor`, before any other selection.** A fresh invocation holds no in-flight reviewer round and no open T1 group, so such a row is the residue of a run that ended after Phase: Refactor step 3 and before `done` — most often a checkpoint that FAILed and whose repair was interrupted (`references/checkpoint-verification.md#pass-criteria`). `refactor` is not terminal, and Phase Red step 1 selects only a named row, a `review-fix` row or a `todo` row, so nothing downstream picks it up: the row would sit there for every later invocation and the spec could never complete. Re-enter Phase: Refactor at step 4 for each — routed blocking reviewers first, since an interrupted repair may have changed code their PASS was given against, then checkpoint verification while the row is still `refactor` — and transition per `#pass-criteria`. This is the only entry that re-selects `refactor`; Phase Red still does not.
 
 ### Phase: Red (Write Failing Test)
 
@@ -443,9 +444,8 @@ is what item 12 of the 12-point gate refers to and the only thing it refers to. 
 reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
 and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
 
-It PASSES only when **every** command in the verification command set exits 0; a partial run is not
-a pass. The boundary definition, command set, pass criteria and evidence fields are in
-`references/checkpoint-verification.md`.
+It PASSES only when **every** command in the verification command set exits 0; a partial run is not a
+pass. The boundary definition, command set, pass criteria, FAIL handling and evidence fields are in `references/checkpoint-verification.md`.
 
 ## FINAL CHECKLIST (Check Last)
 

@@ -90,9 +90,18 @@ and nowhere else**, in one branch per boundary:
 - **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
   does **not** go to `exception`: that status parks the row as an anomaly whose completion then
   needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
-- **Per spec** — the boundary owns no row, so no status moves. Fix the failure, adding a `todo` row
-  carrying the failing selector when the repair needs its own Red/Green cycle, work the ledger back
-  to terminal, and re-run the whole set. Spec-level completion is not declared until it passes.
+  **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
+  re-run passes would strand the row. Preflight step 3 (`../SKILL.md`, Phase: Stage 0 + Preflight)
+  is what resumes it: the next invocation re-enters Phase: Refactor at step 4 for that row — routed
+  blocking reviewers, then the whole set again — before it selects any other row.
+- **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
+  set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
+  obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
+  is the `Status` / `DR-ID` / `Evidence` cells only, and adding, removing or re-scoping a row takes
+  the drift path (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
+  per `#when-drift-is-detected` — STOP, Change Request, owner rerun — and resume on the approved
+  reset (`change-request-reset.md`), then work the ledger back to terminal.
+  Spec-level completion is not declared until it passes.
 
 A partial run is not a pass.
 

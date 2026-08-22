@@ -166,6 +166,14 @@ describe("qfai-implement checkpoint verification contract", () => {
       // rather than being left undefined by the deletion.
       expect(reference).toContain("**Per spec** — the boundary owns no row");
       expect(reference).toContain("Spec-level completion is not declared until it passes");
+      // A ledger row is upstream SSOT: the carve-out this skill holds is the
+      // Status / DR-ID / Evidence cells, so the per-spec repair may not append
+      // a `todo` row itself — it takes the drift path and the owner's rerun.
+      expect(reference).toContain("**Do not add a row here.**");
+      expect(reference).toContain(
+        "`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`",
+      );
+      expect(reference).toContain("#when-drift-is-detected");
 
       // No second remedy anywhere else on the shipped surface.
       const suite = await readFile(path.join(dir, "references", "relevant-test-suite.md"), "utf-8");
@@ -175,6 +183,16 @@ describe("qfai-implement checkpoint verification contract", () => {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
       expect(skill).not.toContain("on failure transition to `exception` with a DR-ID");
       expect(skill).toContain("a FAIL keeps the row at `refactor`");
+
+      // A FAIL now keeps the row at `refactor`, which is neither terminal nor
+      // selectable by Phase Red step 1 (named row / `review-fix` / `todo`). An
+      // interrupted repair would strand it for every later invocation, so
+      // preflight has to be the entry that re-selects it.
+      expect(skill).toContain(
+        "**Resume every row left at `refactor`, before any other selection.**",
+      );
+      expect(skill).toContain("This is the only entry that re-selects `refactor`");
+      expect(reference).toContain("Preflight step 3");
     }
   });
 
