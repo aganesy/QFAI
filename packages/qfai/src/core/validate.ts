@@ -85,7 +85,7 @@ import {
   validateAutopilotPolicy,
   detectHandoffSchemaDrift,
   validateStaleReferences,
-  STUB_SCANNABLE_FILE_PATTERN,
+  STUB_SOURCE_FILE_PATTERN,
 } from "./validators/index.js";
 import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import { readSafe } from "./validators/utils.js";
@@ -489,7 +489,7 @@ async function runAtddValidators(
     // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
     // it empty, which made the validator return before reading anything.
     ...(await validateTestTodoStubs(root, config, {
-      globs: atddAcceptanceTestGlobs(root, config, STUB_SCANNABLE_FILE_PATTERN),
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
     })),
   ];
 }
@@ -555,7 +555,7 @@ function dedupeStubFindings(issues: Issue[]): Issue[] {
       entry.file ?? "",
       entry.loc?.line ?? "",
       (entry.refs ?? []).join(","),
-    ].join(" ");
+    ].join("\0");
     if (seen.has(key)) return false;
     seen.add(key);
     return true;

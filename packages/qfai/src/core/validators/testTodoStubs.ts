@@ -79,6 +79,14 @@ type NonCodeSyntax = {
   lineComments: readonly string[];
   /** Longest opener first: a triple quote must win over a single one. */
   spans: readonly NonCodeSpan[];
+  /**
+   * Sticky matcher for a heredoc opener, for dialects that have one.
+   *
+   * A heredoc is not a {@link NonCodeSpan}: its closing delimiter is written
+   * in the source that opens it, and its body starts on the *next* line rather
+   * than after the opener. See {@link maskHeredocBodies}.
+   */
+  heredocOpener?: RegExp;
 };
 
 const nonCodeSpan = (
@@ -91,6 +99,20 @@ const nonCodeSpan = (
 const BLOCK_COMMENT = nonCodeSpan("/*", "*/", false, true);
 const DOUBLE_QUOTED = nonCodeSpan('"', '"', true, false);
 const SINGLE_QUOTED = nonCodeSpan("'", "'", true, false);
+
+/**
+ * Ruby heredoc opener, matched at one exact offset (sticky).
+ *
+ * RSpec writes fixtures and expected output as `<<~TEXT` bodies, and a line of
+ * such a body that begins with `pending` or `skip` is prose, not a stub — the
+ * Ruby pattern is line-anchored, so without this it was reported as one.
+ *
+ * The bare `<<TAG` form is restricted to an upper-case tag so `results <<x`
+ * (the append operator with no space) is not read as a heredoc; the `<<~`,
+ * `<<-` and quoted forms cannot be an operator, so they take any tag.
+ */
+const RUBY_HEREDOC_OPENER =
+  /<<(?:[-~](?:"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'|([A-Za-z_]\w*))|"([A-Za-z_]\w*)"|'([A-Za-z_]\w*)'|([A-Z_]\w*))/y;
 
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
@@ -151,26 +173,78 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     extensions: [".rb"],
     pattern: /^\s*(?:skip|pending)\b/gm,
     runner: "RSpec/minitest",
-    nonCode: { lineComments: ["#"], spans: [DOUBLE_QUOTED, SINGLE_QUOTED] },
+    nonCode: {
+      lineComments: ["#"],
+      spans: [DOUBLE_QUOTED, SINGLE_QUOTED],
+      heredocOpener: RUBY_HEREDOC_OPENER,
+    },
   },
   {
     extensions: [".cs"],
-    pattern: /\[Ignore\b|\bSkip\s*=\s*"/g,
+    // `Skip` takes no closing quote: `maskNonCode` blanks the reason string
+    // *including its opening quote*, so a pattern ending in `"` could never
+    // match the xUnit `[Fact(Skip = "reason")]` it exists for. Stopping at the
+    // `=` also catches `Skip = SkipReasons.NotImplemented`; the lookahead keeps
+    // a `Skip == x` comparison out.
+    pattern: /\[Ignore\b|\bSkip\s*=(?!=)/g,
+    // Whitespace around the `=` varies, and `refs` is what waivers and report
+    // grouping key on, so the label is normalised rather than taken verbatim.
+    label: (match) => (match[0].startsWith("[") ? "[Ignore" : "Skip ="),
     runner: ".NET test",
     nonCode: { lineComments: ["//"], spans: [BLOCK_COMMENT, DOUBLE_QUOTED] },
   },
 ];
 
 /**
- * Glob file pattern covering every extension some dialect can read.
+ * Test-source extensions qfai has no stub dialect for.
+ *
+ * They are collected on purpose: reaching {@link validateTestTodoStubs} is the
+ * only way `QFAI-TEST-002` can name them, and a caller that brings its own
+ * globs would otherwise hand the validator nothing at all on such a stack. An
+ * acceptance suite written entirely in PHP would then have produced an
+ * unconditionally clean ATDD gate — the exact reading `QFAI-TEST-002` exists
+ * to prevent.
+ *
+ * Source extensions only. Fixtures and data files (`.json`, `.md`, `.yml`,
+ * `.sql`) sit beside acceptance tests everywhere and never hold a stub, so
+ * disclaiming them would be noise rather than coverage information.
+ */
+const UNDIALECTED_TEST_SOURCE_EXTENSIONS: readonly string[] = [
+  "c",
+  "cc",
+  "clj",
+  "cljs",
+  "cpp",
+  "dart",
+  "erl",
+  "ex",
+  "exs",
+  "fs",
+  "groovy",
+  "hs",
+  "lua",
+  "m",
+  "php",
+  "pl",
+  "scala",
+  "swift",
+  "vb",
+];
+
+/**
+ * Glob file pattern covering the test sources this validator should be handed.
  *
  * A caller that supplies its own globs — the ATDD completion gate scans the
  * acceptance directories rather than the project's `testFileGlobs` — uses this
- * so the scan never collects a file `QFAI-TEST-002` would then have to
- * disclaim.
+ * so the scan collects every file the validator has something to say about:
+ * `QFAI-TEST-001` for the extensions with a dialect, `QFAI-TEST-002` for the
+ * ones without.
  */
-export const STUB_SCANNABLE_FILE_PATTERN = `**/*.{${Array.from(
-  new Set(STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1)))),
+export const STUB_SOURCE_FILE_PATTERN = `**/*.{${Array.from(
+  new Set([
+    ...STUB_DIALECTS.flatMap((dialect) => dialect.extensions.map((ext) => ext.slice(1))),
+    ...UNDIALECTED_TEST_SOURCE_EXTENSIONS,
+  ]),
 )
   .sort()
   .join(",")}}`;
@@ -189,10 +263,17 @@ function maskNonCode(content: string, syntax: NonCodeSyntax): string {
   const blank = (index: number): void => {
     if (chars[index] !== "\n") chars[index] = " ";
   };
+  // Heredocs opened on the line being scanned. Their bodies begin after the
+  // line break, and one line may open several (`foo(<<~A, <<~B)`).
+  let pendingHeredocs: string[] = [];
   let i = 0;
   while (i < content.length) {
     if (content[i] === "\n") {
       i += 1;
+      if (pendingHeredocs.length > 0) {
+        i = maskHeredocBodies(content, blank, i, pendingHeredocs);
+        pendingHeredocs = [];
+      }
       continue;
     }
     if (syntax.lineComments.some((marker) => content.startsWith(marker, i))) {
@@ -202,10 +283,61 @@ function maskNonCode(content: string, syntax: NonCodeSyntax): string {
       }
       continue;
     }
+    const heredoc = syntax.heredocOpener
+      ? matchHeredocOpener(content, i, syntax.heredocOpener)
+      : null;
+    if (heredoc) {
+      pendingHeredocs.push(heredoc.tag);
+      i += heredoc.length;
+      continue;
+    }
     const span = syntax.spans.find((candidate) => content.startsWith(candidate.open, i));
     i = span ? maskSpan(content, blank, i, span) : i + 1;
   }
   return chars.join("");
+}
+
+/** The heredoc opened at `start`, or `null` when none is. */
+function matchHeredocOpener(
+  content: string,
+  start: number,
+  opener: RegExp,
+): { tag: string; length: number } | null {
+  opener.lastIndex = start;
+  const match = opener.exec(content);
+  if (!match) return null;
+  // Exactly one alternative's group captured the delimiter; the rest of the
+  // alternation leaves its groups unmatched.
+  const groups: Array<string | undefined> = match.slice(1);
+  const tag = groups.find((group) => group !== undefined);
+  return tag === undefined ? null : { tag, length: match[0].length };
+}
+
+/**
+ * Blanks the bodies of the heredocs opened on the preceding line.
+ *
+ * Each body runs to the line holding its delimiter, which is blanked with it.
+ * An unterminated heredoc blanks to end of file, exactly as an unterminated
+ * block comment does.
+ */
+function maskHeredocBodies(
+  content: string,
+  blank: (index: number) => void,
+  start: number,
+  tags: readonly string[],
+): number {
+  let i = start;
+  for (const tag of tags) {
+    while (i < content.length) {
+      const lineBreak = content.indexOf("\n", i);
+      const lineEnd = lineBreak === -1 ? content.length : lineBreak;
+      const line = content.slice(i, lineEnd);
+      for (let k = i; k < lineEnd; k += 1) blank(k);
+      i = lineBreak === -1 ? content.length : lineBreak + 1;
+      if (line.trim() === tag) break;
+    }
+  }
+  return i;
 }
 
 /** Blanks one {@link NonCodeSpan}; returns the index just past it. */
