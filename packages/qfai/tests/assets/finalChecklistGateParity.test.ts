@@ -215,13 +215,61 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("narrow relevant suite from Phase: Refactor step 2");
   });
 
+  it("requires a terminal status on every row, not merely an accurate one", async () => {
+    // "Statuses are accurate" is satisfiable by a run that advanced nothing: a
+    // `todo` / `review-fix` row left over from the previous run is recorded
+    // correctly, every reviewer/checkpoint box is vacuously true over the empty
+    // set of rows advanced this run, and the spec is declared complete anyway.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("Every ledger row reached a **terminal** status");
+    expect(checklist).toContain(
+      "No `todo`, `red`, `green`, `refactor` or `review-fix` row remains",
+    );
+    // The `exception` half is the waiver, not a bare DR that names the anomaly.
+    expect(checklist).toContain("user-approved accepted-risk waiver");
+    expect(checklist).toContain("`TDDLIST-001`");
+  });
+
+  it("recomputes the handed-over RED test hash, not just the evidence seals", async () => {
+    // Anchor, `Review pack seal` and `Audited evidence hash` all address the
+    // evidence entry. A fixture or test body edited after `/qfai-atdd` observed
+    // the RED moves none of them, so the row completes on stale provenance.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("`Round N: RED test hash` **recomputes**");
+    expect(checklist).toContain("over the manifest recorded beside it, and matches");
+    expect(checklist).toContain("`Shared-artifact re-verify`");
+  });
+
+  it("refuses completion while a cross-spec obligation is still open", async () => {
+    // Local rows, TC coverage, checkpoints and CRs can all pass while another
+    // spec's `done` rows certify a behaviour this run changed and nobody
+    // re-verified — a completion prohibition in its own right.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("No `## Cross-spec obligations` entry");
+    expect(checklist).toContain("`Resolution` reads `re-reviewed` or names a `CR-*`");
+  });
+
+  it("requires the post-merge verify and seam reconciliation after a parallel run", async () => {
+    // Authorized dispatch is the precondition, not the obligation: the merged
+    // trunk carries none of the workers' transitions, and a green merged suite
+    // is exactly the case seam reconciliation exists to see past.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("ran as a parallel slice");
+    expect(checklist).toContain("no merged item's row still `todo`");
+    expect(checklist).toContain("integration verify ran on the **merged** result and passed");
+    expect(checklist).toContain("whether or not the merged suite is green");
+  });
+
   it("states the derivation rule that keeps the two in sync", async () => {
     // Without it the next gate item drifts the same way.
     const checklist = await readChecklistProse(dir);
     expect(checklist).toContain("**Derivation rule (MUST).**");
     expect(checklist).toContain("SKILL.md#item-completion-checklist-12-point-gate");
     expect(checklist).toContain("SKILL.md#spec-completion-conditions");
+    expect(checklist).toContain("SKILL.md#completion-prohibition-conditions");
     expect(checklist).toContain("is a defect in");
+    // A box asserts the work is finished, not that the record of it is correct.
+    expect(checklist).toContain("A box asserts a **terminal** state");
   });
 
   it("keeps every anchor it cites resolvable", async () => {

@@ -5,10 +5,14 @@ cannot be ticked is a reason not to declare completion, not a note to carry forw
 
 **Derivation rule (MUST).** These boxes are the item completion checklist
 (`SKILL.md#item-completion-checklist-12-point-gate`) plus the spec completion conditions
-(`SKILL.md#spec-completion-conditions`), restated as one sweep. Every gate item has at least one box
-and every box names the gate item it covers, so the correspondence is auditable both ways. Adding a
-gate item or a completion condition without adding or extending the box that covers it is a defect in
-this file — the sweep would then pass on work the gate rejects.
+(`SKILL.md#spec-completion-conditions`) and the completion prohibitions that enforce them
+(`SKILL.md#completion-prohibition-conditions`), restated as one sweep. Every gate item has at least
+one box naming its number; a box covering a spec-level condition names that condition instead, so the
+correspondence is auditable both ways. Adding a gate item, a completion condition or a prohibition
+without adding or extending the box that covers it is a defect in this file — the sweep would then
+pass on work the gate rejects. A box asserts a **terminal** state, not an accurately recorded one:
+"the record is correct" and "the work is finished" are different claims, and only the second one
+releases completion.
 
 - [ ] CRITICAL CONSTRAINTS were followed.
 - [ ] Each item was processed one test at a time with its `TDD-ID` selected and in progress, or inside an item-level parallel dispatch authorized by `SKILL.md#parallelization-policy` (gate item 1).
@@ -37,6 +41,13 @@ this file — the sweep would then pass on work the gate rejects.
       recomputed — **except** an `E2E` / `API` row carrying the `Pre-split-evidence: implement`
       marker, whose `implement-<spec-id>.md` anchor is the accepted legacy location; requiring the
       ATDD file there would leave an already-complete row permanently ungateable (gate item 10).
+- [ ] Every handed-over `E2E` / `API` / `Integration` row's `Round N: RED test hash` **recomputes**
+      here over the manifest recorded beside it, and matches. The other three recomputations above
+      address the evidence entry, not the test: a fixture, snapshot or the test body edited after
+      `/qfai-atdd` observed the RED leaves anchor, pack seal and `Audited evidence hash` all correct
+      while the row's RED describes a test that no longer exists. A mismatch sends the row back for a
+      fresh RED unless a `Shared-artifact re-verify` entry names this row's spec and `TDD-ID` and
+      carries the artifact's new manifest and hash (gate item 10, `round-evidence.md#round-block`).
 - [ ] Checkpoint verification passed for **every** row advanced this run — the **full** suite where
       the row sits on a checkpoint boundary, the narrow relevant suite from Phase: Refactor step 2
       (the touched module plus its reverse-dependency closure, or the package fallback when that
@@ -51,9 +62,27 @@ this file — the sweep would then pass on work the gate rejects.
       one the lifecycle sanctions (`execution-ledger.md#allowed-transitions`). A resumption, an
       anomaly exit and the `qa-gatekeeper` rework edge are re-entries, not backward transitions,
       and do not need to be declared here.
-- [ ] Exception items have DR-IDs recorded.
+- [ ] Every ledger row reached a **terminal** status: `done`, or `exception` whose `DR-ID` names a
+      Decision Record recorded as a **user-approved accepted-risk waiver** (a `TDDLIST-001` entry in
+      `.qfai/waivers.yml`) — an `exception` whose DR only describes the anomaly is a parked defect.
+      No `todo`, `red`, `green`, `refactor` or `review-fix` row remains. Accurate statuses are a
+      different claim: a run that advanced no row records the ones left mid-cycle correctly and still
+      may not declare the spec complete (`SKILL.md#completion-prohibition-conditions`).
+- [ ] No `## Cross-spec obligations` entry in this spec's evidence file is still open — each one's
+      `Resolution` reads `re-reviewed` or names a `CR-*` that is itself resolved. An open entry means
+      another spec's `done` rows still certify a behaviour this run changed and nobody re-verified,
+      which is a completion prohibition however clean the local rows are
+      (`cross-spec-ownership.md#the-evidence-entry`, `SKILL.md#completion-prohibition-conditions`).
 - [ ] Every applicable `TC-*` from `06_Test-Cases.md` is present in `test-list.md`, and
       `QFAI-ATDD-111` / `QFAI-ATDD-113` are clean for this spec.
+- [ ] If any item ran as a parallel slice: the trunk ledger was reconciled from the worker reports
+      **before** the verify (no merged item's row still `todo`), integration verify ran on the
+      **merged** result and passed, and the seams were reconciled — each slice's touched `src/` paths
+      diffed against its declared `Owning module`, with undeclared or overlapping paths recorded as a
+      deny-condition breach. That last one is required **whether or not the merged suite is green**;
+      a green suite is what the reconciliation exists to see past
+      (`SKILL.md#post-parallel-integration-verify`,
+      `parallelization-policy.md#seam-reconciliation-after-a-parallel-run`).
 - [ ] No in-scope Change Request or waiver dependency is unresolved
       (`change-request-reset.md#when-an-in-scope-cr-counts-as-resolved`).
 - [ ] All tests pass.
