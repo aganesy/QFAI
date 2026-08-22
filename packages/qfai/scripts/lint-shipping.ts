@@ -52,14 +52,15 @@ type PatternRule = {
    */
   appliesTo: ReadonlyArray<Target>;
   /**
-   * Run this rule on YAML comment lines too. Comment lines are skipped
-   * for every other rule (a YAML parser discards them, so an ID inside
-   * `# ...` is a citation, not an install-site assumption) — but the
-   * comment text itself still ships verbatim via `qfai init` and is
-   * read by humans, so rules about what a READER can open must not be
-   * skipped there.
+   * Run this rule on comment lines of shipped files too — YAML `# ...`
+   * and TypeScript `//` / JSDoc alike. Comment lines are skipped for
+   * every other rule (a YAML parser and the TS compiler both discard
+   * them, so an ID inside a comment is a citation, not an install-site
+   * assumption) — but the comment text itself still ships verbatim via
+   * `qfai init` and is read by humans, so rules about what a READER can
+   * open must not be skipped there.
    */
-  scanYamlComments?: boolean;
+  scanShippedComments?: boolean;
 };
 
 /** The rule's own flags, plus `g`. Never a bare `"g"` — see the call sites. */
@@ -115,10 +116,11 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     // Applies to documentation AND runtime data: both are copied verbatim
     // into the consuming repo, where the cited path resolves to nothing.
     appliesTo: ["init-runtime", "init-doc"],
-    // A YAML `# ...` line ships verbatim and is read by humans, so a
-    // framework path inside one reaches the user as an unopenable
-    // citation just like a markdown line does.
-    scanYamlComments: true,
+    // A YAML `# ...` line — or a `//` / JSDoc line in a shipped `.ts`
+    // template — ships verbatim and is read by humans, so a framework
+    // path inside one reaches the user as an unopenable citation just
+    // like a markdown line does.
+    scanShippedComments: true,
   },
   // PR #206 review Ntbp / NwM- / Nv2- / Nv_Q: catch internal-ID and
   // internal-version leakage in src JSDoc BEFORE it ships via
@@ -358,7 +360,16 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // rules on JSDoc lines so internal-spec-id leakage is caught at
     // source, not only post-build by the leakage shell script.
     if (isTs && TS_COMMENT_LINE_RE.test(line)) {
-      for (const rule of srcCommentRules) {
+      // A `.ts` template under `assets/init/` classifies as
+      // `init-runtime`, so it has NO `src-comment` rules — but its
+      // comments are copied verbatim into the consuming repo, so the
+      // reader-facing rules still apply there, exactly as they do for
+      // YAML comments below (PR #1019 review).
+      const tsCommentRules =
+        targetCategory === "src"
+          ? srcCommentRules
+          : applicableRules.filter((rule) => rule.scanShippedComments === true);
+      for (const rule of tsCommentRules) {
         // `rule.re.flags`, not a bare `"g"`: dropping them lost the `i` on the
         // spec-id rules, so `SPEC-9999` in JSDoc passed here while the
         // post-build guard and the smoke test — both case-insensitive — caught
@@ -380,13 +391,13 @@ async function lintFile(absolutePath: string, pkgRoot: string): Promise<LintViol
     // YAML files: comment lines are not runtime data; the parser ignores
     // them. References inside `# ...` are authority citation, not
     // install-site assumptions — EXCEPT for rules flagged
-    // `scanYamlComments`, which are about what a human reader can open.
+    // `scanShippedComments`, which are about what a human reader can open.
     // Those comments ship verbatim via `qfai init`, so they keep running
     // here (PR #1019 review).
     const isYaml = absolutePath.endsWith(".yaml") || absolutePath.endsWith(".yml");
     const lineRules =
       isYaml && YAML_COMMENT_LINE_RE.test(line)
-        ? applicableRules.filter((rule) => rule.scanYamlComments === true)
+        ? applicableRules.filter((rule) => rule.scanShippedComments === true)
         : applicableRules;
 
     for (const rule of lineRules) {

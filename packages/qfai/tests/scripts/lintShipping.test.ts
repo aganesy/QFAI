@@ -208,6 +208,35 @@ describe("lint-shipping fixture — detection rules", () => {
     expect(violations[0]?.line).toBe(1);
   });
 
+  it("flags framework source paths inside comment lines of a shipped .ts template", async () => {
+    // A `.ts` template under assets/init/ classifies as `init-runtime`, so it
+    // has no `src-comment` rules — but its `//` / JSDoc lines are copied into
+    // the consuming repo verbatim, exactly like a YAML comment (PR #1019).
+    const root = await newTempDir();
+    await mkdir(path.join(root, "assets/init/.qfai/assistant/templates"), { recursive: true });
+    await writeFile(
+      path.join(root, "assets/init/.qfai/assistant/templates/reviewGate.ts"),
+      [
+        "// See core/prototyping/evaluatorReview.ts for the axis list",
+        "/** Mirrors packages/qfai/src/core/layerPolicy.ts. */",
+        "// Example: see spec-0042 for context — a citation, not a path lookup",
+        'export const AXIS_SOURCE = "core/prototyping/evaluatorReview.ts";',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const { violations } = await runLintShipping(root);
+    // Lines 1, 2 (both `packages/qfai/` and the `src/core/**.ts` tail) and 4.
+    expect(violations.map((v) => v.pattern)).toEqual([
+      "framework-source-path",
+      "framework-source-path",
+      "framework-source-path",
+      "framework-source-path",
+    ]);
+    expect(violations.map((v) => v.line)).toEqual([1, 2, 2, 4]);
+  });
+
   it("does NOT flag core/cli paths that belong to a URL", async () => {
     // `https://example.com/core/api.ts` is an external document, not a
     // citation of this framework's tree; a bare `core/api.ts` on the same
