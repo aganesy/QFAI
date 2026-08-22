@@ -55,19 +55,26 @@ async function collectSources(dir: string): Promise<string[]> {
 const ISSUE_CODE_RE = /\bissue\(\s*\n?\s*"([A-Z][A-Z0-9_.-]{2,})"\s*,/g;
 
 /**
- * The `RULE_PROMOTIONS` object literal, JSDoc included. A promotion entry names
- * the finding code it governs in its doc comment, because the key is an
- * identifier and the value is the version `newRuleSeverity` compares against —
- * neither can hold `TDDLIST_EVIDENCE_EMPTY`.
+ * The **entries** of the `RULE_PROMOTIONS` object literal — the text between
+ * its braces, per-entry JSDoc included. An entry names the finding code it
+ * governs in its doc comment, because the key is an identifier and the value is
+ * the version `newRuleSeverity` compares against; neither can hold
+ * `TDDLIST_EVIDENCE_EMPTY`.
+ *
+ * The declaration's own docstring is deliberately excluded. It explains the
+ * policy by narrating the code that motivated it, so including it would make
+ * that code look registered no matter what the entries say — a check that
+ * cannot fail is the failure this file exists to stop.
  */
-async function readRulePromotionsBlock(): Promise<string> {
+async function readRulePromotionEntries(): Promise<string> {
   const body = await readFile(path.join(SRC, "core", "sunset.ts"), "utf-8");
-  const start = body.indexOf("export const RULE_PROMOTIONS");
-  expect(start, "RULE_PROMOTIONS declaration not found in sunset.ts").toBeGreaterThan(-1);
-  const docStart = body.lastIndexOf("/**", start);
-  const end = body.indexOf("} as const;", start);
-  expect(end, "RULE_PROMOTIONS literal is not closed by `} as const;`").toBeGreaterThan(-1);
-  return body.slice(docStart === -1 ? start : docStart, end);
+  const decl = body.indexOf("export const RULE_PROMOTIONS");
+  expect(decl, "RULE_PROMOTIONS declaration not found in sunset.ts").toBeGreaterThan(-1);
+  const start = body.indexOf("{", decl);
+  const end = body.indexOf("} as const;", decl);
+  expect(start, "RULE_PROMOTIONS is not an object literal").toBeGreaterThan(-1);
+  expect(end, "RULE_PROMOTIONS literal is not closed by `} as const;`").toBeGreaterThan(start);
+  return body.slice(start + 1, end);
 }
 
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
@@ -126,7 +133,7 @@ describe("sunset ledger", () => {
 
     // The association is the promotion entry naming its code: `newRuleSeverity`
     // takes a version, so the key alone cannot carry `TDDLIST_EVIDENCE_EMPTY`.
-    const promotions = await readRulePromotionsBlock();
+    const promotions = await readRulePromotionEntries();
     const baseline = new Set(FINDING_CODES_BEFORE_PROMOTION_POLICY);
     const unregistered = [...codes]
       .filter((code) => !baseline.has(code) && !promotions.includes(code))
