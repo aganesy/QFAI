@@ -625,6 +625,85 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("removes the pre-symlink directory wrapper of a retired skill", async () => {
+    // Releases before the symlink recut copied `<integration>/<id>/SKILL.md`
+    // as a real directory. Pruning only symlinks left those behind on an
+    // upgrade straight from one of those releases: the name is not in the
+    // roster, so `ensureSymlink --force` never reaches it either, and the
+    // assistant went on loading a retired instruction after `--force`.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".codex", "skills", "qfai-spec");
+      await mkdir(stale, { recursive: true });
+      await writeFile(
+        path.join(stale, "SKILL.md"),
+        [
+          "---",
+          'name: "qfai-spec"',
+          "---",
+          "",
+          "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
+          "",
+          "- .qfai/assistant/skills/qfai-spec/SKILL.md",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project's own skill directory at a retired basename", async () => {
+    // The retired name alone does not say who wrote the directory. Only the
+    // delegation line to the canonical doc of the same id does, and a
+    // directory a project authored for itself carries none.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const own = path.join(root, ".claude", "skills", "qfai-spec");
+      await mkdir(own, { recursive: true });
+      await writeFile(path.join(own, "SKILL.md"), "our own spec skill\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(own, "SKILL.md"), "utf-8")).toBe("our own spec skill\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an oversized file at a legacy wrapper basename instead of reading it whole", async () => {
+    // Deciding whether to delete is not a reason to pull an arbitrary file
+    // into memory: a large log left at `qfai-spec.md` used to be read whole as
+    // one UTF-8 string, and init died before it wrote anything. Past the
+    // ceiling the ownership question is simply unanswered, so the file stays.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      // Genuine delegation line, but far past the ceiling the evidence read
+      // uses — the size is what decides, not the presence of the marker.
+      const body = `@.qfai/assistant/prompts/qfai-spec.md\n${"x".repeat(8192)}\n`;
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("replaces old non-symlink skill wrappers with symlinks on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

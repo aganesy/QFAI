@@ -1924,6 +1924,12 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
  * `.qfai/assistant/skills/<stem>/SKILL.md`) — 出荷された全世代の wrapper が
  * そうなっている。この参照が生成物である証拠であり、これを持たないファイルは
  * stem が一致しても触らない。
+ *
+ * 本文は {@link WRAPPER_EVIDENCE_MAX_BYTES} までしか読まない。出荷された
+ * wrapper はどの世代も 1 KB 未満だが、同名の通常ファイルが何であるかは
+ * こちらの都合ではない — 巨大なログや FIFO が `qfai-spec.md` に置かれていた
+ * とき、削除可否を判定するためだけに全内容を文字列へ展開すると init 全体が
+ * OOM で止まる。上限を超えるものは「所有権を証明できないもの」として残す。
  */
 async function isInitWrittenWrapper(dir: string, name: string, suffix: string): Promise<boolean> {
   if (!name.endsWith(suffix)) {
@@ -1934,11 +1940,8 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
     return false;
   }
 
-  let body: string;
-  try {
-    body = await readFile(path.join(dir, name), "utf-8");
-  } catch {
-    // 読めないものは「qfai が書いたと証明できないもの」であり、保存側に倒す。
+  const body = await readWrapperEvidence(path.join(dir, name));
+  if (body === null) {
     return false;
   }
 
@@ -1949,10 +1952,35 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
 }
 
 /**
+ * 所有権判定のために読む wrapper 本文の上限。
+ *
+ * 出荷実績のある wrapper は `.claude/commands/*.md` が 400 bytes 未満、
+ * skill wrapper の `SKILL.md` でも 1 KB 未満で、近傍の flattened-link 判定
+ * ({@link isFlattenedLink}) や修復 sidecar の復元が使う上限と同じ 4 KB あれば
+ * どの世代も丸ごと収まる。
+ */
+const WRAPPER_EVIDENCE_MAX_BYTES = 4096;
+
+/**
+ * 所有権判定用に、上限つきで読んだ本文。読めない / 上限超過なら `null`。
+ *
+ * `readPinnedRegularFile` と同じく、上限は lstat が見た inode ではなく実際に
+ * 読む inode に効く。ここでの失敗はすべて「qfai が書いたと証明できない」に
+ * 倒す — prune は削除であり、判定不能なら残すのが安全側。
+ */
+async function readWrapperEvidence(filePath: string): Promise<string | null> {
+  try {
+    return await readPinnedRegularFile(filePath, WRAPPER_EVIDENCE_MAX_BYTES);
+  } catch {
+    return null;
+  }
+}
+
+/**
  * かつて出荷され、いまの roster から外れた skill id。
  *
- * init が wrapper symlink を張るのは出荷 roster の skill だけなので、
- * 「出荷中」でも「引退済み」でもない名前のリンクは init の生成物ではない。
+ * init が wrapper を置くのは出荷 roster の skill だけなので、「出荷中」でも
+ * 「引退済み」でもない名前の entry は init の生成物ではない。
  * プロジェクトが自前の `.qfai/assistant/skills/my-skill/` を持つことは
  * 許可されており (`integrationSurface.ts` の `canonicalSkillIds` 参照)、
  * それを `.claude/skills/my-skill` から symlink するのは正当な運用なので、
@@ -1999,6 +2027,42 @@ async function linksIntoCanonicalSkills(
   return rel !== "" && !rel.startsWith("..") && !path.isAbsolute(rel);
 }
 
+/**
+ * その entry が init の置いた skill wrapper か — 形は世代によって二通りある。
+ *
+ * wrapper が symlink になったのは symlink recut 以降で、それ以前の init は
+ * `.codex/skills/<id>/SKILL.md` のような **実ディレクトリ** を配っていた。
+ * symlink だけを見ていると、recut 前の release から直接アップグレードした
+ * プロジェクトに残る引退済み wrapper
+ * (`qfai-spec/` など) が prune を素通りする — 名前が現 roster にないので
+ * {@link ensureSymlink} の上書きにも当たらず、`--force` 後も廃止済みの指示が
+ * アシスタントからロードできる状態で残ってしまう。
+ *
+ * ディレクトリ形式の所有権は `.claude/commands/` の wrapper と同じ基準
+ * ({@link isInitWrittenWrapper}) で決める: 配ってきた `SKILL.md` は例外なく
+ * 同じ id の canonical doc への委譲行を持つ。これを持たないディレクトリは
+ * プロジェクトが自分で作ったものなので、名前が引退済み id と衝突していても
+ * 触らない。
+ *
+ * 通常ファイルはどちらでもない。修復 sidecar (`qfai-atdd.qfai-repair-1234`)
+ * がそれで、prune は repair より先に走るため、消すと前回の失敗した修復が
+ * 残した唯一の控えを失うことになる。
+ */
+async function isInitWrittenSkillWrapper(
+  entry: Dirent,
+  entryPath: string,
+  canonicalSkillsDir: string,
+): Promise<boolean> {
+  if (entry.isSymbolicLink()) {
+    return linksIntoCanonicalSkills(entryPath, canonicalSkillsDir);
+  }
+  if (!entry.isDirectory()) {
+    return false;
+  }
+  const body = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
+  return body !== null && body.includes(`.qfai/assistant/skills/${entry.name}/SKILL.md`);
+}
+
 async function pruneStaleQfaiWrappers(
   destRoot: string,
   canonicalSkills: string[],
@@ -2033,23 +2097,16 @@ async function pruneStaleQfaiWrappers(
     }
     const entries = await readdir(fullDir, { withFileTypes: true });
     for (const entry of entries) {
-      // 修復 sidecar (`qfai-atdd.qfai-repair-1234`) は通常ファイルなので、
-      // symlink 限定の判定に切り替えた時点で対象外になる。prune は repair より
-      // 先に走るため、これを消すと前回の失敗した修復が残した唯一の控えを
-      // 失うことになる。
-      if (!entry.isSymbolicLink()) {
-        continue;
-      }
       if (canonical.has(entry.name)) {
         continue;
       }
-      // 出荷中でも引退済みでもない名前は init が wrapper を張った skill では
-      // ない — プロジェクトが自前の canonical skill へ張ったリンクなので残す。
+      // 出荷中でも引退済みでもない名前は init が wrapper を置いた skill では
+      // ない — プロジェクトが自前で用意したものなので残す。
       if (!RETIRED_SKILL_IDS.has(entry.name)) {
         continue;
       }
       const entryPath = path.join(fullDir, entry.name);
-      if (!(await linksIntoCanonicalSkills(entryPath, canonicalSkillsDir))) {
+      if (!(await isInitWrittenSkillWrapper(entry, entryPath, canonicalSkillsDir))) {
         continue;
       }
 
