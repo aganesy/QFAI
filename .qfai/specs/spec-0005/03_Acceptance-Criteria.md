@@ -42,7 +42,7 @@ Scenario: --run-validate で内部バリデーション実行
 Scenario: validate.json 不在時のエラー
   Given validate.json が存在しない
   When `qfai report` を実行する
-  Then "入力ファイルが見つかりません" エラーメッセージが表示される
+  Then "qfai report: input file not found" エラーメッセージが表示される
   And exit code 2 で終了する
 ```
 

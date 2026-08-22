@@ -48,7 +48,8 @@ log grep / alert rule / runbook が言語を場合分けせずに済む。
 
 > **Known gap:** `src/core/validators/**` には英語化が済んでいない
 > finding message が残っている。既存メッセージの移行は段階的に行うが、
-> 新規追加は上記の規定に従う。
+> 新規追加は上記の規定に従う。移行途中のファイルは meta-test の
+> baseline で ratchet されており、baseline を超える追加は CI で落ちる。
 
 ## Severity Decision Matrix
 
