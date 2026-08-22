@@ -16,12 +16,22 @@
  * if absent so a clean project can run `qfai handoff upgrade` without
  * a preparatory `mkdir`.
  */
-import { mkdir, readFile, stat, writeFile, rename, unlink } from "node:fs/promises";
+import {
+  constants as fsConstants,
+  copyFile,
+  link,
+  lstat,
+  mkdir,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
-import { isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import { HANDOFF_MINIMUM_FIELDS } from "../../core/schemas/handoff.js";
 import { error as logError, info as logInfo } from "../lib/logger.js";
 
@@ -48,7 +58,7 @@ export type HandoffUpgradeOptions = {
   /**
    * Allow overwriting an EXISTING canonical destination. Without it the
    * run is refused (the canonical handoff is a consumed SSOT, not
-   * scratch output). With it, the prior file is renamed to
+   * scratch output). With it, the prior file is copied to
    * `<dest>.backup-<ISO>` before the new content lands.
    */
   force?: boolean;
@@ -190,14 +200,20 @@ function toYaml(canonical: Record<string, string>, legacy: Record<string, unknow
 }
 
 /**
- * True iff `p` exists. A non-ENOENT `stat` failure (EACCES / EPERM /
- * EBUSY) leaves existence undecidable, so we fail CLOSED and report
- * "exists": the caller then refuses the destructive write instead of
- * renaming over a file it could not inspect.
+ * True iff a directory entry exists at `p`. `lstat` (not `stat`) is
+ * deliberate: a canonical handoff that is a symlink whose target is
+ * temporarily missing is still an entry the operator placed on purpose
+ * — `stat` would follow it, report ENOENT, and let a non-`--force` run
+ * replace the link and sever the connection to the external handoff.
+ *
+ * A non-ENOENT failure (EACCES / EPERM / EBUSY) leaves existence
+ * undecidable, so we fail CLOSED and report "exists": the caller then
+ * refuses the destructive write instead of renaming over a file it
+ * could not inspect.
  */
 async function destinationExists(p: string): Promise<boolean> {
   try {
-    await stat(p);
+    await lstat(p);
     return true;
   } catch (err: unknown) {
     return !isEnoent(err);
@@ -210,6 +226,28 @@ async function destinationExists(p: string): Promise<boolean> {
  */
 function toRelPosix(root: string, abs: string): string {
   return path.relative(root, abs).replace(/\\/g, "/");
+}
+
+/**
+ * Quote a path for the copy-pasteable command hints. Plain paths are
+ * emitted bare; anything carrying shell-significant characters (spaces
+ * above all) is double-quoted with the inner specials escaped.
+ */
+function quoteArg(value: string): string {
+  return /^[A-Za-z0-9._:@/\\-]+$/.test(value) ? value : `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+}
+
+/**
+ * The re-run hint printed by the refusal and by `--dry-run`. The
+ * RESOLVED root is always included: the command may have been invoked
+ * from another directory (`--root /path/to/project`, or a config root
+ * discovered above the cwd), and a hint that omitted it would resolve
+ * the legacy source and the destination against whatever the reader's
+ * cwd happens to be — up to and including a different project's
+ * canonical handoff.
+ */
+function forceHint(root: string, legacyFile: string): string {
+  return `qfai handoff upgrade ${quoteArg(legacyFile)} --root ${quoteArg(root)} --force`;
 }
 
 /**
@@ -239,7 +277,7 @@ function reportDryRun(args: {
   if (args.destExists && !args.force) {
     args.write(
       `  a real run would be REFUSED: ${destRel} already exists. ` +
-        `Re-invoke with \`qfai handoff upgrade ${args.legacyFile} --force\` to overwrite ` +
+        `Re-invoke with \`${forceHint(args.root, args.legacyFile)}\` to overwrite ` +
         `(the existing file is backed up to ${destRel}.backup-<ISO> first).`,
     );
   } else if (args.destExists) {
@@ -289,13 +327,135 @@ async function removeQuietly(p: string): Promise<void> {
 /** Outcome of the staged write. `backupRel` names the file we preserved. */
 type CommitResult = { ok: true; backupRel: string | null } | { ok: false; message: string };
 
+/** True iff `err` is a Node fs error reporting an already-existing target. */
+function isEexist(err: unknown): boolean {
+  return hasErrnoCode(err) && err.code === "EEXIST";
+}
+
 /**
- * Stage → back up → rename. The prior canonical file (when one exists
- * and `--force` was given) is renamed to `<dest>.backup-<ISO>` BEFORE
- * the staged content lands, so an operator's hand-curated handoff is
- * always recoverable from disk rather than only from git. Every failure
- * path fails closed: the staged file is removed and, if the backup
- * rename already happened, it is restored over the destination.
+ * Copy the current canonical handoff to an EXCLUSIVELY reserved backup
+ * name and return that name — or `null` when there was nothing to copy.
+ *
+ * The destination is *copied*, never moved: the canonical path keeps a
+ * readable file for the whole operation, so a concurrent reader (e.g.
+ * `qfai validate`) never observes ENOENT and a crash mid-upgrade cannot
+ * leave the canonical path missing. The final `rename` then replaces it
+ * atomically.
+ *
+ * `COPYFILE_EXCL` makes the name reservation itself exclusive (the
+ * underlying `open` carries `O_EXCL`), and a taken name is retried with
+ * a `-N` discriminator: two `--force` runs landing in the same
+ * millisecond pick the same ISO stamp, and a plain copy would let the
+ * second silently destroy the first run's backup — the oldest canonical
+ * handoff, unrecoverable.
+ *
+ * A missing source (`ENOENT`) means the entry was a dangling symlink or
+ * vanished under us: there are no bytes to preserve, so the caller
+ * proceeds with no backup rather than failing an explicitly forced run.
+ */
+async function backupExclusively(destAbs: string): Promise<string | null> {
+  const base = `${destAbs}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidate = attempt === 0 ? base : `${base}-${attempt}`;
+    try {
+      await copyFile(destAbs, candidate, fsConstants.COPYFILE_EXCL);
+      return candidate;
+    } catch (err: unknown) {
+      if (isEnoent(err)) return null;
+      if (!isEexist(err)) throw err;
+    }
+  }
+  throw new Error(`could not reserve an unused backup name near ${base}`);
+}
+
+/**
+ * Place the staged file at `destAbs` without ever replacing an entry
+ * that appeared after the existence probe.
+ *
+ * `link` is the exclusive primitive here: it fails with `EEXIST` rather
+ * than clobbering, so the probe-then-place window cannot silently
+ * destroy a canonical handoff another process created in the meantime
+ * (`rename` would replace it unconditionally — no refusal, no backup).
+ * Filesystems that reject hard links outright degrade to `rename`,
+ * which keeps the command usable there at the cost of the exclusivity
+ * guarantee.
+ */
+async function placeExclusively(stagedPath: string, destAbs: string): Promise<"placed" | "exists"> {
+  try {
+    await link(stagedPath, destAbs);
+  } catch (err: unknown) {
+    if (isEexist(err)) return "exists";
+    await rename(stagedPath, destAbs);
+    return "placed";
+  }
+  await removeQuietly(stagedPath);
+  return "placed";
+}
+
+/**
+ * Placement when the probe found NO destination. The existence check
+ * and the placement are one exclusive operation, so a canonical handoff
+ * created by another process in between is refused here rather than
+ * overwritten without a backup.
+ */
+async function commitFresh(
+  root: string,
+  destAbs: string,
+  stagedPath: string,
+): Promise<CommitResult> {
+  try {
+    if ((await placeExclusively(stagedPath, destAbs)) === "exists") {
+      await removeQuietly(stagedPath);
+      return {
+        ok: false,
+        message:
+          `${toRelPosix(root, destAbs)} was created while this upgrade was running; ` +
+          `nothing was overwritten. Re-run with --force to replace it.`,
+      };
+    }
+  } catch (err: unknown) {
+    await removeQuietly(stagedPath);
+    return { ok: false, message: describeError(err) };
+  }
+  return { ok: true, backupRel: null };
+}
+
+/**
+ * Placement under `--force`: reserve a backup name and COPY the prior
+ * file into it, then replace the destination with one atomic `rename`.
+ */
+async function commitOverExisting(
+  root: string,
+  destAbs: string,
+  stagedPath: string,
+): Promise<CommitResult> {
+  let backupAbs: string | null;
+  try {
+    backupAbs = await backupExclusively(destAbs);
+  } catch (err: unknown) {
+    await removeQuietly(stagedPath);
+    return {
+      ok: false,
+      message: `could not back up the existing canonical handoff (${describeError(err)}); nothing was overwritten`,
+    };
+  }
+  try {
+    await rename(stagedPath, destAbs);
+  } catch (err: unknown) {
+    await removeQuietly(stagedPath);
+    // The destination was copied, not moved, so it still holds the
+    // operator's bytes — the backup copy is redundant noise.
+    if (backupAbs !== null) await removeQuietly(backupAbs);
+    return { ok: false, message: describeError(err) };
+  }
+  return { ok: true, backupRel: backupAbs === null ? null : toRelPosix(root, backupAbs) };
+}
+
+/**
+ * Stage → back up → place. An operator's hand-curated handoff is always
+ * recoverable from disk rather than only from git, and every failure
+ * path fails closed: the staged file is removed and the destination is
+ * left exactly as it was found.
  */
 async function commitCanonicalWrite(args: {
   root: string;
@@ -311,39 +471,20 @@ async function commitCanonicalWrite(args: {
     await removeQuietly(stagedPath);
     return { ok: false, message: describeError(err) };
   }
-  let backupAbs: string | null = null;
-  if (args.destExists) {
-    const candidate = `${args.destAbs}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
-    try {
-      await rename(args.destAbs, candidate);
-      backupAbs = candidate;
-    } catch (err: unknown) {
-      await removeQuietly(stagedPath);
-      return {
-        ok: false,
-        message: `could not back up the existing canonical handoff (${describeError(err)}); nothing was overwritten`,
-      };
-    }
-  }
-  try {
-    await rename(stagedPath, args.destAbs);
-  } catch (err: unknown) {
-    await removeQuietly(stagedPath);
-    if (backupAbs !== null) {
-      // Put the operator's file back where it was.
-      await rename(backupAbs, args.destAbs).catch(() => undefined);
-    }
-    return { ok: false, message: describeError(err) };
-  }
-  return { ok: true, backupRel: backupAbs === null ? null : toRelPosix(args.root, backupAbs) };
+  return args.destExists
+    ? commitOverExisting(args.root, args.destAbs, stagedPath)
+    : commitFresh(args.root, args.destAbs, stagedPath);
 }
 
 /**
  * Run the upgrade. Two-stage write: stage to a `.tmp` sibling via
- * `writeFile`, then `rename` over the canonical destination — POSIX
- * rename within the same directory is atomic at the directory-entry
- * level, so readers either see the old file or the new file (never a
- * partial write). Note this does NOT include an explicit `fsync` —
+ * `writeFile`, then publish it over the canonical destination — `link`
+ * when the destination was absent (exclusive: an entry that appeared in
+ * the meantime is refused, not clobbered), `rename` when `force` is
+ * replacing a known file. Both are atomic at the directory-entry level,
+ * so readers either see the old file or the new file (never a partial
+ * write), and the `force` backup is a COPY so the canonical path never
+ * goes missing. Note this does NOT include an explicit `fsync` —
  * `writeFile` closes its file descriptor but does not flush the page
  * cache, so a power-loss between the `writeFile` return and the
  * `rename` could lose the staged content. The current contract is
@@ -420,7 +561,7 @@ export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise
   if (destExists && !force) {
     writeErr(
       `qfai handoff upgrade: ${destRel} already exists. Overwriting it would discard the ` +
-        `current canonical handoff. Re-invoke with \`qfai handoff upgrade ${options.legacyFile} --force\` ` +
+        `current canonical handoff. Re-invoke with \`${forceHint(options.root, options.legacyFile)}\` ` +
         `to back it up to ${destRel}.backup-<ISO> and overwrite, or delete the file manually ` +
         `if it is no longer needed.`,
     );

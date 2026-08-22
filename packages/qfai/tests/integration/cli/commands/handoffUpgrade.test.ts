@@ -8,7 +8,17 @@
  */
 // QFAI:SPEC-0015:TC-0015-0030
 
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  readlink,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -279,10 +289,14 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect(code).toBe(1);
     // The curated file is byte-identical.
     await expect(readFile(destAbs, "utf-8")).resolves.toBe(CURATED);
-    // The refusal names the existing path AND the recovery hint.
+    // The refusal names the existing path AND the recovery hint. The
+    // hint carries the RESOLVED root: copied from another directory it
+    // would otherwise resolve against the reader's cwd — a different
+    // project's canonical handoff.
     const message = errs.join("\n");
     expect(message).toMatch(/\.qfai\/handoff\.yaml already exists/);
-    expect(message).toMatch(/qfai handoff upgrade legacy-old\.yml --force/);
+    expect(message).toMatch(/qfai handoff upgrade legacy-old\.yml --root \S+ --force/);
+    expect(message).toContain(root);
     // No staged remnant is left behind.
     await expect(readFile(`${destAbs}.tmp`, "utf-8")).rejects.toThrow();
     expect(out).toEqual([]);
@@ -323,6 +337,73 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     await expect(readFile(path.join(root, ".qfai", backupName), "utf-8")).resolves.toBe(CURATED);
     // The success line names the backup so the operator can find it.
     expect(out.join("\n")).toMatch(/backed up to \.qfai\/handoff\.yaml\.backup-/);
+  });
+
+  // A canonical handoff that is a symlink pointing at an external file
+  // is still an entry the operator placed on purpose. `stat` follows
+  // the link and reports ENOENT while the target is missing, which
+  // would let a plain run replace the link and sever the connection —
+  // the existence probe must use `lstat`.
+  it("refuses a dangling symlink destination without --force", async () => {
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    await symlink(path.join(root, "external", "handoff.yaml"), destAbs, "file");
+    await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    expect(errs.join("\n")).toMatch(/\.qfai\/handoff\.yaml already exists/);
+    // The link itself survives, still pointing at the external file.
+    expect((await lstat(destAbs)).isSymbolicLink()).toBe(true);
+    expect(await readlink(destAbs)).toBe(path.join(root, "external", "handoff.yaml"));
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  // Two `--force` runs landing in the same millisecond derive the same
+  // `.backup-<ISO>` name. A plain rename/copy would let the second
+  // destroy the first run's backup — the only on-disk copy of the
+  // hand-curated file. The name must be reserved exclusively.
+  it("reserves a distinct backup name when two --force runs share a timestamp", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-05-27T12:00:00.000Z"));
+    try {
+      const destAbs = await seedCanonicalAndLegacy();
+      const firstCode = await runHandoffUpgrade({
+        root,
+        legacyFile: "legacy-old.yml",
+        force: true,
+        write: () => undefined,
+        writeErr: () => undefined,
+      });
+      expect(firstCode).toBe(0);
+      const afterFirst = await readFile(destAbs, "utf-8");
+      const secondCode = await runHandoffUpgrade({
+        root,
+        legacyFile: "legacy-old.yml",
+        force: true,
+        write: () => undefined,
+        writeErr: () => undefined,
+      });
+      expect(secondCode).toBe(0);
+      const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+        n.startsWith("handoff.yaml.backup-"),
+      );
+      // Same frozen clock, two backups — the second did not overwrite
+      // the first.
+      expect(backups).toHaveLength(2);
+      const bodies = await Promise.all(
+        backups.map((n) => readFile(path.join(root, ".qfai", n), "utf-8")),
+      );
+      expect(bodies).toContain(CURATED);
+      expect(bodies).toContain(afterFirst);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("honours --dry-run: nothing is written and the preview names the refusal", async () => {
