@@ -146,6 +146,110 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("ignores a fenced sample of the catalogue table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002", "CAP-0003": "spec-0003" },
+        undefined,
+        {
+          trailer: [
+            "## How to fill this in",
+            "",
+            "```markdown",
+            "| CAP ID | Statement | Success metrics | Notes | Spec |",
+            "| ------ | --------- | --------------- | ----- | ---- |",
+            "| CAP-0002 | <what> | <metric> | <note> | spec-9999 |",
+            "```",
+          ],
+        },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("numbers rows by catalogue position, not by a CAP quoted in an earlier cell", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // CAP-0001's Notes points at CAP-0003, which a document-wide first-
+      // appearance scan would number second and re-point spec-0002/spec-0003.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002", "CAP-0003": "spec-0003" },
+        { "CAP-0001": "see CAP-0003" },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("checks a row whose CAP ID is written with Markdown decoration", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002", "CAP-0003": "spec-9999" },
+        undefined,
+        { capCells: { "CAP-0002": "`CAP-0002`", "CAP-0003": "[CAP-0003](./cap.md)" } },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0003", "spec-9999", "spec-0003"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports a broken Parent when the row declares no spec position", async () => {
+    const cases: Array<{ cell: string; declared: string }> = [
+      { cell: "", declared: "(未宣言)" },
+      { cell: "spec-123", declared: "spec-123" },
+    ];
+    for (const { cell, declared } of cases) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        // A blank or malformed cell claims no other row, so it is no evidence
+        // the row moved and the broken Parent below it stays independent damage.
+        await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+          "CAP-0001": "spec-0001",
+          "CAP-0002": "spec-0002",
+          "CAP-0003": cell,
+        });
+        await seedSpec(root, "0001", "CAP-0001");
+        await seedSpec(root, "0002", "CAP-0002");
+        await seedSpec(root, "0003", "CAP-0007");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106", "QFAI-SPLIT-105"]);
+        expect(issues[0]?.refs).toEqual(["CAP-0003", declared, "spec-0003"]);
+        expect(issues[1]?.refs).toEqual(["spec-0003", "CAP-0003"]);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
   it("reads the Spec column past an escaped pipe in an earlier cell", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -225,6 +329,7 @@ async function seedPolicies(
   capIds: string[],
   declaredSpecs?: Record<string, string>,
   notes?: Record<string, string>,
+  extras?: { capCells?: Record<string, string>; trailer?: string[] },
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -234,7 +339,8 @@ async function seedPolicies(
     .map((capId) => {
       const specCell = declaredSpecs ? ` ${declaredSpecs[capId] ?? ""} |` : "";
       const note = notes?.[capId] ?? "note";
-      return `| ${capId} | capability | metric | ${note} |${specCell}`;
+      const capCell = extras?.capCells?.[capId] ?? capId;
+      return `| ${capCell} | capability | metric | ${note} |${specCell}`;
     })
     .join("\n");
   await writeFile(
@@ -249,6 +355,8 @@ async function seedPolicies(
         ? "| ------ | --------- | --------------- | ----- | ---- |"
         : "| ------ | --------- | --------------- | ----- |",
       capLines,
+      "",
+      ...(extras?.trailer ?? []),
       "",
     ].join("\n"),
     "utf-8",
