@@ -586,10 +586,7 @@ export async function createReportData(
   // Whatever the delta scan's own waiver pass suppressed belongs in the same
   // totals: a suppression the report never reports is a waiver the operator
   // cannot see working.
-  const suppressedWaivers = mergeSuppressedWaivers(
-    waiverState.suppressed,
-    deltaScan.suppressed,
-  );
+  const suppressedWaivers = mergeSuppressedWaivers(waiverState.suppressed, deltaScan.suppressed);
   const expiredWaivers = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-WAIVER-003")
     .map((item) => toReportRuleFinding(item));
