@@ -3,52 +3,92 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
+import { type MarkdownTable, parseAllMarkdownTables } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const CAP_ID_HEADER_RE = /^cap\s*id$/i;
 
-function splitTableRow(line: string): string[] {
-  return line
-    .replace(/^\|/, "")
-    .replace(/\|$/, "")
-    .split("|")
-    .map((cell) => cell.trim());
+/**
+ * Matches the template heading `## CAP Catalog` (and a single parenthesised
+ * qualifier such as `## CAP Catalog (required)` / `（必須）`), and nothing
+ * else. `## CAP Catalog Notes` documents the catalog — it is not the catalog.
+ */
+const CAP_CATALOG_HEADING = /^ {0,3}(#{1,6})\s*cap\s*catalog\s*(?:\([^)]*\)|（[^）]*）)?\s*$/i;
+
+/** Any ATX heading, with the 0-3 leading spaces CommonMark permits. */
+const ANY_HEADING = /^ {0,3}(#{1,6})\s+\S/;
+
+/**
+ * Body of the `## CAP Catalog` section, or `null` when the document has no
+ * such heading. The section ends at the next heading of the same or a higher
+ * level, mirroring `extractTestCaseTableSection`.
+ */
+function extractCapCatalogSection(text: string): string | null {
+  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const start = lines.findIndex((line) => CAP_CATALOG_HEADING.test(line));
+  if (start === -1) {
+    return null;
+  }
+  const level = (CAP_CATALOG_HEADING.exec(lines[start] ?? "")?.[1] ?? "#").length;
+
+  let end = lines.length;
+  for (let index = start + 1; index < lines.length; index += 1) {
+    const match = ANY_HEADING.exec(lines[index] ?? "");
+    if (match && (match[1] ?? "").length <= level) {
+      end = index;
+      break;
+    }
+  }
+  return lines.slice(start + 1, end).join("\n");
+}
+
+function hasCapIdColumn(table: MarkdownTable): boolean {
+  return table.headers.some((header) => CAP_ID_HEADER_RE.test(header));
+}
+
+/**
+ * The one table whose row order defines the CAP -> spec-NNNN assignment.
+ *
+ * Section-first: when `## CAP Catalog` exists only that section is searched,
+ * so a second table elsewhere in the document (a reference matrix, an owner
+ * list) cannot contribute rows. Without the heading — older policy files — the
+ * first `CAP ID`-bearing table anywhere in the document is used, and failing
+ * that the first table at all, which is what the column-0 default assumes.
+ */
+function resolveCatalogTable(text: string): MarkdownTable | null {
+  const section = extractCapCatalogSection(text);
+  const tables = parseAllMarkdownTables(section ?? text);
+  return tables.find(hasCapIdColumn) ?? tables[0] ?? null;
 }
 
 /** CAP Catalog テーブルの `CAP ID` 列位置。見出しが無ければ先頭列とみなす。 */
-function findCapIdColumn(rows: string[][]): number {
-  for (const cells of rows) {
-    const index = cells.findIndex((cell) => CAP_ID_HEADER_RE.test(cell));
-    if (index >= 0) {
-      return index;
-    }
-  }
-  return 0;
+function findCapIdColumn(headers: string[]): number {
+  const index = headers.findIndex((header) => CAP_ID_HEADER_RE.test(header));
+  return index >= 0 ? index : 0;
 }
 
 /**
  * CAP Catalog テーブルの各行から `CAP ID` セルの CAP を行順に取り出す。
- * 表の外の地の文や `Notes` セルの CAP 参照は spec-NNNN の割り当て順に
- * 参加させない。テーブルから 1 件も取れない場合のみ、旧挙動である
+ * 表の外の地の文、`Notes` セルの CAP 参照、CAP Catalog 節の外にある別の表は
+ * spec-NNNN の割り当て順に参加させない。行の分割は `splitMarkdownRow`
+ * (`parseAllMarkdownTables` 経由) に任せるので、セル内のエスケープ済み `\|`
+ * で列位置がずれることはない。テーブルから 1 件も取れない場合のみ、旧挙動である
  * ファイル全体走査に落とす (箇条書きだけで CAP を並べた既存プロジェクト用)。
  */
 function extractCatalogCapIds(text: string): string[] {
-  const rows = text
-    .replace(/\r\n/g, "\n")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter((line) => line.startsWith("|"))
-    .map(splitTableRow);
-  const capIdColumn = findCapIdColumn(rows);
+  const table = resolveCatalogTable(text);
   const capIds: string[] = [];
-  for (const cells of rows) {
-    const [capId] = uniqueMatches(cells[capIdColumn] ?? "", CAP_ID_RE);
-    if (!capId || capIds.includes(capId)) {
-      continue;
+  if (table) {
+    const capIdColumn = findCapIdColumn(table.headers);
+    for (const cells of table.rows) {
+      const [capId] = uniqueMatches(cells[capIdColumn] ?? "", CAP_ID_RE);
+      if (!capId || capIds.includes(capId)) {
+        continue;
+      }
+      capIds.push(capId);
     }
-    capIds.push(capId);
   }
   return capIds.length > 0 ? capIds : uniqueMatches(text, CAP_ID_RE);
 }

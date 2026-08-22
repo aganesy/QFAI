@@ -59,6 +59,57 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("ignores a table that sits outside the CAP Catalog section", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], {
+        trailingSection: [
+          "## Related capabilities (reference)",
+          "",
+          "| CAP ID   | Owner |",
+          "| -------- | ----- |",
+          "| CAP-9999 | ops   |",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps column positions when an earlier cell holds an escaped pipe", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"]);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| Statement           | CAP ID   | Notes |",
+          "| ------------------- | -------- | ----- |",
+          "| grep foo \\| wc -l  | CAP-0001 | note  |",
+          "| plain statement     | CAP-0002 | note  |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("falls back to whole-file CAP order when the catalog has no table", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -150,7 +201,7 @@ describe("v1.4.36 layered validators", () => {
 async function seedPolicies(
   root: string,
   capIds: string[],
-  options: { prose?: string; notes?: Record<string, string> } = {},
+  options: { prose?: string; notes?: Record<string, string>; trailingSection?: string[] } = {},
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -169,6 +220,8 @@ async function seedPolicies(
       "| CAP ID | Statement | Success metrics | Notes |",
       "| ------ | --------- | --------------- | ----- |",
       capLines,
+      "",
+      ...(options.trailingSection ?? []),
       "",
     ].join("\n"),
     "utf-8",
