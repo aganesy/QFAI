@@ -75,7 +75,10 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "report",
     lines: [
-      `${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = 入力 validate.json の欠落 (--in / config 既定)`,
+      `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.findings} = 入力 validate.json の破損 / スキーマ不正, または実行時エラー`,
+      "      (読み込み・出力の I/O 失敗),",
+      `${EXIT_CODES.inputError} = 入力 validate.json の欠落 (--in / config 既定)`,
     ],
   },
   {
@@ -92,7 +95,9 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "prototyping iterate --check-convergence",
     lines: [
-      `${EXIT_CODES.ok} = 収束済み, ${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む)`,
+      `${EXIT_CODES.ok} = 収束済み,`,
+      `${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む),`,
+      `      または --cycle 範囲エラー (0..9 以外は peek せず入力エラーとして停止)`,
     ],
   },
   {
@@ -118,9 +123,15 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   },
 ];
 
-const USAGE_ERROR_NOTE =
+const USAGE_ERROR_NOTE = [
   `  ※ 使用法エラーは guardrails のみ ${EXIT_CODES.inputError}、` +
-  `他コマンドは ${EXIT_CODES.findings} を返す (既存互換のための差異)。`;
+    `他コマンドは ${EXIT_CODES.findings} を返す (既存互換のための差異)。`,
+  // 未知オプションはパーサの default 分岐で読み飛ばされる (args.ts)。
+  // 挙動を変えると positional / 将来フラグの互換に波及するため、当面は
+  // 「終了コードでは検出できない」ことを明示する側で穴を塞ぐ。
+  `  ※ 未知のオプション (例: --typo) は無視されるため、コマンド本体が成功すれば ${EXIT_CODES.ok} を返す。`,
+  "     オプション名の誤記は終了コードでは検出できない (未知の *コマンド* 名は使用法エラー扱い)。",
+].join("\n");
 
 /** CJK punctuation / kana / ideographs / fullwidth forms. */
 const FULL_WIDTH_RE = /[\u3000-\u30ff\u3400-\u9fff\uff01-\uff60]/u;

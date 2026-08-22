@@ -1,9 +1,11 @@
-import { readFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { parseArgs } from "../../src/cli/lib/args.js";
 import { EXIT_CODES, formatExitCodesSection } from "../../src/cli/lib/exitCodes.js";
 import { run } from "../../src/cli/main.js";
 
@@ -32,8 +34,20 @@ async function captureHelp(): Promise<string> {
 }
 
 describe("qfai --help exit-code section", () => {
-  afterEach(() => {
+  const tempDirs: string[] = [];
+
+  afterEach(async () => {
     vi.restoreAllMocks();
+    // Best-effort cleanup: a leftover temp dir must not fail the suite.
+    await Promise.all(
+      tempDirs.splice(0).map(async (dir) => {
+        try {
+          await rm(dir, { recursive: true, force: true });
+        } catch {
+          // ignore
+        }
+      }),
+    );
   });
 
   it("renders an Exit codes: block that names every code the CLI returns", async () => {
@@ -73,7 +87,7 @@ describe("qfai --help exit-code section", () => {
     // report / show-spec exit 2 on a missing or unreadable input file — the
     // catch-all "1 = 使用法エラー" row would misreport them.
     expect(section).toMatch(
-      new RegExp(`report\\s+${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} =`),
+      new RegExp(`report\\s+${EXIT_CODES.ok} = 成功,[\\s\\S]*?${EXIT_CODES.inputError} = 入力`),
     );
     expect(section).toMatch(
       new RegExp(`prototyping show-spec\\s+${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} =`),
@@ -123,6 +137,68 @@ describe("qfai --help exit-code section", () => {
     // `shouldStop()` never inspects review.json#sessionStatus, so 64 from
     // `prototyping iterate` is always convergence today.
     expect(section).not.toMatch(/hard-stop/i);
+  });
+
+  it("documents report's 1 for a corrupt input file, not only the missing-file 2", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const reportRow = section.slice(
+      section.indexOf("\n  report"),
+      section.indexOf("prototyping iterate"),
+    );
+
+    // A corrupt / schema-invalid validate.json throws out of runReport, and
+    // cli/index.ts turns any throw into exit 1 — the row has to say so.
+    expect(reportRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 入力 validate.json の破損`));
+  });
+
+  it("rejects a corrupt validate.json instead of exiting 0 or 2", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-report-corrupt-"));
+    tempDirs.push(dir);
+    const inputPath = path.join(dir, "validate.json");
+    await writeFile(inputPath, "{ not json", "utf-8");
+
+    // The throw is what cli/index.ts maps to exit 1; the row now names it.
+    await expect(run(["report", "--root", dir, "--in", inputPath], dir)).rejects.toBeInstanceOf(
+      Error,
+    );
+  });
+
+  it("separates the --check-convergence cycle-range error from 未収束", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
+
+    expect(peekRow).toContain("--cycle 範囲エラー");
+  });
+
+  it("returns the input-error code for an out-of-range --check-convergence cycle", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-peek-range-"));
+    tempDirs.push(dir);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      await run(
+        ["prototyping", "iterate", "--check-convergence", "--cycle", "10", "--root", dir],
+        dir,
+      );
+      expect(process.exitCode).toBe(EXIT_CODES.inputError);
+    } finally {
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it("warns that an unknown option is ignored rather than reported by exit code", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    // parseArgs drops an unrecognized flag in its `default` branch, so the
+    // usage-error note would otherwise promise a 1 that never arrives.
+    const parsed = parseArgs(["validate", "--typo"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+
+    expect(section).toContain("未知のオプション");
+    expect(section).toMatch(new RegExp(`未知のオプション[\\s\\S]*?${EXIT_CODES.ok} を返す`));
   });
 
   it("keeps the rendered section in sync with the EXIT_CODES constants", () => {
