@@ -197,6 +197,28 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("rejects a catalogue row whose CAP cell names several IDs", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The row claims one position for two capabilities. It is left out of the
+      // numbering, so every other check balances and only 108 reports it.
+      await seedPolicies(root, ["CAP-0001"], undefined, undefined, {
+        trailer: ["| CAP-0002 / CAP-0003 | capability | metric | note |"],
+        trailerJoinsTable: true,
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-108"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0002", "CAP-0003"]);
+      expect(issues[0]?.file).toBe(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("reads only the table inside the CAP Catalog section", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -392,6 +414,8 @@ async function seedPolicies(
     capCells?: Record<string, string>;
     leader?: string[];
     trailer?: string[];
+    /** Append the trailer straight onto the catalogue table, with no blank line. */
+    trailerJoinsTable?: boolean;
     catalogHeading?: boolean;
   },
 ): Promise<void> {
@@ -421,8 +445,9 @@ async function seedPolicies(
         ? "| ------ | --------- | --------------- | ----- | ---- |"
         : "| ------ | --------- | --------------- | ----- |",
       capLines,
+      ...(extras?.trailerJoinsTable ? (extras.trailer ?? []) : []),
       "",
-      ...(extras?.trailer ?? []),
+      ...(extras?.trailerJoinsTable ? [] : (extras?.trailer ?? [])),
       "",
     ].join("\n"),
     "utf-8",

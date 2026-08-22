@@ -1501,6 +1501,9 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // A renumber has to travel to every inbound reference, or the old ID keeps
     // resolving — to the spec that took over the position.
     expect(content).toMatch(/Superseded-by:/);
+    // Renumbering a published spec is a SUPERSEDE, not a directory rename, so
+    // the template routes a late capability to the end of the catalogue.
+    expect(content).toMatch(/still unpublished/i);
   });
 
   it("ensures solution-architect agent contains required contract constraints", async () => {

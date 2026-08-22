@@ -41,6 +41,8 @@ type CapCatalogue = {
   hasSpecColumn: boolean;
   /** Data rows of the confirmed CAP catalogue table(s), in table order. */
   rows: CapCatalogueRow[];
+  /** CAP cells naming several IDs, so no single row position can be attributed. */
+  ambiguousRows: string[][];
 };
 
 /**
@@ -81,8 +83,9 @@ function readCatalogueRows(
   window: { start: number; end: number },
   capColumn: number,
   specColumn: number,
-): CapCatalogueRow[] {
+): Pick<CapCatalogue, "rows" | "ambiguousRows"> {
   const rows: CapCatalogueRow[] = [];
+  const ambiguousRows: string[][] = [];
   for (let index = window.start; index < window.end; index += 1) {
     const line = lines[index] ?? "";
     if (!looksLikeTableRow(line)) {
@@ -93,15 +96,22 @@ function readCatalogueRows(
     }
     const cells = splitMarkdownRow(line);
     const [capId, ...extraCapIds] = uniqueMatches(cells[capColumn] ?? "", CAP_ID_RE);
-    if (capId === undefined || extraCapIds.length > 0) {
-      // Not a capability row: the CAP column names no ID, or names several so
-      // the row cannot be attributed to one. Skipping keeps the numbering of
-      // the rows that do name exactly one CAP intact.
+    if (extraCapIds.length > 0) {
+      // Several IDs on one row: the row claims one position for two
+      // capabilities, so it is kept out of the numbering below and reported
+      // instead — swallowing it would leave a capability mapped to no spec
+      // while every count still balanced.
+      ambiguousRows.push(capId === undefined ? extraCapIds : [capId, ...extraCapIds]);
+      continue;
+    }
+    if (capId === undefined) {
+      // Not a capability row: the CAP column names no ID at all. Skipping keeps
+      // the numbering of the rows that do name exactly one CAP intact.
       continue;
     }
     rows.push({ capId, specCell: specColumn >= 0 ? (cells[specColumn] ?? "") : "" });
   }
-  return rows;
+  return { rows, ambiguousRows };
 }
 
 /**
@@ -150,11 +160,11 @@ function parseCapCatalogue(markdown: string): CapCatalogue {
     const specColumn = header.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell));
     return {
       hasSpecColumn: specColumn >= 0,
-      rows: readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
+      ...readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
     };
   }
 
-  return { hasSpecColumn: false, rows: [] };
+  return { hasSpecColumn: false, rows: [], ambiguousRows: [] };
 }
 
 function normalizeDeclaredSpecCell(cell: string): string {
@@ -242,6 +252,23 @@ export async function validateSpecSplitByCapability(
       ),
     );
     return issues;
+  }
+
+  // A row whose CAP cell names several IDs was left out of the numbering, so
+  // without this its capabilities map to no spec at all while the count, the
+  // Spec column and every Parent still balance — and `validateOrphanProhibition`
+  // collects both IDs from the document, so a US parented on one is accepted too.
+  for (const ambiguousRow of catalogue.ambiguousRows) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-108",
+        `_policies/03_Capabilities.md の1行が複数の CAP ID を含んでいます: ${ambiguousRow.join(", ")}`,
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.ambiguousCapRow",
+        ambiguousRow,
+      ),
+    );
   }
 
   // Row order is the mapping, so a CAP repeated on two rows claims two spec
