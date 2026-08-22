@@ -6,7 +6,7 @@
  * `git diff --exit-code .qfai/` fail on a stale catalog.
  */
 import { spawnSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -16,7 +16,7 @@ import { describe, expect, it } from "vitest";
 // tests/scripts/<this file> -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
 const SCRIPT = path.join(repoRoot, "scripts", "gen-agent-catalog.mjs");
-const CATALOG = path.join(
+const ASSETS_ASSISTANT = path.join(
   repoRoot,
   "packages",
   "qfai",
@@ -24,9 +24,9 @@ const CATALOG = path.join(
   "init",
   ".qfai",
   "assistant",
-  "manifest",
-  "agent-catalog.yml",
 );
+const CATALOG = path.join(ASSETS_ASSISTANT, "manifest", "agent-catalog.yml");
+const AGENTS_DIR = path.join(ASSETS_ASSISTANT, "agents");
 
 const AGENT_MD = `---
 name: probe-agent
@@ -105,10 +105,26 @@ describe("gen-agent-catalog", () => {
   it("is a no-op on an already-generated catalog", async () => {
     // Byte-for-byte: the generator rewrites only the block scalar contents, so
     // running it on the committed tree must never show up as a diff.
+    //
+    // On a copy, never on the tracked file: in the one state this test exists
+    // to catch — a stale catalog — a write-mode run against the real asset
+    // would repair the evidence before the assertion reads it, leave the
+    // working tree dirty after a failure, and hand the concurrent SSOT suites a
+    // file that changes under them mid-run.
     const before = await readFile(CATALOG, "utf-8");
-    expect(run().status).toBe(0);
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-gen-agent-catalog-committed-"));
+    try {
+      const assistant = fixtureAssistant(root);
+      await mkdir(path.join(assistant, "manifest"), { recursive: true });
+      await cp(AGENTS_DIR, path.join(assistant, "agents"), { recursive: true });
+      await writeFile(fixtureCatalog(root), before, "utf-8");
 
-    expect(await readFile(CATALOG, "utf-8")).toBe(before);
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      expect(await readFile(fixtureCatalog(root), "utf-8")).toBe(before);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 
   it("fails --check on a catalog the agent markdown has moved past", async () => {
@@ -132,6 +148,39 @@ describe("gen-agent-catalog", () => {
       expect(written).toContain("    kind: worker");
       // And the result is a fixed point.
       expect(run(["--check", `--root=${root}`]).status).toBe(0);
+    });
+  });
+
+  it("reads a whitespace-only line as an in-block blank, not the end of the block", async () => {
+    // Editors leave stray spaces on "empty" lines and YAML still reads them as
+    // blanks inside a block scalar. Ending the block there used to append the
+    // regenerated body in front of the tail of the old one — and the next
+    // `--check` stopped at the same line and called the duplicate up to date.
+    const spaced = STALE_CATALOG.replace(
+      "\n\n      - Probe something",
+      "\n   \n      - Probe something",
+    );
+    await withFixture(spaced, AGENT_MD, async (root) => {
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      expect(written).not.toContain("Probe something else entirely");
+      expect(written).toContain("      - Probe one thing.");
+      expect(run(["--check", `--root=${root}`]).status).toBe(0);
+    });
+  });
+
+  it("fails on an entry that carries no developer_instructions block", async () => {
+    // Deleting the key outright is the one drift the rewriter cannot repair —
+    // there is no block to write under — so it must fail rather than skip the
+    // entry and report the catalog as up to date.
+    const stripped = STALE_CATALOG.replace(/ {4}developer_instructions: \|[\s\S]*$/, "");
+    await withFixture(stripped, AGENT_MD, async (root) => {
+      const { status, output } = run(["--check", `--root=${root}`]);
+
+      expect(status).toBe(1);
+      expect(output).toContain("probe-agent");
+      expect(output).toContain("developer_instructions");
     });
   });
 

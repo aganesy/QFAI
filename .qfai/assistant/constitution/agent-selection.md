@@ -22,7 +22,7 @@ QFAI のサブエージェントの**選定**は、**agent-catalog + agent-routi
 `.qfai/assistant/agents/<id>.md` である。`agent-catalog.yml` の `developer_instructions`
 はそこから導出される派生コピーであり、そこに新しい内容を書き起こさない。本文を変更するときは
 markdown 側を編集し、その `## Mission` 見出し以降をそのままブロックへ写して一致させる
-（乖離は `QFAI-AGENT-014` が警告する）。
+（乖離もブロックの欠落も `QFAI-AGENT-014` が警告する）。
 
 ## 中核原則
 

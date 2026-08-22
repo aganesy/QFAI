@@ -72,6 +72,15 @@ const ANY_ENTRY_RE = /^ {2}- /;
  */
 const BLOCK_RE = /^ {4}developer_instructions: \|(?:[-+]?2?|2[-+])[ \t]*$/;
 const ANY_BLOCK_KEY_RE = /^ {4}developer_instructions:/;
+/**
+ * A line YAML reads as empty inside a block scalar: nothing but spaces or tabs.
+ * Such a line is part of the block whatever its width — the "at least as
+ * indented as the block" rule applies to content lines only. Treating a line of
+ * one to five stray spaces as the end of the block would leave the tail of the
+ * old body in the file behind the regenerated one, and the next `--check` would
+ * stop at the same line and call the duplicated result up to date.
+ */
+const BLANK_RE = /^[ \t]*$/;
 
 const CHECK_ONLY = process.argv.includes("--check");
 
@@ -131,13 +140,13 @@ function blockEnd(lines, start) {
   let end = start;
   while (end < lines.length) {
     const line = lines[end];
-    if (line.length > 0 && !line.startsWith(BODY_INDENT)) break;
+    if (!BLANK_RE.test(line) && !line.startsWith(BODY_INDENT)) break;
     end += 1;
   }
   // Trailing blank lines belong to whatever follows the block — a separator
   // between entries, or the file's final newline. Swallowing them here would
   // delete them from the output and make the rewrite non-idempotent.
-  while (end > start && lines[end - 1].length === 0) end -= 1;
+  while (end > start && BLANK_RE.test(lines[end - 1])) end -= 1;
   return end;
 }
 
@@ -169,15 +178,33 @@ function parseEntryId(raw) {
   return plainId;
 }
 
+/**
+ * Every catalog entry must carry a block: the field is the whole point of the
+ * catalog for a loader that reads it and nothing else. Absence is the one shape
+ * this rewriter cannot repair — there is no key to write under — so it fails
+ * here rather than skipping the entry, which would let a deleted block report
+ * as "up to date" and defeat the very drift guard this script is.
+ */
+function requireBlock(currentId, blockSeen) {
+  if (currentId === null || blockSeen) return;
+  throw new Error(
+    `agent-catalog.yml entry "${currentId}" has no developer_instructions block — every agent ` +
+      "entry must embed the canonical body so a loader that reads only the catalog still gets it",
+  );
+}
+
 function regenerate(source) {
   const lines = source.replace(/\r\n/g, "\n").split("\n");
   const out = [];
   const rewritten = [];
   let currentId = null;
+  let blockSeen = false;
   let index = 0;
   while (index < lines.length) {
     const line = lines[index];
     if (ANY_ENTRY_RE.test(line)) {
+      requireBlock(currentId, blockSeen);
+      blockSeen = false;
       const entryMatch = ENTRY_RE.exec(line);
       const entryId = entryMatch === null ? undefined : parseEntryId(entryMatch[1]);
       if (entryId === undefined) {
@@ -207,8 +234,10 @@ function regenerate(source) {
     const end = blockEnd(lines, index);
     out.push(...blockLines(currentId));
     rewritten.push(currentId);
+    blockSeen = true;
     index = end;
   }
+  requireBlock(currentId, blockSeen);
   return { text: out.join("\n"), rewritten };
 }
 

@@ -112,9 +112,18 @@ async function runWith(
 }
 
 describe("QFAI-AGENT-014 — agent-catalog developer_instructions drift", () => {
-  it("stays silent when the catalog carries no copy at all", async () => {
-    // A catalog that does not duplicate the markdown cannot drift from it.
-    expect(await runWith(undefined)).toEqual([]);
+  it("warns when the entry carries no copy at all", async () => {
+    // Deleting the block is the cheapest way to defeat the comparison, and it
+    // starves the loaders that read the catalog and nothing else. Same warning
+    // severity as a stale block: the copy is derived, so the repair is
+    // mechanical either way.
+    const found = await runWith(undefined);
+
+    expect(found).toHaveLength(1);
+    expect(found[0]?.severity).toBe("warning");
+    expect(found[0]?.message).toContain("no developer_instructions block");
+    expect(found[0]?.message).toContain("qa-gatekeeper");
+    expect(found[0]?.file).toBe(".qfai/assistant/manifest/agent-catalog.yml");
   });
 
   it("stays silent when the copy matches the canonical body", async () => {

@@ -21,12 +21,18 @@ type CatalogAgent = {
   id: string;
   kind: "worker" | "reviewer";
   /**
-   * The catalog's copy of the agent body, when the entry carries one. Optional:
-   * a catalog that omits the key is not stale, it simply does not duplicate the
-   * markdown. Kept rather than discarded at parse time so QFAI-AGENT-014 can
-   * compare it against the source.
+   * The catalog's copy of the agent body. Optional on this type only because
+   * the entry may be missing or malformed on disk — QFAI-AGENT-014 reports
+   * either. Kept rather than discarded at parse time so that rule can compare
+   * it against the source.
    */
   developerInstructions?: string;
+  /**
+   * Whether the entry carried the key at all, whatever its type. A key that is
+   * present but not a string is already reported as a catalog shape error, so
+   * QFAI-AGENT-014 must not name it a second time as a missing block.
+   */
+  hasDeveloperInstructionsKey: boolean;
 };
 
 type RoutingPhase = {
@@ -119,9 +125,9 @@ function normalizeBody(body: string): string {
  * silently shipped two disagreeing copies of the same instructions and
  * `qfai validate` reported nothing.
  *
- * Warning, not error: the derived copy is regenerable, and a stale block does
- * not make the tree unusable — it makes it ambiguous, which is exactly what a
- * warning is for.
+ * Warning, not error: the derived copy is regenerable, and a stale or absent
+ * block does not make the tree unusable — it makes it ambiguous, which is
+ * exactly what a warning is for.
  */
 function checkDeveloperInstructions(
   agent: CatalogAgent,
@@ -131,7 +137,30 @@ function checkDeveloperInstructions(
   issues: Issue[],
 ): void {
   const declared = agent.developerInstructions;
-  if (declared === undefined) return;
+  if (declared === undefined) {
+    // Present but not a string: QFAI-AGENT-006 already named it at parse time,
+    // and a second finding for the same broken block would only add noise.
+    if (agent.hasDeveloperInstructionsKey) return;
+    // A deleted block is not "this catalog does not duplicate" — it is the
+    // cheapest way to defeat the drift comparison, and it silently starves the
+    // downstream loaders the field exists for, which read the catalog and
+    // nothing else. Warning, like the drift case: the block is derived, so the
+    // repair is mechanical.
+    issues.push(
+      issue(
+        "QFAI-AGENT-014",
+        `${catalogRel} agent "${agent.id}" has no developer_instructions block; the catalog is contracted to embed the canonical body so a loader that reads only the catalog still gets it — restore the block by copying ${agentRel} from its "## Mission" heading onward, verbatim`,
+        "warning",
+        catalogRel,
+        "agentDefinition.developerInstructionsMissing",
+        undefined,
+        "canonical",
+        undefined,
+        { relatedFiles: [agentRel] },
+      ),
+    );
+    return;
+  }
   const canonical = canonicalAgentBody(markdown);
   if (canonical === undefined) return;
   if (normalizeBody(declared) === normalizeBody(canonical)) return;
@@ -348,6 +377,7 @@ async function readCatalog(
       agents.push({
         id: agent.id,
         kind: agent.kind,
+        hasDeveloperInstructionsKey: declared !== undefined,
         ...(declaredIsString ? { developerInstructions: declared } : {}),
       });
     }
