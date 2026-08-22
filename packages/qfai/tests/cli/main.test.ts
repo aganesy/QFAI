@@ -73,6 +73,30 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
+  it("documents --strict and --fail-on as report gates in the help text", async () => {
+    // The gate flags are only discoverable to an operator reading `--help`;
+    // while `usage()` scoped both to `validate` alone they looked unsupported
+    // on `report` even though main.ts forwards them.
+    const chunks: string[] = [];
+    const previousWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      process.stdout.write = (chunk: string | Uint8Array): boolean => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      };
+      await run(["--help"], process.cwd());
+    } finally {
+      process.stdout.write = previousWrite;
+      process.exitCode = previousExitCode;
+    }
+
+    const help = chunks.join("");
+    expect(help).toContain("--strict                     validate/report:");
+    expect(help).toContain("--fail-on <error|warning|never>  validate/report:");
+  });
+
   it("sets exitCode=2 when guardrails args are invalid", async () => {
     const cwd = process.cwd();
 

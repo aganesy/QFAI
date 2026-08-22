@@ -386,11 +386,31 @@ describe("report", { timeout: 15000 }, () => {
 });
 
 describe("report exit code", { timeout: 15000 }, () => {
-  async function seedValidation(counts: {
-    info: number;
-    warning: number;
-    error: number;
-  }): Promise<{ root: string; inputPath: string }> {
+  type SeedCounts = { info: number; warning: number; error: number };
+
+  /** Build the `issues[]` a given `counts` claims, so the two never disagree. */
+  function issuesFor(counts: SeedCounts): Array<Record<string, string>> {
+    const severities: Array<keyof SeedCounts> = ["info", "warning", "error"];
+    return severities.flatMap((severity) =>
+      Array.from({ length: counts[severity] }, (_unused, index) => ({
+        code: `QFAI-SEED-${severity.toUpperCase()}`,
+        severity,
+        category: "canonical",
+        message: `seeded ${severity} #${index}`,
+      })),
+    );
+  }
+
+  /**
+   * Seed a `--in` file whose `issues` really carry the requested severities.
+   * Replacing `counts` alone would leave the fixture's own bare-init findings
+   * in `issues`, and the gate now recounts from `issues` — so a counts-only
+   * fixture would assert against a number nothing in the report agrees with.
+   */
+  async function seedValidation(
+    counts: SeedCounts,
+    overrides: { keepIssues?: boolean } = {},
+  ): Promise<{ root: string; inputPath: string }> {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-gate-"));
     await runInit({ dir: root, force: false, dryRun: false, yes: true });
     await runValidate({ root, strict: false, failOn: "never", format: "github" });
@@ -398,7 +418,10 @@ describe("report exit code", { timeout: 15000 }, () => {
     const validatePath = path.join(root, ".qfai", "report", "validate.json");
     const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
     const inputPath = path.join(root, ".qfai", "report", "validate.seeded.json");
-    await writeFile(inputPath, `${JSON.stringify({ ...parsed, counts }, null, 2)}\n`, "utf-8");
+    const seeded = overrides.keepIssues
+      ? { ...parsed, counts }
+      : { ...parsed, issues: issuesFor(counts), counts };
+    await writeFile(inputPath, `${JSON.stringify(seeded, null, 2)}\n`, "utf-8");
     return { root, inputPath };
   }
 
@@ -433,6 +456,49 @@ describe("report exit code", { timeout: 15000 }, () => {
 
     expect(exitCode).toBe(1);
     await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
+  });
+
+  it("recounts from issues when the input's counts are stale", async () => {
+    // `--in` reads a file the gate does not own: a stale or hand-edited
+    // `counts` block that zeroes out errors the `issues[]` still lists would
+    // otherwise print those errors in the report and exit 0 anyway.
+    const { root, inputPath } = await seedValidation(
+      { info: 0, warning: 0, error: 0 },
+      { keepIssues: true },
+    );
+    const seeded = JSON.parse(await readFile(inputPath, "utf-8")) as {
+      issues: Array<{ severity: string; suppressed?: boolean }>;
+    };
+    expect(
+      seeded.issues.some((issue) => issue.severity === "error" && issue.suppressed !== true),
+    ).toBe(true);
+
+    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
+    expect(await runReport({ root, format: "md", inputPath, failOn: "never" })).toBe(0);
+  });
+
+  it("rejects an input whose issues carry an unknown severity", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    await writeFile(
+      inputPath,
+      `${JSON.stringify(
+        {
+          ...parsed,
+          issues: [
+            { code: "QFAI-SEED-BOGUS", severity: "fatal", category: "canonical", message: "x" },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    // Counting an unrecognised severity would quietly drop it from the gate.
+    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
+      /validate\.json の形式が不正です/,
+    );
   });
 });
 

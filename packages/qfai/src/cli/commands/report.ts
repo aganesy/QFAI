@@ -9,7 +9,7 @@ import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
-import { validateProject } from "../../core/validate.js";
+import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
@@ -168,7 +168,43 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   if (!isValidationResult(parsed)) {
     throw new Error(`validate.json の形式が不正です: ${inputPath}`);
   }
-  return parsed;
+  return reconcileCounts(parsed, inputPath);
+}
+
+/**
+ * `--in` の `counts` は外部ファイル由来で、`issues` と食い違いうる（古い
+ * validate.json、手編集、部分的な書き換え）。gate も report 本文のサマリも
+ * `counts` を読むため、食い違いを放置すると error を列挙したレポートが
+ * exit 0 で緑になる。`issues` から（suppressed を除いて）数え直し、差異は
+ * 警告した上で数え直した値を採用する。
+ */
+function reconcileCounts(result: ValidationResult, inputPath: string): ValidationResult {
+  const recounted = countIssues(result.issues);
+  const stated = result.counts;
+  if (
+    recounted.info === stated.info &&
+    recounted.warning === stated.warning &&
+    recounted.error === stated.error
+  ) {
+    return result;
+  }
+  warn(
+    [
+      `report: ${inputPath} の counts が issues と一致しません`,
+      `(counts: info=${stated.info} warning=${stated.warning} error=${stated.error} /`,
+      `issues: info=${recounted.info} warning=${recounted.warning} error=${recounted.error})。`,
+      "issues から数え直した値で集計と gate 判定を行います。",
+    ].join(" "),
+  );
+  return { ...result, counts: recounted };
+}
+
+function hasKnownSeverity(issue: unknown): boolean {
+  if (!issue || typeof issue !== "object") {
+    return false;
+  }
+  const severity: unknown = Reflect.get(issue, "severity");
+  return severity === "info" || severity === "warning" || severity === "error";
 }
 
 function isValidationResult(value: unknown): value is ValidationResult {
@@ -193,7 +229,9 @@ function isValidationResult(value: unknown): value is ValidationResult {
   ) {
     return false;
   }
-  if (!Array.isArray(record.issues)) {
+  // `severity` is load-bearing: the gate counts by it, so an unknown value
+  // would silently drop out of the recount instead of failing loudly.
+  if (!Array.isArray(record.issues) || !record.issues.every(hasKnownSeverity)) {
     return false;
   }
   const counts = record.counts as Record<string, unknown> | undefined;
