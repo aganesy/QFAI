@@ -143,8 +143,15 @@ and signalled by `QFAI-DENSITY-005`.
 Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TDD micro-cycle.
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
-- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
+- Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`, `BR-Ref`. `Blocked-By` names what a
   `blocked` row is waiting on and is required on those rows.
+- `BR-Ref` is **conditionally required**: optional to `qfai validate` — the required set above is
+  what it enforces, so ledgers seeded before the column keep passing — and required for
+  `/qfai-implement`'s T1 review batching, which can close no group without it. `/qfai-sdd`
+  Phase 2b seeds it. One value per row: a single `BR-*` declared in `04_Business-Rules.md`, or
+  `-` for "not resolved" (that row is reviewed alone). When the column is present its cells are
+  checked for both — shape and referent — at `warning`, so a mistyped or dangling key is named
+  rather than silently regrouping rows.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.

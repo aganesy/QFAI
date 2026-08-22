@@ -133,6 +133,22 @@ const VALID_STATUSES = new Set([
 const BLOCKED_BY_COLUMN = "Blocked-By";
 
 /**
+ * The T1 review-group key column.
+ *
+ * Optional to this validator on purpose — the required set is what
+ * `TDDLIST_REQUIRED_COLUMN_MISSING` enforces, and ledgers seeded before the
+ * column existed must keep passing. It is `/qfai-implement`'s grouping key, so
+ * a ledger that *does* declare it gets its cells checked: see Check 8c.
+ */
+const BR_REF_COLUMN = "BR-Ref";
+
+/** The spec-scoped `BR-*` id shape `04_Business-Rules.md` declares. */
+const BR_ID_FORMAT = /^BR-\d{4}-\d{4}$/;
+
+/** The file a ledger's `BR-Ref` has to resolve into. */
+const BR_DECLARATION_FILE = "04_Business-Rules.md";
+
+/**
  * The `Layer` values the shipped ledger schema declares
  * (`qfai-implement/SKILL.md` "Execution Ledger: test-list.md").
  *
@@ -359,6 +375,26 @@ function toPosixRel(value: string): string {
  * ledgers, and resolving only against the spec-local file would report every
  * such citation as unresolved.
  */
+/**
+ * Every `BR-*` the spec's `04_Business-Rules.md` mentions, or `null` when the
+ * file is absent.
+ *
+ * `null` is not an empty set: a spec with no rules file cannot contradict a
+ * `BR-Ref`, and reporting every key as dangling there would fire on layouts
+ * that legitimately have no `04`. Fenced and commented regions are masked so a
+ * rule quoted in an example block does not count as a declaration.
+ */
+async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null> {
+  const file = path.join(specDir, BR_DECLARATION_FILE);
+  if (!(await exists(file))) return null;
+  const declared = new Set<string>();
+  const text = maskNonSpecRegions(await readSafe(file));
+  for (const match of text.matchAll(/\bBR-\d{4}-\d{4}\b/g)) {
+    declared.add(match[0].toUpperCase());
+  }
+  return declared;
+}
+
 async function collectDeclaredDrIds(specDir: string, specsRoot: string): Promise<Set<string>> {
   const declared = new Set<string>();
   const files = [
@@ -1072,6 +1108,56 @@ async function validateSpecTddList(
             unresolved,
             "change",
             `該当の Decision Record を spec の 07_Decisions.md（または _policies/08_Decisions.md）に記載してください。別の場所で管理している場合は \`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
+          ),
+        );
+      }
+    }
+  }
+
+  // Phase 2 – Check 8c: a declared review-group key has to resolve.
+  //
+  // `BR-Ref` is optional, so its absence is silent. Its *presence* is a claim
+  // `/qfai-implement` acts on: it opens, fills and closes a T1 review group by
+  // this cell, and nothing else in the ledger can contradict it. A mistyped or
+  // retired `BR-*` therefore does not fail loudly — it regroups rows into a
+  // review unit nobody chose. `warning`, for the same reason the DR-ID referent
+  // checks are: a ledger written against an older `04_Business-Rules.md` must
+  // not start failing CI on upgrade.
+  if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
+    const declaredBrIds = await collectDeclaredBrIds(specDir);
+    for (const ref of ledgerRows()) {
+      const brRef = cell(ref, BR_REF_COLUMN);
+      // Empty and `-` are the same legal state — "not resolved". The row forms
+      // a review group of one and is reviewed alone, which is the documented
+      // safe degradation, not a defect.
+      if (brRef.length === 0 || brRef === "-") continue;
+      const token = brRef.toUpperCase();
+      if (!BR_ID_FORMAT.test(token)) {
+        issues.push(
+          issue(
+            "TDDLIST_BR_REF_INVALID",
+            `Malformed ${BR_REF_COLUMN} "${brRef}" in tdd/test-list.md for spec-${specNumber} (${ref.label}). Expected one BR-NNNN-NNNN, or \`-\` when no BR reaches the row`,
+            "warning",
+            relPath,
+            "tddList.brRefFormat",
+            [brRef],
+            "change",
+            `${BR_REF_COLUMN} は1行1件です。TC の \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、複数該当する場合は最小番号の \`BR-*\` を書いてください。該当する BR がない行は \`-\` です。`,
+          ),
+        );
+        continue;
+      }
+      if (declaredBrIds !== null && !declaredBrIds.has(token)) {
+        issues.push(
+          issue(
+            "TDDLIST_BR_REF_UNRESOLVED",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is declared in no ${BR_DECLARATION_FILE}. The T1 review group would be keyed on a rule that does not exist`,
+            "warning",
+            relPath,
+            "tddList.brRefResolves",
+            [token],
+            "change",
+            `${BR_DECLARATION_FILE} に該当 BR を追加するか、${BR_REF_COLUMN} を実在する \`BR-*\`（または \`-\`）に直してください。`,
           ),
         );
       }

@@ -58,19 +58,37 @@ open group is a completion prohibition — or closes one per row, which is T2
 behaviour at T1 cost.
 
 - Fill it at ledger-authoring time (`/qfai-sdd` Phase 2b), the one point where
-  `03`, `04` and `06` are all open. That is where `Owning module` is resolved
-  from the same join.
-- **One `BR-*` per row.** Both hops are many-to-many, so the value is fixed by
-  rule rather than judgement: take the ACs the row's `TC-Refs` name in
-  `06_Test-Cases.md`, take every `BR` whose `AC-Refs` names one of those ACs,
-  and keep the **lowest-numbered** `BR-*` of that set. Two agents running this
-  reach the same value, which is what makes the group boundary reproducible.
+  `03`, `04`, `05` and `06` are all open. That is where `Owning module` is
+  resolved from the same join.
+- **One `BR-*` per row.** Resolve it per TC the row's `TC-Refs` name, taking the
+  direct edge first:
+  1. **`TC` -> `EX` -> `BR`.** Read the TC's `EX-Ref` in `06_Test-Cases.md`,
+     then that `EX`'s `BR-Ref` in `05_Examples.md`. `EX-Ref` is single-valued
+     and `BR-Ref` pins the `EX` to one rule, so this edge names the `BR` the
+     row actually verifies.
+  2. **Only for a TC with no `EX-Ref`:** take the ACs it names in
+     `06_Test-Cases.md` and every `BR` whose `AC-Refs` names one of them in
+     `04_Business-Rules.md`.
+
+  The union is still many-to-many across several `TC-Refs`, so keep the
+  **lowest-numbered** `BR-*` of it. Two agents running this reach the same
+  value, which is what makes the group boundary reproducible. Going straight to
+  the AC join misattributes: a TC pinned through its `EX` to one `BR` would be
+  filed under the lowest-numbered `BR` merely sharing its `AC`, and rows
+  verifying different rules would land in one review unit.
+
 - `-` is legal and means "not resolved" — no `BR` reaches the row's TCs, or the
   row has no `TC-Refs` at all (an `E2E` / `API` row). A row carrying `-` is
   **not eligible for batching**: it forms a group of one and is reviewed alone.
   That is the safe direction; the unsafe one is a group that never closes.
 - It is a grouping key, not an obligation. Coverage counting reads `TC-*` tokens
   only, so `BR-Ref` is inert to it.
+- The column is optional to `qfai validate` — the required set above is what it
+  enforces, so a ledger seeded before the column keeps passing — but a ledger
+  that **declares** it has its cells checked: `TDDLIST_BR_REF_INVALID` (not a
+  single `BR-NNNN-NNNN`, and not `-`) and `TDDLIST_BR_REF_UNRESOLVED` (no such
+  rule in `04_Business-Rules.md`). Both are `warning`: a ledger written against
+  an older rules file must not start failing CI on upgrade.
 
 ## Obligation columns (optional, required by layer)
 

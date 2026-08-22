@@ -39,7 +39,11 @@ parsed as the ledger instead and raises eight
 
 ## Schema
 
-Required columns, in the order used above:
+Columns, in the order used above. Every one except `BR-Ref` is required by
+`qfai validate`; `BR-Ref` is **optional to the validator and required for T1
+batching**, so a ledger seeded before the column existed keeps validating
+unchanged. Seed it here anyway — this is the only phase that can resolve it,
+and `/qfai-implement` can close no T1 review group without it.
 
 | Column    | Description                                                  |
 | --------- | ------------------------------------------------------------ |
@@ -53,10 +57,13 @@ Required columns, in the order used above:
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
 
-`BR-Ref` is resolved here because this is the only phase where `03`, `04` and
-`06` are all open: take the TC's `AC-Refs` from `06_Test-Cases.md`, take every
-`BR` whose `AC-Refs` names one of them in `04_Business-Rules.md`, and keep the
-**lowest-numbered** `BR-*`. Write `-` when no `BR` reaches the row.
+`BR-Ref` is resolved here because this is the only phase where `03`, `04`, `05`
+and `06` are all open: read each TC's `EX-Ref` in `06_Test-Cases.md` and that
+`EX`'s `BR-Ref` in `05_Examples.md` — the edge that names the rule the test
+verifies. Only a TC with no `EX-Ref` falls back to its `AC-Refs` and every `BR`
+whose `AC-Refs` names one of them in `04_Business-Rules.md`. Across several
+`TC-Refs`, keep the **lowest-numbered** `BR-*`. Write `-` when no `BR` reaches
+the row.
 `/qfai-implement` batches its T1 reviews on this value and can close no group
 without it. It is derived from upstream, not from run state, so a reseed
 re-resolves it — that is not the row rewrite the delta rule forbids.

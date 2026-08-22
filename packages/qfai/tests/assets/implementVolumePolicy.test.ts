@@ -191,9 +191,37 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(ledger).toContain("it forms a group of one and is reviewed alone");
 
       expect(section).toContain("the set of items that share one `BR-Ref` value");
-      expect(section).toContain("the next `todo` row carries a different `BR-Ref`");
+      expect(section).toContain("the next `todo` **T1** row carries a different `BR-Ref`");
       expect(section).not.toContain("the first T1 row of a BR/AC reaches `refactor`");
       expect(skill).toContain("the rows sharing one `BR-Ref`, the ledger's group key");
+    });
+
+    it(`${tree}: the direct TC -> EX -> BR edge wins over the AC join`, async () => {
+      // The AC join alone misattributes a row: a TC pinned through its `EX` to
+      // one `BR` was filed under the lowest-numbered `BR` merely sharing its
+      // `AC`, so rows verifying different rules landed in one review unit.
+      const ledger = unwrap(await read(tree, LEDGER));
+      // The key is only reproducible if a wrong one is named: optional to the
+      // validator, checked when the ledger declares it.
+      expect(ledger).toContain("`TDDLIST_BR_REF_UNRESOLVED`");
+      expect(ledger).toContain("**`TC` -> `EX` -> `BR`.**");
+      expect(ledger).toContain("that `EX`'s `BR-Ref` in `05_Examples.md`");
+      expect(ledger).toContain("**Only for a TC with no `EX-Ref`:**");
+    });
+
+    it(`${tree}: the close conditions are scoped to the key's T1 members`, async () => {
+      // Tier is derived per row, so one `BR-Ref` can hold T2/T3 rows. Reading
+      // them as members strands the group — Fill only ever advances the key's
+      // remaining T1 rows, so a `todo` T2 row keeps both conditions false.
+      const section = unwrap(await read(tree, REFERENCE));
+      expect(section).toContain("every **T1** row carrying the key has reached `refactor`");
+      expect(section).toContain("Both keyed conditions read **T1 members only**");
+      expect(section).toContain("neither join the group nor hold it open");
+      // `-` is "not resolved", not a value rows share.
+      expect(section).toContain("`-` is **not** a shared key");
+      expect(section).toContain(
+        "opens a group of one that closes the moment that row reaches `refactor`",
+      );
     });
 
     it(`${tree}: the ledger-exhausted clause is a terminator, not a grouping rule`, async () => {

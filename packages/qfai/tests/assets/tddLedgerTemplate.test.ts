@@ -58,6 +58,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("keep the **lowest-numbered** `BR-*`");
       expect(template).toContain("Write `-` when no `BR` reaches the row.");
       expect(template).toContain("`04_Business-Rules.md`");
+      // The direct edge first: the AC join alone files a TC pinned through its
+      // `EX` to one `BR` under a different rule that merely shares its `AC`.
+      expect(template).toContain("read each TC's `EX-Ref` in `06_Test-Cases.md`");
+      expect(template).toContain("Only a TC with no `EX-Ref` falls back to its `AC-Refs`");
 
       const checklists = await read(
         tree,
@@ -65,6 +69,24 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(checklists).toContain("- Fill `BR-Ref` —");
       expect(checklists).toContain("lowest-numbered `BR-*` wins");
+      expect(checklists).toContain("only a TC with no `EX-Ref` falls back");
+    });
+
+    it(`${tree}: the column's requiredness matches the schema SSOT`, async () => {
+      // The template called `BR-Ref` a Required column while
+      // `spec-traceability-rules.md` listed it in neither set and
+      // `TDD_LEDGER_REQUIRED_COLUMNS` kept the original eight — so a ledger
+      // seeded per the SSOT had no group key and still passed `qfai validate`.
+      const template = (await read(tree, TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(template).toContain("Every one except `BR-Ref` is required by `qfai validate`");
+      expect(template).toContain("**optional to the validator and required for T1 batching**");
+
+      const ssot = (
+        await read(tree, "assistant/skills/qfai-sdd/references/spec-traceability-rules.md")
+      ).replace(/\s*\n\s*/g, " ");
+      expect(ssot).toContain("`Blocked-By`, `BR-Ref`");
+      expect(ssot).toContain("`BR-Ref` is **conditionally required**");
+      expect(ssot).toContain("its cells are checked for both — shape and referent — at `warning`");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

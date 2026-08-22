@@ -86,8 +86,11 @@ the review-ready state — and waits there for its group. Members still move
 `refactor -> done`, only together.
 
 - **Open** the group when a T1 row reaches `refactor` and no group is open. Its
-  `BR-Ref` value becomes the group's key; a row carrying `-` opens a group of
-  one, which closes on the next row.
+  `BR-Ref` value becomes the group's key. `-` is **not** a shared key: a row
+  carrying `-` opens a group of one that closes the moment that row reaches
+  `refactor`, however many other `-` rows the ledger holds. Reading `-` as one
+  key would merge rows no `BR` relates and, with a second `-` row still `todo`,
+  leave both close conditions below false.
 - **Fill** it by continuing to process the ledger's remaining T1 rows carrying
   that same `BR-Ref`, one item at a time. The one-item-at-a-time constraint is
   about the Red/Green cycle: at most one row is in `red` or `green` at any
@@ -95,9 +98,16 @@ the review-ready state — and waits there for its group. Members still move
   group, not an abandoned item, so parking is not a violation of that
   constraint.
 - **Close** the group — this is the review-start condition — at whichever comes
-  first: every row carrying the key has reached `refactor`; the next `todo` row
-  carries a different `BR-Ref`; the ledger has no `todo` rows left. A group
-  never spans a spec, so finishing a ledger also closes the open group.
+  first: every **T1** row carrying the key has reached `refactor`; the next
+  `todo` **T1** row carries a different `BR-Ref`; the ledger has no `todo` rows
+  left. A group never spans a spec, so finishing a ledger also closes the open
+  group.
+- Both keyed conditions read **T1 members only**. Tier is derived per row, so
+  one `BR-Ref` can hold T2 and T3 rows as well; those are reviewed alone and
+  neither join the group nor hold it open. Counting them as members strands it:
+  Fill advances only the key's remaining T1 rows, so a `todo` T2 row sharing the
+  key leaves both keyed conditions false at once — the group never closes, and
+  no member ever reaches `done`.
 - The last close condition is a **terminator, not a grouping rule**. It closes
   whatever group is still open when the ledger runs out. A run that reaches it
   without ever having closed a group on one of the other two has batched the
@@ -137,11 +147,13 @@ whole spec one group. Pick one of two, in this order:
    a schema addition — it writes no `Status` or `Evidence` cell — so it is not
    the regeneration the ledger's delta rule forbids.
 2. Resolve the key yourself, once per row, by the procedure
-   `execution-ledger.md` states (`TC-Refs` -> the TC's `AC-Refs` in
-   `06_Test-Cases.md` -> every `BR` whose `AC-Refs` names one of them in
-   `04_Business-Rules.md`, lowest-numbered `BR-*` wins), and record the group's
-   key next to its member `TDD-ID`s in the evidence file. The tie-break is what
-   makes the answer the same for the next agent that reads the same rows.
+   `execution-ledger.md` states (`TC-Refs` -> the TC's `EX-Ref` in
+   `06_Test-Cases.md` -> that `EX`'s `BR-Ref` in `05_Examples.md`; only a TC
+   with no `EX-Ref` falls back to its `AC-Refs` -> every `BR` whose `AC-Refs`
+   names one of them in `04_Business-Rules.md`; lowest-numbered `BR-*` wins),
+   and record the group's key next to its member `TDD-ID`s in the evidence
+   file. The tie-break is what makes the answer the same for the next agent
+   that reads the same rows.
 
 When neither is available — no `04_Business-Rules.md`, or no `BR` reaches the
 row — every T1 row is its own group and is reviewed alone. That costs the
