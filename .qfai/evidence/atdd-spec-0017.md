@@ -2130,6 +2130,14 @@ found it recorded at 1196 against a measured 1197, moved by round 8's own repair
 the same way and is still not derived. Three rounds asked for the revision beside the totals and got a round name
 instead; a round name cannot be checked, which is the whole reason those rounds asked.
 
+**Every line below was re-run for round 19, and that sentence has to be earned each time.** Round 19's
+gate found `7fbac2d3` advancing this block's currency claim from "round 14" to "round 18" after
+re-measuring **one line of seven** — while the other session's commit had changed the producer of three
+others (`check-atdd-annotation-ledger.mjs`, `check-workflow-hygiene.mjs`, `check-publish-dry-run.mjs`,
+all of which `ci:lint` and this block run). The commit that noticed a concurrent session had invalidated
+one figure re-dated the whole block instead of re-running it. That is the block's own recorded failure
+mode, for the third time.
+
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
@@ -2137,16 +2145,30 @@ pnpm -C packages/qfai test:e2e                  1476 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1239 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
-pnpm verify:pack                                exit 0
+pnpm verify:pack                                exit 0 (ok=16 info=2 warning=1 error=0)
   (named because round 9 found it absent from this block while `release.yml` runs it, and because it
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 error=49 here, of which 43 are QFAI-REVIEW-007 against
-                                                untracked local packs; error=4 at the committed
-                                                revision. The deltas are the property; see § "The
-                                                full profile"
+node ... validate --profile full                 info=4 warning=403 error=48 on THIS working copy, of
+                                                which 44 are QFAI-REVIEW-007 against untracked local
+                                                packs. The absolute is not a property of any revision;
+                                                the deltas are. See § "The full profile"
 ```
+
+**`QFAI-ATDD-111` left that decomposition during this round, and not because of anything here.** It was
+one of the five rows summing to the sealed figure — "11 US across four specs, of which this spec owns
+NONE" — and the other session's coverage commit closed it, taking the unscoped profile from 49 to 48 at
+the same pack state. The row below is kept with that noted rather than deleted, because the point of the
+decomposition is which rules produce the number, and this is a worked example of the answer changing
+without the subject moving.
+
+**`.qfai/report/validate.log` is not cited here and was not committed with this round.** It is tracked,
+it is shared by every run on this machine scoped or not, and round 19's gate found it rewritten mid-review
+by a sibling reviewer's unscoped run — `errors: 49, warnings: 403` — at a revision whose scoped gate is
+`error=1`. That has now happened in two of the two rounds where anyone looked, so it is the normal case
+rather than a hazard. Every `--profile full` measurement this round restored `.qfai/report/` from a copy
+taken first, and `git status --porcelain .qfai/report/` was verified empty afterwards.
 
 **`--project assets` does not exist**, and an earlier version of this block named it. The workspace
 declares **seven** projects — `core`, `unit`, `validators`, `integration`, `e2e`, `cli`, `scripts`
@@ -2584,9 +2606,12 @@ evidence cuts the other way, the counter-example.
 
 **`validate --profile full` has no single number, and that is the finding.** `build` runs the profile,
 and three of its rules — `QFAI-REVIEW-004`, `-005`, `-007` — report against the review pack this stage
-has open. So the count tracks the ROUND's state, not the revision's: **48 with the current round sealed,
-50 at a revision that has just opened a pack, 49 once reports land in it and before a `summary.json`
-does.** Round 16 recorded 49 as a property of the tree; round 17's gate measured 50 at the committed
+has open. So the count tracks the ROUND's state, not the revision's — and, on a working copy, the number
+of untracked packs sitting beside it. Re-measured at round 19: **47 with the current round sealed, 49 at
+a revision that has just opened a pack, 48 once reports land in it and before a `summary.json` does.**
+Each of those is one lower than round 18 recorded, because `QFAI-ATDD-111` closed mid-round through
+another session's work — which is the third distinct way this figure has moved without the subject
+changing. Round 16 recorded 49 as a property of the tree; round 17's gate measured 50 at the committed
 revision and reconstructed the sequence from the run-log timestamps.
 
 A number that moves three ways without the subject changing is not a measurement of the subject, so what
@@ -2619,9 +2644,10 @@ What is a property of the subject, checkable at any revision, is the rule and it
 > `+2` on opening a pack, `−1` once reports land in it, `−1` once a `summary.json` does.
 
 Both committed revisions above satisfy it (4 sealed → 6 just-opened). On a working copy the same rule
-holds on top of however many untracked packs it carries: **48 sealed / 50 just-opened / 49 with reports
-and no summary**, re-measured at each state, with 43 untracked packs present. Cite the deltas. If an
-absolute is cited, it is meaningless without the count of untracked packs beside it.
+holds on top of however many untracked packs it carries: **47 sealed / 49 just-opened / 48 with reports
+and no summary**, re-measured at round 19 with 42 untracked packs present, and 48 is the state this
+commit is in. Cite the deltas. An absolute cited without the untracked-pack count beside it, and the
+date it was taken, is not a measurement of anything a reader can reproduce.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
 and never re-run, in the block whose own first sentence says it is re-measured rather than carried.
 
@@ -2633,13 +2659,14 @@ claimed. Measuring before repairing and recording after is a sequence that
 produces a true measurement of a tree that no longer exists, and nothing in this record's derived-count
 machinery reaches the unscoped profile.
 
-The forty-eight, by rule, with the round sealed:
+The decomposition, on this working copy, with the round sealed — **47 now, 48 until round 19**, and
+the row that left is the worked example of why the absolute is not the subject's property:
 
 ```text
 QFAI-REVIEW-007   44   summary.json missing or misusing `revision_form`
 QFAI-REVIEW-004    1   review pack layout
 QFAI-REVIEW-005    1   review pack layout
-QFAI-ATDD-111      1   unscoped: 11 US across four specs, of which this spec owns NONE
+QFAI-ATDD-111      0   CLOSED during round 19 by another session's coverage commit; it was 1
 QFAI-ATDD-112      1   unscoped: 15 TCs across four specs, of which it owns 8
 ```
 
