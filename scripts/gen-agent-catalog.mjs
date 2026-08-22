@@ -56,7 +56,7 @@ const ENTRY_RE = /^ {2}- id: (\S+)\s*$/;
  * and an explicit indentation indicator (`|2`). All of those are valid YAML for
  * the same content, and a header this regex does not recognise would be skipped
  * silently — the entry would never be compared and `--check` would call a stale
- * catalog up to date. `UNSUPPORTED_BLOCK_RE` turns every other spelling of the
+ * catalog up to date. `ANY_BLOCK_KEY_RE` turns every other spelling of the
  * key (quoted, folded, flow) into a hard failure for the same reason.
  */
 const BLOCK_RE = /^ {4}developer_instructions: \|[-+]?[0-9]*[-+]?[ \t]*$/;
