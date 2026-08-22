@@ -84,14 +84,19 @@ They ship in the header above so a seeded E2E/API row's obligation always has a
 home — a row of that layer with nowhere to record its `US-*` / `CON-API-*` is
 unverifiable, which is the state the header used to leave it in:
 
-| Column       | Description                                                               |
-| ------------ | ------------------------------------------------------------------------- |
-| US-Refs      | `US-NNNN` this row implements. Legal **only** on a `Layer = E2E` row      |
-| CON-API-Refs | `CON-API-NNNN` this row implements. Legal **only** on a `Layer = API` row |
+| Column       | Description                                                                                   |
+| ------------ | --------------------------------------------------------------------------------------------- |
+| US-Refs      | `US-NNNN` this row implements. Legal **only** on — and required on — a `Layer = E2E` row      |
+| CON-API-Refs | `CON-API-NNNN` this row implements. Legal **only** on — and required on — a `Layer = API` row |
 
 `.qfai/assistant/catalog/test-layers.md` forbids `TC-*` annotations in
 `tests/e2e/**` and `tests/api/**`, so those rows carry `-` in `TC-Refs`;
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` enforces the binding in both directions.
+The required direction is conditioned on the column being in the header, which
+it is here: on this template an `E2E` row that leaves `US-Refs` at `-` (or an
+`API` row that leaves `CON-API-Refs` at `-`) is a row with no obligation in any
+column, and the validator errors on it rather than letting it reach `done`.
+A ledger predating these columns is untouched by that rule.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

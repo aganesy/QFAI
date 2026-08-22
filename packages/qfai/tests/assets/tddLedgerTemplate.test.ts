@@ -136,6 +136,71 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(preconditions).toContain("`Layer = API` row per **active** `CON-API-*`");
     });
 
+    it(`${tree}: the surface exemption is conditioned on surface typing being in use`, async () => {
+      // `atddTraceability.ts#resolveUiBearingScope` returns "no scope" when no
+      // spec declares a surface, so `QFAI-ATDD-111` stays project-wide for a
+      // project that never opted in. An unconditional "skip a US-* in a spec
+      // with no surface" would leave exactly those projects with zero E2E rows
+      // and a gate that never clears.
+      for (const surface of [
+        "assistant/skills/qfai-sdd/SKILL.md",
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      ]) {
+        const text = await read(tree, surface);
+        expect(text, surface).toMatch(/at least one[\s\S]{0,40}UI-bearing|some spec does declare/);
+        expect(text, surface).toMatch(/project-wide|surface typing/);
+      }
+    });
+
+    it(`${tree}: an API row's owning spec is resolved mechanically`, async () => {
+      // `.qfai/contracts/**` has no spec owner in the model, so "the spec
+      // declares" left a multi-spec project unable to decide which ledger the
+      // row goes in — every ledger, or none.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("**Ownership of an API row**");
+      expect(skill).toContain("**lowest-numbered**");
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory does not state ownership").toContain("lowest-numbered");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("**Which ledger an API row goes in.**");
+      expect(checklists).toContain("Never write the same `CON-API-*` row into two ledgers.");
+    });
+
+    it(`${tree}: manual recovery restores all three groups, not only the TC one`, async () => {
+      // Copying the template and deriving from `06_Test-Cases.md` alone
+      // reproduces the missing-acceptance-row state the recovery exists to fix.
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("must restore the **same three groups**");
+      expect(preconditions).toContain('"No TC backs it" is not a reason to drop an\nE2E/API row');
+      expect(preconditions).toContain("read **all three** Phase 2b sources");
+    });
+
+    it(`${tree}: the ATDD and implement primary procedures follow the new producer`, async () => {
+      // Both stated the pre-#490 contract in their own body — the surface an
+      // agent actually follows — so `/qfai-atdd` enumerated no rows and
+      // `/qfai-implement` required none.
+      const atdd = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
+      expect(atdd).not.toContain("A fresh spec has none of these rows yet");
+      expect(atdd).toContain("Phase 2b seeds one `Layer = E2E` row per active `US-*`");
+      expect(atdd).toContain("incomplete Phase 2b");
+
+      const implement = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(implement).not.toContain("those rows have no producer");
+      expect(implement).toContain(
+        "Phase 2b seeds an `E2E` /\n  `API` row per **active** obligation",
+      );
+    });
+
     it(`${tree}: reseeding is stated as a delta, not a regeneration`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");
@@ -180,7 +245,11 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
-      expect(preconditions).toContain("read `06_Test-Cases.md` and");
+      // `06_Test-Cases.md` is one of the three Phase 2b sources, not the only
+      // one: with the E2E/API groups seeded, a ledger can be header-only
+      // because its acceptance rows are missing rather than unowed.
+      expect(preconditions).toContain("`06_Test-Cases.md` declares no coverage-target TC");
+      expect(preconditions).toContain("`02_User-stories.md` declares no active `US-*`");
       expect(preconditions).toContain("Run the recovery above instead of exiting");
     });
 

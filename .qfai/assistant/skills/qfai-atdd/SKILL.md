@@ -211,7 +211,7 @@ they had `/qfai-implement` demand a fresh RED for a test already green here.
 
 - **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
-- **A fresh spec has none of these rows yet, and this stage cannot create them** — zero is a legitimate count, not "nothing to do": `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
+- **`/qfai-sdd` Phase 2b seeds one `Layer = E2E` row per active `US-*` and one `Layer = API` row per active `CON-API-*`; this stage still cannot create them.** So a spec with an active obligation normally arrives with rows here — enumerate them and build the handoff from them. Zero is legitimate only when every obligation is exempt, and even then is not "nothing to do"; a row missing for an **active** obligation is an incomplete Phase 2b — report it, never write it. `references/red-provenance.md#a-spec-with-no-atdd-owned-rows`.
 - **The stage order makes that a real question**: Work Orders build the surfaces a journey needs (P3, P4), so a journey written after them passes first run — an anomaly bound for `exception`, which then becomes the only reachable terminal state.
 
 ### RED provenance for an ATDD-owned row (MUST)

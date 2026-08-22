@@ -216,16 +216,27 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    at `Status = todo` — one row per coverage-target TC from `06_Test-Cases.md`,
    one `Layer = E2E` row per **active** `US-*` from `02_User-stories.md`
    (obligation in `US-Refs`, `TC-Refs` = `-`), and one `Layer = API` row per
-   **active** `CON-API-*` the spec declares (obligation in `CON-API-Refs`,
+   **active** `CON-API-*` the spec **owns** (obligation in `CON-API-Refs`,
    `TC-Refs` = `-`); copy `templates/specs/spec/tdd/test-list.md` when absent.
    Without the first group `/qfai-implement` starts with zero selectable items;
    without the other two the ledger cannot hold a `US-*` / `CON-API-*`
    obligation, so an all-`done` ledger reports complete beside a
    `QFAI-ATDD-111` / `QFAI-ATDD-113` gate at 0%. **Active** is the
-   `.qfai/assistant/catalog/test-layers.md` exemption: skip a `US-*` in a spec
-   that declares no user-facing surface, and a `CON-API-*` whose contract
-   declares `x-qfai-status: planned` — seeding those parks a
+   `.qfai/assistant/catalog/test-layers.md` exemption: skip a `CON-API-*` whose
+   contract declares `x-qfai-status: planned`, and skip a `US-*` in a spec that
+   declares no user-facing surface — the latter **only when the project uses
+   surface typing at all** (at least one spec declares a surface by one of the
+   signals `test-layers.md` lists). A project that has never declared one has
+   not opted in, `QFAI-ATDD-111` stays project-wide for it, and every `US-*` is
+   therefore active; exempting them there would leave a legacy project with no
+   E2E row and a failing gate. Seeding a genuinely exempt obligation parks a
    completion-prohibiting row on a test that must not be written.
+   **Ownership of an API row** is mechanical, because `.qfai/contracts/**` has
+   no spec owner in the model: a spec owns a `CON-API-*` its own
+   `spec-*/01..10` / `16_*` files name, and when more than one names it the
+   **lowest-numbered** such spec owns the single row (the others record it as a
+   cross-spec obligation, not a duplicate row). A `CON-API-*` no spec names has
+   no owner and gets no row — raise it in Phase 2c instead of guessing a ledger.
    **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs and newly active obligations append at `todo`, and
@@ -368,6 +379,6 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from 06_Test-Cases.md, one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
+- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md`, one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

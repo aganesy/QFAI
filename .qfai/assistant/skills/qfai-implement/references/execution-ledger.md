@@ -80,7 +80,13 @@ The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,
 so a forbidden placement cannot close a coverage-target TC.
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` likewise rejects a `US-Refs` /
-`CON-API-Refs` value on a layer that does not own it.
+`CON-API-Refs` value on a layer that does not own it, and — on a ledger whose
+header carries the column — an `E2E` / `API` row that leaves it empty or `-`.
+That last direction is what stops a seeded obligation row from reaching `done`
+with nothing recorded: `TC-Refs` is forbidden on it, so an empty obligation
+cell leaves the row with no auditable target at all. It fires only where the
+column exists, so an eight-column ledger written before these columns shipped is
+a legacy shape, not an error.
 
 A `Layer` outside the legal values raises `TDDLIST_UNKNOWN_LAYER` (warning) —
 without a legal `Layer` the row has no obligation column. Coverage counting
