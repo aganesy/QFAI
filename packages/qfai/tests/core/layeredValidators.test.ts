@@ -177,6 +177,29 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("checks the exact Spec column, not a Previous Spec column beside it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `Previous Spec` carries the row position, so a loose header match would
+      // read it, pass the wrong canonical value and mis-blame the right one.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-9999" },
+        undefined,
+        { previousSpecColumn: true },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((issue) => issue.code)).toEqual(["QFAI-SPLIT-106"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0002", "spec-9999", "spec-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("rejects a CAP ID repeated on two catalogue rows", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -416,6 +439,8 @@ async function seedPolicies(
     trailer?: string[];
     /** Append the trailer straight onto the catalogue table, with no blank line. */
     trailerJoinsTable?: boolean;
+    /** Add a `Previous Spec` column carrying the row position before `Spec`. */
+    previousSpecColumn?: boolean;
     catalogHeading?: boolean;
   },
 ): Promise<void> {
@@ -423,12 +448,14 @@ async function seedPolicies(
   await mkdir(policiesDir, { recursive: true });
 
   const withSpecColumn = declaredSpecs !== undefined;
+  const withPreviousSpec = extras?.previousSpecColumn === true;
   const capLines = capIds
-    .map((capId) => {
+    .map((capId, index) => {
       const specCell = declaredSpecs ? ` ${declaredSpecs[capId] ?? ""} |` : "";
+      const previousCell = withPreviousSpec ? ` spec-${String(index + 1).padStart(4, "0")} |` : "";
       const note = notes?.[capId] ?? "note";
       const capCell = extras?.capCells?.[capId] ?? capId;
-      return `| ${capCell} | capability | metric | ${note} |${specCell}`;
+      return `| ${capCell} | capability | metric | ${note} |${previousCell}${specCell}`;
     })
     .join("\n");
   await writeFile(
@@ -438,12 +465,12 @@ async function seedPolicies(
       "",
       ...(extras?.leader ?? []),
       ...(extras?.catalogHeading ? ["", "## CAP Catalog", ""] : []),
-      withSpecColumn
-        ? "| CAP ID | Statement | Success metrics | Notes | Spec |"
-        : "| CAP ID | Statement | Success metrics | Notes |",
-      withSpecColumn
-        ? "| ------ | --------- | --------------- | ----- | ---- |"
-        : "| ------ | --------- | --------------- | ----- |",
+      `| CAP ID | Statement | Success metrics | Notes |${withPreviousSpec ? " Previous Spec |" : ""}${
+        withSpecColumn ? " Spec |" : ""
+      }`,
+      `| ------ | --------- | --------------- | ----- |${withPreviousSpec ? " ------------- |" : ""}${
+        withSpecColumn ? " ---- |" : ""
+      }`,
       capLines,
       ...(extras?.trailerJoinsTable ? (extras.trailer ?? []) : []),
       "",

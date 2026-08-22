@@ -7,11 +7,12 @@
 - Row position is the mapping: inserting or reordering a row re-points every spec
   directory below it, so a reorder renames each of those directories and updates the
   matching `Spec:` line in its `01_Spec.md` and the `Spec` column below.
-- Insert or reorder only while every spec below the change is still unpublished. Once
-  one is published, append the new capability at the end instead: renumbering a
-  published spec is a RENUMBER, which `11_Slice-Policy.md` routes through SUPERSEDE
-  (approval, delta, `Superseded-by:`, old ID kept) rather than a directory rename, and
-  the mapping counts the retained directory too.
+- Insert or reorder only while no spec directory exists at or below the row you are
+  moving — `ls` the specs directory, that is the whole test. Once one exists, append
+  the new capability as the last row instead: renaming an existing directory is a
+  RENUMBER, which `11_Slice-Policy.md` routes through SUPERSEDE (approval, delta,
+  `Superseded-by:`, old ID kept) rather than a rename, and the mapping counts the
+  retained directory too.
 - A renumber is not local to the spec: grep the whole pack for the old spec ID and
   re-point every inbound reference to it (`Superseded-by:` in another `01_Spec.md`,
   links, plan and delta entries). Left alone, the old ID now names the spec that took

@@ -16,6 +16,7 @@ const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const SPEC_CELL_RE = /^spec-\d{4}$/i;
 const HEADER_CAP_CELL_RE = /cap\s*id/i;
 const HEADER_SPEC_CELL_RE = /(^|[^a-z])spec([^a-z]|$)/i;
+const SPEC_HEADER_EXACT_RE = /^spec$/i;
 const ATX_HEADING_RE = /^ {0,3}(#{1,6})\s+/;
 const CAP_CATALOG_HEADING_RE = /^ {0,3}(#{1,6})\s+.*\bcap\s+catalog\b/i;
 
@@ -72,6 +73,29 @@ function findCatalogueWindow(lines: string[]): { start: number; end: number } {
     return { start: index + 1, end: lines.length };
   }
   return { start: 0, end: lines.length };
+}
+
+/**
+ * Picks the column the row position is declared in.
+ *
+ * A header spelled exactly `Spec` wins outright, so a companion column such as
+ * `Previous Spec` in a renumber-history table cannot take its place — matching
+ * loosely and taking the first hit would validate the wrong cell in both
+ * directions, passing a wrong canonical value and failing a right one. The
+ * loose spelling (`Spec ID`, `対応 spec`) is honoured only when nothing matches
+ * exactly and exactly one column is a candidate; an ambiguous header declares
+ * no column at all rather than guessing one.
+ */
+function findSpecColumn(header: string[]): number {
+  const normalized = header.map((cell) => cell.replace(/[`*_]/g, "").trim());
+  const exact = normalized.findIndex((cell) => SPEC_HEADER_EXACT_RE.test(cell));
+  if (exact >= 0) {
+    return exact;
+  }
+  const loose = normalized.flatMap((cell, index) =>
+    HEADER_SPEC_CELL_RE.test(cell) ? [index] : [],
+  );
+  return loose.length === 1 ? (loose[0] ?? -1) : -1;
 }
 
 /**
@@ -157,7 +181,7 @@ function parseCapCatalogue(markdown: string): CapCatalogue {
     if (capColumn < 0) {
       continue;
     }
-    const specColumn = header.findIndex((cell) => HEADER_SPEC_CELL_RE.test(cell));
+    const specColumn = findSpecColumn(header);
     return {
       hasSpecColumn: specColumn >= 0,
       ...readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
