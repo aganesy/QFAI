@@ -125,6 +125,9 @@ Who records which status:
   the CLI-side dispatch persists `<screen>.review.json` only on a
   successful attempt, so a `launchFailed` / fully-exhausted pair leaves
   **no file**. Do not invent one — an absent payload is the signal.
+  A payload that does carry `retryExhausted` / `launchFailed` reviewed
+  nothing, so `npx qfai prototyping certify` rejects it (exit `64`) no
+  matter what its axes claim.
 
 That is also what separates the two exit `64`s: a converged run has a
 parsable payload for every (spec, screen) pair, while a Reviewer

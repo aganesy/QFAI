@@ -446,6 +446,42 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     }
   });
 
+  it.each(["retryExhausted", "launchFailed"] as const)(
+    "exits 64 when a payload reports sessionStatus '%s' even with all axes exceptional",
+    async (status) => {
+      // `retryExhausted` / `launchFailed` are the Reviewer Playwright
+      // hard-stop: every attempt failed, or the Reviewer never
+      // started. Such a pair is supposed to leave no payload at all,
+      // so a file that carries a failed status reviewed nothing — its
+      // `exceptional` axes are not evidence and must not seal a
+      // certificate.
+      const root = await newTempDir();
+      await seedMinimalProject(root);
+      await seedAllGatesPass(root, { specsCovered: ["0012"] });
+      await seedUiScreens(root, ["home", "settings"]);
+      await seedReviewJson(root, "spec-0012", "home");
+      await seedReviewJson(
+        root,
+        "spec-0012",
+        "settings",
+        1,
+        reviewPayload("spec-0012", "settings", { sessionStatus: status }),
+      );
+
+      const logger = await import("../../../src/cli/lib/logger.js");
+      const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+      try {
+        const exit = await runPrototypingCertify({ root, check: false });
+        expect(exit).toBe(64);
+        const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+        expect(messages.some((m) => m.includes("contradict convergence"))).toBe(true);
+        expect(messages.some((m) => m.includes(`sessionStatus is "${status}"`))).toBe(true);
+      } finally {
+        errorSpy.mockRestore();
+      }
+    },
+  );
+
   it("exits 64 when a payload still carries layout anti-patterns or DESIGN.md violations", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

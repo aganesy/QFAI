@@ -16,6 +16,7 @@
  */
 export type ReviewPayloadOverrides = {
   readonly cycle?: number;
+  readonly sessionStatus?: "ok" | "retryExhausted" | "launchFailed";
   readonly axis?: "weak" | "acceptable" | "strong" | "exceptional";
   readonly layoutAntiPatternsDetected?: readonly string[];
   readonly designMdViolations?: ReadonlyArray<{ kind: string; found: string }>;
@@ -31,7 +32,7 @@ export function reviewPayload(
     specId,
     screenId,
     cycle: overrides.cycle ?? 1,
-    sessionStatus: "ok",
+    sessionStatus: overrides.sessionStatus ?? "ok",
     retryCount: 0,
     ordinalAxes: {
       informationArchitecture: axis,

@@ -804,7 +804,8 @@ export async function runPrototypingCertify(
       }
       // `reviewerGate.result === "PASS"` is a summary claim (gated
       // above); the per-screen payloads are the evidence behind it.
-      // Convergence is an AND over every (spec, screen) pair — all 4
+      // Convergence is an AND over every (spec, screen) pair — a
+      // completed Reviewer session (`sessionStatus: "ok"`), all 4
       // ordinal axes `exceptional`, `layoutAntiPatternsDetected` and
       // `designMdViolations` both empty (see
       // `core/prototyping/iteration.ts::allFourAxesExceptional` /
@@ -815,9 +816,9 @@ export async function runPrototypingCertify(
         reportPayloadFailures(
           "qfai prototyping certify: prototyping.json#reviewerGate.result is PASS but accepted " +
             `iteration ${acceptedIterDir} has ${unconvergedPayloads.length} review.json ` +
-            "payload(s) that contradict convergence (every (spec, screen) pair needs all 4 " +
-            "ordinal axes `exceptional` with layoutAntiPatternsDetected and designMdViolations " +
-            "empty):",
+            "payload(s) that contradict convergence (every (spec, screen) pair needs " +
+            '`sessionStatus: "ok"` and all 4 ordinal axes `exceptional` with ' +
+            "layoutAntiPatternsDetected and designMdViolations empty):",
           unconvergedPayloads,
         );
         // Non-converged per-screen evidence is the same evidence-gap
@@ -2069,9 +2070,23 @@ function collectIdentityMismatches(
  * ordinal axes `exceptional`, no layout anti-patterns, no DESIGN.md
  * violations. Every returned string names one reason this pair is not
  * converged.
+ *
+ * `sessionStatus` gates all of that: the shipped reference declares
+ * `retryExhausted` / `launchFailed` as the Reviewer Playwright
+ * hard-stop — every attempt failed, or the Reviewer never started —
+ * and such a pair is supposed to leave NO payload behind. A file that
+ * nonetheless carries a failed status reviewed nothing, so whatever
+ * axes it claims are not evidence; only `ok` describes a session that
+ * actually ran.
  */
 function collectConvergenceContradictions(review: ReviewerPayload): string[] {
   const errors: string[] = [];
+  if (review.sessionStatus !== "ok") {
+    errors.push(
+      `sessionStatus is "${review.sessionStatus}", not "ok" — the Reviewer session did not ` +
+        "complete, so this payload is not evidence of a review",
+    );
+  }
   for (const axis of ORDINAL_AXES) {
     const verdict = review.ordinalAxes[axis];
     if (verdict !== "exceptional") {
