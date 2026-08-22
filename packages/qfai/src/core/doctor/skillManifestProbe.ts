@@ -17,8 +17,12 @@
  *
  * `probeSkillManifest` is the full-fidelity entry point: it keeps
  * "manifest found, zero deps declared" distinct from "no manifest at
- * all" and from "manifest unreadable". `probeSkillManifestRuntimeDeps`
- * stays as the findings-only convenience wrapper.
+ * all", from "manifest present but unreadable" (permission / I/O
+ * fault), and from "manifest unparseable". It also reports whether the
+ * skills root itself exists, so callers can tell an uninitialized
+ * project from a typo'd `--profile <skill>`.
+ * `probeSkillManifestRuntimeDeps` stays as the findings-only
+ * convenience wrapper.
  */
 
 import { access, readFile } from "node:fs/promises";
@@ -39,11 +43,16 @@ export type SkillManifestProbeFinding = {
  * Whether the skill's manifest was located and understood.
  *
  * - `found` — manifest read and parsed (it may still declare no deps).
- * - `absent` — no manifest file at the resolved path.
+ * - `absent` — no manifest file at the resolved path (`ENOENT` /
+ *   `ENOTDIR`: the file, or a directory on the way to it, is missing).
+ * - `unreadable` — a manifest entry exists at the path but the read
+ *   itself failed (permission denied, the entry is a directory, a
+ *   transient I/O error). Distinct from `absent`: reporting it as
+ *   "no manifest" would hide a filesystem fault as a config gap.
  * - `unparseable` — manifest exists but is not JSON, is not an object,
  *   or declares a non-array `runtimeDependencies`.
  */
-export type SkillManifestState = "found" | "absent" | "unparseable";
+export type SkillManifestState = "found" | "absent" | "unreadable" | "unparseable";
 
 export type SkillManifestProbeResult = {
   readonly manifest: SkillManifestState;
@@ -51,9 +60,20 @@ export type SkillManifestProbeResult = {
   readonly manifestPath: string;
   /**
    * Whether the skill's own directory exists. `false` means the skill
-   * itself is unresolvable — a typo'd or renamed `--profile <skill>`.
+   * itself is unresolvable — a typo'd or renamed `--profile <skill>`,
+   * but ONLY when `skillsRootExists` is true. See below.
    */
   readonly skillDirExists: boolean;
+  /** Absolute path of the skills root the manifest was resolved under. */
+  readonly skillsRootPath: string;
+  /**
+   * Whether the skills root itself (`config.paths.skillsDir`) exists.
+   * `false` means the project is uninitialized or its configured
+   * skillsDir is missing — every skill name resolves to a missing
+   * directory there, so `skillDirExists === false` says nothing about
+   * whether the requested `--profile` value is correct.
+   */
+  readonly skillsRootExists: boolean;
   readonly findings: readonly SkillManifestProbeFinding[];
 };
 
@@ -106,13 +126,22 @@ async function probeNodeModulesFor(
   return { found: false, probedPaths };
 }
 
+type ResolvedManifestLocation = {
+  readonly manifestPath: string;
+  readonly skillsRootPath: string;
+};
+
 async function resolveManifestPath(
   root: string,
   skill: string,
   options?: SkillManifestProbeOptions,
-): Promise<string> {
+): Promise<ResolvedManifestLocation> {
   if (options?.manifestPath) {
-    return options.manifestPath;
+    const manifestPath = options.manifestPath;
+    return {
+      manifestPath,
+      skillsRootPath: path.dirname(path.dirname(manifestPath)),
+    };
   }
   // Honor `config.paths.skillsDir` so a project that relocates its
   // skills tree still has its per-skill `manifest.json` resolved
@@ -125,11 +154,16 @@ async function resolveManifestPath(
   // path intact for projects that did not override it.
   const { config } = await loadConfig(root);
   const skillsDirRel = config.paths.skillsDir;
-  return path.resolve(root, skillsDirRel, skill, "manifest.json");
+  const skillsRootPath = path.resolve(root, skillsDirRel);
+  return {
+    manifestPath: path.resolve(skillsRootPath, skill, "manifest.json"),
+    skillsRootPath,
+  };
 }
 
 type ManifestRead =
   | { readonly state: "absent" }
+  | { readonly state: "unreadable" }
   | { readonly state: "unparseable" }
   | { readonly state: "found"; readonly deps: readonly string[] };
 
@@ -156,12 +190,35 @@ function extractRuntimeDeps(parsed: unknown): ManifestRead {
   return { state: "found", deps };
 }
 
+/**
+ * Error codes that mean "there is nothing at this path" rather than
+ * "something is there but the read failed". `ENOENT` is the plain
+ * missing file; `ENOTDIR` is a missing/!directory component on the way
+ * to it (e.g. the skill directory is itself a file).
+ */
+const ABSENT_READ_ERROR_CODES: ReadonlySet<string> = new Set(["ENOENT", "ENOTDIR"]);
+
+function errorCode(error: unknown): string | undefined {
+  if (typeof error === "object" && error !== null && "code" in error) {
+    const code: unknown = error.code;
+    return typeof code === "string" ? code : undefined;
+  }
+  return undefined;
+}
+
 async function readManifest(manifestPath: string): Promise<ManifestRead> {
   let raw: string;
   try {
     raw = await readFile(manifestPath, "utf-8");
-  } catch {
-    return { state: "absent" };
+  } catch (error: unknown) {
+    // Only a genuinely missing path is `absent`. Permission denied,
+    // "manifest.json is a directory" (EISDIR), and transient I/O
+    // errors leave the manifest unprobed and MUST NOT be reported as
+    // "this skill declares no runtimeDependencies".
+    const code = errorCode(error);
+    return code !== undefined && ABSENT_READ_ERROR_CODES.has(code)
+      ? { state: "absent" }
+      : { state: "unreadable" };
   }
   let parsed: unknown;
   try {
@@ -185,11 +242,13 @@ export async function probeSkillManifest(
   skill: string,
   options?: SkillManifestProbeOptions,
 ): Promise<SkillManifestProbeResult> {
-  const manifestPath = await resolveManifestPath(root, skill, options);
+  const { manifestPath, skillsRootPath } = await resolveManifestPath(root, skill, options);
   const skillDirExists = await exists(path.dirname(manifestPath));
+  const skillsRootExists = skillDirExists ? true : await exists(skillsRootPath);
   const read = await readManifest(manifestPath);
+  const location = { manifestPath, skillDirExists, skillsRootPath, skillsRootExists };
   if (read.state !== "found") {
-    return { manifest: read.state, manifestPath, skillDirExists, findings: [] };
+    return { manifest: read.state, ...location, findings: [] };
   }
   const findings: SkillManifestProbeFinding[] = [];
   for (const name of read.deps) {
@@ -201,7 +260,7 @@ export async function probeSkillManifest(
       probedPaths: probe.probedPaths,
     });
   }
-  return { manifest: "found", manifestPath, skillDirExists, findings };
+  return { manifest: "found", ...location, findings };
 }
 
 /**

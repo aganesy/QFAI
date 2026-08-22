@@ -124,6 +124,35 @@ describe("probeSkillManifest — manifest state is reported separately from find
     expect(result.skillDirExists).toBe(true);
   });
 
+  it("reports manifest=unreadable — not absent — when the read itself fails", async () => {
+    const root = await newTempDir("state-unreadable");
+    // A directory in place of manifest.json makes readFile throw
+    // EISDIR: the manifest path is occupied, so nothing was probed and
+    // "absent" would hide the fault as a missing declaration.
+    await mkdir(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "manifest.json"), {
+      recursive: true,
+    });
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("unreadable");
+    expect(result.skillDirExists).toBe(true);
+    expect(result.findings).toEqual([]);
+  });
+
+  it("separates a missing skills root from a missing skill inside an existing root", async () => {
+    const uninitialized = await newTempDir("state-noroot");
+    const noRoot = await probeSkillManifest(uninitialized, "qfai-atdd");
+    expect(noRoot.manifest).toBe("absent");
+    expect(noRoot.skillsRootExists).toBe(false);
+    expect(noRoot.skillDirExists).toBe(false);
+
+    const initialized = await newTempDir("state-root");
+    await seedManifest(initialized, "qfai-atdd", []);
+    const typo = await probeSkillManifest(initialized, "qfai-atdd-typo");
+    expect(typo.manifest).toBe("absent");
+    expect(typo.skillsRootExists).toBe(true);
+    expect(typo.skillDirExists).toBe(false);
+  });
+
   it("reports manifest=unparseable for invalid JSON and for a non-array field", async () => {
     const root = await newTempDir("state-bad");
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-atdd");

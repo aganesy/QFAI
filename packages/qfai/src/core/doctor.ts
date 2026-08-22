@@ -577,11 +577,22 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
 }
 
 /**
- * Report a manifest the probe could not read. An unreadable manifest is
- * NOT a clean bill of health: nothing was probed. When the skill's own
- * directory is missing too, the `--profile` value itself is wrong (a
- * typo, or a skill that was renamed), so that case is an error rather
- * than a warning.
+ * Report a manifest the probe could not read. An unprobed manifest is
+ * NOT a clean bill of health: nothing was probed.
+ *
+ * The four unprobed states are diagnosed apart because they call for
+ * different actions:
+ * - `unparseable` / `unreadable` — the file is there but unusable, so
+ *   this is an error the user must repair (bad JSON, permissions, I/O).
+ * - skills root missing — the project is uninitialized (or its
+ *   configured `paths.skillsDir` is gone). Every skill name resolves
+ *   to a missing directory then, so blaming `--profile` would be a
+ *   misdiagnosis; this is the same "run init" condition that the
+ *   `paths.skillsDir` / `skills.integrity` checks report, and it stays
+ *   a warning so `--fail-on error` is not tripped by it.
+ * - skill directory missing inside an existing skills root — only
+ *   here is the `--profile` value itself wrong (a typo, or a skill
+ *   that was renamed), so that case is an error.
  */
 function buildUnreadableManifestCheck(
   root: string,
@@ -590,11 +601,14 @@ function buildUnreadableManifestCheck(
 ): DoctorCheck {
   const manifestRel = toRelativePath(root, result.manifestPath);
   const skillDirRel = toRelativePath(root, path.dirname(result.manifestPath));
+  const skillsRootRel = toRelativePath(root, result.skillsRootPath);
   const details = {
     skill,
     manifest: result.manifest,
     manifestPath: manifestRel,
     skillDirExists: result.skillDirExists,
+    skillsRootExists: result.skillsRootExists,
+    skillsRoot: skillsRootRel,
   };
   const base = { id: "skill.runtimeDependencies", title: "Skill runtimeDependencies", details };
   if (result.manifest === "unparseable") {
@@ -602,6 +616,20 @@ function buildUnreadableManifestCheck(
       ...base,
       severity: "error",
       message: `manifest for skill '${skill}' at ${manifestRel} is not JSON declaring a '${SKILL_MANIFEST_RUNTIME_DEPENDENCIES_FIELD}' array — runtimeDependencies were not probed`,
+    };
+  }
+  if (result.manifest === "unreadable") {
+    return {
+      ...base,
+      severity: "error",
+      message: `manifest for skill '${skill}' at ${manifestRel} exists but could not be read (permissions, a directory in its place, or an I/O error) — runtimeDependencies were not probed`,
+    };
+  }
+  if (!result.skillsRootExists) {
+    return {
+      ...base,
+      severity: "warning",
+      message: `skills root ${skillsRootRel} does not exist, so skill '${skill}' could not be resolved (run 'qfai init', or fix paths.skillsDir) — runtimeDependencies were not probed`,
     };
   }
   if (!result.skillDirExists) {

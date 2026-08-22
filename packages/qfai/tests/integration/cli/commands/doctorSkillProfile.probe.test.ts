@@ -164,6 +164,31 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     expect(finding.details?.manifestPath).toMatch(/manifest\.json/u);
   });
 
+  it("warns about the missing skills root instead of blaming --profile", async () => {
+    // Uninitialized project: every skill name resolves to a missing
+    // directory, so "unknown skill / check --profile" would be a
+    // misdiagnosis, and `--fail-on error` must not trip on it.
+    const root = await newTempDir("noskillsroot");
+    const finding = await runAndFind(root, "qfai-atdd");
+    expect(finding.severity).toBe("warning");
+    expect(finding.message).not.toMatch(/unknown skill/u);
+    expect(finding.message).toMatch(/skills root/u);
+    expect(finding.message).toMatch(/qfai init/u);
+    expect(finding.details?.skillsRootExists).toBe(false);
+  });
+
+  it("errors when the manifest path exists but cannot be read", async () => {
+    const root = await newTempDir("unreadable");
+    await mkdir(
+      path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping", "manifest.json"),
+      { recursive: true },
+    );
+    const finding = await runAndFind(root, "qfai-prototyping");
+    expect(finding.severity).toBe("error");
+    expect(finding.message).toMatch(/could not be read/u);
+    expect(finding.details?.manifest).toBe("unreadable");
+  });
+
   it("errors when the manifest exists but cannot be parsed", async () => {
     const root = await newTempDir("unparseable");
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");
