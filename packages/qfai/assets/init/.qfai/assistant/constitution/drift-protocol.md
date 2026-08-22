@@ -287,14 +287,26 @@ is a defect.
 - The first two are **blocking** and gate `done`. `record:*` and `none` are not.
 - `Traces to: record:<CODE>` is a record defect: the ledger, a round block, an evidence anchor or
   the provenance prose is wrong while the product is not. It MUST be recorded as `advisory`, MUST
-  NOT be `blocking`, and settles in one queue at the spec boundary rather than by re-running the
-  row. `record:unchecked` is a bug report against `validateTddList`, not against the item — a
-  record rule worth a round is worth a validator code.
+  NOT be `blocking`, and settles in the spec's record-defect queue (`#the-record-defect-queue`)
+  rather than by re-running the row. `record:unchecked` is a bug report against `validateTddList`,
+  not against the item — a record rule worth a round is worth a validator code.
+- **A record that misrepresents the run is not a record defect.** Evidence copied from a previous
+  round or a sibling row, an evidence anchor resolving to a run other than the one it names, and a
+  false `Authored/edited under review` attestation do not merely mis-state the work — they claim
+  work that was not done, or independence the reviewer did not have. `agents/qa-gatekeeper.md`
+  rejects the first two outright and
+  `shared-skill-delegation-baseline.md#reviewer-response-template` forbids a `PASS` on the third,
+  so classifying them `record:*` would let an advisory-only review return `PASS` and release
+  `done` over the very evidence the gate exists to reject. They stay **blocking** as
+  `defect:code-quality` and MUST NOT be filed as `record:*`. `record:*` covers a record that is
+  honestly produced and merely wrong — a tier missing from an Evidence cell, a `Satisfied-by`
+  naming the wrong sibling row, an unlabelled round block.
 - `Traces to: none` is reviewer-originated scope. It is **drift**, and it is **not satisfiable
   downstream**: encoding it as production code plus a hard test assertion is the same violation as
   patching upstream SSOT, inverted. It MUST be recorded as `advisory`, MUST NOT be `blocking`, and
   is routed to the Change Request / Open Question path — never to the implementer.
-- Routing an advisory finding:
+- Routing a `none` advisory (a `record:*` advisory takes `#the-record-defect-queue` instead — the
+  Change Request path adjudicates product obligations and cannot repair a record):
   1. The reviewer records it in its response under `Advisory / Change Request proposals`, with
      enough context for the owner phase to adjudicate. The reviewer does **not** write it into
      `08_Open-questions.md`: that file is upstream SSOT (see `#core-rule`) and is owned by
@@ -314,6 +326,34 @@ is a defect.
   depend on the obligation under dispute, resume only after approval and the owner rerun.
   Completing against an obligation that is known to be under revision would ship a knowingly
   inconsistent SSOT.
+
+### The record-defect queue
+
+Making `record:*` advisory removes the round it used to force. It does not remove the defect, so
+the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
+one queue per spec, and it has exactly three properties.
+
+- **Where.** A `## Record defects` section in the spec's evidence file:
+  `.qfai/evidence/implement-<spec-id>.md` when that file exists, otherwise
+  `.qfai/evidence/atdd-<spec-id>.md` — the same file rule the spec-level checkpoint boundary uses,
+  so a spec never has this queue in two places. Never `08_Open-questions.md`: that file is upstream
+  SSOT owned by `/qfai-sdd` (see `#core-rule`), and a record defect is not a product obligation.
+- **Who.** The reviewer records the finding in its response as an advisory, as for any advisory.
+  The **orchestrator** that dispatched the review appends it to the queue when the round closes —
+  the same role that owns the ledger. A finding that stays in the reviewer response and never
+  reaches the queue is an unrouted advisory, which the review gate already forbids.
+- **Entry.** One line per defect: the `<CODE>`, the row or artifact it is against, what the record
+  says against what the run actually did, and the round it came from. That is what makes it
+  repairable later by someone who did not watch the round.
+- **Drain, at the spec boundary.** Before spec-level completion is declared, every open entry is
+  resolved one of two ways: **repaired in place** — the record is corrected to what the run did, no
+  row re-run and no status change — or **converted to a validator bug report** when the rule it
+  names is one no validator checks, per the `record:unchecked` ratchet above. Completion is not
+  declared while an entry is open. This gates the **spec** boundary only: a `record:*` finding
+  still never holds an individual row out of `done`, which is the whole point of the class.
+
+An unconsumed queue would make the class worse than what it replaced: the round is gone and the
+defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 

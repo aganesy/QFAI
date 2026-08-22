@@ -346,7 +346,7 @@ The skill may declare "this spec's implementation is complete" only when:
   has an `E2E` row": those rows have no producer, so requiring them made a correct
   spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
-- 0 blocking reviewer issues remain
+- 0 blocking reviewer issues remain, and this spec's `## Record defects` queue is drained — every `record:*` advisory filed there is repaired in place or converted to a `validateTddList` bug report (`references/finding-classification.md#advisory`). Making that class advisory removed the round it used to force, not the defect; the drain is the only place it is collected, so an open entry here is an uncorrected record certified as complete
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
 - No unresolved Change Request or waiver dependency exists. The gate covers only the
   `.qfai/decisions/CR-*.md` **in scope for this spec**; a CR confined to another spec never blocks

@@ -229,18 +229,18 @@ in/out split is not re-derived per run.
 
 - Every finding must declare a severity (`blocking` or `advisory`) and a `Traces to:` value.
 - `Traces to:` names what the finding enforces. Legal values:
-  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named constitution/catalog
-    rule **that governs the product's behaviour**;
-  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts
-    themselves, cited together with the evidence that demonstrates it (see `drift-protocol.md#defect-or-new-scope-decide-this-first`).
-    A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
-  - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a
-    round block, an evidence anchor, the provenance prose itself. `<CODE>` names the record rule;
+  - an upstream obligation — an `AC-*`, `BR-*`, `TC-*`, `CON-*` ID, or a named constitution/catalog rule **that governs the product's behaviour**;
+  - `defect:correctness`, `defect:security`, or `defect:code-quality` — a defect demonstrable from the changed artifacts themselves, cited with the evidence that demonstrates it
+    (see `drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
+  - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a round block, an evidence anchor, the provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
-- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding
-  settles in one queue at the spec boundary, never by re-running the row, and `record:unchecked` is a bug report against
-  `validateTddList`, not against the item: a record rule worth a round is worth a validator code.
-- An advisory finding is routed to the Change Request / Open Question path defined in `drift-protocol.md#reviewer-originated-obligations`, not to the implementer.
+- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the spec's
+  record-defect queue and it is drained there before spec completion (`drift-protocol.md#the-record-defect-queue`). `record:unchecked` is a bug report against `validateTddList`, not
+  against the item: a record rule worth a round is worth a validator code.
+- **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
+  `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
+  built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.
+- A `none` advisory takes the Change Request / Open Question path (`drift-protocol.md#reviewer-originated-obligations`); a `record:*` advisory takes the queue above. Neither goes to the implementer.
 - Only `blocking` findings — those citing a behaviour-governing obligation or a defect class — force `REVISE`.
 
 ### Reviewer budget exhausted

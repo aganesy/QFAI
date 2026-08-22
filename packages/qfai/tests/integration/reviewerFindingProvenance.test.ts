@@ -135,7 +135,7 @@ describe("reviewer finding provenance", () => {
       expect(doc).toContain("`record:<CODE>`");
       // The ratchet: a record rule worth a round is worth a validator code.
       expect(doc).toMatch(/`record:unchecked` is a bug report against\s+`validateTddList`/);
-      expect(doc).toMatch(/settles in\s+one queue at the spec boundary/);
+      expect(doc).toMatch(/record-defect queue/);
     }
     expect(baseline).toMatch(
       /`record:\*` and `none` MUST be recorded as `advisory`;\s+neither can be `blocking` or gate `DONE`/,
@@ -158,7 +158,7 @@ describe("reviewer finding provenance", () => {
     expect(classification.indexOf("## Blocking")).toBeGreaterThanOrEqual(0);
     expect(advisoryIndex).toBeGreaterThan(0);
     expect(classification.indexOf("`record:<CODE>`")).toBeGreaterThan(advisoryIndex);
-    expect(classification).toMatch(/settles in\s+one queue at the spec boundary/);
+    expect(classification).toMatch(/settles in\s+the spec's record-defect queue/);
     expect(classification).toMatch(
       /`record:unchecked` is a bug report against\s+`validateTddList`/,
     );
@@ -167,6 +167,62 @@ describe("reviewer finding provenance", () => {
       const card = await readFile(file, "utf-8");
       expect(card).toMatch(/no blocking finding traces to `none` or `record:\*`/);
     }
+  });
+
+  it("gives the record-defect queue a destination, an owner and a drain", async () => {
+    // Making `record:*` advisory drops the round it used to force. Without a
+    // named queue, a named owner and a point that consumes it, the defect drops
+    // with the round: the review returns PASS, the row goes `done`, and nothing
+    // ever comes back for the wrong Evidence cell.
+    const [drift, classification, skill] = await Promise.all([
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+      readFile(IMPLEMENT_SKILL, "utf-8"),
+    ]);
+    // Destination: a section of the spec's own evidence file, never upstream SSOT.
+    expect(drift).toMatch(/^### The record-defect queue$/m);
+    for (const doc of [drift, classification]) {
+      expect(doc).toContain("## Record defects");
+      expect(doc).toContain(".qfai/evidence/implement-<spec-id>.md");
+      expect(doc).toContain(".qfai/evidence/atdd-<spec-id>.md");
+    }
+    expect(drift).toMatch(/Never `08_Open-questions\.md`/);
+    // Owner: the orchestrator that dispatched the review, not the reviewer.
+    expect(drift).toMatch(/The \*\*orchestrator\*\* that dispatched the review appends it/);
+    // Drain: consumed at the spec boundary, and completion is gated on it.
+    expect(drift).toMatch(/repaired in place[\s\S]{0,400}converted to a validator bug report/);
+    expect(drift).toMatch(/Completion is not\s*\n?\s*declared while an entry is open/);
+    expect(skill).toMatch(
+      /0 blocking reviewer issues remain, and this spec's `## Record defects` queue is drained/,
+    );
+    // …while still not gating any individual row's `done`.
+    for (const doc of [drift, classification]) {
+      expect(doc).toMatch(/never holds an\s*\n?\s*individual row out of `done`/);
+    }
+  });
+
+  it("keeps an evidence-integrity violation blocking instead of record class", async () => {
+    // Copied evidence, an anchor pointing at another run and a false
+    // independence attestation are all defects "in the record". Classing them
+    // `record:*` would make them advisory, and an advisory-only review returns
+    // PASS — releasing `done` over exactly the evidence `qa-gatekeeper.md` and
+    // the response rules exist to refuse.
+    const [baseline, drift, classification] = await Promise.all([
+      readFile(DELEGATION_BASELINE, "utf-8"),
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+    ]);
+    for (const doc of [baseline, drift, classification]) {
+      // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+      expect(doc).toMatch(/copied from a(nother| previous)\s+round or a sibling row/);
+      expect(doc).toMatch(/`Authored\/edited under review` attestation/);
+      expect(doc).toMatch(/`defect:code-quality`/);
+      expect(doc).toContain("qa-gatekeeper.md");
+    }
+    expect(baseline).toMatch(/\*\*Integrity is not record class\.\*\*/);
+    expect(drift).toMatch(
+      /A record that misrepresents the run is not a record defect[\s\S]{0,900}MUST NOT be filed as `record:\*`/,
+    );
   });
 
   it("links only to anchors that exist in the target document", async () => {
