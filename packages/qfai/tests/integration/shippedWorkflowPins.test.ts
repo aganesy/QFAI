@@ -381,3 +381,123 @@ describe("TC-0003-0033 (TDD-0033): leakage guard exits 1 on a planted convention
     expect(script).toContain(String.raw`| grep -vE 'package\.json' || true`);
   });
 });
+
+describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an unsanctioned owner", () => {
+  // Realizes TC-0003-0032 (AC-0003-0027, EX-0003-0029). The rule under test is
+  // `shipped-third-party` in the workflow-hygiene lane: every third-party
+  // `uses:` owner in the SHIPPED set must be a member of a closed sanctioned
+  // list. Both Verify bullets are here, and the second is the one that gives
+  // the row its value — a count-of-zero implementation would redden on the
+  // clean tree, which is why the clean leg is not a formality.
+  //
+  // The lane is spawned against a temp COPY. Its own docblock requires that:
+  // planting into `.github/` or into the packaged assets would mutate the
+  // tree every other suite reads.
+  const newTempDir = useTempDirPool("qfai-pins-thirdparty-");
+
+  const repoRoot = path.resolve(packageRoot, "..", "..");
+  const LANE = path.join(repoRoot, "scripts", "check-workflow-hygiene.mjs");
+  const SHIPPED_WORKFLOWS_REL = path.join(
+    "packages",
+    "qfai",
+    "assets",
+    "init",
+    "root",
+    ".github",
+    "workflows",
+  );
+  /** The file carrying the one sanctioned third-party reference today. */
+  const THIRD_PARTY_FILE = "qfai-validate.yml";
+  const UNSANCTIONED_OWNER = "someone-else";
+
+  type LaneRun = { exitCode: number; output: string };
+
+  /**
+   * Runs the lane over a staged root.
+   *
+   * `?? -1` and not `?? 1`: a lane that could not be spawned at all must stay
+   * distinguishable from one that reported a violation, or a broken harness
+   * reads as a passing rejection.
+   */
+  function runLane(root: string): LaneRun {
+    const child = spawnSync(process.execPath, [LANE, "--root", root], { encoding: "utf-8" });
+    return {
+      exitCode: child.status ?? -1,
+      output: `${child.stdout ?? ""}${child.stderr ?? ""}`,
+    };
+  }
+
+  /** Both trees the lane's structural rules cover, staged under one root. */
+  async function stageTree(): Promise<string> {
+    const dir = await newTempDir();
+    await cp(path.join(repoRoot, ".github"), path.join(dir, ".github"), { recursive: true });
+    await cp(path.join(repoRoot, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
+      recursive: true,
+    });
+    return dir;
+  }
+
+  /** Only the lane's own findings, so an unrelated diagnostic cannot satisfy a `toContain`. */
+  function findingsOf(output: string): string {
+    return output
+      .split(/\r?\n/)
+      .filter((line) => line.startsWith("R-WORKFLOW-HYGIENE-DRIFT:"))
+      .join("\n");
+  }
+
+  /** The third-party owners the untouched shipped set references, first-party excluded. */
+  async function shippedThirdPartyOwners(): Promise<string[]> {
+    const owners = new Set<string>();
+    for (const [, body] of await loadShippedWorkflows()) {
+      for (const match of body.matchAll(/^\s*(?:- )?uses:\s*([^@\s]+)@/gm)) {
+        const owner = (match[1] ?? "").split("/")[0] ?? "";
+        if (owner !== "" && !owner.startsWith(".") && !["actions", "github"].includes(owner)) {
+          owners.add(owner);
+        }
+      }
+    }
+    return [...owners].sort();
+  }
+
+  it("exits 1 on a planted unsanctioned owner, naming both the reference and the allow-list", async () => {
+    const dir = await stageTree();
+    const target = path.join(dir, SHIPPED_WORKFLOWS_REL, THIRD_PARTY_FILE);
+    const body = await readFile(target, "utf-8");
+    // The plant keeps a valid 40-hex suffix on purpose: it must fail the
+    // third-party rule and not the pin rule, or this row would pass while
+    // the allow-list did nothing.
+    const planted = body.replace(
+      /uses: pnpm\/action-setup@[0-9a-f]{40}/,
+      `uses: ${UNSANCTIONED_OWNER}/action-setup@0123456789abcdef0123456789abcdef01234567`,
+    );
+    expect(planted, "the plant found no sanctioned reference to displace").not.toBe(body);
+    await writeFile(target, planted, "utf-8");
+
+    const run = runLane(dir);
+    expect(run.exitCode, "an unsanctioned third-party owner must fail the lane").toBe(1);
+
+    const findings = findingsOf(run.output);
+    expect(findings, "the finding does not name the offending reference").toContain(
+      UNSANCTIONED_OWNER,
+    );
+    expect(findings, "the finding does not render the sanctioned set").toContain("pnpm");
+    expect(findings, "the plant tripped the pin rule instead of the allow-list").not.toContain(
+      "action-pin",
+    );
+  });
+
+  it("exits 0 on the untouched set, which still carries a sanctioned third-party reference", async () => {
+    // Non-vacuity first: without a third-party reference in the shipped set,
+    // the clean leg below would pass against a rule that never evaluates.
+    expect(
+      await shippedThirdPartyOwners(),
+      "the shipped set references no third party, so the clean leg proves nothing",
+    ).toEqual(["pnpm"]);
+
+    const run = runLane(await stageTree());
+    // A count-of-zero implementation reddens here. That is the whole point of
+    // the leg: it falsifies the reading the allow-list exists to replace.
+    expect(run.exitCode, "the untouched shipped set must pass the lane").toBe(0);
+    expect(findingsOf(run.output)).toBe("");
+  });
+});
