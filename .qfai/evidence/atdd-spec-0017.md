@@ -2092,7 +2092,16 @@ stage's own guards were red in that project, at a revision that had opened a rev
 nothing else. The block is re-run rather than carried forward, which is what its own first sentence has
 demanded through six rounds.
 
-e2e callsites at this tree: 883
+**And it moved again, for the same structural reason and from outside this stage.** A session
+closing `QFAI-ATDD-111` and the non-`spec-0017` half of `QFAI-ATDD-112` added four e2e files and
+one integration file — coverage for eleven user stories and seven test cases across four other
+specs — which took the e2e callsite count from 883 to 912. Nothing about `spec-0017` changed; the
+guard reddened because the count it measures is a property of the **tree**, not of this spec, and
+that is the second time a foreign commit has demonstrated the point this section makes. Both suite
+totals above are therefore known-invalid for the current tree rather than assumed current, which is
+exactly what the mechanism below says the line's movement means.
+
+e2e callsites at this tree: 912
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
