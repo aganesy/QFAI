@@ -36,12 +36,15 @@ the rule. A skill approaching it is a signal to move a section out.
 - If AskUserQuestion is unavailable, ask the same question in a normal message with explicit numbered choices.
 - Preserve structured choice semantics when falling back.
 - State why AskUserQuestion was unavailable.
-- Spend **at most 5 clarifying questions per stage invocation**. Only
-  clarifications spend the budget: a prompt asked because a document requires a
-  recorded human decision (an SDD triage `Approved By`, a reviewer-gate
-  escalation) is an **approval** and spends nothing. On exhaustion, do not ask a
-  sixth — proceed with explicit, labelled assumptions and record them in the
-  stage output, exactly as `--auto` does. See
+- Spend **at most 5 clarifying questions per invocation**, the unit being one
+  top-level skill or command invocation (a `/qfai-*` stage, `/qfai-configure`,
+  `/web-research`, …). Classify each question, not the prompt: a question asked
+  because a document requires a recorded human decision (an SDD triage
+  `Approved By`, a reviewer-gate escalation) is an **approval** and spends
+  nothing, and bundling one into a prompt does not exempt the clarifications
+  beside it. On exhaustion, do not ask a sixth clarification — proceed with
+  explicit, labelled assumptions and record them in the output, as `--auto`
+  does; a required approval may still be asked. See
   `constitution.md#article-vi--clarification-budget-avoid-endless-qa`.
 
 ## Canonical qfai Launcher (Mandatory)

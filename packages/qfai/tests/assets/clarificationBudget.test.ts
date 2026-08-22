@@ -41,8 +41,12 @@ describe("the clarification budget binds a stage", () => {
     it(`${tree}: Article VI names the unit the budget is spent per`, async () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "## Article VI — Clarification budget (avoid endless Q&A)");
-      expectPhrase(content, "**at most 5 clarifying questions per stage invocation**");
-      expectPhrase(content, "It is not per\n  session and not per conversation.");
+      expectPhrase(content, "**at most 5 clarifying questions per invocation**");
+      expectPhrase(content, "The unit is one\n  top-level skill or command invocation");
+      // The article binds every non-discussion command, so the unit cannot be a
+      // canonical stage: `/qfai-configure` and `/web-research` are neither.
+      expectPhrase(content, "`/qfai-configure` or `/web-research`");
+      expectPhrase(content, "It is not per session and not per\n  conversation.");
       // "5 clarifying questions total" left the scope open to four readings.
       expectNoPhrase(content, "clarifying questions total");
     });
@@ -56,16 +60,23 @@ describe("the clarification budget binds a stage", () => {
       // rather than a general escape hatch.
       expectPhrase(content, "`Approved By`");
       expectPhrase(content, "shared-skill-delegation-baseline.md#round-budget-must");
-      expectPhrase(content, "A prompt that carries both is an approval");
+      // A mixed prompt is classified question by question, so one approval
+      // cannot carry an unbounded tail of clarifications past the budget.
+      expectPhrase(content, "Classify **each question, not the prompt**");
+      expectPhrase(content, "spends\n  one unit per clarification it contains");
+      expectNoPhrase(content, "A prompt that carries both is an approval");
     });
 
     it(`${tree}: Article VI defines what exhaustion requires`, async () => {
       const content = await read(tree, CONSTITUTION);
       expectPhrase(content, "### On exhaustion (MUST)");
       expectPhrase(content, "Do not ask a sixth clarification.");
-      expectPhrase(content, "Continue exactly as `--auto` does");
-      expectPhrase(content, "record them in the stage output");
+      expectPhrase(content, "Settle the remaining ambiguity the way `--auto`\ndoes");
+      expectPhrase(content, "record them in the\ninvocation's output");
       expectPhrase(content, "as Open\nQuestions when the assumption is still unresolved");
+      // Exhaustion must not import Article X's blanket no-question mode, or a
+      // required approval would become unaskable and unskippable at once.
+      expectPhrase(content, "A **required approval is still asked**");
     });
 
     it(`${tree}: the operating baseline restates the budget where questions are asked`, async () => {
@@ -73,9 +84,11 @@ describe("the clarification budget binds a stage", () => {
       // Article X reaches every skill through this section; without a line here
       // the budget reaches none of them.
       expectPhrase(content, "## User Questions (AskUserQuestion Protocol)");
-      expectPhrase(content, "**at most 5 clarifying questions per stage invocation**");
-      expectPhrase(content, "is an **approval** and spends nothing");
-      expectPhrase(content, "On exhaustion, do not ask a\n  sixth");
+      expectPhrase(content, "**at most 5 clarifying questions per invocation**");
+      expectPhrase(content, "is an **approval** and spends\n  nothing");
+      expectPhrase(content, "bundling one into a prompt does not exempt the clarifications");
+      expectPhrase(content, "On exhaustion, do not ask a sixth clarification");
+      expectPhrase(content, "a required approval may still be asked");
       expectPhrase(content, "constitution.md#article-vi--clarification-budget-avoid-endless-qa");
     });
   }

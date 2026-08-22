@@ -86,10 +86,12 @@ Non-discussion commands MUST minimize questions.
 
 Default policy:
 
-- Ask **at most 5 clarifying questions per stage invocation**. The unit is the
-  stage listed in `workflow.md` → “Stages (canonical)”: one `/qfai-*` run spends
-  its own budget and the next stage starts with a full one. It is not per
-  session and not per conversation.
+- Ask **at most 5 clarifying questions per invocation**. The unit is one
+  top-level skill or command invocation: every `/qfai-*` stage listed in
+  `workflow.md` → “Stages (canonical)”, and equally a non-stage command such as
+  `/qfai-configure` or `/web-research`. Each invocation spends its own budget and
+  the next one starts with a full budget. It is not per session and not per
+  conversation.
 - Prioritize **blocking** questions first.
 - If user requests `--auto`, proceed with explicit assumptions (label them).
 
@@ -104,7 +106,9 @@ Default policy:
   escalation exit requires a user decision per escalation
   (`shared-skill-delegation-baseline.md#round-budget-must`). Counting them would
   make this article impossible to satisfy in the stage that asks the most.
-- A prompt that carries both is an approval, and does not spend budget.
+- Classify **each question, not the prompt**. A prompt that carries both spends
+  one unit per clarification it contains; only its approval questions are exempt.
+  Attaching an approval to a clarification does not buy the clarification back.
 
 Stop conditions:
 
@@ -113,10 +117,13 @@ Stop conditions:
 
 ### On exhaustion (MUST)
 
-Do not ask a sixth clarification. Continue exactly as `--auto` does: proceed with
-explicit assumptions, label them, and record them in the stage output — as Open
-Questions when the assumption is still unresolved. Silently stopping the stage is
-not a sanctioned move, and neither is asking anyway.
+Do not ask a sixth clarification. Settle the remaining ambiguity the way `--auto`
+does: proceed with explicit assumptions, label them, and record them in the
+invocation's output — as Open Questions when the assumption is still unresolved.
+Exhaustion silences clarifications only. A **required approval is still asked**:
+it never spent budget, and Article X's `--auto` no-question mode is not in force
+here — only its assumption-recording behaviour is. Silently stopping is not a
+sanctioned move, and neither is asking a sixth clarification anyway.
 
 ---
 
