@@ -126,6 +126,22 @@ describe("Completion Contract keeps its executable step executable", () => {
       });
     }
 
+    it(`${tree}: an override names a target its own legitimate runs can still hit`, async () => {
+      // A non-waivable bullet only works if every correct run has something to
+      // execute. Two shipped paths otherwise had none: a re-run of an
+      // already-terminal ledger moves no item to `done`, and configure may not
+      // repair the spec/ATDD/prototyping artifacts a profile-less `validate`
+      // judges. Left as-is, each turns a correct run into a permanent
+      // UNRUN/FAIL, i.e. a completion blocker with no reachable remedy.
+      const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(implement).toContain("A run that moves no item still has a target");
+      expect(implement).toContain("A legitimate no-op is never UNRUN for want of a target.");
+
+      const configure = flat(await read(tree, "assistant/skills/qfai-configure/SKILL.md"));
+      expect(configure).toContain("**judged only over the findings this skill owns**");
+      expect(configure).toContain("rather than read as this bullet's FAIL");
+    });
+
     it(`${tree}: no two inheritors share the same override`, async () => {
       const sentences = await Promise.all(
         skills.map(async (skill) =>

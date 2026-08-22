@@ -302,7 +302,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ## Completion Contract (Shared)
 
-Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the Test command from `catalog/tech.md#standard-commands-copy-paste`, run over the items this session moved to `done` — a suite that did not execute is UNRUN, not a pass.
+Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#completion-contract-shared`. **Smallest applicable smoke check** (this skill's override): the Test command from `catalog/tech.md#standard-commands-copy-paste`, run over the items this session moved to `done` — a suite that did not execute is UNRUN, not a pass. A run that moves no item still has a target: on the "nothing to do" / "All items complete" exits of an already-terminal ledger the check is the spec-level checkpoint verification that exit already owes (`references/checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`) — run its command set when the recorded entries are absent or stale, and where they are fresh for this ledger state take that recorded result as this bullet's outcome with its `Checkpoint verification seal` recomputed here. A legitimate no-op is never UNRUN for want of a target.
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol` for validate, doctor, and quality-gate failures.
 
 ### Item completion checklist (12-point gate)
