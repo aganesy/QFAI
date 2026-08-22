@@ -2014,6 +2014,26 @@ something is written, believed without reading it.
      the only check that reads an adopter-facing body at all. What it is not, after the sweep, is the
      thing standing between an unreviewed body and the shipped tree — `ALLOWED_STEP_BODIES` is.
 
+10. **The Coverage Depth Matrix enumerates and justifies every `❌` and says nothing about any `⚠️`,
+    which is the value a reader most needs a reason for.** Round 19's `qa-gatekeeper` filed this as a
+    residual under a section it explicitly did not raise as a `REVISE`: the depth check passed, because
+    each `❌ ❌` row is enumerated with the ledger rows that would close it and the one normal-path-only
+    row is answered in the class C roster.
+
+    But `§ "Every ❌ cell, named"` and the guard that reads it both key on `❌`. Counted from the
+    table's own rows, **sixteen `⚠️` cells across the seven depth columns** — `US-0017-0001`'s error
+    path and special values, `-0002`'s boundary and combinatorial, `-0003`'s and `-0007`'s and
+    `-0009`'s boundary and special values, `-0004` through `-0006`'s and `-0008`'s oracle strength, and
+    `-0008`'s normal path — carry no reason anywhere, and `⚠️` means PARTIALLY covered: the reader
+    cannot tell which part, or what would finish it. `❌` at least says "nothing here"; `⚠️` says
+    "something here" and stops.
+
+    **It is recorded rather than repaired, and the reason is the one this record keeps arguing.**
+    Sixteen justifications written quickly would be sixteen sentences that sound like reasons, in the
+    artifact whose entire value is that its justifications are judgements a human re-makes each round —
+    which is the "tidy summary" failure lesson 5 warns about, at the scale of a whole section. It is
+    named here so the next round owns it as work rather than finding it again as a gap.
+
 ## Round 2, and the P7 evidence for it
 
 Three reviewers ran on `56daee8d` — **two of them blocking**, per `agent-routing.yml`, whose atdd
@@ -2692,7 +2712,7 @@ What is a property of the subject, checkable at any revision, is the rule and it
 
 Both committed revisions above satisfy it (4 sealed → 6 just-opened). On a working copy the same rule
 holds on top of however many untracked packs it carries: **47 sealed / 49 just-opened / 48 with reports
-and no summary**, re-measured at round 19 with 42 untracked packs present, and 48 is the state this
+and no summary**, re-measured at round 19 with 42 untracked packs present, and 49 is the state this
 commit is in. Cite the deltas. An absolute cited without the untracked-pack count beside it, and the
 date it was taken, is not a measurement of anything a reader can reproduce.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
@@ -2799,7 +2819,7 @@ What is not satisfied:
 - Stage Minimum Roles were not used for P2-P4 — the reviewer gate ran, the work orders did not.
 
 Confirmed by: **one gate has passed, and it is the narrow one.** Counted from the packs on disk:
-**nineteen** rounds, **50** reviewer responses, **49 REVISE and one PASS** — the PASS being P1d's sixth
+**twenty** rounds, **53** reviewer responses, **52 REVISE and one PASS** — the PASS being P1d's sixth
 pass on `DR-0017-0010`. No stage-level gate has passed. **The response count covers CLOSED rounds**:
 round 15's three land in it when a further round opens. Counting the in-flight pack made this row red for
 the whole duration of every round — a required CI leg failing because a reviewer wrote a report, which the
@@ -2864,7 +2884,7 @@ Round 1's pack, for continuity:
 
 ### Review packs and their seals
 
-**Nineteen** packs, one per round — and round 13's holds a request and no reports, because its three
+**Twenty** packs, one per round — and round 13's holds a request and no reports, because its three
 reviewers died on `ENOTFOUND` before writing. Zero is a legitimate response count for a round; it is not
 a passed one. The seal is *supposed* to be fixed at the moment the last reviewer
 response lands, and § "When each pack was actually sealed" below measures the gap **per round**, without a
@@ -2945,6 +2965,8 @@ Review pack:       .qfai/review/review-20260822150000000/            (round 18 �
 Review pack seal:  b62a5174cf942a19308c18c9bccfccd6cf460ffd3e1d2b6f9c7a97a099e47a29
 Review pack:       .qfai/review/review-20260822180000000/            (round 19 — stage gates only)
 Review pack seal:  084ba5ee9d2b676aa87d15534d4badb01a028c4bd81bd40efcdade51ddbdb810
+Review pack:       .qfai/review/review-20260823000000000/            (round 20 — stage gates only)
+Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
