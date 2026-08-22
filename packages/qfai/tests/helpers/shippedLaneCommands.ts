@@ -912,6 +912,77 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
 ]);
 
 /**
+ * Each shipped workflow file, by the bytes of its content.
+ *
+ * **The three shape pins read a PARSED document, and a parse is not an identity.** Round 17 measured the
+ * consequences: a non-mapping step is invisible at three `isRecord` sites, eight YAML spellings of an
+ * empty value collapse onto the same `null`, and several number spellings collapse too — so two files
+ * that differ can serialize identically, which is the one thing a boundary may not permit.
+ *
+ * The bytes are the identity, exactly as they are for a `run:` body. Line endings are normalized because
+ * `.gitattributes` stores these files LF and a checkout is free to hand back CRLF; nothing else is,
+ * because every other normalization tried in this file turned out to erase a behaviour.
+ *
+ * The shape pins are kept beside this one and are not redundant: this says the file is not the reviewed
+ * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
+ */
+export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
+  ["qfai-tests.yml", "581608a7e1dbbb7249768d414018b495175d978ff3f0175398154a937b53f9ee"],
+  ["qfai-validate.yml", "08e79f77a91b59c60b15d3e517341dcf18561b09397f804564f3a58c9bd1c7f6"],
+]);
+
+/** The bytes of a shipped file, line endings normalized and nothing else. */
+export function fileDigest(raw: string): string {
+  return createHash("sha256").update(raw.replace(/\r\n/g, "\n")).digest("hex");
+}
+
+/**
+ * The adopter-facing files `qfai init` writes, outside the four agent-instruction trees.
+ *
+ * The shape pins cover `.github/workflows/**` and nothing else, and `qfai init` writes more than
+ * workflows. Round 17's gate planted a `package.json` carrying a `preinstall` and an `.npmrc` into the
+ * shipped root, ran init, and executed the very step body whose digest is pinned below: arbitrary code
+ * ran with all seven projects and `ci:lint` green. A first variant was caught only by eslint's
+ * `no-require-imports` — a rule about how the planted file was WRITTEN — and inlining the payload evaded
+ * it, which is this record's recurring class working by accident and then not working.
+ *
+ * `.qfai/`, `.claude/`, `.codex/` and `.agents/` are excluded by path: they are agent-instruction trees
+ * that change whenever a skill does, and what matters about them is narrower than their contents, which
+ * `INIT_MUST_NOT_SHIP` states.
+ */
+export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
+  ".github/copilot-instructions.md",
+  ".github/workflows/qfai-tests.yml",
+  ".github/workflows/qfai-validate.yml",
+  ".gitignore",
+  "DESIGN.md",
+  "qfai.config.yaml",
+]);
+
+/** The four trees excluded from the path pin, and excluded from nothing else. */
+export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
+  ".qfai/",
+  ".claude/",
+  ".codex/",
+  ".agents/",
+  ".github/agents/",
+  ".github/instructions/",
+  ".github/prompts/",
+  ".github/skills/",
+];
+
+/**
+ * What `qfai init` may never write ANYWHERE in an adopter's tree, including the instruction trees.
+ *
+ * A kind rather than a list of paths, because the danger is not which file it is but who runs it: a
+ * package manager reads a manifest and a shell reads a script, and neither asks where it came from.
+ * `EXECUTED_ON_INSTALL` names the same class for a lane's redirect targets one level in, and this is the
+ * same claim about the tree the lane runs in.
+ */
+export const INIT_MUST_NOT_SHIP =
+  /(?:^|\/)(?:package\.json|package-lock\.json|pnpm-lock\.yaml|yarn\.lock|pnpm-workspace\.yaml|\.npmrc|\.yarnrc(?:\.yml)?|\.pnpmfile\.(?:c?js))$|\.(?:c?js|mjs|sh|bash|ps1|bat|cmd)$|(?:^|\/)\.git\/hooks\//;
+
+/**
  * Every shipped step, in the job it belongs to and the order the file runs them, with its `run:`
  * body reduced to a digest.
  *

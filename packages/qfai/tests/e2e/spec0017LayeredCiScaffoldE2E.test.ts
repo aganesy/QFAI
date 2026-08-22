@@ -55,6 +55,10 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_JOB_KEYS,
+  ALLOWED_WORKFLOW_FILES,
+  INIT_MUST_NOT_SHIP,
+  INIT_INSTRUCTION_TREES,
+  ALLOWED_INIT_PATHS,
   ALLOWED_WORKFLOW_SHAPE,
   ALLOWED_JOB_SHAPE,
   ALLOWED_SHELLS,
@@ -63,6 +67,7 @@ import {
   ALLOWED_STEP_SHAPE,
   ALLOWED_WORKFLOW_KEYS,
   bodyDigest,
+  fileDigest,
   invocationsOf,
   refusals,
 } from "../helpers/shippedLaneCommands.js";
@@ -507,6 +512,57 @@ describe(
   "E2E: an adopter's lanes do not each rebuild what one could produce (US-0017-0004)",
   { timeout: 120000 },
   () => {
+    it("writes nothing into an adopter's tree that a package manager or a shell runs", async () => {
+      // **What `qfai init` writes at all**, which every pin above is blind to: they read
+      // `.github/workflows/**`, and round 17's gate put a `package.json` with a `preinstall` and an
+      // `.npmrc` into the shipped root, ran init, and executed the very step body whose digest is pinned —
+      // arbitrary code, with all seven projects and `ci:lint` green.
+      //
+      // Two questions, because the surface has two halves. WHICH files arrive, outside the four
+      // agent-instruction trees, is a nine-entry list and is pinned. WHAT KIND of file arrives anywhere,
+      // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be
+      // a file a package manager or a shell executes.
+      const root = await project();
+      const shipped: string[] = [];
+      const walk = async (at: string): Promise<void> => {
+        for (const entry of await readdir(at, { withFileTypes: true })) {
+          const full = path.join(at, entry.name);
+          if (entry.isDirectory()) {
+            await walk(full);
+            continue;
+          }
+          shipped.push(path.relative(root, full).split(path.sep).join("/"));
+        }
+      };
+      await walk(root);
+      expect(shipped.length, "the init tree must have files to read").toBeGreaterThan(20);
+
+      const executable = shipped.filter((file) => INIT_MUST_NOT_SHIP.test(file));
+      expect
+        .soft(
+          executable,
+          "`qfai init` must write nothing a package manager or a shell executes — an adopter's install " +
+            "runs their manifest, and a manifest this tree supplied is code this tree supplied",
+        )
+        .toEqual([]);
+
+      const outsideTrees = shipped.filter(
+        (file) => !INIT_INSTRUCTION_TREES.some((tree) => file.startsWith(tree)),
+      );
+      expect
+        .soft(
+          outsideTrees.filter((file) => !ALLOWED_INIT_PATHS.has(file)).sort(),
+          "a file `qfai init` writes into an adopter's root that nobody reviewed",
+        )
+        .toEqual([]);
+      expect
+        .soft(
+          [...ALLOWED_INIT_PATHS].filter((file) => !outsideTrees.includes(file)).sort(),
+          "a reviewed init path that no longer arrives",
+        )
+        .toEqual([]);
+    });
+
     it("ships no lane that runs its own bundler build", async () => {
       // The invariant, not the feature. Measured: the shipped set uploads no artifact and runs no
       // build, so "reuse" has no surface there yet and `TDD-0032`..`TDD-0035` are `blocked` on
@@ -758,6 +814,14 @@ describe(
       // which is a lane that never runs and therefore never fails.
       const contexts: string[] = [];
       for (const file of await shippedWorkflowFiles()) {
+        // The BYTES first. Everything below reads a parsed document, and a parse is not an identity: a
+        // non-mapping step is invisible to `isRecord`, and eight YAML spellings of an empty value
+        // serialize to the same `null`. Two files that differ can produce one shape, which is the one
+        // thing a boundary may not permit — so the boundary is the file and the shapes say what moved.
+        const digest = fileDigest(await workflowText(file));
+        if (digest !== ALLOWED_WORKFLOW_FILES.get(file)) {
+          contexts.push(`${file}: content ${digest}`);
+        }
         const parsed: unknown = parseYaml(await workflowText(file));
         if (!isRecord(parsed)) continue;
         const { jobs: shippedJobsMap, ...workflowShape } = parsed;
@@ -780,6 +844,23 @@ describe(
         // whether the workflow level needs a rule of its own will read this line to find out.
         readUses(`${file} (workflow level)`, parsed, ALLOWED_WORKFLOW_KEYS);
       }
+      // And the other direction, which the step list has had since round 15 and these two never
+      // inherited: a pinned entry naming a workflow or a job that no longer arrives is an entry nobody
+      // deleted, and it passed. Two maps, one property, applied to one of them.
+      const arrived = new Set<string>();
+      for (const file of await shippedWorkflowFiles()) {
+        arrived.add(file);
+        const parsed: unknown = parseYaml(await workflowText(file));
+        const jobs = isRecord(parsed) && isRecord(parsed["jobs"]) ? parsed["jobs"] : {};
+        for (const id of Object.keys(jobs)) arrived.add(`${file}#${id}`);
+      }
+      for (const key of [...ALLOWED_WORKFLOW_SHAPE.keys(), ...ALLOWED_JOB_SHAPE.keys()]) {
+        if (!arrived.has(key)) contexts.push(`${key}: reviewed, and no longer shipped`);
+      }
+      for (const file of ALLOWED_WORKFLOW_FILES.keys()) {
+        if (!arrived.has(file)) contexts.push(`${file}: reviewed, and no longer shipped`);
+      }
+
       expect
         .soft(
           contexts,

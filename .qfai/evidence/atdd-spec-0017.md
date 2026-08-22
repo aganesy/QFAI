@@ -276,7 +276,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
 
 ## Work performed (what changed, where)
 
-- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 10 tests across 8
+- **new** `packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts` — 11 tests across 8
   annotated describes, one describe per covered user story, plus a block comment where
   `US-0017-0007`'s was, recording why the claim was withdrawn rather than leaving its absence to be
   inferred
@@ -347,7 +347,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 
 ```text
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts
-  -> Tests 10 passed (10), exit 0
+  -> Tests 11 passed (11), exit 0
      (9 before US-0017-0007 was withdrawn, 8 after, 9 again once US-0017-0003
       gained the positive-half assertion round 1 showed was available; briefly 11
       while the classifier corpus lived here, before round 4 moved it to
@@ -2030,7 +2030,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 14: the e2e figure is 1445 and the integration+unit figure 1219. Round 12 re-measured them at
+round 14: the e2e figure is 1446 and the integration+unit figure 1219. Round 12 re-measured them at
 1443 and 1216 and round 14 moved both again — the e2e figure by exactly the arithmetic the rule below
 predicts, 1443 + (881 - 879) = 1445, since this round added two callsites: the derived check over the
 mechanism corpus's own size.
@@ -2040,7 +2040,7 @@ stage's own guards were red in that project, at a revision that had opened a rev
 nothing else. The block is re-run rather than carried forward, which is what its own first sentence has
 demanded through six rounds.
 
-e2e callsites at this tree: 881
+e2e callsites at this tree: 882
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -2071,7 +2071,7 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1445 passed / 16 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1446 passed / 16 skipped, exit 0
 vitest --project integration --project unit     1219 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
