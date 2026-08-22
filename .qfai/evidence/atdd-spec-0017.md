@@ -2052,7 +2052,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 19: the e2e figure is 1447 and the integration+unit figure 1222.
+round 19: the e2e figure is 1476 and the integration+unit figure 1239.
 
 **And the integration+unit figure moved — but not for the reason this paragraph gave for a round, and
 the figure it replaced had been wrong since round 15.** A concurrent session pushed `b0f9d443` onto this
@@ -2074,9 +2074,10 @@ review**, in the `unit` project, which is inside this very total. The window's d
 and one of the three is this stage's own. The sentence that says the figure moved without this stage
 touching it was written one commit after this stage moved it.
 
-**And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — 99
-against passed, 118 against passed-plus-skipped — which holds at round 12's `1216` / `1117` and at
-today's `1222` / `1123`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
+**And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — for
+integration+unit, 99 against passed and 118 against passed-plus-skipped; for e2e, 564 and 580. It holds
+at round 12's `1216` / `1117`, at today's e2e `1476` / `912`, and at
+today's `1239` / `1140`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
 the record said **1220**: one high for the whole of rounds 15 to 18, in the block whose first sentence is
 "re-run after the last artifact changed". The re-measurement that replaced it did not detect that,
 because it measured the endpoint and narrated the cause.
@@ -2132,8 +2133,8 @@ instead; a round name cannot be checked, which is the whole reason those rounds 
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1447 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1222 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1476 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1239 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0
