@@ -119,6 +119,18 @@ a run that collected nothing, filtered to zero tests or reports the selector
 skipped proves nothing about assertions that never ran, exactly as a load error
 does.
 
+**Not necessarily by name.** Several runners name the tests they ran only when
+they fail: `go test ./pkg -run '^TestFoo$'` prints `--- FAIL: TestFoo` on the
+RED and a bare `ok <package>` on the strip, and `-v` is what would add the name.
+Adding it is not open — this field requires the `RED command` **unchanged**, and
+a differing command is a reject condition of its own — so demanding the name
+would REVISE every ordinary Go RED. Where the runner names no test on success,
+the command and the output show it together: the `RED command`'s own selector
+filter pins which tests could run, and the success line carries no
+zero-selected or skipped marker (Go prints `ok <package> [no tests to run]`
+when the filter matched nothing). The strip diff closes the rest — a strip that
+skipped the selector instead of neutralizing its assertions is visible in it.
+
 One stripped run per RED, so a round that takes a fresh RED takes a fresh one
 (`round-evidence.md`) — where a round whose RED was observed before this field
 existed is also grandfathered, since its stripped run is no longer takeable. A
@@ -152,12 +164,23 @@ the smallest edit that satisfies it:
 - no assertion in the selector can fail.
 
 So keep the expression and discard the verdict rather than removing the line:
-bind the operands to the language's blank or void form (`_ = want; _ = got` in
-Go), or pass them to the framework's non-failing observation call (`t.Log`,
-`console.log`, a bare expression statement). For an expected-exception check,
-keep the wrapped call and drop only the expectation about what it raises —
-catching and discarding, where the language needs the throw handled to keep
-compiling.
+bind the operands to the language's blank or void form, or pass them to the
+framework's non-failing observation call (`t.Log`, `console.log`, a bare
+expression statement).
+
+**The assertion library is one of those symbols.** In Go,
+`assert.Equal(t, want, got)` becomes `_ = want; _ = got; _ = assert.Equal`, and
+the last term is not decoration: without it `github.com/stretchr/testify/assert`
+is an unused import, which Go rejects at build time, so the strip would be
+botched by the very rule below and the row could still not obtain the field.
+Any non-failing reference discharges it — `_ = assert.Equal`, or
+`t.Log(assert.ObjectsAreEqual(want, got))` where the operands are wanted in the
+output — provided nothing in it can fail. The same applies to every other
+import the deleted line was the only user of.
+
+For an expected-exception check, keep the wrapped call and drop only the
+expectation about what it raises — catching and discarding, where the language
+needs the throw handled to keep compiling.
 
 A stripped run that fails to build, collect or resolve is a **botched strip**,
 not a criterion-4 failure. Redo it in this form and re-run; do not record the

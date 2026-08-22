@@ -70,15 +70,36 @@ the assertions, and the failure it would have to be taken against is gone.
 Required retroactively, the field would leave a legitimately evidenced row
 unable to finish, with no migration and no way back.
 
-Such a round records the field as `pre-contract`, with the round's
-`RED revision` as its warrant, and is not reopened:
+Such a round records the field as `pre-contract`, and the warrant has to be
+**checkable against the update**, not merely plausible. "The round already has
+its GREEN pair" is not that: a round that took its RED after the update, skipped
+the strip, then wrote production code and a GREEN pair satisfies it exactly as a
+genuinely pre-contract round does, and a `RED revision` of the form
+`working-tree+<content hash>` is ordered against nothing at all. Left there, the
+criterion this contract just made mandatory would stay optional for any new
+round willing to write four characters. So the warrant is the round's
+`RED revision` **as a commit**, shown to be older than the field:
 
-`Round 1: RED assertion-stripped result: pre-contract — RED observed at <revision>, before this field`
+`Round 1: RED assertion-stripped result: pre-contract — RED observed at <git rev>, an ancestor of <field commit>, which added this field`
 
-It is admissible **only** on a round that already holds a complete GREEN pair.
-A round still at RED can take the stripped run now and therefore must — so
-`pre-contract` on a RED being submitted for `red`-phase review is a REVISE,
-whatever the row's `Status`, and a round this cycle opens never qualifies. It
+- `<git rev>` is a commit — never `working-tree+<content hash>`. A content hash
+  has no position in history, so it cannot show the RED came first.
+- `<field commit>` is the commit that introduced
+  `RED assertion-stripped result` into this project's `.qfai` tree, from
+  `git log --diff-filter=A -S'RED assertion-stripped result' -- <this file>`.
+  `git merge-base --is-ancestor <git rev> <field commit>` must hold: that, and
+  only that, is the "before" this value asserts.
+- Where the project does not track `.qfai`, there is no such commit and
+  `pre-contract` is **unavailable** — nothing in the tree orders the RED
+  against the update.
+- The round must already hold a complete GREEN pair. A round still at RED can
+  take the stripped run now and therefore must — so `pre-contract` on a RED
+  being submitted for `red`-phase review is a REVISE, whatever the row's
+  `Status`, and a round this cycle opens never qualifies.
+
+A round that cannot show that ancestry has no warrant, and the field is a
+REVISE. The way back is a fresh observation, not a weaker warrant: the rework
+opens round N+1, whose RED and stripped run are both taken on its own tree. It
 grandfathers an observation that has already happened; it is not a value a
 round may choose.
 

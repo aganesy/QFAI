@@ -93,12 +93,21 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   or reports the selector skipped. A build or collection error in the stripped
   run is a botched strip, not a criterion-4 failure: send it back to be
   re-taken in the compilable form, do not accept the build error as the result.
+  **Do not require the selector by name where the runner does not print it on
+  success** — `go test` without `-v` reports `ok <package>` — there the
+  command's own selector filter plus a success line free of any zero-selected
+  or skipped marker is that showing, and a command that added `-v` to produce
+  the name is a changed command and therefore a REVISE.
 - **`pre-contract` is the one admissible absence.** A round whose RED was
   observed before this field existed cannot produce the run — the production
   code is already in the tree — so `references/round-evidence.md` grandfathers
-  it against the round's `RED revision`. Accept it **only** on a round that
-  already holds a complete GREEN pair. On a RED routed here at phase `red` it
-  is a REVISE: that submission is the moment the stripped run is takeable.
+  it. Accept it **only** on a round that already holds a complete GREEN pair
+  **and** whose `RED revision` is a commit shown to be an ancestor of the
+  commit that added this field; a GREEN pair alone is equally true of a round
+  that took its RED after the update and skipped the strip, and a
+  `working-tree+<content hash>` revision orders against nothing. On a RED
+  routed here at phase `red` it is a REVISE: that submission is the moment the
+  stripped run is takeable.
 
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite

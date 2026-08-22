@@ -97,7 +97,12 @@ describe.each(TREES)("%s", (tree) => {
     const doc = await read(tree, ADMISSIBILITY);
     expect(doc).toContain("### A neutralization that still compiles");
     expect(doc).toContain("every symbol and import the original test used is still used");
-    expect(doc).toContain("`_ = want; _ = got` in Go");
+    // The worked example has to satisfy that bullet itself: `_ = want; _ = got`
+    // alone leaves `testify/assert` unused, which is the same build error the
+    // section exists to avoid, so the example must keep the library referenced.
+    expect(doc).toContain("**The assertion library is one of those symbols.**");
+    expect(doc).toContain("`_ = want; _ = got; _ = assert.Equal`");
+    expect(doc).toContain("is an unused import, which Go rejects at build time");
     // A build error is a botched strip, not criterion 4's answer — and not an
     // exemption from the field either.
     expect(doc).toContain(
@@ -120,10 +125,29 @@ describe.each(TREES)("%s", (tree) => {
     const gate = await read(tree, GATEKEEPER);
     expect(gate).toContain("**Judge the strip, not only its exit code.**");
     expect(gate).toContain("REVISE when the diff is absent, when it touches production source");
+    expect(gate).toContain(
+      "**Do not require the selector by name where the runner does not print it on success**",
+    );
     // And the producer's contract must ask for the diff, or nothing takes it.
     expect(await read(tree, SKILL)).toContain(
       "the **strip diff** taken before the restore, its **passing** output",
     );
+  });
+
+  it("accepts a selector shown by the command where the runner names none on success", async () => {
+    // `go test ./pkg -run '^TestFoo$'` names TestFoo when it fails and prints
+    // bare `ok <package>` when it passes. Requiring the name in the stripped
+    // run's output would REVISE every such RED, and the only way to obtain it —
+    // adding `-v` — breaks "the RED command unchanged", which is a reject
+    // condition of its own. The command's own filter plus a success line with
+    // no zero-selected marker is the showing there.
+    const doc = await read(tree, ADMISSIBILITY);
+    expect(doc).toContain("**Not necessarily by name.**");
+    expect(doc).toContain(
+      "the `RED command`'s own selector filter pins which tests could run, and the " +
+        "success line carries no zero-selected or skipped marker",
+    );
+    expect(doc).toContain("`ok <package> [no tests to run]`");
   });
 
   it("grandfathers a round whose RED was observed before the field existed", async () => {
@@ -137,9 +161,7 @@ describe.each(TREES)("%s", (tree) => {
     expect(doc).toContain("Nothing existing becomes non-conformant.");
     expect(doc).toContain("records the field as `pre-contract`");
     // Narrow, or it is a bypass: only a round that already has its GREEN pair.
-    expect(doc).toContain(
-      "It is admissible **only** on a round that already holds a complete GREEN pair.",
-    );
+    expect(doc).toContain("The round must already hold a complete GREEN pair.");
     expect(doc).toContain(
       "`pre-contract` on a RED being submitted for `red`-phase review is a REVISE",
     );
@@ -147,6 +169,31 @@ describe.each(TREES)("%s", (tree) => {
     expect(gate).toContain("**`pre-contract` is the one admissible absence.**");
     expect(gate).toContain(
       "Accept it **only** on a round that already holds a complete GREEN pair",
+    );
+  });
+
+  it("makes the pre-contract warrant checkable, so a new round cannot claim it", async () => {
+    // A complete GREEN pair does not show the RED predates the field: take the
+    // RED now, skip the strip, write production code and a GREEN pair, and the
+    // condition holds. And `working-tree+<content hash>` has no position in
+    // history at all, so it orders against nothing. Either way criterion 4
+    // stays optional for a new round unless the warrant is a commit shown to
+    // precede the field.
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).toContain("**checkable against the update**");
+    expect(doc).toContain(
+      "`<git rev>` is a commit — never `working-tree+<content hash>`. A content hash has no " +
+        "position in history, so it cannot show the RED came first.",
+    );
+    expect(doc).toContain("`git merge-base --is-ancestor <git rev> <field commit>` must hold");
+    // And there has to be a stated way back, or the tightening strands a row.
+    expect(doc).toContain(
+      "The way back is a fresh observation, not a weaker warrant: the rework opens round N+1",
+    );
+    const gate = await read(tree, GATEKEEPER);
+    expect(gate).toContain(
+      "**and** whose `RED revision` is a commit shown to be an ancestor of the commit that " +
+        "added this field",
     );
   });
 
