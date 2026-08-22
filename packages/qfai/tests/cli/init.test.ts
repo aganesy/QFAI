@@ -1,11 +1,14 @@
 import {
   access,
+  chmod,
   lstat,
   mkdtemp,
   mkdir,
   readFile,
   readlink,
+  rename,
   rm,
+  stat,
   writeFile,
   symlink,
 } from "node:fs/promises";
@@ -684,6 +687,10 @@ describe("qfai init", { timeout: 60000 }, () => {
       if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
       coverage.set("mandatory_agents", ["house-engineer"]);
       await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
+      // The merge replaces the file through a temp file and a rename, which
+      // makes a new inode: the mode has to be carried over, or a manifest kept
+      // at 0600 comes back readable by everyone.
+      if (process.platform !== "win32") await chmod(routingPath, 0o600);
 
       const captured = await captureStdout(async () => {
         await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -702,6 +709,16 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(merged).toContain("house-engineer");
       expect(captured).toContain("W-ROUTING-AGENT-DIVERGED");
       expect(captured).toContain("test-design-analyst");
+      if (process.platform !== "win32") {
+        expect((await stat(routingPath)).mode & 0o777).toBe(0o600);
+      }
+      // No half-written temp file is left behind in the manifest layer.
+      const manifestEntries = await fg("*", {
+        cwd: path.dirname(routingPath),
+        dot: true,
+        onlyFiles: true,
+      });
+      expect(manifestEntries.filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
 
       // Idempotent: a second --force has nothing left to add.
       const second = await captureStdout(async () => {
@@ -784,6 +801,83 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(captured).toContain("W-ROUTING-AGENT-UNKNOWN");
       expect(captured).toContain("qa-gatekeeper");
       expect(atddPhaseIds(await readFile(routingPath, "utf-8"))).not.toContain("red");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // An `lstat` on the manifest — like `O_NOFOLLOW` — answers for the last path
+  // component only. A project whose whole `manifest/` directory is a link out
+  // of the tree has a perfectly ordinary file at the end of it, so both checks
+  // passed while every byte written still landed outside the project.
+  it("--force refuses to merge through a symlinked manifest directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dirlink-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const escapee = path.join(outside, "manifest");
+
+      // Move the real manifest layer out of the project and link to it.
+      await rename(manifestDir, escapee);
+      try {
+        await symlink(escapee, manifestDir, "dir");
+      } catch {
+        await rename(escapee, manifestDir);
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+      const escapedRouting = path.join(escapee, "agent-routing.yml");
+      const stale = withoutAtddRedPhase(await readFile(escapedRouting, "utf-8"));
+      await writeFile(escapedRouting, stale, "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written to the file outside the project.
+      expect(await readFile(escapedRouting, "utf-8")).toBe(stale);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  // `review-profiles.yml` is excluded from `--force` exactly as the catalog is,
+  // so a skill entry shipped alongside a new profile would be appended whole
+  // into a project that has neither — leaving `review_profile:` naming a
+  // profile nothing declares when the reviewers for that skill are selected.
+  it("--force skips a routing entry whose review profile the project lacks", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-profile-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const profilesPath = path.join(manifestDir, "review-profiles.yml");
+
+      // A project on an older package: no `qfai-prototyping` routing entry, and
+      // no `ui-bearing` profile for it to name either.
+      const routing = parseDocument(await readFile(routingPath, "utf-8"));
+      const entries = routing.get("routing");
+      if (!isSeq(entries)) throw new Error("agent-routing.yml has no routing sequence");
+      entries.items = entries.items.filter(
+        (item) => !(isMap(item) && item.get("skill") === "qfai-prototyping"),
+      );
+      await writeFile(routingPath, routing.toString({ lineWidth: 0 }), "utf-8");
+      const profiles = parseDocument(await readFile(profilesPath, "utf-8"));
+      const declared = profiles.get("profiles");
+      if (!isMap(declared)) throw new Error("review-profiles.yml has no profiles map");
+      declared.delete("ui-bearing");
+      await writeFile(profilesPath, profiles.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-PROFILE-UNKNOWN");
+      expect(captured).toContain("ui-bearing");
+      expect(await readFile(routingPath, "utf-8")).not.toContain("- skill: qfai-prototyping");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

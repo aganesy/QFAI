@@ -28,12 +28,17 @@ import { isMap, isScalar, isSeq, parseDocument } from "yaml";
  *
  * Two invariants bound what "add" is allowed to mean:
  *
- * - **Never add a node the project's catalog cannot satisfy.** A project that
+ * - **Never add a node the project's manifests cannot satisfy.** A project that
  *   removed an agent through `qfai-configure` has no entry for it in
  *   `manifest/agent-catalog.yml`, and `--force` does not regenerate that file.
  *   Splicing in a shipped node that routes to the removed agent would leave
  *   the project failing `qfai validate` (`QFAI-AGENT-008`) on a table that was
  *   valid a moment earlier. Such a node is skipped and reported instead.
+ *   `review-profiles.yml` is the same file class and the same exclusion: a
+ *   skill entry shipped alongside a new profile — `qfai-implement` with
+ *   `implementation-heavy` — would otherwise be appended to a project that has
+ *   neither, leaving a `review_profile:` that resolves to nothing when the
+ *   reviewers for that skill are selected. Reported and skipped as well.
  * - **Never let an insertion reorder a gate.** A missing phase goes in ahead of
  *   the earliest shipped phase that follows it and that the project does have,
  *   so `red` lands before `implementation` even in a project that reordered
@@ -56,7 +61,9 @@ export type RoutingMergeWarningKind =
   /** A declared phase omits an agent the shipped phase marks required. */
   | "agent-diverged"
   /** A shipped node routes to an agent the project's catalog does not list. */
-  | "catalog-mismatch";
+  | "catalog-mismatch"
+  /** A shipped entry names a review profile the project does not declare. */
+  | "profile-mismatch";
 
 export type RoutingMergeWarning = {
   kind: RoutingMergeWarningKind;
@@ -84,6 +91,12 @@ export type RoutingMergeOptions = {
    * withhold a phase on a guess.
    */
   knownAgents?: ReadonlySet<string> | null;
+  /**
+   * Profile names the project's `manifest/review-profiles.yml` declares.
+   * `null` (the default) means the file could not be read, which disables the
+   * check for the same reason `knownAgents` does.
+   */
+  knownProfiles?: ReadonlySet<string> | null;
 };
 
 /** Phase keys whose shipped membership is a gate, not a preference. */
@@ -105,6 +118,7 @@ export function mergeRoutingPhases(
   options: RoutingMergeOptions = {},
 ): RoutingMergeResult {
   const knownAgents = options.knownAgents ?? null;
+  const knownProfiles = options.knownProfiles ?? null;
   const addedPhases: RoutingPhaseAddition[] = [];
   const addedSkills: string[] = [];
   const warnings: RoutingMergeWarning[] = [];
@@ -130,6 +144,11 @@ export function mergeRoutingPhases(
       const unknown = unknownAgentRefs(entryAgentRefs(templateEntry), knownAgents);
       if (unknown.length > 0) {
         warnings.push(catalogWarning(skill, null, unknown));
+        continue;
+      }
+      const profile = unknownProfileRef(templateEntry, knownProfiles);
+      if (profile !== null) {
+        warnings.push(profileWarning(skill, profile));
         continue;
       }
       projectRouting.items.push(cloneNode(templateEntry));
@@ -168,6 +187,28 @@ export function readCatalogAgentIds(source: string): ReadonlySet<string> | null 
   return ids;
 }
 
+/**
+ * Profile names declared by a project's `manifest/review-profiles.yml`, or
+ * `null` when the file cannot be read as one — "unknown", not "empty", as in
+ * {@link readCatalogAgentIds}.
+ */
+export function readProfileNames(source: string): ReadonlySet<string> | null {
+  const doc = parseDocument(source);
+  if (doc.errors.length > 0) return null;
+  const profiles: unknown = doc.get("profiles");
+  if (!isMap(profiles)) return null;
+  const names = new Set<string>();
+  for (const item of profiles.items) {
+    const key: unknown = item.key;
+    if (typeof key === "string") {
+      names.add(key);
+    } else if (isScalar(key) && typeof key.value === "string") {
+      names.add(key.value);
+    }
+  }
+  return names;
+}
+
 function mergeSkillPhases(
   skill: string,
   templateEntry: unknown,
@@ -194,16 +235,25 @@ function mergeSkillPhases(
   }
 
   // Walk the shipped phases in order, tracking where the next missing one
-  // belongs: after the last shipped phase the project does have, but never
-  // after a shipped phase that follows it. That keeps `red` ahead of
-  // `implementation` even in a project whose other phases were reordered.
+  // belongs: after every shipped phase that precedes it and that the project
+  // does have, but never after a shipped phase that follows it. That keeps
+  // `red` ahead of `implementation` even in a project whose other phases were
+  // reordered.
+  //
+  // The cursor only ever moves forward. Taking it from the phase matched last
+  // let it *retreat* across a project that reordered two phases: shipped
+  // `coverage, red, implementation` against a project holding
+  // `red, coverage, evidence`, `coverage` puts the cursor at 2 and `red` —
+  // sitting earlier — pulled it back to 1, so `implementation` was spliced in
+  // ahead of the `coverage` it must follow. The maximum is the only position
+  // that is after *all* of the preceding phases the project declares.
   let cursor = 0;
   for (const [templateIndex, templatePhase] of templatePhases.items.entries()) {
     const id = readString(templatePhase, "id");
     if (!id) continue;
     const existing = projectPhases.items.findIndex((item) => readString(item, "id") === id);
     if (existing >= 0) {
-      cursor = existing + 1;
+      cursor = Math.max(cursor, existing + 1);
       warnings.push(
         ...divergedAgentWarnings(skill, id, templatePhase, projectPhases.items[existing]),
       );
@@ -216,7 +266,11 @@ function mergeSkillPhases(
     }
     const at = insertionIndex(templatePhases.items, templateIndex, projectPhases.items, cursor);
     projectPhases.items.splice(at, 0, cloneNode(templatePhase));
-    cursor = at + 1;
+    // `at` is never past the cursor, so the splice shifts every position the
+    // cursor already accounts for one to the right — including the cursor
+    // itself. Re-anchoring on `at + 1` would drop the earlier phases back
+    // behind the insertion point whenever the clamp pulled `at` below it.
+    cursor += 1;
     addedPhases.push({ skill, phase: id });
   }
 }
@@ -289,6 +343,28 @@ function catalogWarning(
     kind: "catalog-mismatch",
     message: `${subject} routes to ${unknown.join(", ")}, which agent-catalog.yml does not declare. Skipped rather than added — adding it would fail \`qfai validate\`; re-add the agent to the catalog, or record why the project routes without this phase.`,
   };
+}
+
+function profileWarning(skill: string, profile: string): RoutingMergeWarning {
+  return {
+    kind: "profile-mismatch",
+    message: `${skill}: the shipped routing entry names review profile "${profile}", which review-profiles.yml does not declare. Skipped rather than added — the reviewers for the skill would resolve to nothing; add the profile through \`qfai-configure\`, then re-run \`qfai init --force\`.`,
+  };
+}
+
+/**
+ * The `review_profile` a shipped entry names when the project does not declare
+ * it, or `null` when it does, when the entry names none, or when the profiles
+ * file could not be read.
+ */
+function unknownProfileRef(
+  entry: unknown,
+  knownProfiles: ReadonlySet<string> | null,
+): string | null {
+  if (knownProfiles === null) return null;
+  const profile = readString(entry, "review_profile");
+  if (profile === null || knownProfiles.has(profile)) return null;
+  return profile;
 }
 
 /** Agent references in `refs` the project's catalog does not declare. */

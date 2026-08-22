@@ -16,6 +16,7 @@ import { describe, expect, it } from "vitest";
 import {
   mergeRoutingPhases,
   readCatalogAgentIds,
+  readProfileNames,
   type RoutingMergeResult,
 } from "../../../../src/core/manifest/routingPhaseMerge.js";
 
@@ -125,6 +126,35 @@ routing:
     expect(merged.indexOf("- id: implementation")).toBeLessThan(merged.indexOf("- id: coverage"));
   });
 
+  // Anchoring the cursor on the phase matched *last* let it retreat: matching
+  // `coverage` at index 1 and then `red` at index 0 pulled the insertion point
+  // back to 1, so `implementation` was spliced in ahead of the `coverage` the
+  // shipped table puts before it. The cursor only ever moves forward now.
+  it("keeps an added phase after every earlier shipped phase the project reordered", () => {
+    const swapped = `schema_version: "1.0"
+
+routing:
+  - skill: qfai-atdd
+    phases:
+      - id: red
+        mandatory_agents: [delivery-planner, acceptance-test-engineer]
+        blocking_agents: [delivery-planner]
+        rerun_policy: changed-scope-dependents
+      - id: coverage
+        mandatory_agents: [test-design-analyst]
+        blocking_agents: [test-design-analyst]
+        rerun_policy: failed-agents-only
+    review_profile: runtime-heavy
+`;
+    const result = mergeRoutingPhases(TEMPLATE, swapped);
+
+    expect(result.addedPhases).toEqual([{ skill: "qfai-atdd", phase: "implementation" }]);
+    const merged = result.content ?? "";
+    expect(merged.indexOf("- id: coverage")).toBeLessThan(merged.indexOf("- id: implementation"));
+    // The project's own ordering of the phases it already had is untouched.
+    expect(merged.indexOf("- id: red")).toBeLessThan(merged.indexOf("- id: coverage"));
+  });
+
   it("never rewrites a phase the project already declares", () => {
     const merged = mergeRoutingPhases(TEMPLATE, STALE_PROJECT).content ?? "";
 
@@ -227,6 +257,36 @@ routing:
     expect(messages(result)).toContain("delivery-planner");
   });
 
+  // A skill entry shipped together with a new review profile — `qfai-implement`
+  // and `implementation-heavy` — reaches a project that has neither, and
+  // `--force` does not regenerate `review-profiles.yml` either. Appending the
+  // entry whole would leave `review_profile:` pointing at nothing when the
+  // reviewers for that skill are selected.
+  it("skips a shipped entry whose review profile the project does not declare", () => {
+    const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, {
+      knownProfiles: new Set(["default"]),
+    });
+
+    expect(result.addedSkills).toEqual([]);
+    expect(result.content ?? "").not.toContain("- skill: qfai-verify");
+    const mismatch = result.warnings.filter((warning) => warning.kind === "profile-mismatch");
+    expect(mismatch).toHaveLength(1);
+    expect(mismatch[0]?.message).toContain("runtime-heavy");
+    expect(mismatch[0]?.message).toContain("qfai-verify");
+    // The phase merge into an entry the project already has is unaffected: its
+    // profile is the project's own.
+    expect(result.addedPhases).toEqual([{ skill: "qfai-atdd", phase: "red" }]);
+  });
+
+  it("adds the entry when the project declares the profile it names", () => {
+    const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, {
+      knownProfiles: new Set(["default", "runtime-heavy"]),
+    });
+
+    expect(result.addedSkills).toEqual(["qfai-verify"]);
+    expect(result.warnings.filter((warning) => warning.kind === "profile-mismatch")).toEqual([]);
+  });
+
   it("adds everything when the catalog covers the shipped agents", () => {
     const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, { knownAgents: FULL_CATALOG });
 
@@ -250,5 +310,22 @@ describe("readCatalogAgentIds", () => {
   it("answers null for a catalog it cannot read as one", () => {
     expect(readCatalogAgentIds("agents: [\n")).toBeNull();
     expect(readCatalogAgentIds("agents: {}\n")).toBeNull();
+  });
+});
+
+describe("readProfileNames", () => {
+  it("collects the declared profile names", () => {
+    const names = readProfileNames(
+      `schema_version: "1.0"\nprofiles:\n  default:\n    always_required: [completion-reviewer]\n  runtime-heavy:\n    always_required: [qa-gatekeeper]\n`,
+    );
+
+    expect([...(names ?? [])]).toEqual(["default", "runtime-heavy"]);
+  });
+
+  // Same rule as the catalog: `null` is "unknown", so an unreadable file
+  // disables the check instead of withholding every addition.
+  it("answers null for a file it cannot read as one", () => {
+    expect(readProfileNames("profiles: [\n")).toBeNull();
+    expect(readProfileNames("profiles: []\n")).toBeNull();
   });
 });

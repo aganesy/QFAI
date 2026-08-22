@@ -11,12 +11,14 @@ import {
   readdir,
   readFile,
   readlink,
+  realpath,
   rename,
   rm,
   symlink,
   writeFile,
 } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
 import { exec as execCb } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -49,6 +51,7 @@ import {
 import {
   mergeRoutingPhases,
   readCatalogAgentIds,
+  readProfileNames,
   type RoutingMergeResult,
   type RoutingMergeWarningKind,
 } from "../../core/manifest/routingPhaseMerge.js";
@@ -406,6 +409,16 @@ async function seedProjectSteering(
 
 const ROUTING_MANIFEST_FILE = "agent-routing.yml";
 const AGENT_CATALOG_FILE = "agent-catalog.yml";
+const REVIEW_PROFILES_FILE = "review-profiles.yml";
+
+/**
+ * Ceiling on a manifest this step reads into memory.
+ *
+ * The largest shipped manifest is ~70 KB, so 4 MiB is far above any table a
+ * human maintains while still bounding what a file swapped in at that path can
+ * make `init` allocate.
+ */
+const MANIFEST_MAX_BYTES = 4 * 1024 * 1024;
 
 /**
  * Diagnostic code per merge-warning kind.
@@ -419,6 +432,7 @@ const ROUTING_WARNING_CODES: Record<RoutingMergeWarningKind, string> = {
   "manifest-shape": "W-ROUTING-MANIFEST-UNREADABLE",
   "agent-diverged": "W-ROUTING-AGENT-DIVERGED",
   "catalog-mismatch": "W-ROUTING-AGENT-UNKNOWN",
+  "profile-mismatch": "W-ROUTING-PROFILE-UNKNOWN",
 };
 
 /**
@@ -436,34 +450,33 @@ async function mergeRequiredRoutingPhases(
   const projectPath = joinAssistantLayer(destRoot, "manifest", ROUTING_MANIFEST_FILE);
   const rel = toPosixRelative(destRoot, projectPath);
 
-  // `writeFile` follows a symlink and rewrites whatever it points at, so a
-  // project whose manifest is a link into another tree would have had that
-  // other file edited by `qfai init`. `copyTemplateTree` `lstat`s its
-  // destinations for exactly this; a direct write has to as well.
-  if ((await safeLstat(projectPath))?.isSymbolicLink()) {
-    return [
-      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} is a symlink; skipped the phase merge rather than write through it to a file outside the project.`,
-    ];
-  }
+  const unsafe = await describeUnsafeManifestPath(destRoot, projectPath, rel);
+  if (unsafe !== null) return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${unsafe}`];
 
-  const project = await readOptionalFile(projectPath);
+  const project = await readMergeableManifest(projectPath);
   // The project predates the manifest layer. Not this step's to repair:
   // validate reports the missing manifest (QFAI-AGENT-002).
-  if (project === null) return [];
-  const template = await readOptionalFile(templatePath);
-  if (template === null) {
+  if (project.kind === "missing") return [];
+  if (project.kind === "unusable") {
+    return [
+      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} is not a regular file of at most ${String(MANIFEST_MAX_BYTES)} bytes; skipped the phase merge.`,
+    ];
+  }
+  const template = await readMergeableManifest(templatePath);
+  if (template.kind !== "ok") {
     // A packaging fault, not a project one — and silence here is what made it
     // invisible: the merge stopped with no note at all.
     return [
-      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the packaged ${ROUTING_MANIFEST_FILE} was not found; skipped the phase merge.`,
+      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the packaged ${ROUTING_MANIFEST_FILE} could not be read; skipped the phase merge.`,
     ];
   }
 
-  const result = mergeRoutingPhases(template, project, {
-    knownAgents: await readProjectAgentIds(destRoot),
+  const result = mergeRoutingPhases(template.content, project.content, {
+    knownAgents: await readProjectManifestNames(destRoot, AGENT_CATALOG_FILE, readCatalogAgentIds),
+    knownProfiles: await readProjectManifestNames(destRoot, REVIEW_PROFILES_FILE, readProfileNames),
   });
   if (result.content !== null && !dryRun) {
-    await writeWithoutFollowingLink(projectPath, result.content);
+    await replaceFileAtomically(projectPath, result.content, project.mode);
   }
   return formatRoutingMergeNotes(result, rel, dryRun);
 }
@@ -490,57 +503,140 @@ function formatRoutingMergeNotes(
 }
 
 /**
- * Agent ids the project's own catalog declares, or `null` when it cannot be
- * read as one. `--force` regenerates `assistant/agents/**` but never
- * `manifest/agent-catalog.yml`, so a project that removed an agent through
- * `qfai-configure` still has no catalog entry for it — and a spliced-in phase
- * routing to it would leave `qfai validate` failing (QFAI-AGENT-008) on a
- * table that validated a moment earlier.
+ * Names a project manifest declares — catalog agent ids, review profile
+ * names — or `null` when the file cannot be read as one. `--force` regenerates
+ * `assistant/agents/**` but never `manifest/**`, so a project that removed an
+ * agent or a profile through `qfai-configure` still has no entry for it, and a
+ * spliced-in node referring to one would leave the project routing to something
+ * nothing declares — `qfai validate` failing (QFAI-AGENT-008) for an agent, an
+ * unresolvable reviewer set for a profile.
  */
-async function readProjectAgentIds(destRoot: string): Promise<ReadonlySet<string> | null> {
-  const catalogPath = joinAssistantLayer(destRoot, "manifest", AGENT_CATALOG_FILE);
-  const source = await readOptionalFile(catalogPath);
-  return source === null ? null : readCatalogAgentIds(source);
+async function readProjectManifestNames(
+  destRoot: string,
+  file: string,
+  parse: (source: string) => ReadonlySet<string> | null,
+): Promise<ReadonlySet<string> | null> {
+  const manifestPath = joinAssistantLayer(destRoot, "manifest", file);
+  const read = await readMergeableManifest(manifestPath);
+  return read.kind === "ok" ? parse(read.content) : null;
 }
 
-/** File contents, or `null` when nothing is at the path. */
-async function readOptionalFile(target: string): Promise<string | null> {
+type ManifestRead =
+  | { kind: "ok"; content: string; mode: number }
+  | { kind: "missing" }
+  | { kind: "unusable" };
+
+/**
+ * Read a manifest, but only from a regular file of bounded size.
+ *
+ * `readFile` takes whatever is at the path. On a FIFO it blocks until a writer
+ * appears — `qfai init --force` then neither merges nor exits, with no
+ * diagnostic — and on a file swapped for an enormous one it pulls the whole
+ * thing into memory. The `fstat`-on-the-open-handle pin is the same one the
+ * flattened-link repair in this file applies, and it answers for the inode
+ * actually opened rather than for the pathname.
+ *
+ * `mode` travels with the content because the atomic replace writes a **new**
+ * inode: without it a manifest somebody kept at `0600` would come back `0644`.
+ */
+async function readMergeableManifest(target: string): Promise<ManifestRead> {
   try {
-    return await readFile(target, "utf-8");
+    const pinned = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
+    return pinned === null
+      ? { kind: "unusable" }
+      : { kind: "ok", content: pinned.content.toString("utf-8"), mode: pinned.mode };
   } catch (err: unknown) {
-    if (isEnoent(err)) return null;
+    if (isEnoent(err)) return { kind: "missing" };
     throw err;
   }
 }
 
 /**
- * Overwrite `target` without following a symlink at that path.
+ * Why the project's manifest must not be written, or `null` when it may be.
  *
- * The `lstat` in the caller answers for the entry init saw; `O_NOFOLLOW`
- * closes the window between that look and this write on the platforms that
- * define it. Windows defines neither, and the `lstat` is the check there.
+ * `writeFile` follows a symlink and rewrites whatever it points at, so a
+ * project whose manifest is a link into another tree would have had that other
+ * file edited by `qfai init`. `copyTemplateTree` `lstat`s its destinations for
+ * exactly this; a direct write has to as well — and an `lstat` (like
+ * `O_NOFOLLOW`) answers for the **last** path component only. A project whose
+ * `assistant/manifest` directory is itself a link out of the tree passes both
+ * checks with a perfectly ordinary file at the end of it, and every write still
+ * lands outside the project. So the ancestors are resolved too, and the result
+ * has to be inside the destination root.
  */
-async function writeWithoutFollowingLink(target: string, content: string): Promise<void> {
-  let handle: FileHandle | undefined;
+async function describeUnsafeManifestPath(
+  destRoot: string,
+  target: string,
+  rel: string,
+): Promise<string | null> {
+  if ((await safeLstat(target))?.isSymbolicLink()) {
+    return `${rel} is a symlink; skipped the phase merge rather than write through it to a file outside the project.`;
+  }
+  if (!(await resolvesInsideRoot(destRoot, path.dirname(target)))) {
+    return `${rel} resolves outside the project through a linked parent directory; skipped the phase merge rather than write there.`;
+  }
+  return null;
+}
+
+/**
+ * `true` when `dir` is inside `destRoot` once every symlink on the way to both
+ * is resolved. A path that cannot be resolved counts as outside: `init` has no
+ * way to tell where a write would land, and the merge is skippable.
+ */
+async function resolvesInsideRoot(destRoot: string, dir: string): Promise<boolean> {
+  const [rootReal, dirReal] = await Promise.all([safeRealpath(destRoot), safeRealpath(dir)]);
+  if (rootReal === null || dirReal === null) return false;
+  const rel = path.relative(rootReal, dirReal);
+  if (rel === "") return true;
+  return rel !== ".." && !rel.startsWith(`..${path.sep}`) && !path.isAbsolute(rel);
+}
+
+async function safeRealpath(target: string): Promise<string | null> {
   try {
-    handle = await open(target, OPEN_NOFOLLOW_WRITE_FLAGS);
-    await handle.writeFile(content, "utf-8");
-  } catch (err: unknown) {
-    // `ELOOP` is the kernel reporting the very race the flag is there for:
-    // something turned the path into a symlink after the `lstat`. Leaving the
-    // file alone is the answer, and the caller has already said the merge is
-    // add-only and skippable.
-    if ((err as NodeJS.ErrnoException | null)?.code !== "ELOOP") throw err;
-  } finally {
-    await handle?.close();
+    return await realpath(target);
+  } catch {
+    return null;
   }
 }
 
-const OPEN_NOFOLLOW_WRITE_FLAGS =
-  constants.O_WRONLY |
-  constants.O_CREAT |
-  constants.O_TRUNC |
-  (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0);
+/**
+ * Replace `target` with `content` without following a symlink at that path and
+ * without ever leaving the original truncated.
+ *
+ * Opening the file itself `O_TRUNC` emptied a valid user manifest the instant
+ * the merge began, so an `ENOSPC`, an `EIO` or a signal mid-write left the
+ * project with an empty or half-written `agent-routing.yml` and no copy of what
+ * it replaced — unrecoverable damage from an add-only update to a file the user
+ * owns. The content goes to a temp file in the same directory and is renamed
+ * over the target instead: `rename` is atomic against the pathname, so any
+ * failure before it leaves the original exactly as it was, and it replaces the
+ * directory entry rather than writing through whatever that entry points at.
+ */
+async function replaceFileAtomically(target: string, content: string, mode: number): Promise<void> {
+  const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
+  try {
+    // `O_EXCL`: the temp name is ours or nothing is written. It is created
+    // `0600` and widened once complete, so the content is never briefly
+    // readable under a mode the original did not carry.
+    const handle = await open(
+      temp,
+      constants.O_WRONLY | constants.O_CREAT | constants.O_EXCL,
+      0o600,
+    );
+    try {
+      await handle.writeFile(content, "utf-8");
+    } finally {
+      await handle.close();
+    }
+    await chmod(temp, mode);
+    await rename(temp, target);
+  } catch (err: unknown) {
+    // The temp file is this function's alone — leaving it behind would litter
+    // the manifest directory with a partial YAML on every failed merge.
+    await rm(temp, { force: true });
+    throw err;
+  }
+}
 
 /** A `destRoot`-relative path with forward slashes, for operator notes. */
 function toPosixRelative(destRoot: string, target: string): string {
