@@ -33,10 +33,13 @@ gate commands there, not here.
 
 ## How to run locally
 
+Setup and the QFAI launcher only. Project gate commands (build / test / lint /
+typecheck / format / pack) belong in
+`.qfai/assistant/catalog/tech.md#standard-commands-copy-paste`; do not repeat
+them here.
+
 ```bash
 <install command>
-<build command>
-<test command>
 npx qfai validate
 npx qfai doctor
 ```

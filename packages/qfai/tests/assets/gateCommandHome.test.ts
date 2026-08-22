@@ -68,14 +68,35 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     }
   });
 
+  it("keeps the how-to-run block in structure.md free of gate commands", async () => {
+    // Otherwise the steering-refresh checklist fills `<test command>` here as a
+    // real value while `tech.md` holds the same one — the drift, re-created.
+    const structure = await read(tree, STRUCTURE);
+    const howTo = structure.slice(structure.indexOf("## How to run locally"));
+    expect(howTo).not.toContain("<test command>");
+    expect(howTo).not.toContain("<build command>");
+    expect(howTo).toContain("catalog/tech.md#standard-commands-copy-paste");
+  });
+
   it("sends /qfai-verify's steering refresh to the file /qfai-implement reads", async () => {
     const verify = await read(tree, VERIFY);
-    expect(verify).toContain("standard gate commands from package.json, CI config, lockfiles");
+    expect(verify).toContain("standard gate commands from the task-runner manifest");
     expect(verify).toContain("(tech.md#standard-commands-copy-paste)");
     expect(verify).not.toContain("gate commands from the file tree and scripts (structure.md)");
     expect(verify).not.toContain(
       "structure.md: repo layout, key packages, entrypoints, standard gate commands",
     );
+  });
+
+  it("discovers gate commands from non-Node manifests too, and writes them back", async () => {
+    // A Makefile/justfile/pyproject-only project has no package.json scripts;
+    // enumerating only Node sources leaves `tech.md` on its placeholders.
+    const verify = await read(tree, VERIFY);
+    for (const source of ["`Makefile`", "`justfile`", "`pyproject.toml`", "`Cargo.toml`"]) {
+      expect(verify, `missing discovery source ${source}`).toContain(source);
+    }
+    const step1 = verify.slice(verify.indexOf("## Step 1 — Discover project gate commands"));
+    expect(step1).toContain("catalog/tech.md#standard-commands-copy-paste");
   });
 
   it("keeps /qfai-implement reading that same home", async () => {
