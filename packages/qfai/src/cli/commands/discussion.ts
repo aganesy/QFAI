@@ -5,6 +5,13 @@ import { findPacks } from "../../core/packLocator.js";
 import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../core/state.js";
 import { error, info } from "../lib/logger.js";
 
+/**
+ * usage / 入力エラーの exit code。`usage()` の "Exit codes" 表 (全コマンド
+ * 共通で 2) に合わせる。state 側の失敗 (pointer 不在 / 曖昧) は gate 失敗
+ * として 1 のままにする。
+ */
+const USAGE_EXIT_CODE = 2;
+
 export type DiscussionAction = "list" | "use";
 
 export type DiscussionOptions = {
@@ -47,7 +54,7 @@ async function runUse(options: DiscussionOptions, writeErr: (m: string) => void)
   const id = options.id?.trim();
   if (!id) {
     writeErr("qfai discussion use: <id> is required (e.g. qfai discussion use discussion-<ts>).");
-    return 1;
+    return USAGE_EXIT_CODE;
   }
   await writeDiscussionCurrentId(options.root, id);
   return 0;
@@ -154,7 +161,7 @@ export async function runDiscussion(options: DiscussionOptions): Promise<number>
   // action === "list"
   if (!options.active) {
     writeErr("qfai discussion list: only --active is supported.");
-    return 1;
+    return USAGE_EXIT_CODE;
   }
   return runListActive(options, write, writeErr);
 }

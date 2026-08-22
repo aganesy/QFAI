@@ -417,6 +417,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
+        } else {
+          // 不正な値を黙って捨てると既定の失敗条件で検証が続行し、
+          // 誤記した gate 条件が 0 / 1 として返ってしまう。usage エラー
+          // として 2 で拒否する。
+          markInvalid();
         }
         i += 1;
         break;

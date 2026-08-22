@@ -157,6 +157,7 @@ describe("parseArgs", () => {
     const rejections: string[][] = [
       ["validate", "--format"],
       ["validate", "--profile", "unknown"],
+      ["validate", "--fail-on", "typo"],
       ["prototyping", "iterate", "--cycle", "notanumber"],
       ["prototyping", "bogusaction"],
       ["guardrails", "bogusaction"],
@@ -174,6 +175,17 @@ describe("parseArgs", () => {
     const parsed = parseArgs(["prototyping", "iterate", "--cycle", "0"], cwd);
     expect(parsed.invalid).toBe(false);
     expect(parsed.options.invalidExitCode).toBe(2);
+  });
+
+  // `--fail-on` の正当値は従来どおり素通しする（typo 拒否の巻き添えで
+  // gate 条件そのものが壊れていないことを固定する）。
+  it("still accepts every valid --fail-on value", () => {
+    const cwd = process.cwd();
+    for (const value of ["never", "warning", "error"] as const) {
+      const parsed = parseArgs(["validate", "--fail-on", value], cwd);
+      expect(parsed.invalid, value).toBe(false);
+      expect(parsed.options.failOn, value).toBe(value);
+    }
   });
 
   // CHG-006 second-wave flag parsing (spec-0012):

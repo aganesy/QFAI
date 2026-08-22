@@ -348,7 +348,9 @@ Options:
 
 Exit codes（全コマンド共通）:
   0   成功
-  1   gate 失敗（validate/report/guardrails などの検査が不合格）
+  1   gate 失敗（validate --fail-on <warning|error> / guardrails などの検査が不合格）
+      report は検査結果を表示するだけで gate ではない（不合格でも 0 を返す）。
+      CI gate には validate --fail-on <warning|error> を使うこと。
   2   usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
 
   prototyping 系は canonical exit-code matrix に従い、上記に加えて次を返す:

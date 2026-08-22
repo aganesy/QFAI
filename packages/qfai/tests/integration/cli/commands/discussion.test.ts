@@ -108,6 +108,49 @@ describe("TC-0010-0012: discussion use writes pointer; list --active reads it", 
   });
 });
 
+// usage / 入力エラーは全コマンド共通で exit 2（`usage()` の "Exit codes"
+// 表）。state 側の失敗 (pointer 不在 / 曖昧) が返す gate 失敗 1 と
+// 呼び出し側が区別できるようにする。
+describe("discussion usage errors exit 2", () => {
+  it("`discussion use` without <id> returns 2", async () => {
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "use",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(2);
+    expect(cap.err.join("\n")).toMatch(/<id> is required/);
+  });
+
+  it("`discussion list` without --active returns 2", async () => {
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(2);
+    expect(cap.err.join("\n")).toMatch(/only --active is supported/);
+  });
+
+  it("keeps the ambiguous-pointer failure at gate exit 1", async () => {
+    await makePack("discussion-20260101000000000");
+    await makePack("discussion-20260202000000000");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      active: true,
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(1);
+  });
+});
+
 describe("TC-0010-0013: ambiguous/absent pointer recovery error", () => {
   it("exits non-zero naming candidate dirs + recovery command when currentId absent with multiple candidates", async () => {
     await makePack("discussion-20260101000000000");
