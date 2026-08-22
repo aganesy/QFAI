@@ -45,7 +45,7 @@ const constitutionFiles = async (tree: string): Promise<string[]> =>
 
 describe("constitution front matter follows one shipped convention", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: every front-matter key is on the shipped schema`, async () => {
+    it(`${tree}: a front-matter block carries exactly the shipped key set`, async () => {
       const offenders: string[] = [];
       for (const file of await constitutionFiles(tree)) {
         const block = frontMatterOf(
@@ -54,10 +54,11 @@ describe("constitution front matter follows one shipped convention", () => {
         if (block === undefined) {
           continue;
         }
-        for (const key of topLevelKeys(block)) {
-          if (!ALLOWED_KEYS.includes(key)) {
-            offenders.push(`${file}: ${key}`);
-          }
+        // Compare the key list itself, not just membership: a dropped key or a
+        // duplicated one has to fail here too, not only an unknown key.
+        const keys = topLevelKeys(block);
+        if (keys.join(",") !== ALLOWED_KEYS.join(",")) {
+          offenders.push(`${file}: [${keys.join(", ")}]`);
         }
       }
 
