@@ -308,4 +308,49 @@ describe("guardrails command", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("emits a structured JSON envelope on the exit 2 refusals", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-guardrails-"));
+    try {
+      const loadOutput = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "list",
+          paths: ["missing.md"],
+          format: "json",
+        });
+        expect(exitCode).toBe(2);
+      });
+
+      expect(loadOutput).not.toContain(root);
+      const parsed: unknown = JSON.parse(loadOutput);
+      if (typeof parsed !== "object" || parsed === null) {
+        throw new Error("guardrails --format json must emit an object on failure");
+      }
+      expect({ ...parsed }.error).toEqual(
+        expect.objectContaining({
+          code: "load-failed",
+          details: [{ path: "missing.md", message: "Path does not exist" }],
+        }),
+      );
+
+      const maxOutput = await captureStdout(async () => {
+        const exitCode = await runGuardrails({
+          root,
+          action: "extract",
+          paths: [],
+          max: -1,
+          format: "json",
+        });
+        expect(exitCode).toBe(2);
+      });
+      const parsedMax: unknown = JSON.parse(maxOutput);
+      if (typeof parsedMax !== "object" || parsedMax === null) {
+        throw new Error("guardrails --format json must emit an object on failure");
+      }
+      expect({ ...parsedMax }.error).toEqual(expect.objectContaining({ code: "invalid-max" }));
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

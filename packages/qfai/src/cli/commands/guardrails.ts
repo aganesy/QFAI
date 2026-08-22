@@ -26,8 +26,16 @@ export type GuardrailsCommandOptions = {
 const DEFAULT_EXTRACT_MAX = 20;
 
 export async function runGuardrails(options: GuardrailsCommandOptions): Promise<number> {
+  // Resolved before any failure branch: `--format json` promises parseable
+  // stdout for every outcome, refusals included.
+  const asJson = options.format === "json";
+
   if (!options.action) {
-    error("guardrails: action is required (list|extract|check)");
+    const message = "guardrails: action is required (list|extract|check)";
+    error(message);
+    if (asJson) {
+      info(formatGuardrailsErrorJson("action-required", message));
+    }
     return 2;
   }
 
@@ -40,10 +48,20 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
     errors.forEach((item) => {
       error(`guardrails: ${item.path}: ${item.message}`);
     });
+    if (asJson) {
+      info(
+        formatGuardrailsErrorJson(
+          "load-failed",
+          "guardrails: failed to load one or more guardrail sources",
+          errors.map((item) => ({
+            path: toRelativePath(root, item.path),
+            message: item.message,
+          })),
+        ),
+      );
+    }
     return 2;
   }
-
-  const asJson = options.format === "json";
 
   if (options.action === "check") {
     return runGuardrailsCheck(entries, root, asJson);
@@ -55,7 +73,11 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
   if (options.action === "extract") {
     const max = options.max !== undefined ? options.max : DEFAULT_EXTRACT_MAX;
     if (!Number.isFinite(max) || max < 0) {
-      error("guardrails: --max must be a non-negative number");
+      const message = "guardrails: --max must be a non-negative number";
+      error(message);
+      if (asJson) {
+        info(formatGuardrailsErrorJson("invalid-max", message));
+      }
       return 2;
     }
     const limit = Math.max(0, Math.floor(max));
@@ -74,6 +96,28 @@ export async function runGuardrails(options: GuardrailsCommandOptions): Promise<
 
   info(formatGuardrailsList(filtered, root));
   return 0;
+}
+
+/**
+ * Machine-readable encoding for the exit-2 refusals (missing action, load
+ * failure, invalid `--max`). Distinct top-level key so consumers can tell a
+ * refusal apart from a `check` payload, whose `errors[]` are guardrail issues.
+ * `details[].path` is relativized against the project root like every other
+ * path the JSON payloads emit.
+ */
+function formatGuardrailsErrorJson(
+  code: string,
+  message: string,
+  details: { path: string; message: string }[] = [],
+): string {
+  const payload = {
+    error: {
+      code,
+      message,
+      ...(details.length > 0 ? { details } : {}),
+    },
+  };
+  return JSON.stringify(payload, null, 2);
 }
 
 /**
