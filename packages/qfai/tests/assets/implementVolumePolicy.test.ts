@@ -203,6 +203,27 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(skill).toContain("the rows sharing one `BR-Ref`, the ledger's group key");
     });
 
+    it(`${tree}: an open group makes Phase Red's row selection keyed, not positional`, async () => {
+      // Fill advances "the ledger's remaining T1 rows carrying that same
+      // `BR-Ref`", but Phase Red selected the first `todo` row in ledger order.
+      // On `BR-A, BR-B, BR-A` those disagree: the positional pick is the `B`,
+      // which can neither join the open `A` group nor open one of its own,
+      // while the trailing `A` keeps the open group from closing.
+      const section = unwrap(await read(tree, REFERENCE));
+      const skill = unwrap(await read(tree, SKILL));
+
+      expect(section).toContain("**While a group is open, this selection outranks ledger order**");
+      expect(section).toContain("the first `todo` row carrying the **open key**");
+      expect(section).toContain(
+        "Selection returns to ledger order only once no `todo` T1 row carries the key",
+      );
+      expect(skill).toContain(
+        "**While a T1 review group is open that `todo` selection is keyed, not positional**",
+      );
+      expect(skill).toContain("take the first `todo` row carrying the open group's `BR-Ref`");
+      expect(skill).toContain("`references/volume-policy.md` > Group formation, Fill");
+    });
+
     it(`${tree}: the direct TC -> EX -> BR edge wins over the AC join`, async () => {
       // The AC join alone misattributes a row: a TC pinned through its `EX` to
       // one `BR` was filed under the lowest-numbered `BR` merely sharing its

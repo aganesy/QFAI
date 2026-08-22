@@ -94,7 +94,14 @@ the review-ready state — and waits there for its group. Members still move
   one key would merge rows no `BR` relates and, with a second unresolved row
   still `todo`, leave both close conditions below false.
 - **Fill** it by continuing to process the ledger's remaining T1 rows carrying
-  that same `BR-Ref`, one item at a time. The one-item-at-a-time constraint is
+  that same `BR-Ref`, one item at a time. **While a group is open, this
+  selection outranks ledger order**: `SKILL.md` Phase Red step 1 takes the
+  first `todo` row carrying the **open key**, not the first `todo` row in the
+  ledger. Keys need not be contiguous, so on `BR-A, BR-B, BR-A` the positional
+  pick is the `B` — which can neither join the open `A` group nor open one of
+  its own, while the `A` below it holds that group open. Selection returns to
+  ledger order only once no `todo` T1 row carries the key, and the second close
+  condition has closed the group by then. The one-item-at-a-time constraint is
   about the Red/Green cycle: at most one row is in `red` or `green` at any
   moment. A row parked in `refactor` is an in-flight member of the **open**
   group, not an abandoned item, so parking is not a violation of that
