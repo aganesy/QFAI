@@ -195,6 +195,46 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
   return out;
 }
 
+/**
+ * Reduce a module to the text that can actually execute: block and line
+ * comments, string / template literals, and `import … from "…"` /
+ * `export { … } from "…"` declarations all go away.
+ *
+ * Without this, prose about a rule counts as wiring. `validateTddList` is
+ * named in four comments under `src/core/`, so a substring scan keeps calling
+ * it "wired" even after `validate.ts` drops both its import and its call —
+ * exactly the regression this guard exists to catch. A bare re-export is not
+ * a call site either: it only moves the name one module further along.
+ */
+function codeOnly(source: string): string {
+  return (
+    source
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a
+      // string or an escaped regex atom, not to a comment.
+      .replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1")
+      .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
+      .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
+      .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
+      .replace(/`(?:\\.|[^`\\])*`/g, '""')
+      .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""')
+  );
+}
+
+/**
+ * True when `source` uses `name` as an identifier in executable position —
+ * either a call `name(…)` or a function value handed to something that calls
+ * it (`[name]`, `{ gate: name }`, `run(name)`). Identifier boundaries keep
+ * `validateDelegationMap` from being satisfied by `validateDelegationMapIssues`.
+ *
+ * A trailing `:` marks a property key rather than a value, so registries that
+ * are *keyed* by validator name (`SAAS_PACKAGE_SKIPPED_GATE_FAMILIES`) do not
+ * masquerade as call sites — they are data about the gate, not the gate.
+ */
+function referencesName(source: string, name: string): boolean {
+  return new RegExp(`(?<![\\w$])${name}(?![\\w$])(?!\\s*:)`).test(codeOnly(source));
+}
+
 /** Names referenced from at least one `src/**` file, keyed by name. */
 async function namesWithOutsideReference(names: Map<string, string>): Promise<Set<string>> {
   const files = await listTsFiles(SRC_ROOT);
@@ -205,7 +245,7 @@ async function namesWithOutsideReference(names: Map<string, string>): Promise<Se
     for (const [name, owner] of names) {
       // The defining module always mentions its own export; the barrel is what
       // is being audited. A reference from anywhere else is a real call site.
-      if (file !== owner && body.includes(name)) referenced.add(name);
+      if (file !== owner && referencesName(body, name)) referenced.add(name);
     }
   }
   return referenced;
@@ -226,6 +266,24 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
       "validators/index.ts declares itself the production path, so a name listed there with no call " +
         "site reads as a live rule. Delete the barrel line when a validator is retired, or wire it in.",
     ).toEqual([]);
+  });
+
+  it("counts only executable references, not prose, re-exports or longer names", () => {
+    // Rejected: the name is mentioned, never used.
+    expect(referencesName("// validateFoo reads the ledger table", "validateFoo")).toBe(false);
+    expect(referencesName("/**\n * See `validateFoo`.\n */", "validateFoo")).toBe(false);
+    expect(referencesName('import { validateFoo } from "./foo.js";', "validateFoo")).toBe(false);
+    expect(referencesName('export { validateFoo } from "./foo.js";', "validateFoo")).toBe(false);
+    expect(referencesName('const skipped = ["validateFoo"];', "validateFoo")).toBe(false);
+    expect(referencesName("issues.push(...validateFooIssues(root));", "validateFoo")).toBe(false);
+    expect(referencesName('const families = { validateFoo: ["FOO_*"] };', "validateFoo")).toBe(
+      false,
+    );
+
+    // Accepted: a call, or a value something else will call.
+    expect(referencesName("issues.push(...(await validateFoo(root)));", "validateFoo")).toBe(true);
+    expect(referencesName("const gates = [validateFoo];", "validateFoo")).toBe(true);
+    expect(referencesName("const gates = { tdd: validateFoo };", "validateFoo")).toBe(true);
   });
 
   it("the retired /qfai-require validators are gone from the barrel", async () => {
