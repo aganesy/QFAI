@@ -260,6 +260,19 @@ const MECHANISMS = [
   // and a `case` arm, where `headIndexOf` answered `undefined` while `invocationOf` read the arm, so
   // the install carrying a package had no arguments by one of the two functions
   "case x in *) npm install ./evil --no-audit --no-fund ;; esac",
+  // round 16: three decisions in the splitter read the raw text while the mask sat three lines away,
+  // and an escaped `>` fooled all of them
+  "echo a\\>|npx tsup",
+  "echo a\\> | npx tsup",
+  "echo a\\ #b && npx tsup",
+  // round 17: the two walks disagreed about what a quote is, in three ways
+  "echo $'a\\'' | npx tsup",
+  "echo $'a\\'' && npx tsup",
+  'echo a | npx tsup "$(echo ")")"',
+  // and a here-document whose closer could not be found took the rest of the body with it
+  "read x <<\\EOF\ndata\nEOF\nnpx tsup",
+  "read x <<NOPE\nnpx tsup",
+  "read x <<EOF && npx tsup\ndata\nEOF",
   // a `node` with no flag at all, which reads its program from stdin: the absence of an argument
   // is not the absence of a program, and the inverted rule refuses it by the missing `-e`
   "node",

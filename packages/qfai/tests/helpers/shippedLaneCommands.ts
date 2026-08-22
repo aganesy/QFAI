@@ -136,7 +136,16 @@ export function commandsOf(body: string): string[] {
     // tsup` executed the build and `read x <<EOF > evil.cjs` created the file, both reporting nothing.
     // `cat <<EOF >> "$GITHUB_OUTPUT"` is GitHub's documented multiline-output idiom, so a lane reaching
     // for it is ordinary rather than adversarial. The skip is deferred to the newline instead.
-    if (ch === "<" && body[i + 1] === "<" && body[i + 2] !== "<" && quote === "") {
+    // `body[i - 1] !== "<"` because this matched the SECOND `<` of a here-STRING: `done <<< "$changed"`
+    // then read `$changed` as a here-document delimiter, and once a missing closer became a refusal
+    // rather than a licence, the shipped tree refused its own line. A here-string is one operator.
+    if (
+      ch === "<" &&
+      body[i + 1] === "<" &&
+      body[i + 2] !== "<" &&
+      body[i - 1] !== "<" &&
+      quote === ""
+    ) {
       let k = i + 2;
       if (body[k] === "-") k += 1;
       while (k < body.length && /[ \t]/.test(body[k] ?? "")) k += 1;
@@ -151,6 +160,14 @@ export function commandsOf(body: string): string[] {
         }
         if (next === '"' || next === "'") {
           delimiterQuote = next;
+          continue;
+        }
+        // `<<\\EOF` is bash's THIRD spelling of a quoted delimiter, beside `<<'EOF'` and `<<""EOF""`,
+        // and the delimiter it names is `EOF`. This walk kept the backslash, so the closer it built
+        // never matched — and the rule below then treated the whole rest of the body as data.
+        if (next === "\\") {
+          delimiter += body[k + 1] ?? "";
+          k += 1;
           continue;
         }
         if (/[\s;&|)]/.test(next)) break;
@@ -168,6 +185,12 @@ export function commandsOf(body: string): string[] {
           const quoted = delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           const closer = new RegExp(`^[ \\t]*${quoted}[ \\t]*$`, "m");
           const at = closer.exec(rest);
+          // **A missing closer is a refusal, not a licence.** The first version answered one by
+          // discarding everything after the operator as data — so any construct that stopped the
+          // closer matching hid the whole rest of the body, which is fail-open in the one place this
+          // file exists to be fail-closed. A delimiter the scanner cannot pair is a delimiter it
+          // cannot read.
+          if (at === null) out.push(`unterminated-here-document ${delimiter}`);
           current += body.slice(i, k);
           heredocEnd = lineEnd + (at === null ? rest.length : at.index + at[0].length);
           i = k - 1;
@@ -200,6 +223,26 @@ export function commandsOf(body: string): string[] {
       if (ch === quote) quote = "";
       continue;
     }
+    // ANSI-C quoting, which neither walk modelled. `$'a\\''` is the two characters `a'`: the escape is
+    // processed INSIDE the quote, so the `'` after the backslash does not close it. Read as an
+    // ordinary single quote the parity inverts and the separator after it is swallowed — round 17
+    // ran a build past this twice that way.
+    if (ch === "$" && body[i + 1] === "'") {
+      current += ch + (body[i + 1] ?? "");
+      let j = i + 2;
+      for (; j < body.length; j += 1) {
+        const next = body[j] ?? "";
+        current += next;
+        if (next === "\\") {
+          current += body[j + 1] ?? "";
+          j += 1;
+          continue;
+        }
+        if (next === "'") break;
+      }
+      i = j;
+      continue;
+    }
     if (ch === '"' || ch === "'") {
       quote = ch;
       current += ch;
@@ -208,8 +251,12 @@ export function commandsOf(body: string): string[] {
     // A comment starts only at the beginning of a WORD. bash runs `echo a#b && npx tsup`; the
     // previous version dropped the rest of the line at the `#` and the build ran unseen. It read the
     // RAW previous character until round 16, so an escaped space made `echo a\\ #b && npx tsup`
-    // start a comment where bash starts none.
-    if (ch === "#" && (i === 0 || /^$|[\s;&|(]/.test(lastCode(i)))) {
+    // start a comment where bash starts none. **`lastCode` was the wrong instrument**: it skips
+    // spaces, so an ordinary trailing comment stopped being one and `pnpm install --frozen-lockfile
+    // # keep in sync` reported a program called `not use`. What the rule needs is the raw previous
+    // character AND the mask's verdict on it: a separator that is code starts a comment, an escaped
+    // space does not.
+    if (ch === "#" && (i === 0 || (mask[i - 1] === true && /[\s;&|(]/.test(body[i - 1] ?? " ")))) {
       inComment = true;
       continue;
     }
@@ -310,8 +357,46 @@ function codeMask(body: string): boolean[] {
   for (let i = 0; i < body.length; i += 1) {
     const ch = body[i] ?? "";
     if (inComment) {
+      // The newline that ENDS a comment is a command separator and stays code. Marking it with the
+      // comment made the next line's `#` follow a non-code character, so a comment after a comment
+      // stopped being one — five shipped bodies refused their own prose as commands. It also left
+      // the alternation lookahead, which scans for a newline at a code position, unable to see one.
+      if (ch === "\n") {
+        inComment = false;
+        continue;
+      }
       mask[i] = false;
-      if (ch === "\n") inComment = false;
+      continue;
+    }
+    // A SUBSTITUTION restarts the quote state, and this walk had no model of one. Round 17 measured the
+    // consequence: `"$(echo ")")"` puts a `)` on a code position, the alternation lookahead reads it as a
+    // case arm closing, and a real pipe stops splitting — so `echo a | npx tsup "$(echo ")")"` ran a
+    // build with the scan clean, while the same line without the inner quote was correctly refused. One
+    // `"` decided the verdict.
+    //
+    // `commandsOf` has always entered substitutions on their own terms; this is the same repair in the
+    // other walk, and the disagreement between the two is what the finding was.
+    if (quote !== "'" && ((ch === "$" && body[i + 1] === "(") || ch === "<" || ch === ">")) {
+      const opensAt = ch === "$" ? i + 1 : i + 1;
+      if (body[opensAt] === "(") {
+        const close = matchingParen(body, opensAt);
+        const inner = codeMask(body.slice(opensAt + 1, close));
+        mask[i] = false;
+        mask[opensAt] = false;
+        for (let j = 0; j < inner.length; j += 1) mask[opensAt + 1 + j] = inner[j] ?? true;
+        if (close < body.length) mask[close] = false;
+        i = close;
+        continue;
+      }
+    }
+    if (ch === "`" && quote !== "'") {
+      const close = body.indexOf("`", i + 1);
+      const end = close === -1 ? body.length : close;
+      const inner = codeMask(body.slice(i + 1, end));
+      mask[i] = false;
+      for (let j = 0; j < inner.length; j += 1) mask[i + 1 + j] = inner[j] ?? true;
+      if (close !== -1) mask[close] = false;
+      i = end;
       continue;
     }
     if (quote !== "") {
@@ -322,6 +407,26 @@ function codeMask(body: string): boolean[] {
         continue;
       }
       if (ch === quote) quote = "";
+      continue;
+    }
+    // ANSI-C quoting. `$'…'` processes backslash escapes inside, so `$'a\''` is the two characters `a'`
+    // and the quote does NOT end at that `'`. Read as an ordinary single quote — where a backslash is
+    // literal — the parity inverts and the rest of the line joins the string: round 17 ran
+    // `echo $'a\'' | npx tsup` and `… && npx tsup` past both walks that way.
+    if (ch === "$" && body[i + 1] === "'") {
+      mask[i] = false;
+      let j = i + 1;
+      mask[j] = false;
+      for (j += 1; j < body.length; j += 1) {
+        mask[j] = false;
+        if (body[j] === "\\") {
+          if (j + 1 < body.length) mask[j + 1] = false;
+          j += 1;
+          continue;
+        }
+        if (body[j] === "'") break;
+      }
+      i = j;
       continue;
     }
     if (ch === "\\") {

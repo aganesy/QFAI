@@ -367,8 +367,17 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // and not B" cannot say WHICH cells are inapplicable, so the record must name each one and the
     // table must agree: a member the prose does not name is a cell reclassified without a reason, and a
     // name with no member is a reason for a cell that moved.
+    // Named in CLASS C's OWN PARAGRAPH, not anywhere in the file. Round 17 moved a member's reason
+    // into class A's paragraph and this stayed satisfied while the cell had no reason under the class
+    // that claims it — the same defect as the two guards beside it, all three reading a wider region
+    // than the claim they make.
+    const classCAt = text.indexOf("**Class C — property:");
+    expect(classCAt, "class C's paragraph must be findable").toBeGreaterThan(-1);
+    const afterClassC = text.slice(classCAt + 1);
+    const classCStop = afterClassC.search(/^(?:\*\*Class |## )/m);
+    const classCBody = classCStop === -1 ? afterClassC : afterClassC.slice(0, classCStop);
     const namedInProse = new Set(
-      [...text.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
+      [...classCBody.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
         (match) => `${match[1] ?? ""}/${match[2] ?? ""}`,
       ),
     );
@@ -556,7 +565,17 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       // asterisks. The bold markers were optional by accident, so an unbolded mention of the column
       // earlier in the section matched first and masked a bullet that contradicts the table. One
       // doubled escape, in the pin the round-6 and round-7 findings exist to enforce.
-      const stated = new RegExp(`^- \\*\\*${column} \`([^\`]+)\`\\*\\*`, "m").exec(rowSection)?.[1];
+      // EVERY bullet for the column, not the first. `.exec` reads one match, so a second bullet
+      // contradicting the table passed — and a section that states one column's score twice is
+      // exactly the state this pin exists to catch.
+      const all = [
+        ...rowSection.matchAll(new RegExp(`^- \\*\\*${column} \`([^\`]+)\`\\*\\*`, "gm")),
+      ].map((match) => match[1] ?? "");
+      if (all.length > 1) {
+        disagreeing.push(`${column}: the section states it ${String(all.length)} times`);
+        continue;
+      }
+      const stated = all[0];
       const scored = row?.cells[column] ?? "";
       if (stated === undefined) {
         disagreeing.push(`${column}: the section states no score for it`);

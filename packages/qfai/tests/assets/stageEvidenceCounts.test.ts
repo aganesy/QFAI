@@ -227,8 +227,17 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // line beginning `| ` + a backticked path, so a fenced sample carrying the path satisfied it
     // with the real table row deleted — a check over prose that prose can satisfy by accident.
     const unfenced = section.replace(/^```[\s\S]*?^```/gm, "");
+    // And the TABLE, found by its header row, rather than any pipe-line in the section: round 17
+    // deleted the real row and satisfied this with a sentence two paragraphs below it. Third version,
+    // third time vacuous, and the third time for the same reason — the check read a wider region than
+    // the claim it was making. That is now the stated failure mode of this whole family.
+    const header = unfenced.indexOf("| artifact ");
+    expect(header, "the table must be findable by its header row").toBeGreaterThan(-1);
+    const afterHeader = unfenced.slice(header);
+    const blank = afterHeader.search(/\n[ \t]*\n/);
+    const table = blank === -1 ? afterHeader : afterHeader.slice(0, blank);
     const listed = new Set(
-      [...unfenced.matchAll(/^\|\s*`([^`]+)`\s*\|[^\n]*\|/gm)].map((match) => match[1] ?? ""),
+      [...table.matchAll(/^\|\s*`([^`]+)`\s*\|[^\n]*\|/gm)].map((match) => match[1] ?? ""),
     );
     expect(listed.size, "the table must have a first column to read").toBeGreaterThan(5);
     const missing = [...TRACKED, ...HELPERS].filter(
@@ -259,9 +268,11 @@ describe("the stage evidence's counts are derived, not typed", () => {
       start,
       "the mechanism corpus must be findable by the name the record cites",
     ).toBeGreaterThan(-1);
-    // Entries are one per line at indent two, opening with either quote character — prettier picks
-    // whichever avoids escaping, and the first version of this count read only the double.
-    const held = (corpus.slice(start, end).match(/^ {2}["']/gm) ?? []).length;
+    // Entries are one per line at indent two, opening with ANY of the three quote characters. The
+    // first version read only the double, the second added the single, and a template literal — the
+    // style `ROOT_CAUSES` already uses in this same file — would have made a corpus of thirty require
+    // the record to say twenty-nine.
+    const held = (corpus.slice(start, end).match(/^ {2}["'`]/gm) ?? []).length;
     expect(held, "the corpus must hold something for this row to be about").toBeGreaterThan(20);
 
     const evidence = await source(".qfai/evidence/atdd-spec-0017.md");
@@ -269,14 +280,6 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // only whitespace-adjacent digits made two wrong sizes in that style invisible — the same
     // needle-shaped blindness this check was written to close, one style along.
     const prose = evidence.replaceAll("**", "");
-    // Every numeral within a few words of `mechanism`, in either order, so a rewording is still
-    // read.
-    const sites = [
-      ...prose.matchAll(/(\d+)(?:\s+\S+){0,3}\s+mechanisms?\b/g),
-      ...prose.matchAll(/mechanisms?(?:\s+\S+){0,3}\s+(\d+)\b/g),
-      ...prose.matchAll(/lets all (\d+) through/g),
-      ...prose.matchAll(/with all (\d+) listed/g),
-    ];
     // How many sites there are is READ FROM THE RECORD, not typed here. `SITES = 4` was a literal
     // the record never stated while its nearest sentence said three, so adding one true sentence
     // reddened this row and a reader had no way to know which number was authoritative.
@@ -287,6 +290,22 @@ describe("the stage evidence's counts are derived, not typed", () => {
       SITES,
       `the record's word for the site count must be readable: ${stated?.[1] ?? "?"}`,
     ).toBeGreaterThan(0);
+    // IN THIS SECTION, and ADJACENT to the word. The previous version searched the whole file for a
+    // numeral up to three words from `mechanisms`, so `29 of the 31 mechanisms` satisfied it while
+    // stating two numbers — and a true sentence added in a different section reddened a row whose own
+    // claim is scoped to one. A claim about a section is checked over that section.
+    const sectionStart = prose.lastIndexOf("### ", prose.indexOf(stated?.[0] ?? ""));
+    const sectionEnd = prose.indexOf("\n### ", sectionStart + 1);
+    const section = prose.slice(
+      sectionStart === -1 ? 0 : sectionStart,
+      sectionEnd === -1 ? prose.length : sectionEnd,
+    );
+    const sites = [
+      ...section.matchAll(/(\d+) mechanisms?\b/g),
+      ...section.matchAll(/mechanisms? (?:pinned|held)[^.]{0,24}?(\d+)\b/g),
+      ...section.matchAll(/lets all (\d+) through/g),
+      ...section.matchAll(/with all (\d+) listed/g),
+    ];
     const wrong = sites
       .filter((match) => Number(match[1]) !== held)
       .map((match) => `${match[0]}: corpus holds ${String(held)}`);

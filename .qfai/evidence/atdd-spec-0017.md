@@ -1028,15 +1028,15 @@ So the boundary moved, and the scanner stayed:
 Measured, at the revision that carries them:
 
 ```text
-escape corpus                         29 mechanisms, 0 still open
+escape corpus                         38 mechanisms, 0 still open
 false-refusal cost                    12 shipped bodies, 0 newly refused
 existing corpora                      PLANTED 62, ROOT_CAUSES 18, WRAPPED 620 — 0 escaping, before and after
 pinned program set                    16 programs, unchanged
-tests/unit/shippedLaneCommands.test.ts  29 mechanisms pinned; the pre-repair helper lets all 29 through
+tests/unit/shippedLaneCommands.test.ts  38 mechanisms pinned; the pre-repair helper lets all 38 through
 ```
 
 The last line is the falsification, in both directions: swapping the previous helper under the new
-assertion reddens it with all 29 listed, and swapping it back leaves the file green. A corpus that passes
+assertion reddens it with all 38 listed, and swapping it back leaves the file green. A corpus that passes
 against both versions of its subject would be measuring nothing, which is entry 5 of that list.
 
 **The corpus size appears four times in this section, and every one of them is derived** by

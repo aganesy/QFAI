@@ -82,9 +82,12 @@ const GOVERNANCE = [
   // The list was widened in round 15 and was short by four — the widening named the files the
   // round happened to be looking at rather than the files this stage wrote, which is the same
   // shape as the scoping it replaced, one size smaller.
-  // NOT this file: `RETRACTED` holds the claims verbatim, so scanning it would report every needle
-  // against its own entry. A list of what was retracted is not an assertion of it, and that is the
-  // one place in the repository where the distinction is structural rather than a matter of quoting.
+  // NOT this file, and the reason round 16 gave for that was wrong. It said scanning here "would
+  // report every needle against its own entry"; round 17 measured 118 of 124 occurrences already
+  // reading as quoted, and six that do not. Those six are this file's own commentary ABOUT the
+  // retracted claims and about past pack counts — and two of the instruments that would read them
+  // cannot be satisfied by quoting at all, because `COUNTED_CLAIMS` has no quotation model. The
+  // exclusion stands on that, measured, rather than on the sentence it stood on before.
   "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
   "packages/qfai/tests/unit/buildCommand.test.ts",
   "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
