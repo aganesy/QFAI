@@ -111,10 +111,12 @@ export async function runInit(options: InitOptions): Promise<void> {
   }
 
   // If --upgrade-assistant-tree is supplied, run the migration FIRST.
-  // This relocates user-edited content from the legacy pre-recut
-  // surfaces (instructions/, steering/, manifest/) into the new 4-layer
-  // tree BEFORE copyTemplateTree fills the same destinations from the
-  // asset defaults. The subsequent copyTemplateTree uses
+  // This relocates user-edited content from the 2 legacy pre-recut
+  // surfaces (instructions/, steering/) into the new 4-layer tree
+  // BEFORE copyTemplateTree fills the same destinations from the
+  // asset defaults. The pre-recut manifest/ layer is deliberately out
+  // of scope — see runUpgradeAssistantTree's legacySurfaces comment.
+  // The subsequent copyTemplateTree uses
   // conflictPolicy: "skip", so migrated user edits are preserved.
   const upgradeResult = options.upgradeAssistantTree
     ? await runUpgradeAssistantTree(destRoot, options.dryRun, toolVersion)
