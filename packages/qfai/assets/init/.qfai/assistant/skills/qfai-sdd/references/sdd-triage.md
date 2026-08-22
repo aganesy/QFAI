@@ -114,7 +114,9 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column.
+   approver in the `Approved By` column. Under `--auto` no question is
+   asked and the agent never records itself as the approver: the row
+   stays unapproved and the run stops at step 7.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /

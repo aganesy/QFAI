@@ -29,11 +29,32 @@ function expectPhrase(content: string, phrase: string): void {
   expect(unwrap(content)).toContain(unwrap(phrase));
 }
 
+/** Body of `## <heading>` up to the next level-2 heading (or end of file). */
+function section(markdown: string, heading: string): string {
+  const start = markdown.indexOf(`## ${heading}`);
+  if (start === -1) return "";
+  const rest = markdown.slice(start + heading.length + 3);
+  const end = rest.search(/^## /m);
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
 const CONSTITUTION = "assistant/constitution/constitution.md";
 const COMMUNICATION = "assistant/constitution/communication.md";
 const OPERATING = "assistant/constitution/shared-skill-operating-baseline.md";
 const BASELINE_ANCHOR =
   "shared-skill-operating-baseline.md#user-questions-askuserquestion-protocol";
+const QUESTIONS_HEADING = "User Questions (AskUserQuestion Protocol)";
+
+// Bullets the baseline owns. A delegating skill that repeats one of them has
+// forked the copy it claims to inherit, which is exactly the drift the
+// delegation exists to prevent.
+const BASELINE_OWNED_RULES = [
+  "use AskUserQuestion if the tool is available",
+  "prefer structured choices over free-text input",
+  "ask the same question in a normal message with explicit numbered choices",
+  "Preserve structured choice semantics",
+  "State why AskUserQuestion was unavailable",
+];
 
 describe("--auto suppresses questions in every copy of the protocol", () => {
   for (const tree of QFAI_TREES) {
@@ -101,6 +122,23 @@ describe("--auto suppresses questions in every copy of the protocol", () => {
         // A delegating skill must not also restate the protocol: the baseline
         // is the copy it inherits, and a second local copy would drift.
         expect(body).toContain(`Follow \`.qfai/assistant/constitution/${BASELINE_ANCHOR}\`.`);
+        const local = section(body, QUESTIONS_HEADING);
+        expect(local.trim(), `${skill}: no "${QUESTIONS_HEADING}" section`).not.toBe("");
+        for (const rule of BASELINE_OWNED_RULES) {
+          expect(unwrap(local), `${skill} restates a baseline rule`).not.toContain(unwrap(rule));
+        }
+        // A skill-specific MUST that mandates asking has to say what happens
+        // under `--auto`, or the resolved chain tells the agent both to ask and
+        // not to ask. Presence of the `Follow` line alone cannot catch that.
+        const localAdditions = unwrap(local).replace(
+          `Follow \`.qfai/assistant/constitution/${BASELINE_ANCHOR}\`.`,
+          "",
+        );
+        if (/\bMUST\b[^.]*AskUserQuestion/.test(localAdditions)) {
+          expect(localAdditions, `${skill} mandates asking without resolving --auto`).toContain(
+            "`--auto`",
+          );
+        }
       }
     });
   }
