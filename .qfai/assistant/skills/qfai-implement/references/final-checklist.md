@@ -56,6 +56,15 @@ releases completion.
       `Pre-split-evidence: implement` marker, whose `implement-<spec-id>.md` anchor is the accepted
       legacy location; requiring the ATDD file there would leave an already-complete row permanently
       ungateable (gate item 10).
+- [ ] Each row's remaining observations **agree on the revision the row finally landed at** — the
+      GREEN's `Revision`, both reviewers' `Reviewed revision` and the pack's `summary.json.revision`.
+      `RED revision` (or `Falsifiability revision` in its place) is the standing exception and the
+      only one: that observation is taken before the code that makes it pass exists. Nothing else in
+      this sweep compares what the reviewers read with the tree the row ended on — production or test
+      code changed after a PASS leaves anchor, identity copy, pack seal and every
+      `Audited evidence hash` recomputing correctly, and the later checkpoint runs green against the
+      new tree, so the spec completes carrying a change no reviewer ever saw (gate item 10,
+      `evidence-revision.md#what-makes-evidence-stale`).
 - [ ] Every handed-over `E2E` / `API` / `Integration` row's `Round N: RED test hash` **recomputes**
       here over the manifest recorded beside it, and matches. The other three recomputations above
       address the evidence entry, not the test: a fixture, snapshot or the test body edited after

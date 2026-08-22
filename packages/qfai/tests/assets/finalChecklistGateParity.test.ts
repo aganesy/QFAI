@@ -358,6 +358,24 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("`TC-ref` for `Unit` / `Component` / `Integration`");
   });
 
+  it("requires the surviving observations to agree on the row's final revision", async () => {
+    // Every other check here is internally consistent by construction: edit
+    // production or test code after a PASS and the anchor, identity copy, pack
+    // seal and each `Audited evidence hash` still recompute, while the next
+    // checkpoint runs green against the new tree. Only the revision comparison
+    // sees that the reviewers ruled on code that no longer exists.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("**agree on the revision the row finally landed at**");
+    expect(checklist).toContain(
+      "both reviewers' `Reviewed revision` and the pack's `summary.json.revision`",
+    );
+    // Item 3 keeps its own field — demanding one revision across all four is
+    // what made every correct handed-over and `falsifiability` row stale.
+    expect(checklist).toContain(
+      "`RED revision` (or `Falsifiability revision` in its place) is the standing exception",
+    );
+  });
+
   it("asks for the spec-level checkpoint boundary gate item 12 never reaches", async () => {
     const checklist = await readChecklistProse(dir);
     expect(checklist).toContain(
