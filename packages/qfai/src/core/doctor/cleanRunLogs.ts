@@ -18,9 +18,14 @@
  *   1. a calendar-day TTL, so only long-cold runs are candidates,
  *   2. a keep-latest floor of at least one run, so the newest runs
  *      survive regardless of age, and
- *   3. an explicit exclusion of the run `validate.log`'s `run_log:`
- *      line names, so the shipped Hard Gate evidence can never be left
- *      pointing at a directory this pruner removed.
+ *   3. an explicit exclusion of every run `validate.log` refers to (its
+ *      `run_log:` path and its `run_id:` line), so the shipped Hard Gate
+ *      evidence can never be left pointing at a directory this pruner
+ *      removed.
+ *
+ * A failed removal never aborts the pass: the outcome of every candidate
+ * is collected so the caller can report what was already deleted before
+ * the failure, and exit non-zero on the failures.
  *
  * (1) and (2) are configurable (`report.staleTtlDays` /
  * `report.keepLatestRuns`), and `report.staleTtlDays: 0` opts a project
@@ -47,11 +52,23 @@ import {
   RUN_LOG_STALE_TTL_DAYS_DEFAULT,
 } from "./staleTtl.js";
 
-/** Run ids are `run-<17-digit local timestamp>`; lexical order is chronological. */
+/** Run ids are `run-<17-digit local timestamp>`. */
 const RUN_LOG_DIR_RE = /^run-\d{17}$/u;
 
-/** `- run_log: <path>` as written by `writeValidateRunLog`. */
-const RUN_LOG_POINTER_RE = /^-\s*run_log:\s*(\S+)\s*$/mu;
+/**
+ * `- run_log: <path>` as written by `writeValidateRunLog`.
+ *
+ * The capture runs to end of line rather than stopping at the first
+ * space: `relativeReportDir` is a path under the project root, and a
+ * root or an `outDir` containing a space is perfectly legal. A `\S+`
+ * capture silently failed to match those lines, which made the pointer
+ * read as absent and let the prune delete the very run the shipped Hard
+ * Gate evidence names.
+ */
+const RUN_LOG_POINTER_RE = /^-\s*run_log:\s*(.+?)\s*$/mu;
+
+/** `- run_id: run-<17 digits>` from the same `validate.log`. */
+const RUN_LOG_RUN_ID_RE = /^-\s*run_id:\s*(run-\d{17})\s*$/mu;
 
 export type CleanRunLogsOptions = {
   /** Calendar-day TTL. Defaults to `RUN_LOG_STALE_TTL_DAYS_DEFAULT` (14). */
@@ -72,10 +89,29 @@ export type CleanRunLogEntry = {
   readonly runId: string;
   readonly dirPath: string;
   readonly mtimeMs: number;
+  /**
+   * `run.json#started_at` in epoch milliseconds, or `null` when the file
+   * is missing, unparseable or carries no usable timestamp. Used to
+   * order the keep-latest window by real time; see `compareByRecency`.
+   */
+  readonly startedAtMs: number | null;
+};
+
+/** A candidate whose removal was attempted and failed. */
+export type CleanRunLogFailure = {
+  readonly entry: CleanRunLogEntry;
+  readonly reason: string;
 };
 
 export type CleanRunLogsResult = {
   readonly removed: readonly CleanRunLogEntry[];
+  /**
+   * Candidates whose `rm` failed (`EACCES`, `EBUSY`, an I/O error).
+   * Non-empty means the prune was partial: `removed` still lists what
+   * WAS irreversibly deleted before the failure, which is exactly what
+   * a caller that aborts on the first throw could no longer report.
+   */
+  readonly failed: readonly CleanRunLogFailure[];
   readonly skippedInTtl: readonly CleanRunLogEntry[];
   readonly retainedLatest: readonly CleanRunLogEntry[];
   /**
@@ -146,6 +182,60 @@ export async function precheckRunLogPrune(
 }
 
 /**
+ * `run.json#started_at` for one run directory, in epoch milliseconds.
+ *
+ * `null` for every failure mode — absent file, unreadable file, invalid
+ * JSON, missing or unparseable field — because a run whose real start
+ * time cannot be established must fall back to the ordering keys that
+ * are always available rather than be dropped from the listing.
+ */
+function hasStartedAt(value: unknown): value is { started_at: unknown } {
+  return typeof value === "object" && value !== null && "started_at" in value;
+}
+
+async function readStartedAtMs(dirPath: string): Promise<number | null> {
+  try {
+    const parsed: unknown = JSON.parse(await readFile(path.join(dirPath, "run.json"), "utf-8"));
+    if (!hasStartedAt(parsed) || typeof parsed.started_at !== "string") {
+      return null;
+    }
+    const startedAtMs = Date.parse(parsed.started_at);
+    return Number.isFinite(startedAtMs) ? startedAtMs : null;
+  } catch {
+    // Absent, unreadable or invalid JSON: the caller falls back to the
+    // ordering keys that are always available.
+    return null;
+  }
+}
+
+/**
+ * Newest run first, by real elapsed time rather than by run id.
+ *
+ * Run ids are `run-<17-digit LOCAL timestamp>`, so lexical order is only
+ * chronological while the local clock moves forward: across a DST
+ * autumn fall-back — or any manual clock correction backwards — a run
+ * that started later carries the smaller id. Sorting by id there hands
+ * the keep-latest slots to the pre-rollback runs and leaves the genuinely
+ * newest ones exposed to the TTL, breaking the "the newest
+ * `keepLatestRuns` survive" contract exactly when history matters most.
+ *
+ * `run.json#started_at` is written as a UTC ISO instant and is therefore
+ * immune to the offset shift, so it is the primary key. Directory mtime
+ * (also an absolute instant, in the same epoch-millisecond unit) stands
+ * in for runs whose `run.json` is missing or unparseable, which keeps
+ * the ordering total, and the run id remains the final deterministic
+ * tiebreaker.
+ */
+function recencyKey(entry: CleanRunLogEntry): number {
+  return entry.startedAtMs ?? entry.mtimeMs;
+}
+
+function compareByRecency(a: CleanRunLogEntry, b: CleanRunLogEntry): number {
+  const delta = recencyKey(b) - recencyKey(a);
+  return delta !== 0 ? delta : b.runId.localeCompare(a.runId);
+}
+
+/**
  * Enumerate `run-*` directories under `reportRoot`, newest first.
  *
  * A report directory that does not exist yields an empty list: the
@@ -175,33 +265,53 @@ async function listRunLogDirs(reportRoot: string): Promise<CleanRunLogEntry[]> {
     try {
       const stats = await stat(dirPath);
       if (!stats.isDirectory()) continue;
-      results.push({ runId: name, dirPath, mtimeMs: stats.mtimeMs });
+      results.push({
+        runId: name,
+        dirPath,
+        mtimeMs: stats.mtimeMs,
+        startedAtMs: await readStartedAtMs(dirPath),
+      });
     } catch {
       continue;
     }
   }
-  return results.sort((a, b) => b.runId.localeCompare(a.runId));
+  return results.sort(compareByRecency);
 }
 
 /**
- * Run id named by `<reportRoot>/validate.log`'s `run_log:` line, or
- * `null` when the file is absent, unreadable or does not carry a
- * pointer. Nothing in this module rewrites `validate.log`, so whatever
- * it names has to survive the prune.
+ * Every run id `<reportRoot>/validate.log` refers to — empty when the
+ * file is absent, unreadable or carries no usable reference. Nothing in
+ * this module rewrites `validate.log`, so whatever it names has to
+ * survive the prune.
+ *
+ * BOTH the `run_log:` path and the `run_id:` line are read, and the
+ * union is excluded. They normally agree, so the second is redundant;
+ * it is kept because the two fail independently. `run_log:` is a path
+ * and can be mangled by anything that reformats the file, while
+ * `run_id:` is a bare token — so a log whose path line cannot be turned
+ * into a run id still protects its referent, and a hand-truncated
+ * `run_id:` line still leaves the path.
  */
-async function readPointerRunId(reportRoot: string): Promise<string | null> {
+async function readPointerRunIds(reportRoot: string): Promise<ReadonlySet<string>> {
+  const runIds = new Set<string>();
   let contents: string;
   try {
     contents = await readFile(path.join(reportRoot, "validate.log"), "utf-8");
   } catch {
-    return null;
+    return runIds;
   }
   const pointer = RUN_LOG_POINTER_RE.exec(contents)?.[1];
-  if (pointer === undefined) {
-    return null;
+  if (pointer !== undefined) {
+    const runId = path.basename(pointer.replace(/[/\\]+$/u, ""));
+    if (RUN_LOG_DIR_RE.test(runId)) {
+      runIds.add(runId);
+    }
   }
-  const runId = path.basename(pointer.replace(/[/\\]+$/u, ""));
-  return RUN_LOG_DIR_RE.test(runId) ? runId : null;
+  const declaredRunId = RUN_LOG_RUN_ID_RE.exec(contents)?.[1];
+  if (declaredRunId !== undefined) {
+    runIds.add(declaredRunId);
+  }
+  return runIds;
 }
 
 function normalizeKeepLatest(value: number | undefined): number {
@@ -211,15 +321,22 @@ function normalizeKeepLatest(value: number | undefined): number {
   return Math.max(RUN_LOG_KEEP_LATEST_MIN, Math.floor(value));
 }
 
-async function removeRunLog(entry: CleanRunLogEntry): Promise<void> {
+/**
+ * Remove one run log; `null` on success, the reason on failure.
+ *
+ * Deliberately does NOT throw. Removal is irreversible and there are
+ * usually several candidates, so a throw on the second one would
+ * discard the record of the first — the operator would see only the
+ * `EACCES` and never learn which run logs are already gone. The caller
+ * accumulates the outcomes instead and reports both lists; the non-zero
+ * exit is carried by the failure list, not by an exception.
+ */
+async function removeRunLog(entry: CleanRunLogEntry): Promise<string | null> {
   try {
     await rm(entry.dirPath, { recursive: true, force: true });
+    return null;
   } catch (error) {
-    // Surface as throw so the caller can decide. We do NOT swallow:
-    // the doctor command catches and converts to a finding.
-    throw new Error(
-      `failed to prune run log ${entry.runId}: ${error instanceof Error ? error.message : String(error)}`,
-    );
+    return error instanceof Error ? error.message : String(error);
   }
 }
 
@@ -234,15 +351,16 @@ export async function cleanStaleRunLogs(
   const nowMs = options.nowMs ?? Date.now();
 
   const entries = await listRunLogDirs(reportRoot);
-  const pointerRunId = await readPointerRunId(reportRoot);
+  const pointerRunIds = await readPointerRunIds(reportRoot);
   const retainedLatest = entries.slice(0, keepLatest);
   const candidates = entries.slice(keepLatest);
 
   const removed: CleanRunLogEntry[] = [];
+  const failed: CleanRunLogFailure[] = [];
   const skippedInTtl: CleanRunLogEntry[] = [];
   const retainedPointer: CleanRunLogEntry[] = [];
   for (const entry of candidates) {
-    if (entry.runId === pointerRunId) {
+    if (pointerRunIds.has(entry.runId)) {
       retainedPointer.push(entry);
       continue;
     }
@@ -250,15 +368,21 @@ export async function cleanStaleRunLogs(
       skippedInTtl.push(entry);
       continue;
     }
-    removed.push(entry);
     if (options.dryRun) {
+      removed.push(entry);
       continue;
     }
-    await removeRunLog(entry);
+    const reason = await removeRunLog(entry);
+    if (reason === null) {
+      removed.push(entry);
+    } else {
+      failed.push({ entry, reason });
+    }
   }
 
   return {
     removed,
+    failed,
     skippedInTtl,
     retainedLatest,
     retainedPointer,

@@ -30,10 +30,21 @@ afterEach(async () => {
   }
 });
 
-async function seedRunLog(root: string, runId: string, ageDays: number): Promise<string> {
+async function seedRunLog(
+  root: string,
+  runId: string,
+  ageDays: number,
+  startedAt?: string,
+): Promise<string> {
   const dir = path.join(root, ".qfai", "report", runId);
   await mkdir(dir, { recursive: true });
-  await writeFile(path.join(dir, "run.json"), "{}\n", "utf-8");
+  await writeFile(
+    path.join(dir, "run.json"),
+    startedAt === undefined
+      ? "{}\n"
+      : `${JSON.stringify({ run_id: runId, started_at: startedAt })}\n`,
+    "utf-8",
+  );
   const mtime = new Date(Date.now() - ageDays * DAY_MS);
   await utimes(dir, mtime, mtime);
   return dir;
@@ -159,6 +170,77 @@ describe("cleanStaleRunLogs — TTL + keep-latest pruning of validate run logs",
     expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
     expect(await exists(pointed)).toBe(true);
     expect(await exists(newest)).toBe(true);
+  });
+
+  it("retains the pointed-at run when outDir — and so the run_log: path — holds a space", async () => {
+    // `writeValidateRunLog` writes `relativeReportDir` verbatim, so an
+    // outDir with a space produces `- run_log: my reports/run-...`. A
+    // `\S+` capture stopped at the space, read the pointer as absent and
+    // deleted the run the Hard Gate evidence names.
+    const root = await newTempDir("spaced-outdir");
+    const config = { ...defaultConfig, paths: { ...defaultConfig.paths, outDir: "my reports" } };
+    const reportRoot = path.join(root, "my reports");
+    const pointed = path.join(reportRoot, "run-20260401120000001");
+    const newest = path.join(reportRoot, "run-20260402120000002");
+    for (const dir of [pointed, newest]) {
+      await mkdir(dir, { recursive: true });
+      const mtime = new Date(Date.now() - 90 * DAY_MS);
+      await utimes(dir, mtime, mtime);
+    }
+    await writeFile(
+      path.join(reportRoot, "validate.log"),
+      "- run_log: my reports/run-20260401120000001\n",
+      "utf-8",
+    );
+
+    const result = await cleanStaleRunLogs(root, config, { keepLatest: 1 });
+
+    expect(result.removed).toEqual([]);
+    expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
+    expect(await exists(pointed)).toBe(true);
+  });
+
+  it("retains a run named only by run_id: when the run_log: path is unusable", async () => {
+    const root = await newTempDir("run-id-only");
+    const pointed = await seedRunLog(root, "run-20260401120000001", 90);
+    await seedRunLog(root, "run-20260402120000002", 89);
+    await writeFile(
+      path.join(root, ".qfai", "report", "validate.log"),
+      "- run_id: run-20260401120000001\n- run_log: (rewritten by hand)\n",
+      "utf-8",
+    );
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 1 });
+
+    expect(result.removed).toEqual([]);
+    expect(result.retainedPointer.map((entry) => entry.runId)).toEqual(["run-20260401120000001"]);
+    expect(await exists(pointed)).toBe(true);
+  });
+
+  it("keeps the run that really started last when a clock rollback inverts the run ids", async () => {
+    // Run ids come from the LOCAL clock, so a DST fall-back gives the
+    // later run the smaller id. `run.json#started_at` is a UTC instant
+    // and keeps the ordering honest.
+    const root = await newTempDir("clock-rollback");
+    const beforeRollback = await seedRunLog(
+      root,
+      "run-20261101015900000",
+      90,
+      "2026-11-01T05:59:00.000Z",
+    );
+    const afterRollback = await seedRunLog(
+      root,
+      "run-20261101010500000",
+      90,
+      "2026-11-01T06:05:00.000Z",
+    );
+
+    const result = await cleanStaleRunLogs(root, defaultConfig, { keepLatest: 1 });
+
+    expect(result.retainedLatest.map((entry) => entry.runId)).toEqual(["run-20261101010500000"]);
+    expect(result.removed.map((entry) => entry.runId)).toEqual(["run-20261101015900000"]);
+    expect(await exists(afterRollback)).toBe(true);
+    expect(await exists(beforeRollback)).toBe(false);
   });
 
   it("reports an unreadable outDir instead of returning an empty plan", async () => {

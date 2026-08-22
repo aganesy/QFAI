@@ -53,6 +53,12 @@ export type AutoremediateSummary = {
   readonly configFieldsWritten: readonly string[];
   /** Validate run-log directories pruned by this run. */
   readonly prunedRunLogs: readonly string[];
+  /**
+   * Run-log directories this run tried and failed to remove. Non-empty
+   * means the prune was partial — `prunedRunLogs` is still irreversibly
+   * gone — and the caller must exit non-zero.
+   */
+  readonly failedRunLogPrunes: readonly string[];
   /** Review packs recorded as predating `revision_form` by this run. */
   readonly legacyPacksRecorded: readonly string[];
 };
@@ -138,6 +144,7 @@ export async function runAutoremediate(
       archived: [],
       configFieldsWritten: [],
       prunedRunLogs: [],
+      failedRunLogPrunes: [],
       legacyPacksRecorded: [],
     };
   }
@@ -193,6 +200,7 @@ export async function runAutoremediate(
   // hand are not the ones governing the directory, and this half of the
   // cleanup deletes rather than moves.
   const prunedRunLogs: string[] = [];
+  const failedRunLogPrunes: string[] = [];
   const precheck = await precheckRunLogPrune(options.root, config, configIssues);
   if (precheck.blocked) {
     lines.push(`autoremediate: run log prune skipped — ${precheck.reason}`);
@@ -210,6 +218,15 @@ export async function runAutoremediate(
         ? `autoremediate: would prune run logs=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length} (dry-run)`
         : `autoremediate: run logs pruned=${prunedRunLogs.length}, in-ttl=${runLogResult.skippedInTtl.length}, kept-latest=${runLogResult.retainedLatest.length}`,
     );
+    // A failed `rm` no longer aborts the pruner, so the partial outcome
+    // is reported here instead of being lost with the summary: the
+    // removals above already happened and cannot be undone.
+    failedRunLogPrunes.push(...runLogResult.failed.map((failure) => failure.entry.runId));
+    for (const failure of runLogResult.failed) {
+      lines.push(
+        `autoremediate: run log prune failed -> ${failure.entry.runId}: ${failure.reason}`,
+      );
+    }
   }
 
   // (3) Write missing default-keyed config fields (user-authored values
@@ -250,6 +267,7 @@ export async function runAutoremediate(
     installed,
     archived: archivedNames,
     prunedRunLogs,
+    failedRunLogPrunes,
     configFieldsWritten,
     legacyPacksRecorded: migration.added,
   };

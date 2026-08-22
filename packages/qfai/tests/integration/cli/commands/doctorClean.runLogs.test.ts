@@ -5,7 +5,7 @@
 // in-process `runDoctor` entry point with deterministic temp-dir
 // fixtures (no shelling out so Windows parallel-FS flake stays bounded).
 
-import { access, mkdir, mkdtemp, rm, utimes, writeFile } from "node:fs/promises";
+import { access, mkdir, mkdtemp, rm, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -44,6 +44,18 @@ async function seedRunLog(root: string, runId: string, ageDays: number): Promise
 async function exists(target: string): Promise<boolean> {
   try {
     await access(target);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/** Directory symlinks need Developer Mode or elevation on Windows. */
+async function canCreateSymlink(root: string): Promise<boolean> {
+  const probe = path.join(root, "probe-link");
+  try {
+    await symlink(root, probe, "dir");
+    await rm(probe, { force: true, recursive: false });
     return true;
   } catch {
     return false;
@@ -130,6 +142,52 @@ describe("doctor --clean prunes stale validate run logs", () => {
     // force, the older one would be deleted out of app-b's evidence
     // trail were the collision not detected first.
     const sharedRoot = path.join(mono, "shared-report");
+    const shared = path.join(sharedRoot, "run-20260401120000001");
+    for (const runId of ["run-20260401120000001", "run-20260402120000002"]) {
+      const dir = path.join(sharedRoot, runId);
+      await mkdir(dir, { recursive: true });
+      const mtime = new Date(Date.now() - 30 * DAY_MS);
+      await utimes(dir, mtime, mtime);
+    }
+
+    const exit = await runDoctor({
+      root: path.join(mono, "app-a"),
+      rootExplicit: true,
+      format: "text",
+      clean: true,
+    });
+
+    expect(exit).toBe(0);
+    expect(await exists(shared)).toBe(true);
+  });
+
+  it("refuses to prune an outDir another project reaches through a symlink", async ({ skip }) => {
+    const mono = await newTempDir("linked-outdir");
+    if (!(await canCreateSymlink(mono))) {
+      // Real symlinks need Developer Mode or elevation on Windows. A
+      // machine without either cannot set the alias up at all, so the
+      // case is skipped explicitly rather than left as a silent hole.
+      skip();
+      return;
+    }
+    await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
+    const sharedRoot = path.join(mono, "shared-report");
+    await mkdir(sharedRoot, { recursive: true });
+    // app-b reaches the very same directory under a different spelling.
+    // `path.normalize` alone reads the two as unrelated, so app-a's
+    // retention settings would delete app-b's evidence.
+    await symlink(sharedRoot, path.join(mono, "linked-report"), "dir");
+    for (const [app, outDir] of [
+      ["app-a", "../shared-report"],
+      ["app-b", "../linked-report"],
+    ]) {
+      await mkdir(path.join(mono, app), { recursive: true });
+      await writeFile(
+        path.join(mono, app, "qfai.config.yaml"),
+        `paths:\n  outDir: ${outDir}\nreport:\n  keepLatestRuns: 1\n`,
+        "utf-8",
+      );
+    }
     const shared = path.join(sharedRoot, "run-20260401120000001");
     for (const runId of ["run-20260401120000001", "run-20260402120000002"]) {
       const dir = path.join(sharedRoot, runId);

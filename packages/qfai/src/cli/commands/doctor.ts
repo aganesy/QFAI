@@ -106,8 +106,16 @@ function formatDoctorJson(data: unknown): string {
  * Review-pack archival always runs (it moves, and is therefore
  * recoverable). The run-log prune deletes, so it runs only after
  * `precheckRunLogPrune` clears it.
+ *
+ * `failed` reports run logs the prune could not remove. The summary is
+ * still printed in that case — the removals that DID happen are
+ * irreversible and the operator has to see them — and the flag makes
+ * `runDoctor` exit non-zero regardless of `--fail-on`.
  */
-async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<string[]> {
+async function runCleanPhase(
+  resolvedRoot: string,
+  dryRun: boolean,
+): Promise<{ lines: string[]; failed: boolean }> {
   const lines: string[] = [];
   const { config, issues } = await loadConfig(resolvedRoot);
   const reviewTtlDays = config.review?.staleTtlDays;
@@ -132,7 +140,7 @@ async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<str
   const precheck = await precheckRunLogPrune(resolvedRoot, config, issues);
   if (precheck.blocked) {
     lines.push(`doctor --clean: run log prune skipped — ${precheck.reason}`);
-    return lines;
+    return { lines, failed: false };
   }
 
   const runLogTtlDays = config.report?.staleTtlDays;
@@ -151,7 +159,15 @@ async function runCleanPhase(resolvedRoot: string, dryRun: boolean): Promise<str
   for (const entry of runLogs.removed) {
     lines.push(dryRun ? `  would remove -> ${entry.runId}` : `  removed -> ${entry.runId}`);
   }
-  return lines;
+  // Listed after the removals so the two are read together: what is
+  // gone for good, then what is still on disk and why.
+  if (runLogs.failed.length > 0) {
+    lines.push(`doctor --clean: failed to prune run logs=${runLogs.failed.length}`);
+    for (const failure of runLogs.failed) {
+      lines.push(`  failed -> ${failure.entry.runId}: ${failure.reason}`);
+    }
+  }
+  return { lines, failed: runLogs.failed.length > 0 };
 }
 
 export async function runDoctor(options: DoctorCommandOptions): Promise<number> {
@@ -170,6 +186,10 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // Side-effecting pre-steps run before the diagnostic build so the
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
+  // A partial run-log prune must not report success: some directories
+  // are irreversibly gone while others the operator asked to remove are
+  // still there. Independent of `--fail-on`, which grades diagnostics.
+  let cleanFailed = false;
   if (options.autoremediate) {
     const isCi = process.env["CI"] === "true";
     // Thread the resolved skill profile into the autoremediate orchestrator
@@ -198,6 +218,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       ...(options.skillProfile ? { skill: options.skillProfile } : {}),
     });
     sideEffectLines.push(...summary.lines);
+    cleanFailed = summary.failedRunLogPrunes.length > 0;
     // When the operator did not pass `--profile <skill>`, the install
     // phase of runAutoremediate is structurally skipped (there is no
     // manifest to probe). Surface that explicitly so operators do not
@@ -227,7 +248,9 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
       return 0;
     }
   } else if (options.clean) {
-    sideEffectLines.push(...(await runCleanPhase(resolvedRoot, Boolean(options.dryRun))));
+    const cleanPhase = await runCleanPhase(resolvedRoot, Boolean(options.dryRun));
+    sideEffectLines.push(...cleanPhase.lines);
+    cleanFailed = cleanPhase.failed;
   }
 
   const data = await createDoctorData({
@@ -248,7 +271,7 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // remains on stdout (legacy human-readable behavior).
   const sideEffectPrefix =
     !isJson && sideEffectLines.length > 0 ? `${sideEffectLines.join("\n")}\n` : "";
-  const exitCode = shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
+  const exitCode = cleanFailed || shouldFailDoctor(data.summary, options.failOn) ? 1 : 0;
 
   if (isJson && sideEffectLines.length > 0) {
     process.stderr.write(`${sideEffectLines.join("\n")}\n`);
