@@ -1233,21 +1233,90 @@ const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   // xUnit / BDD call form with the modifier chains the frameworks allow:
   // `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
   /(?:^|[^\w$.])(?:it|test|describe|context|specify|suite|scenario)\s*(?:\.\s*[\w$]+\s*)*\(/,
-  // Gherkin: a `.feature` is executed scenario by scenario.
-  /^\s*(?:Scenario Outline|Scenario|Example|Background)\s*:/m,
-  // Attribute / decorator declarations: JUnit, NUnit / xUnit.net, Rust, pytest.
-  /^\s*(?:@Test\b|\[\s*(?:Test|Fact|Theory)\w*\s*[\]([]|#\[\s*(?:\w+::)?test\s*\]|@pytest\.mark\b)/m,
+  // Gherkin: a `.feature` is executed scenario by scenario. `Background:` is
+  // deliberately absent — it is the shared preamble those scenarios run, not a
+  // scenario a runner collects, so a feature that has only one declares no test.
+  /^\s*(?:Scenario Outline|Scenario|Example)\s*:/m,
+  // Attribute / decorator declarations: JUnit 5's collectable annotations,
+  // NUnit / xUnit.net, Rust, pytest.
+  /^\s*(?:@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b|\[\s*(?:Test|Fact|Theory)\w*\s*[\]([]|#\[\s*(?:\w+::)?test\s*\]|@pytest\.mark\b)/m,
   // Naming conventions that are themselves the declaration: pytest, Go,
   // PHPUnit, minitest.
   /^\s*(?:async\s+)?(?:def\s+test\w*\s*\(|func\s+(?:Test|Benchmark|Fuzz)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
 ];
+
+/**
+ * Blanks a comment or literal span, keeping its newlines.
+ *
+ * The patterns above anchor on `^`/`m`, so a span must be replaced with
+ * something of the same line shape rather than deleted: collapsing the lines
+ * would slide an unrelated declaration up behind a stripped prefix.
+ */
+function blankSpan(span: string): string {
+  return span.replace(/[^\n]/g, " ");
+}
+
+/**
+ * Removes comments and string literals so a declaration is only read from code.
+ *
+ * Applying {@link RUNNABLE_TEST_STRUCTURE_PATTERNS} to the raw body made an
+ * annotation-only file executable as soon as it mentioned the shape it lacks:
+ * `// TODO: add test("story", ...)` matched the call form, so a ledger renamed
+ * to `.test.ts` cleared the obligation with a comment. Comments and literals
+ * are therefore blanked first.
+ *
+ * One tokenizer covers every ecosystem the scan meets: `//` and slash-star are
+ * the C family (TS/JS, Java, C#, Go, Rust, Kotlin, Swift, PHP), `#` is the hash
+ * family (Python, Ruby, Gherkin) minus Rust's `#[test]` attribute and a
+ * shebang, and quoted spans cover the string literals. Single- and
+ * double-quoted spans stop at end of line, so an apostrophe in prose costs at
+ * most the rest of its own line; triple quotes are matched first so a Python
+ * docstring is blanked whole. A regex literal is not tracked — `/test\s*\(/`
+ * in a source file still reads as a declaration, which errs toward calling a
+ * carrier executable, the direction that reports nothing.
+ */
+function stripCommentsAndLiterals(text: string): string {
+  let out = "";
+  let index = 0;
+  while (index < text.length) {
+    const rest = text.slice(index);
+    const block = /^\/\*[\s\S]*?(?:\*\/|$)/.exec(rest);
+    if (block) {
+      out += blankSpan(block[0]);
+      index += block[0].length;
+      continue;
+    }
+    const line = /^(?:\/\/|#(?![[!]))[^\n]*/.exec(rest);
+    if (line) {
+      out += blankSpan(line[0]);
+      index += line[0].length;
+      continue;
+    }
+    const triple = /^(?:"""[\s\S]*?(?:"""|$)|'''[\s\S]*?(?:'''|$))/.exec(rest);
+    if (triple) {
+      out += blankSpan(triple[0]);
+      index += triple[0].length;
+      continue;
+    }
+    const quoted = /^(?:"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?)/.exec(rest);
+    if (quoted && quoted[0].length > 0) {
+      out += blankSpan(quoted[0]);
+      index += quoted[0].length;
+      continue;
+    }
+    out += text.charAt(index);
+    index += 1;
+  }
+  return out;
+}
 
 /** True when `file` is a carrier a runner could execute, judged on its body. */
 function hasRunnableTestStructure(file: string, text: string): boolean {
   if (PROSE_CARRIER_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase())) {
     return false;
   }
-  return RUNNABLE_TEST_STRUCTURE_PATTERNS.some((pattern) => pattern.test(text));
+  const code = stripCommentsAndLiterals(text);
+  return RUNNABLE_TEST_STRUCTURE_PATTERNS.some((pattern) => pattern.test(code));
 }
 
 /**

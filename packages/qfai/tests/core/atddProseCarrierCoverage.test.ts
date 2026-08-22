@@ -233,6 +233,115 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("does not read a declaration out of a comment, so a TODO is not a test", async () => {
+    // The same loophole an extension check leaves open, reopened one level
+    // down: matching the raw body let an annotation-only file mention the
+    // shape it lacks and be counted for it.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            '// TODO: add test("serves the story", ...)',
+            '/* describe("US-0001", () => {}) once the API lands */',
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("does not read a declaration out of a string literal either", async () => {
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "export const pending = \"it('serves the story')\";",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("does not count a Gherkin Background as a scenario, because no runner collects it", async () => {
+    // `Background:` is the preamble every scenario runs, so a feature holding
+    // only one has nothing to execute the annotation against.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.feature": [
+            "Feature: story",
+            "  # QFAI:SPEC-0001:US-0001",
+            "  Background:",
+            "    Given a signed-in user",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("reads JUnit 5's other collectable annotations, not only @Test", async () => {
+    // A `@ParameterizedTest` method named `shouldServeTheStory` matches no
+    // naming convention either, so missing the annotation reported a suite
+    // the runner does execute as unimplemented.
+    for (const annotation of ["@ParameterizedTest", "@RepeatedTest(3)", "@TestFactory"]) {
+      await withProject(
+        {
+          us: ["US-0001"],
+          files: {
+            "tests/e2e/StoryTest.java": [
+              "class StoryTest {",
+              "  // QFAI:SPEC-0001:US-0001",
+              `  ${annotation}`,
+              "  void shouldServeTheStory() {}",
+              "}",
+              "",
+            ].join("\n"),
+          },
+        },
+        async (root) => {
+          const config = {
+            ...defaultConfig,
+            validation: {
+              ...defaultConfig.validation,
+              traceability: {
+                ...defaultConfig.validation.traceability,
+                testFileGlobs: ["tests/**/*.java"],
+              },
+            },
+          };
+          expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
+            "QFAI-ATDD-118",
+          );
+        },
+      );
+    }
+  });
+
   it("covers TC and CON-API on the same terms as US", async () => {
     await withProject(
       {
