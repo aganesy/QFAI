@@ -131,7 +131,13 @@ one-file-per-spec contract holds: a spec never has this boundary in both files.
 Record a **per-item** result in the evidence file the row's `Layer` owns (the spec-level boundary
 above has no row, and its own rule is stated there) — `.qfai/evidence/implement-<spec-id>.md`, or
 `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, the ATDD-owned set
-`qfai-implement/SKILL.md` Non-goals defines — using the per-item evidence fields
+`qfai-implement/SKILL.md` Non-goals defines. **A row carrying `Pre-split-evidence: implement` keeps
+`implement-<spec-id>.md`** (`qfai-implement/SKILL.md` gate item 10): the marker is what identifies a
+legacy row whose evidence lawfully predates the split, item 10 goes on accepting its implement
+anchor, and item 12 recomputes this seal inside the per-item entry item 10 selected — so writing the
+legacy row's checkpoint to the ATDD side leaves that entry with no checkpoint trio to recompute, and
+the row cannot reach `done` even after its marker migration succeeded. Read the marker first, then
+the `Layer`. Record it using the per-item evidence fields
 `Checkpoint verification command`, `Checkpoint verification result` and
 `Checkpoint verification seal`. The seal is the audit hash over
 the first two together with the `Revision` this run was made against, taken the moment the run ends

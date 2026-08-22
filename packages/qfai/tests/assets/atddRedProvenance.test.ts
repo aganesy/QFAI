@@ -2577,4 +2577,66 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       "**Validate evidence is a completion-gate input, not an item-cycle one.**",
     );
   });
+  it("keeps an L1/L2-only Integration row on the side that will author its test", async () => {
+    // `QFAI-ATDD-112` excludes L1/L2, so `/qfai-atdd` writes no test for an
+    // `Integration` row whose TC-Refs declare only those levels, and the
+    // validator reports that Layer/Level contradiction as a warning — such a
+    // ledger passes `--fail-on error`. Moving the whole layer across without
+    // this carve-out left that row refused by both skills and stuck at `todo`.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.**",
+    );
+    expect(implement).toContain("(`TDDLIST_COVERAGE_LAYER_MISMATCH`)");
+    expect(implement).toContain("this skill writes its test in Phase Red steps 3-5");
+    // Stated once, and inherited by every site that names the set — those sites
+    // spell the three layers out longhand and the 500-line ceiling is at zero.
+    expect(implement).toContain("**Every rule below that names the ATDD-owned set excludes it**");
+  });
+
+  it("migrates a row whose advance was never committed", async () => {
+    // A phase may leave `test-list.md` and its evidence uncommitted, which
+    // `evidence-revision.md` addresses as `working-tree+<content hash>`. No
+    // commit then carries the advance, so a patch-history-only migration finds
+    // the pre-advance line and never marks the row it exists to rescue.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**Read the working tree before the history, because an advance need not be committed at all.**",
+    );
+    expect(implement).toContain("`working-tree+<content hash>`");
+    expect(implement).toContain("compare the row's line with `HEAD` first");
+    expect(implement).toContain("Only where the line matches `HEAD` does the patch history decide");
+    const revision = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/evidence-revision.md"),
+    );
+    expect(revision).toContain("working-tree+");
+  });
+
+  it("keeps a marked legacy row's checkpoint where item 12 recomputes its seal", async () => {
+    // Item 10 goes on accepting the implement anchor of a row carrying the
+    // marker, so item 12 recomputes the checkpoint seal inside that entry.
+    // Branching on `Layer` alone sent the trio to the ATDD file and left the
+    // implement entry with nothing to recompute — the row migrated and still
+    // could not reach `done`.
+    const checkpoint = flat(await read(tree, CHECKPOINT));
+    expect(checkpoint).toContain(
+      "**A row carrying `Pre-split-evidence: implement` keeps `implement-<spec-id>.md`**",
+    );
+    expect(checkpoint).toContain("item 12 recomputes this seal inside the per-item entry item 10");
+    expect(checkpoint).toContain("Read the marker first, then the `Layer`");
+  });
+
+  it("keeps a marked legacy row's cross-spec obligation where the prohibition reads", async () => {
+    // The completion prohibition reads the file item 10 selected. For a marked
+    // legacy row that is the implement file, so recording the open obligation
+    // on the ATDD side hides it and completion can be declared with the
+    // affected spec's re-review still open.
+    const crossSpec = flat(await read(tree, CROSS_SPEC));
+    expect(crossSpec).toContain(
+      "**A row carrying `Pre-split-evidence: implement` keeps `implement-<spec-id>.md`**",
+    );
+    expect(crossSpec).toContain(
+      "puts the open obligation in a file neither item 10 nor the completion prohibition reads for it",
+    );
+  });
 });
