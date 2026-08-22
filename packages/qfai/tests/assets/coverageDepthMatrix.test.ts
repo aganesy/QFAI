@@ -48,6 +48,36 @@ async function statements(
   return out;
 }
 
+/**
+ * A markdown bullet: any marker, any indent, inside a blockquote or not.
+ *
+ * **One copy.** Round 18 found `^- ` too narrow — `* `, `  - `, `> - ` and a tab-indented bullet each
+ * carried a contradicting score through green — and fixed it at the site the finding named. Fifteen
+ * lines away, in the same file and the same commit, the other copy kept `^- `, and round 19 walked
+ * through it: the class C roster reddened on a true reason written with a `* ` marker. Two copies of
+ * one rule, and the one nobody was looking at was wrong, which is the finding this stage has now
+ * recorded six times about its own work.
+ */
+const BULLET = "^[ \\t>]*[-*+] ";
+
+/**
+ * What each class C member's reason must be ABOUT.
+ *
+ * Distinctness is not that property. Round 19 swapped the two reasons between the two members and the
+ * check stayed green, because two swapped spans are still two distinct spans — so the exact plant
+ * round 18 filed as its break 2 passed the repair written to close it, and a reason of `**A.**` passed
+ * as well.
+ *
+ * A reason belongs to a cell when it argues about what that cell measures, so the pair is pinned to a
+ * word only that cell's argument would use. Rewording a reason means editing this line, which is
+ * correct: **this line is the claim that the reason belongs to the cell**, and nothing else in the
+ * record states it.
+ */
+const CLASS_C_REASON_MUST_ARGUE: ReadonlyMap<string, RegExp> = new Map([
+  ["US-0017-0001/Boundary values", /\bboundar(?:y|ies)\b/i],
+  ["US-0017-0007/Error path", /\bfail(?:ure|s|ed)?\b/i],
+]);
+
 const COLUMNS = [
   "Normal path",
   "Error path",
@@ -381,9 +411,11 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // with no reason at all — every one of the three green. What class C claims is that each member has
     // ITS OWN reason, so the bullet must carry a bolded one and the reasons must be distinct.
     const reasons = new Map<string, string>();
-    for (const match of classCBody.matchAll(
-      /^- `(US-0017-\d{4})`\s*×\s*`([^`]+)`\s*—\s*\*\*([^*]+)\*\*/gm,
-    )) {
+    const ROSTER = new RegExp(
+      BULLET + "`(US-0017-\\d{4})`\\s*×\\s*`([^`]+)`\\s*—\\s*\\*\\*([^*]+)\\*\\*",
+      "gm",
+    );
+    for (const match of classCBody.matchAll(ROSTER)) {
       reasons.set(`${match[1] ?? ""}/${match[2] ?? ""}`, (match[3] ?? "").trim());
     }
     const namedInProse = new Set(reasons.keys());
@@ -391,6 +423,23 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       [...new Set(reasons.values())].length,
       "each class C member needs its own reason, and two members sharing one is a reason for neither",
     ).toBe(reasons.size);
+    // …and distinct is not the same as ITS OWN. See `CLASS_C_REASON_MUST_ARGUE`.
+    expect(
+      [...CLASS_C_REASON_MUST_ARGUE.keys()].sort(),
+      "the pinned reasons and the roster must name the same members — a member with no pin is a " +
+        "reason nothing checks, and a pin with no member is a check over nothing",
+    ).toEqual([...reasons.keys()].sort());
+    const offTopic = [...CLASS_C_REASON_MUST_ARGUE]
+      .filter(([cell, must]) => !must.test(reasons.get(cell) ?? ""))
+      .map(
+        ([cell, must]) =>
+          `${cell}: ${String(must)} does not match ${reasons.get(cell) ?? "<none>"}`,
+      );
+    expect(
+      offTopic,
+      "a class C reason that does not argue about the cell it is written under — swapping two " +
+        "reasons between members leaves both distinct, which is how the previous version passed",
+    ).toEqual([]);
     const classC = members
       .filter((member) => member.className === "C")
       .map((member) => `${member.row}/${member.column}`);
