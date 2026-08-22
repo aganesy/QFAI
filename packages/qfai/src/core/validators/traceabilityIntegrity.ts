@@ -133,9 +133,10 @@ type LedgerRead =
   | { readonly ok: false; readonly issue: Issue };
 
 /**
- * Reads one spec's ledger. Both failure modes are `QFAI-TRACE-002` warnings:
- * the artifact is optional, and its absence or wrong shape only means the
- * `QFAI-TRACE-001` check cannot run for that spec.
+ * Reads one spec's ledger. Every failure mode — absent, not a regular file,
+ * unreadable, wrong shape — is a `QFAI-TRACE-002` warning: the artifact is
+ * optional, and not getting it only means the `QFAI-TRACE-001` check cannot run
+ * for that spec.
  */
 async function readSpecLedger(specId: string, ledgerPath: string): Promise<LedgerRead> {
   // `stat` before `readFile`, never the other way round. This scan now visits
