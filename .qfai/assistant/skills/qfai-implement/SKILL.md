@@ -456,7 +456,7 @@ must be ticked; a box that cannot be ticked is a reason not to declare completio
 
 - [ ] This skill's Definition of Done is satisfied.
 - [ ] Required artifacts were produced or updated (if applicable).
-- [ ] Open questions were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`. This skill does not write `08_Open-questions.md`.
+- [ ] Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`; questions about this skill's own inputs or settings stay in its own output for the user to answer. This skill does not write `08_Open-questions.md`.
 - [ ] The completion message was presented to the user.
 - [ ] Next actions were enumerated for all available options.
 

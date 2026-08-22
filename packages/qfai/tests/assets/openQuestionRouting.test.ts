@@ -10,7 +10,11 @@
  * `(if applicable)` escape hatch meant the question was silently dropped at the
  * moment the box was ticked. The Drift Protocol already defines the real route
  * — record it as an advisory / Change Request proposal and let `/qfai-sdd`
- * adjudicate it — so the box must name that route.
+ * adjudicate it — so the box must name that route, and must limit it to
+ * questions that place a new obligation on the product. A skill's own
+ * configuration questions (`/qfai-configure` listing an ambiguous test
+ * directory, say) belong in that skill's output and to its user, not in an
+ * advisory addressed to a phase that does not own the setting.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -60,7 +64,13 @@ describe("the Completion Checklist routes open questions to the owner phase", ()
         const checklist = flat(completionChecklist(await read(tree, skillPath(skill))));
 
         expect(checklist).toContain(
-          "Open questions were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`.",
+          "Open questions that place a **new obligation on the product** were routed to the owner phase (`/qfai-sdd`) as an advisory / Change Request proposal per `constitution/drift-protocol.md#reviewer-originated-obligations`;",
+        );
+        // A skill's own configuration questions are not reviewer-originated
+        // product scope: routing them to the owner phase would misdeliver a
+        // question the skill (or its user) has to answer itself.
+        expect(checklist).toContain(
+          "questions about this skill's own inputs or settings stay in its own output for the user to answer.",
         );
         // Reading the box alone must be enough to know the write is barred.
         expect(checklist).toContain("This skill does not write `08_Open-questions.md`.");
