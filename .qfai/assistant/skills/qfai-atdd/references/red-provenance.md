@@ -196,7 +196,8 @@ Take the first that applies, and record which one in the evidence file.
    neither owns production source — the same ownership boundary branch 1 step 5
    states. Hand the row over naming the predicate to break: its Phase Red
    **step 3c** applies the mutation, runs this row's selector, captures the
-   failure, reverts, and writes the trio into this row's entry here. The row
+   failure, writes the trio into this row's entry here, and reverts only once
+   `qa-gatekeeper` has answered. The row
    is not deferred waiting for evidence only that step can produce. Writing
    the mutation here to "just take the evidence" is the breach the boundary
    exists to prevent, and the alternative — stopping because no agent may
@@ -204,19 +205,26 @@ Take the first that applies, and record which one in the evidence file.
    `exception`.
 
    `/qfai-implement` Phase Red **step 3c** follows the shared path in
-   `../../qfai-implement/references/red-not-observable.md`: it records
-   `Satisfied-by`, mutates the production predicate the journey asserts on,
-   runs this row's selector, confirms the failure, restores, and writes
-   `Falsifiability command` / `Falsifiability result` beside the GREEN pair.
-   `qa-gatekeeper` accepts this form as the row's minimum evidence, and the row
-   proceeds to `green` and `done` normally.
+   `../../qfai-implement/references/red-not-observable.md`, **in this order**:
+   it mutates the production predicate the journey asserts on, runs this row's
+   selector, writes the entry complete — `Falsifiability command` /
+   `Falsifiability result` among the rest — and routes `qa-gatekeeper` **while
+   the mutation is still in the tree**, because that gatekeeper's ownership
+   check reads the mutated tree to confirm what broke is the predicate
+   `Satisfied-by` names. It restores and re-runs for the GREEN only after that
+   verdict, whatever the verdict was. `qa-gatekeeper` accepts this form as the
+   row's minimum evidence, and the row proceeds to `green` and `done` normally.
 
-   What this stage owes at the handover is the predicate to break: **record
-   `Satisfied-by` naming it, and hand the row over.** Nothing else in this
-   branch is this stage's to run. For everything else that entry has to carry,
-   read the `Falsifiability` row of `## Evidence shape` below — it is the one
-   statement of the entry's contents, so a partial list here cannot disagree
-   with it.
+   What this stage owes at the handover is the predicate to break and a branch
+   still true of the tree: **record `Satisfied-by` naming the predicate, re-run
+   this row's classification test immediately before handing it over (P4b) so
+   an earlier branch-1 row's production code has not made the branch stale, and
+   hand the row over.** Nothing else in this branch is this stage's to run. The
+   entry's fields are listed in the `Falsifiability` row of
+   `## Evidence shape` below, so no partial list here can disagree with it; the
+   `Round N:` prefix each field takes and its placement inside the round block
+   are step 3c's and `../../qfai-implement/references/round-evidence.md`'s, and
+   the entry is not complete without them.
 
    **`Satisfied-by` takes whatever already implements the predicate.** The
    shared reference names a sibling `TDD-NNNN` because that is its usual case,

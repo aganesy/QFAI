@@ -654,9 +654,53 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // The one obligation that is this stage's, and so the only imperative left.
     expect(provenance).toContain("What this stage owes at the handover is the predicate to break");
 
-    // The partial field list is gone: the entry's contents are stated once, in
+    // The partial field list is gone: the entry's fields are listed once, in
     // the `## Evidence shape` table, so the two cannot disagree.
-    expect(provenance).toContain("read the `Falsifiability` row of `## Evidence shape` below");
+    expect(provenance).toContain("listed in the `Falsifiability` row of `## Evidence shape` below");
+  });
+
+  it("keeps the gatekeeper ahead of the revert in branch 2's summary", async () => {
+    // Summarised as "run, confirm, restore, then record", the paragraph put the
+    // gatekeeper in front of a restored tree. `qfai-implement/SKILL.md` step 3c
+    // routes it while the mutation is still applied, because its ownership
+    // check is what confirms the broken predicate is the one `Satisfied-by`
+    // names — against the reverted tree there is nothing left to inspect.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "routes `qa-gatekeeper` **while the mutation is still in the tree**",
+    );
+    expect(provenance).toContain("It restores and re-runs for the GREEN only after that verdict");
+    // The paragraph above it summarises the same step and must not invert it.
+    expect(provenance).toContain(
+      "writes the trio into this row's entry here, and reverts only once `qa-gatekeeper` has answered",
+    );
+  });
+
+  it("keeps the pre-handover branch re-run on this stage's side of the boundary", async () => {
+    // `Nothing else in this branch is this stage's to run` read as licence to
+    // skip the P4b re-run, which `## What each stage gate owes` requires: a
+    // branch chosen at P1b goes stale when an earlier branch-1 row's production
+    // code satisfies this row's predicate, and a stale `falsifiability` hands
+    // step 3c a test that is already failing to mutate.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "re-run this row's classification test immediately before handing it over (P4b)",
+    );
+  });
+
+  it("does not let the Evidence shape table stand in for the per-round entry contract", async () => {
+    // The table lists which fields each branch records; it says nothing about
+    // the `Round N:` prefix or the round block they sit in. Cited as the sole
+    // statement of the entry's contents, it licensed row-level fields the
+    // completion gate cannot find under the round it is judging.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain(
+      "`Round N:` prefix each field takes and its placement inside the round block",
+    );
+    expect(provenance).toContain(
+      "`../../qfai-implement/references/round-evidence.md`'s, and the entry is not complete without them",
+    );
+    expect(provenance).not.toContain("it is the one statement of the entry's contents");
   });
 });
 
