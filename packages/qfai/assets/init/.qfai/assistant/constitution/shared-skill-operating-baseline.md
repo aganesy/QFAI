@@ -32,19 +32,37 @@ the rule. A file approaching it is a signal to move a section out.
 ### The owning tree is the one the file sits in
 
 The ceiling applies to **every** shipped assistant asset, not only `SKILL.md`,
-so this shape does too. `assistant/` has more trees than `skills/`, and each
-one owns the same overflow directories directly under itself:
-`constitution/references/<topic>.md`, `catalog/references/<topic>.md`,
-`agents/references/<topic>.md`, `manifest/references/<topic>.md`,
-`process/references/<topic>.md`. A constitution or catalog file at the ceiling
-splits by topic into its own tree's `references/` and cites the result, exactly
-as a `SKILL.md` splits into the skill's — the tree that owns the file owns where
-its detail goes, and a worked instance ships at
-`constitution/references/audited-evidence-hash.md`.
+so this shape does too — wherever the asset is prose a reader reads.
+`assistant/` has more trees than `skills/`, and each one owns the same overflow
+directories directly under itself: `constitution/references/<topic>.md`,
+`catalog/references/<topic>.md`, `agents/references/<topic>.md`,
+`manifest/references/<topic>.md`, `process/references/<topic>.md`. A
+constitution or catalog file at the ceiling splits by topic into its own tree's
+`references/` and cites the result, exactly as a `SKILL.md` splits into the
+skill's — the tree that owns the file owns where its detail goes, and a worked
+instance ships at `constitution/references/audited-evidence-hash.md`.
 
-Raising the ceiling or claiming an exemption is not the remedy. An exemption
-claims no split is possible, and a file whose tree has a `references/` home
-available cannot make that claim.
+For a prose asset, raising the ceiling or claiming an exemption is not the
+remedy. An exemption claims no split is possible, and a Markdown file whose tree
+has a `references/` home available cannot make that claim.
+
+### Machine-readable assets split in their own format, or say why they cannot
+
+The ceiling is measured over YAML assets too — routing and profile manifests,
+gate rule sets, the shipped contract templates. The split above is not open to
+them: a validator parses those files as structured data, or a skill copies one
+whole into a project, so an entry moved into a Markdown sibling under
+`references/` leaves the parsed document and stops meaning anything. Prose
+about the file may move there; the file's own items may not.
+
+So for a machine-readable asset at the ceiling the remedy is, in order:
+
+1. **Split it in its own format** — a sibling of the same kind that the loader
+   or schema already reads, so every item stays parsed.
+2. **Record an exemption** where the document has to stay whole — a file
+   generated from another asset, one the schema admits only as a single
+   document — naming what makes the split impossible. "This file is long" is
+   not that reason, and a prose asset may not use this step.
 
 ## User Questions (AskUserQuestion Protocol)
 

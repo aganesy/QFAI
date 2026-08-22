@@ -47,8 +47,24 @@ describe.each(TREES)("%s", (tree) => {
   it("says the ceiling covers every shipped asset, not only SKILL.md", async () => {
     const operating = flat(await read(tree, OPERATING));
     expect(operating).toContain("applies to **every** shipped assistant asset, not only");
-    // The two escapes the framework argues against stay closed.
-    expect(operating).toContain("Raising the ceiling or claiming an exemption is not the remedy");
+    // The two escapes the framework argues against stay closed — for the prose
+    // assets the split remedy is actually available to.
+    expect(operating).toContain(
+      "For a prose asset, raising the ceiling or claiming an exemption is not the remedy",
+    );
+  });
+
+  it("leaves machine-readable assets a remedy the split rule cannot give them", async () => {
+    // The same ceiling is measured over `manifest/*.yml` and the shipped
+    // `templates/*.yaml`, which a validator parses or a skill copies whole.
+    // Sending one of their items to a Markdown sibling takes it out of the
+    // parsed document, so a blanket "no exemption where a references/ home
+    // exists" would leave them with no compliant move at all — and
+    // `manifest/agent-catalog.yml` is exempt today for exactly that reason.
+    const operating = flat(await read(tree, OPERATING));
+    expect(operating).toContain("The ceiling is measured over YAML assets too");
+    expect(operating).toContain("**Split it in its own format**");
+    expect(operating).toContain("**Record an exemption**");
   });
 
   it("ships a constitution reference topic, so the rule has a worked instance", async () => {

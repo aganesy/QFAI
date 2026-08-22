@@ -1,6 +1,6 @@
 # Audited Evidence Hash
 
-The procedure `shared-skill-delegation-baseline.md#reviewer-response-template`
+The procedure `../shared-skill-delegation-baseline.md#reviewer-response-template`
 cites for its `Audited evidence hash` field. The reviewer computes it and
 `/qfai-implement` gate item 10 recomputes it, so it is stated once, here.
 
@@ -57,8 +57,8 @@ procedure, in four steps:
      tree it never ran on.
    - **Stage review** (a `completion-reviewer` judging a stage rather than a
      row — a spec with no ATDD-owned rows is the ordinary case, and
-     `qfai-atdd/SKILL.md` treats zero as a legitimate count): the stage
-     evidence file **whole**, under its repo-relative path, plus
+     `../../skills/qfai-atdd/SKILL.md` treats zero as a legitimate count): the
+     stage evidence file **whole**, under its repo-relative path, plus
      `.qfai/evidence/coverage-depth-<spec-id>.md` whole — **minus the
      `## Final status` section**, which the P8 reviewer's own answer fills in.
      Whole-file included it, so writing PASS and the confirmer's name straight
@@ -134,7 +134,8 @@ procedure, in four steps:
    in the matrix contributes nothing.
 4. **Hash.** SHA-256 of that record list; record the hex digest.
 
-**A T1 coherent group is one pass and several rows** (`volume-policy.md`).
+**A T1 coherent group is one pass and several rows**
+(`../../skills/qfai-implement/references/volume-policy.md`).
 One hash over a representative would leave the other members' evidence free to
 change after the PASS, and a private concatenation of their sections has no
 defined member order or record shape for gate item 10 to reproduce. Record
