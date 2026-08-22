@@ -252,6 +252,24 @@ describe(
         return job === undefined ? true : laneExecutes(job["if"], controlOutputs);
       });
       expect(controlExecuting).toEqual(["unit"]);
+
+      // Second control, for the OTHER conjunct. Both cases above hold `lanes` at
+      // the full set, so nothing here had yet shown the lane set suppressing
+      // anything: replacing a condition's `contains(...lanes...)` with
+      // `(contains(...lanes...) || true)` leaves the scriptless fixture skipped
+      // and this control executing, and every assertion above still passes —
+      // while a documentation-only change, which is exactly when `lanes` is
+      // empty, would run the lane. Same script presence, empty lane set, zero
+      // executing lanes.
+      const unselectedOutputs = { scripts: controlRun.outputs["scripts"] ?? "", lanes: "[]" };
+      const unselectedExecuting = LANE_LAYERS.filter((layer) => {
+        const job = findWorkflowJob(doc, layer);
+        return job === undefined ? true : laneExecutes(job["if"], unselectedOutputs);
+      });
+      expect(
+        unselectedExecuting,
+        "a declared layer script must not execute a lane the detection step did not select",
+      ).toEqual([]);
     });
 
     it("each lane condition references layer-script presence and the detection lane set, never a credential attribute", async () => {
