@@ -18,7 +18,7 @@ export type IssueCodeUsage = {
   everyErrorSiteHasSuggestedAction: boolean;
 };
 
-/** One place in the source that constructs an `Issue` with a literal code. */
+/** One place in the source that constructs an `Issue` with a statically known code. */
 type EmissionSite = {
   code: string;
   errorCapable: boolean;
@@ -132,9 +132,15 @@ function findEnclosingBrace(source: string, index: number): number | null {
   return open.length > 0 ? open[open.length - 1] : null;
 }
 
-const ISSUE_CALL_RE = /\b(issue|makeIssue)\(\s*"([A-Za-z][A-Za-z0-9_-]*)"/g;
-const OBJECT_CODE_RE = /(?:^|[\s{,(])code:\s*"([A-Za-z][A-Za-z0-9_-]*)"/g;
+const ISSUE_CALL_RE = /\b(issue|makeIssue)\(/g;
+const OBJECT_CODE_RE =
+  /(?:^|[\s{,(])code:\s*(?=("[A-Za-z][A-Za-z0-9_-]*"|[A-Za-z_$][A-Za-z0-9_$.]*))/g;
 const PROPERTY_RE = /^([A-Za-z_$][A-Za-z0-9_$]*)\s*(?::([\s\S]*))?$/;
+const CODE_LITERAL_RE = /^"([A-Za-z][A-Za-z0-9_-]*)"$/;
+const CODE_VALUE_RE = /^[A-Za-z][A-Za-z0-9_-]*$/;
+const CONST_STRING_RE =
+  /\bconst\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*"([^"\\\n]*)"(?:\s+as\s+const)?\s*;/g;
+const CONST_OBJECT_RE = /\bconst\s+([A-Za-z_$][A-Za-z0-9_$]*)\s*=\s*\{/g;
 const SEVERITY_ARG_INDEX = 2;
 const SUGGESTED_ACTION_ARG_INDEX = 7;
 const NON_ERROR_SEVERITY_RE = /^"(?:warning|info)"$/;
@@ -143,15 +149,71 @@ function isPresentValue(value: string): boolean {
   return value !== "" && value !== "undefined";
 }
 
-/** Emission sites of the form `issue("CODE", ...)` / `makeIssue("CODE", ...)`. */
-function readCallSites(source: string): EmissionSite[] {
+/**
+ * File-local `const` bindings whose value is a plain string: `NAME` for
+ * `const NAME = "CODE";`, and `NAME.key` for a `const NAME = { key: "CODE" }`
+ * code table. Emitters routinely name their code once at module scope and pass
+ * the binding to `issue(...)`, so a census that only reads string literals
+ * misses them entirely.
+ *
+ * Resolution is deliberately confined to the file being scanned: a code
+ * imported from another module would need real module resolution, and no
+ * emission site in `src/` does that today.
+ */
+function readStringConstants(source: string): Map<string, string> {
+  const constants = new Map<string, string>();
+  for (const match of source.matchAll(CONST_STRING_RE)) {
+    constants.set(match[1], match[2]);
+  }
+  for (const match of source.matchAll(CONST_OBJECT_RE)) {
+    if (match.index === undefined) continue;
+    const brace = match.index + match[0].length - 1;
+    const members = splitBalancedList(source, brace);
+    if (members === null) continue;
+    for (const member of members) {
+      const property = PROPERTY_RE.exec(member);
+      if (!property || property[2] === undefined) continue;
+      const literal = CODE_LITERAL_RE.exec(property[2].trim());
+      if (literal) {
+        constants.set(`${match[1]}.${property[1]}`, literal[1]);
+      }
+    }
+  }
+  return constants;
+}
+
+/**
+ * The issue code a `code` argument / property denotes: the literal itself, or
+ * the value of the file-local constant it names. `null` when the token is a
+ * runtime expression (`error.code`, `group.code`) whose code is not decidable
+ * from the source text.
+ */
+function resolveCodeToken(token: string, constants: Map<string, string>): string | null {
+  const trimmed = token.trim();
+  const literal = CODE_LITERAL_RE.exec(trimmed);
+  if (literal) {
+    return literal[1];
+  }
+  const resolved = constants.get(trimmed);
+  return resolved !== undefined && CODE_VALUE_RE.test(resolved) ? resolved : null;
+}
+
+/**
+ * Emission sites of the form `issue(CODE, ...)` / `makeIssue(CODE, ...)`, where
+ * `CODE` is a string literal or a file-local constant holding one.
+ */
+function readCallSites(source: string, constants: Map<string, string>): EmissionSite[] {
   const sites: EmissionSite[] = [];
   for (const match of source.matchAll(ISSUE_CALL_RE)) {
     const helper = match[1];
-    const code = match[2];
     if (match.index === undefined) continue;
-    const openParen = source.indexOf("(", match.index + helper.length);
+    const openParen = match.index + match[0].length - 1;
     const args = splitBalancedList(source, openParen);
+    const code = resolveCodeToken(args?.[0] ?? "", constants);
+    // A helper declaration (`function issue(code: string, ...)`) and a call that
+    // computes its code both land here with nothing to resolve; neither names a
+    // code the census can account for.
+    if (code === null) continue;
     // `makeIssue` has no severity parameter and always produces an error.
     const severity = helper === "makeIssue" ? '"error"' : (args?.[SEVERITY_ARG_INDEX] ?? "");
     const suggested = args?.[SUGGESTED_ACTION_ARG_INDEX] ?? "";
@@ -167,12 +229,12 @@ function readCallSites(source: string): EmissionSite[] {
 }
 
 /**
- * Emission sites of the form `{ code: "CODE", severity: ..., ... }`. An object
+ * Emission sites of the form `{ code: CODE, severity: ..., ... }`. An object
  * literal counts as an `Issue` only when it also names `severity` directly:
  * that field is required by the type, and demanding it keeps look-alike shapes
  * (schema-validation records, config descriptors) out of the catalog census.
  */
-function readObjectSites(source: string): EmissionSite[] {
+function readObjectSites(source: string, constants: Map<string, string>): EmissionSite[] {
   const sites: EmissionSite[] = [];
   for (const match of source.matchAll(OBJECT_CODE_RE)) {
     if (match.index === undefined) continue;
@@ -188,13 +250,16 @@ function readObjectSites(source: string): EmissionSite[] {
       if (!property) continue;
       properties.set(property[1], (property[2] ?? property[1]).trim());
     }
-    const code = properties.get("code");
-    if (code !== `"${match[1]}"`) continue;
+    // The `code:` the regex found must be a direct property of the enclosing
+    // object, not one nested a level deeper inside it.
+    if (properties.get("code") !== match[1]) continue;
+    const code = resolveCodeToken(match[1], constants);
+    if (code === null) continue;
     const severity = properties.get("severity");
     if (severity === undefined) continue;
 
     sites.push({
-      code: match[1],
+      code,
       errorCapable: !NON_ERROR_SEVERITY_RE.test(severity),
       hasSuggestedAction: isPresentValue(properties.get("suggested_action") ?? ""),
     });
@@ -215,17 +280,18 @@ function foldSites(sites: Iterable<EmissionSite>, into: Map<string, IssueCodeUsa
 }
 
 /**
- * Scan `srcDir` for literal issue-code emissions. Only codes written as a
- * literal — the first argument of `issue`/`makeIssue`, or a `code:` property of
- * an inline `Issue` object — are collected; codes assembled at runtime are out
- * of scope.
+ * Scan `srcDir` for statically decidable issue-code emissions: the first
+ * argument of `issue`/`makeIssue`, or the `code:` property of an inline `Issue`
+ * object, written either as a string literal or as a file-local constant that
+ * holds one. Codes assembled at runtime are out of scope.
  */
 export async function collectIssueCodeUsage(srcDir: string): Promise<Map<string, IssueCodeUsage>> {
   const merged = new Map<string, IssueCodeUsage>();
   for (const filePath of await collectTsFiles(srcDir)) {
     const source = await readFile(filePath, "utf-8");
-    foldSites(readCallSites(source), merged);
-    foldSites(readObjectSites(source), merged);
+    const constants = readStringConstants(source);
+    foldSites(readCallSites(source, constants), merged);
+    foldSites(readObjectSites(source, constants), merged);
   }
   return merged;
 }

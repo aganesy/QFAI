@@ -954,6 +954,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
   "QFAI-SKILLS-001":
     "`.qfai/assistant/skills/**` matches the skill assets shipped by the installed QFAI version.",
+  "D-SAAS-PACKAGE-ATTESTATION-MISSING":
+    "The saas-package profile finds a design-system attestation at its configured path.",
+  "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
+    "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
+  "QFAI-DRIFT-001":
+    "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
 };
 
 /**
@@ -990,6 +996,17 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   // do not, so the code needs a catalog entry that covers all of them.
   "QFAI-DCON-005":
     "Add the design-system.yaml entry the message names — the `visual.*` mirror block, the legacy `checklist.*` key, or the component-guidance block — then rerun validate.",
+  // The browser-QA bundle checks are schema assertions raised by a local
+  // `makeIssue` helper that has no `suggested_action` parameter, so every one of
+  // their call sites depends on this catalog for its `fix:` line.
+  "QFAI-PROT-273":
+    "Add the `browserQa` block the message names to the browser-QA bundle, with `executed` a boolean and `status` one of completed|skipped|failed.",
+  "QFAI-PROT-274":
+    "Make `browserQa.executed` and `browserQa.status` agree: `executed=true` pairs with `status=completed`, and any other status pairs with `executed=false`.",
+  "QFAI-PROT-275":
+    "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
+  "QFAI-PROT-276":
+    "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

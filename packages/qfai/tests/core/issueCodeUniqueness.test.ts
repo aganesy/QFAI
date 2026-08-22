@@ -171,9 +171,10 @@ describe("issue code uniqueness", () => {
 // and fail when an entry is written but the code stays listed here.
 //
 // The census behind them counts every emission site, including `Issue` object
-// literals and codes whose `suggested_action` is passed on only some of their
-// call sites — both were invisible to the first cut of the helper, so the lists
-// were re-baselined once to name the codes that hole had been hiding.
+// literals, codes named by a module-level constant rather than a string literal,
+// and codes whose `suggested_action` is passed on only some of their call sites
+// — all three were invisible to earlier cuts of the helper, so the lists were
+// re-baselined to name the codes those holes had been hiding.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
@@ -546,6 +547,19 @@ async function collectErrorCapableUsage(): Promise<Map<string, IssueCodeUsage>> 
 }
 
 describe("issue report metadata", () => {
+  it("counts codes named by a constant, not only codes written as a string literal", async () => {
+    const usage = await collectErrorCapableUsage();
+    // `core/saasPackage/profile.ts` passes a `const CODE = "..."` binding, and
+    // `core/browserQa/index.ts` passes a member of a `const` code table. Neither
+    // is a literal at the call site, so both used to slip past the ratchet.
+    expect(usage.has("D-SAAS-PACKAGE-ATTESTATION-MISSING")).toBe(true);
+    expect(usage.has("D-SAAS-PACKAGE-HANDOFF-SCHEMA")).toBe(true);
+    expect(usage.has("QFAI-PROT-273")).toBe(true);
+    // A code emitted only at `warning` severity stays out of the error census
+    // even when its constant now resolves.
+    expect(usage.has("QFAI-TABLE-001")).toBe(false);
+  });
+
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
     const usage = await collectErrorCapableUsage();
     const missing = [...usage.keys()]
