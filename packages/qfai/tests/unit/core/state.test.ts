@@ -12,7 +12,17 @@
  */
 // QFAI:SPEC-0010:TC-0010-0012
 
-import { mkdir, mkdtemp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import {
+  chmod,
+  lstat,
+  mkdir,
+  mkdtemp,
+  readdir,
+  readFile,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +33,7 @@ import {
   readDiscussionCurrentId,
   StateUnreadableError,
   writeDiscussionCurrentId,
+  writeStateFile,
 } from "../../../src/core/state.js";
 
 let root: string;
@@ -142,4 +153,81 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     await writeDiscussionCurrentId(root, "discussion-20260101000000000");
     expect(await readdir(path.join(root, ".qfai"))).toEqual(["state.json"]);
   });
+
+  it("gives every concurrent write in one process its own scratch file", async () => {
+    // A single pid-based temp name made all in-flight writes share one
+    // path: the first rename moved it away and the rest failed ENOENT.
+    await Promise.all([
+      writeDiscussionCurrentId(root, "discussion-A"),
+      writeDiscussionCurrentId(root, "discussion-B"),
+      writeDiscussionCurrentId(root, "discussion-C"),
+    ]);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["state.json"]);
+    expect(await readDiscussionCurrentId(root)).toMatch(/^discussion-[ABC]$/u);
+  });
+
+  it("removes the scratch file when the write fails", async () => {
+    // `.qfai/state.json` as a directory makes the rename fail after the
+    // scratch file already exists.
+    const abs = path.join(root, ".qfai", "state.json");
+    await mkdir(abs, { recursive: true });
+    await expect(writeStateFile(root, { discussion: { currentId: "x" } })).rejects.toThrow();
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["state.json"]);
+  });
+
+  it.skipIf(process.platform === "win32" || process.geteuid?.() === 0)(
+    "refuses to overwrite a read-only state.json",
+    async () => {
+      const abs = path.join(root, ".qfai", "state.json");
+      await mkdir(path.dirname(abs), { recursive: true });
+      const original = `${JSON.stringify({ discussion: { currentId: "discussion-LOCKED" } })}\n`;
+      await writeFile(abs, original, "utf-8");
+      await chmod(abs, 0o444);
+
+      // The direct `writeFile` this replaced failed with EACCES here; a
+      // bare rename would have succeeded and reset the mode to 0644.
+      await expect(writeDiscussionCurrentId(root, "discussion-NEW")).rejects.toThrow();
+      expect(await readFile(abs, "utf-8")).toBe(original);
+      expect((await lstat(abs)).mode & 0o777).toBe(0o444);
+      expect(await readdir(path.join(root, ".qfai"))).toEqual(["state.json"]);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "refuses the write when state.json is a dangling symlink",
+    async () => {
+      const abs = path.join(root, ".qfai", "state.json");
+      await mkdir(path.dirname(abs), { recursive: true });
+      await symlink(path.join(root, "shared", "state.json"), abs);
+
+      // `readFile` reports a dangling link as ENOENT; treating that as
+      // "absent" would replace the link itself with a regular file.
+      await expect(writeDiscussionCurrentId(root, "discussion-X")).rejects.toBeInstanceOf(
+        StateUnreadableError,
+      );
+      expect((await lstat(abs)).isSymbolicLink()).toBe(true);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "writes through a live symlink instead of replacing it",
+    async () => {
+      const shared = path.join(root, "shared", "state.json");
+      await mkdir(path.dirname(shared), { recursive: true });
+      await writeFile(shared, JSON.stringify({ unrelated: { keep: true } }), "utf-8");
+      const abs = path.join(root, ".qfai", "state.json");
+      await mkdir(path.dirname(abs), { recursive: true });
+      await symlink(shared, abs);
+
+      await writeDiscussionCurrentId(root, "discussion-LINKED");
+
+      expect((await lstat(abs)).isSymbolicLink()).toBe(true);
+      const raw = JSON.parse(await readFile(shared, "utf-8")) as {
+        unrelated?: { keep?: boolean };
+        discussion?: { currentId?: string };
+      };
+      expect(raw.unrelated?.keep).toBe(true);
+      expect(raw.discussion?.currentId).toBe("discussion-LINKED");
+    },
+  );
 });
