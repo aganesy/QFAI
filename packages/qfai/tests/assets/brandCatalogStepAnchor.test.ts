@@ -66,6 +66,35 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
     expect(line).toContain("design-md-brand-catalog.md");
   });
 
+  it("Phase B routes the archetype `interaction` default to `accessibility.motion`", async () => {
+    // `visual` rejects unknown keys (`readVisual` in
+    // `src/core/design/designMd.ts` allows only
+    // colors | typography | radius | shadow | spacing), so an agent told
+    // to fold every `aesthetic_properties` entry into `visual.*` would
+    // emit `visual.motion` / `visual.interaction` and fail DESIGN.md
+    // parsing. Each Phase B instruction must name the split explicitly.
+    const skillMd = await readFile(skillMdPath, "utf-8");
+    const step9 =
+      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
+      "";
+    expect(step9).toContain("visual.*");
+    expect(step9).toContain("accessibility.motion");
+
+    const catalog = await readFile(catalogPath, "utf-8");
+    const catalogStep5 =
+      catalog.split("\n").find((line) => line.includes("Phase B of step 9")) ?? "";
+    expect(catalogStep5).toContain("visual.*");
+    expect(catalogStep5).toContain("accessibility.motion");
+
+    // The intake reference is the mapping SSOT the catalog defers to, so
+    // the same split has to be written there too.
+    const intake = await readFile(
+      path.join(discussionSkillDir, "references", "design-dna-intake.md"),
+      "utf-8",
+    );
+    expect(intake).toContain("accessibility.motion");
+  });
+
   it("the intake reference still carries the anchor the catalog links to", async () => {
     const intake = await readFile(
       path.join(discussionSkillDir, "references", "design-dna-intake.md"),

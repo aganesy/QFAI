@@ -89,4 +89,4 @@ Use this catalog during Required Process step 9, Phase A (`qfai-discussion/SKILL
 2. Apply the archetype tie-breaker when two archetypes tie: highest visual-theme weight wins, then alphabetical name.
 3. Record the selected archetype in root `DESIGN.md` front-matter as `brand.archetype`.
 4. The selected archetype's `aesthetic_properties` become the defaults for Color Palette, Typography, Spacing, and Animation sections.
-5. Phase B of step 9 then customizes those defaults into the project-specific `visual.*` overrides.
+5. Phase B of step 9 then customizes those defaults into project-specific overrides, split by destination: `color_tendency` / `typography` / `spacing` become `visual.*` tokens, while the `interaction` default becomes `accessibility.motion` — `visual.*` has no motion or interaction key.
