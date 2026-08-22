@@ -331,7 +331,7 @@ is a defect.
 
 Making `record:*` advisory removes the round it used to force. It does not remove the defect, so
 the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
-one queue per spec, and it has exactly three properties.
+one queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
 
 - **Where.** A `## Record defects` section in the spec's evidence file:
   `.qfai/evidence/implement-<spec-id>.md` when that file exists, otherwise
