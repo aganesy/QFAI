@@ -320,7 +320,12 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     // could not reach `done` however correct its RED and GREEN were.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain("the evidence file its `Layer` owns");
-    expect(implement).toContain("`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row");
+    // `Integration` is in the enumeration too: `/qfai-sdd` Phase 2b seeds
+    // those rows and `/qfai-atdd` authors their tests, so their evidence lives
+    // in the same file an `E2E` row's does.
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
     expect(implement).toContain(
       "The item's evidence file (item 10) is appended with both reviewer verdicts",
     );

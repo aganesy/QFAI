@@ -71,19 +71,21 @@ form (`L1`-`L5`) and the word form (`unit`, `integration`, `e2e`, …) — so `L
 and `L2` are coverage targets whose missing row is an error and `L3`-`L5` are
 not. A value it recognises in neither spelling is conservatively treated as a
 target, and `TDDLIST_UNKNOWN_LEVEL` reports it rather than letting it pass
-silently.
+silently — as a `warning`, which a waiver may clear, so an unrecognised `Level`
+is not stopped before Phase 2b has to route it.
 
 Which codes **get** a row is wider than that: `L3` gets a `Layer = Integration`
 row too, seeded by the same Phase 2b and ungated, because that row is what puts
 the integration layer in the Red/Green/Refactor cycle. `L4` / `L5` get none —
 they are misfiled as `TC-*` in the first place.
 
-**Leave the cell blank and the TC is routed as `L3`**, not as a coverage target:
-`QFAI-ATDD-112` reads an undeclared `Level` as `<testsDir>/integration/**`, so
-Phase 2b seeds it a `Layer = Integration` row and `/qfai-atdd` writes its test.
-That single row is also what `TDDLIST_TC_NOT_COVERED` counts, so the TC is owed
-exactly once. Declare the `Level` anyway — the routing is a fallback, not a
-substitute for saying which layer the oracle observes.
+**Leave the cell blank — or spell it something these five codes do not name —
+and the TC is routed as `L3`**, not as a coverage target: `QFAI-ATDD-112` reads
+every `Level` it cannot resolve as `<testsDir>/integration/**`, so Phase 2b
+seeds it a `Layer = Integration` row and `/qfai-atdd` writes its test. That
+single row is also what `TDDLIST_TC_NOT_COVERED` counts, so the TC is owed
+exactly once. Declare one of the five codes anyway — the routing is a fallback,
+not a substitute for saying which layer the oracle observes.
 
 A `TC-*` that enumerates several rejection reasons, a status-code matrix or
 several independent state transitions gets **one row per boundary**, not one row

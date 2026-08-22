@@ -8,14 +8,17 @@ Red/Green/Refactor cycle one row at a time.
 
 Rows are derived from `06_Test-Cases.md`: **one row per coverage-target TC**,
 plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,
-or no declared `Level`) TC**. `/qfai-sdd` seeds both at Phase 2b.
+or a `Level` the layer vocabulary cannot read — blank, or an unrecognised
+spelling) TC**. `/qfai-sdd` seeds both at Phase 2b.
 An empty table below is valid — it means the spec declares neither yet, not that
 the ledger is missing.
 
-The two groups are exclusive. A TC that declares no `Level` belongs to the
-second: `QFAI-ATDD-112` routes it to `tests/integration/**`, so seeding it as a
-coverage-target row would have `/qfai-implement` and `/qfai-atdd` each write a
-test for it. That one `Integration` row still covers the TC for
+The two groups are exclusive. A TC whose `Level` is blank **or unrecognised**
+belongs to the second: `QFAI-ATDD-112` routes every `Level` it cannot read to
+`tests/integration/**`, so seeding it as a coverage-target row would have
+`/qfai-implement` and `/qfai-atdd` each write a test for it — and
+`TDDLIST_UNKNOWN_LEVEL` is a waivable `warning`, so nothing stops such a TC
+arriving here unfixed. That one `Integration` row still covers the TC for
 `TDDLIST_TC_NOT_COVERED`, which asks only that some row carry it in `TC-Refs`.
 
 **"One row" is a floor, not a cap.** A TC that enumerates several rejection

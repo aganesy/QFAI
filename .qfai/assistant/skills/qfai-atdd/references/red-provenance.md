@@ -316,7 +316,8 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 
 `/qfai-sdd` Phase 2b seeds a ledger row per **coverage-target** `TC-*` and a
 `Layer = Integration` row per integration-level `TC-*` — `L3`, `integration`, or
-a TC declaring no `Level`, the routing `QFAI-ATDD-112` already uses; `US-*` and
+a `Level` the layer vocabulary cannot read (blank, or a spelling like `smoke`),
+the routing `QFAI-ATDD-112` already uses; `US-*` and
 `CON-API-*` are not row-producing obligations there. A first run therefore finds
 **zero** `Layer = E2E` / `Layer = API` rows, legitimately, and this stage cannot
 create them — it is not the ledger's writer under any circumstance.

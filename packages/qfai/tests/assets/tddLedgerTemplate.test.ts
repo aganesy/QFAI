@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { resolveAtddHomeKind } from "../../src/core/atddTraceability.js";
 import { defaultConfig } from "../../src/core/config.js";
 import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
@@ -69,7 +70,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
-        "plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,\nor no declared `Level`) TC**",
+        "plus **one `Layer = Integration` row per integration-level (`L3`, `integration`,\nor a `Level` the layer vocabulary cannot read — blank, or an unrecognised\nspelling) TC**",
       );
 
       const preconditions = await read(
@@ -80,7 +81,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain(
-        "**and one `Layer = Integration` row per\n   integration-level (`L3`, `integration`, or no declared `Level`) TC**",
+        "**and one `Layer = Integration` row per\n   integration-level (`L3`, `integration`, or a `Level` the layer vocabulary\n   cannot read — blank, or a spelling like `smoke`) TC**",
       );
 
       const checklists = await read(
@@ -88,7 +89,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "- Add one `Layer = Integration` row per integration-level (`L3`, `integration`, or **no declared `Level`**) TC as well",
+        "- Add one `Layer = Integration` row per integration-level (`L3`, `integration`, or **a `Level` the layer vocabulary cannot read** — blank, or an unrecognised spelling like `smoke`) TC as well",
       );
 
       // The consumer of those rows names the same producer, so an agent
@@ -134,8 +135,12 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
       );
       expect(preconditions).toContain("**Read each TC's `Level` once and route it to exactly one");
-      expect(preconditions).toContain("`Level` is `L3`, the word `integration`, **or is blank**");
-      expect(preconditions).toContain("**A blank `Level` belongs to the second group**");
+      expect(preconditions).toContain(
+        "`Level` is `L3`, the word `integration`, **is blank, or is a spelling neither\n  vocabulary recognises**",
+      );
+      expect(preconditions).toContain(
+        "**A blank _or unrecognised_ `Level` belongs to the second group**",
+      );
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("The two groups are exclusive.");
@@ -144,7 +149,74 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/templates/specs/spec/06_Test-Cases.md",
       );
-      expect(testCases).toContain("**Leave the cell blank and the TC is routed as `L3`**");
+      expect(testCases).toContain(
+        "**Leave the cell blank — or spell it something these five codes do not name —\nand the TC is routed as `L3`**",
+      );
+    });
+
+    it(`${tree}: an unrecognised Level is routed to the Integration group, not to both`, async () => {
+      // `isCoverageTargetLevel` treats an unrecognised spelling as a coverage
+      // target, while `resolveAtddHomeKind` falls it back to the integration
+      // home — so `QFAI-ATDD-112` has `/qfai-atdd` write the same TC's test.
+      // Seeding it in the first group as well is the double ownership the
+      // exclusivity rule above forbids, and `TDDLIST_UNKNOWN_LEVEL` is a
+      // waivable warning, so the input is not guaranteed to be stopped first.
+      expect(isCoverageTargetLevel("smoke")).toBe(true);
+      expect(resolveAtddHomeKind("smoke")).toBe("integration");
+      expect(resolveAtddHomeKind("")).toBe("integration");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      // The first group is an allowlist of recognised coverage levels, so an
+      // unrecognised one cannot fall into it.
+      expect(preconditions).toContain(
+        "- **one row per coverage-target TC that declares a `Level` the layer vocabulary\n  recognises**",
+      );
+      expect(preconditions).not.toContain("unrecognised ones included");
+      expect(preconditions).toContain("`TDDLIST_UNKNOWN_LEVEL` is a\n`warning` and waivable");
+      expect(preconditions).toContain(
+        "**No validator asks for the second group** — with two exceptions, the blank and\nthe unrecognised `Level` above",
+      );
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("A TC whose `Level` is blank **or unrecognised**");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("a Level the layer vocabulary cannot read (blank or unrecognised)");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "declares a `Level` the layer vocabulary recognises (`L1` / `L2` / `unit` / `component`)",
+      );
+    });
+
+    it(`${tree}: the implement skill names Integration in every ATDD-ownership rule`, async () => {
+      // Phase 2b now produces `Layer = Integration` rows, and step 3b plus
+      // gate item 10 already treat them as handed over. Non-goals, Phase Red
+      // step 3 and the Orchestrator Protocol still enumerated `E2E` / `API`
+      // only, so an agent reading them wrote the integration test itself
+      // (double authoring) or anchored its evidence at
+      // `implement-<spec-id>.md`, which item 10 rejects.
+      const implement = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(implement).toContain(
+        "`Layer = E2E` / `Layer = API` / `Layer = Integration` ledger rows are tracked here",
+      );
+      expect(implement).toContain("**All three, including `Integration`**");
+      expect(implement).toContain(
+        "An `E2E`, `API` **or `Integration`** row's test is authored by `/qfai-atdd` (Non-goals)",
+      );
+      expect(implement).not.toContain("An `E2E` or `API` row's test is authored");
+      expect(implement).not.toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row, whose RED was produced",
+      );
+      expect(implement).toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row, whose RED was produced",
+      );
     });
 
     it(`${tree}: the producer rule allows one row per boundary, not exactly one per TC`, async () => {
@@ -287,7 +359,19 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       }
       expect(preconditions).toMatch(/no `Level` column/);
       // The removed claim: only `L1` / `L2` counted as coverage targets.
-      expect(preconditions).not.toMatch(/`L1`\s*\/\s*`L2`/);
+      //
+      // Scoped to the section that answers "what does the gate demand a row
+      // for", not the whole file: the **Producer** routing above legitimately
+      // names `L1` / `L2` as the first group's allowlist, because every other
+      // spelling — unrecognised ones included — is seeded a
+      // `Layer = Integration` row instead rather than being skipped. It is
+      // this section, which drives the exit decision, that must stay an
+      // exclusion list.
+      const gateStart = preconditions.indexOf("### What counts as a coverage target");
+      const gateEnd = preconditions.indexOf("### The outcomes");
+      expect(gateStart).toBeGreaterThan(-1);
+      expect(gateEnd).toBeGreaterThan(gateStart);
+      expect(preconditions.slice(gateStart, gateEnd)).not.toMatch(/`L1`\s*\/\s*`L2`/);
     });
 
     it(`${tree}: qfai-sdd owns a ledger-seeding phase in every phase-order surface`, async () => {

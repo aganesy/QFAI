@@ -285,8 +285,9 @@ therefore share one lifecycle, and the ordering that skill works in makes the
 RED question different rather than absent.
 
 **Who seeds them.** `/qfai-sdd` Phase 2b, **at least** one `Layer = Integration`
-row per integration-level `TC-*` — `L3`, the word `integration`, or a TC that
-declares no `Level` at all, the same routing `QFAI-ATDD-112` uses — alongside
+row per integration-level `TC-*` — `L3`, the word `integration`, or a `Level`
+the layer vocabulary cannot read (blank, or a spelling like `smoke`), the same
+routing `QFAI-ATDD-112` uses — alongside
 the coverage-target rows (`references/ledger-preconditions.md#producer`). A
 matrix-shaped TC is seeded one row per independently observable boundary there,
 because `/qfai-atdd` cannot split a row it may not write
