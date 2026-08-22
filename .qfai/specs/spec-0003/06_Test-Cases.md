@@ -34,6 +34,7 @@
 | TC-0003-0024 | integration | AC-0003-0021               | EX-0003-0021 | migration memo authoring                     |
 | TC-0003-0025 | unit        | AC-0003-0022               | EX-0003-0022 | assistantPaths.ts SSOT lint                  |
 | TC-0003-0026 | integration | AC-0003-0023, AC-0003-0024 | EX-0003-0023 | 旧 layout backward compat + sunset warning   |
+| TC-0003-0027 | integration | AC-0003-0025               |              | Codex agent profile 生成 + --force 再生成    |
 
 ## TC-0003-0001: 空ディレクトリでの初期化
 
@@ -217,3 +218,18 @@ Verify:
 - stdout に `D-DEPRECATED-PATH` warning が出力される
 - warning 本文に `v1.10.0` という具体的な sunset minor version が文字列として含まれる
 - 「次の release」「将来」などの曖昧表現は warning 本文に含まれない
+
+## TC-0003-0027: Codex agent profile 生成 + --force 再生成
+
+**Level:** integration
+**AC Refs:** AC-0003-0025
+
+Setup: 空 temp dir に `runInit` を実行した直後の project。
+Action: profile を書き換えた上で `runInit` (plain) と `runInit --force` を実行。
+Verify:
+
+- canonical agent 1 件につき `.codex/agents/<name>.toml` が 1 件生成される
+- `name` / `description` が canonical frontmatter と一致し、body は `## Mission` 以降と一致する
+- `kind: reviewer` の agent のみ `sandbox_mode = "read-only"` を持つ
+- 既存 profile は plain run で保持され、`--force` で生成物へ再生成される
+- `--dry-run` では `.codex/agents/` が作成されない

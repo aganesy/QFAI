@@ -179,6 +179,7 @@ Scenario: レガシー管理ブロックからの自動移行
 | AC-0003-0022 | assistantPaths.ts SSOT 経由     | REQ-0022   | P1       |
 | AC-0003-0023 | 旧 layout 読取 backward compat  | REQ-0023   | P1       |
 | AC-0003-0024 | D-DEPRECATED-PATH sunset 明示   | REQ-0023   | P1       |
+| AC-0003-0025 | Codex agent profile 生成        | REQ-0009   | P1       |
 
 ## AC-0003-0017: 4-layer asset-tree seed
 
@@ -235,3 +236,11 @@ Scenario: レガシー管理ブロックからの自動移行
 - Given 旧 layout が検出された init 実行
 - When `D-DEPRECATED-PATH` warning が出力される
 - Then warning 本文に sunset minor version (v1.10.0) が文字列として明示されている。曖昧な「次の release」「将来」等の表現は含まない
+
+## AC-0003-0025: Codex agent profile の init 生成
+
+- US-Refs: US-0003-0006
+- Given `.qfai/assistant/agents/<name>.md` と `assistant/manifest/agent-catalog.yml#agents[].kind` が存在する
+- When `qfai init` を実行する
+- Then `.codex/agents/<name>.toml` が canonical frontmatter (`name` / `description`) とカノニカル body から生成され、`kind: reviewer` の agent は `sandbox_mode = "read-only"` を持つ
+- And 既存 profile は plain run では保持され、`--force` で再生成される。`kind` を判定できない agent は生成せず、その旨を出力する

@@ -1,4 +1,4 @@
-import { lstat, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -10,6 +10,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
+  CODEX_AGENT_GENERATED_MARKER,
   buildCodexAgentToml,
   escapeTomlBasicString,
   isGeneratedCodexAgentToml,
@@ -143,6 +144,7 @@ afterEach(async () => {
   }
 });
 
+// QFAI:SPEC-0003:TC-0003-0027
 // The defect: nothing shipped a `.codex/agents/` tree and `init` generated no
 // TOML, so a project that installed qfai got Claude and GitHub agent wrappers
 // and Codex got nothing — including after `qfai init --force`, the documented
@@ -254,6 +256,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     const rendered = renderCodexAgentToml(
       await readFile(path.join(root, ".qfai", "assistant", "agents", "doc-steward.md"), "utf-8"),
       "worker",
+      "doc-steward",
     );
     expect(rendered.ok).toBe(true);
     if (!rendered.ok) return;
@@ -306,12 +309,15 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     );
 
     // `.codex/agents/` is not qfai's alone: a project may keep its own Codex
-    // profiles beside the generated ones, and they carry keys the generator
-    // never emits.
+    // profiles beside the generated ones. This one is written the way anybody
+    // would write a minimal worker — `name`, `description`,
+    // `developer_instructions`, three single-line basic strings — which is
+    // exactly the shape the generator emits, so shape alone could not tell them
+    // apart and `--force` deleted it.
     const handWritten = codexAgentPath(root, "team-scribe");
     await writeFile(
       handWritten,
-      'name = "team-scribe"\nmodel = "o3"\ndescription = "ours"\ndeveloper_instructions = "Write it down."\n',
+      'name = "team-scribe"\ndescription = "ours"\ndeveloper_instructions = "Write it down."\n',
       "utf-8",
     );
 
@@ -325,7 +331,51 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
       code: "ENOENT",
     });
-    expect(await readFile(handWritten, "utf-8")).toContain('model = "o3"');
+    expect(await readFile(handWritten, "utf-8")).toContain('description = "ours"');
+  });
+
+  // `.codex/agents` is a path the repository controls, and a directory
+  // component of it can be a symlink out of the tree. `removeSymlinkAt` only
+  // ever looked at the leaf `<name>.toml`, so `mkdir` and `writeFile` followed
+  // the parent link and a plain run wrote every profile into somebody else's
+  // directory — with `--force` free to prune files there as well.
+  it("refuses to write through a symlinked wrapper directory", async () => {
+    const root = await initProject();
+    const wrapperDir = path.join(root, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+    const outside = path.join(root, "outside-tree");
+    await mkdir(outside, { recursive: true });
+    const bystander = path.join(outside, "qa-gatekeeper.toml");
+    await writeFile(bystander, "untouched\n", "utf-8");
+
+    await rm(wrapperDir, { recursive: true, force: true });
+    await symlink(outside, wrapperDir, "dir");
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("symlink");
+    expect(await readFile(bystander, "utf-8")).toBe("untouched\n");
+    expect(await readdir(outside)).toEqual(["qa-gatekeeper.toml"]);
+  });
+
+  // `removeSymlinkAt` leaves a real directory alone and the write then failed
+  // `EISDIR`, aborting `--force` with the agents sorted before this one already
+  // rewritten — the one command for repairing a checkout left a mixed tree.
+  it("skips a destination occupied by a directory instead of aborting the run", async () => {
+    const root = await initProject();
+    const target = codexAgentPath(root, "doc-steward");
+    const neighbour = codexAgentPath(root, "qa-gatekeeper");
+    await rm(target, { force: true });
+    await mkdir(target, { recursive: true });
+    await writeFile(neighbour, 'name = "qa-gatekeeper"\ndescription = "stale"\n', "utf-8");
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("ディレクトリ");
+    expect((await lstat(target)).isDirectory()).toBe(true);
+    // The run went on: the agent sorted after the conflict was regenerated.
+    expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
   });
 
   // The roster accepts whatever `.qfai/assistant/agents/` holds, symlinks
@@ -349,6 +399,10 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     });
   });
 
+  // The ceiling is measured on the bytes actually read, not on the size
+  // `fstat` reports: a procfs file is a regular file that claims size 0 and
+  // then yields as much as it is asked for, so the reported size alone let an
+  // unbounded read back in.
   it("refuses a canonical document larger than the read ceiling", async () => {
     const root = await initProject();
     await addProjectAgent(root, "reviewer");
@@ -447,6 +501,7 @@ describe("the TOML renderer", () => {
         "\n",
       ),
       "worker",
+      "demo",
     );
     expect(result.ok).toBe(false);
     if (result.ok) return;
@@ -473,12 +528,65 @@ describe("the TOML renderer", () => {
         "",
       ].join("\n"),
       "worker",
+      "demo",
     );
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const parsed = parseTomlDocument(result.toml);
     expect(parsed["developer_instructions"]).toBe("## Mission\n\n- Do the thing.");
     expect(parsed["description"]).toBe("Keep the ## Mission section short");
+  });
+
+  // The slice handed to Codex starts at the `## Mission` heading itself, so it
+  // is never empty and the emptiness guard was unreachable: a document that was
+  // nothing but its required headings rendered into a valid TOML with no
+  // instructions in it.
+  it("rejects a Mission section with nothing under the heading", () => {
+    const headingsOnly = [
+      "---",
+      "name: demo",
+      'description: "d"',
+      "tools: [Read]",
+      "---",
+      "",
+      "# Demo",
+      "",
+      "## Mission",
+      "",
+      "## Operating Rules",
+      "",
+      "- Something else entirely.",
+      "",
+    ].join("\n");
+    const result = renderCodexAgentToml(headingsOnly, "worker", "demo");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("empty");
+  });
+
+  // `foo.md` carrying `name: bar` produced `foo.toml` with `name = "bar"`:
+  // Codex reads that as a different agent, and `isGeneratedCodexAgentToml`
+  // stops recognising it, so the file could never be pruned either.
+  it("refuses a document whose frontmatter name is not the filename", () => {
+    const mismatched = [
+      "---",
+      "name: bar",
+      'description: "d"',
+      "tools: [Read]",
+      "---",
+      "",
+      "# Bar",
+      "",
+      "## Mission",
+      "",
+      "- Do it.",
+      "",
+    ].join("\n");
+    const result = renderCodexAgentToml(mismatched, "worker", "foo");
+    expect(result.ok).toBe(false);
+    if (result.ok) return;
+    expect(result.error).toContain("foo");
+    expect(renderCodexAgentToml(mismatched, "worker", "bar").ok).toBe(true);
   });
 
   it("drops catalog entries that declare no usable kind", () => {
@@ -519,19 +627,28 @@ describe("the TOML renderer", () => {
       body: "## Mission\n\n- Read it.",
       kind: "reviewer",
     });
+    expect(worker.startsWith(`${CODEX_AGENT_GENERATED_MARKER}\n`)).toBe(true);
     expect(isGeneratedCodexAgentToml(worker, "demo")).toBe(true);
     expect(isGeneratedCodexAgentToml(reviewer, "demo")).toBe(true);
     // A profile whose name disagrees with its filename is not this generator's.
     expect(isGeneratedCodexAgentToml(worker, "other")).toBe(false);
+    // The licence to delete is the marker, not the shape: a project's own
+    // minimal worker is the same three single-line basic strings.
     expect(
       isGeneratedCodexAgentToml(
-        'name = "demo"\nmodel = "o3"\ndescription = "d"\ndeveloper_instructions = "x"\n',
+        'name = "demo"\ndescription = "d"\ndeveloper_instructions = "x"\n',
         "demo",
       ),
     ).toBe(false);
     expect(
       isGeneratedCodexAgentToml(
-        'name = "demo"\ndescription = "d"\ndeveloper_instructions = """\nx\n"""\n',
+        `${CODEX_AGENT_GENERATED_MARKER}\nname = "demo"\nmodel = "o3"\ndescription = "d"\ndeveloper_instructions = "x"\n`,
+        "demo",
+      ),
+    ).toBe(false);
+    expect(
+      isGeneratedCodexAgentToml(
+        `${CODEX_AGENT_GENERATED_MARKER}\nname = "demo"\ndescription = "d"\ndeveloper_instructions = """\nx\n"""\n`,
         "demo",
       ),
     ).toBe(false);
@@ -556,7 +673,7 @@ describe("this repository's own Codex profiles", () => {
         path.join(repoRoot, ".qfai", "assistant", "agents", `${name}.md`),
         "utf-8",
       );
-      const rendered = renderCodexAgentToml(canonical, kind);
+      const rendered = renderCodexAgentToml(canonical, kind, name);
       expect(rendered.ok, `${name}: canonical markdown did not render`).toBe(true);
       if (!rendered.ok) continue;
       const checkedIn = await readFile(

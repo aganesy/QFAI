@@ -84,3 +84,20 @@ This spec consolidates the following archived specs:
 - Implementation-phase 詳細 US/AC/BR/EX/TC は同じ v1.9.0 PR (#209) の per-spec SDD pass で append 済み — US-0003-0016..0020, AC-0003-0017..0024, BR-0003-0015..0020, EX-0003-0018..0023, TC-0003-0021..0026 すべて 02..06 に追加完了。
 - Classifier routing contract (REQ-0020, `classifyLegacySteeringEntry`): the migration helper routes legacy entries using **exact basename (stem) Set membership** for catalog / manifest / constitution layers, and **top-segment matching** (`segments[0] === "process"` OR `segments[0] === "migrations"`) for the process layer. The `process/...` form strips its leading prefix on relocation; the `migrations/...` form is preserved as-is (lands at `.qfai/assistant/process/migrations/...`). Non-top-level `migrations` segments (e.g. `foo/migrations/bar.md`) explicitly fall through to the default `catalog/` layer so user docs are not pulled out from under their intended location. User docs whose filenames contain layer-relevant tokens (e.g. `agent-routing-notes.md`, `review-gate-overview.md`, `foo-migration-bar.md`, `quality-gate-summary.md`) are NOT mis-routed; previously the substring `.includes()` form would have pulled them into the canonical layers. This is a behavior change from the v1.9.0-alpha implementation; the unknown-stem fallback remains `catalog/` so unrouted user docs still land in a defensible default layer.
 - Source: REQ-0001, REQ-0002, REQ-0008, REQ-0009, REQ-0011, REQ-0012, REQ-0013, REQ-0018, NFR-0001, NFR-0002
+
+## CHG-004 — Codex agent profile を init 生成へ (RE-OPEN DR-0003-0003 / DR-0030)
+
+- Operation: UPDATE:APPEND
+- Re-opened decisions: spec-0003 DR-0003-0003（Codex サブエージェントは静的配置）、`_policies/08_Decisions.md` DR-0030（静的配置方式）
+- Superseded by: DR-0003-0008（Codex サブエージェント TOML を init で自動生成する）
+- Trigger: 「静的配置 + 手動管理」は配布物が `.codex/agents/` を含むことを前提にしていたが、`packages/qfai/assets/init/` に当該ツリーは存在しない。`qfai init` を実行したプロジェクトには Claude / Copilot の agent wrapper だけが届き、`--force` を付けても Codex は空のままだった
+- adopted: `qfai init` が canonical agent markdown + `agent-catalog.yml#agents[].kind` から `.codex/agents/<name>.toml` を生成する。plain run は create-only、`--force` で再生成、roster を外れた生成物は `--force` で prune
+- adopted: 本リポジトリの `.codex/agents/*.toml` も生成物として扱い、generator 出力との byte 一致をテストで固定する
+- rejected: 配布 asset へ TOML を静的同梱する（canonical markdown との二重管理を配布物へ持ち込むだけで、drift の構造は変わらない）
+- Cascade:
+  - AC-0003-0025 を `03_Acceptance-Criteria.md` に登録（US-0003-0006 / REQ-0009 配下）
+  - TC-0003-0027 を `06_Test-Cases.md` に登録、`tdd/test-list.md` に TDD-0027 を追加
+  - 実装: `packages/qfai/src/core/codexAgentToml.ts`（新規）、`packages/qfai/src/cli/commands/init.ts` step 6
+  - テスト: `packages/qfai/tests/integration/codexAgentWrappers.test.ts`
+  - ドキュメント: `README.md` / `packages/qfai/README.md` の Codex 統合記述
+- impact: 既存プロジェクトが `qfai init` を再実行すると `.codex/agents/` が新規作成される。手書きの Codex profile は生成マーカー行を持たないため prune 対象外

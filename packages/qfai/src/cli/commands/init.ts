@@ -1301,13 +1301,31 @@ async function createCodexAgentTomls(
     return { copied, skipped, removed };
   }
 
-  const classification = await loadAgentClassification(assistantAssetsDir, destRoot);
   const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
+  const unsafeComponent = await findUnsafeWrapperComponent(destRoot, CODEX_AGENT_WRAPPER_DIR);
+  if (unsafeComponent !== undefined) {
+    info(`  skip: ${wrapperDir} (${unsafeComponent})`);
+    return { copied, skipped, removed };
+  }
+
+  const classification = await loadAgentClassification(assistantAssetsDir, destRoot);
 
   for (const agentName of roster) {
     const destination = path.join(wrapperDir, `${agentName}${CODEX_AGENT_WRAPPER_SUFFIX}`);
-    const existing = await pathExists(destination);
+    const destinationStats = await safeLstat(destination);
+    const existing = destinationStats !== undefined;
     if (existing && !options.force) {
+      skipped.push(destination);
+      continue;
+    }
+    if (destinationStats?.isDirectory() === true) {
+      // `removeSymlinkAt` leaves a real directory alone and the `writeFile`
+      // below then failed `EISDIR`, aborting the whole run — with the profiles
+      // of every agent sorted before this one already rewritten. `--force` is
+      // the command for repairing a broken checkout; it must not be the one
+      // that leaves a half-updated tree. The directory is not generator
+      // output, so it is refused rather than replaced.
+      info(`  skip: ${destination} (ディレクトリが存在するため生成できません)`);
       skipped.push(destination);
       continue;
     }
@@ -1352,6 +1370,45 @@ async function createCodexAgentTomls(
   }
 
   return { copied, skipped, removed };
+}
+
+/**
+ * The first component of `relativeDir` under `destRoot` that must not be
+ * written through, or `undefined` when the whole chain is safe.
+ *
+ * `.codex/agents` is a path an untrusted repository controls, and a directory
+ * component of it can be a symlink out of the tree — a checked-in
+ * `.codex/agents -> /home/user/.config` is enough. `mkdir` follows it,
+ * `writeFile` follows it, and `removeSymlinkAt` cannot see it: that guard
+ * looks at the leaf `<name>.toml` only. A plain `qfai init` would then write
+ * every profile into that external directory and `--force` would let
+ * {@link pruneOrphanCodexProfiles} delete files there. So every component is
+ * `lstat`-ed before anything is written or removed, and one link anywhere in
+ * the chain skips the step whole rather than writing part of it somewhere
+ * unexpected.
+ *
+ * A component that does not exist yet ends the walk: `mkdir` creates real
+ * directories, and nothing below an absent parent can exist either.
+ */
+async function findUnsafeWrapperComponent(
+  destRoot: string,
+  relativeDir: string,
+): Promise<string | undefined> {
+  let current = destRoot;
+  for (const segment of relativeDir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined) {
+      return undefined;
+    }
+    if (stats.isSymbolicLink()) {
+      return `${current} が symlink のため生成先として使えません`;
+    }
+    if (!stats.isDirectory()) {
+      return `${current} がディレクトリではありません`;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -1433,7 +1490,7 @@ async function planCodexAgentProfile(
     return { status: "unavailable", reason: "canonical markdown が見つかりません" };
   }
 
-  const rendered = renderCodexAgentToml(markdown.content, kind);
+  const rendered = renderCodexAgentToml(markdown.content, kind, agentName);
   if (!rendered.ok) {
     return { status: "unavailable", reason: rendered.error };
   }
@@ -1601,6 +1658,9 @@ type BoundedRead =
  */
 const MAX_CANONICAL_INPUT_BYTES = 4 * 1024 * 1024;
 
+/** Read granularity. One chunk, reused nowhere, so the peak stays the total. */
+const CANONICAL_READ_CHUNK_BYTES = 64 * 1024;
+
 /** `O_NONBLOCK` keeps `open` off a FIFO's blocking path; Windows has neither. */
 const NONBLOCKING_READ_FLAGS =
   process.platform === "win32" ? constants.O_RDONLY : constants.O_RDONLY | constants.O_NONBLOCK;
@@ -1612,8 +1672,16 @@ const NONBLOCKING_READ_FLAGS =
  * accepts whatever `.qfai/assistant/agents/` holds, symlinks included — so a
  * plain `readFile` was a hang or an OOM away: pointed at a FIFO it waits for a
  * writer that never comes, pointed at `/dev/zero` it reads until the heap is
- * gone. The size and the file type are both checked against the *opened*
- * handle, so swapping the path after the check does not get past it.
+ * gone. The file type is checked against the *opened* handle, so swapping the
+ * path after the check does not get past it.
+ *
+ * The ceiling is applied to the bytes actually read, not to the size `fstat`
+ * reports. A reported size is a claim, and on Linux a procfs file
+ * (`/proc/self/pagemap`, say) is a regular file that claims 0 and then yields
+ * as much as it is asked for — so a symlink pointing there passed both checks
+ * and `readFile` consumed memory to the same effect as `/dev/zero`. Reading in
+ * chunks and stopping one byte past the ceiling makes the bound the one thing
+ * the file cannot lie about.
  *
  * `absent` for a missing file (a dangling symlink included); every other I/O
  * failure propagates.
@@ -1642,13 +1710,24 @@ async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
     if (!stats.isFile()) {
       return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
     }
-    if (stats.size > MAX_CANONICAL_INPUT_BYTES) {
-      return {
-        status: "rejected",
-        reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
-      };
+    const chunks: Buffer[] = [];
+    let total = 0;
+    for (;;) {
+      const chunk = Buffer.alloc(CANONICAL_READ_CHUNK_BYTES);
+      const { bytesRead } = await handle.read(chunk, 0, CANONICAL_READ_CHUNK_BYTES, total);
+      if (bytesRead === 0) {
+        break;
+      }
+      total += bytesRead;
+      if (total > MAX_CANONICAL_INPUT_BYTES) {
+        return {
+          status: "rejected",
+          reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+        };
+      }
+      chunks.push(chunk.subarray(0, bytesRead));
     }
-    return { status: "ok", content: await handle.readFile("utf-8") };
+    return { status: "ok", content: Buffer.concat(chunks, total).toString("utf-8") };
   } finally {
     await handle.close();
   }
