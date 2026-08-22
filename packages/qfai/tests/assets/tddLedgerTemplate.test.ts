@@ -41,6 +41,11 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "Status",
         "DR-ID",
         "Evidence",
+        // Optional ninth column: the split row's stable identity. Appended
+        // after the required eight so "in the order used above" still holds
+        // for the schema table, and tolerated by `validateTddList`, which
+        // checks that the required columns are present, not that no others are.
+        "Boundary",
       ]);
       expect(template.indexOf("## Ledger")).toBeLessThan(template.indexOf("## Schema"));
     });
@@ -68,6 +73,15 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(phase2b).toContain("more than one independently observable boundary");
       expect(phase2b).toContain("one row per boundary");
+      // `06_Test-Cases.md` keeps Steps / Expected / Notes in separate columns,
+      // so an input matrix can sit in `Steps` under a single summarising
+      // `Expected`. A criterion scoped to the expected outcome alone leaves
+      // that TC whole and its RED still stops at the first failing assert.
+      expect(phase2b).toContain(
+        "**Count the boundaries over the whole TC row, not over `Expected` alone.**",
+      );
+      expect(phase2b).toContain("`Steps`, `Expected` and `Notes` in separate columns");
+      expect(phase2b).toContain("`EX-Ref` and `AC-Refs`");
       // Without this the seeded shape reads as a TC-coverage violation.
       expect(phase2b).toContain("`TC-Refs` is many-to-many");
       expect(phase2b).toContain("spec-traceability-rules.md");
@@ -120,9 +134,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         checklists.indexOf("## Phase 2b"),
         checklists.indexOf("## Phase 2c"),
       );
-      expect(phase2b).toContain(
-        "`Selector` is the only cell that tells two rows of one `TC-*` apart",
-      );
+      expect(phase2b).toContain("Name the boundary in a `Boundary` cell on every row");
       expect(phase2b).toContain("The unit of the delta is the boundary, not the `TC-*`");
       expect(phase2b).toContain("Reconcile changed and removed TCs per boundary");
       expect(phase2b).toContain("retire the row of a boundary dropped from its TC");
@@ -131,12 +143,58 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain("a reseed matches rows on `Selector`, not on `TC-Refs`");
+      expect(rules).toContain(
+        "a reseed matches rows on `Boundary`, not on `Selector` or `TC-Refs`",
+      );
 
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain("identified by the boundary its `Selector` names");
+      expect(template).toContain("identified by its `Boundary` cell");
       expect(template).toContain(
         "A boundary dropped from a surviving TC has its row retired the same way",
+      );
+    });
+
+    it(`${tree}: the boundary identity is a cell /qfai-implement never rewrites`, async () => {
+      // `/qfai-implement` writes a renamed `Selector` back to the ledger when a
+      // review-fix handback replaces the test (Red step 3b). Keyed on
+      // `Selector`, a reseed reads that rename as one boundary dropped and
+      // another added, and retires a row whose Status/Evidence are still valid.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      const phase2b = checklists.slice(
+        checklists.indexOf("## Phase 2b"),
+        checklists.indexOf("## Phase 2c"),
+      );
+      expect(phase2b).toContain("a reseed matches rows on `Boundary` and on nothing else");
+      expect(phase2b).toContain("it is the runtime test name");
+      expect(phase2b).toContain("is written only here, and is never rewritten downstream");
+
+      // The claim above is only true while the handback path really is
+      // Selector-only, so pin the sentence it rests on.
+      const implement = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(implement).toContain("A handback naming a new `Selector` or `Test file`");
+
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toContain("`Boundary` is seed-owned");
+      expect(preconditions.replace(/\s+/g, " ")).toContain(
+        "handback rewrites `Selector` and `Test file`, never `Boundary`",
+      );
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("`Boundary` is an optional column");
+      expect(rules).toContain("never rewritten by `/qfai-implement`");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "`Boundary` is written by `/qfai-sdd` Phase 2b and by nothing else",
       );
     });
 
@@ -164,6 +222,46 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain(
         "legacy one-row aggregate for a matrix TC does **not** count as unchanged",
+      );
+    });
+
+    it(`${tree}: the legacy re-split resets a progressed row only under an approved CR`, async () => {
+      // `change-request-reset.md` makes an approved CR enumerating the rows the
+      // only sanctioned backward transition. The migration is triggered by the
+      // seeding rule changing, not by an edit to `06_Test-Cases.md`, so no such
+      // CR exists yet — a checklist that just says "reset it" asks the agent
+      // either to break that rule or to abandon the split.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      const phase2b = checklists.slice(
+        checklists.indexOf("## Phase 2b"),
+        checklists.indexOf("## Phase 2c"),
+      );
+      expect(phase2b).toContain("a row past `todo` moves backwards only under an approved `CR-*`");
+      expect(phase2b).toContain("qfai-implement/references/change-request-reset.md");
+      expect(phase2b).toContain("constitution/drift-protocol.md");
+      expect(phase2b).toContain("listing the aggregate rows by `TDD-ID`");
+      // The unapproved half must still run: appending the missing boundary
+      // rows moves no Status, so the split is never abandoned for want of a CR.
+      expect(phase2b).toContain("rewrite no `Status` and need no approval");
+      expect(phase2b).toContain("never abandon the split for want of it");
+
+      const reset = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/change-request-reset.md",
+      );
+      expect(reset).toContain("**enumerates the rows**");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "a row past `todo` is reset or retired only under an approved `CR-*` that",
+      );
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain(
+        "its own `Status` moves backwards only under an approved\n   `CR-*` that enumerates it",
       );
     });
 

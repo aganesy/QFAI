@@ -24,10 +24,14 @@ traced by `QFAI:` annotations in the test tree per
 `.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
 this ledger.
 
-A split row is identified by the boundary its `Selector` names — seeded at
-Phase 2b while `Test file` is still `-`. `TDD-ID` is a serial and `TC-Refs`
-repeats identically across sibling rows, so `Selector` is the only cell that
-tells two rows of one `TC-*` apart, and it is what the reseed matches on.
+A split row is identified by its `Boundary` cell — a short slug for the one
+observable boundary the row owns, seeded at Phase 2b while `Test file` is still
+`-`. `TDD-ID` is a serial and `TC-Refs` repeats identically across sibling rows,
+so neither tells two rows of one `TC-*` apart, and `Selector` cannot either: it
+is the runtime test name, which `/qfai-implement` rewrites when a review-fix
+handback replaces the test. `Boundary` is written here and never rewritten
+downstream, so the reseed matches on it; matching on `Selector` would read such
+a rename as one boundary dropped and another added.
 
 Reseeding is a **delta**, never a regeneration, and its unit is the boundary,
 not the `TC-*`: a row whose boundary is unchanged keeps its `TDD-ID`, `Status`,
@@ -44,11 +48,18 @@ its rows retired. Leaving a stale `done` row hides re-implementation work, and
 leaving a `todo` row for a deleted boundary feeds `/qfai-implement` an
 obligation that no longer exists.
 
-A ledger seeded before this rule holds **one** row for a matrix-shaped TC.
+A ledger seeded before this rule holds **one** row for a matrix-shaped TC and no
+`Boundary` column.
 Such a legacy aggregate row is not unchanged and the delta does not preserve it:
-re-split it into one row per boundary, and return it to `todo` unless its
-`Selector` already names exactly one boundary. A single RED stops at the first
-failing assert, so an aggregate row's `Evidence` proves no boundary in full.
+add the column and re-split it into one row per boundary. Appending the missing
+rows needs no approval; moving the aggregate row's own `Status` backwards does —
+a row past `todo` is reset or retired only under an approved `CR-*` that
+enumerates it
+(`.qfai/assistant/skills/qfai-implement/references/change-request-reset.md`).
+Raise that CR when the row's `Selector` names no single boundary or its `Status`
+is past `todo`, and leave the row as it stands until it is approved. A single
+RED stops at the first failing assert, so an aggregate row's `Evidence` proves
+no boundary in full.
 
 ## Ledger
 
@@ -57,8 +68,8 @@ reads it with `parseFirstMarkdownTable`. Keep it first; a table above it is
 parsed as the ledger instead and raises eight
 `TDDLIST_REQUIRED_COLUMN_MISSING` errors.
 
-| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
-| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |
+| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | Boundary |
+| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | -------- |
 
 ## Schema
 
@@ -74,6 +85,18 @@ Required columns, in the order used above:
 | Status    | `todo` / `red` / `green` / `refactor` / `done` / `exception` |
 | DR-ID     | Decision Record ID for exception rows (`-` otherwise)        |
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
+
+Optional columns, appended after the required eight:
+
+| Column       | Description                                               |
+| ------------ | --------------------------------------------------------- |
+| Boundary     | Stable slug for the one observable boundary this row owns |
+| US-Refs      | E2E obligation, on an `E2E` row                           |
+| CON-API-Refs | API obligation, on an `API` row                           |
+
+`Boundary` is written by `/qfai-sdd` Phase 2b and by nothing else — it is what
+a reseed matches on, so `/qfai-implement` never rewrites it even when a
+review-fix handback changes `Selector` or `Test file`.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

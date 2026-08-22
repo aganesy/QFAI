@@ -9,10 +9,14 @@ one.
 
 `/qfai-sdd` Phase 2b seeds one row per independently observable boundary of a
 coverage-target TC from `06_Test-Cases.md` — a matrix-shaped TC arrives already
-split into N rows, each repeating that `TC-*` in `TC-Refs` and naming its own
-boundary in `Selector`. A ledger seeded before that rule can still hold one
-aggregate row for a matrix TC; rerun `/qfai-sdd <spec-id>` to have Phase 2b
-re-split it — splitting a row in-cycle is an upstream edit this skill does not own.
+split into N rows, each repeating that `TC-*` in `TC-Refs` and identifying its
+own boundary in a `Boundary` cell. `Boundary` is seed-owned: a review-fix
+handback rewrites `Selector` and `Test file`, never `Boundary`, so the next
+reseed still matches the row it belongs to. A ledger seeded before that rule can
+still hold one aggregate row for a matrix TC; rerun `/qfai-sdd <spec-id>` to have
+Phase 2b re-split it — splitting a row in-cycle is an upstream edit this skill
+does not own, and resetting an aggregate row already past `todo` needs an
+approved `CR-*` per `references/change-request-reset.md`.
 `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
 annotations, not ledger rows — they never appear as rows here.
 
