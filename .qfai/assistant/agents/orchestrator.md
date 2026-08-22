@@ -22,9 +22,10 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 
 - .qfai/assistant/constitution/\*\*
 - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-- .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-  `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-  `developer_instructions` body when that agent card is already in context (constitution Article III).
+  (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+  `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+  Skip a `developer_instructions` body when that agent card is already in context. See constitution
+  Article III.)
 - .qfai/assistant/catalog/test-layers.md (SSOT for hard coverage obligations)
 - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/\_policies/08_Decisions.md (Decision Records, DR-\*; check rejected)
 - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)

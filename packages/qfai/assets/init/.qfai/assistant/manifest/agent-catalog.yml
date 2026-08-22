@@ -33,9 +33,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md (SSOT for hard coverage obligations)
       - .qfai/specs/spec-\*/07_Decisions.md and .qfai/specs/\_policies/08_Decisions.md (Decision Records, DR-\*; check rejected)
       - Prompt-specific artifacts (traceability, validation evidence, optional legacy scenario/ledger artifacts)
@@ -124,9 +125,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
       - `.qfai/specs/spec-*/tdd/test-list.md` — the execution ledger this role selects
@@ -206,9 +208,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - Existing discussion records under `.qfai/discussion/`
       - .qfai/discussion/discussion-\*/04_Sources.md
@@ -277,9 +280,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/discussion/discussion-\*/04_Sources.md
       - .qfai/discussion/discussion-\*/06_REQ.md
@@ -357,9 +361,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
       - .qfai/discussion/discussion-\*/04_Sources.md
@@ -440,9 +445,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
       - .github/instructions/principles.instructions.md
@@ -514,9 +520,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
       - .github/instructions/principles.instructions.md
@@ -588,9 +595,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
@@ -665,9 +673,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/02_User-stories.md
@@ -764,9 +773,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/03_Acceptance-Criteria.md
@@ -841,9 +851,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .qfai/specs/spec-\*/01_Spec.md
@@ -908,9 +919,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/specs/spec-\*/09_delta.md
       - package.json scripts, CI config, and runbooks
       - Evidence summaries under `.qfai/evidence/`
@@ -974,9 +986,10 @@ agents:
 
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - CHANGELOG.md
       - README.md
       - docs/\*\*
@@ -1041,9 +1054,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - Validation evidence and gate results
@@ -1134,9 +1148,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - Requirement drafts, option tables, and OQ ledgers
@@ -1201,9 +1216,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .github/instructions/code-review.instructions.md
@@ -1274,9 +1290,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .github/instructions/code-review.instructions.md
@@ -1373,9 +1390,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - .github/instructions/code-review.instructions.md
@@ -1599,9 +1617,10 @@ agents:
       - .qfai/assistant/constitution/\*\*
       - .qfai/assistant/constitution/drift-protocol.md
       - .qfai/assistant/manifest/agent-routing.yml, .qfai/assistant/manifest/review-profiles.yml, and .qfai/assistant/catalog/\*\*
-      - .qfai/assistant/manifest/agent-catalog.yml — this role's own entry (`owned_artifacts`, `tool_profile`,
-        `permission_profile`, `specialization_tags`); another role's entry on demand. Skip a
-        `developer_instructions` body when that agent card is already in context (constitution Article III).
+        (`.qfai/assistant/manifest/agent-catalog.yml`: this role's own entry — `owned_artifacts`,
+        `tool_profile`, `permission_profile`, `specialization_tags` — plus another role's entry on demand.
+        Skip a `developer_instructions` body when that agent card is already in context. See constitution
+        Article III.)
       - .qfai/assistant/catalog/test-layers.md
       - .qfai/specs/spec-\*/09_delta.md
       - `.qfai/specs/spec-*/tdd/test-list.md` — the ledger row under review

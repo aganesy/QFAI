@@ -144,8 +144,16 @@ describe.each(QFAI_TREES)("%s", (tree) => {
         ".qfai/assistant/manifest/agent-catalog.yml",
       );
       expect(body, `${card}: does not scope the mirrored body`).toContain(
-        "`developer_instructions` body when that agent card is already in context",
+        "Skip a `developer_instructions` body when that agent card is already in context",
       );
+      // `doctor`'s `extractLiteralRequiredInputs` (src/core/doctor.ts) treats a
+      // bullet that starts with "." and carries no glob character as a literal
+      // path it must find on disk. The catalog scope therefore has to ride on
+      // the globbed bullet as a continuation line, never as its own bullet.
+      expect(
+        body,
+        `${card}: the catalog scope is its own bullet and doctor will read it as a path`,
+      ).not.toContain("- .qfai/assistant/manifest/agent-catalog.yml —");
     }
   });
 });
