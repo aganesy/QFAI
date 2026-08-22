@@ -83,7 +83,7 @@ behaviour at T1 cost.
   That is the safe direction; the unsafe one is a group that never closes.
 - It is a grouping key, not an obligation. Coverage counting reads `TC-*` tokens
   only, so `BR-Ref` is inert to it.
-- The column is optional to `qfai validate` — the required set above is what it
+- The column is optional to `npx qfai validate` — the required set above is what it
   enforces, so a ledger seeded before the column keeps passing — but a ledger
   that **declares** it has its cells checked: `TDDLIST_BR_REF_INVALID` (not a
   single `BR-NNNN-NNNN`, and not `-`) and `TDDLIST_BR_REF_UNRESOLVED` (no such

@@ -40,7 +40,7 @@ parsed as the ledger instead and raises eight
 ## Schema
 
 Columns, in the order used above. Every one except `BR-Ref` is required by
-`qfai validate`; `BR-Ref` is **optional to the validator and required for T1
+`npx qfai validate`; `BR-Ref` is **optional to the validator and required for T1
 batching**, so a ledger seeded before the column existed keeps validating
 unchanged. Seed it here anyway — this is the only phase that can resolve it,
 and `/qfai-implement` can close no T1 review group without it.

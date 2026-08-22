@@ -78,7 +78,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // `TDD_LEDGER_REQUIRED_COLUMNS` kept the original eight — so a ledger
       // seeded per the SSOT had no group key and still passed `qfai validate`.
       const template = (await read(tree, TEMPLATE)).replace(/\s*\n\s*/g, " ");
-      expect(template).toContain("Every one except `BR-Ref` is required by `qfai validate`");
+      expect(template).toContain("Every one except `BR-Ref` is required by `npx qfai validate`");
       expect(template).toContain("**optional to the validator and required for T1 batching**");
 
       const ssot = (
