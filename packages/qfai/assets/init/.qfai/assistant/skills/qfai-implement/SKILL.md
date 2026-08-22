@@ -372,7 +372,7 @@ Completion MUST NOT be declared when any of the following are true:
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
   DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a step 1 command exited 0 with no test named in its recorded output — a run that selected zero tests exits 0 too, so the exit code alone never settles step 1 — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a step 1 command exited 0 with no test named in its recorded output (a run that selected zero tests exits 0 too, so the exit code alone never settles step 1) — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
