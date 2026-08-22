@@ -991,11 +991,13 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
-  // Only the mirror value-mismatch path passes a `suggested_action`; the
-  // missing-key paths (mirror block, legacy checklist key, component guidance)
-  // do not, so the code needs a catalog entry that covers all of them.
+  // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
+  // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
+  // component guidance, a mirror value that diverges from DESIGN.md, and a
+  // mirror key DESIGN.md never authored — all fall through to this entry, so it
+  // has to name every repair, not just the additive one.
   "QFAI-DCON-005":
-    "Add the design-system.yaml entry the message names — the `visual.*` mirror block, the legacy `checklist.*` key, or the component-guidance block — then rerun validate.",
+    "design-system.yaml is a verbatim copy of DESIGN.md, so repair the entry the message names in whichever direction it is off: add it when it is missing (the `visual.*` block or key, the legacy `checklist.*` key, or the component-guidance block), copy DESIGN.md's value over it when the two diverge, and delete it when DESIGN.md does not author it. Then refreeze the lock and rerun validate.",
   // The browser-QA bundle checks are schema assertions raised by a local
   // `makeIssue` helper that has no `suggested_action` parameter, so every one of
   // their call sites depends on this catalog for its `fix:` line.

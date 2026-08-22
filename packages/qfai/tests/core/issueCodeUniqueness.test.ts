@@ -171,9 +171,10 @@ describe("issue code uniqueness", () => {
 // and fail when an entry is written but the code stays listed here.
 //
 // The census behind them counts every emission site, including `Issue` object
-// literals, codes named by a module-level constant rather than a string literal,
-// and codes whose `suggested_action` is passed on only some of their call sites
-// — all three were invisible to earlier cuts of the helper, so the lists were
+// literals, codes named by a module-level constant rather than a string
+// literal, codes forwarded through a validator's own `Issue` factory, and codes
+// whose `suggested_action` is passed on only some of their call sites — all
+// four were invisible to earlier cuts of the helper, so the lists were
 // re-baselined to name the codes those holes had been hiding.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
@@ -375,9 +376,68 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "TDDLIST_TEST_FILE_MISSING",
   "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
+  // The `core/uiux/**` validators route every finding through a file-local
+  // `Issue` factory rather than calling `issue(...)` directly, so none of these
+  // codes reached the census until factory call sites were counted. They are
+  // recorded as pending rather than catalogued in bulk: each still needs an
+  // expected-state sentence written by someone who knows the rule.
+  "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+  "UIX-VAL-3LAYER-LEGACY-FORMAT",
+  "UIX-VAL-3LAYER-MIXED-FORMAT",
+  "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
+  "UIX-VAL-CLASSIFICATION-MISSING",
+  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
   "UIX-VAL-DS-READ-ERROR",
   "UIX-VAL-DS01",
   "UIX-VAL-DS02",
+  "UIX-VAL-OQ-OPEN-CRITICAL",
+  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
+  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
+  "UIX-VAL-SIDECAR-MISSING",
+  "UIX-VAL-SKILL-ASPIRATIONAL",
+  "UIX-VAL-SKILL-BANNED-PHRASE",
+  "UIX-VAL-SKILL-CANONICAL-SURFACE",
+  "UIX-VAL-SKILL-CLI-SURFACE",
+  "UIX-VAL-SKILL-DELEGATION",
+  "UIX-VAL-SKILL-ENV-PRECONDITIONS",
+  "UIX-VAL-SKILL-EVIDENCE-PATHS",
+  "UIX-VAL-SKILL-PLAYWRIGHT-FALLBACK",
+  "UIX-VAL-SKILL-PREFLIGHT",
+  "UIX-VAL-SKILL-SECTION-MISSING",
+  "UIX-VAL-SKILL-STATIC-FIRST",
+  "UIX-VAL-SKILL-UI-BEARING-FALSE",
+  "UIX-VAL-STRATEGY-CANDIDATE-OPTIONS",
+  "UIX-VAL-STRATEGY-CHOSEN-OPTION",
+  "UIX-VAL-STRATEGY-DUPLICATE-CANDIDATE-OPTION",
+  "UIX-VAL-STRATEGY-DUPLICATE-FILENAME",
+  "UIX-VAL-STRATEGY-INCOMPLETE",
+  "UIX-VAL-STRATEGY-INVALID-CANDIDATE-OPTION",
+  "UIX-VAL-STRATEGY-INVALID-CHOSEN-OPTION",
+  "UIX-VAL-STRATEGY-INVALID-DECISION",
+  "UIX-VAL-STRATEGY-INVALID-SURFACE",
+  "UIX-VAL-STRATEGY-LEGACY-FILENAME",
+  "UIX-VAL-STRATEGY-NONE-CANDIDATES-REQUIRED",
+  "UIX-VAL-STRATEGY-NONE-CHOSEN-REQUIRED",
+  "UIX-VAL-STRATEGY-NONE-DECISION-REQUIRED",
+  "UIX-VAL-STRATEGY-SELECTION-BOOLEAN",
+  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-CHOSEN",
+  "UIX-VAL-STRATEGY-SELECTION-REQUIRES-DECISION",
+  "UIX-VAL-TASTE-INCOMPLETE",
+  "UIX-VAL-TASTE-MISSING",
+  "UIX-VAL-TREND-CATEGORY-MISSING",
+  "UIX-VAL-TREND-ENTRY-MISSING",
+  "UIX-VAL-TREND-FIELD-MISSING",
+  "UIX-VAL-TREND-SCAN-MISSING",
   "W-SKILL-DOC-BROKEN-REF",
   "W-STALE-REFERENCE",
 ]);
@@ -558,6 +618,18 @@ describe("issue report metadata", () => {
     // A code emitted only at `warning` severity stays out of the error census
     // even when its constant now resolves.
     expect(usage.has("QFAI-TABLE-001")).toBe(false);
+  });
+
+  it("counts codes forwarded through a validator's own Issue factory", async () => {
+    const usage = await collectErrorCapableUsage();
+    // `validators/skill/prototypingSkill.ts` never calls `issue(...)`: every
+    // finding goes through its local `skillIssue(code, message, severity, fix)`.
+    expect(usage.get("UIX-VAL-SKILL-BANNED-PHRASE")).toEqual({
+      errorCapable: true,
+      // The factory forwards its 4th argument as `suggested_action`, and every
+      // call site fills it in.
+      everyErrorSiteHasSuggestedAction: true,
+    });
   });
 
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
