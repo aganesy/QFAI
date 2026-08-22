@@ -173,6 +173,68 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
     });
   });
 
+  it("keeps the sdd-only contract-reference gate out of the shared contracts group", async () => {
+    // `runTddValidators` calls `validateContracts`, but `QFAI-CONTRACT-030`
+    // comes from `validateContractReferences`, which only sdd runs.
+    await withProject(async (root) => {
+      const tdd = await noticeFor(root, "tdd");
+      expect(tdd?.message).toContain("QFAI-CONTRACT-030");
+      expect(tdd?.message).not.toContain("QFAI-CONTRACT-010");
+
+      const sdd = await noticeFor(root, "sdd");
+      expect(sdd?.message).not.toContain("QFAI-CONTRACT-030");
+    });
+  });
+
+  it("keeps the tdd-only traceability-integrity codes out of the shared group", async () => {
+    // `validateTraceability` (QFAI-TRACE-1xx) is shared; `QFAI-TRACE-001/002`
+    // come from `validateTraceabilityIntegrity`, which only tdd runs.
+    await withProject(async (root) => {
+      const sdd = await noticeFor(root, "sdd");
+      expect(sdd?.message).toContain("QFAI-TRACE-001");
+      expect(sdd?.message).toContain("QFAI-TRACE-002");
+      expect(sdd?.message).not.toContain("QFAI-TRACE-1*");
+
+      const tdd = await noticeFor(root, "tdd");
+      expect(tdd?.message).not.toContain("QFAI-TRACE-001");
+      expect(tdd?.message).not.toContain("QFAI-TRACE-1*");
+    });
+  });
+
+  it("splits QFAI-DCON-* by the stage that emits each code", async () => {
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const sdd = await noticeFor(root, "sdd");
+        // Prototyping-only emitters: required design contracts and the
+        // design-system / prototype-handoff mirrors.
+        expect(sdd?.message).toContain("QFAI-DCON-001");
+        expect(sdd?.message).toContain("QFAI-DCON-005");
+        // sdd runs the shared root-DESIGN.md gates and its own DCON-019.
+        expect(sdd?.message).not.toContain("QFAI-DCON-034");
+        expect(sdd?.message).not.toContain("QFAI-DCON-019");
+
+        const prototyping = await noticeFor(root, "prototyping");
+        expect(prototyping?.message).toContain("QFAI-DCON-019");
+        expect(prototyping?.message).not.toContain("QFAI-DCON-001");
+        expect(prototyping?.message).not.toContain("QFAI-DCON-034");
+      });
+    });
+  });
+
+  it("never names TDDLIST-NNN, which is a waiver rule id and not a finding code", async () => {
+    // `TDDLIST-001`..`TDDLIST-006` are waiver ids for the `TDDLIST_*` findings,
+    // so listing them as an unevaluated hard-gate family names nothing real.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        for (const profile of PARTIAL_PROFILES) {
+          const notice = await noticeFor(root, profile);
+          expect(notice?.message ?? "").not.toMatch(/TDDLIST-\d/);
+          expect(notice?.message ?? "").not.toContain("TDDLIST-*");
+        }
+      });
+    });
+  });
+
   it("names the spec-pack families --profile tdd skips", async () => {
     // `runSddValidators` owns these and `runTddValidators` calls none of them.
     await withProject(async (root) => {

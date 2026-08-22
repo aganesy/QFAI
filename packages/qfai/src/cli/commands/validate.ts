@@ -408,12 +408,19 @@ function buildDeprecationIssue(args: {
  *   - `validateContracts` and `validateTraceability` are called by both
  *     `runSddValidators` and `runTddValidators`, so `QFAI-CONTRACT-*` /
  *     `QFAI-TRACE-*` cannot sit in either profile's own group — a `tdd` run
- *     listed as unevaluated a family it had just emitted.
+ *     listed as unevaluated a family it had just emitted. The wildcard cannot
+ *     stand in for the shared work either: `QFAI-CONTRACT-030` belongs to the
+ *     sdd-only `validateContractReferences` and `QFAI-TRACE-001/002` to the
+ *     tdd-only `validateTraceabilityIntegrity`, so a shared entry spelled
+ *     `QFAI-CONTRACT-*` / `QFAI-TRACE-*` would let a stage claim coverage of a
+ *     hard gate it never ran. Those codes get their own single-emitter groups.
  *   - `QFAI-DCON-*` has one emitter per profile
  *     (`validateSddDesignContractReadiness` /
- *     `validatePrototypingDesignContractReadiness`), and `QFAI-RESEARCH-*` /
- *     `UIX-VAL-*` are reached from both the discussion and the prototyping
- *     compositions.
+ *     `validatePrototypingDesignContractReadiness`), which share only the root
+ *     DESIGN.md sample / lock gates; the required-file, design-system and
+ *     handoff codes are prototyping-only and `QFAI-DCON-019` is sdd-only, so
+ *     the family splits three ways. `QFAI-RESEARCH-*` / `UIX-VAL-*` are
+ *     reached from both the discussion and the prototyping compositions.
  *   - The reviewer-gate `R-*` codes split by detector, not by prefix:
  *     `detectMockHrefDrift` and `validateDesignMdPatchZone` run only in
  *     prototyping, the rest only in sdd. The wildcard made `--profile sdd`
@@ -477,12 +484,52 @@ const GATE_GROUP_FAMILIES = {
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
   ],
-  // `validateContracts` — `runSddValidators` and `runTddValidators`.
-  contracts: ["QFAI-CONTRACT-*", "QFAI-DB-*"],
-  // `validateTraceability` — `runSddValidators` and `runTddValidators`.
-  traceability: ["QFAI-TRACE-*"],
-  // One design-contract-readiness emitter per profile, same family.
-  "design-contract-readiness": ["QFAI-DCON-*"],
+  // `validateContracts` (with `validateContractConsistency` /
+  // `validateDbContractExecutability`) — `runSddValidators` and
+  // `runTddValidators`. Listed by code, not as `QFAI-CONTRACT-*`: the wildcard
+  // would swallow the sdd-only `QFAI-CONTRACT-030` below.
+  contracts: [
+    "QFAI-CONTRACT-000",
+    "QFAI-CONTRACT-010",
+    "QFAI-CONTRACT-011",
+    "QFAI-CONTRACT-012",
+    "QFAI-CONTRACT-013",
+    "QFAI-CONTRACT-014",
+    "QFAI-CONTRACT-020",
+    "QFAI-CONTRACT-021",
+    "QFAI-CONTRACT-031",
+    "QFAI-CONTRACT-040",
+    "QFAI-DB-*",
+  ],
+  // `validateContractReferences` — `runSddValidators` only.
+  "contract-references": ["QFAI-CONTRACT-030"],
+  // `validateTraceability` — `runSddValidators` and `runTddValidators`. Its
+  // codes are the `QFAI-TRACE-1xx` block; `QFAI-TRACE-001/002` are the
+  // tdd-only integrity gate below.
+  traceability: ["QFAI-TRACE-1*"],
+  // `validateTraceabilityIntegrity` — `runTddValidators` only.
+  "traceability-integrity": ["QFAI-TRACE-001", "QFAI-TRACE-002"],
+  // Root DESIGN.md sample / identity / lock gates, run by both
+  // design-contract-readiness emitters before they branch on stage.
+  "design-contract-readiness": [
+    "QFAI-DCON-030",
+    "QFAI-DCON-031",
+    "QFAI-DCON-032",
+    "QFAI-DCON-033",
+    "QFAI-DCON-034",
+  ],
+  // `validateSddDesignContractReadiness` only — the premature-prototyping-
+  // output guard.
+  "design-contract-readiness-sdd": ["QFAI-DCON-019"],
+  // `validatePrototypingDesignContractReadiness` only — required design
+  // contracts plus the design-system / prototype-handoff mirrors.
+  "design-contract-readiness-prototyping": [
+    "QFAI-DCON-001",
+    "QFAI-DCON-005",
+    "QFAI-DCON-009",
+    "QFAI-DCON-012",
+    "QFAI-DCON-013",
+  ],
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
     "QFAI-PROT-*",
@@ -509,7 +556,10 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER", "D-SCAFFOLD-FOREIGN-HOME"],
-  tdd: ["TDDLIST_*", "TDDLIST-*", "QFAI-TEST-001", "QFAI-DRIFT-*"],
+  // `TDDLIST-001`..`TDDLIST-006` are deliberately absent: they are the waiver
+  // rule ids for the `TDDLIST_*` findings (`core/ruleIds.ts`,
+  // `validators/tddList.ts`), not codes any finding is ever emitted under.
+  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-DRIFT-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -521,6 +571,7 @@ const PROTOTYPING_GATE_GROUPS: readonly GateGroup[] = [
   "prototyping",
   "reviewer-gate-prototyping",
   "design-contract-readiness",
+  "design-contract-readiness-prototyping",
   "research-summary",
   "canonical-uix",
 ];
@@ -534,13 +585,22 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: ALL_GATE_GROUPS,
   verify: ALL_GATE_GROUPS,
   discussion: ["discussion", "research-summary", "canonical-uix"],
-  sdd: ["sdd", "reviewer-gate-sdd", "contracts", "traceability", "design-contract-readiness"],
+  sdd: [
+    "sdd",
+    "reviewer-gate-sdd",
+    "contracts",
+    "contract-references",
+    "traceability",
+    "design-contract-readiness",
+    "design-contract-readiness-sdd",
+  ],
   prototyping: PROTOTYPING_GATE_GROUPS,
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
   // scaffold-placeholder gate that completes the atdd group. It also calls
-  // `validateContracts` and `validateTraceability`, which sdd shares.
-  tdd: ["tdd", "atdd-traceability", "contracts", "traceability"],
+  // `validateContracts` and `validateTraceability`, which sdd shares, plus the
+  // tdd-only `validateTraceabilityIntegrity`.
+  tdd: ["tdd", "atdd-traceability", "contracts", "traceability", "traceability-integrity"],
   // `runSaasPackage` runs the prototyping composition, then narrows it via
   // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below).
   "saas-package": PROTOTYPING_GATE_GROUPS,
