@@ -1268,13 +1268,30 @@ const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   // deliberately absent — it is the shared preamble those scenarios run, not a
   // scenario a runner collects, so a feature that has only one declares no test.
   /^\s*(?:Scenario Outline|Scenario|Example)\s*:/m,
-  // Attribute / decorator declarations: JUnit 5's collectable annotations,
-  // NUnit / xUnit.net, Rust, pytest.
-  /^\s*(?:@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b|\[\s*(?:Test|Fact|Theory)\w*\s*[\]([]|#\[\s*(?:\w+::)?test\s*\]|@pytest\.mark\b)/m,
+  // Attribute / decorator declarations that name a collected unit: JUnit 5's
+  // collectable annotations, NUnit / xUnit.net, Rust. Container and lifecycle
+  // attributes are excluded on the same terms as the hook chains above — an
+  // `[TestFixture]` on an otherwise empty class and a `@pytest.mark.integration`
+  // on a plain helper declare nothing a runner collects, and pytest's own
+  // collection is the `def test\w*` convention on the next line anyway.
+  /^\s*(?:@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b|\[\s*(?:Test|TestCase|TestCaseSource|Fact|Theory)\s*[\]([]|#\[\s*(?:\w+::)?test\s*\])/m,
   // Naming conventions that are themselves the declaration: pytest, Go,
-  // PHPUnit, minitest.
-  /^\s*(?:async\s+)?(?:def\s+test\w*\s*\(|func\s+(?:Test|Benchmark|Fuzz)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
+  // PHPUnit, minitest. `Example` included because `go test` collects it and
+  // runs it whenever it carries an `// Output:` comment.
+  /^\s*(?:async\s+)?(?:def\s+test\w*\s*\(|func\s+(?:Test|Benchmark|Fuzz|Example)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
 ];
+
+/**
+ * A `.feature` written in a Gherkin dialect this scan cannot read English.
+ *
+ * Cucumber resolves `Scenario:` through the `# language:` header, so a feature
+ * declaring `ja` collects `シナリオ:` and matches no English keyword above.
+ * Carrying a keyword table for seventy dialects is not this scan's job, so a
+ * non-English feature is taken at its word and counted as declaring a test:
+ * over-counting one file costs a finding that would not have been raised,
+ * while under-counting reports a suite the runner does execute as unwritten.
+ */
+const LOCALISED_GHERKIN_RE = /^\s*#\s*language\s*:\s*(?!en\s*$)[A-Za-z]/im;
 
 /**
  * Blanks a comment or literal span, keeping its newlines.
@@ -1324,6 +1341,30 @@ const QUOTED_RE = /"(?:\\.|[^"\\\n])*"?|'(?:\\.|[^'\\\n])*'?|`(?:\\.|[^`\\])*`?/
 const REGEX_LITERAL_RE = /\/(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[A-Za-z]*/y;
 /** Characters that can end a value, so a `/` after one divides. */
 const VALUE_END_RE = /["'`\w$)\]]/;
+/**
+ * Words that end in an identifier character yet still open an expression.
+ *
+ * `return /^\s*```/;` reads as division on the character test alone, which
+ * leaves the backtick inside the literal free to open a template literal and
+ * blank the declaration below it — the failure the regex branch exists to
+ * prevent, one token further along.
+ */
+const EXPRESSION_KEYWORDS: ReadonlySet<string> = new Set([
+  "return",
+  "throw",
+  "typeof",
+  "instanceof",
+  "in",
+  "of",
+  "new",
+  "delete",
+  "void",
+  "case",
+  "do",
+  "else",
+  "yield",
+  "await",
+]);
 
 /** Matches the non-code span opening at `at`, or `null` when none does. */
 function nonCodeSpanAt(text: string, at: number): string | null {
@@ -1341,15 +1382,27 @@ function nonCodeSpanAt(text: string, at: number): string | null {
   return REGEX_LITERAL_RE.exec(text)?.[0] ?? null;
 }
 
-/** True when the nearest non-whitespace character before `at` ends a value. */
+/** True when the token before `at` ends a value, so a `/` there divides. */
 function endsValueBefore(text: string, at: number): boolean {
-  for (let back = at - 1; back >= 0; back -= 1) {
-    const char = text.charAt(back);
-    if (!/\s/.test(char)) {
-      return VALUE_END_RE.test(char);
-    }
+  let back = at - 1;
+  while (back >= 0 && /\s/.test(text.charAt(back))) {
+    back -= 1;
   }
-  return false;
+  if (back < 0) {
+    return false;
+  }
+  const char = text.charAt(back);
+  if (!VALUE_END_RE.test(char)) {
+    return false;
+  }
+  if (!/[\w$]/.test(char)) {
+    return true;
+  }
+  let wordStart = back;
+  while (wordStart > 0 && /[\w$]/.test(text.charAt(wordStart - 1))) {
+    wordStart -= 1;
+  }
+  return !EXPRESSION_KEYWORDS.has(text.slice(wordStart, back + 1));
 }
 
 function stripCommentsAndLiterals(text: string): string {
@@ -1373,8 +1426,14 @@ function stripCommentsAndLiterals(text: string): string {
 
 /** True when `file` is a carrier a runner could execute, judged on its body. */
 function hasRunnableTestStructure(file: string, text: string): boolean {
-  if (PROSE_CARRIER_EXTENSIONS.has(path.extname(file).slice(1).toLowerCase())) {
+  const extension = path.extname(file).slice(1).toLowerCase();
+  if (PROSE_CARRIER_EXTENSIONS.has(extension)) {
     return false;
+  }
+  // Read off the raw body: the header is a `#` comment, which the tokenizer
+  // below blanks along with every other one.
+  if (extension === "feature" && LOCALISED_GHERKIN_RE.test(text)) {
+    return true;
   }
   const code = stripCommentsAndLiterals(text);
   return RUNNABLE_TEST_STRUCTURE_PATTERNS.some((pattern) => pattern.test(code));

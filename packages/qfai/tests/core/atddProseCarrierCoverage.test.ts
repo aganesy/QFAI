@@ -354,6 +354,123 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("keeps reading code past a regex that follows a keyword, not only an operator", async () => {
+    // `return` ends in an identifier character, so the character test alone
+    // read the literal as division and let its backtick open a template.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "function fence() {",
+            "  return /^\\s*```/;",
+            "}",
+            'it("serves the story", () => {',
+            "  expect(fence()).toBeInstanceOf(RegExp);",
+            "});",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
+      },
+    );
+  });
+
+  it("does not count a container attribute or a bare pytest marker", async () => {
+    // `[TestFixture]` and `@pytest.mark.integration` decorate a class or a
+    // helper; neither names a unit the runner collects.
+    for (const [file, body] of [
+      ["tests/e2e/StoryFixture.cs", "[TestFixture]\npublic class StoryFixture { }\n"],
+      ["tests/e2e/test_story.py", "@pytest.mark.integration\ndef make_client():\n    return 1\n"],
+    ]) {
+      await withProject(
+        {
+          us: ["US-0001"],
+          files: { [file]: `// QFAI:SPEC-0001:US-0001\n${body}` },
+        },
+        async (root) => {
+          const config = {
+            ...defaultConfig,
+            validation: {
+              ...defaultConfig.validation,
+              traceability: {
+                ...defaultConfig.validation.traceability,
+                testFileGlobs: ["tests/**/*.cs", "tests/**/*.py"],
+              },
+            },
+          };
+          const issues = await validateAtddCodeTraceability(root, config);
+          expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+            "SPEC-0001:US-0001",
+          ]);
+        },
+      );
+    }
+  });
+
+  it("still counts the NUnit case attributes and a Go example function", async () => {
+    for (const [file, body] of [
+      ["tests/e2e/StoryTest.cs", '[TestCase("a")]\npublic void ServesTheStory(string s) { }\n'],
+      [
+        "tests/e2e/story_test.go",
+        'func ExampleStory() {\n\tfmt.Println("ok")\n\t// Output: ok\n}\n',
+      ],
+    ]) {
+      await withProject(
+        {
+          us: ["US-0001"],
+          files: { [file]: `// QFAI:SPEC-0001:US-0001\n${body}` },
+        },
+        async (root) => {
+          const config = {
+            ...defaultConfig,
+            validation: {
+              ...defaultConfig.validation,
+              traceability: {
+                ...defaultConfig.validation.traceability,
+                testFileGlobs: ["tests/**/*.cs", "tests/**/*.go"],
+              },
+            },
+          };
+          expect(codes(await validateAtddCodeTraceability(root, config))).not.toContain(
+            "QFAI-ATDD-118",
+          );
+        },
+      );
+    }
+  });
+
+  it("takes a localised Gherkin dialect at its word rather than reporting it unwritten", async () => {
+    // Cucumber resolves the keyword through `# language:`, and a keyword table
+    // for every dialect is not this scan's job — so a non-English feature is
+    // counted, which costs a finding rather than inventing one.
+    await withProject(
+      {
+        us: ["US-0001"],
+        files: {
+          "tests/e2e/us-0001.feature": [
+            "# language: ja",
+            "機能: story",
+            "  # QFAI:SPEC-0001:US-0001",
+            "  シナリオ: 物語を返す",
+            "    前提 ログイン済みの利用者",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
+      },
+    );
+  });
+
   it("does not count a Gherkin Background as a scenario, because no runner collects it", async () => {
     // `Background:` is the preamble every scenario runs, so a feature holding
     // only one has nothing to execute the annotation against.
