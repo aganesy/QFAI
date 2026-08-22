@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from "node:crypto";
 import { constants } from "node:fs";
-import { open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { open, readdir, rename, rm, writeFile } from "node:fs/promises";
 import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
@@ -62,6 +63,74 @@ export function isLocalAssistantOverlay(relativePath: string): boolean {
 }
 
 /**
+ * Prefix of the temporary file a governed write stages beside its target.
+ *
+ * Staging in the layer directory is what makes the write atomic — `rename`
+ * within one directory either lands whole or leaves the old file untouched —
+ * but it also puts a file qfai owns inside a scanned layer. The prefix is how
+ * `collectGovernedAssistantFiles` recognises it as qfai's own scaffolding
+ * rather than a normative file the project added.
+ */
+export const ASSISTANT_STAGING_PREFIX = ".qfai-staging-";
+
+/**
+ * Dotfiles inside a governed layer that are known housekeeping, not policy.
+ *
+ * Only these are skipped. Excluding every dotted name instead was a hole the
+ * size of the check: `constitution/.policy.md` is as normative as its
+ * undotted sibling, and a blanket `startsWith(".")` let one be added without
+ * `QFAI-ASSETS-005` ever seeing it — the exact bypass this record exists to
+ * close. `*.local.md` is the one sanctioned way to add a file here.
+ */
+const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
+  ".gitkeep",
+  ".gitignore",
+  ".gitattributes",
+  ".npmignore",
+  ".DS_Store",
+  ASSISTANT_ASSETS_LOCK_BASENAME,
+]);
+
+function isUngovernedManagementFile(basename: string): boolean {
+  return (
+    UNGOVERNED_MANAGEMENT_BASENAMES.has(basename) || basename.startsWith(ASSISTANT_STAGING_PREFIX)
+  );
+}
+
+/**
+ * True when `key` is a lock key qfai could itself have written: exactly
+ * `<governed layer>/<basename>`, with no traversal and no nesting.
+ *
+ * The lock is checked in with the project, so its keys are attacker- or
+ * accident-supplied input, not qfai's own output. A key of
+ * `../../package.json` joined against the assistant root resolves outside the
+ * governed tree entirely, and `qfai init --force` retires — deletes — any
+ * recorded path whose content still matches its recorded hash. Keys are
+ * therefore validated at the parse boundary, so neither `init` nor `validate`
+ * can be handed a path to act on that qfai does not own.
+ */
+export function isGovernedAssistantLockKey(key: string): boolean {
+  const segments = key.split("/");
+  if (segments.length !== 2) {
+    return false;
+  }
+  const [layer, basename] = segments;
+  if (layer === undefined || basename === undefined) {
+    return false;
+  }
+  const layers: readonly string[] = GOVERNED_ASSISTANT_LAYERS;
+  if (!layers.includes(layer)) {
+    return false;
+  }
+  if (basename.length === 0 || basename === "." || basename === "..") {
+    return false;
+  }
+  // `\` is a separator on Windows, and `\0` truncates a path at the syscall
+  // boundary on POSIX. Neither can appear in a name qfai ships.
+  return !/[\\/\0]/.test(basename);
+}
+
+/**
  * Hash of one assistant asset.
  *
  * CRLF is normalised first: the same file checked out on Windows and on Linux
@@ -119,24 +188,30 @@ const OPEN_READ_FLAGS =
  * POSIX paths, relative to the assistant root, of every governed file under
  * `assistantRoot`. Overlays are excluded: they are project property.
  */
-export async function collectGovernedAssistantFiles(assistantRoot: string): Promise<string[]> {
+export async function collectGovernedAssistantFiles(
+  assistantRoot: string,
+  options: { requireLayers?: boolean } = {},
+): Promise<string[]> {
   const found: string[] = [];
   for (const layer of GOVERNED_ASSISTANT_LAYERS) {
     const layerDir = path.join(assistantRoot, layer);
-    let entries: string[];
+    let entries: Dirent[];
     try {
-      entries = await readdir(layerDir);
+      entries = await readdir(layerDir, { withFileTypes: true });
     } catch (error: unknown) {
-      if (isEnoent(error)) {
+      if (isEnoent(error) && options.requireLayers !== true) {
         continue;
       }
       throw error;
     }
-    for (const entry of entries.sort((a, b) => a.localeCompare(b))) {
-      if (entry.startsWith(".") || isLocalAssistantOverlay(entry)) {
+    for (const entry of entries.sort((a, b) => a.name.localeCompare(b.name))) {
+      if (entry.isDirectory()) {
         continue;
       }
-      found.push(`${layer}/${entry}`);
+      if (isUngovernedManagementFile(entry.name) || isLocalAssistantOverlay(entry.name)) {
+        continue;
+      }
+      found.push(`${layer}/${entry.name}`);
     }
   }
   return found;
@@ -144,18 +219,30 @@ export async function collectGovernedAssistantFiles(assistantRoot: string): Prom
 
 /**
  * Governed-file hashes of the release currently installed.
+ *
+ * Fail-closed: a governed layer that cannot be read, or a shipped file whose
+ * content cannot be hashed, throws instead of narrowing the result. An empty
+ * or partial shipped set is not "this release ships less" — every entry the
+ * lock holds and the set does not is treated by `qfai init --force` as a rule
+ * the release withdrew, and deleted. A truncated install would have retired
+ * the project's whole constitution on the next upgrade.
  */
 export async function buildShippedAssistantHashes(
   assistantAssetsRoot: string,
 ): Promise<Record<string, string>> {
   const hashes: Record<string, string> = {};
-  for (const relative of await collectGovernedAssistantFiles(assistantAssetsRoot)) {
+  for (const relative of await collectGovernedAssistantFiles(assistantAssetsRoot, {
+    requireLayers: true,
+  })) {
     const hash = await hashAssistantAssetFile(
       path.join(assistantAssetsRoot, ...relative.split("/")),
     );
-    if (hash !== null) {
-      hashes[relative] = hash;
+    if (hash === null) {
+      throw new Error(
+        `qfai の配布アセット ${relative} を読み取れませんでした（インストールが不完全です）。`,
+      );
     }
+    hashes[relative] = hash;
   }
   return hashes;
 }
@@ -171,15 +258,34 @@ export function assistantAssetsLockPath(assistantRoot: string): string {
  * project initialised before this record existed has no lock, and a project
  * that corrupted one is in the same position as a project that never had one.
  * Refusing to validate in either case would trade a warning for a crash.
+ *
+ * The read is the same pinned, non-blocking, regular-file-only read the
+ * governed files themselves get. A plain `readFile` here waited for a writer
+ * when the checkout left `.assets.lock.json` as a FIFO — or a symlink to one —
+ * which hung `qfai init` and `qfai validate` outright, with no diagnostic and
+ * no timeout. An oversized lock is refused for the same reason: this file is a
+ * hash table qfai wrote, not arbitrary project input to buffer whole.
  */
 export async function readAssistantAssetsLock(
   assistantRoot: string,
 ): Promise<AssistantAssetsLock | null> {
+  let handle: FileHandle | undefined;
   let raw: string;
   try {
-    raw = await readFile(assistantAssetsLockPath(assistantRoot), "utf-8");
+    handle = await open(assistantAssetsLockPath(assistantRoot), OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile() || pinned.size > MAX_ASSISTANT_ASSETS_LOCK_BYTES) {
+      return null;
+    }
+    raw = await handle.readFile("utf-8");
   } catch {
     return null;
+  } finally {
+    try {
+      await handle?.close();
+    } catch {
+      // The parse below owns the answer; a close fault must not replace it.
+    }
   }
   try {
     return parseAssistantAssetsLock(JSON.parse(raw));
@@ -187,6 +293,13 @@ export async function readAssistantAssetsLock(
     return null;
   }
 }
+
+/**
+ * Ceiling on `.assets.lock.json`. Two governed layers of markdown produce a
+ * few kilobytes of sha256 entries; 4 MiB is orders of magnitude of headroom
+ * and still refuses a file that is not this record at all.
+ */
+const MAX_ASSISTANT_ASSETS_LOCK_BYTES = 4 * 1024 * 1024;
 
 function parseAssistantAssetsLock(value: unknown): AssistantAssetsLock | null {
   if (typeof value !== "object" || value === null || !("files" in value)) {
@@ -198,7 +311,10 @@ function parseAssistantAssetsLock(value: unknown): AssistantAssetsLock | null {
   }
   const parsed: Record<string, string> = {};
   for (const [key, entry] of Object.entries(files)) {
-    if (typeof entry === "string") {
+    // Keys that qfai could not have written are dropped, not honoured: the
+    // lock is project-supplied input and every consumer joins these keys onto
+    // the assistant root before reading — or, under `--force`, deleting.
+    if (typeof entry === "string" && isGovernedAssistantLockKey(key)) {
       parsed[key] = entry;
     }
   }
@@ -223,7 +339,10 @@ export async function writeAssistantAssetsLock(
   const ordered: Record<string, string> = {};
   for (const key of Object.keys(lock.files).sort((a, b) => a.localeCompare(b))) {
     const value = lock.files[key];
-    if (value !== undefined) {
+    // Same gate as the read side: a record qfai writes may only name paths
+    // qfai owns, so a key that survived from anywhere else cannot be laundered
+    // into a well-formed lock by a round trip through `init`.
+    if (value !== undefined && isGovernedAssistantLockKey(key)) {
       ordered[key] = value;
     }
   }

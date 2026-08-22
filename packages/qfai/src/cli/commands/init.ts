@@ -1,4 +1,5 @@
 import path from "node:path";
+import { randomUUID } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -23,6 +24,7 @@ import { promisify } from "node:util";
 
 import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import {
+  ASSISTANT_STAGING_PREFIX,
   buildShippedAssistantHashes,
   hashAssistantAssetFile,
   readAssistantAssetsLock,
@@ -190,10 +192,21 @@ export async function runInit(options: InitOptions): Promise<void> {
     info("参考: https://docs.github.com/en/copilot/using-github-copilot/code-review");
   }
 
+  // The generic `.qfai/` copy is create-only, so every governed file that
+  // already existed is in its `skipped` list before the governed sync runs.
+  // Whatever the governed sync then reports on is the authoritative outcome
+  // for that path — refreshed, left forked, retired — so the generic verdict
+  // is dropped rather than printed beside it, which showed one path twice and
+  // listed a file `--force` had just updated as "skipped".
+  const governedPaths = new Set([
+    ...governedResult.copied,
+    ...governedResult.skipped,
+    ...governedResult.removed,
+  ]);
   report(
     [
       ...rootResult.copied,
-      ...qfaiResult.copied,
+      ...withoutPaths(qfaiResult.copied, governedPaths),
       ...skillsResult.copied,
       ...wrappersResult.copied,
       ...gitignoreResult.copied,
@@ -205,7 +218,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     ],
     [
       ...rootResult.skipped,
-      ...qfaiResult.skipped,
+      ...withoutPaths(qfaiResult.skipped, governedPaths),
       ...skillsResult.skipped,
       ...wrappersResult.skipped,
       ...gitignoreResult.skipped,
@@ -244,6 +257,10 @@ export async function runInit(options: InitOptions): Promise<void> {
 // Governed assistant assets: provenance record + upgrade path
 // ---------------------------------------------------------------------------
 
+function withoutPaths(paths: string[], excluded: ReadonlySet<string>): string[] {
+  return paths.filter((candidate) => !excluded.has(candidate));
+}
+
 type GovernedAssetsResult = {
   copied: string[];
   skipped: string[];
@@ -281,6 +298,15 @@ async function syncGovernedAssistantAssets(
   try {
     shipped = await buildShippedAssistantHashes(assistantAssets);
   } catch {
+    // Fail closed. An unreadable or partially extracted install yields a
+    // shipped set that is short of files it really ships, and every governed
+    // file the lock names but the set omits is what `--force` retires — so a
+    // truncated package would have deleted the rules it could not read. The
+    // sync is abandoned whole: nothing refreshed, nothing removed, and the
+    // existing record left exactly as it was.
+    manualMergeNotes.push(
+      "NOTE: qfai の配布アセット（assistant/constitution/**, assistant/catalog/**）を読み取れなかったため、これらの層の同期と .assets.lock.json の更新をスキップしました（インストールが不完全な可能性があります）。",
+    );
     return { copied, skipped, removed, manualMergeNotes };
   }
 
@@ -293,23 +319,26 @@ async function syncGovernedAssistantAssets(
     const currentHash = await hashAssistantAssetFile(dest);
     const previousHash = previous[relative];
 
-    if (currentHash === shippedHash || currentHash === null) {
+    if (currentHash === shippedHash) {
       recorded[relative] = shippedHash;
+      continue;
+    }
+
+    if (currentHash === null) {
+      await restoreUnreadableGovernedAsset(source, dest, shippedHash, previousHash, options, {
+        copied,
+        skipped,
+        recorded,
+        manualMergeNotes,
+        relative,
+      });
       continue;
     }
 
     const refreshable = options.force && previousHash !== undefined && currentHash === previousHash;
     if (refreshable) {
       if (!options.dryRun) {
-        await mkdir(path.dirname(dest), { recursive: true });
-        // The link, not what it points at. `copyFile` follows a symlink, so a
-        // governed path left pointing at another file — the repository's own
-        // `package.json`, say — had that file replaced with shipped markdown
-        // by `--force`. Removing the entry first makes the refresh land on the
-        // governed path as a regular file, which is the only thing this
-        // function claims to write.
-        await rm(dest, { force: true });
-        await copyFile(source, dest);
+        await replaceGovernedAsset(source, dest);
       }
       copied.push(dest);
       recorded[relative] = shippedHash;
@@ -337,6 +366,97 @@ async function syncGovernedAssistantAssets(
   }
 
   return { copied, skipped, removed, manualMergeNotes };
+}
+
+/**
+ * Writes `source` onto the governed path `dest` atomically.
+ *
+ * The copy lands on a temporary beside the target first and is then `rename`d
+ * over it, so a failure — a full disk, a read fault, a process killed between
+ * the two steps — leaves the previous rule in place instead of a hole where a
+ * normative file used to be. Deleting first and copying second had exactly
+ * that window, and the file it removed was one qfai had already vouched for.
+ *
+ * `rename` also keeps the property the delete-first version was written for:
+ * it replaces the directory entry itself, so a governed path left as a symlink
+ * is replaced, never followed to overwrite whatever it points at.
+ */
+async function replaceGovernedAsset(source: string, dest: string): Promise<void> {
+  const directory = path.dirname(dest);
+  await mkdir(directory, { recursive: true });
+  const staging = path.join(directory, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`);
+  try {
+    await copyFile(source, staging, constants.COPYFILE_EXCL);
+    await rename(staging, dest);
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault below is the one worth reporting.
+    });
+    throw error;
+  }
+}
+
+/**
+ * Handles a governed path that holds no readable regular file.
+ *
+ * Recording the shipped hash here was a false claim: nothing had been written,
+ * so the next `validate` compared the project against a record of a file that
+ * was never there. Worse, when the path is *occupied* — by a directory, a
+ * FIFO, a dangling symlink — the create-only copy upstream skips it as
+ * existing and this branch wrote nothing either, so `QFAI-ASSETS-006` kept
+ * firing and no `init`, `--force` included, could clear it.
+ *
+ * Absent is restored. Occupied is only replaced under `--force`, which is the
+ * flag that already means "regenerate what qfai owns"; without it the occupant
+ * is reported and left alone, because removing something a project deliberately
+ * put there is not a decision `qfai init` gets to make silently.
+ */
+async function restoreUnreadableGovernedAsset(
+  source: string,
+  dest: string,
+  shippedHash: string,
+  previousHash: string | undefined,
+  options: { force: boolean; dryRun: boolean },
+  out: {
+    copied: string[];
+    skipped: string[];
+    recorded: Record<string, string>;
+    manualMergeNotes: string[];
+    relative: string;
+  },
+): Promise<void> {
+  // An `lstat` that fails for anything but ENOENT (a permission fault on the
+  // parent, say) reads as occupied: what could not be inspected must not be
+  // clobbered.
+  const occupied = await pathExists(dest).catch(() => true);
+  if (!occupied) {
+    if (!options.dryRun) {
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    return;
+  }
+
+  if (options.force) {
+    if (!options.dryRun) {
+      // The occupant may be a directory; `rm -r` is what a `rename` over it
+      // would otherwise fail on.
+      await rm(dest, { force: true, recursive: true });
+      await replaceGovernedAsset(source, dest);
+    }
+    out.copied.push(dest);
+    out.recorded[out.relative] = shippedHash;
+    out.manualMergeNotes.push(
+      `NOTE: ${dest} は通常ファイル以外（ディレクトリ / 特殊ファイル / 壊れた symlink 等）に占有されていたため、出荷ファイルで置き換えました。`,
+    );
+    return;
+  }
+
+  out.skipped.push(dest);
+  if (previousHash !== undefined) {
+    out.recorded[out.relative] = previousHash;
+  }
 }
 
 /**

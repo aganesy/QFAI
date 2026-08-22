@@ -1,5 +1,5 @@
 import { execFile } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, rm, symlink, writeFile } from "node:fs/promises";
+import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -151,6 +151,145 @@ describe("assistant asset provenance", () => {
     expect(unshipped).toHaveLength(1);
     expect(unshipped[0]?.file).toContain("review-gate.local.yml");
   });
+
+  it("checks a dotted filename too, and still ignores known housekeeping dotfiles", async () => {
+    const root = await makeProject();
+    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
+    await writeFile(path.join(constitutionDir, ".gitkeep"), "", "utf-8");
+    await writeFile(path.join(constitutionDir, ".policy.md"), "# hidden rule\n", "utf-8");
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    expect(unshipped).toHaveLength(1);
+    expect(unshipped[0]?.file).toContain(".policy.md");
+  });
+
+  it("refuses to build a shipped set from an incompletely extracted install", async () => {
+    const broken = await mkdtemp(path.join(os.tmpdir(), "qfai-provenance-broken-"));
+    tempRoots.push(broken);
+    // `catalog/` never extracted. Reporting an empty layer here would make
+    // every catalog entry in a project's lock look like a withdrawn rule.
+    await cp(path.join(shippedAssistantDir, "constitution"), path.join(broken, "constitution"), {
+      recursive: true,
+    });
+
+    await expect(buildShippedAssistantHashes(broken)).rejects.toThrow();
+  });
+
+  it("drops a lock key that points outside the governed layers", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const outside = path.join(root, "outside-victim.json");
+    const outsideBody = '{ "name": "victim" }\n';
+    await writeFile(outside, outsideBody, "utf-8");
+
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await writeFile(
+      path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME),
+      `${JSON.stringify(
+        {
+          files: {
+            ...(lock?.files ?? {}),
+            "../../outside-victim.json": hashAssistantAssetText(outsideBody),
+            "catalog/../../../escape.md": "deadbeef",
+            "catalog/nested/deep.md": "deadbeef",
+          },
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    const parsed = await readAssistantAssetsLock(assistantDir);
+    expect(parsed?.files["../../outside-victim.json"]).toBeUndefined();
+    expect(parsed?.files["catalog/../../../escape.md"]).toBeUndefined();
+    expect(parsed?.files["catalog/nested/deep.md"]).toBeUndefined();
+
+    // The retire pass deletes any recorded path whose content still matches
+    // its recorded hash: an honoured traversal key would take this file with it.
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(outside, "utf-8")).toBe(outsideBody);
+  }, 120000);
+
+  it("repairs a governed path occupied by a directory, and never calls it shipped", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const governed = path.join(assistantDir, "constitution", "quality.md");
+    await rm(path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME), { force: true });
+    await rm(governed);
+    await mkdir(governed);
+    await writeFile(path.join(governed, "inner.md"), "# project content\n", "utf-8");
+
+    await captureStdout(() => runInit({ dir: root, force: false, dryRun: false, yes: true }));
+
+    // Nothing was written there, so nothing may be recorded as if it had been.
+    const plainLock = await readAssistantAssetsLock(assistantDir);
+    expect(plainLock?.files["constitution/quality.md"]).toBeUndefined();
+    expect(codesOf(await validateAssistantAssets(root, defaultConfig))).toContain(
+      "QFAI-ASSETS-006",
+    );
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
+    expect(hashAssistantAssetText(await readFile(governed, "utf-8"))).toBe(
+      shipped["constitution/quality.md"],
+    );
+    const forcedLock = await readAssistantAssetsLock(assistantDir);
+    expect(forcedLock?.files["constitution/quality.md"]).toBe(shipped["constitution/quality.md"]);
+  }, 120000);
+
+  it("reports each governed path once, with the governed outcome", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const shipped = await buildShippedAssistantHashes(shippedAssistantDir);
+    const stalePath = path.join(assistantDir, "catalog", "test-layers.md");
+    const forkedPath = path.join(assistantDir, "constitution", "quality.md");
+    const staleBody = "# Test Layers\n\nOlder release.\n";
+    await writeFile(stalePath, staleBody, "utf-8");
+    await writeFile(
+      forkedPath,
+      `${await readFile(forkedPath, "utf-8")}\n- project rule\n`,
+      "utf-8",
+    );
+    await writeAssistantAssetsLock(assistantDir, {
+      files: { ...shipped, "catalog/test-layers.md": hashAssistantAssetText(staleBody) },
+    });
+
+    const output = await captureStdout(() =>
+      runInit({ dir: root, force: true, dryRun: false, yes: true }),
+    );
+    const listedTimes = (needle: string): number =>
+      output.split("\n").filter((line) => line.trim().startsWith("- ") && line.includes(needle))
+        .length;
+
+    // Refreshed by the governed sync, so the generic create-only skip for the
+    // same path must not survive into the report.
+    expect(listedTimes(path.join("catalog", "test-layers.md"))).toBe(0);
+    expect(listedTimes(path.join("constitution", "quality.md"))).toBe(1);
+    // No staging file is left behind by the atomic refresh.
+    const catalogEntries = await readdir(path.join(assistantDir, "catalog"));
+    expect(catalogEntries.filter((entry) => entry.includes("qfai-staging"))).toEqual([]);
+  }, 120000);
+
+  it.skipIf(process.platform === "win32")(
+    "answers for a FIFO at the lock path instead of waiting for a writer",
+    async () => {
+      const root = await makeProject();
+      const assistantDir = path.join(root, ".qfai", "assistant");
+      const lockPath = path.join(assistantDir, ASSISTANT_ASSETS_LOCK_BASENAME);
+      await rm(lockPath, { force: true });
+      await promisify(execFile)("mkfifo", [lockPath]);
+
+      // A plain `readFile` here blocks until a writer appears, hanging both
+      // `qfai init` and `qfai validate` with no diagnostic.
+      expect(await readAssistantAssetsLock(assistantDir)).toBeNull();
+      expect(Array.isArray(await validateAssistantAssets(root, defaultConfig))).toBe(true);
+    },
+    15000,
+  );
 
   it("retires a governed file the installed release no longer ships", async () => {
     const root = await makeProject();

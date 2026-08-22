@@ -269,7 +269,7 @@ function provenanceIssue(
         "assistantAssets.missingVendoredAsset",
         undefined,
         "canonical",
-        "`npx qfai init` を実行すると欠落した出荷ファイルを復元します。適用対象外にしたい規範がある場合は、削除ではなく Change Request を残してください。",
+        "`npx qfai init` を実行すると欠落した出荷ファイルを復元します（同じパスをディレクトリや特殊ファイルが占有している場合は `npx qfai init --force` が置き換えます）。適用対象外にしたい規範がある場合は、削除ではなく Change Request を残してください。",
       );
   }
 }
