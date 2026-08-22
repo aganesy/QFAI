@@ -2059,6 +2059,47 @@ something is written, believed without reading it.
     was one round old, it arrived as a residual under a passing check, and it landed in the commit that
     OPENS a review round — the one moment this stage's own rule says the subject must stop moving.
 
+11. **Three claims this record retracted are standing, live and unquoted, in the execution ledger — a
+    file this skill reads and does not write.** Round 20's `qa-gatekeeper` re-grepped all 33 needles
+    over every tracked file and found them; `GOVERNANCE` does not list
+    `.qfai/specs/spec-0017/tdd/test-list.md`, so nothing in this stage's instruments can see them. This
+    stage re-derived the finding independently with the guard's own needle set and flattening, over
+    2388 tracked files.
+
+    ```text
+    tdd/test-list.md:107  "becomes implementable once the pull request has three green"
+                          retracted: that exit is unreachable — the run it waits for is gated on the
+                          annotation it would justify (P1d pass 1)
+    tdd/test-list.md:107  "NOT BLOCKED by a CR"
+    tdd/test-list.md:108  "NOT BLOCKED by a CR"
+                          retracted: the negation of the `Blocked-By: CR-20260820-0012` the row is
+                          being given (P1d round 7, `A1`)
+    ```
+
+    **It is recorded rather than repaired, and the reason is ownership rather than difficulty.**
+    `qfai-implement/references/execution-ledger.md` gives that file one writer, and this skill's own
+    Read Set Contract says it is "read, never written". Adding it to `GOVERNANCE` would turn a required
+    `e2e` leg red against text this stage may not edit — which is the "a guard that reddens on the
+    honest edit" hazard the record has tracked since round 10, in its purest form: there would be no
+    honest edit available at all.
+
+    So it goes to the ledger's owner with the lines quoted. What this stage can say is that the claims
+    are refuted and by what, which is above.
+
+    **The related limit, measured.** Two of the 33 needles cannot be widened as they stand, and this
+    paragraph deliberately does not write either of them out — round 20 found that doing so is itself
+    the offence, which is the neatest demonstration available that the guard works:
+
+    - the **pack-count** needle matches a sentence in `_policies/08_Decisions.md`,
+      `_policies/10_delta.md` and `spec-0017/09_delta.md` about one design being fragmented across
+      three SPEC packs, which is a different noun from a review pack;
+    - the **seal-filter** needle matches an unrelated rejected option in `_policies/08_Decisions.md`
+      about shipping a list-only view.
+
+    All three of those files are upstream SSOT this skill may not patch either. A needle that cannot be
+    widened without accusing a file you cannot fix is a needle at the edge of its scope, and that is
+    where these two are.
+
 ## Round 2, and the P7 evidence for it
 
 Three reviewers ran on `56daee8d` — **two of them blocking**, per `agent-routing.yml`, whose atdd
@@ -2097,7 +2138,7 @@ numbers.
 currency both times.** Round 3 found the first version written at `16f611c7` before `21ea1ddc` landed
 +489/-76 across four files, so it certified three artifacts that postdated it — established by
 `git log -S`. Round 4 found the replacement stale in the same way. **These numbers are measured at the working tree of this commit**, which carries every repair through
-round 19: the e2e figure is 1477 and the integration+unit figure 1239.
+round 20: the e2e figure is 1478 and the integration+unit figure 1240.
 
 **And the integration+unit figure moved — but not for the reason this paragraph gave for a round, and
 the figure it replaced had been wrong since round 15.** A concurrent session pushed `b0f9d443` onto this
@@ -2121,7 +2162,7 @@ touching it was written one commit after this stage moved it.
 
 **And the arithmetic exposes the predecessor.** Total minus callsites is constant per project — for
 integration+unit, 99 against passed and 118 against passed-plus-skipped; for e2e, 564 and 580. It holds
-at round 12's `1216` / `1117`, at today's e2e `1477` / `913`, and at
+at round 12's `1216` / `1117`, at today's e2e `1478` / `914`, and at
 today's `1239` / `1140`. At `20121003` the callsite count was 1120, so the true figure was **1219** and
 the record said **1220**: one high for the whole of rounds 15 to 18, in the block whose first sentence is
 "re-run after the last artifact changed". The re-measurement that replaced it did not detect that,
@@ -2186,8 +2227,8 @@ mode, for the third time.
 ```text
 pnpm ci:lint                                    exit 0, all eleven members
 pnpm check-types                                exit 0
-pnpm -C packages/qfai test:e2e                  1477 passed / 16 skipped, exit 0
-vitest --project integration --project unit     1239 passed / 19 skipped, exit 0
+pnpm -C packages/qfai test:e2e                  1478 passed / 16 skipped, exit 0
+vitest --project integration --project unit     1240 passed / 19 skipped, exit 0
 node scripts/check-atdd-annotation-ledger.mjs --spec 0017
                                                 9 claim(s) backed, exit 0
 pnpm verify:pack                                exit 0 (ok=16 info=2 warning=1 error=0)
@@ -2423,6 +2464,9 @@ differ.
 | 19    | `implementation-reviewer` | REVISE  |        8 | B1, M1-M3, m1-m3, A1   |       8 |
 | 19    | `completion-reviewer`     | REVISE  |       13 | B1-B6, M1-M2, m1-m3, A1-A2 | 13 |
 | 19    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B3, M1-M3, m1-m3, A1 |     10 |
+| 20    | `implementation-reviewer` | REVISE  |        8 | B1, M1-M4, m1-m2, A1   |       8 |
+| 20    | `completion-reviewer`     | REVISE  |       16 | B1-B6, M1-M4, m1-m4, A1-A2 | 16 |
+| 20    | `qa-gatekeeper` (stage)   | REVISE  |       15 | B1-B2, M1-M4, m1-m3, A1-A6 | 15 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2666,10 +2710,16 @@ decoration goes through `bash -c` with the marker cleared first; the row is corr
 existence matches the list it is filed under.
 
 ```text
-34 decorations executed under bash
-   25 live    all 25 ran            marker: "npx tsup" (and "npx tsup )" for the round-19 escape)
-    9 inert   none of the 9 ran     marker absent
+40 decorations executed under bash
+   29 live    all 29 ran            marker: "npx tsup" (and "npx tsup )" for the round-19 escape)
+   11 inert   none of the 11 ran    marker absent
 ```
+
+**What it costs, measured, because round 20 asked.** Forty serial subprocesses: **4.1 s** alone and
+**12.3 s** inside a full `--project e2e` run against this repository's ten workers. The review
+measured 12 s against a 15 s budget and called it a risk; the budget is the describe's own
+`{ timeout: 120000 }`, not the project default, so the margin is ten times the cost rather than a
+quarter of it. Recorded because the next round should not have to re-derive which budget applies.
 
 **Two rows were misfiled and the run is what found them**, which is the whole argument for doing it:
 
@@ -3003,7 +3053,7 @@ Review pack seal:  b62a5174cf942a19308c18c9bccfccd6cf460ffd3e1d2b6f9c7a97a099e47
 Review pack:       .qfai/review/review-20260822180000000/            (round 19 — stage gates only)
 Review pack seal:  084ba5ee9d2b676aa87d15534d4badb01a028c4bd81bd40efcdade51ddbdb810
 Review pack:       .qfai/review/review-20260823000000000/            (round 20 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  f988c704c39608dc04e184d88c5af8bdb0cb71340426b7fa966c0f8b9c9e3243
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
@@ -3044,7 +3094,24 @@ round  last report at   summary.json at   gap
  16    7d67a719         7d67a719          same commit
  17    953a6afe         953a6afe          same commit
  18    20121003         20121003          same commit
+ 19    1fad70cb         6f64a9a1          4 commits
 ```
+
+**Row 19 is the first row in nineteen with a real gap, and it is this stage's own.** The last
+report was force-added at `1fad70cb` and the `summary.json` at `6f64a9a1`, four commits later —
+the four being repairs this stage applied to round 19's findings between the reports landing and
+the pack being sealed. `SKILL.md` fixes the seal at the moment the last response lands, and this
+sealed it at the moment the repairs were done. Nothing was laundered: the seal recomputes over the
+current bytes and the reports in it are byte-identical to what the reviewers wrote. What the gap
+costs is the property the table exists to provide — a reader cannot tell, from the seal alone,
+whether the pack was sealed before or after the stage started answering it.
+
+**Round 20 has the same gap, and larger.** The first version of this paragraph said round 20 would
+seal before applying anything; it did not, and the sentence was written while that was already
+untrue. The cause is structural rather than an oversight: this stage force-adds a pack's files when
+it next commits, and it next commits when it has applied something. Sealing at the moment the last
+response lands would mean a commit that touches nothing else, which is the change to make and is
+not made here. Recorded as the practice actually followed rather than as the practice claimed.
 
 **Rows 13 to 18 were missing for six rounds while the section pointing here said it measures the gap
 per round.** Round 19 found a twelve-row table presented as the eighteen-round claim; the rows above
