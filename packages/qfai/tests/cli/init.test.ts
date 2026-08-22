@@ -55,6 +55,18 @@ function legacyWrapperBody(stem: string): string {
   ].join("\n");
 }
 
+/** The bullet form `.github/prompts/*.prompt.md` shipped with, not the `@` one. */
+function legacyPromptWrapperBody(stem: string): string {
+  return [
+    "---",
+    `description: "QFAI: ${stem}"`,
+    "---",
+    "1) Open and follow the canonical QFAI prompt:",
+    `- .qfai/assistant/prompts/${stem}.md`,
+    "",
+  ].join("\n");
+}
+
 async function expectSymlink(linkPath: string): Promise<void> {
   const stat = await lstat(linkPath);
   expect(stat.isSymbolicLink()).toBe(true);
@@ -508,9 +520,13 @@ describe("qfai init", { timeout: 60000 }, () => {
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
       await writeFile(deprecatedClaude, legacyWrapperBody("qfai-spec"), "utf-8");
-      await writeFile(deprecatedGithub, legacyWrapperBody("qfai-spec"), "utf-8");
+      await writeFile(deprecatedGithub, legacyPromptWrapperBody("qfai-spec"), "utf-8");
       await writeFile(deprecatedCanonicalClaude, legacyWrapperBody("qfai-configure"), "utf-8");
-      await writeFile(deprecatedCanonicalGithub, legacyWrapperBody("qfai-configure"), "utf-8");
+      await writeFile(
+        deprecatedCanonicalGithub,
+        legacyPromptWrapperBody("qfai-configure"),
+        "utf-8",
+      );
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
@@ -673,6 +689,58 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await expectSymlink(alias);
       expect(await readFile(path.join(alias, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project command whose fence nests a shorter one", async () => {
+    // CommonMark closes a fence only on the same character, at least as long.
+    // Flipping on any fence line read the inner ``` as the close, and the
+    // quoted delegation after it counted as the real thing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "How the retired wrapper was documented:",
+        "",
+        "````md",
+        "```",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "````",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a project command carrying a delegation in the prompt wrapper's form", async () => {
+    // `.claude/commands/` only ever got the `@<path>` form; the `- <path>`
+    // bullet is what the prompt and skill wrappers use. Sharing one set of
+    // forms across surfaces accepted a shape qfai never wrote there, so a
+    // project's own reference list was evidence against it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = "Reading list:\n\n- .qfai/assistant/skills/qfai-spec/SKILL.md\n";
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
     } finally {
       await rm(root, { recursive: true, force: true });
     }

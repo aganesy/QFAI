@@ -1940,7 +1940,12 @@ const LEGACY_WRAPPER_STEMS: ReadonlySet<string> = new Set([
  * とき、削除可否を判定するためだけに全内容を文字列へ展開すると init 全体が
  * OOM で止まる。上限を超えるものは「所有権を証明できないもの」として残す。
  */
-async function isInitWrittenWrapper(dir: string, name: string, suffix: string): Promise<boolean> {
+async function isInitWrittenWrapper(
+  dir: string,
+  name: string,
+  suffix: string,
+  delegations: DelegationForms,
+): Promise<boolean> {
   if (!name.endsWith(suffix)) {
     return false;
   }
@@ -1954,7 +1959,7 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
     return false;
   }
 
-  return hasDelegationLine(body, stem);
+  return hasDelegationLine(body, delegations(stem));
 }
 
 /**
@@ -1970,36 +1975,64 @@ async function isInitWrittenWrapper(dir: string, name: string, suffix: string): 
  * 旧 wrapper の中身を自分の doc に転記しただけの自作 command が生成物として
  * 消えていた。qfai が配った wrapper は委譲行を fence の中に置かない。
  */
-function hasDelegationLine(body: string, stem: string): boolean {
-  const delegations = new Set(DELEGATION_LINES(stem));
-  let fenced = false;
+function hasDelegationLine(body: string, forms: readonly string[]): boolean {
+  const delegations = new Set(forms);
+  let open: { marker: string; length: number } | null = null;
   for (const line of body.split(/\r?\n/)) {
-    if (FENCE_RE.test(line)) {
-      fenced = !fenced;
+    const fence = FENCE_RE.exec(line);
+    if (fence !== null) {
+      const marker = fence[1]?.[0] ?? "";
+      const length = fence[1]?.length ?? 0;
+      if (open === null) {
+        open = { marker, length };
+        continue;
+      }
+      // CommonMark: 閉じるのは「同じ文字で、開いたときと同じ長さ以上」の
+      // fence だけ。どの fence 行でも状態を反転させていたため、4 backtick の
+      // ブロックの中に 3 backtick の例が入っていると、そこで閉じたと誤認して
+      // 続く引用行を「本物の委譲行」として数えていた。
+      if (marker === open.marker && length >= open.length) {
+        open = null;
+      }
       continue;
     }
-    if (!fenced && delegations.has(line)) {
+    if (open === null && delegations.has(line)) {
       return true;
     }
   }
   return false;
 }
 
-/** Markdown の code fence 行 (``` / ~~~、字下げ可、情報文字列可)。 */
-const FENCE_RE = /^\s{0,3}(?:`{3,}|~{3,})/;
+/** Markdown の code fence 行 (``` / ~~~、字下げ 0-3、情報文字列可)。 */
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
+
+/** その stem に対して、ある surface で出荷実績のある委譲行の全形。 */
+type DelegationForms = (stem: string) => readonly string[];
 
 /**
- * 出荷実績のある委譲行の全形。
+ * 出荷実績のある委譲行 — surface ごとに形が違う。
  *
- * Claude の slash command は `@<path>`、Copilot prompt / Codex / Agents の
- * skill wrapper は箇条書きの `- <path>` で canonical doc を指す。canonical の
- * 置き場所は `assistant/prompts/<stem>.md` から `assistant/skills/<stem>/SKILL.md`
- * へ移っており、どちらの世代の wrapper もまだプロジェクトに残りうる。
+ * Claude の slash command は `@<path>`、Copilot prompt と skill wrapper の
+ * `SKILL.md` は箇条書きの `- <path>`。両方を全 surface で受理すると、qfai が
+ * その場所へ一度も書いたことのない形まで所有権の証拠になり、参照一覧に
+ * `- .qfai/...` を並べただけの自作 command が消える。
+ *
+ * canonical の置き場所は `assistant/prompts/<stem>.md` から
+ * `assistant/skills/<stem>/SKILL.md` へ移っており、command / prompt には
+ * どちらの世代の wrapper もまだプロジェクトに残りうる。skill wrapper が
+ * 配られたのは後者になってからなので、そちらは 1 形だけ。
  */
-const DELEGATION_LINES = (stem: string): readonly string[] => {
-  const targets = [`.qfai/assistant/prompts/${stem}.md`, `.qfai/assistant/skills/${stem}/SKILL.md`];
-  return targets.flatMap((target) => [`@${target}`, `- ${target}`]);
-};
+const CLAUDE_COMMAND_DELEGATIONS: DelegationForms = (stem) => [
+  `@.qfai/assistant/prompts/${stem}.md`,
+  `@.qfai/assistant/skills/${stem}/SKILL.md`,
+];
+
+const GITHUB_PROMPT_DELEGATIONS: DelegationForms = (stem) => [
+  `- .qfai/assistant/prompts/${stem}.md`,
+  `- .qfai/assistant/skills/${stem}/SKILL.md`,
+];
+
+const SKILL_DOC_DELEGATIONS: DelegationForms = (id) => [`- .qfai/assistant/skills/${id}/SKILL.md`];
 
 /**
  * 所有権判定のために読む wrapper 本文の上限。
@@ -2116,7 +2149,9 @@ async function classifyInitWrittenSkillWrapper(
   }
   if (entry.isDirectory()) {
     const doc = await readWrapperEvidence(path.join(entryPath, "SKILL.md"));
-    return doc !== null && hasDelegationLine(doc, entry.name) ? "directory" : null;
+    return doc !== null && hasDelegationLine(doc, SKILL_DOC_DELEGATIONS(entry.name))
+      ? "directory"
+      : null;
   }
   if (!entry.isFile()) {
     return null;
@@ -2147,7 +2182,9 @@ async function pruneStaleQfaiWrappers(
   // 1. Remove the .claude/commands/*.md wrappers qfai itself once wrote
   await pruneMatchingEntries(
     path.join(destRoot, ".claude", "commands"),
-    async (entry, dir) => entry.isFile() && (await isInitWrittenWrapper(dir, entry.name, ".md")),
+    async (entry, dir) =>
+      entry.isFile() &&
+      (await isInitWrittenWrapper(dir, entry.name, ".md", CLAUDE_COMMAND_DELEGATIONS)),
     removed,
     dryRun,
   );
@@ -2156,7 +2193,8 @@ async function pruneStaleQfaiWrappers(
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "prompts"),
     async (entry, dir) =>
-      entry.isFile() && (await isInitWrittenWrapper(dir, entry.name, ".prompt.md")),
+      entry.isFile() &&
+      (await isInitWrittenWrapper(dir, entry.name, ".prompt.md", GITHUB_PROMPT_DELEGATIONS)),
     removed,
     dryRun,
   );
