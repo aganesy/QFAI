@@ -74,7 +74,12 @@ describe("completion contract placeholder scan", () => {
       expect(baseline).toContain("**A documented `TBD` is a compliant record.**");
       expect(baseline).toContain("together with a note of what evidence is missing");
       expect(baseline).toContain("deleting it destroys the record of the missing evidence");
-      expect(baseline).toContain("Only a bare `TBD` with no such note is a hit.");
+      // The exemption needs both halves `thinking.md` requires: the missing-evidence
+      // note AND the Open Question. A note-only `TBD` is still a hit.
+      expect(baseline).toContain("requires raising the matching Open Question");
+      expect(baseline).toContain(
+        "A `TBD` missing either half — no note, or no Open Question — is a hit.",
+      );
     });
 
     it(`${tree}: a surviving hit has a stated verdict`, async () => {
@@ -85,7 +90,20 @@ describe("completion contract placeholder scan", () => {
       expect(baseline).toContain(
         "whether it is now resolved, deferred with rationale, or recorded as an Open Question",
       );
-      expect(baseline).toContain("Completion is blocked only while a hit is none of the three.");
+      expect(baseline).toContain("Completion is blocked while a hit is none of the three.");
+    });
+
+    it(`${tree}: the severity floor withholds the Open Question verdict`, async () => {
+      const baseline = flat(await read(tree, BASELINE));
+
+      expect(baseline).toContain("**Severity floor on the verdict.**");
+      expect(baseline).toContain(
+        "_Deferred with rationale_ and _recorded as an Open Question_ are NOT available",
+      );
+      expect(baseline).toContain(
+        "a concrete security defect, data loss or corruption, or a correctness defect that would break a released contract",
+      );
+      expect(baseline).toContain("cleared only by a named fix or by dropping the item from scope");
     });
 
     it(`${tree}: the required Open-questions templates still ship the exempted strings`, async () => {

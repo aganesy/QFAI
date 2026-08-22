@@ -180,7 +180,7 @@ Before declaring completion, you MUST:
 
 ### What the placeholder scan does not flag
 
-**`OQ` and `OPEN QUESTION` are not placeholders.** An `OQ-NNNN-NNNN` row is a
+**`OQ` and `OPEN QUESTION` are not placeholders.** An `OQ-ID` row is a
 tracked artifact with an owner, a status and a due date, and the
 `Open-questions.md` files are required outputs that ship containing both strings
 while recording zero open questions. Article II and `workflow.md` both end an
@@ -189,10 +189,11 @@ must never be reported as an unresolved placeholder.
 
 **A documented `TBD` is a compliant record.** `constitution.md` Article II and
 `thinking.md` require writing `TBD` together with a note of what evidence is
-missing. That pairing is the finished form, not an unfinished one; do not report
-it and do not delete it — deleting it destroys the record of the missing
-evidence, which is the whole point of the marker. Only a bare `TBD` with no such
-note is a hit.
+missing, and `thinking.md` requires raising the matching Open Question for the
+same fact. Both halves together are the finished form, not an unfinished one; do
+not report it and do not delete it — deleting it destroys the record of the
+missing evidence, which is the whole point of the marker. A `TBD` missing either
+half — no note, or no Open Question — is a hit.
 
 ### What a surviving hit obligates
 
@@ -200,4 +201,13 @@ A hit is **reported, not silently cleared**. List every surviving hit alongside
 the completion claim — file, line, token — and state for each one whether it is
 now resolved, deferred with rationale, or recorded as an Open Question. A
 completion claim that omits a surviving hit is invalid evidence under the rules
-above. Completion is blocked only while a hit is none of the three.
+above. Completion is blocked while a hit is none of the three.
+
+**Severity floor on the verdict.** _Deferred with rationale_ and _recorded as an
+Open Question_ are NOT available for a hit that stands in for a concrete
+security defect, data loss or corruption, or a correctness defect that would
+break a released contract. Such a hit is cleared only by a named fix or by
+dropping the item from scope; recording it and declaring completion anyway is
+prohibited, exactly as `shared-skill-delegation-baseline.md` withholds that same
+exit for that same class. While neither of the two remaining verdicts applies,
+completion stays blocked.
