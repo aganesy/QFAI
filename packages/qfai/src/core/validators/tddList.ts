@@ -129,6 +129,16 @@ const VALID_STATUSES = new Set([
   "exception",
 ]);
 
+/**
+ * Every ledger status that still owes work: `VALID_STATUSES` less `done`.
+ *
+ * Derived rather than listed, so a new non-terminal status cannot be added to
+ * the vocabulary and left out of the retirement migration instruction — which
+ * would strand exactly the rows nothing asks for again. `blocked` and
+ * `review-fix` are the two that were missed when this was spelled out by hand.
+ */
+const LIVE_LEDGER_STATUSES = Array.from(VALID_STATUSES).filter((status) => status !== "done");
+
 /** The column naming what a `blocked` row is waiting on. Optional; required on `blocked`. */
 const BLOCKED_BY_COLUMN = "Blocked-By";
 
@@ -568,15 +578,20 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
  * to be able to list them. `info` keeps them printed while taking them out of
  * `--fail-on error` / `--fail-on warning`.
  *
- * Only a status the enum recognises retires a ledger — an absent or
- * unparseable one leaves the spec current here and is reported by its own rule.
+ * Only a complete declaration retires a ledger: `SpecEntry.status` is set from
+ * the header block alone, and only once the retirement carries the companion
+ * field it requires. An absent, unparseable, out-of-header or half-written
+ * `Status:` leaves the spec current here and is reported by its own
+ * `QFAI-STATUS-00N` rule — which matters because `--profile tdd` runs this
+ * validator without `validateSpecPacks`, so a demotion it granted on an
+ * unvalidated declaration would answer to nothing.
  */
 function demoteRetiredSpecIssues(issues: readonly Issue[], entry: SpecEntry): Issue[] {
   const status = entry.status;
   if (status === undefined || status === "active") {
     return [...issues];
   }
-  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (todo / red / green / refactor / exception) to the successor spec's \`${TDD_LIST_REL_PATH}\` and leave done rows as the historical record.`;
+  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (${LIVE_LEDGER_STATUSES.join(" / ")}) to the successor spec's \`${TDD_LIST_REL_PATH}\`, remapping each TC-Ref onto the successor's own TC IDs from its 06_Test-Cases.md, and leave done rows as the historical record.`;
   return issues.map((found): Issue => {
     return {
       ...found,

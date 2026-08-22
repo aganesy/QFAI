@@ -91,24 +91,87 @@ export function extractBulletField(md: string, name: string): string | undefined
   return value;
 }
 
+/** `Superseded-by` names a spec directory: `spec-0042`. */
+export const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
+/** `Deprecated-at` is an ISO calendar date: `2026-05-02`. */
+export const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The lifecycle declaration of a spec: its `Status:` bullet and companions. */
+export type SpecLifecycle = {
+  status: SpecStatus;
+  supersededBy?: string;
+  deprecatedAt?: string;
+};
+
+/** Start of the first `##`+ section — the end of the leading bullet block. */
+const HEADER_BLOCK_END_RE = /^#{2,6}\s/m;
+
 /**
- * The lifecycle status of a spec, read straight from its `Status:` bullet.
+ * The leading metadata block of `01_Spec.md`: everything before its first `##`
+ * heading.
  *
- * Returns `undefined` when the bullet is absent or holds a value outside
- * {@link SPEC_STATUS_VALUES}. `QFAI-STATUS-001` / `QFAI-STATUS-002` report
- * those two cases on their own, and a caller that branches on the lifecycle
- * (retiring a ledger, skipping a classification) must not act on a spelling no
- * validator accepted.
+ * `extractBulletField` matches the first bullet anywhere in the document, so an
+ * illustrative `- Status: deprecated` quoted in a prose section would otherwise
+ * read as the spec's own lifecycle. `QFAI-STATUS-001` places the bullet in
+ * "01_Spec.md の冒頭 bullet ブロック", so a lifecycle branch honours exactly
+ * that block.
+ */
+function specHeaderBlock(md: string): string {
+  const firstSection = HEADER_BLOCK_END_RE.exec(md);
+  return firstSection === null ? md : md.slice(0, firstSection.index);
+}
+
+/**
+ * The lifecycle a spec declares in its header block.
  *
- * This is the cheap path for callers that need only the status: `parseSpec`
+ * Returns `undefined` when the header block has no `Status:` bullet or holds a
+ * value outside {@link SPEC_STATUS_VALUES}: `QFAI-STATUS-001` /
+ * `QFAI-STATUS-002` report those two cases on their own, and a caller that
+ * branches on the lifecycle (retiring a ledger, skipping a classification) must
+ * not act on a spelling no validator accepted.
+ *
+ * This is the cheap path for callers that need only the lifecycle: `parseSpec`
  * also exposes it, but reads the whole document to do so.
  */
-export function parseSpecStatus(md: string): SpecStatus | undefined {
-  const raw = extractBulletField(md, "Status");
+export function parseSpecLifecycle(md: string): SpecLifecycle | undefined {
+  const header = specHeaderBlock(md);
+  const raw = extractBulletField(header, "Status");
   if (raw === undefined || !isSpecStatus(raw)) {
     return undefined;
   }
-  return raw;
+  const lifecycle: SpecLifecycle = { status: raw };
+  const supersededBy = extractBulletField(header, "Superseded-by");
+  if (supersededBy !== undefined) {
+    lifecycle.supersededBy = supersededBy;
+  }
+  const deprecatedAt = extractBulletField(header, "Deprecated-at");
+  if (deprecatedAt !== undefined) {
+    lifecycle.deprecatedAt = deprecatedAt;
+  }
+  return lifecycle;
+}
+
+/**
+ * Whether a retirement carries the companion field its status requires, in the
+ * shape `QFAI-STATUS-003` / `-005` / `-006` demand.
+ *
+ * A caller that acts on the retirement — dropping a ledger out of the gate —
+ * must not do so on half a declaration: `--profile tdd` never runs
+ * `validateSpecPacks`, so `- Status: superseded` with no `Superseded-by` would
+ * otherwise retire a ledger with nothing anywhere reporting the omission.
+ * Whether the named successor exists is `QFAI-STATUS-004`'s question and
+ * changes only which spec inherits the work, not that the source retired.
+ */
+export function isLifecycleDeclarationComplete(lifecycle: SpecLifecycle): boolean {
+  switch (lifecycle.status) {
+    case "active":
+      return true;
+    case "superseded":
+      return lifecycle.supersededBy !== undefined && SUPERSEDED_BY_RE.test(lifecycle.supersededBy);
+    case "deprecated":
+    case "removed":
+      return lifecycle.deprecatedAt !== undefined && DEPRECATED_AT_RE.test(lifecycle.deprecatedAt);
+  }
 }
 
 const SPEC_ID_RE = /\bSPEC-\d{4}\b/;

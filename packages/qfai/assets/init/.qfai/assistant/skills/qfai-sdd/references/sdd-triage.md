@@ -194,12 +194,21 @@ ops), `Rationale` (recommended for every row).
 Retiring a spec retires its execution ledger with it, so move the work
 **before** rewriting `Status:`:
 
-1. Migrate every live row of the source spec's `tdd/test-list.md`
-   (`todo` / `red` / `green` / `refactor` / `exception`) into the
-   successor spec's ledger, keeping the TC-Refs it carried.
-2. Leave `done` rows where they are — they are the historical record of
+1. Migrate every live row of the source spec's `tdd/test-list.md` into
+   the successor spec's ledger. Live = every `Status` except `done`:
+   `todo` / `blocked` / `red` / `green` / `refactor` / `review-fix` /
+   `exception`. `blocked` is an obligation nobody has started and
+   `review-fix` is a reviewer's REVISE still owed — leaving either
+   behind retires work that was never delivered.
+2. Remap each migrated `TC-Refs` cell onto the successor's own TC IDs.
+   TC IDs are spec-namespaced (`TC-NNNN-MMMM`, `NNNN` = spec number),
+   so a copied `TC-Refs` fails `TDDLIST_UNKNOWN_REF` in the successor
+   and leaves its matching TC at `TDDLIST_TC_NOT_COVERED`. Build the
+   correspondence from the successor's `06_Test-Cases.md`; if it has no
+   TC for a migrated row, add one there first.
+3. Leave `done` rows where they are — they are the historical record of
    what the retired spec delivered.
-3. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
+4. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).
 
 `validate` demotes every ledger finding on a non-active spec to `info`,
 matching the rule above that triage ignores such specs. That is what

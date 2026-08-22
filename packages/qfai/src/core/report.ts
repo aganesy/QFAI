@@ -2091,6 +2091,10 @@ async function collectLedgerLayerCounts(specsRoot: string): Promise<{
   let total = 0;
 
   for (const entry of await collectSpecEntries(specsRoot)) {
+    // A retired spec's rows are the record of what it delivered, not the
+    // repository's current test-layer distribution — and `validate` has already
+    // stopped gating on them.
+    if (entry.status !== undefined && entry.status !== "active") continue;
     const ledgerPath = path.join(entry.dir, "tdd", "test-list.md");
     let text: string;
     try {

@@ -34,7 +34,7 @@ const LEDGER = `# TDD Execution Ledger
 
 async function withProject<T>(
   fn: (root: string) => Promise<T>,
-  opts: { ledger?: string; examples?: string } = {},
+  opts: { ledger?: string; examples?: string; spec?: string } = {},
 ): Promise<T> {
   const root = path.join(
     os.tmpdir(),
@@ -44,7 +44,7 @@ async function withProject<T>(
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   try {
     for (const [name, body] of [
-      ["01_Spec.md", "# Spec\n"],
+      ["01_Spec.md", opts.spec ?? "# Spec\n"],
       ["02_User-stories.md", "# US\n"],
       ["03_Acceptance-Criteria.md", "# AC\n"],
       ["05_Examples.md", opts.examples ?? "# 05 Examples\n\n| EX-ID | BR-Ref |\n| --- | --- |\n"],
@@ -108,6 +108,20 @@ describe("the layer distribution reads the artifact the templates produce", () =
         expect(report.markdown).toContain("- source: `Layer` column of `tdd/test-list.md`");
       },
       { ledger: LEDGER },
+    );
+  });
+
+  it("leaves a retired spec's ledger out of the distribution", async () => {
+    // `validate` has stopped gating on these rows; counting them here would
+    // present a retired spec's history as the repository's current test mix.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        const report = { testStrategy: data.testStrategy, markdown: formatReportMarkdown(data) };
+        expect(report.testStrategy.layerSource).toBe("none");
+        expect(report.testStrategy.layer.unit).toBe(0);
+      },
+      { ledger: LEDGER, spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n" },
     );
   });
 

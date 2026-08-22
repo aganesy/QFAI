@@ -124,6 +124,25 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/info/);
   });
 
+  it("lists every non-done ledger status as live work to migrate", async () => {
+    // `blocked` (never started) and `review-fix` (a reviewer's REVISE still
+    // owed) are obligations too: omitted from the migration, they are retired
+    // along with the spec and nothing asks for them again.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    for (const status of ["todo", "blocked", "red", "green", "refactor", "review-fix"]) {
+      expect(ref).toContain(`\`${status}\``);
+    }
+  });
+
+  it("tells the migration to remap TC-Refs into the successor's namespace", async () => {
+    // TC IDs are spec-namespaced, so TC-Refs copied verbatim fail
+    // `TDDLIST_UNKNOWN_REF` in the successor and leave its own TCs uncovered.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/TC-Refs/);
+    expect(ref).toMatch(/TDDLIST_UNKNOWN_REF/);
+    expect(ref).toMatch(/06_Test-Cases\.md/);
+  });
+
   it("documents the append-first principle and impact cascade", async () => {
     const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
     expect(ref).toMatch(/append-first/i);

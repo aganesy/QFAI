@@ -93,4 +93,47 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
       expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
     });
   });
+
+  it("ignores a Status bullet outside the header block", async () => {
+    // A bullet quoted in a prose section is an example, not this spec's
+    // lifecycle — and with no header `Status:` at all, `QFAI-STATUS-001` is the
+    // rule that answers for the file.
+    await withSpecStatus(
+      [
+        "## Notes",
+        "",
+        "SUPERSEDE writes this pair into the source spec:",
+        "",
+        "- Status: deprecated",
+        "- Deprecated-at: 2026-01-01",
+      ],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
+  it("does not retire a spec whose retirement declaration is incomplete", async () => {
+    // `--profile tdd` never runs `validateSpecPacks`, so a `superseded` bullet
+    // with no `Superseded-by` would demote the whole ledger with nothing
+    // anywhere reporting the omission.
+    await withSpecStatus(["- Status: superseded"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+    await withSpecStatus(["- Status: deprecated", "- Deprecated-at: last spring"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+  });
+
+  it("names every non-done ledger status in the migration instruction", async () => {
+    // `blocked` and `review-fix` are live obligations too: a migration that
+    // lists only some of them retires work that was never delivered.
+    await withSpecStatus(["- Status: superseded", "- Superseded-by: spec-0002"], (issues) => {
+      const action = issues[0]?.suggested_action ?? "";
+      for (const status of ["todo", "blocked", "red", "green", "refactor", "review-fix"]) {
+        expect(action).toContain(status);
+      }
+      expect(action).toContain("TC-Ref");
+    });
+  });
 });

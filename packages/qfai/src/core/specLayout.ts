@@ -2,7 +2,11 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
-import { parseSpecStatus, type SpecStatus } from "./parse/spec.js";
+import {
+  isLifecycleDeclarationComplete,
+  parseSpecLifecycle,
+  type SpecStatus,
+} from "./parse/spec.js";
 
 const SPEC_DIR_RE = /^spec-\d{4}$/i;
 // Canonical: catalog/ — registry artifacts (filename lists, lookup
@@ -143,10 +147,14 @@ export type SpecEntry = {
   layeredStyle: LayeredStyle | null;
   specNumber: string;
   /**
-   * The spec's lifecycle `Status:` bullet, when it declares one the enum
-   * recognises. Absent for a spec with no bullet, an unparseable value, or an
-   * unreadable spec file — all three cases are reported by their own rules, and
-   * a caller that branches on the lifecycle must treat them as still current.
+   * The spec's lifecycle, read from the `Status:` bullet of its header block —
+   * present only when the declaration is one a caller may act on.
+   *
+   * Absent for a spec with no bullet, an unparseable value, an unreadable spec
+   * file, or a retirement missing the companion field it requires
+   * (`Superseded-by` / `Deprecated-at`). Every one of those is reported by its
+   * own rule (`QFAI-STATUS-001` … `-006`), and a caller that branches on the
+   * lifecycle must treat them all as still current.
    */
   status?: SpecStatus;
   // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
@@ -284,19 +292,30 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
 }
 
 /**
- * Read one spec's lifecycle status from disk.
+ * Read one spec's actionable lifecycle status from disk.
  *
  * A spec file that cannot be read yields no status rather than an exception:
  * the layout collector is the entry point for the very validators that report a
  * missing or unreadable spec file, so throwing here would replace those
  * findings with a crash.
+ *
+ * An incomplete retirement yields no status either — see
+ * {@link isLifecycleDeclarationComplete}. The gate lives here rather than in
+ * each consumer so that every reader of `SpecEntry.status` retires a spec on
+ * the same evidence.
  */
 async function readSpecStatus(specMetaPath: string): Promise<SpecStatus | undefined> {
+  let md: string;
   try {
-    return parseSpecStatus(await readFile(specMetaPath, "utf-8"));
+    md = await readFile(specMetaPath, "utf-8");
   } catch {
     return undefined;
   }
+  const lifecycle = parseSpecLifecycle(md);
+  if (lifecycle === undefined || !isLifecycleDeclarationComplete(lifecycle)) {
+    return undefined;
+  }
+  return lifecycle.status;
 }
 
 export async function collectMissingRequiredFiles(

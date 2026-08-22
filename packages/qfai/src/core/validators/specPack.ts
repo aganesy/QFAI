@@ -36,7 +36,13 @@ import {
   parseTestCaseIds,
   resolveTestCaseTable,
 } from "../specPackParsers.js";
-import { parseSpec, SPEC_STATUS_VALUES, type ParsedSpec } from "../parse/spec.js";
+import {
+  DEPRECATED_AT_RE,
+  parseSpec,
+  SPEC_STATUS_VALUES,
+  SUPERSEDED_BY_RE,
+  type ParsedSpec,
+} from "../parse/spec.js";
 import {
   TRIAGE_TABLE_HEADER,
   TRIAGE_TOP_LEVEL_OPS,
@@ -163,8 +169,6 @@ async function validatePoliciesDeltaTriage(specsRoot: string): Promise<Issue[]> 
 }
 
 const STATUS_ENUM_LIST = SPEC_STATUS_VALUES.join(" | ");
-const SUPERSEDED_BY_RE = /^spec-\d{4}$/;
-const DEPRECATED_AT_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 async function validateSpecStatusForEntry(
   entry: SpecEntry,
