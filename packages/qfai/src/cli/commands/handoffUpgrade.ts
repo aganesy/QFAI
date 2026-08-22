@@ -16,6 +16,7 @@
  * if absent so a clean project can run `qfai handoff upgrade` without
  * a preparatory `mkdir`.
  */
+import { randomBytes } from "node:crypto";
 import {
   constants as fsConstants,
   copyFile,
@@ -232,9 +233,17 @@ function toRelPosix(root: string, abs: string): string {
  * Quote a path for the copy-pasteable command hints. Plain paths are
  * emitted bare; anything carrying shell-significant characters (spaces
  * above all) is double-quoted with the inner specials escaped.
+ *
+ * A backslash is deliberately NOT in the bare-safe set. A POSIX shell
+ * consumes an unquoted `\` as an escape character, so a root or legacy
+ * filename containing one would be silently rewritten by the paste —
+ * selecting a different legacy file or a different project root and
+ * force-overwriting a canonical handoff the operator never named.
+ * Windows paths therefore render quoted with doubled separators, which
+ * every consumer of this hint resolves identically.
  */
 function quoteArg(value: string): string {
-  return /^[A-Za-z0-9._:@/\\-]+$/.test(value) ? value : `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+  return /^[A-Za-z0-9._:@/-]+$/.test(value) ? value : `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
 }
 
 /**
@@ -369,24 +378,54 @@ async function backupExclusively(destAbs: string): Promise<string | null> {
 }
 
 /**
+ * Fallback placement for filesystems that reject hard links (FAT, some
+ * network mounts): create the destination with `wx` (`O_EXCL`), which
+ * is still EXCLUSIVE — an entry that appeared after the probe yields
+ * `EEXIST` and is reported, never overwritten.
+ *
+ * What this surrenders relative to `link` is reader atomicity, and only
+ * on the fresh-placement path: there is no prior canonical file for a
+ * reader to see torn, just a destination that briefly holds fewer bytes
+ * than it finally will.
+ */
+async function createExclusively(
+  destAbs: string,
+  body: string,
+  stagedPath: string,
+): Promise<"placed" | "exists"> {
+  try {
+    await writeFile(destAbs, body, { encoding: "utf-8", flag: "wx" });
+  } catch (err: unknown) {
+    if (isEexist(err)) return "exists";
+    throw err;
+  }
+  await removeQuietly(stagedPath);
+  return "placed";
+}
+
+/**
  * Place the staged file at `destAbs` without ever replacing an entry
  * that appeared after the existence probe.
  *
  * `link` is the exclusive primitive here: it fails with `EEXIST` rather
  * than clobbering, so the probe-then-place window cannot silently
- * destroy a canonical handoff another process created in the meantime
- * (`rename` would replace it unconditionally — no refusal, no backup).
- * Filesystems that reject hard links outright degrade to `rename`,
- * which keeps the command usable there at the cost of the exclusivity
- * guarantee.
+ * destroy a canonical handoff another process created in the meantime.
+ * A `link` failure that is NOT `EEXIST` means hard links are
+ * unavailable, not that the destination is taken — so it degrades to
+ * `createExclusively`, never to `rename`. `rename` replaces its target
+ * unconditionally: on a link-hostile filesystem it would hand back the
+ * exact clobber-without-backup this function exists to prevent.
  */
-async function placeExclusively(stagedPath: string, destAbs: string): Promise<"placed" | "exists"> {
+async function placeExclusively(
+  stagedPath: string,
+  destAbs: string,
+  body: string,
+): Promise<"placed" | "exists"> {
   try {
     await link(stagedPath, destAbs);
   } catch (err: unknown) {
     if (isEexist(err)) return "exists";
-    await rename(stagedPath, destAbs);
-    return "placed";
+    return createExclusively(destAbs, body, stagedPath);
   }
   await removeQuietly(stagedPath);
   return "placed";
@@ -402,9 +441,10 @@ async function commitFresh(
   root: string,
   destAbs: string,
   stagedPath: string,
+  body: string,
 ): Promise<CommitResult> {
   try {
-    if ((await placeExclusively(stagedPath, destAbs)) === "exists") {
+    if ((await placeExclusively(stagedPath, destAbs, body)) === "exists") {
       await removeQuietly(stagedPath);
       return {
         ok: false,
@@ -452,6 +492,34 @@ async function commitOverExisting(
 }
 
 /**
+ * Write the staged bytes to a sibling name reserved EXCLUSIVELY for
+ * this run, and return that name.
+ *
+ * The name carries per-run entropy and is opened with `wx` (`O_EXCL`),
+ * so a staging file left behind by an interrupted run is never reopened.
+ * With a fixed `<dest>.tmp` it would be: after a successful fresh
+ * placement the staging entry is a HARD LINK to the canonical handoff
+ * itself, and a run that crashed before its cleanup leaves that link on
+ * disk. The next `--force` run would then truncate the canonical file
+ * through the staging name *before* `backupExclusively` copies it — so
+ * the backup would capture the new content and the operator's bytes
+ * would be gone from both paths.
+ */
+async function stageExclusively(destAbs: string, body: string): Promise<string> {
+  const base = `${destAbs}.tmp-`;
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const candidate = `${base}${randomBytes(6).toString("hex")}`;
+    try {
+      await writeFile(candidate, body, { encoding: "utf-8", flag: "wx" });
+      return candidate;
+    } catch (err: unknown) {
+      if (!isEexist(err)) throw err;
+    }
+  }
+  throw new Error(`could not reserve an unused staging name near ${base}`);
+}
+
+/**
  * Stage → back up → place. An operator's hand-curated handoff is always
  * recoverable from disk rather than only from git, and every failure
  * path fails closed: the staged file is removed and the destination is
@@ -463,24 +531,27 @@ async function commitCanonicalWrite(args: {
   destExists: boolean;
   yaml: string;
 }): Promise<CommitResult> {
-  const stagedPath = `${args.destAbs}.tmp`;
+  const body = `${args.yaml}\n`;
+  let stagedPath: string;
   try {
     await mkdir(path.dirname(args.destAbs), { recursive: true });
-    await writeFile(stagedPath, `${args.yaml}\n`, "utf-8");
+    stagedPath = await stageExclusively(args.destAbs, body);
   } catch (err: unknown) {
-    await removeQuietly(stagedPath);
     return { ok: false, message: describeError(err) };
   }
   return args.destExists
     ? commitOverExisting(args.root, args.destAbs, stagedPath)
-    : commitFresh(args.root, args.destAbs, stagedPath);
+    : commitFresh(args.root, args.destAbs, stagedPath, body);
 }
 
 /**
- * Run the upgrade. Two-stage write: stage to a `.tmp` sibling via
- * `writeFile`, then publish it over the canonical destination — `link`
- * when the destination was absent (exclusive: an entry that appeared in
- * the meantime is refused, not clobbered), `rename` when `force` is
+ * Run the upgrade. Two-stage write: stage to a `.tmp-<random>` sibling
+ * created with `O_EXCL` (never a fixed name — a leftover staging entry
+ * from an interrupted run is a hard link to the canonical file itself),
+ * then publish it over the canonical destination — `link` when the
+ * destination was absent (exclusive: an entry that appeared in the
+ * meantime is refused, not clobbered; where hard links are unsupported,
+ * an `O_EXCL` create keeps that refusal), `rename` when `force` is
  * replacing a known file. Both are atomic at the directory-entry level,
  * so readers either see the old file or the new file (never a partial
  * write), and the `force` backup is a COPY so the canonical path never

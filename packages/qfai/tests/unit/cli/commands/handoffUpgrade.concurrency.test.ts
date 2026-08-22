@@ -3,13 +3,15 @@
  * never lets the canonical path go missing (TC-0015-0031,
  * AC-0015-0020).
  *
- * The existence probe and the placement are two syscalls apart, so both
+ * The existence probe and the placement are two syscalls apart, so the
  * cases here need a hook that runs *inside* that window — one process
  * creating `.qfai/handoff.yaml` after the probe, and a reader observing
- * the destination while a forced replacement is in flight. `vi.mock` is
- * hoisted to module scope, so these fs-instrumented cases live apart
- * from the other handoff-upgrade files rather than mocking fs for every
- * case in them.
+ * the destination while a forced replacement is in flight. The last two
+ * cases additionally force `link` to fail, standing in for a filesystem
+ * that rejects hard links: the fallback must stay exclusive rather than
+ * degrade to a clobbering `rename`. `vi.mock` is hoisted to module
+ * scope, so these fs-instrumented cases live apart from the other
+ * handoff-upgrade files rather than mocking fs for every case in them.
  */
 // QFAI:SPEC-0015:TC-0015-0031
 
@@ -28,6 +30,12 @@ const { hooks } = vi.hoisted(() => ({
     afterWriteFile: null as null | ((target: string) => Promise<void>),
     /** Runs before every `rename` — the publish step of the commit. */
     beforeRename: null as null | ((from: string, to: string) => Promise<void>),
+    /**
+     * When set, `link` fails with this errno instead of running —
+     * standing in for a filesystem that rejects hard links outright
+     * (FAT, some network mounts).
+     */
+    linkErrno: null as null | string,
   },
 }));
 
@@ -50,8 +58,30 @@ vi.mock("node:fs/promises", async () => {
       if (hooks.beforeRename !== null) await hooks.beforeRename(String(from), String(to));
       await actual.rename(from, to);
     },
+    link: async (
+      from: Parameters<FsPromises["link"]>[0],
+      to: Parameters<FsPromises["link"]>[1],
+    ): Promise<void> => {
+      if (hooks.linkErrno !== null) {
+        const err: NodeJS.ErrnoException = new Error(
+          `${hooks.linkErrno}: link is unsupported here`,
+        );
+        err.code = hooks.linkErrno;
+        throw err;
+      }
+      await actual.link(from, to);
+    },
   };
 });
+
+/**
+ * True iff `p` is one of this command's staging siblings. The name
+ * carries per-run entropy (a fixed `<dest>.tmp` would be a hard link to
+ * the canonical file after a crashed run), so match on the prefix.
+ */
+function isStagingName(p: string): boolean {
+  return path.basename(p).startsWith("handoff.yaml.tmp-");
+}
 
 const { runHandoffUpgrade } = await import("../../../../src/cli/commands/handoffUpgrade.js");
 
@@ -60,12 +90,14 @@ let root: string;
 beforeEach(async () => {
   hooks.afterWriteFile = null;
   hooks.beforeRename = null;
+  hooks.linkErrno = null;
   root = await mkdtemp(path.join(os.tmpdir(), "qfai-handoff-upgrade-race-"));
 });
 
 afterEach(async () => {
   hooks.afterWriteFile = null;
   hooks.beforeRename = null;
+  hooks.linkErrno = null;
   await rm(root, { recursive: true, force: true });
 });
 
@@ -88,7 +120,7 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     // and the file appears while our staged copy is on disk. A plain
     // `rename` would replace it — exit 0, no backup, no warning.
     hooks.afterWriteFile = async (target) => {
-      if (!target.endsWith("handoff.yaml.tmp")) return;
+      if (!isStagingName(target)) return;
       hooks.afterWriteFile = null;
       await writeFile(destAbs, rival, "utf-8");
     };
@@ -119,7 +151,7 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     // saas-package profile) would observe ENOENT on a consumed SSOT.
     const observed: boolean[] = [];
     hooks.beforeRename = async (from, to) => {
-      if (!from.endsWith("handoff.yaml.tmp")) return;
+      if (!isStagingName(from)) return;
       observed.push(await exists(to));
     };
     const code = await runHandoffUpgrade({
@@ -139,5 +171,50 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     await expect(readFile(path.join(root, ".qfai", backups[0] ?? ""), "utf-8")).resolves.toBe(
       curated,
     );
+  });
+
+  // A filesystem that rejects hard links (FAT, some network mounts)
+  // fails `link` with something other than EEXIST. Degrading that to a
+  // plain `rename` would replace whatever appeared after the probe with
+  // no refusal and no backup — precisely the clobber the exclusive
+  // placement exists to prevent.
+  it("refuses a rival file even when hard links are unavailable", async () => {
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    const rival = "companyName: Rival Writer\nsignature: written-by-another-process\n";
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    hooks.linkErrno = "EPERM";
+    hooks.afterWriteFile = async (target) => {
+      if (!isStagingName(target)) return;
+      hooks.afterWriteFile = null;
+      await writeFile(destAbs, rival, "utf-8");
+    };
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    await expect(readFile(destAbs, "utf-8")).resolves.toBe(rival);
+    expect(errs.join("\n")).toMatch(/was created while this upgrade was running/);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  it("still places the canonical file when hard links are unavailable", async () => {
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    hooks.linkErrno = "EPERM";
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    await expect(readFile(path.join(root, ".qfai", "handoff.yaml"), "utf-8")).resolves.toMatch(
+      /companyName: "FreshCo"/,
+    );
+    // The exclusive-create fallback still clears its staging sibling.
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
   });
 });

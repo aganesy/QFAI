@@ -9,6 +9,7 @@
 // QFAI:SPEC-0015:TC-0015-0030
 
 import {
+  link,
   lstat,
   mkdir,
   mkdtemp,
@@ -36,6 +37,17 @@ beforeEach(async () => {
 afterEach(async () => {
   await rm(root, { recursive: true, force: true });
 });
+
+/**
+ * How the re-run hint is expected to render `value`. Mirrors the
+ * command's own quoting rule: bare when every character is shell-inert,
+ * otherwise double-quoted with `"`, `\`, `$` and a backtick escaped. A
+ * backslash is NOT shell-inert — a POSIX shell eats an unquoted one —
+ * so a Windows path renders quoted with doubled separators.
+ */
+function shellArg(value: string): string {
+  return /^[A-Za-z0-9._:@/-]+$/.test(value) ? value : `"${value.replace(/(["\\$`])/g, "\\$1")}"`;
+}
 
 const LEGACY_BODY = `# legacy session handoff
 companyName: Acme
@@ -296,9 +308,10 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     const message = errs.join("\n");
     expect(message).toMatch(/\.qfai\/handoff\.yaml already exists/);
     expect(message).toMatch(/qfai handoff upgrade legacy-old\.yml --root \S+ --force/);
-    expect(message).toContain(root);
-    // No staged remnant is left behind.
-    await expect(readFile(`${destAbs}.tmp`, "utf-8")).rejects.toThrow();
+    expect(message).toContain(shellArg(root));
+    // No staged remnant is left behind (the staging name carries per-run
+    // entropy, so assert on the directory rather than one fixed name).
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
     expect(out).toEqual([]);
   });
 
@@ -337,6 +350,65 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     await expect(readFile(path.join(root, ".qfai", backupName), "utf-8")).resolves.toBe(CURATED);
     // The success line names the backup so the operator can find it.
     expect(out.join("\n")).toMatch(/backed up to \.qfai\/handoff\.yaml\.backup-/);
+  });
+
+  // A legacy filename carrying a literal backslash must not be emitted
+  // bare: pasted into a POSIX shell the backslash is consumed as an
+  // escape, so `legacy\-old.yml` would name `legacy-old.yml` — a
+  // DIFFERENT file — and force-overwrite the canonical handoff from it.
+  // Backslash is a path separator on Windows, so a filename can only
+  // carry a literal one on POSIX — which is exactly where the unquoted
+  // paste misfires.
+  it.skipIf(process.platform === "win32")(
+    "quotes a backslash in the --force re-run hint",
+    async () => {
+      await seedCanonicalAndLegacy();
+      const legacyName = "legacy\\-old.yml";
+      await writeFile(path.join(root, legacyName), "companyName: Wrong Co\n", "utf-8");
+      const errs: string[] = [];
+      const code = await runHandoffUpgrade({
+        root,
+        legacyFile: legacyName,
+        write: () => undefined,
+        writeErr: (m) => errs.push(m),
+      });
+      expect(code).toBe(1);
+      const message = errs.join("\n");
+      expect(message).toContain('"legacy\\\\-old.yml"');
+      expect(message).not.toMatch(/upgrade legacy\\-old\.yml/);
+    },
+  );
+
+  // A run that dies between the exclusive `link` and its cleanup leaves
+  // the staging sibling behind as a HARD LINK to the canonical file.
+  // With a fixed `<dest>.tmp` the next `--force` run truncated the
+  // canonical bytes through that name before backing them up, so the
+  // backup captured the NEW content and the curated file was gone from
+  // both paths. The staging name must be reserved per run.
+  it("does not write through a residual staging hard link under --force", async () => {
+    const destAbs = await seedCanonicalAndLegacy();
+    // The remnant a crashed pre-fix run would have left.
+    const residual = `${destAbs}.tmp`;
+    await link(destAbs, residual);
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      force: true,
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    // The backup holds the CURATED bytes, not the freshly written ones.
+    const backups = (await readdir(path.join(root, ".qfai"))).filter((n) =>
+      n.startsWith("handoff.yaml.backup-"),
+    );
+    expect(backups).toHaveLength(1);
+    await expect(readFile(path.join(root, ".qfai", backups[0] ?? ""), "utf-8")).resolves.toBe(
+      CURATED,
+    );
+    // The remnant was left untouched rather than reused as staging.
+    await expect(readFile(residual, "utf-8")).resolves.toBe(CURATED);
+    await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "Wrong Co"/);
   });
 
   // A canonical handoff that is a symlink pointing at an external file
