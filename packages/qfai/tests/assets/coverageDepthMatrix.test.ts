@@ -12,12 +12,13 @@
  * `❌` and five justification sections existed. The matrix now partitions every `❌` cell into named
  * reason classes, and the class counts here must sum to the cells the table actually holds.
  */
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { isQuotation } from "../helpers/recordProse.js";
+import { isQuotation, nextHeadingAt } from "../helpers/recordProse.js";
 
 const MATRIX = path.resolve(__dirname, "../../../../.qfai/evidence/coverage-depth-spec-0017.md");
 /**
@@ -51,7 +52,12 @@ async function statements(
 }
 
 /**
- * A markdown bullet: any marker, any indent, inside a blockquote or not.
+ * A markdown bullet: any marker, any indent.
+ *
+ * **Not inside a blockquote.** `[ \\t>]*` let a `> - ` line match, which decided `shown or asserted`
+ * a second time and decided it the OTHER way from `isQuotation` — sixty lines below the import of
+ * `isQuotation`, in the file that imports it. A blockquoted roster entry is a quotation, the same as
+ * everywhere else, and the leading `>` is now left to the one function that knows.
  *
  * **One copy.** Round 18 found `^- ` too narrow — `* `, `  - `, `> - ` and a tab-indented bullet each
  * carried a contradicting score through green — and fixed it at the site the finding named. Fifteen
@@ -60,25 +66,41 @@ async function statements(
  * one rule, and the one nobody was looking at was wrong, which is the finding this stage has now
  * recorded six times about its own work.
  */
-const BULLET = "^[ \\t>]*[-*+] ";
+const BULLET = "^[ \\t]*[-*+] ";
 
 /**
- * What each class C member's reason must be ABOUT.
+ * What each class C member's reason must be ABOUT, and the exact reason reviewed.
  *
- * Distinctness is not that property. Round 19 swapped the two reasons between the two members and the
- * check stayed green, because two swapped spans are still two distinct spans — so the exact plant
- * round 18 filed as its break 2 passed the repair written to close it, and a reason of `**A.**` passed
- * as well.
+ * Round 19 pinned a keyword, because distinctness alone let two swapped reasons pass. Round 20 showed
+ * a keyword is not much more: round 15's REJECTED reason — "it is simply untested, no one has looked",
+ * which is a class A or B claim and the opposite of what class C asserts — passes the moment the word
+ * `fails` appears in it, and so do `**boundary.**` and `**fail.**`.
  *
- * A reason belongs to a cell when it argues about what that cell measures, so the pair is pinned to a
- * word only that cell's argument would use. Rewording a reason means editing this line, which is
- * correct: **this line is the claim that the reason belongs to the cell**, and nothing else in the
- * record states it.
+ * So the reason is pinned as what it is: **a governance judgement, by digest**. Class C's whole claim
+ * is that no future work turns the cell green, and nothing derives that — a human decides it, and the
+ * digest is the record that a human did. Rewording means updating this line, which is the same cost
+ * `ALLOWED_WORKFLOW_FILES` charges for changing a shipped byte, and for the same reason.
+ *
+ * The keyword stays beside it so a failure says which cell's argument went missing rather than only
+ * that two hashes differ.
  */
-const CLASS_C_REASON_MUST_ARGUE: ReadonlyMap<string, RegExp> = new Map([
-  ["US-0017-0001/Boundary values", /\bboundar(?:y|ies)\b/i],
-  ["US-0017-0007/Error path", /\bfail(?:ure|s|ed)?\b/i],
-]);
+const CLASS_C_REASON: ReadonlyMap<string, { readonly argues: RegExp; readonly digest: string }> =
+  new Map([
+    [
+      "US-0017-0001/Boundary values",
+      {
+        argues: /\bboundar(?:y|ies)\b/i,
+        digest: "dd4722d6c07b26cfbe4f169924743196a9ff4bd402e2c8404e747ff05456be0e",
+      },
+    ],
+    [
+      "US-0017-0007/Error path",
+      {
+        argues: /\bfail(?:ure|s|ed)?\b/i,
+        digest: "c59038056ca5466a12c2aac03446155a0aa289440cff2031a1bc8ceefd4b24f0",
+      },
+    ],
+  ]);
 
 const COLUMNS = [
   "Normal path",
@@ -411,7 +433,15 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // a region that ran past its section because the pattern did not match the heading that ended
     // it. "The region is part of the claim" was written into the record as a lesson while three
     // terminators still enumerated levels.
-    const classCStop = afterClassC.search(/^(?:\*\*Class |#{1,6} )/m);
+    // …and a heading is a heading only OUTSIDE a fence. Round 19 widened this from an enumeration of
+    // levels to any level, and round 20 showed the widening opened the hole it closed: a `# comment`
+    // inside a ```text block ended the section, so a phantom member hidden behind one was invisible —
+    // round 15's finding, restored by the repair for round 19's. `nextHeadingAt` is the one place
+    // that is decided now, and all three regions read it.
+    const classCHeading = nextHeadingAt(afterClassC, 0);
+    const classCNext = afterClassC.search(/^\*\*Class /m);
+    const classCStop =
+      [classCHeading, classCNext].filter((n) => n !== -1).sort((a, b) => a - b)[0] ?? -1;
     const classCBody = classCStop === -1 ? afterClassC : afterClassC.slice(0, classCStop);
     // The coordinates AND the reason after them. Matching the coordinates alone made the roster a list
     // of names: round 18 deleted a reason, swapped two reasons between members, and wrote coordinates
@@ -432,20 +462,29 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     ).toBe(reasons.size);
     // …and distinct is not the same as ITS OWN. See `CLASS_C_REASON_MUST_ARGUE`.
     expect(
-      [...CLASS_C_REASON_MUST_ARGUE.keys()].sort(),
+      [...CLASS_C_REASON.keys()].sort(),
       "the pinned reasons and the roster must name the same members — a member with no pin is a " +
         "reason nothing checks, and a pin with no member is a check over nothing",
     ).toEqual([...reasons.keys()].sort());
-    const offTopic = [...CLASS_C_REASON_MUST_ARGUE]
-      .filter(([cell, must]) => !must.test(reasons.get(cell) ?? ""))
-      .map(
-        ([cell, must]) =>
-          `${cell}: ${String(must)} does not match ${reasons.get(cell) ?? "<none>"}`,
-      );
+    const offTopic: string[] = [];
+    for (const [cell, pin] of CLASS_C_REASON) {
+      const reason = reasons.get(cell) ?? "";
+      if (!pin.argues.test(reason)) {
+        offTopic.push(`${cell}: ${String(pin.argues)} does not match ${JSON.stringify(reason)}`);
+        continue;
+      }
+      const digest = createHash("sha256").update(reason, "utf8").digest("hex");
+      if (digest !== pin.digest) {
+        offTopic.push(
+          `${cell}: reviewed ${pin.digest.slice(0, 12)}…, reads ${digest.slice(0, 12)}…`,
+        );
+      }
+    }
     expect(
       offTopic,
-      "a class C reason that does not argue about the cell it is written under — swapping two " +
-        "reasons between members leaves both distinct, which is how the previous version passed",
+      "a class C reason that is not the reviewed one. Swapping two reasons leaves both distinct " +
+        "and both on topic, and a one-word reason satisfies a keyword — the digest is what says a " +
+        "human judged THIS sentence",
     ).toEqual([]);
     const classC = members
       .filter((member) => member.className === "C")
@@ -463,7 +502,10 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     const afterC = text.slice(classCStart + 1);
     // Same rule as the forward half above; two copies of one terminator is the shape this file keeps
     // finding, so they are corrected together.
-    const classCEnd = afterC.search(/^(?:\*\*Class |#{1,6} )/m);
+    // Same rule as the forward half above; corrected together.
+    const cHeading = nextHeadingAt(afterC, 0);
+    const cNext = afterC.search(/^\*\*Class /m);
+    const classCEnd = [cHeading, cNext].filter((n) => n !== -1).sort((a, b) => a - b)[0] ?? -1;
     const classCReasons = classCEnd === -1 ? afterC : afterC.slice(0, classCEnd);
     const inClassCSection = new Set(
       [...classCReasons.matchAll(/`(US-0017-\d{4})`\s*×\s*`([^`]+)`/g)].map(
@@ -627,7 +669,14 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
     // a region that ran past its section because the pattern did not match the heading that ended
     // it. "The region is part of the claim" was written into the record as a lesson while three
     // terminators still enumerated levels.
-    const rowSection = /### US-0017-0007[^\n]*\n([\s\S]*?)(?=\n#{1,6} |$)/.exec(text)?.[1] ?? "";
+    // Through `nextHeadingAt` like the other two regions: a lookahead for `#{1,6}` cannot tell a
+    // heading from a `#` inside a fenced block, and this row's section carries fenced samples.
+    const rowHeading = text.search(/^### US-0017-0007/m);
+    const rowStop = rowHeading === -1 ? -1 : nextHeadingAt(text, rowHeading);
+    const rowSection =
+      rowHeading === -1
+        ? ""
+        : text.slice(text.indexOf("\n", rowHeading) + 1, rowStop === -1 ? text.length : rowStop);
     expect(rowSection.length, "the row's justification section must be findable").toBeGreaterThan(
       0,
     );
@@ -665,11 +714,27 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
         `\\*\\*${escaped} \`([^\`]+)\`\\*\\*|\\*\\*${escaped}\\*\\*\\s*\`([^\`]+)\``,
         "g",
       );
-      const all = rowSection
+      // **Read over UNWRAPPED text, not physical lines.** The record is hand-wrapped at 100 columns,
+      // so a bolded pair can straddle a newline — and round 20 planted a contradicting bullet that did,
+      // which the per-line scan could not see, while rewrapping a TRUE bullet made it disappear too.
+      // A claim about what a section says cannot depend on where its author pressed Enter.
+      //
+      // Quotations and fenced blocks are dropped FIRST, because unwrapping would otherwise splice a
+      // quoted line onto the assertion above it.
+      let fenced = false;
+      const prose = rowSection
         .split("\n")
-        .filter((line) => !isQuotation(line))
-        .flatMap((line) => [...line.matchAll(ASSERTS)])
-        .map((match) => match[1] ?? match[2] ?? "");
+        .filter((line) => {
+          if (/^\s{0,3}(?:```|~~~)/.test(line)) {
+            fenced = !fenced;
+            return false;
+          }
+          return !fenced && !isQuotation(line);
+        })
+        .join("\n")
+        // A newline followed by indentation is a wrap; a blank line is a real break.
+        .replace(/\n[ \t]+/g, " ");
+      const all = [...prose.matchAll(ASSERTS)].map((match) => match[1] ?? match[2] ?? "");
       if (all.length > 1) {
         disagreeing.push(`${column}: the section states it ${String(all.length)} times`);
         continue;

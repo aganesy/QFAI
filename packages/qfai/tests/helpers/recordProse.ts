@@ -75,3 +75,47 @@ export const WORDS: Record<string, number> = {
   "thirty-four": 34,
   "thirty-five": 35,
 };
+
+/**
+ * A numeral alternation over `WORDS`, longest key first.
+ *
+ * `Object.keys` order puts `twenty` before `twenty-one`, and a regex alternation is first-match, not
+ * longest-match — so `twenty-one` captured as `twenty` in two of the three needles that used it, which
+ * is the exact defect `WORDS`'s own doc comment above says the hyphenated keys exist to prevent. The
+ * keys were right and the alternation built from them was not.
+ */
+export const NUMERAL_PATTERN = `\\d+|${Object.keys(WORDS)
+  .sort((a, b) => b.length - a.length)
+  .join("|")}`;
+
+/** A numeral token — digits or a spelled-out word — as the number it names, or NaN. */
+export function numeralValue(token: string): number {
+  return /^\d+$/.test(token) ? Number(token) : (WORDS[token.toLowerCase()] ?? Number.NaN);
+}
+
+/**
+ * The index of the next markdown heading at or after `from`, or `-1`, **ignoring headings inside a
+ * fenced block**.
+ *
+ * Round 19 widened three region terminators from an enumeration of heading levels (`#{2,4}`, `^## `,
+ * `#{3}`) to any level, because each was one heading away from round 17's defect. Round 20 showed the
+ * widening opened a different hole in the same place: a `# comment` inside a ```text block now ends a
+ * section, so a phantom class C member hidden behind one is invisible — round 15's finding restored by
+ * the repair for round 19's.
+ *
+ * A heading is a heading only outside a fence, and this is the one place that is decided.
+ */
+export function nextHeadingAt(text: string, from: number): number {
+  let inFence = false;
+  let at = from;
+  while (at < text.length) {
+    const lineEnd = text.indexOf("\n", at);
+    const stop = lineEnd === -1 ? text.length : lineEnd;
+    const line = text.slice(at, stop);
+    if (/^\s{0,3}(?:```|~~~)/.test(line)) inFence = !inFence;
+    else if (!inFence && at > from && /^#{1,6} /.test(line)) return at;
+    if (lineEnd === -1) return -1;
+    at = lineEnd + 1;
+  }
+  return -1;
+}

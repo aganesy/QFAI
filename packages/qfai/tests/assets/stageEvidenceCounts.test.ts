@@ -29,7 +29,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { WORDS } from "../helpers/recordProse.js";
+import { nextHeadingAt, NUMERAL_PATTERN, numeralValue, WORDS } from "../helpers/recordProse.js";
 
 const ROOT = path.resolve(__dirname, "../../../..");
 
@@ -210,7 +210,10 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // deleted — no fence needed at all. Round 18 fixed the fence delimiter and left this, which is the
     // wider-region defect one more time: the check read `some table in this section` where the claim
     // is about `the table`. Two of them is not a table this check can be about, so two is a failure.
-    const headers = [...unfenced.matchAll(/^\|\s*artifact\s+\|/gm)];
+    // Case-INsensitively: round 20 renamed the live header to `| Artifact |` and pasted a complete
+    // stale copy above it, and the count came to one because the needle could not see the live one.
+    // Markdown does not care about the capital and neither can this.
+    const headers = [...unfenced.matchAll(/^\|\s*artifact\s+\|/gim)];
     expect(
       headers.length,
       "the section must hold exactly one artifact table — a second one makes `the table` ambiguous, and taking the first is how a decoy satisfied this with the real row deleted",
@@ -289,79 +292,128 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // a region that ran past its section because the pattern did not match the heading that ended
     // it. "The region is part of the claim" was written into the record as a lesson while three
     // terminators still enumerated levels.
-    const sectionEnd = prose.slice(sectionStart + 1).search(/\n#{1,6} /);
+    // …and a heading is a heading only OUTSIDE a fence. Round 19 widened this from an enumeration of
+    // levels to any level, and round 20 showed the widening opened the hole it closed: a `# comment`
+    // inside a ```text block ended the section, so a phantom member hidden behind one was invisible —
+    // round 15's finding, restored by the repair for round 19's. `nextHeadingAt` is the one place
+    // that is decided now, and all three regions read it.
+    const sectionEnd = nextHeadingAt(prose, sectionStart);
     const section = prose.slice(
       sectionStart === -1 ? 0 : sectionStart,
-      sectionEnd === -1 ? prose.length : sectionStart + 1 + sectionEnd,
+      sectionEnd === -1 ? prose.length : sectionEnd,
     );
 
-    // **Round 19: the region was right and the needle was a closed enumeration of four phrasings**,
-    // which is the defect the comment above says a pin cannot have. Five wrong sizes passed it — three
-    // intervening words, four intervening words, a spelled-out numeral, a verb outside `{pinned,held}`,
-    // and the noun `corpus` — and two TRUE sentences were reported as wrong sizes, because the needle
-    // had no model of the word being used for anything but the total.
+    // **Round 20: widening the needle lost a site the narrow one caught.** Round 19 replaced four
+    // fixed phrasings with a general sweep, and `with all 42 listed` — one of the four the record
+    // states — fell outside every one of the three patterns: it names no noun after the numeral and
+    // sits 189 characters from the previous `mechanisms`. Changing it to 47 was green, and deleting
+    // it was green. Meanwhile the sweep counted one occurrence twice (`corpus … 42` and `42
+    // mechanisms` at adjacent indices), so the site total still came to four and nothing showed.
     //
-    // The spelled-out escape is not contrived: it is this record's own house style, which writes
-    // "nineteen rounds" and "fourteen confirmed escapes" a few lines away, and `WORDS` exists in this
-    // file for exactly that reason and was not consulted here.
-    //
-    // So the needle is as WIDE as the language allows — any numeral, digits or spelled out, within
-    // three words before the noun or forty characters after it — and the sentences that legitimately
-    // carry a nearby numeral which is NOT the total are enumerated instead. Widening the needle and
-    // enumerating the exceptions is the shape every other allowlist in this stage's work has; the four
-    // rounds spent narrowing a needle until it stopped accusing true sentences lost a spelling each
-    // time, because "which numerals are near this word" and "which of them claim to be the total" are
-    // two questions and one regex was being asked both.
-    const NOT_THE_TOTAL: ReadonlyArray<string> = [
-      // A RATE — twenty agents, one mechanism each. It says nothing about how many the corpus holds,
-      // and the wide needle reads its `one` as a corpus size of 1.
-      "one mechanism per agent",
-      // A DE-DUPLICATION of the corpus into classes. How many classes the entries fall into is a
-      // different quantity from how many entries there are, and both are true at once.
-      "De-duplicated by mechanism rather than by spelling they are six classes on three levels",
-      // How many of the forty-two are STILL OPEN, which is the sweep's result rather than its size.
-      // Quoted WITHOUT the leading `42 `: that `42` is one of the four true sites, and an exemption
-      // spanning it swallowed a site the record correctly states. An exemption is as narrow as the
-      // thing it exempts, or it is a hole.
-      "mechanisms, 0 still open",
-      // The SITE COUNT — the sentence this guard reads `SITES` out of, four lines up. The wide
-      // needle reads its `four` as a corpus size, so the check would accuse the sentence that tells
-      // it how many sentences to expect.
-      "corpus size appears four times in this section",
+    // Two questions were being asked with one instrument again. **Which sentences state the size** is
+    // a closed list, and it is the record's own list, so it is DECLARED and each entry is read
+    // directly. **Whether any other numeral near the nouns disagrees** is open, and that is what the
+    // sweep is for. Neither can do the other's job: round 18's enumeration missed new phrasings,
+    // round 19's sweep missed a stated one.
+    const CORPUS_SITES: ReadonlyArray<RegExp> = [
+      /(\d+) mechanisms, 0 still open/,
+      /(\d+) mechanisms pinned/,
+      /lets all (\d+) through/,
+      /with all (\d+) listed/,
     ];
-    const stale = NOT_THE_TOTAL.filter((phrase) => !section.includes(phrase));
     expect(
-      stale,
+      CORPUS_SITES.length,
+      "the record says how many times it states the corpus size, and this list is that many",
+    ).toBe(SITES);
+    const declared: Array<readonly [number, number]> = [];
+    const wrong: string[] = [];
+    for (const site of CORPUS_SITES) {
+      const global = new RegExp(site.source, "g");
+      const hits = [...section.matchAll(global)];
+      if (hits.length !== 1) {
+        wrong.push(`${String(site)}: appears ${String(hits.length)} times, expected once`);
+        continue;
+      }
+      const hit = hits[0];
+      if (hit === undefined || hit.index === undefined) continue;
+      declared.push([hit.index, hit.index + hit[0].length]);
+      if (Number(hit[1]) !== held) {
+        wrong.push(`${hit[0]}: corpus holds ${String(held)}`);
+      }
+    }
+
+    // Sentences carrying a numeral near either noun that is NOT the corpus total, enumerated because
+    // the sweep cannot tell a rate or a class count from a total, and narrowing it until it could is
+    // what lost five spellings across rounds 16 to 18.
+    const NOT_THE_TOTAL: ReadonlyArray<RegExp> = [
+      // A RATE — twenty agents, one mechanism each.
+      /one mechanism per agent/,
+      // A DE-DUPLICATION into classes, which is a different quantity from the corpus size.
+      /De-duplicated by mechanism rather than by spelling they are six classes on three levels/,
+      // How many of the forty-two are STILL OPEN. Quoted without the leading `42 `, which is one of
+      // the declared sites above: an exemption spanning a site swallows it.
+      /mechanisms, 0 still open/,
+      // The SITE-COUNT sentence, which `SITES` is read out of four lines up. **By shape, not by its
+      // current wording**: round 19 pinned the literal "appears four times", which is the very thing
+      // the comment above it says was removed for being a hard-coded count — so adding a fifth site
+      // and honestly updating the sentence to "five" reddened with "an exempted phrase that is no
+      // longer in the section".
+      /corpus size appears \w+ times in this section/,
+    ];
+    const stale = NOT_THE_TOTAL.filter((phrase) => !phrase.test(section));
+    expect(
+      stale.map(String),
       "an exempted phrase that is no longer in the section — a dead entry here is a hole this guard " +
         "would keep open for whatever is written next at that spot",
     ).toEqual([]);
-    const exemptSpans = NOT_THE_TOTAL.map((phrase) => {
-      const at = section.indexOf(phrase);
-      return [at, at + phrase.length] as const;
+    const exempt = NOT_THE_TOTAL.flatMap((phrase) => {
+      const hit = new RegExp(phrase.source).exec(section);
+      return hit === null || hit.index === undefined
+        ? []
+        : [[hit.index, hit.index + hit[0].length] as const];
     });
 
-    const NUMERAL = `\\d+|${Object.keys(WORDS).join("|")}`;
-    const sites = [
-      ...section.matchAll(new RegExp(`(${NUMERAL})(?:\\s+\\S+){0,3}\\s+mechanisms?\\b`, "gi")),
-      ...section.matchAll(new RegExp(`\\bmechanisms?\\b[^.\\n]{0,40}?\\b(${NUMERAL})\\b`, "gi")),
-      ...section.matchAll(new RegExp(`\\bcorpus\\b[^.\\n]{0,40}?\\b(${NUMERAL})\\b`, "gi")),
-    ].filter(
-      (match) =>
-        !exemptSpans.some(([from, to]) => (match.index ?? -1) >= from && (match.index ?? -1) < to),
-    );
-    const valueOf = (token: string): number =>
-      /^\d+$/.test(token) ? Number(token) : (WORDS[token.toLowerCase()] ?? Number.NaN);
-    const wrong = sites
-      .filter((match) => valueOf(match[1] ?? "") !== held)
-      .map((match) => `${match[0]}: corpus holds ${String(held)}`);
+    // …and the open half. `\b` before the group, because without it `None of the mechanisms` was read
+    // as stating a corpus size of one.
+    // A match is located by its NUMERAL, not by where the needle happened to start. `corpus … 42`
+    // begins 31 characters before the `42` that a declared site already covers, so filtering on the
+    // match start left the same occurrence counted twice — the double-count round 20 found, which is
+    // what made the old site total come to four while one true site was never read at all.
+    const numeralAt = (match: RegExpMatchArray): number =>
+      (match.index ?? 0) + match[0].lastIndexOf(match[1] ?? "");
+    const sweep = [
+      ...section.matchAll(
+        new RegExp(`\\b(${NUMERAL_PATTERN})(?:\\s+\\S+){0,3}\\s+mechanisms?\\b`, "gi"),
+      ),
+      ...section.matchAll(
+        new RegExp(`\\bmechanisms?\\b[^.\\n]{0,40}?\\b(${NUMERAL_PATTERN})\\b`, "gi"),
+      ),
+      ...section.matchAll(new RegExp(`\\bcorpus\\b[^.\\n]{0,40}?\\b(${NUMERAL_PATTERN})\\b`, "gi")),
+    ].filter((match) => {
+      const at = numeralAt(match);
+      const covered = (spans: ReadonlyArray<readonly [number, number]>): boolean =>
+        spans.some(([from, to]) => at >= from && at < to);
+      return !covered(exempt) && !covered(declared);
+    });
+    for (const match of sweep) {
+      if (numeralValue(match[1] ?? "") !== held) {
+        wrong.push(`${match[0]}: corpus holds ${String(held)}`);
+      }
+    }
     expect(wrong, "a mechanism-corpus size the record states and the corpus does not hold").toEqual(
       [],
     );
+    // A sweep match whose value IS the total is another statement of it, and the record says how
+    // many statements there are. Without this, adding a true fifth sentence left the record's own
+    // "appears four times" false and the row green — the count property the declared list alone
+    // does not carry. Deduplicated by the NUMERAL's position, because two needles reach the same
+    // numeral from different starts and round 20 found that pair inflating the old site count.
+    const alsoStated = new Set(
+      sweep.filter((match) => numeralValue(match[1] ?? "") === held).map(numeralAt),
+    );
     expect(
-      new Set(sites.map((match) => match.index)).size,
-      "the record must still state the corpus size where it says it does — a rewording that " +
-        "escapes these patterns would otherwise leave the row green over nothing, which is how the " +
-        "first version of this check passed while three sentences carried a wrong number",
+      declared.length + alsoStated.size,
+      "the record states how many times it gives the corpus size; this is how many times it does",
     ).toBe(SITES);
   });
 

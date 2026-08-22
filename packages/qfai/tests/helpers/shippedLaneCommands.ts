@@ -95,7 +95,7 @@ interface HereDoc {
   readonly unterminated: boolean;
 }
 
-function hereDocAt(body: string, at: number): HereDoc | undefined {
+function hereDocAt(body: string, at: number, dataFrom?: number): HereDoc | undefined {
   // `body[at - 1] !== "<"` because this matched the SECOND `<` of a here-STRING: `done <<< "$changed"`
   // then read `$changed` as a delimiter, and once a missing closer became a refusal the shipped tree
   // refused its own line. A here-string is one operator.
@@ -135,7 +135,19 @@ function hereDocAt(body: string, at: number): HereDoc | undefined {
   if (delimiter === "") return undefined;
   const lineEnd = body.indexOf("\n", k);
   if (lineEnd === -1) return undefined;
-  const rest = body.slice(lineEnd + 1);
+  // **Where this opener's DATA starts, which is not always the operator line's end.** `cat <<A <<B`
+  // is two here-documents on one line: A's data begins after the line, and B's begins after A's
+  // TERMINATOR. Computing both from `lineEnd + 1` gave them the same `dataStart` and overlapping
+  // regions — so `codeMask`'s `pendingData.find` matched only the first, the second was never masked,
+  // and the walk went through it as code. One `"` in B's data then disarmed the scan for the rest of
+  // the body: round 19's blocker, re-entered through the bookkeeping added to close it. Round 20
+  // executed it.
+  //
+  // `dataFrom` is the caller's running origin for the current line: the end of the previous opener's
+  // data, or the line end for the first. The closer is searched from there too, or B would match a
+  // line inside A.
+  const dataStart = Math.max(dataFrom ?? lineEnd + 1, lineEnd + 1);
+  const rest = body.slice(dataStart);
   // Every regex metacharacter escaped. Round 16 found this class written so that the escape for `]`
   // closed the class instead, by extracting it from this file's own bytes: reading the line looks right.
   const pattern = delimiter.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -144,8 +156,8 @@ function hereDocAt(body: string, at: number): HereDoc | undefined {
     delimiter,
     quoted,
     afterDelimiter: k,
-    dataStart: lineEnd + 1,
-    dataEnd: closer === null ? body.length : lineEnd + 1 + closer.index + closer[0].length,
+    dataStart,
+    dataEnd: closer === null ? body.length : dataStart + closer.index + closer[0].length,
     unterminated: closer === null,
   };
 }
@@ -159,6 +171,9 @@ export function commandsOf(body: string): string[] {
   // Where a here-document's data ends, once one has been opened on the current line. The skip has to
   // wait for the newline: everything between the delimiter and it is still command text.
   let heredocEnd: number | undefined;
+  // The next here-document opened on THIS line takes its data from the end of the previous
+  // one's, not from the line end. A property of one line, so it resets at every newline.
+  let nextDataStart: number | undefined;
 
   // **`lastCode` lived here and is gone.** Round 16 added it because three decisions in this walk were
   // reading the raw text while `codeMask` — computed at the top of this function — knew better: an
@@ -212,7 +227,9 @@ export function commandsOf(body: string): string[] {
     //
     // `hereDocAt` is shared with `codeMask`, which had no model of this at all until the differential
     // test found the two walks disagreeing about whether a here-document's body is code.
-    const here = quote === "" ? hereDocAt(body, i) : undefined;
+    // The running origin for THIS line: the previous opener's data end, so `cat <<A <<B` gives B a
+    // region that starts after A's terminator instead of overlapping it.
+    const here = quote === "" ? hereDocAt(body, i, nextDataStart) : undefined;
     if (here !== undefined) {
       // **A missing closer is a refusal, not a licence.** Answering one by discarding everything after
       // the operator as data means any construct that stops the closer matching hides the rest of the
@@ -238,7 +255,8 @@ export function commandsOf(body: string): string[] {
         }
       }
       current += body.slice(i, here.afterDelimiter);
-      heredocEnd = here.dataEnd;
+      heredocEnd = heredocEnd === undefined ? here.dataEnd : Math.max(heredocEnd, here.dataEnd);
+      nextDataStart = here.dataEnd;
       i = here.afterDelimiter - 1;
       continue;
     }
@@ -384,9 +402,12 @@ export function commandsOf(body: string): string[] {
       flush();
       // The data of any here-document opened on this line is skipped HERE, after the line's own
       // commands have been read.
-      if (ch === "\n" && heredocEnd !== undefined) {
-        i = heredocEnd;
-        heredocEnd = undefined;
+      if (ch === "\n") {
+        if (heredocEnd !== undefined) {
+          i = heredocEnd;
+          heredocEnd = undefined;
+        }
+        nextDataStart = undefined;
       }
       // A pipe IS a redirection of the downstream command's stdin, so it leaves a token shaped like
       // one. Dropping it made `echo "<javascript>" | node` read as a bare `node`, which is allowed.
@@ -423,6 +444,10 @@ function codeMask(body: string): boolean[] {
   // Here-document data regions opened on a line already walked. The walk JUMPS them rather than
   // walking them masked, because a quote inside data that is not code still drove the state machine.
   const pendingData: HereDoc[] = [];
+  // Same running origin as `commandsOf`, for the same reason and reset in the same place: two
+  // openers on one line take their data from different places, and computing both from the line
+  // end gave them the same `dataStart`, so the `find` below matched only the first.
+  let nextDataStart: number | undefined;
   for (let i = 0; i < body.length; i += 1) {
     const here = pendingData.find((region) => region.dataStart === i);
     if (here !== undefined) {
@@ -454,6 +479,7 @@ function codeMask(body: string): boolean[] {
       continue;
     }
     const ch = body[i] ?? "";
+    if (ch === "\n") nextDataStart = undefined;
     if (inComment) {
       // The newline that ENDS a comment is a command separator and stays code. Marking it with the
       // comment made the next line's `#` follow a non-code character, so a comment after a comment
@@ -489,10 +515,11 @@ function codeMask(body: string): boolean[] {
     // now, which is what makes the answer for an unquoted here-document a rule rather than a side effect
     // of the bug above.
     if (quote === "") {
-      const here = hereDocAt(body, i);
+      const here = hereDocAt(body, i, nextDataStart);
       if (here !== undefined) {
         for (let j = i; j < here.afterDelimiter; j += 1) mask[j] = false;
         pendingData.push(here);
+        nextDataStart = here.dataEnd;
         i = here.afterDelimiter - 1;
         continue;
       }
@@ -1202,6 +1229,15 @@ export const LIVE_DECORATIONS: ReadonlyArray<string> = [
   "read v <<'EOF'\ndata\nEOF\n%s",
   "read v <<\\EOF\ndata\nEOF\n%s",
   "case $x in *) %s ;; esac",
+  // Round 20, the twelfth spelling, executed. `cat <<A <<B` is TWO here-documents on one line:
+  // A's data begins after the line and B's begins after A's TERMINATOR. Both were computed from
+  // the line end, so they shared a `dataStart`, the mask's region lookup matched only the first,
+  // and the walk went through B's data as code — one `"` in it disarmed the scan for the rest of
+  // the body. Round 19's blocker, re-entered through the bookkeeping added to close it.
+  'read v <<A <<B\nA\n"\nB\necho a | %s ")"',
+  "read v <<A <<B\nA\nB\n%s",
+  "read v <<A <<B\nA\n$(%s)\nB",
+  "read v <<A <<B\n$(%s)\nA\nB",
   "if [ -f package.json ]; then %s; fi",
   // CALLED, not merely defined. Round 19 executed every row here and this one did not run:
   // bash defines a function body and does not enter it, so the row asserted an execution that
@@ -1243,6 +1279,11 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
   // Both walks guarded on `quote !== "'"`, which admitted it.
   'echo "<(%s)"',
   'echo ">(%s)"',
+  // A QUOTED first delimiter makes its data literal even with a second opener on the line, so
+  // the substitution never runs. The mask must say so, and the scan must not refuse it.
+  "read v <<'A' <<B\n$(%s)\nA\nB",
+  // Plain here-document DATA is text, not commands: bash passes it to `read` and runs nothing.
+  "read v <<A <<B\n%s\nA\ndata\nB",
 ];
 
 /**
