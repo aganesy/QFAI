@@ -22,9 +22,9 @@ or the run ended between the `REVISE` and the fix — comes back carrying its
 rounds as the row section's _siblings_. Such a block is **unmigrated evidence,
 not an absent field**: a reader extracting only `#### Round N` skips it in
 silence, so the earlier rounds' RED/GREEN drop out of the completion-review
-subject and the review PASSes over a hash that never covered them, and step 1
-of **Resuming a `review-fix` item** below reads the highest round as lower than
-it is. Migrate before anything reads the file: re-nest each `###` round heading
+subject and the review PASSes over a hash that never covered them, and
+**Resuming a `review-fix` item** below takes the highest round as lower than it
+is. Migrate before anything reads the file: re-nest each `###` round heading
 at `####` inside the `### TDD-NNNN` section it belongs to. That is a
 heading-depth move and nothing else — no field value changes, no observation is
 re-taken, and no hash that was valid before it stops being valid. **Attribution
