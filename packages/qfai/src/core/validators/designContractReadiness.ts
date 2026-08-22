@@ -5,9 +5,13 @@ import fg from "fast-glob";
 import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
+import { resolvePath } from "../config.js";
 import { hashDesignMd, isUnreplacedDesignMdSample, parseDesignMd } from "../design/designMd.js";
 import type { DesignMd } from "../design/designMd.js";
 import { DESIGN_MD_SHA_HEX_RE, readDesignMdLockSha } from "../design/designMdLock.js";
+import { VISUAL_BROWSER_SURFACES, readValidatedClassification } from "../detection/surfaceType.js";
+import type { UiBearingClassification } from "../detection/surfaceType.js";
+import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { resolveAllUiBearingSpecs } from "../prototyping/specResolution.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -82,6 +86,12 @@ async function validateDesignContractReadinessForStage(
   // Reuse `resolveAllUiBearingSpecs` rather than re-deriving the rule, so a
   // project cannot be UI-bearing for prototyping and non-UI for this gate.
   const uiBearing = hasUiContracts || (await hasUiBearingSpec(root, config));
+  // `cli` is discussion UI-bearing but is NOT a visual-prototyping surface:
+  // `/qfai-discussion` authors no root DESIGN.md for a cli-only pack and
+  // `/qfai-prototyping` rejects `cli`, so the `visual.*` token tree has no
+  // reader at all. Demanding the brand SSOT here would re-block a pack the
+  // discussion skill deliberately exempted.
+  const cliOnly = uiBearing && (await isCliOnlySurfaceProject(root, config));
 
   // The unreplaced-sample gate runs BEFORE the UI-contract gate below.
   // Every other check in this validator presupposes design contracts that
@@ -91,7 +101,7 @@ async function validateDesignContractReadinessForStage(
   // Phase 0 freezes the file's sha256 in between. Gated behind
   // `uiContracts.length === 0` the gate could only ever report a freeze
   // that already happened.
-  const sampleIssues = await validateRootDesignMdSample(root, uiBearing);
+  const sampleIssues = await validateRootDesignMdSample(root, uiBearing && !cliOnly);
   if (!hasUiContracts) {
     return sampleIssues;
   }
@@ -99,7 +109,11 @@ async function validateDesignContractReadinessForStage(
   const designDir = path.join(root, config.paths.contractsDir, "design");
   const issues: Issue[] = [...sampleIssues];
 
-  const rootResult = await validateRootDesignMdAndLock(root, designDir);
+  // A cli-only project never freezes a brand SSOT, so neither the file
+  // (DCON-030/033) nor its lock (DCON-031/032) can be required of it.
+  const rootResult: RootDesignMdResult = cliOnly
+    ? { issues: [], designMd: null, lockSha: null }
+    : await validateRootDesignMdAndLock(root, designDir);
   issues.push(...rootResult.issues);
 
   if (stage === "prototyping") {
@@ -148,6 +162,61 @@ async function hasUiBearingSpec(root: string, config: QfaiConfig): Promise<boole
   } catch {
     return false;
   }
+}
+
+/**
+ * True when the project's own classification says every surface it ships is
+ * `cli` — `primary_surface: cli` with no `web` / `mobile` / `desktop` /
+ * `mixed` entry in `secondary_surfaces`.
+ *
+ * `cli` is discussion UI-bearing, so it reaches every gate in this file, but
+ * it is not a visual-prototyping surface: `/qfai-discussion` deliberately
+ * authors no root DESIGN.md for such a pack and `/qfai-prototyping` rejects
+ * `cli`, leaving the `visual.*` token tree with no reader. Without this the
+ * DESIGN.md requirement the discussion skill dropped would simply reappear as
+ * a hard `qfai validate --profile sdd` error.
+ *
+ * The classification is read from the latest discussion pack's
+ * `01_Context.md` via the strict validated reader, so a malformed or
+ * contradictory block (which `uix/classification.ts` reports separately)
+ * yields `null` and this returns `false` — the strict brand-SSOT behaviour.
+ * Same for a project with no discussion pack at all: absence of evidence is
+ * not evidence of `cli`, and every pre-existing project must keep its gates.
+ *
+ * A filesystem failure degrades to `false` for the same reason: it can only
+ * ever widen the requirement back to today's behaviour, never silently drop a
+ * gate.
+ */
+async function isCliOnlySurfaceProject(root: string, config: QfaiConfig): Promise<boolean> {
+  let packDir: string | null = null;
+  try {
+    packDir = await findLatestDiscussionPackDir(resolvePath(root, config, "discussionDir"));
+  } catch {
+    return false;
+  }
+  if (packDir === null) {
+    return false;
+  }
+
+  let classification: UiBearingClassification | null = null;
+  try {
+    classification = await readValidatedClassification(packDir);
+  } catch {
+    return false;
+  }
+  if (classification === null || !classification.ui_bearing) {
+    return false;
+  }
+
+  // `VISUAL_BROWSER_SURFACES` is the code SSOT for "this surface needs the
+  // `visual.*` token tree". Judge the whole classified set, not
+  // `primary_surface` alone: `primary_surface: cli` with
+  // `secondary_surfaces: [web]` still ships a visual surface.
+  const surfaces = [classification.primary_surface, ...classification.secondary_surfaces];
+  if (surfaces.some((surface) => VISUAL_BROWSER_SURFACES.has(surface))) {
+    return false;
+  }
+  return classification.primary_surface === "cli";
 }
 
 /**

@@ -160,11 +160,17 @@ describe("discussion skill template integration", () => {
       );
     }
 
-    // `cli` stays UI-bearing but gets its own outcome.
+    // `cli` stays UI-bearing but gets its own outcome. It must still name all
+    // three canonical sidecars: completion condition 3 and the Reviewer Gate
+    // require the whole family from `cli` too, so a row that reads
+    // "screen contracts only" sends the pack back for the two it skipped.
     const cliRow = surfaceRow("cli");
     expect(cliRow).toMatch(/\|\s*Yes\s*\|/);
     expect(cliRow).not.toMatch(/Generate full uiux sidecar family/);
     expect(cliRow).toMatch(/no root `DESIGN\.md`/i);
+    for (const sidecar of ["00_index.md", "40_screen_contracts.md", "50_review_input_bundle.md"]) {
+      expect(cliRow, `cli Surface Mapping row omits ${sidecar}`).toContain(sidecar);
+    }
 
     // The completion matrix must carry the matching carve-out, or the pack is
     // still blocked by condition 1 no matter what the playbook says.
@@ -181,7 +187,7 @@ describe("discussion skill template integration", () => {
     // root DESIGN.md for every UI-bearing pack the carve-out is unreachable.
     const skill = await readFile(skillPath, "utf-8");
     expect(skill).toMatch(/Root `DESIGN\.md` is required only on the visual-prototyping surfaces/);
-    expect(skill).toMatch(/skip for `cli`/);
+    expect(skill).toMatch(/skip for cli-only and non-ui targets/);
 
     // `route` remains a required field for every surface
     // (`validators/uix/screenContract.ts#REQUIRED_FIELDS`), so the template must
@@ -193,6 +199,113 @@ describe("discussion skill template integration", () => {
     expect(screenContracts).toMatch(/^- route:/m);
     expect(screenContracts).toMatch(/`route:` is required on every surface/);
     expect(screenContracts).toMatch(/command invocation/i);
+  });
+
+  // `primary_surface: cli` with `secondary_surfaces: [web]` is a valid
+  // classification (`detection/surfaceType.ts#readValidatedClassificationBlock`),
+  // and it still ships a visual surface. A carve-out written against
+  // `primary_surface` alone would drop the token SSOT for that product.
+  it("DESIGN.md carve-out が secondary_surfaces も判定に含めている", async () => {
+    const skill = await readFile(skillPath, "utf-8");
+    const playbook = await readFile(uiBearingPlaybookPath, "utf-8");
+    const matrix = await readFile(completionMatrixPath, "utf-8");
+    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
+
+    for (const [name, body] of [
+      ["SKILL.md", skill],
+      ["ui-bearing-playbook.md", playbook],
+      ["discussion-completion-matrix.md", matrix],
+      ["01_Context.md", context],
+    ] as const) {
+      expect(body, `${name} scopes the carve-out to a cli-only pack`).toMatch(/cli-only/);
+      expect(body, `${name} names secondary_surfaces in the decision`).toMatch(
+        /secondary_surfaces/,
+      );
+    }
+
+    // The playbook is the reference the other three defer to, so it has to
+    // state the rule outright, not merely mention the field.
+    expect(playbook).toMatch(/`primary_surface: cli` with `secondary_surfaces: \[web\]`/);
+  });
+
+  // Half a carve-out is worse than none: if the Reviewer Gate still demands a
+  // root DESIGN.md from `cli`, the pack discussion just exempted is bounced at
+  // review instead of at completion.
+  it("Reviewer Gate と review bundle が cli pack を DESIGN.md 要求から外している", async () => {
+    const gatePaths = [
+      path.join(templateBase, "templates", "14_Review-Request.md"),
+      path.join(templateBase, "templates", "review", "review_request.md"),
+      path.join(templateBase, "templates", "review", "Rxx_reviewer.md"),
+      path.join(uiuxTemplateDir, "50_review_input_bundle.md"),
+    ];
+    for (const gatePath of gatePaths) {
+      const body = await readFile(gatePath, "utf-8");
+      const name = path.basename(gatePath);
+      // Every DESIGN.md-bearing checklist line must carry the exemption.
+      const designLines = body
+        .split("\n")
+        .filter((line) => /^[-|]/.test(line) && line.includes("DESIGN.md"));
+      expect(designLines.length, `${name} has no DESIGN.md checklist line`).toBeGreaterThan(0);
+      for (const line of designLines) {
+        expect(line, `${name}: unconditional DESIGN.md requirement -> ${line}`).toMatch(
+          /cli-only|visual-prototyping/i,
+        );
+      }
+    }
+  });
+
+  // `templates/prototyping.yaml` and `qfai-prototyping/SKILL.md` both reject
+  // `cli` as an execution surface, so discussion must not hand a cli pack a
+  // recommendation the next skill refuses to run.
+  it("cli pack に prototyping.yaml を生成させない", async () => {
+    const skill = await readFile(skillPath, "utf-8");
+    const context = await readFile(path.join(templateBase, "templates", "01_Context.md"), "utf-8");
+    const prototypingYaml = await readFile(
+      path.join(templateBase, "templates", "prototyping.yaml"),
+      "utf-8",
+    );
+
+    // The shipped yaml is the SSOT for the valid execution-surface set.
+    expect(prototypingYaml).toMatch(/web \| mobile \| desktop \| mixed/);
+    expect(prototypingYaml).toMatch(/not valid prototyping execution surfaces/);
+
+    // The classification note must not advertise `cli` as one of them.
+    const surfaceNote = context
+      .split("\n")
+      .find((line) => line.includes("prototyping.yaml") && line.includes("subset"));
+    expect(surfaceNote, "01_Context.md lost its prototyping-surface note").toBeDefined();
+    expect(surfaceNote).toMatch(/`web\|mobile\|desktop\|mixed`/);
+    expect(surfaceNote).not.toMatch(/`web\|mobile\|desktop\|cli\|mixed`/);
+
+    const generationStep = skill
+      .split("\n")
+      .find((line) => /^\d+\. Generate `prototyping\.yaml`/.test(line));
+    expect(generationStep, "SKILL.md lost its prototyping.yaml step").toBeDefined();
+    expect(generationStep).toMatch(/cli-only pack emits none/);
+  });
+
+  // `screenContract.ts` requires a non-empty `route`, never a URL. Telling
+  // native mobile/desktop authors that a web path is "expected" pushes them to
+  // invent one for a product that has no URLs at all.
+  it("40_screen_contracts.md が surface ごとの route の意味を定義している", async () => {
+    const screenContracts = await readFile(
+      path.join(uiuxTemplateDir, "40_screen_contracts.md"),
+      "utf-8",
+    );
+    expect(screenContracts).toMatch(/`route:` is required on every surface/);
+    // Every classification surface that can carry a screen gets its own row.
+    for (const surface of ["web", "mobile", "desktop", "cli", "mixed"]) {
+      expect(screenContracts, `no route row for '${surface}'`).toMatch(
+        new RegExp(`^\\|\\s*\`${surface}\``, "m"),
+      );
+    }
+    expect(screenContracts).toMatch(/deep link/i);
+    expect(screenContracts).toMatch(/navigation destination/i);
+    expect(screenContracts).toMatch(/command invocation/i);
+    // Native surfaces must not be lumped in with the web-path expectation.
+    expect(screenContracts).not.toMatch(
+      /a web path is only expected on the\s+visual-prototyping surfaces/,
+    );
   });
 
   it("09_Constraints.md が accessibility を正しい階層で参照している", async () => {

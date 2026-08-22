@@ -4,10 +4,21 @@
 
 Draft interaction contracts for key screens using the strong screen contract schema (11 required fields).
 
-`route:` is required on every surface, but a web path is only expected on the
-visual-prototyping surfaces (`web`, `mobile`, `desktop`, `mixed`). On a `cli`
-pack write the command invocation instead (e.g. `route: myapp deploy --dry-run`);
-do not invent a URL for a product that has none.
+`route:` is required on every surface — `validators/uix/screenContract.ts` demands a
+non-empty string, not a URL — but what it names is surface-specific. Record the real
+navigation identifier for the surface you are on; never invent a URL for a product that
+has none:
+
+| Surface            | `route:` names                                                         | Example                  |
+| ------------------ | ---------------------------------------------------------------------- | ------------------------ |
+| `web`              | URL path                                                               | `/orders/:id`            |
+| `mobile` (native)  | navigation destination, or the deep link when one exists               | `OrderDetail`            |
+| `desktop` (native) | window / view identifier, or the app-scheme deep link                  | `main:order-detail`      |
+| `cli`              | command invocation                                                     | `myapp deploy --dry-run` |
+| `mixed`            | the identifier of the surface that owns the screen, per the rows above | `/orders/:id`            |
+
+Use one convention per surface consistently across the whole file so downstream
+`.qfai/contracts/ui/*.yaml` normalization stays deterministic.
 
 ### Screen: [Screen Name]
 
@@ -45,6 +56,6 @@ do not invent a URL for a product that has none.
 
 ## Cross-references
 
-- Brand SSOT (product intent, brand signals, anti-goals): root `DESIGN.md`
+- Brand SSOT (product intent, brand signals, anti-goals): root `DESIGN.md` — visual-prototyping surfaces only; a cli-only pack has none
 - Sidecar manifest: `00_index.md`
 - Review handoff: `50_review_input_bundle.md`

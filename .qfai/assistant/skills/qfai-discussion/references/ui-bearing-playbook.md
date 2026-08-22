@@ -8,14 +8,14 @@ Use this file when `/qfai-discussion` needs the full UI-bearing decision logic.
 
 ## Surface Mapping
 
-| Surface | UI-bearing | Result                                                       |
-| ------- | ---------- | ------------------------------------------------------------ |
-| web     | Yes        | Generate full uiux sidecar family                            |
-| mobile  | Yes        | Generate full uiux sidecar family                            |
-| desktop | Yes        | Generate full uiux sidecar family                            |
-| cli     | Yes        | Screen contracts only; no root `DESIGN.md` visual token tree |
-| mixed   | Yes        | Generate full uiux sidecar family                            |
-| non-ui  | No         | Skip uiux sidecars                                           |
+| Surface | UI-bearing | Result                                                                                                                                             |
+| ------- | ---------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| web     | Yes        | Generate full uiux sidecar family                                                                                                                  |
+| mobile  | Yes        | Generate full uiux sidecar family                                                                                                                  |
+| desktop | Yes        | Generate full uiux sidecar family                                                                                                                  |
+| cli     | Yes        | Generate the canonical uiux sidecars (`00_index.md`, `40_screen_contracts.md`, `50_review_input_bundle.md`); no root `DESIGN.md` visual token tree |
+| mixed   | Yes        | Generate full uiux sidecar family                                                                                                                  |
+| non-ui  | No         | Skip uiux sidecars                                                                                                                                 |
 
 ## Detection Signals
 
@@ -39,20 +39,31 @@ the screen-level UX inputs:
 
 Visual-prototyping surfaces are `web`, `mobile`, `desktop` and `mixed` — the
 surfaces `/qfai-prototyping` actually executes. Root `DESIGN.md` and its
-`visual.*` token tree are required **only** on those surfaces: the sole
-consumer of the token values is the prototyping loop's DESIGN.md drift
-scanner, and that loop rejects `cli`.
+`visual.*` token tree are required **only** when the pack targets one of
+them: the sole consumer of the token values is the prototyping loop's
+DESIGN.md drift scanner, and that loop rejects `cli`.
 
-`cli` stays `ui_bearing: true` and keeps the screen-level UX inputs above —
-those have downstream readers. It must NOT be blocked on inventing brand
-colors, font stacks, a type scale, spacing tokens, radii or shadows:
+**Judge the whole classified surface set, not `primary_surface` alone.**
+`secondary_surfaces` accepts every UI-bearing surface, so
+`primary_surface: cli` with `secondary_surfaces: [web]` still ships a visual
+surface and still needs the token SSOT. The carve-out applies only to a
+**cli-only** pack: `primary_surface: cli` with no visual surface anywhere in
+`secondary_surfaces`.
 
-- Do not author root `DESIGN.md` for a `cli` pack. `/qfai-sdd` freezes the
-  file's sha256 only when it exists, and nothing on the `cli` path reads a
+A cli-only pack stays `ui_bearing: true` and keeps all three screen-level UX
+inputs above — those have downstream readers. It must NOT be blocked on
+inventing brand colors, font stacks, a type scale, spacing tokens, radii or
+shadows:
+
+- Do not author root `DESIGN.md` for a cli-only pack. `/qfai-sdd` Phase 0
+  skips the DESIGN.md freeze for it, and nothing on the `cli` path reads a
   token value.
 - Screen contracts stay mandatory, including their `route:` field, which on
   `cli` names the command invocation (e.g. `route: myapp deploy --dry-run`)
-  instead of a web path.
+  instead of a web path. `templates/uiux/40_screen_contracts.md` carries the
+  per-surface `route:` meanings.
+- No `prototyping.yaml`: `cli` is not a valid prototyping execution surface,
+  so a recommendation naming it cannot be executed downstream.
 
 ### Trend Scan SSOT
 

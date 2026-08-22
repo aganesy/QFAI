@@ -1369,3 +1369,89 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
   });
 });
+
+/**
+ * `cli` is discussion UI-bearing, so a cli project reaches every gate in this
+ * validator — but it is not a visual-prototyping surface. `/qfai-discussion`
+ * authors no root DESIGN.md for a cli-only pack and `/qfai-prototyping`
+ * rejects `cli`, so the `visual.*` token tree has no reader. Without the
+ * carve-out below the requirement the discussion skill dropped would simply
+ * reappear here as a blocking `qfai validate --profile sdd` error.
+ */
+describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
+  async function seedClassification(
+    root: string,
+    primarySurface: string,
+    secondarySurfaces: string[],
+  ): Promise<void> {
+    const packDir = path.join(root, ".qfai/discussion/discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    const secondaryBlock =
+      secondarySurfaces.length === 0
+        ? "- secondary_surfaces: []"
+        : ["- secondary_surfaces:", ...secondarySurfaces.map((s) => `  - ${s}`)].join("\n");
+    await writeFile(
+      path.join(packDir, "01_Context.md"),
+      [
+        "# 01 Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        `- primary_surface: ${primarySurface}`,
+        secondaryBlock,
+        "- classification_rationale: fixture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+
+  it("cli-only pack: no DCON-030 / DCON-031 for a missing DESIGN.md + lock", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", []);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-031");
+  });
+
+  it("cli-only pack: the unreplaced `qfai init` sample degrades to a warning", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", []);
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    const dcon034 = issues.find((i) => i.code === "QFAI-DCON-034");
+    expect(dcon034?.severity).toBe("warning");
+  });
+
+  it("cli primary with a visual secondary surface still requires the brand SSOT", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", ["web"]);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  it("web pack keeps DCON-030 / DCON-031", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", []);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  it("no discussion pack at all keeps DCON-030 (absence is not evidence of cli)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+  });
+});
