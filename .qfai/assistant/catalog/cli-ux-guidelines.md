@@ -20,7 +20,7 @@ QFAI が定義する、`npx qfai validate` の UI/UX 関連出力ガイドライ
 - `(<file>)` は issue に path がある場合のみ付与される
 - `refs=<refs>` は issue に refs がある場合のみ付与される（カンマ区切り）
 - `suppressed=true` は issue が waiver で抑止されている場合のみ付与される
-- `<message>` は改行を含むことがある（例: `QFAI-BPAP-002` は YAML パーサーの複数行 error message をそのまま保持する）。emitText は改行を正規化しないため、issue 1 件の出力が複数の物理行になり、`(<file>)` 以降の任意スロットは最終物理行に付く。パーサーは `[<severity>] ` で始まらない行を直前 issue の継続行として扱うこと
+- `<message>` は改行を含むことがある（例: `QFAI-BPAP-002` は YAML パーサーの複数行 error message をそのまま保持する）。emitText は改行を正規化しないため、issue 1 件の出力が複数の物理行になり、`(<file>)` 以降の任意スロットは最終物理行に付く。継続行と構造行の区別は後述の「行の判定順序」に従うこと
 
 例:
 
@@ -67,6 +67,21 @@ counts: info=<n> warning=<n> error=<n>
 ```text
 run-log: <path>
 ```
+
+### 行の判定順序
+
+text 出力の 1 行は、上から順に **最初に一致した規則** で解釈する。構造行を先に判定するため、`counts:` / `run-log:` / 詳細行がメッセージ継続行に取り込まれることはない:
+
+1. `[warn] ` で始まる行 — 走査打ち切り警告。最初の issue 行より前にのみ現れ、直前 issue を持たないので継続行にはならない
+2. `[info] ` / `[warning] ` / `[error] ` で始まる行 — 新しい issue のヘッダー行
+3. `counts: ` で始まる行 — 集計行。issue 出力の終端
+4. `run-log: ` で始まる行 — run log 行。text 出力の最終行
+5. 直前 issue の severity が `error` で、まだ詳細ブロックに入っていない場合、2 スペースインデントの `error_code:` 行が詳細ブロックの開始。詳細ブロック内では 2 スペースインデント + `<label>:` の行が新しい詳細フィールド、それ以外の行は直前フィールド値の継続行
+6. 上記のいずれにも一致しない行 — 直前 issue のメッセージ継続行
+
+メッセージ継続の終了条件は 2 / 3 / 5 のいずれか。`error` 以外の severity では詳細ブロックが出力されないため 2 または 3 で終わる。
+
+> **Known limitation:** message や詳細フィールドの値が、上の構造行と同じ接頭辞（`[error] ` / `counts: ` / インデント付き `error_code:` など）で始まる物理行を含む場合、この文法では区別できない。厳密な機械解析が必要なら text 出力ではなく `output.validateJsonPath` が指す JSON レポートを読むこと。
 
 > **Note:** `.qfai/contracts/design/design-tokens*.yaml` は **optional supporting artifact** である。init 直後にファイルが存在しなくても異常ではなく、token validator は token file が作成された場合にのみ実行される。
 

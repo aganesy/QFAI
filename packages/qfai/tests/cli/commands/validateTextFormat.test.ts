@@ -140,6 +140,70 @@ function resultOf(issues: Issue[]): ValidationResult {
   };
 }
 
+type LineKind =
+  | "warn"
+  | "header"
+  | "counts"
+  | "run-log"
+  | "detail"
+  | "detail-continuation"
+  | "message-continuation";
+
+/**
+ * The precedence documented under `### 行の判定順序`, implemented literally:
+ * structural lines are recognised before the "anything else continues the
+ * previous message" fallback. A guideline whose rules only worked in this
+ * order on paper would still leave `counts:` swallowed by a multi-line message.
+ */
+function classifyByGuideline(lines: string[]): { kind: LineKind; line: string }[] {
+  let section: "none" | "message" | "detail" = "none";
+  let severity: string | undefined;
+  return lines.map((line) => {
+    if (line.startsWith("[warn] ")) {
+      return { kind: "warn" as const, line };
+    }
+    const header = /^\[(info|warning|error)\] /.exec(line);
+    if (header) {
+      section = "message";
+      severity = header[1];
+      return { kind: "header" as const, line };
+    }
+    if (line.startsWith("counts: ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "counts" as const, line };
+    }
+    if (line.startsWith("run-log: ")) {
+      section = "none";
+      severity = undefined;
+      return { kind: "run-log" as const, line };
+    }
+    if (severity === "error" && section === "message" && line.startsWith("  error_code: ")) {
+      section = "detail";
+      return { kind: "detail" as const, line };
+    }
+    if (section === "detail") {
+      return {
+        kind: /^ {2}\S+: /.test(line) ? ("detail" as const) : ("detail-continuation" as const),
+        line,
+      };
+    }
+    return { kind: "message-continuation" as const, line };
+  });
+}
+
+/** The ordered rules listed under `### 行の判定順序`, in document order. */
+function extractPrecedenceRules(guideline: string): string[] {
+  const section = /### 行の判定順序\n([\s\S]*?)\n\n>/.exec(guideline)?.[1];
+  if (section === undefined) {
+    throw new Error("cli-ux-guidelines.md no longer documents a line-classification precedence");
+  }
+  return section
+    .split("\n")
+    .filter((line) => /^\d+\. /.test(line))
+    .map((line) => line.replace(/^\d+\. /, ""));
+}
+
 const MULTILINE_FIX = [
   "標準資産の直編集は非推奨です。",
   "標準状態へ戻してから validate を再実行してください。",
@@ -368,5 +432,75 @@ describe("validate --format text matches the shipped CLI UX guideline", () => {
       );
     });
     expect(complete).toBe("");
+  });
+
+  /**
+   * "Anything that does not start with `[<severity>] ` continues the previous
+   * message" is only safe once the structural lines are matched first. This
+   * runs the documented precedence over one real run that carries all of them
+   * at once: a truncation warning, a multi-line `QFAI-BPAP-002` message, an
+   * error detail block, `counts:` and `run-log:`.
+   */
+  it("classifies every structural line ahead of the message-continuation fallback", async () => {
+    const guideline = await readGuideline();
+    const rules = extractPrecedenceRules(guideline);
+    expect(rules).toHaveLength(6);
+    const anchors = ["[warn] ", "[info] ", "counts: ", "run-log: ", "error_code:"];
+    for (const [index, anchor] of anchors.entries()) {
+      expect(rules[index], `precedence rule ${index + 1} must key on ${anchor}`).toContain(anchor);
+    }
+
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-text-classify-"));
+    try {
+      const designDir = path.join(root, ".qfai", "contracts", "design");
+      await mkdir(designDir, { recursive: true });
+      await mkdir(path.join(root, ".qfai", "specs"), { recursive: true });
+      await writeFile(
+        path.join(designDir, "anti-patterns.yaml"),
+        "- id: AP-0001\n  title: [unclosed\n",
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        warnIfTruncated(
+          { globs: [], excludeGlobs: [], matchedFileCount: 20001, truncated: true, limit: 20000 },
+          "validate",
+        );
+        await runValidate({ root, strict: false, format: "text" });
+      });
+      const classified = classifyByGuideline(output.trimEnd().split("\n"));
+
+      expect(classified[0]?.kind).toBe("warn");
+      expect(classified.at(-1)?.kind).toBe("run-log");
+      expect(classified.at(-2)?.kind).toBe("counts");
+      expect(classified.filter((entry) => entry.kind === "counts")).toHaveLength(1);
+
+      const header = classified.findIndex(
+        (entry) => entry.kind === "header" && entry.line.startsWith("[error] QFAI-BPAP-002 "),
+      );
+      expect(header, "the fixture must produce a real YAML parse error").toBeGreaterThanOrEqual(0);
+      // The parser message spans physical lines, and the detail block that
+      // follows is recognised as structure rather than more message.
+      expect(classified[header + 1]?.kind).toBe("message-continuation");
+      const detail = classified.findIndex(
+        (entry, index) => index > header && entry.kind === "detail",
+      );
+      expect(classified[detail]?.line.startsWith("  error_code: QFAI-BPAP-002")).toBe(true);
+
+      for (const entry of classified.filter((item) => item.kind === "message-continuation")) {
+        expect(entry.line.startsWith("counts: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
+        expect(entry.line.startsWith("run-log: "), `structural line absorbed: ${entry.line}`).toBe(
+          false,
+        );
+        expect(
+          entry.line.startsWith("  error_code: "),
+          `structural line absorbed: ${entry.line}`,
+        ).toBe(false);
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });
