@@ -341,10 +341,10 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
-- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every still-owed `US-*` and
-  `CON-API-*` is referenced from the test tree, one deferred by `- x-qfai-status: planned` being
-  recorded at `QFAI-ATDD-118` / `-114` instead. **Not** "every `US-*` has an `E2E` row": those rows
-  have no producer, so requiring them made a correct spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
+- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every still-owed `US-*` and `CON-API-*` is
+  referenced from the test tree; a deferral is recorded instead: `QFAI-ATDD-118` for a `US-*` (a
+  `- x-qfai-status: planned` meta line inside its story block), `QFAI-ATDD-114` for a `CON-API-*`
+  (document-root `x-qfai-status: planned` — no list dash, which would make the OpenAPI document an array). **Not** "every `US-*` has an `E2E` row": those rows have no producer, so requiring them made a correct spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
