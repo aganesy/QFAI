@@ -25,11 +25,42 @@ import { isMap, isScalar, isSeq, parseDocument } from "yaml";
  * caller surfaces a warning naming the phase and the agent, and the operator
  * decides. A visible divergence is repairable; a silently restored agent is
  * indistinguishable from one the project chose.
+ *
+ * Two invariants bound what "add" is allowed to mean:
+ *
+ * - **Never add a node the project's catalog cannot satisfy.** A project that
+ *   removed an agent through `qfai-configure` has no entry for it in
+ *   `manifest/agent-catalog.yml`, and `--force` does not regenerate that file.
+ *   Splicing in a shipped node that routes to the removed agent would leave
+ *   the project failing `qfai validate` (`QFAI-AGENT-008`) on a table that was
+ *   valid a moment earlier. Such a node is skipped and reported instead.
+ * - **Never let an insertion reorder a gate.** A missing phase goes in ahead of
+ *   the earliest shipped phase that follows it and that the project does have,
+ *   so `red` lands before `implementation` even in a project that reordered
+ *   the phases around it. The project's own order is not otherwise disturbed.
  */
 
 export type RoutingPhaseAddition = {
   skill: string;
   phase: string;
+};
+
+/**
+ * Why a merge step was skipped. The caller maps this to its own diagnostic
+ * code, so a syntax error is not reported as a taxonomy divergence: a consumer
+ * classifying by code would otherwise be steered into the wrong repair.
+ */
+export type RoutingMergeWarningKind =
+  /** The manifest could not be parsed, or a node has an unexpected shape. */
+  | "manifest-shape"
+  /** A declared phase omits an agent the shipped phase marks required. */
+  | "agent-diverged"
+  /** A shipped node routes to an agent the project's catalog does not list. */
+  | "catalog-mismatch";
+
+export type RoutingMergeWarning = {
+  kind: RoutingMergeWarningKind;
+  message: string;
 };
 
 export type RoutingMergeResult = {
@@ -42,11 +73,24 @@ export type RoutingMergeResult = {
   addedPhases: RoutingPhaseAddition[];
   addedSkills: string[];
   /** Non-fatal notes: an unreadable manifest, or a required agent removed. */
-  warnings: string[];
+  warnings: RoutingMergeWarning[];
+};
+
+export type RoutingMergeOptions = {
+  /**
+   * Agent ids the project's `manifest/agent-catalog.yml` declares. `null` (the
+   * default) means the catalog could not be read, so no node is filtered — the
+   * merge cannot tell a removed agent from an unreadable catalog and must not
+   * withhold a phase on a guess.
+   */
+  knownAgents?: ReadonlySet<string> | null;
 };
 
 /** Phase keys whose shipped membership is a gate, not a preference. */
 const REQUIRED_AGENT_KEYS = ["mandatory_agents", "blocking_agents"] as const;
+
+/** Every phase key that names agents, for the catalog reachability check. */
+const AGENT_LIST_KEYS = ["mandatory_agents", "conditional_agents", "blocking_agents"] as const;
 
 /**
  * `toString` options that keep a round-trip faithful to how the shipped
@@ -58,10 +102,12 @@ const STRINGIFY_OPTIONS = { lineWidth: 0, flowCollectionPadding: false } as cons
 export function mergeRoutingPhases(
   templateSource: string,
   projectSource: string,
+  options: RoutingMergeOptions = {},
 ): RoutingMergeResult {
+  const knownAgents = options.knownAgents ?? null;
   const addedPhases: RoutingPhaseAddition[] = [];
   const addedSkills: string[] = [];
-  const warnings: string[] = [];
+  const warnings: RoutingMergeWarning[] = [];
 
   const templateRouting = readRouting(templateSource);
   const projectDoc = parseProjectDocument(projectSource, warnings);
@@ -70,7 +116,9 @@ export function mergeRoutingPhases(
   }
   const projectRouting = readRoutingFromDocument(projectDoc);
   if (!templateRouting || !projectRouting) {
-    warnings.push("agent-routing.yml has no `routing:` sequence; skipped the phase merge.");
+    warnings.push(
+      shapeWarning("agent-routing.yml has no `routing:` sequence; skipped the phase merge."),
+    );
     return { content: null, addedPhases, addedSkills, warnings };
   }
 
@@ -79,11 +127,16 @@ export function mergeRoutingPhases(
     if (!skill) continue;
     const projectEntry = projectRouting.items.find((item) => readString(item, "skill") === skill);
     if (projectEntry === undefined) {
+      const unknown = unknownAgentRefs(entryAgentRefs(templateEntry), knownAgents);
+      if (unknown.length > 0) {
+        warnings.push(catalogWarning(skill, null, unknown));
+        continue;
+      }
       projectRouting.items.push(cloneNode(templateEntry));
       addedSkills.push(skill);
       continue;
     }
-    mergeSkillPhases(skill, templateEntry, projectEntry, addedPhases, warnings);
+    mergeSkillPhases(skill, templateEntry, projectEntry, knownAgents, addedPhases, warnings);
   }
 
   if (addedPhases.length === 0 && addedSkills.length === 0) {
@@ -97,23 +150,55 @@ export function mergeRoutingPhases(
   };
 }
 
+/**
+ * Agent ids declared by a project's `manifest/agent-catalog.yml`, or `null`
+ * when the file cannot be read as one. `null` is "unknown", not "empty": it
+ * disables the reachability filter rather than skipping every addition.
+ */
+export function readCatalogAgentIds(source: string): ReadonlySet<string> | null {
+  const doc = parseDocument(source);
+  if (doc.errors.length > 0) return null;
+  const agents: unknown = doc.get("agents");
+  if (!isSeq(agents)) return null;
+  const ids = new Set<string>();
+  for (const item of agents.items) {
+    const id = readString(item, "id");
+    if (id) ids.add(id);
+  }
+  return ids;
+}
+
 function mergeSkillPhases(
   skill: string,
   templateEntry: unknown,
   projectEntry: unknown,
+  knownAgents: ReadonlySet<string> | null,
   addedPhases: RoutingPhaseAddition[],
-  warnings: string[],
+  warnings: RoutingMergeWarning[],
 ): void {
   const templatePhases = readSeq(templateEntry, "phases");
+  // Nothing shipped to merge for this skill; not a project defect.
+  if (!templatePhases) return;
   const projectPhases = readSeq(projectEntry, "phases");
-  if (!templatePhases || !projectPhases) return;
+  if (!projectPhases) {
+    // The entry exists but carries no `phases:` sequence, so the phases the
+    // regenerated skill routes to stay missing. `validateRouting` skips a
+    // non-array `phases` too, so silence here left the operator with no
+    // diagnostic from any command.
+    warnings.push(
+      shapeWarning(
+        `${skill}: routing entry has no \`phases:\` sequence; skipped the phase merge for it.`,
+      ),
+    );
+    return;
+  }
 
   // Walk the shipped phases in order, tracking where the next missing one
-  // belongs: immediately after the last shipped phase the project does have.
-  // That keeps `red` ahead of `implementation` even in a project whose other
-  // phases were reordered.
+  // belongs: after the last shipped phase the project does have, but never
+  // after a shipped phase that follows it. That keeps `red` ahead of
+  // `implementation` even in a project whose other phases were reordered.
   let cursor = 0;
-  for (const templatePhase of templatePhases.items) {
+  for (const [templateIndex, templatePhase] of templatePhases.items.entries()) {
     const id = readString(templatePhase, "id");
     if (!id) continue;
     const existing = projectPhases.items.findIndex((item) => readString(item, "id") === id);
@@ -124,10 +209,44 @@ function mergeSkillPhases(
       );
       continue;
     }
-    projectPhases.items.splice(cursor, 0, cloneNode(templatePhase));
-    cursor += 1;
+    const unknown = unknownAgentRefs(phaseAgentRefs(templatePhase), knownAgents);
+    if (unknown.length > 0) {
+      warnings.push(catalogWarning(skill, id, unknown));
+      continue;
+    }
+    const at = insertionIndex(templatePhases.items, templateIndex, projectPhases.items, cursor);
+    projectPhases.items.splice(at, 0, cloneNode(templatePhase));
+    cursor = at + 1;
     addedPhases.push({ skill, phase: id });
   }
+}
+
+/**
+ * Where a missing shipped phase goes: at the cursor, unless a shipped phase
+ * that comes *after* it already sits earlier in the project's list.
+ *
+ * The cursor alone was not enough. A project that reordered its phases to
+ * `implementation, coverage` and lacks `red` moves the cursor to the end when
+ * it matches `coverage`, so `red` was appended *after* `implementation` — the
+ * one placement the phase exists to prevent, since after the surfaces are
+ * built there is nothing left to watch fail. Clamping to the earliest
+ * following shipped phase restores the gate without reordering anything the
+ * project already declared.
+ */
+function insertionIndex(
+  templateItems: unknown[],
+  templateIndex: number,
+  projectItems: unknown[],
+  cursor: number,
+): number {
+  let limit = projectItems.length;
+  for (let i = templateIndex + 1; i < templateItems.length; i += 1) {
+    const laterId = readString(templateItems[i], "id");
+    if (!laterId) continue;
+    const at = projectItems.findIndex((item) => readString(item, "id") === laterId);
+    if (at >= 0 && at < limit) limit = at;
+  }
+  return Math.min(cursor, limit);
 }
 
 /**
@@ -139,30 +258,79 @@ function divergedAgentWarnings(
   phase: string,
   templatePhase: unknown,
   projectPhase: unknown,
-): string[] {
-  const warnings: string[] = [];
+): RoutingMergeWarning[] {
+  const warnings: RoutingMergeWarning[] = [];
   for (const key of REQUIRED_AGENT_KEYS) {
     const shipped = readStringList(templatePhase, key);
     if (shipped.length === 0) continue;
     const declared = new Set(readStringList(projectPhase, key));
     const missing = shipped.filter((agent) => !declared.has(agent));
     if (missing.length === 0) continue;
-    warnings.push(
-      `${skill}/${phase}: ${key} does not list ${missing.join(", ")}, which the shipped routing marks required. Kept as-is — re-add it or record why the project routes without it.`,
-    );
+    warnings.push({
+      kind: "agent-diverged",
+      message: `${skill}/${phase}: ${key} does not list ${missing.join(", ")}, which the shipped routing marks required. Kept as-is — re-add it or record why the project routes without it.`,
+    });
   }
   return warnings;
 }
 
+function shapeWarning(message: string): RoutingMergeWarning {
+  return { kind: "manifest-shape", message };
+}
+
+function catalogWarning(
+  skill: string,
+  phase: string | null,
+  unknown: string[],
+): RoutingMergeWarning {
+  const subject =
+    phase === null ? `${skill}: the shipped routing entry` : `${skill}/${phase}: the shipped phase`;
+  return {
+    kind: "catalog-mismatch",
+    message: `${subject} routes to ${unknown.join(", ")}, which agent-catalog.yml does not declare. Skipped rather than added — adding it would fail \`qfai validate\`; re-add the agent to the catalog, or record why the project routes without this phase.`,
+  };
+}
+
+/** Agent references in `refs` the project's catalog does not declare. */
+function unknownAgentRefs(refs: string[], knownAgents: ReadonlySet<string> | null): string[] {
+  if (knownAgents === null) return [];
+  const missing = new Set(refs.filter((ref) => !knownAgents.has(ref)));
+  return [...missing];
+}
+
+/** Every agent a shipped phase names, across all four routing keys. */
+function phaseAgentRefs(phase: unknown): string[] {
+  const refs: string[] = [];
+  for (const key of AGENT_LIST_KEYS) {
+    refs.push(...readStringList(phase, key));
+  }
+  const groups = readSeq(phase, "parallel_groups");
+  if (groups) {
+    for (const group of groups.items) {
+      refs.push(...seqStrings(isSeq(group) ? group : null));
+    }
+  }
+  return refs;
+}
+
+/** Every agent a whole shipped skill entry names, across all its phases. */
+function entryAgentRefs(entry: unknown): string[] {
+  const phases = readSeq(entry, "phases");
+  if (!phases) return [];
+  return phases.items.flatMap((phase) => phaseAgentRefs(phase));
+}
+
 function parseProjectDocument(
   source: string,
-  warnings: string[],
+  warnings: RoutingMergeWarning[],
 ): ReturnType<typeof parseDocument> | null {
   const doc = parseDocument(source);
   if (doc.errors.length > 0) {
     const first = doc.errors[0];
     warnings.push(
-      `agent-routing.yml could not be parsed (${first?.message ?? "unknown error"}); skipped the phase merge.`,
+      shapeWarning(
+        `agent-routing.yml could not be parsed (${first?.message ?? "unknown error"}); skipped the phase merge.`,
+      ),
     );
     return null;
   }
@@ -195,7 +363,10 @@ function readSeq(node: unknown, key: string): { items: unknown[] } | null {
 }
 
 function readStringList(node: unknown, key: string): string[] {
-  const seq = readSeq(node, key);
+  return seqStrings(readSeq(node, key));
+}
+
+function seqStrings(seq: { items: unknown[] } | null): string[] {
   if (!seq) return [];
   const values: string[] = [];
   for (const item of seq.items) {

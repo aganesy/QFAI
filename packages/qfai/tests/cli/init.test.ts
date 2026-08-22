@@ -51,6 +51,34 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
   expect(normalized).toContain(expectedFragment);
 }
 
+/** The `qfai-atdd` phases sequence of an `agent-routing.yml` document. */
+function atddPhases(doc: ReturnType<typeof parseDocument>) {
+  const routing = doc.get("routing");
+  if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
+  const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
+  if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
+  const phases = atdd.get("phases");
+  if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
+  return phases;
+}
+
+/** Roll a routing table back to a package that had no ATDD `red` gate. */
+function withoutAtddRedPhase(source: string): string {
+  const doc = parseDocument(source);
+  const phases = atddPhases(doc);
+  phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
+  return doc.toString({ lineWidth: 0 });
+}
+
+function atddPhaseIds(source: string): string[] {
+  const ids: string[] = [];
+  for (const item of atddPhases(parseDocument(source)).items) {
+    const id = isMap(item) ? item.get("id") : null;
+    if (typeof id === "string") ids.push(id);
+  }
+  return ids;
+}
+
 // This suite exercises end-to-end init flows with extensive filesystem I/O
 // (temp dirs, template copying, globbing), so we use a higher timeout to
 // avoid flaky failures on slow or heavily loaded CI runners.
@@ -649,15 +677,10 @@ describe("qfai init", { timeout: 60000 }, () => {
       // Roll this project back to a table without the ATDD `red` phase, and
       // give it a taxonomy of its own: an extra agent in `coverage`, and one
       // shipped-required agent deliberately dropped from it.
-      const doc = parseDocument(await readFile(routingPath, "utf-8"));
-      const routing = doc.get("routing");
-      if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
-      const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
-      if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
-      const phases = atdd.get("phases");
-      if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
-      phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
-      const coverage = phases.items.find((item) => isMap(item) && item.get("id") === "coverage");
+      const doc = parseDocument(withoutAtddRedPhase(await readFile(routingPath, "utf-8")));
+      const coverage = atddPhases(doc).items.find(
+        (item) => isMap(item) && item.get("id") === "coverage",
+      );
       if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
       coverage.set("mandatory_agents", ["house-engineer"]);
       await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
@@ -686,6 +709,81 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       expect(second).not.toContain("I-ROUTING-PHASE-MERGED");
       expect(await readFile(routingPath, "utf-8")).toBe(merged);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `writeFile` resolves a symlink and writes through it, so a project whose
+  // `agent-routing.yml` is a link into another tree would have had that other
+  // file rewritten by `qfai init`. `copyTemplateTree` already `lstat`s its
+  // destinations for this; the merge's direct write has to as well.
+  it("--force refuses to merge through a symlinked agent-routing.yml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-link-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // A valid, writable routing table that lives outside the project and is
+      // missing the ATDD `red` phase — exactly what the merge wants to add.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const escapee = path.join(outside, "agent-routing.yml");
+      await writeFile(escapee, stale, "utf-8");
+      await rm(routingPath, { force: true });
+      try {
+        await symlink(escapee, routingPath, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written through the link.
+      expect(await readFile(escapee, "utf-8")).toBe(stale);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
+  // `--force` regenerates `assistant/agents/**` but never the project's
+  // `agent-catalog.yml`, so a phase spliced in ahead of an agent the project
+  // removed would leave `qfai validate` failing (QFAI-AGENT-008) on a table
+  // that validated a moment earlier.
+  it("--force skips a routing phase the project's agent catalog cannot satisfy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-catalog-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const catalogPath = path.join(manifestDir, "agent-catalog.yml");
+
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      // The supported removal path: the agent is gone from the catalog.
+      const catalog = parseDocument(await readFile(catalogPath, "utf-8"));
+      const agents = catalog.get("agents");
+      if (!isSeq(agents)) throw new Error("agent-catalog.yml has no agents sequence");
+      agents.items = agents.items.filter(
+        (item) => !(isMap(item) && item.get("id") === "qa-gatekeeper"),
+      );
+      await writeFile(catalogPath, catalog.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-AGENT-UNKNOWN");
+      expect(captured).toContain("qa-gatekeeper");
+      expect(atddPhaseIds(await readFile(routingPath, "utf-8"))).not.toContain("red");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

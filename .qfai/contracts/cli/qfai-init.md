@@ -52,10 +52,13 @@ Exit codes:
 Behavior:
 
 - A `routing[]` skill entry the project lacks is appended whole; a phase the project lacks is inserted at the position the shipped table gives it, relative to the phases the project does have. Comments travel with the inserted node.
+- An inserted phase MUST land ahead of the earliest shipped phase that follows it and that the project already declares, so a gate such as ATDD `red` stays ahead of `implementation` even in a project that reordered the phases around it. The order of the phases the project already has MUST NOT change.
 - A phase the project already declares MUST NOT be edited or removed. Its agent lists are the project's taxonomy.
 - When a declared phase omits an agent the shipped phase lists in `mandatory_agents` / `blocking_agents`, the omission is **respected and reported** (`W-ROUTING-AGENT-DIVERGED`), never restored — restoring it would overwrite a decision made through the supported path.
+- A shipped node whose agent references the project's `manifest/agent-catalog.yml` does not declare MUST be **skipped and reported** (`W-ROUTING-AGENT-UNKNOWN`), never added. `--force` does not regenerate the catalog, so adding such a node would leave a project that removed the agent through `qfai-configure` failing `qfai validate` (`QFAI-AGENT-008`) on a table that validated a moment earlier. A catalog that cannot be read as one disables the check rather than withholding every addition.
 - Additions are reported as `I-ROUTING-PHASE-MERGED`. `--dry-run` reports without writing, and the file is left byte-identical when nothing was added.
-- An unparsable or unexpectedly shaped project manifest is reported and skipped; `init` does not fail on it (`qfai validate` owns `QFAI-AGENT-002`).
+- An unparsable project manifest, a routing entry with no `phases:` sequence, a missing packaged template, and a project manifest that is a **symlink** are each reported as `W-ROUTING-MANIFEST-UNREADABLE` and skipped; `init` does not fail on them (`qfai validate` owns `QFAI-AGENT-002`). The symlink case is a write-safety rule: the merge MUST NOT follow a link out of the project tree, matching the `lstat` guard `copyTemplateTree` already applies.
+- The three warning classes carry **distinct** codes — `W-ROUTING-MANIFEST-UNREADABLE` (parse / shape / write-safety), `W-ROUTING-AGENT-DIVERGED` (deliberate agent removal), `W-ROUTING-AGENT-UNKNOWN` (catalog cannot satisfy the shipped node) — so a consumer classifying by code is not steered into the wrong repair.
 
 #### `--upgrade-assistant-tree` (one-shot migration helper)
 

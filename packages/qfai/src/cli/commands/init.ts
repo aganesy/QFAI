@@ -37,6 +37,7 @@ import {
   ASSISTANT_LAYERS,
   HANDOFF_REQUIRED_SECTIONS,
   WORKLOG_ENTRY_KINDS,
+  joinAssistantAssetLayer,
   joinAssistantLayer,
   joinLegacyAssistantInstructions,
   joinLegacyAssistantSteering,
@@ -45,7 +46,12 @@ import {
   legacyAssistantSteeringSunsetLabel,
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
-import { mergeRoutingPhases } from "../../core/manifest/routingPhaseMerge.js";
+import {
+  mergeRoutingPhases,
+  readCatalogAgentIds,
+  type RoutingMergeResult,
+  type RoutingMergeWarningKind,
+} from "../../core/manifest/routingPhaseMerge.js";
 import { resolveToolVersion } from "../../core/version.js";
 
 const execAsync = promisify(execCb);
@@ -399,6 +405,21 @@ async function seedProjectSteering(
 // ---------------------------------------------------------------------------
 
 const ROUTING_MANIFEST_FILE = "agent-routing.yml";
+const AGENT_CATALOG_FILE = "agent-catalog.yml";
+
+/**
+ * Diagnostic code per merge-warning kind.
+ *
+ * One code for every warning read the same to a consumer classifying by code:
+ * a YAML syntax error and a deliberately removed agent both arrived as
+ * `W-ROUTING-AGENT-DIVERGED`, so a project with no divergence at all was
+ * steered into the taxonomy repair for a file that simply does not parse.
+ */
+const ROUTING_WARNING_CODES: Record<RoutingMergeWarningKind, string> = {
+  "manifest-shape": "W-ROUTING-MANIFEST-UNREADABLE",
+  "agent-diverged": "W-ROUTING-AGENT-DIVERGED",
+  "catalog-mismatch": "W-ROUTING-AGENT-UNKNOWN",
+};
 
 /**
  * Merge the routing phases the shipped skills require into the project's own
@@ -411,14 +432,48 @@ async function mergeRequiredRoutingPhases(
   destRoot: string,
   dryRun: boolean,
 ): Promise<string[]> {
-  const templatePath = path.join(assistantAssets, "manifest", ROUTING_MANIFEST_FILE);
+  const templatePath = joinAssistantAssetLayer(assistantAssets, "manifest", ROUTING_MANIFEST_FILE);
   const projectPath = joinAssistantLayer(destRoot, "manifest", ROUTING_MANIFEST_FILE);
-  const sources = await readRoutingSources(templatePath, projectPath);
-  if (!sources) return [];
+  const rel = toPosixRelative(destRoot, projectPath);
 
-  const result = mergeRoutingPhases(sources.template, sources.project);
+  // `writeFile` follows a symlink and rewrites whatever it points at, so a
+  // project whose manifest is a link into another tree would have had that
+  // other file edited by `qfai init`. `copyTemplateTree` `lstat`s its
+  // destinations for exactly this; a direct write has to as well.
+  if ((await safeLstat(projectPath))?.isSymbolicLink()) {
+    return [
+      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} is a symlink; skipped the phase merge rather than write through it to a file outside the project.`,
+    ];
+  }
+
+  const project = await readOptionalFile(projectPath);
+  // The project predates the manifest layer. Not this step's to repair:
+  // validate reports the missing manifest (QFAI-AGENT-002).
+  if (project === null) return [];
+  const template = await readOptionalFile(templatePath);
+  if (template === null) {
+    // A packaging fault, not a project one — and silence here is what made it
+    // invisible: the merge stopped with no note at all.
+    return [
+      `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the packaged ${ROUTING_MANIFEST_FILE} was not found; skipped the phase merge.`,
+    ];
+  }
+
+  const result = mergeRoutingPhases(template, project, {
+    knownAgents: await readProjectAgentIds(destRoot),
+  });
+  if (result.content !== null && !dryRun) {
+    await writeWithoutFollowingLink(projectPath, result.content);
+  }
+  return formatRoutingMergeNotes(result, rel, dryRun);
+}
+
+function formatRoutingMergeNotes(
+  result: RoutingMergeResult,
+  rel: string,
+  dryRun: boolean,
+): string[] {
   const notes: string[] = [];
-  const rel = path.relative(destRoot, projectPath).replace(/\\/g, "/");
   const additions = [
     ...result.addedSkills,
     ...result.addedPhases.map((entry) => `${entry.skill}/${entry.phase}`),
@@ -429,34 +484,67 @@ async function mergeRequiredRoutingPhases(
     );
   }
   for (const warning of result.warnings) {
-    notes.push(`  W-ROUTING-AGENT-DIVERGED: ${warning}`);
-  }
-
-  if (result.content !== null && !dryRun) {
-    await writeFile(projectPath, result.content, "utf-8");
+    notes.push(`  ${ROUTING_WARNING_CODES[warning.kind]}: ${warning.message}`);
   }
   return notes;
 }
 
-async function readRoutingSources(
-  templatePath: string,
-  projectPath: string,
-): Promise<{ template: string; project: string } | null> {
+/**
+ * Agent ids the project's own catalog declares, or `null` when it cannot be
+ * read as one. `--force` regenerates `assistant/agents/**` but never
+ * `manifest/agent-catalog.yml`, so a project that removed an agent through
+ * `qfai-configure` still has no catalog entry for it — and a spliced-in phase
+ * routing to it would leave `qfai validate` failing (QFAI-AGENT-008) on a
+ * table that validated a moment earlier.
+ */
+async function readProjectAgentIds(destRoot: string): Promise<ReadonlySet<string> | null> {
+  const catalogPath = joinAssistantLayer(destRoot, "manifest", AGENT_CATALOG_FILE);
+  const source = await readOptionalFile(catalogPath);
+  return source === null ? null : readCatalogAgentIds(source);
+}
+
+/** File contents, or `null` when nothing is at the path. */
+async function readOptionalFile(target: string): Promise<string | null> {
   try {
-    const [template, project] = await Promise.all([
-      readFile(templatePath, "utf-8"),
-      readFile(projectPath, "utf-8"),
-    ]);
-    return { template, project };
-  } catch (err) {
-    if (isEnoent(err)) {
-      // Either the project predates the manifest layer or the asset mirror is
-      // incomplete. Neither is this step's to repair: validate reports the
-      // missing manifest (QFAI-AGENT-002).
-      return null;
-    }
+    return await readFile(target, "utf-8");
+  } catch (err: unknown) {
+    if (isEnoent(err)) return null;
     throw err;
   }
+}
+
+/**
+ * Overwrite `target` without following a symlink at that path.
+ *
+ * The `lstat` in the caller answers for the entry init saw; `O_NOFOLLOW`
+ * closes the window between that look and this write on the platforms that
+ * define it. Windows defines neither, and the `lstat` is the check there.
+ */
+async function writeWithoutFollowingLink(target: string, content: string): Promise<void> {
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(target, OPEN_NOFOLLOW_WRITE_FLAGS);
+    await handle.writeFile(content, "utf-8");
+  } catch (err: unknown) {
+    // `ELOOP` is the kernel reporting the very race the flag is there for:
+    // something turned the path into a symlink after the `lstat`. Leaving the
+    // file alone is the answer, and the caller has already said the merge is
+    // add-only and skippable.
+    if ((err as NodeJS.ErrnoException | null)?.code !== "ELOOP") throw err;
+  } finally {
+    await handle?.close();
+  }
+}
+
+const OPEN_NOFOLLOW_WRITE_FLAGS =
+  constants.O_WRONLY |
+  constants.O_CREAT |
+  constants.O_TRUNC |
+  (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0);
+
+/** A `destRoot`-relative path with forward slashes, for operator notes. */
+function toPosixRelative(destRoot: string, target: string): string {
+  return path.relative(destRoot, target).split("\\").join("/");
 }
 
 // ---------------------------------------------------------------------------

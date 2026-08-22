@@ -13,7 +13,11 @@
 
 import { describe, expect, it } from "vitest";
 
-import { mergeRoutingPhases } from "../../../../src/core/manifest/routingPhaseMerge.js";
+import {
+  mergeRoutingPhases,
+  readCatalogAgentIds,
+  type RoutingMergeResult,
+} from "../../../../src/core/manifest/routingPhaseMerge.js";
 
 const TEMPLATE = `schema_version: "1.0"
 
@@ -64,6 +68,19 @@ routing:
     review_profile: runtime-heavy
 `;
 
+/** Every agent the shipped table above routes to. */
+const FULL_CATALOG = new Set([
+  "test-design-analyst",
+  "delivery-planner",
+  "acceptance-test-engineer",
+  "qa-gatekeeper",
+  "house-engineer",
+]);
+
+function messages(result: RoutingMergeResult): string {
+  return result.warnings.map((warning) => warning.message).join("\n");
+}
+
 describe("mergeRoutingPhases", () => {
   it("inserts a missing phase at its shipped position and keeps it there", () => {
     const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT);
@@ -78,6 +95,34 @@ describe("mergeRoutingPhases", () => {
     // The rationale comment travels with the phase.
     expect(merged).toContain("Stage gate P1b");
     expect(merged).toContain("iteration: per-ledger-item");
+  });
+
+  // Anchoring on the last phase matched put `red` at the end of a reordered
+  // list — after `implementation`, which is the one placement the gate exists
+  // to prevent. The insertion point is clamped to the earliest shipped phase
+  // that follows it, so the gate holds without disturbing the project's order.
+  it("keeps a gate phase ahead of its successor when the project reordered its phases", () => {
+    const reordered = `schema_version: "1.0"
+
+routing:
+  - skill: qfai-atdd
+    phases:
+      - id: implementation
+        mandatory_agents: [acceptance-test-engineer]
+        blocking_agents: []
+        rerun_policy: changed-scope-dependents
+      - id: coverage
+        mandatory_agents: [test-design-analyst]
+        blocking_agents: [test-design-analyst]
+        rerun_policy: failed-agents-only
+    review_profile: runtime-heavy
+`;
+    const merged = mergeRoutingPhases(TEMPLATE, reordered).content ?? "";
+
+    expect(merged.indexOf("- id: red")).toBeGreaterThan(-1);
+    expect(merged.indexOf("- id: red")).toBeLessThan(merged.indexOf("- id: implementation"));
+    // The project's own ordering of the phases it already had is untouched.
+    expect(merged.indexOf("- id: implementation")).toBeLessThan(merged.indexOf("- id: coverage"));
   });
 
   it("never rewrites a phase the project already declares", () => {
@@ -102,8 +147,9 @@ describe("mergeRoutingPhases", () => {
     );
     const result = mergeRoutingPhases(TEMPLATE, edited);
 
-    expect(result.warnings.join("\n")).toContain("qfai-atdd/coverage");
-    expect(result.warnings.join("\n")).toContain("test-design-analyst");
+    expect(result.warnings.map((warning) => warning.kind)).toContain("agent-diverged");
+    expect(messages(result)).toContain("qfai-atdd/coverage");
+    expect(messages(result)).toContain("test-design-analyst");
     // Respected, not repaired: the phase body is untouched.
     expect(result.content ?? "").toContain("- id: coverage\n        mandatory_agents: []");
   });
@@ -120,10 +166,89 @@ describe("mergeRoutingPhases", () => {
   it("leaves an unparsable or unexpected project manifest alone and says so", () => {
     const broken = mergeRoutingPhases(TEMPLATE, "routing: [\n");
     expect(broken.content).toBeNull();
-    expect(broken.warnings.join("\n")).toContain("agent-routing.yml");
+    expect(messages(broken)).toContain("agent-routing.yml");
+    // A syntax error is a shape problem, never a taxonomy divergence: a
+    // consumer classifying by code would otherwise be sent to repair agent
+    // lists in a file that does not parse.
+    expect(broken.warnings.map((warning) => warning.kind)).toEqual(["manifest-shape"]);
 
     const wrongShape = mergeRoutingPhases(TEMPLATE, "schema_version: '1.0'\nrouting: {}\n");
     expect(wrongShape.content).toBeNull();
-    expect(wrongShape.warnings.length).toBeGreaterThan(0);
+    expect(wrongShape.warnings.map((warning) => warning.kind)).toEqual(["manifest-shape"]);
+  });
+
+  // `validateRouting` skips a non-array `phases` too, so staying silent here
+  // left the phase missing with no diagnostic from any command.
+  it("warns when a project's routing entry carries no phases sequence", () => {
+    const shapeless = `schema_version: "1.0"
+
+routing:
+  - skill: qfai-atdd
+    phases: {}
+    review_profile: runtime-heavy
+`;
+    const result = mergeRoutingPhases(TEMPLATE, shapeless);
+
+    expect(result.addedPhases).toEqual([]);
+    const shape = result.warnings.filter((warning) => warning.kind === "manifest-shape");
+    expect(shape).toHaveLength(1);
+    expect(shape[0]?.message).toContain("qfai-atdd");
+  });
+
+  // `--force` regenerates skills and agents but never `agent-catalog.yml`, so
+  // splicing a shipped node that routes to an agent the project removed would
+  // leave a table that fails `qfai validate` (QFAI-AGENT-008) where a valid
+  // one stood.
+  it("skips a shipped node the project's catalog cannot satisfy", () => {
+    const withoutGatekeeper = new Set(FULL_CATALOG);
+    withoutGatekeeper.delete("qa-gatekeeper");
+
+    const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, {
+      knownAgents: withoutGatekeeper,
+    });
+
+    expect(result.addedPhases).toEqual([]);
+    expect(result.content ?? "").not.toContain("- id: red");
+    const mismatch = result.warnings.filter((warning) => warning.kind === "catalog-mismatch");
+    expect(mismatch).toHaveLength(1);
+    expect(mismatch[0]?.message).toContain("qa-gatekeeper");
+    // The entry whose agents the catalog does cover is still added.
+    expect(result.addedSkills).toEqual(["qfai-verify"]);
+  });
+
+  it("skips a whole shipped skill entry whose agents the catalog omits", () => {
+    const withoutPlanner = new Set(FULL_CATALOG);
+    withoutPlanner.delete("delivery-planner");
+
+    const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, { knownAgents: withoutPlanner });
+
+    expect(result.addedSkills).toEqual([]);
+    expect(messages(result)).toContain("qfai-verify");
+    expect(messages(result)).toContain("delivery-planner");
+  });
+
+  it("adds everything when the catalog covers the shipped agents", () => {
+    const result = mergeRoutingPhases(TEMPLATE, STALE_PROJECT, { knownAgents: FULL_CATALOG });
+
+    expect(result.addedPhases).toEqual([{ skill: "qfai-atdd", phase: "red" }]);
+    expect(result.addedSkills).toEqual(["qfai-verify"]);
+    expect(result.warnings.filter((warning) => warning.kind === "catalog-mismatch")).toEqual([]);
+  });
+});
+
+describe("readCatalogAgentIds", () => {
+  it("collects the declared agent ids", () => {
+    const ids = readCatalogAgentIds(
+      `schema_version: "1.0"\nagents:\n  - id: delivery-planner\n    kind: worker\n  - id: qa-gatekeeper\n    kind: reviewer\n`,
+    );
+
+    expect([...(ids ?? [])]).toEqual(["delivery-planner", "qa-gatekeeper"]);
+  });
+
+  // `null` is "unknown", not "empty": an unreadable catalog must not withhold
+  // every addition on a guess.
+  it("answers null for a catalog it cannot read as one", () => {
+    expect(readCatalogAgentIds("agents: [\n")).toBeNull();
+    expect(readCatalogAgentIds("agents: {}\n")).toBeNull();
   });
 });

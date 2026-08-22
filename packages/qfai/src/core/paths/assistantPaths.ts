@@ -55,6 +55,25 @@ export function joinAssistantLayer(
   return path.join(destRoot, ASSISTANT_DIR, layer, ...rest);
 }
 
+/**
+ * The same layer, on the **asset** side: a path inside the packaged
+ * `assets/init/.qfai/assistant/` tree, whose root the caller already holds.
+ *
+ * Both sides of a template-vs-project comparison have to name the layer, and
+ * only the project side went through this module. A layer renamed or moved
+ * here would have taken `joinAssistantLayer` with it while the asset path kept
+ * a literal segment, so the read would miss, its `ENOENT` would be swallowed
+ * as "no template", and the merge would stop without saying so. Routing both
+ * sides through one typed `AssistantLayer` makes that a compile error instead.
+ */
+export function joinAssistantAssetLayer(
+  assistantAssetsRoot: string,
+  layer: AssistantLayer,
+  ...rest: string[]
+): string {
+  return path.join(assistantAssetsRoot, layer, ...rest);
+}
+
 export function joinLegacyAssistantSteering(destRoot: string, ...rest: string[]): string {
   return path.join(destRoot, LEGACY_ASSISTANT_STEERING_DIR, ...rest);
 }
