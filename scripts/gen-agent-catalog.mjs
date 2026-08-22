@@ -144,9 +144,10 @@ function blockEnd(lines, start) {
 /**
  * The id of an entry line, given everything after `- id:`. Handles the two
  * scalar forms YAML allows here — plain and quoted — plus a trailing `#`
- * comment. Returns undefined when the value is anything else (an anchor, a
- * multi-line scalar, an unterminated quote), so the caller can fail rather than
- * carry the previous id forward.
+ * comment. Returns undefined when the value is anything else (empty, a
+ * multi-line scalar header, an unterminated quote), so the caller can fail
+ * rather than carry the previous id forward. A value that parses but names no
+ * agent — an alias, a typo — fails a step later, in `canonicalBody`.
  */
 function parseEntryId(raw) {
   const value = raw.trim();
