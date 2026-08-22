@@ -136,9 +136,97 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
-        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the `BR` / `AC` of the specs that reference the named contract) + Phase 4 (Delta update) only",
+        "run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run changed) + Phase 4 (Delta update) only",
       );
       expect(skill).toContain("**Phase 2c is not droppable in this mode.**");
+    });
+
+    it(`${tree}: the contract-scoped target is the obligations that already exist`, async () => {
+      // The per-obligation rules are written for "produced in Phase 2" / "this
+      // run produced", and Phase 2 does not run in this mode. Left unqualified,
+      // the target set is empty and the mandatory phase passes over nothing.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain(
+        "**The target set is the obligations the specs already hold.** Phase 2 does not run here",
+      );
+      expect(skill).toContain(
+        "**In contract-scoped mode the target is the `BR` / `AC` the specs already hold**, not the ones this run produced",
+      );
+      expect(rules).toContain("**Target the obligations that already exist.**");
+      expect(rules).toContain(
+        "a literal reading gives an empty set, and an empty set passes the phase without checking anything",
+      );
+      expect(checklists).toContain(
+        "the target is the `BR` / `AC` the in-scope specs **already hold**",
+      );
+    });
+
+    it(`${tree}: the contract-scoped scope follows Phase 0's writes, not the argument`, async () => {
+      // Phase 0's Cross-contract Reconciliation may amend the paired DB
+      // contract of the named API contract. A spec referencing only that pair
+      // member is the one a named-ID scope misses.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain("**Scope follows what Phase 0 wrote, not what the argument named.**");
+      expect(skill).toContain(
+        "every contract this run changed or re-adjusted is in scope, and so, transitively, is every spec referencing any of them",
+      );
+      expect(rules).toContain("**Take the scope from what Phase 0 wrote, not from the argument.**");
+      expect(rules).toContain(
+        "A spec that references only the paired contract is exactly the one the named-ID scope would miss.",
+      );
+      expect(checklists).toContain(
+        "including a paired contract Phase 0's Cross-contract Reconciliation amended, not only the named one",
+      );
+    });
+
+    it(`${tree}: contract-scoped resolution stays on the contract side`, async () => {
+      // In-phase repair of a `BR`/`AC` assumes Phase 2 / 2b / 3 run behind it.
+      // They do not here, so the EX/TC, the ledger and the plan would keep the
+      // old obligation while Phase 4 closes the Change Request.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain(
+        "**Amending a `BR` / `AC` is outside this mode's write scope.** Phase 2 / 2b / 3 do not run, so `06_Test-Cases.md`, `tdd/test-list.md` and `10_Plan.md` would keep the old obligation.",
+      );
+      expect(skill).toContain(
+        "halt and widen the Change Request to a spec-scoped `/qfai-sdd <spec-id>` rerun",
+      );
+      expect(rules).toContain(
+        "**Resolve on the contract side; amending an obligation is out of write scope.**",
+      );
+      expect(rules).toContain(
+        "When a mismatch cannot be resolved in the contract, halt and widen the Change Request to a spec-scoped `/qfai-sdd <spec-id>` rerun instead.",
+      );
+      expect(checklists).toContain(
+        "fix the contract, never the obligation — Phase 2 / 2b / 3 do not run",
+      );
+    });
+
+    it(`${tree}: a confirm-only rerun runs the phase read-only`, async () => {
+      // `confirm-only` is approved to write nothing but the CR reference, so a
+      // phase that records per-obligation outcomes and repairs mismatches in
+      // place cannot be run as written without breaking the approved limit.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain("**Under a `confirm-only` Change Request the phase is read-only.**");
+      expect(skill).toContain("a mismatch halts the rerun and returns to the Change Request");
+      expect(rules).toContain("**Under a `confirm-only` Change Request, run it read-only.**");
+      expect(rules).toContain(
+        "a `confirm-only` rerun cannot honestly confirm a contract whose approved obligations have stopped being realizable",
+      );
+      expect(checklists).toContain(
+        "read-only. Record nothing, repair nothing, and halt on the first mismatch",
+      );
     });
 
     it(`${tree}: the rule places the phase for the contract-scoped mode`, async () => {

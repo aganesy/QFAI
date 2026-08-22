@@ -56,6 +56,9 @@ Use these checklists as the detailed operational guide for `/qfai-sdd`.
 - When the attribute lives in another relation, state the join that reaches it. No join reaching it means the obligation is unrealizable, however valid both contracts are.
 - Fix the contract or the obligation in this phase — both are owned by `/qfai-sdd`, and a mismatch carried downstream reaches an implementer who can fix neither.
 - Record the outcome per obligation, not per spec.
+- Contract-scoped mode (`/qfai-sdd --contract <CON-ID>`): the target is the `BR` / `AC` the in-scope specs **already hold** — Phase 2 does not run, so "this run produced" would leave the set empty. In scope are the specs referencing any contract this run changed, including a paired contract Phase 0's Cross-contract Reconciliation amended, not only the named one.
+- Contract-scoped mode, resolution: fix the contract, never the obligation — Phase 2 / 2b / 3 do not run, so a rewritten obligation leaves `06_Test-Cases.md`, `tdd/test-list.md` and `10_Plan.md` on the old one. If only the obligation can move, halt and widen the Change Request to `/qfai-sdd <spec-id>`.
+- Contract-scoped mode under a `confirm-only` Change Request: read-only. Record nothing, repair nothing, and halt on the first mismatch rather than writing anything but the CR reference.
 - Full rule: `contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
 
 ## Phase 3: Plan finalize

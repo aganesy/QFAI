@@ -141,6 +141,33 @@ ordering assumed above: the obligations already exist and the contract is what
 just changed, so the check is not a formality there — it is what makes the
 rerun safe. Dropping it closes a Change Request over obligations that may have
 stopped being realizable, with a delta entry saying the change was handled.
+Four things change with it, and all four are `MUST`:
+
+- **Target the obligations that already exist.** The per-obligation rules below
+  say "produced in Phase 2", and Phase 2 does not run in this mode. Read that
+  as the `BR` / `AC` the in-scope specs already hold; a literal reading gives an
+  empty set, and an empty set passes the phase without checking anything.
+- **Take the scope from what Phase 0 wrote, not from the argument.** Phase 0's
+  mandatory Cross-contract Reconciliation may amend a contract the invocation
+  did not name — typically the paired DB contract of a named API contract, when
+  a state or status value moved. Every contract this run changed or re-adjusted
+  is in scope, and so is every spec referencing any of them, transitively. A
+  spec that references only the paired contract is exactly the one the named-ID
+  scope would miss.
+- **Resolve on the contract side; amending an obligation is out of write
+  scope.** The in-phase repair rule below assumes Phase 2, 2b and 3 still run
+  behind it. Here they do not, so a rewritten `BR` / `AC` leaves the `EX` / `TC`
+  in `06_Test-Cases.md`, the rows in `tdd/test-list.md` and `10_Plan.md` stating
+  the old obligation, and Phase 4 would close the Change Request over that gap.
+  When a mismatch cannot be resolved in the contract, halt and widen the Change
+  Request to a spec-scoped `/qfai-sdd <spec-id>` rerun instead.
+- **Under a `confirm-only` Change Request, run it read-only.**
+  `constitution/drift-protocol.md#when-drift-is-detected` lets that mode write
+  nothing but the CR reference, so record no per-obligation outcome and repair
+  neither side. Reconcile, and halt on the first mismatch: a `confirm-only`
+  rerun cannot honestly confirm a contract whose approved obligations have
+  stopped being realizable, and the halt returns the question to the Change
+  Request, where `re-derive` is available.
 
 For every `BR` / `AC` produced in Phase 2:
 

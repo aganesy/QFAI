@@ -187,7 +187,11 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the `BR` / `AC` of the specs that reference the named contract) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. **Phase 2c is not droppable in this mode.** It is the one invocation whose ordering is inverted — the obligations already exist and the contract is what just changed — so it is the one invocation where an already-approved `BR` / `AC` can silently have stopped being realizable, and skipping the check would close the Change Request over the mismatch. See `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 2c (Obligation reconciliation, limited to the existing `BR` / `AC` of the specs that reference any contract this run changed) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. **Phase 2c is not droppable in this mode.** It is the one invocation whose ordering is inverted — the obligations already exist and the contract is what just changed — so it is the one invocation where an already-approved `BR` / `AC` can silently have stopped being realizable, and skipping the check would close the Change Request over the mismatch. Four qualifications apply, specified in `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`:
+  - **The target set is the obligations the specs already hold.** Phase 2 does not run here, so reading the standing "produced this run" wording literally would make the set empty and the phase a no-op.
+  - **Scope follows what Phase 0 wrote, not what the argument named.** Phase 0 Cross-contract Reconciliation may amend the paired `CON-DB-*` of a named `CON-API-*`; every contract this run changed or re-adjusted is in scope, and so, transitively, is every spec referencing any of them.
+  - **Amending a `BR` / `AC` is outside this mode's write scope.** Phase 2 / 2b / 3 do not run, so `06_Test-Cases.md`, `tdd/test-list.md` and `10_Plan.md` would keep the old obligation. Resolve on the contract side, or halt and widen the Change Request to a spec-scoped `/qfai-sdd <spec-id>` rerun.
+  - **Under a `confirm-only` Change Request the phase is read-only.** That mode writes nothing but the CR reference, so reconcile without recording per-obligation outcomes and without repairing either side; a mismatch halts the rerun and returns to the Change Request, which is the finding — a `confirm-only` rerun cannot honestly confirm a contract whose obligations no longer hold.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints
@@ -228,6 +232,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `references/contract-artifact-rules.md#obligation-reconciliation-must--phase-2c`.
    Fix the contract or the obligation here; both are owned by this skill, and a
    mismatch carried downstream reaches an implementer who can fix neither.
+   **In contract-scoped mode the target is the `BR` / `AC` the specs already
+   hold**, not the ones this run produced — Phase 2 did not run — and the specs
+   in scope are those referencing any contract this run changed, including a
+   paired contract Phase 0 amended. There, resolve on the contract side only:
+   amending an obligation without Phase 2 / 2b / 3 leaves `06_Test-Cases.md`,
+   `tdd/test-list.md` and `10_Plan.md` on the old one, so halt and widen the
+   Change Request instead. Under `confirm-only`, run it read-only and halt on a
+   mismatch — that mode may write nothing but the CR reference.
 9. Phase 3: Plan finalize (after at least one slice gate passes).
 10. Phase 4: Delta update.
 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
