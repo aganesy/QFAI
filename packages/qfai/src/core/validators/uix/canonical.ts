@@ -1,7 +1,7 @@
 /**
  * Canonical UIX aggregate validator.
  *
- * Runs the eight canonical UIX checks against the discussion pack under
+ * Runs the canonical UIX checks against the discussion pack under
  * validation — resolved from a repo root, or taken directly when the target is
  * already a pack root.
  */
@@ -24,6 +24,7 @@ import {
   validateThreeLayerFamilyCompleteness,
 } from "./threeLayer.js";
 import { validateScreenContractSchema } from "./screenContract.js";
+import { validateTrendScan } from "./trendScan.js";
 
 type UixValidator = (root: string, config: QfaiConfig) => Promise<Issue[]>;
 
@@ -32,10 +33,10 @@ type UixValidator = (root: string, config: QfaiConfig) => Promise<Issue[]>;
  * runs.
  *
  * Exported because the non-UI over-fire regression (`nonUiOverfire.ts`) has to
- * measure *this* list. Its own copy of the list drifted into naming six
- * modules that had been unwired from here when the pre-`DESIGN.md` uiux
- * sidecars were retired, so the regression asserted zero fires from validators
- * production never executed.
+ * measure *this* list. Its own copy of the list drifted into naming modules
+ * that had been unwired from here when the pre-`DESIGN.md` uiux sidecars were
+ * retired, so the regression asserted zero fires from validators production
+ * never executed.
  */
 export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
   // Explicit UI-bearing classification (must run before sidecar checks)
@@ -52,6 +53,9 @@ export const CANONICAL_UIX_VALIDATORS: readonly UixValidator[] = [
   validateExplorationArtifacts,
   // OQ closure
   validateOqClosure,
+  // Trend scan — `04_Sources.md#Trend Scan` is live SSOT; only the
+  // `uiux/20_trend_scan.md` sidecar was retired.
+  validateTrendScan,
 ];
 
 /**
@@ -65,8 +69,9 @@ export async function runCanonicalUixValidators(
   // The admission probe used to be `<root>/01_Spec.md`, and both call sites
   // pass the repo root. `01_Spec.md` is a *spec* file that no discussion pack
   // contains — a pack has `01_Context.md`, which is what everything behind this
-  // gate then reads. So all eight validators were inert on every documented
-  // invocation, including `qfai validate --profile discussion --fail-on error`.
+  // gate then reads. So every validator behind this gate was inert on every
+  // documented invocation, including
+  // `qfai validate --profile discussion --fail-on error`.
   const packRoots = await resolvePackRoots(root, config);
   if (packRoots.length === 0) {
     return [];

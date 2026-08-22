@@ -26,12 +26,14 @@ describe("fixture coverage", () => {
 
   it("fixture files per validator", async () => {
     // The canonical UIX validators — the set `runCanonicalUixValidators` runs.
-    // The retired pre-`DESIGN.md` sidecar validators (taste / trend / strategy)
-    // were deleted with their tests, so naming them here only asserted that
-    // fixtures exist for validators that no longer do.
+    // The retired pre-`DESIGN.md` sidecar validators (taste / strategy) were
+    // deleted with their tests, so naming them here only asserted that fixtures
+    // exist for validators that no longer do. `trendScan` stays: its SSOT is
+    // `04_Sources.md#Trend Scan`, not a retired sidecar.
     const validators = [
       { name: "classification", file: path.join(TESTS_ROOT, "uix", "classification.test.ts") },
       { name: "threeLayer", file: path.join(TESTS_ROOT, "uix", "threeLayer.test.ts") },
+      { name: "trendScan", file: path.join(TESTS_ROOT, "uix", "trendScan.test.ts") },
       {
         name: "comparisonValidator",
         file: path.join(TESTS_ROOT, "uix", "comparisonValidator.test.ts"),
