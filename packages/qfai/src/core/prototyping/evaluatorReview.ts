@@ -389,8 +389,14 @@ const REVIEWER_PAYLOAD_KNOWN_KEYS: ReadonlySet<string> = new Set<string>([
 const SOFT_WARNINGS_KNOWN_KEYS: ReadonlySet<string> = new Set<string>(["timeBudget"]);
 
 /**
- * Per-spec Reviewer wall-time cap in seconds (5 min/spec), as declared
- * by the shipped reference
+ * Reviewer wall-time cap in seconds for ONE session — i.e. one
+ * `(spec, screen)` pair, since `dispatchReviewerToPair` runs a
+ * separate session per pair and each writes its own payload. The cap
+ * is deliberately per-session, not per-spec: a payload carries only
+ * its own `wallTimeSec`, so a per-spec total is not derivable here and
+ * a multi-screen spec would otherwise have to inflate every pair's
+ * flag (which this same relation check rejects). Declared by the
+ * shipped reference
  * (`.qfai/assistant/skills/qfai-prototyping/references/review-payload-schema.md`
  * §Field rules). `softWarnings.timeBudget` is `true` iff `wallTimeSec`
  * exceeds this cap — the parser enforces that relation so a payload

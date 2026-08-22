@@ -42,6 +42,27 @@ The two share only `layoutAntiPatternsDetected` and
 `evidenceRefs` exist on the summary only — putting them in a
 `<screen>.review.json` fails the closed schema.
 
+### Aggregating the payloads into the summary
+
+The summary is derived from the payloads you just wrote, never from
+one screen alone. Fold every `(spec, screen)` pair of this cycle:
+
+- `scores.<axis>` — the **worst** verdict that axis takes across all
+  pairs (`weak` < `acceptable` < `strong` < `exceptional`).
+- `layoutAntiPatternsDetected` — the **union** of the pairs' arrays,
+  deduplicated by ID.
+- `designMdViolations` — the **union**, deduplicated on
+  `(kind, found)`.
+- `proseCritique` / `pivotDirective` describe the cycle as a whole and
+  read the aggregated `scores`.
+
+This keeps the loop's stop test identical to the convergence AND that
+`npx qfai prototyping certify` re-derives per pair: the cycle stops
+only when every pair is `exceptional` with both arrays empty. A
+summary built from the best screen would stop the loop while certify
+still rejects the per-screen payloads — with no further cycle left in
+which to fix them.
+
 ## Per-cycle summary (`iter-NN/review.json`)
 
 ```ts

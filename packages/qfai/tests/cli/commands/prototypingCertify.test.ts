@@ -482,6 +482,77 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
     },
   );
 
+  it("exits 64 when an undeclared screen's payload left in the accepted iteration is unparsable", async () => {
+    // `buildCompletionCertificate` digests every file under the
+    // evidence root, so a payload left behind by a since-deleted
+    // screen would be sealed into the certificate. The declared-pair
+    // sweep never opens it — certify must enumerate the per-spec
+    // directory itself.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings");
+    // `old` is not a declared screen any more; the file is corrupt.
+    await seedReviewJson(root, "spec-0012", "old", 1, "{ truncated");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-0012/old.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when an undeclared screen's payload contradicts convergence", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings");
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "old",
+      1,
+      reviewPayload("spec-0012", "old", { axis: "weak" }),
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("contradict convergence"))).toBe(true);
+      expect(messages.some((m) => m.includes("spec-0012/old.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("still seals the certificate when an undeclared screen's payload is itself valid and converged", async () => {
+    // A stray file is audited, not banned outright: per-spec UI
+    // contracts can narrow the declared set, and a schema-valid,
+    // converged payload for an extra screen is not an evidence gap.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home", "settings"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(root, "spec-0012", "settings");
+    await seedReviewJson(root, "spec-0012", "extra");
+
+    const exit = await runPrototypingCertify({ root, check: false });
+    expect(exit).toBe(0);
+  });
+
   it("exits 64 when a payload still carries layout anti-patterns or DESIGN.md violations", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);

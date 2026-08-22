@@ -746,6 +746,38 @@ export async function runPrototypingCertify(
             unconvergedPayloads.push({ expectedPath: rel, errors: audit.convergenceErrors });
           }
         }
+        // The expected-path sweep above only opens the payloads the
+        // declared screens name. `buildCompletionCertificate` digests
+        // every file under the evidence root, so a payload left behind
+        // by a since-deleted screen (`old.review.json`) would be sealed
+        // into the certificate without ever being read — exactly the
+        // "present-but-unparsable payload is not evidence" case the
+        // shipped reference says certify rejects. Audit every
+        // `*.review.json` actually on disk in the per-spec directory,
+        // holding a stray file against the screen its own filename
+        // claims.
+        const declared = new Set(scopedScreens.map((s) => s.screenId));
+        const specDirRel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${specDirName}`;
+        for (const fileName of await listReviewPayloadFiles(path.join(options.root, specDirRel))) {
+          const screenId = fileName.slice(0, -REVIEW_PAYLOAD_SUFFIX.length);
+          if (declared.has(screenId)) continue;
+          const rel = `${specDirRel}/${fileName}`;
+          const audit = await auditReviewPayload(path.join(options.root, rel), {
+            specDirName,
+            screenId,
+            cycle: acceptedIterationIndex,
+          });
+          if (audit.schemaErrors.length > 0) {
+            invalidPayloads.push({ expectedPath: rel, errors: audit.schemaErrors });
+            continue;
+          }
+          if (audit.identityErrors.length > 0) {
+            mismatchedPayloads.push({ expectedPath: rel, errors: audit.identityErrors });
+          }
+          if (audit.convergenceErrors.length > 0) {
+            unconvergedPayloads.push({ expectedPath: rel, errors: audit.convergenceErrors });
+          }
+        }
       }
       if (missingPairs.length > 0) {
         error(
@@ -2037,6 +2069,25 @@ async function auditReviewPayload(
 
 function schemaOnlyAudit(message: string): ReviewPayloadAudit {
   return { schemaErrors: [message], identityErrors: [], convergenceErrors: [] };
+}
+
+/** Filename suffix of a per-(spec × screen) reviewer payload. */
+const REVIEW_PAYLOAD_SUFFIX = ".review.json";
+
+/**
+ * Every `<screen>.review.json` file that actually exists in one
+ * accepted-iteration per-spec directory, sorted for deterministic
+ * operator output. A missing / unreadable directory yields `[]`: the
+ * per-pair presence sweep already reports that as missing pairs.
+ */
+async function listReviewPayloadFiles(dirAbs: string): Promise<string[]> {
+  let entries: string[];
+  try {
+    entries = await readdir(dirAbs);
+  } catch {
+    return [];
+  }
+  return entries.filter((name) => name.endsWith(REVIEW_PAYLOAD_SUFFIX)).sort();
 }
 
 /**
