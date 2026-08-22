@@ -205,6 +205,27 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(finding?.suggested_action).toContain("qfai-configure");
   });
 
+  // The config loader accepts a whitespace-only entry, and fast-glob matches
+  // nothing for it. A raw-length check read that as configured, so the scan ran
+  // over zero files and reported nothing at all — the same silent non-result as
+  // the empty array, reached through a value that looks configured.
+  it("emits QFAI-TEST-002 when testFileGlobs holds only blank entries", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/a.test.ts",
+      'import { it } from "vitest";\nit' + TODO + '("x");\n',
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["   ", ""] }),
+    );
+
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TEST-002"]);
+    expect(issues[0]?.file).toBe("qfai.config.yaml");
+  });
+
   it("stays silent about empty testFileGlobs when the stub gate is off", async () => {
     const root = await newTempDir();
 

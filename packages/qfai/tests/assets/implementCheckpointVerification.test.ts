@@ -164,13 +164,20 @@ describe("qfai-implement checkpoint verification contract", () => {
         "reports zero `QFAI-TEST-001` **and** zero `QFAI-TEST-002` findings",
       );
       expect(checkpoint).toContain("Reading that exit 0 as a pass passes a gate that");
+      // A waiver leaves the finding in the output with `suppressed=true`
+      // (`waivers.ts:applyWaiversToFindings`), so a gate phrased as a flat
+      // "zero QFAI-TEST-002" would be unsatisfiable on the very repositories
+      // the waiver route exists for — an unscannable extension reports the
+      // code on every run.
+      expect(checkpoint).toContain("A waiver does not remove the finding");
+      expect(checkpoint).toContain("`suppressed=true`");
 
       const checklist = await readFile(path.join(dir, "references", "final-checklist.md"), "utf-8");
-      expect(checklist).toContain("The same run reports zero `QFAI-TEST-002` findings.");
-      expect(checklist).toContain("Do **not** tick the box because the command exited 0.");
+      expect(checklist).toContain("a waiver has not marked `suppressed=true`");
+      expect(checklist).toContain("Do **not** tick the");
 
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
-      expect(skill).toContain("**Or the run reports `QFAI-TEST-002`**");
+      expect(skill).toContain("**Or the run reports a `QFAI-TEST-002` no waiver marked");
     }
   });
 

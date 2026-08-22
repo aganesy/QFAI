@@ -23,7 +23,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
-import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
+import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS, normalizeGlobs } from "../traceability.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -119,7 +119,12 @@ export async function validateTestTodoStubs(root: string, config: QfaiConfig): P
     return [];
   }
 
-  const globs = config.validation.traceability.testFileGlobs;
+  // Normalised before the emptiness test, not after: the config loader accepts
+  // `testFileGlobs: ["   "]`, and a raw-length check reads that as configured
+  // while fast-glob matches nothing — a zero-file scan with no QFAI-TEST-002,
+  // the silent non-result this finding exists to stop. `collectScTestReferences`
+  // normalises the same key the same way, so both scan one file set.
+  const globs = normalizeGlobs(config.validation.traceability.testFileGlobs);
   if (globs.length === 0) {
     return [reportEmptyTestFileGlobs()];
   }
