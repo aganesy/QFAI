@@ -6,14 +6,15 @@
  * This catches the "validator written but never invoked" failure mode that
  * allowed `validateExecutionPlan` and `validateDelegationMap` to lurk as dead
  * code in v1.8.3 (RR §8.6). The guard used to scan `validators/prototyping/`
- * only — 5 of 89 declarations — while the same failure mode kept landing in
- * the other 84. Adding a new validator anywhere under `validators/` without
+ * only — 5 of 91 declarations — while the same failure mode kept landing in
+ * the other 86. Adding a new validator anywhere under `validators/` without
  * wiring it into a runXxxValidators function (directly or via an orchestrator
  * like validateStateGate) MUST fail this test in CI.
  *
  * Implementation strategy:
  *   1. Walk every TS file under src/core/validators/ recursively
- *   2. Extract every `export function validate*(`
+ *   2. Extract every exported validator: both `export function validate*(`
+ *      declarations and `export const validate* = …` function values
  *   3. Build a "reachable text" set by walking the *symbol* graph out of
  *      validate.ts: follow relative imports transitively, and resolve imports
  *      that go through a barrel (`index.ts`) to the modules that actually
@@ -41,6 +42,12 @@ const VALIDATE_TS = path.resolve(__dirname, "../../src/core/validate.ts");
 const SRC_ROOT = path.resolve(__dirname, "../../src");
 
 const PUBLIC_VALIDATOR_RE = /^export\s+(?:async\s+)?function\s+(validate\w+)\s*\(/gm;
+/**
+ * `export const validateX = …` / `export const validateX: Fn = …`. A validator
+ * bound to a variable is just as exported — and just as capable of being dead —
+ * as a function declaration, so it must be collected too.
+ */
+const PUBLIC_VALIDATOR_CONST_RE = /^export\s+(?:const|let|var)\s+(validate\w+)\s*(?::[^=;]*)?=/gm;
 const IMPORT_RE =
   /import\s+(?:type\s+)?(?:(\w+)\s*,?\s*)?(?:\{([^}]*)\})?\s*from\s+["'](\.\.?\/[\w./-]+)["']/g;
 const REEXPORT_RE = /export\s+(?:type\s+)?\{([^}]*)\}\s*from\s+["'](\.\.?\/[\w./-]+)["']/g;
@@ -72,6 +79,10 @@ const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validateAtddCoverageLedgers", "2026-08-22 — validators/atddLedger.ts, see #402"],
   ["validateBusinessFlowHasMermaid", "2026-08-22 — validators/businessFlow.ts, see #670"],
   ["validateConvergenceDoc", "2026-08-22 — validators/docs/convergenceDoc.ts, see #670"],
+  [
+    "validateDiscussMermaid",
+    "2026-08-22 — validators/discussMermaid.ts, unused `export const` alias, see #670",
+  ],
   ["validateImportLiteEvidencePresence", "2026-08-22 — validators/importLite.ts, see #407"],
   ["validateIntegrationSurface", "2026-08-22 — validators/integrationSurface.ts, see #670"],
   ["validateMermaidFenceUsage", "2026-08-22 — validators/mermaidFence.ts, see #670"],
@@ -85,6 +96,10 @@ const PENDING_WIRING: ReadonlyMap<string, string> = new Map<string, string>([
   ["validatePhaseOrdering", "2026-08-22 — validators/skill/phaseOrdering.ts, see #670"],
   ["validateSidecarFlowOrdering", "2026-08-22 — validators/skill/sidecarFlowOrdering.ts, see #670"],
   ["validateAntiPreference", "2026-08-22 — validators/uix/antiPreference.ts, see #403"],
+  [
+    "validateCanonicalSidecarFamilyCompleteness",
+    "2026-08-22 — validators/uix/threeLayer.ts, unused `export const` alias, see #670",
+  ],
   ["validateDesignSystemPresence", "2026-08-22 — validators/uix/designSystemPresence.ts, see #403"],
   ["validateStrategyStrong", "2026-08-22 — validators/uix/strategy.ts, see #403"],
   ["validateTasteInterview", "2026-08-22 — validators/uix/taste.ts, see #403"],
@@ -102,6 +117,7 @@ const PENDING_WIRING_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
   "validateAtddCoverageLedgers",
   "validateBusinessFlowHasMermaid",
   "validateConvergenceDoc",
+  "validateDiscussMermaid",
   "validateImportLiteEvidencePresence",
   "validateIntegrationSurface",
   "validateMermaidFenceUsage",
@@ -112,6 +128,7 @@ const PENDING_WIRING_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
   "validatePhaseOrdering",
   "validateSidecarFlowOrdering",
   "validateAntiPreference",
+  "validateCanonicalSidecarFamilyCompleteness",
   "validateDesignSystemPresence",
   "validateStrategyStrong",
   "validateTasteInterview",
@@ -124,9 +141,36 @@ const PENDING_WIRING_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
  * than through `validators/index.ts`. P4 requires the barrel re-export, so the
  * check below covers the whole tree; these names were already exempt when that
  * check was widened (2026-08-22) and are grandfathered. Like `PENDING_WIRING`
- * this set may only shrink — a newly added validator must be barrel-exported.
+ * this set may only shrink — a newly added validator must be barrel-exported,
+ * and `BARREL_EXPORT_EXEMPT_INITIAL_KEYS` below makes that structural rather
+ * than aspirational.
  */
 const BARREL_EXPORT_EXEMPT: ReadonlySet<string> = new Set<string>([
+  "validateAssistantAssets",
+  "validateContractConsistency",
+  "validateContracts",
+  "validateDbContractExecutability",
+  "validateDiscussionMermaid",
+  "validateDefinedIds",
+  "validateSkillsIntegrity",
+  "validateSpecPacks",
+  "validateSpecStatus",
+  "validateCreateRowCapabilityRefs",
+  "validateTriageSection",
+  "validateClassification",
+  "validateExplorationArtifacts",
+  "validateSidecarMissing",
+  "validateOqClosure",
+]);
+
+/**
+ * The exact keys recorded when `BARREL_EXPORT_EXEMPT` was taken (2026-08-22).
+ * `BARREL_EXPORT_EXEMPT` MUST stay a subset of this set, for the same reason
+ * `PENDING_WIRING` must stay a subset of its initial keys: without a fixed
+ * baseline, forgetting a new validator's barrel export could be waved through
+ * by appending its name to the exemption list.
+ */
+const BARREL_EXPORT_EXEMPT_INITIAL_KEYS: ReadonlySet<string> = new Set<string>([
   "validateAssistantAssets",
   "validateContractConsistency",
   "validateContracts",
@@ -169,12 +213,14 @@ async function collectPublicValidators(
   const out: Array<{ name: string; file: string }> = [];
   for (const file of files) {
     const body = await readFile(file, "utf-8");
-    PUBLIC_VALIDATOR_RE.lastIndex = 0;
-    let match: RegExpExecArray | null;
-    while ((match = PUBLIC_VALIDATOR_RE.exec(body)) !== null) {
-      const name = match[1];
-      if (name && !DEPRECATED_LEGACY_VALIDATORS.has(name)) {
-        out.push({ name, file });
+    for (const re of [PUBLIC_VALIDATOR_RE, PUBLIC_VALIDATOR_CONST_RE]) {
+      re.lastIndex = 0;
+      let match: RegExpExecArray | null;
+      while ((match = re.exec(body)) !== null) {
+        const name = match[1];
+        if (name && !DEPRECATED_LEGACY_VALIDATORS.has(name)) {
+          out.push({ name, file });
+        }
       }
     }
   }
@@ -212,22 +258,144 @@ function clauseNames(clause: string, side: "local" | "public"): string[] {
 }
 
 /**
- * Remove text that mentions a validator without invoking it: comments,
- * `import … from` declarations, the validator's own `export function`
- * declaration head, and `export { … } from` re-export statements. Without
- * this, a declaration, an import line or a barrel line makes a dead validator
- * look reachable — which is exactly how `validateDelegationMapIssues` passed
- * the old guard, and how an orchestrator that imports a new validator but
- * forgets to call it would still pass this one.
+ * Characters after which a `/` opens a regular expression literal rather than a
+ * division. Used by `stripComments` so a regex body such as `/\/\//` is not
+ * mistaken for the start of a line comment.
+ */
+const REGEX_LITERAL_PREV = new Set<string>([
+  "",
+  "\n",
+  "(",
+  ",",
+  "=",
+  ":",
+  "[",
+  "!",
+  "&",
+  "|",
+  "?",
+  "{",
+  "}",
+  ";",
+  "+",
+  "-",
+  "*",
+  "%",
+  "~",
+  "^",
+  "<",
+  ">",
+]);
+
+/**
+ * Remove every comment — block, whole-line AND trailing — while leaving string,
+ * template and regex literals intact. A regex-only strip anchored at the start
+ * of a line misses a trailing comment such as
+ * `return issues; // TODO: call validateNewGate`, which would leave the name in
+ * the reachable text and make an unwired validator look wired.
+ */
+function stripComments(body: string): string {
+  let out = "";
+  let index = 0;
+  let prevSignificant = "";
+  while (index < body.length) {
+    const ch = body[index];
+    const next = body[index + 1];
+    if (ch === "/" && next === "/") {
+      while (index < body.length && body[index] !== "\n") index += 1;
+      continue;
+    }
+    if (ch === "/" && next === "*") {
+      index += 2;
+      while (index < body.length && !(body[index] === "*" && body[index + 1] === "/")) index += 1;
+      index += 2;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === "`") {
+      out += ch;
+      index += 1;
+      while (index < body.length) {
+        const inner = body[index];
+        if (inner === "\\") {
+          out += body.slice(index, index + 2);
+          index += 2;
+          continue;
+        }
+        out += inner;
+        index += 1;
+        if (inner === ch) break;
+        if (ch !== "`" && inner === "\n") break; // unterminated quote — bail on the line
+      }
+      prevSignificant = ch;
+      continue;
+    }
+    if (ch === "/" && REGEX_LITERAL_PREV.has(prevSignificant)) {
+      out += ch;
+      index += 1;
+      let inCharClass = false;
+      while (index < body.length) {
+        const inner = body[index];
+        if (inner === "\\") {
+          out += body.slice(index, index + 2);
+          index += 2;
+          continue;
+        }
+        if (inner === "[") inCharClass = true;
+        else if (inner === "]") inCharClass = false;
+        out += inner;
+        index += 1;
+        if (inner === "/" && !inCharClass) break;
+        if (inner === "\n") break; // unterminated literal — it was a division
+      }
+      prevSignificant = "/";
+      continue;
+    }
+    out += ch;
+    if (ch === "\n") prevSignificant = "\n";
+    else if (ch !== undefined && !/\s/.test(ch)) prevSignificant = ch;
+    index += 1;
+  }
+  return out;
+}
+
+/**
+ * Remove text that mentions a validator without invoking it: comments (block,
+ * whole-line and trailing), `import … from` declarations, the validator's own
+ * `export function` / `export const` declaration head, and `export { … } from`
+ * re-export statements. Without this, a declaration, an import line or a barrel
+ * line makes a dead validator look reachable — which is exactly how
+ * `validateDelegationMapIssues` passed the old guard, and how an orchestrator
+ * that imports a new validator but forgets to call it would still pass this one.
  */
 function stripNonInvokingText(body: string): string {
-  return body
-    .replace(/\/\*[\s\S]*?\*\//g, "")
-    .replace(/^\s*\/\/.*$/gm, "")
+  return stripComments(body)
     .replace(/^import\s+[^;]*?\sfrom\s*["'][^"']+["']\s*;?/gm, "")
     .replace(/^import\s*["'][^"']+["']\s*;?/gm, "")
     .replace(/export\s+(?:type\s+)?\{[^}]*\}\s*from\s+["'][^"']+["'];?/g, "")
-    .replace(/^export\s+(?:async\s+)?function\s+validate\w+\s*\(/gm, "function __declared__(");
+    .replace(/^export\s+(?:async\s+)?function\s+validate\w+\s*\(/gm, "function __declared__(")
+    .replace(/^export\s+(?:const|let|var)\s+validate\w+\s*(?::[^=;]*)?=/gm, "const __declared__ =");
+}
+
+/**
+ * The identifiers a barrel actually re-exports, parsed from its `export { … }
+ * from "…"` clauses. Exact identifiers matter: a substring test on the barrel
+ * body reports `validateTraceability` as exported merely because the file
+ * mentions `validateTraceabilityIntegrity`, which silently forgives the very
+ * omission the P4 check exists to catch. `export type { … }` clauses are
+ * skipped — a type re-export is not a validator re-export.
+ */
+function barrelExportedNames(indexBody: string): ReadonlySet<string> {
+  const names = new Set<string>();
+  const valueReexportRe = /export\s+\{([^}]*)\}\s*from\s+["'][^"']+["']/g;
+  let match: RegExpExecArray | null;
+  while ((match = valueReexportRe.exec(indexBody)) !== null) {
+    const clause = match[1];
+    if (!clause) continue;
+    for (const name of clauseNames(clause, "public")) {
+      names.add(name);
+    }
+  }
+  return names;
 }
 
 /** Modules a barrel supplies the requested names from. */
@@ -331,7 +499,7 @@ describe("meta-test: validators are wired into the pipeline", () => {
     const all = await collectPublicValidators(VALIDATORS_ROOT);
     const prototypingOnly = await collectPublicValidators(PROTOTYPING_VALIDATORS_DIR);
 
-    // The pre-widening guard saw 5 of 89 declarations. Any scope regression
+    // The pre-widening guard saw 5 of 91 declarations. Any scope regression
     // that re-narrows the collector trips here.
     expect(all.length).toBeGreaterThan(prototypingOnly.length * 5);
     const dirs = new Set(all.map((v) => path.relative(VALIDATORS_ROOT, path.dirname(v.file))));
@@ -342,13 +510,13 @@ describe("meta-test: validators are wired into the pipeline", () => {
 
   it("validators/index.ts re-exports every public validator under validators/ (excluding pending-wiring and grandfathered exemptions)", async () => {
     const validators = await collectPublicValidators(VALIDATORS_ROOT);
-    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+    const exported = barrelExportedNames(await readFile(VALIDATORS_INDEX, "utf-8"));
 
     const missingExports: string[] = [];
     for (const { name } of validators) {
       if (PENDING_WIRING.has(name)) continue;
       if (BARREL_EXPORT_EXEMPT.has(name)) continue;
-      if (!indexBody.includes(name)) {
+      if (!exported.has(name)) {
         missingExports.push(name);
       }
     }
@@ -362,15 +530,26 @@ describe("meta-test: validators are wired into the pipeline", () => {
   it("BARREL_EXPORT_EXEMPT has no stale entries (re-exported or deleted validators must be removed)", async () => {
     const validators = await collectPublicValidators(VALIDATORS_ROOT);
     const declared = new Set(validators.map((v) => v.name));
-    const indexBody = await readFile(VALIDATORS_INDEX, "utf-8");
+    const exported = barrelExportedNames(await readFile(VALIDATORS_INDEX, "utf-8"));
 
     const stale = [...BARREL_EXPORT_EXEMPT].filter(
-      (name) => !declared.has(name) || indexBody.includes(name),
+      (name) => !declared.has(name) || exported.has(name),
     );
     expect(
       stale,
       `These names no longer need an exemption — drop them from BARREL_EXPORT_EXEMPT: ${stale.join(", ")}`,
     ).toEqual([]);
+  });
+
+  it("BARREL_EXPORT_EXEMPT never grows (a new validator must be barrel-exported, not exempted)", () => {
+    const added = [...BARREL_EXPORT_EXEMPT].filter(
+      (name) => !BARREL_EXPORT_EXEMPT_INITIAL_KEYS.has(name),
+    );
+    expect(
+      added,
+      `BARREL_EXPORT_EXEMPT may only shrink — export the validator from validators/index.ts instead. New names: ${added.join(", ")}`,
+    ).toEqual([]);
+    expect(BARREL_EXPORT_EXEMPT.size).toBeLessThanOrEqual(BARREL_EXPORT_EXEMPT_INITIAL_KEYS.size);
   });
 
   it("stripNonInvokingText keeps only text that can invoke a validator", () => {
@@ -385,7 +564,11 @@ describe("meta-test: validators are wired into the pipeline", () => {
       'import type { Issue } from "../types.js";',
       'export { validateBarrelOnly } from "./barrelOnly.js";',
       "// TODO: call validateLineCommentOnly here one day",
+      "export const validateAliasDeclaredHere = validateActuallyCalled;",
       "export function validateDeclaredHere(input: string): Issue[] {",
+      "  const fence = /\\/\\//; // regex, not a comment: validateTrailingCommentOnly",
+      '  const doc = "https://example.com/#validateInsideStringUrl";',
+      "  if (fence.test(doc)) return validateAlsoCalled(input); // validateTrailingAfterCode",
       "  return validateActuallyCalled(input);",
       "}",
     ].join("\n");
@@ -397,7 +580,19 @@ describe("meta-test: validators are wired into the pipeline", () => {
     expect(stripped).not.toContain("validateImportedButNeverCalled");
     expect(stripped).not.toContain("validateBarrelOnly");
     expect(stripped).not.toContain("validateDeclaredHere");
+    // Trailing comments count as prose too — both after a regex literal and
+    // after a real statement.
+    expect(stripped).not.toContain("validateTrailingCommentOnly");
+    expect(stripped).not.toContain("validateTrailingAfterCode");
+    // …but the code on those lines, and anything a string literal happens to
+    // contain, must survive: over-stripping would report a wired validator as
+    // dead.
+    expect(stripped).toContain("validateAlsoCalled");
+    expect(stripped).toContain("validateInsideStringUrl");
     expect(stripped).toContain("validateActuallyCalled");
+    // An `export const validate… =` head is a declaration, not an invocation,
+    // exactly like the `export function` head above.
+    expect(stripped).not.toContain("validateAliasDeclaredHere");
   });
 
   it("the retired QFAI-PROT-310 producer is absent from the reachable graph", async () => {
