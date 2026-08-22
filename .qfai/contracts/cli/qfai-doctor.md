@@ -19,7 +19,7 @@
 
 ## Public sub-commands
 
-### `qfai doctor [--profile <name>] [--format <text|json>] [--out <path>] [--fail-on <error|warning>] [--clean] [--autoremediate] [--dry-run] [--yes]`
+### `qfai doctor [--profile <name>] [--format <text|json>] [--out <path>] [--fail-on <error|warning|never>] [--clean] [--autoremediate] [--dry-run] [--yes]`
 
 Probes the active profile's required runtime preconditions and the
 skill / asset integrity surface. Returns a structured summary grouping
@@ -27,11 +27,14 @@ findings into two buckets: "errors blocking the active profile" and
 "warnings advisory of drift" (per REQ-0122).
 
 The probe itself is read-only. `--clean` and `--autoremediate` are the
-only paths that write, and they run as pre-steps BEFORE the diagnostic
-build so the summary reports the post-remediation tree. Every path they
-write is enumerated under "Side effects (written)" below.
+only paths that mutate the repository, and they run as pre-steps
+BEFORE the diagnostic build so the summary reports the
+post-remediation tree. Every path they write is enumerated under "Side
+effects (written)" below, alongside the one operator-named write
+`--out <path>` performs on any invocation.
 
-Inputs (read; never written):
+Inputs (read; the repository is never written from them — `--out`
+names a destination file, see its bullet):
 
 - `--profile <name>` — when passed, doctor scopes the probe to the
   named profile's required runtime preconditions (e.g.
@@ -51,9 +54,13 @@ Inputs (read; never written):
   `qfai doctor --format json --out report.json | jq` reads a status
   line rather than JSON — a consumer that wants the document reads
   the file. This is an operator-named report destination, not a
-  repository mutation.
-- `--fail-on <error|warning>` — selects the finding severity that
-  turns the exit code non-zero; see "Exit codes".
+  repository mutation — but it IS a write, on every invocation and
+  under no flag: see "`--out <path>`" under "Side effects (written)".
+- `--fail-on <error|warning|never>` — selects the finding severity
+  that turns the exit code non-zero; see "Exit codes". `never` is
+  accepted and means "report, always exit 0" — the same outcome as
+  omitting the flag, spelled explicitly for a lane that wants the
+  intent recorded in the command line.
 - `qfai.config.yaml#prototyping.execution.browserTool` — accepted
   values during the deprecation window: `"playwright"` (canonical)
   OR `"playwright-cli"` (legacy, emits `D-DEPRECATED-PROBE`
@@ -63,10 +70,28 @@ Inputs (read; never written):
 
 ## Side effects (written)
 
-Doctor writes nothing unless `--clean` or `--autoremediate` is
-passed. `--autoremediate` supersedes `--clean`: when both are
-present, only the autoremediate path runs (it archives review packs
-itself as one of its phases).
+Doctor does not touch the repository unless `--clean` or
+`--autoremediate` is passed; the one write available without either
+is the report destination the operator names with `--out`.
+`--autoremediate` supersedes `--clean`: when both are present, only
+the autoremediate path runs (it archives review packs itself as one
+of its phases).
+
+### `--out <path>`
+
+| Path              | Write                 | Condition         |
+| ----------------- | --------------------- | ----------------- |
+| `<path>`          | created / overwritten | `--out` is passed |
+| `dirname(<path>)` | created recursively   | it does not exist |
+
+Passed alone — no `--clean`, no `--autoremediate` — `--out` still
+writes: doctor resolves the path against the process CWD, creates the
+parent directories it needs, and writes the rendered summary there.
+`--dry-run` does not suppress it; it governs the remediations, not the
+report. This is the operator's own destination rather than a
+repository mutation, which is why it is not part of the remediation
+tables below, but a caller reasoning about what a doctor run touches
+counts it.
 
 ### `--clean`
 
@@ -87,7 +112,7 @@ Runs install + clean + config-fill as one orchestrated pass.
 
 | Path                                    | Write                              | Condition                                                                                                        |
 | --------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `<root>/.gitignore`                     | managed block rewritten            | always (before the orchestrator), unless a standard CI environment is detected                                   |
+| `<root>/.gitignore`                     | managed block rewritten            | the managed block is missing or stale (see below); never in a detected CI environment                            |
 | `qfai.config.yaml`                      | appended                           | a default-keyed field (`review:`) is absent from the PARSED document; user-authored values are never overwritten |
 | `.qfai/review/review-<ts>/`             | renamed (moved)                    | same TTL rule as `--clean`                                                                                       |
 | `.qfai/review/.legacy-packs`            | written (first run only)           | packs predating `revision_form` exist and no record has been taken yet                                           |
@@ -95,8 +120,21 @@ Runs install + clean + config-fill as one orchestrated pass.
 | `node_modules/`                         | `npm install <name>`               | `--profile <skill>` names a manifest with unmet `runtimeDependencies`                                            |
 | `package.json` + `package-lock.json`    | updated by that same `npm install` | same condition as the row above                                                                                  |
 
+The `.gitignore` rewrite is checked, not unconditional. It is
+attempted before the orchestrator on every non-CI `--autoremediate`
+run, but the helper returns early — writing nothing — when the
+existing managed block already carries the marker, every required
+governance negation, those negations outranking any later matching
+ignore line, and no retired legacy line. So a second
+`--autoremediate` on an already-migrated repository leaves
+`.gitignore` byte-identical.
+
 Three of these rows land on version-controlled files, so an
-`--autoremediate` run is expected to leave a diff:
+`--autoremediate` run that has something to do leaves a diff. A
+repeat run on a repository whose block is already current, whose
+dependencies are installed, whose config carries every default key
+and whose packs are all inside the TTL writes nothing at all and
+leaves no diff — the whole pass is idempotent:
 
 - The install runs `npm install <name>` WITHOUT `--no-save`, so under
   the default npm settings (`save=true`, `package-lock=true`) it
@@ -106,6 +144,28 @@ Three of these rows land on version-controlled files, so an
   `.legacy-packs` record AND a `revision_form: "legacy"` field in
   each named pack's `summary.json`. A pack that already declares a
   form is never reclassified.
+
+#### Install scripts are an UNBOUNDED side effect
+
+The install runs `npm install <name>` without `--ignore-scripts`, so
+npm executes the target package's (and its dependencies')
+`preinstall` / `install` / `postinstall` / `prepare` lifecycle
+scripts. Those scripts are arbitrary code running with the operator's
+own privileges: they can write anywhere the operator can, and nothing
+in this contract bounds them to the table above. The declared
+boundary covers the paths DOCTOR writes; it does not and cannot cover
+what a third-party package's install hooks do.
+
+This is deliberate rather than an oversight — a runtimeDependency
+like `playwright` is unusable without its `postinstall` — but it is
+the reason `--autoremediate --profile <skill>` is an
+operator-confirmed action and not something to schedule unattended.
+An operator who needs the enumerated set to be the whole story
+installs the dependency themselves with `npm install <name>
+--ignore-scripts` and re-runs doctor without `--autoremediate`.
+Restricting doctor's own install to `--ignore-scripts` would be a
+contract change in the other direction (it silently produces
+half-installed packages), so it is not done implicitly.
 
 Presence of the `review:` config key is decided by PARSING the YAML
 document, not by matching raw text, so a quoted or spaced spelling
@@ -247,17 +307,23 @@ Findings that surface drift without blocking the profile. Examples:
 
 The non-zero row is gated on `--fail-on`: with `--fail-on error` the
 "errors" bucket being non-empty returns 1, and with `--fail-on
-warning` a non-empty "warnings" bucket does too. Without `--fail-on`,
-doctor reports its findings and returns 0 — the summary is the signal,
-not the exit code.
+warning` a non-empty "warnings" bucket does too. `--fail-on never` is
+the third accepted value; it is dropped before reaching the doctor
+run, so it behaves exactly like omitting the flag. Without
+`--fail-on` — or with `never` — doctor reports its findings and
+returns 0; the summary is the signal, not the exit code.
 
 ## Non-goals
 
 - `qfai doctor` is read-only BY DEFAULT and does NOT attempt repairs
   on its own. Repairs happen only when the operator opts in with
-  `--clean` or `--autoremediate`, and are bounded by the paths
-  enumerated under "Side effects (written)". Widening that set is a
-  contract change.
+  `--clean` or `--autoremediate`, and the paths DOCTOR ITSELF writes
+  are bounded by those enumerated under "Side effects (written)"
+  (plus the operator-named `--out` destination). Widening that set is
+  a contract change. The bound stops at doctor's own writes: the
+  `npm install <name>` the autoremediate install phase shells out to
+  runs the target package's lifecycle scripts, whose writes are
+  unbounded — see "Install scripts are an UNBOUNDED side effect".
 - `qfai doctor` does NOT delete anything. `--clean` renames stale
   review packs into `_archive/`; no path is removed on any flag.
 - `qfai doctor` does NOT remediate in a detected CI environment

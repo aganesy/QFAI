@@ -96,6 +96,44 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(summary.configFieldsWritten).toContain("review");
   });
 
+  it("previews the legacy-pack record against the post-archive set, as the live run sees it", async () => {
+    // A TTL-expired pack with no `revision_form` is archived by phase (2) before
+    // phase (4) enumerates the top level, so a live run records nothing. The
+    // dry-run moves no directory, so without the same exclusion it counted the
+    // pack and promised `.legacy-packs` + `summary.json` writes the live run
+    // would never make. Both paths must answer 0.
+    const seed = async (label: string): Promise<string> => {
+      const root = await newTempDir(label);
+      const staleTs = "20260401120000333";
+      const packDir = path.join(root, ".qfai", "review", `review-${staleTs}`);
+      await mkdir(packDir, { recursive: true });
+      // No `revision_form` — this is exactly what the migration records.
+      await writeFile(
+        path.join(packDir, "summary.json"),
+        JSON.stringify({ verdict: "pass" }, null, 2),
+        "utf-8",
+      );
+      const mtime = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+      await utimes(packDir, mtime, mtime);
+      return root;
+    };
+
+    const dryRoot = await seed("legacy-dry");
+    const dry = await runAutoremediate({ root: dryRoot, dryRun: true, yes: true, isCi: false });
+
+    const liveRoot = await seed("legacy-live");
+    const live = await runAutoremediate({ root: liveRoot, dryRun: false, yes: true, isCi: false });
+
+    expect(live.archived).toHaveLength(1);
+    expect(dry.archived).toEqual(live.archived);
+    expect(live.legacyPacksRecorded).toEqual([]);
+    expect(dry.legacyPacksRecorded).toEqual([]);
+    expect(dry.lines).toContain("autoremediate: would record legacy review packs=0 (dry-run)");
+    // The preview promised no manifest, and the live run wrote none.
+    expect(await fileExists(path.join(liveRoot, ".qfai", "review", ".legacy-packs"))).toBe(false);
+    expect(await fileExists(path.join(dryRoot, ".qfai", "review", ".legacy-packs"))).toBe(false);
+  });
+
   it("does NOT overwrite a user-authored review.staleTtlDays value", async () => {
     const root = await newTempDir("no-overwrite");
     const configPath = path.join(root, "qfai.config.yaml");

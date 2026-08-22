@@ -61,6 +61,29 @@ function doctorOnlyFlags(argsSource: string): string[] {
   return [...found].sort();
 }
 
+/**
+ * The values the parser's `--fail-on` branch accepts.
+ *
+ * Read out of the source rather than hard-coded: the point of the assertion is
+ * that the contract's enumeration and the parser's cannot drift, and a list
+ * repeated in the test would drift with neither.
+ */
+function failOnValues(argsSource: string): string[] {
+  const branch = /case "--fail-on": \{([\s\S]*?)\n {6}\}/u.exec(argsSource);
+  const body = branch?.[1] ?? "";
+  const found = new Set<string>();
+  const re = /next === "([a-z-]+)"/gu;
+  let match = re.exec(body);
+  while (match !== null) {
+    const value = match[1];
+    if (value !== undefined) {
+      found.add(value);
+    }
+    match = re.exec(body);
+  }
+  return [...found].sort();
+}
+
 /** The `### \`qfai doctor ...\`` command-shape heading. */
 function commandShapeHeading(contract: string): string {
   const line = contract.split("\n").find((candidate) => candidate.startsWith("### `qfai doctor"));
@@ -93,6 +116,61 @@ describe("`qfai doctor` CLI contract surface", () => {
     for (const flag of parserFlags) {
       expect(heading).toContain(flag);
     }
+  });
+
+  it("enumerates every `--fail-on` value the parser accepts", async () => {
+    const [contract, argsSource] = await Promise.all([
+      readFile(CONTRACT, "utf-8"),
+      readFile(ARGS, "utf-8"),
+    ]);
+    const heading = commandShapeHeading(contract);
+    const values = failOnValues(argsSource);
+
+    // Guard the guard: an unmatched branch would make the loop vacuous.
+    expect(values).toContain("never");
+    expect(values).toContain("error");
+    for (const value of values) {
+      expect(heading).toContain(value);
+    }
+  });
+
+  it("declares the `--out` write, which needs neither mutating flag", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // `runDoctor` mkdir -p's the parent and writes the file on any invocation
+    // carrying `--out`, so "doctor writes nothing unless --clean or
+    // --autoremediate" was false for the one write an operator asks for by
+    // name.
+    expect(contract).not.toContain("Doctor writes nothing unless `--clean` or `--autoremediate`");
+    expect(contract).toContain("### `--out <path>`");
+    expect(contract).toContain("created recursively");
+  });
+
+  it("puts npm lifecycle scripts outside the enumerated side-effect boundary", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // `defaultInstallRunner` spawns `npm install <name>` with no
+    // `--ignore-scripts`, so the package's preinstall / install / postinstall /
+    // prepare hooks run as the operator. Claiming the remediation is "bounded
+    // by the paths enumerated" without that carve-out overstates the guarantee.
+    expect(contract).not.toContain(
+      'are bounded by the paths enumerated under "Side effects (written)"',
+    );
+    expect(contract).toContain("Install scripts are an UNBOUNDED side effect");
+    expect(contract).toContain("without `--ignore-scripts`");
+    expect(contract).toContain("`postinstall`");
+  });
+
+  it("conditions the `.gitignore` rewrite on the block being missing or stale", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // `ensureRootGitignoreEntries` returns early — writing nothing — when the
+    // marker, the governance negations, their ordering and the absence of
+    // legacy lines all hold, so an `always` row promised a diff a repeat run
+    // does not produce.
+    expect(contract).toContain("the managed block is missing or stale");
+    expect(contract).toContain("returns early");
+    expect(contract).toContain("byte-identical");
   });
 
   it("scopes the read-only claim instead of asserting it unconditionally", async () => {

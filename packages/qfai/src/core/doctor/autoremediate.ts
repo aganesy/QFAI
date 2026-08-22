@@ -264,8 +264,16 @@ export async function runAutoremediate(
   // a commit and every legacy claim is uncorroborated again in CI and in the
   // next clone. It is done there rather than here because this module is core
   // and that helper is CLI — importing it the other way is a cycle.
+  // The archive pass above already ran, so a live run no longer sees the packs
+  // it moved into `_archive/` and records none of them. A dry-run moves
+  // nothing, so without the same exclusion it enumerated those packs and
+  // reported `would record legacy review packs=N` for a live run whose answer
+  // is 0 — a preview that promised manifest and summary writes the run would
+  // never make. Handing the archived names over keeps both paths on the same
+  // post-archive set.
   const migration = await migrateLegacyReviewPacks(options.root, {
     ...(options.dryRun ? { dryRun: true } : {}),
+    excludePacks: archivedNames,
   });
   lines.push(
     options.dryRun
