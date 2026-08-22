@@ -136,7 +136,7 @@ change still flows into the plan and the delta.
 
 **In contract-scoped mode (`/qfai-sdd --contract <CON-ID>`) neither neighbour
 runs, so Phase 2c sits between Phase 0 and Phase 4**, scoped to the `BR` / `AC`
-of the specs that reference the named contract. That invocation inverts the
+of the specs that reference the contracts this run touched. That invocation inverts the
 ordering assumed above: the obligations already exist and the contract is what
 just changed, so the check is not a formality there — it is what makes the
 rerun safe. Dropping it closes a Change Request over obligations that may have

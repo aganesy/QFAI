@@ -239,7 +239,7 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
         "**In contract-scoped mode (`/qfai-sdd --contract <CON-ID>`) neither neighbour runs, so Phase 2c sits between Phase 0 and Phase 4**",
       );
       expect(rules).toContain(
-        "scoped to the `BR` / `AC` of the specs that reference the named contract",
+        "scoped to the `BR` / `AC` of the specs that reference the contracts this run touched",
       );
     });
 
