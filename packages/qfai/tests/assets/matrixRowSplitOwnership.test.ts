@@ -152,6 +152,9 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(phase2b).toContain("`Audited evidence hash`");
     expect(phase2b).not.toContain("unless its recorded RED/GREEN still holds");
+    // The reset itself is a cell write, so it stays with the cells' owner.
+    expect(phase2b).toContain("**This phase does not write that reset**, only the row identity");
+    expect(phase2b).toContain("`qfai-implement/references/change-request-reset.md`");
   });
 
   it("carries the Phase 2b exceptions into project_memory", async () => {
@@ -161,7 +164,7 @@ describe.each(TREES)("%s", (tree) => {
     const memory = skill.slice(skill.indexOf("project_memory:"));
 
     expect(memory).toContain("one row per independently observable boundary");
-    expect(memory).toContain("always return the kept row to todo");
+    expect(memory).toContain("always have the kept row re-executed");
     expect(memory).toContain("columns are migrated to the template's");
   });
 
@@ -205,6 +208,11 @@ describe.each(TREES)("%s", (tree) => {
     expect(red).not.toContain("Split the row per `#selector-granularity-must` before continuing");
     expect(red).toContain("**This skill does not split it.**");
     expect(red).toContain("Never split in place");
+
+    // Step 3c offered the same in-place split as a way to get one trio per
+    // selector entry, which routed around the rule the rest of the phase states.
+    expect(red).not.toContain("or split the row before the handoff");
+    expect(red).toContain("**and never split the row here to get one**");
   });
 
   it("routes the residual matrix shape through a Change Request and a blocked row", async () => {
