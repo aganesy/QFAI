@@ -48,7 +48,12 @@ const FIXED_ORDER = [
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-type Phase = { id?: string; blocking_agents?: string[] };
+type Phase = {
+  id?: string;
+  blocking_agents?: string[];
+  mandatory_agents?: string[];
+  rerun_policy?: string;
+};
 
 async function sddRoutingPhases(tree: string): Promise<Phase[]> {
   const raw = await read(tree, "assistant/manifest/agent-routing.yml");
@@ -169,6 +174,47 @@ describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order
       "Phase 0 Contracts-first and Phase 1 Outline are shared work run once per batch",
     );
     expect(flat).toContain("only Phase 2 Slice through Phase 4 Delta update fan out per spec");
+  });
+
+  it("keeps the spec drafter routed into the span where it drafts", async () => {
+    // Span membership is a floor, not an exclusive assignment. The Triage span
+    // ends before any spec edit, so a `requirements-analyst` mandatory only
+    // there could never perform the drafting `Stage minimum roles` assigns it.
+    const [phases, skill] = await Promise.all([sddRoutingPhases(tree), readSddSkill(tree)]);
+    const mandatory = (id: string): string[] =>
+      phases.find((phase) => phase.id === id)?.mandatory_agents ?? [];
+    expect(mandatory("slice-and-scope")).toContain("requirements-analyst");
+    expect(mandatory("design")).toContain("requirements-analyst");
+
+    const flat = skill.replace(/\s+/g, " ");
+    expect(flat).toContain("Span membership partitions the fixed order, not the agent roster");
+    expect(flat).toContain("never a ban on running in another span");
+  });
+
+  it("routes a Triage `REVISE` back to the author of the table", async () => {
+    // `failed-agents-only` re-ran the blocking planner alone against a table
+    // only `requirements-analyst` can amend, so the same verdict repeated.
+    const [phases, skill] = await Promise.all([sddRoutingPhases(tree), readSddSkill(tree)]);
+    expect(phases.find((phase) => phase.id === "slice-and-scope")?.rerun_policy).toBe(
+      "changed-scope-dependents",
+    );
+    expect(skill.replace(/\s+/g, " ")).toContain(
+      "returns the table to `requirements-analyst`, its author, and the planner re-evaluates the amended table",
+    );
+  });
+
+  it("keeps a serial repair path for shared contracts in batch mode", async () => {
+    // Phase 2c MUST fix the contract or the obligation in place; the batch
+    // prohibition on editing shared artifacts would otherwise leave a worker
+    // whose fix belongs to the contract with nothing but a weakened obligation.
+    const flat = (await readSddSkill(tree)).replace(/\s+/g, " ");
+    expect(flat).toContain("neither edits the contract nor weakens the obligation to fit");
+    expect(flat).toContain(
+      "the orchestrator suspends the fan-out, applies the contract fix once as shared work",
+    );
+    expect(flat).toContain(
+      "re-runs Phase 2 Slice through Phase 2c for every spec whose obligations read the amended contract",
+    );
   });
 
   it("points the manifest back at the crosswalk", async () => {

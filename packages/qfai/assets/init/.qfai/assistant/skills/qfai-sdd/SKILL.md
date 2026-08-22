@@ -164,7 +164,21 @@ per-phase blocking never reorders the fixed order. Two exceptions bound the tabl
   Contracts-first and Phase 1 Outline are shared work run once per batch; only Phase 2 Slice
   through Phase 4 Delta update fan out per spec, and `slice-and-scope` and `review` run once per
   invocation, per `### No-argument batch delegation (MUST)`. No worker may edit shared contracts or
-  `_policies` after the fan-out begins.
+  `_policies` after the fan-out begins. That prohibition is not a licence to carry a mismatch: when
+  a worker's Phase 2c finds the correct fix is on the shared-contract side, it neither edits the
+  contract nor weakens the obligation to fit — it stops, records the mismatch, and the orchestrator
+  suspends the fan-out, applies the contract fix once as shared work, then re-runs Phase 2 Slice
+  through Phase 2c for every spec whose obligations read the amended contract before resuming.
+
+Span membership partitions the fixed order, not the agent roster. Being mandatory in a span is a
+floor — the agent MUST run inside it — never a ban on running in another span, so a role may be
+mandatory in more than one. `requirements-analyst` is: it authors the Stage 1 Triage table in
+`slice-and-scope` and drafts the requirement-aligned spec content `Stage minimum roles` assigns it
+in Phase 2 Slice, inside `design`, after Phase 0 has frozen the contracts. A `delivery-planner`
+`REVISE` at the Triage gate therefore returns the table to `requirements-analyst`, its author, and
+the planner re-evaluates the amended table; `slice-and-scope` is `changed-scope-dependents` for
+exactly that reason, because `failed-agents-only` would re-run the planner alone against an
+unchanged table and repeat the same verdict.
 
 ### Reviewer Gate (MUST)
 
