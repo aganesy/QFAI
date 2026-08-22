@@ -27,7 +27,11 @@ are never deleted: a consumed or abandoned block is closed in place
 (`- ~~TDD-0065..TDD-0079~~ — <author or slice>, closed <YYYY-MM-DD>`) so its
 end stays the permanent high-water mark. Drop the bullet and `max + 1` falls
 back into the block's unused tail, reissuing ids the gap was meant to retire
-and colliding with a block still being worked. Worktree separation is
+and colliding with a block still being worked. An empty candidate set has a
+maximum of 0, so a freshly seeded ledger starts at `TDD-0001`; `TDD-9999` is
+the last legal id, because `TDD_ID_FORMAT` accepts exactly four digits — a
+spec that reaches the ceiling is split, not allocated past. Worktree
+separation is
 mandatory for parallel work (`constitution/workflow.md`), so a `max + 1` read
 taken inside one worktree is stale as soon as another appends, and
 `TDDLIST_DUPLICATE_ID` is an `error`: guessing locks out every writer but the

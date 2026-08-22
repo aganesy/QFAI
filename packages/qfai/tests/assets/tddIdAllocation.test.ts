@@ -46,6 +46,13 @@ describe("TDD-ID allocation", () => {
       expect(rules).toContain(
         "**and the upper bound of every bullet under `## TDD-ID reservations`**",
       );
+      // `max` over an empty set is undefined, and Phase 2b seeds every ledger
+      // empty — the base case is the most common allocation there is.
+      expect(rules).toContain("**An empty candidate set has a maximum of 0**");
+      expect(rules).toContain("the first row a freshly seeded ledger takes is `TDD-0001`");
+      // `TDD_ID_FORMAT` is /^TDD-\d{4}$/, so `max + 1` has a ceiling.
+      expect(rules).toContain("**`TDD-9999` is the last legal id**");
+      expect(rules).toContain("the spec is split");
     });
 
     it(`${tree}: the rule names the race it closes`, async () => {
@@ -77,6 +84,16 @@ describe("TDD-ID allocation", () => {
         "If no reservation exists and you need IDs anyway, take one yourself",
       );
       expect(rules).toContain("it serializes where a batch of rows cannot");
+      // Picking a range in your own worktree is the same stale read; only the
+      // push serializes it, and no validator catches two overlapping bullets.
+      expect(rules).toContain("**What serializes it is the push, not the commit**");
+      expect(rules).toContain(
+        "**if the push is rejected, fetch and recompute the block from the new tip before retrying**",
+      );
+      expect(rules).toContain("`validateTddList` never looks at reservation bullets");
+      expect(rules).toContain(
+        "**A bullet that overlaps one already on the shared branch is invalid**",
+      );
     });
 
     it(`${tree}: gaps are kept and written IDs are never renumbered`, async () => {
@@ -111,13 +128,17 @@ describe("TDD-ID allocation", () => {
       );
     });
 
-    it(`${tree}: the SKILL points at the allocation rule before a write`, async () => {
+    it(`${tree}: the SKILL points at the allocation rule but claims no ownership`, async () => {
       const skill = flat(await read(tree, SKILL));
 
       expect(skill).toContain(
         "Allocating a new `TDD-ID` is governed by `references/execution-ledger.md#tdd-id-allocation`",
       );
       expect(skill).toContain("never guess the next value from a ledger another worktree holds");
+      // Rows are upstream: this skill owns only Status / DR-ID / Evidence, so
+      // the allocation pointer must not read as a licence to append a row.
+      expect(skill).toContain("**This skill allocates no `TDD-ID`**");
+      expect(skill).toContain("`/qfai-sdd` Phase 2b is their producer");
     });
   }
 });

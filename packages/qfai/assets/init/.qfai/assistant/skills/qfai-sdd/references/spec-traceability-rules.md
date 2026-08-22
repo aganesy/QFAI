@@ -226,7 +226,15 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      allocate upward from it. The reservation bullets are part of the
      maximum, not decoration: a block that is still being worked has no rows
      in the file yet, and a block that is finished may have consumed only its
-     first id. Nothing else changes for the ordinary case.
+     first id. Nothing else changes for the ordinary case. **An empty
+     candidate set has a maximum of 0**, so the first row a freshly seeded
+     ledger takes is `TDD-0001` — Phase 2b seeds every ledger from empty, so
+     that base case is the most common allocation there is. **`TDD-9999` is
+     the last legal id**: `TDD_ID_FORMAT` accepts exactly four digits, so
+     `max + 1` past it yields a value every subsequent row and reservation
+     fails `TDDLIST_*` validation on. A ledger whose maximum reaches it stops
+     and the spec is split (`_policies/11_Slice-Policy.md`); do not allocate
+     past the ceiling and do not widen the format on your own.
   2. **Concurrent authoring — reserve first, on the shared branch.** Before
      dispatching authors that will append to one spec's ledger from separate
      worktrees, make one serialized write on the branch they all fork from
@@ -240,7 +248,18 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      collide. **If no reservation exists and you need IDs anyway, take one
      yourself** — the bullet is a one-line append that can land on the shared
      branch in its own commit long before the rows are ready, so it serializes
-     where a batch of rows cannot.
+     where a batch of rows cannot. **What serializes it is the push, not the
+     commit**, so a self-reservation taken after the worktrees have already
+     split follows a compare-and-set: compute the block from the shared
+     branch's current tip, push the bullet there, and **if the push is
+     rejected, fetch and recompute the block from the new tip before
+     retrying** — never rebase the old range forward. Choosing a range inside
+     your own worktree is the very stale read this rule exists to stop: two
+     authors reading the same tip pick the same block, and
+     `validateTddList` never looks at reservation bullets, so a merge that
+     keeps both raises nothing and both authors write the same `TDD-ID`s. **A
+     bullet that overlaps one already on the shared branch is invalid** —
+     recompute it; never resolve that conflict by keeping both.
   3. **A block is a budget, not a promise.** An author that exhausts its block
      stops and asks for another one; it does not continue past the boundary.
      Unused reserved IDs stay unused — leave the gap, exactly as
