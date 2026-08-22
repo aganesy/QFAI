@@ -24,10 +24,12 @@ import { copyTemplatePaths, copyTemplateTree } from "../lib/fs.js";
 import { getInitAssetsDir } from "../lib/assets.js";
 import { error, info } from "../lib/logger.js";
 import { SUNSETS, deprecationSeverity } from "../../core/sunset.js";
-import { isEnoent } from "../../core/fs/errno.js";
+import { hasErrnoCode, isEnoent } from "../../core/fs/errno.js";
 import {
   CODEX_AGENT_WRAPPER_DIR,
   CODEX_AGENT_WRAPPER_SUFFIX,
+  isGeneratedCodexAgentToml,
+  parseAgentCatalogDeclarations,
   parseAgentCatalogKinds,
   renderCodexAgentToml,
   type CodexAgentKind,
@@ -1299,7 +1301,7 @@ async function createCodexAgentTomls(
     return { copied, skipped, removed };
   }
 
-  const kinds = await loadAgentCatalogKinds(assistantAssetsDir, destRoot);
+  const classification = await loadAgentClassification(assistantAssetsDir, destRoot);
   const wrapperDir = path.join(destRoot, ...CODEX_AGENT_WRAPPER_DIR.split("/"));
 
   for (const agentName of roster) {
@@ -1310,7 +1312,13 @@ async function createCodexAgentTomls(
       continue;
     }
 
-    const plan = await planCodexAgentProfile(assistantAssetsDir, destRoot, agentName, kinds);
+    const plan = await planCodexAgentProfile(
+      assistantAssetsDir,
+      destRoot,
+      agentName,
+      classification,
+      options,
+    );
     if (plan.status === "unavailable") {
       info(`  skip: ${destination} (${plan.reason})`);
       // `--force` means "make the wrappers match the canonical agents". A
@@ -1339,7 +1347,58 @@ async function createCodexAgentTomls(
     }
   }
 
+  if (options.force) {
+    removed.push(...(await pruneOrphanCodexProfiles(wrapperDir, new Set(roster), options.dryRun)));
+  }
+
   return { copied, skipped, removed };
+}
+
+/**
+ * Deletes the generated profiles of agents that left the roster.
+ *
+ * The loop above only ever visits agents that still exist, so deleting an agent
+ * from both the catalog and `assistant/agents/` left its TOML untouched — and a
+ * Codex profile is a self-contained snapshot, not a symlink that goes dangling
+ * with its referent. Codex alone kept loading a retired agent, write access
+ * included. Scoped to `--force`, which is already the mode that rewrites this
+ * tree, and to files carrying the generator's own shape so a project's
+ * hand-written Codex profile survives.
+ */
+async function pruneOrphanCodexProfiles(
+  wrapperDir: string,
+  roster: Set<string>,
+  dryRun: boolean,
+): Promise<string[]> {
+  const removed: string[] = [];
+  let entries: Dirent[];
+  try {
+    entries = await readdir(wrapperDir, { withFileTypes: true });
+  } catch (err: unknown) {
+    if (isEnoent(err)) {
+      return removed;
+    }
+    throw err;
+  }
+  for (const entry of entries) {
+    if (entry.isDirectory() || !entry.name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX)) {
+      continue;
+    }
+    const agentName = entry.name.slice(0, -CODEX_AGENT_WRAPPER_SUFFIX.length);
+    if (roster.has(agentName)) {
+      continue;
+    }
+    const target = path.join(wrapperDir, entry.name);
+    const read = await readBoundedTextFile(target);
+    if (read.status !== "ok" || !isGeneratedCodexAgentToml(read.content, agentName)) {
+      continue;
+    }
+    removed.push(target);
+    if (!dryRun) {
+      await rm(target, { force: true });
+    }
+  }
+  return removed;
 }
 
 type CodexAgentProfilePlan =
@@ -1351,28 +1410,43 @@ async function planCodexAgentProfile(
   assistantAssetsDir: string,
   destRoot: string,
   agentName: string,
-  kinds: Map<string, CodexAgentKind>,
+  classification: AgentClassification,
+  options: WrapperSyncOptions,
 ): Promise<CodexAgentProfilePlan> {
-  const kind = kinds.get(agentName);
+  const kind = classification.kinds.get(agentName);
   if (kind === undefined) {
     // Guessing `worker` would drop `sandbox_mode` from a reviewer and hand a
     // read-only agent write access; guessing `reviewer` would break a worker.
-    return {
-      status: "unavailable",
-      reason: `agent-catalog.yml に ${agentName} の kind がありません`,
-    };
+    return { status: "unavailable", reason: classifyFailureReason(agentName, classification) };
   }
 
-  const markdown = await readCanonicalAgentMarkdown(assistantAssetsDir, destRoot, agentName);
-  if (markdown === undefined) {
+  const markdown = await readCanonicalAgentMarkdown(
+    assistantAssetsDir,
+    destRoot,
+    agentName,
+    options,
+  );
+  if (markdown.status === "rejected") {
+    return { status: "unavailable", reason: markdown.reason };
+  }
+  if (markdown.status === "absent") {
     return { status: "unavailable", reason: "canonical markdown が見つかりません" };
   }
 
-  const rendered = renderCodexAgentToml(markdown, kind);
+  const rendered = renderCodexAgentToml(markdown.content, kind);
   if (!rendered.ok) {
     return { status: "unavailable", reason: rendered.error };
   }
   return { status: "render", toml: rendered.toml };
+}
+
+function classifyFailureReason(agentName: string, classification: AgentClassification): string {
+  if (classification.unusable !== undefined) {
+    return classification.unusable;
+  }
+  return classification.rejected.has(agentName)
+    ? `agent-catalog.yml の ${agentName} の kind が不正です`
+    : `agent-catalog.yml に ${agentName} の kind がありません`;
 }
 
 /**
@@ -1409,6 +1483,14 @@ async function collectCodexAgentRoster(destRoot: string, shipped: string[]): Pro
   return [...roster].sort();
 }
 
+type AgentClassification = {
+  kinds: Map<string, CodexAgentKind>;
+  /** IDs the project's own catalog names but does not classify. */
+  rejected: Set<string>;
+  /** Set — to the reason — when the project's catalog cannot be read at all. */
+  unusable: string | undefined;
+};
+
 /**
  * The project's own copy wins over the shipped template, for both the catalog
  * and the canonical markdown: `assistant/manifest/**` is copied create-only and
@@ -1421,28 +1503,49 @@ async function collectCodexAgentRoster(destRoot: string, shipped: string[]): Pro
  * returning the first non-empty map left every agent a later release added
  * permanently un-classified — markdown and two wrappers written, Codex profile
  * skipped as "kind がありません" forever.
+ *
+ * It fills in **only** those, though. An ID the project names without a usable
+ * `kind` is a broken local statement about that agent, and answering it with
+ * the shipped value re-grants exactly the access the classification guard
+ * exists to withhold: a project that had pinned an agent to `reviewer` and then
+ * mistyped the key would get the shipped `worker` profile, `sandbox_mode` and
+ * all, from a `--force` run. Those IDs — and every ID, when the project's
+ * catalog is not a catalog at all — stay unclassified, so the profile is
+ * refused and, under `--force`, removed.
  */
-async function loadAgentCatalogKinds(
+async function loadAgentClassification(
   assistantAssetsDir: string,
   destRoot: string,
-): Promise<Map<string, CodexAgentKind>> {
-  const candidates = [
-    joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml"),
+): Promise<AgentClassification> {
+  const projectCatalog = joinAssistantLayer(destRoot, "manifest", "agent-catalog.yml");
+  const project = await readBoundedTextFile(projectCatalog);
+  if (project.status === "rejected") {
+    return { kinds: new Map(), rejected: new Set(), unusable: project.reason };
+  }
+
+  const declarations =
+    project.status === "ok" ? parseAgentCatalogDeclarations(project.content) : undefined;
+  if (declarations?.unusable === true) {
+    return {
+      kinds: new Map(),
+      rejected: new Set(),
+      unusable: "agent-catalog.yml を agents リストとして読めません",
+    };
+  }
+
+  const kinds = new Map(declarations?.kinds ?? []);
+  const rejected = declarations?.unclassified ?? new Set<string>();
+  const shipped = await readBoundedTextFile(
     path.join(assistantAssetsDir, "manifest", "agent-catalog.yml"),
-  ];
-  const kinds = new Map<string, CodexAgentKind>();
-  for (const candidate of candidates) {
-    const content = await readFileIfPresent(candidate);
-    if (content === undefined) {
-      continue;
-    }
-    for (const [id, kind] of parseAgentCatalogKinds(content)) {
-      if (!kinds.has(id)) {
+  );
+  if (shipped.status === "ok") {
+    for (const [id, kind] of parseAgentCatalogKinds(shipped.content)) {
+      if (!kinds.has(id) && !rejected.has(id)) {
         kinds.set(id, kind);
       }
     }
   }
-  return kinds;
+  return { kinds, rejected, unusable: undefined };
 }
 
 /**
@@ -1456,35 +1559,102 @@ async function removeSymlinkAt(target: string): Promise<void> {
   }
 }
 
+/**
+ * The canonical body to snapshot, from the project's copy or the shipped asset.
+ *
+ * The project's copy wins on a plain run — it is what the two symlink wrappers
+ * resolve to. Under `--force` the asset wins instead, because `--force` has
+ * already overwritten that copy with the asset (`STANDARD_ASSET_PATHS` includes
+ * `assistant/agents`) — except under `--dry-run`, where the copy is only
+ * announced. Reading the destination there made the preview describe a project
+ * state that the real run replaces one step earlier: a stale agent document
+ * missing its `## Mission` heading had `--force --dry-run` announce the removal
+ * of a profile the real `--force` regenerates.
+ */
 async function readCanonicalAgentMarkdown(
   assistantAssetsDir: string,
   destRoot: string,
   agentName: string,
-): Promise<string | undefined> {
-  const candidates = [
-    path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`),
-    path.join(assistantAssetsDir, "agents", `${agentName}.md`),
-  ];
+  options: WrapperSyncOptions,
+): Promise<BoundedRead> {
+  const projectCopy = path.join(destRoot, ".qfai", "assistant", "agents", `${agentName}.md`);
+  const shippedAsset = path.join(assistantAssetsDir, "agents", `${agentName}.md`);
+  const candidates = options.force ? [shippedAsset, projectCopy] : [projectCopy, shippedAsset];
   for (const candidate of candidates) {
-    const content = await readFileIfPresent(candidate);
-    if (content !== undefined) {
-      return content;
+    const read = await readBoundedTextFile(candidate);
+    if (read.status !== "absent") {
+      return read;
     }
   }
-  return undefined;
+  return { status: "absent" };
 }
 
-/** `undefined` for an absent file; every other I/O failure propagates. */
-async function readFileIfPresent(filePath: string): Promise<string | undefined> {
+type BoundedRead =
+  | { status: "ok"; content: string }
+  | { status: "absent" }
+  | { status: "rejected"; reason: string };
+
+/**
+ * A canonical agent document is a few kilobytes of markdown; a catalog is
+ * smaller still. The ceiling is generous enough that no honest input meets it
+ * and small enough that a hostile one cannot exhaust memory.
+ */
+const MAX_CANONICAL_INPUT_BYTES = 4 * 1024 * 1024;
+
+/** `O_NONBLOCK` keeps `open` off a FIFO's blocking path; Windows has neither. */
+const NONBLOCKING_READ_FLAGS =
+  process.platform === "win32" ? constants.O_RDONLY : constants.O_RDONLY | constants.O_NONBLOCK;
+
+/**
+ * Reads a regular file of bounded size, or says why it would not.
+ *
+ * Both inputs this reads are named by an untrusted repository — the roster
+ * accepts whatever `.qfai/assistant/agents/` holds, symlinks included — so a
+ * plain `readFile` was a hang or an OOM away: pointed at a FIFO it waits for a
+ * writer that never comes, pointed at `/dev/zero` it reads until the heap is
+ * gone. The size and the file type are both checked against the *opened*
+ * handle, so swapping the path after the check does not get past it.
+ *
+ * `absent` for a missing file (a dangling symlink included); every other I/O
+ * failure propagates.
+ */
+async function readBoundedTextFile(filePath: string): Promise<BoundedRead> {
+  let handle: FileHandle;
   try {
-    return await readFile(filePath, "utf-8");
+    handle = await open(filePath, NONBLOCKING_READ_FLAGS);
   } catch (err: unknown) {
     if (isEnoent(err)) {
-      return undefined;
+      return { status: "absent" };
+    }
+    // A directory, a symlink cycle or a device with no reader is the same
+    // answer as a special file: not something to snapshot. Anything else
+    // (EACCES, EIO, ...) is the caller's problem, not a classification.
+    if (hasErrnoCode(err) && UNREADABLE_OPEN_CODES.has(err.code)) {
+      return {
+        status: "rejected",
+        reason: `${filePath} は通常ファイルとして開けません (${err.code})`,
+      };
     }
     throw err;
   }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile()) {
+      return { status: "rejected", reason: `${filePath} は通常ファイルではありません` };
+    }
+    if (stats.size > MAX_CANONICAL_INPUT_BYTES) {
+      return {
+        status: "rejected",
+        reason: `${filePath} が上限 ${MAX_CANONICAL_INPUT_BYTES} バイトを超えています`,
+      };
+    }
+    return { status: "ok", content: await handle.readFile("utf-8") };
+  } finally {
+    await handle.close();
+  }
 }
+
+const UNREADABLE_OPEN_CODES = new Set(["EISDIR", "ENOTDIR", "ELOOP", "ENXIO"]);
 
 async function ensureSymlink(
   linkPath: string,

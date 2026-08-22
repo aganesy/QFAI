@@ -12,9 +12,12 @@ import {
   CODEX_AGENT_WRAPPER_SUFFIX,
   buildCodexAgentToml,
   escapeTomlBasicString,
+  isGeneratedCodexAgentToml,
+  parseAgentCatalogDeclarations,
   parseAgentCatalogKinds,
   renderCodexAgentToml,
 } from "../../src/core/codexAgentToml.js";
+import { captureStdout } from "../helpers/stdout.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateAgentsDir = path.join(
@@ -102,6 +105,21 @@ async function readProjectCatalog(root: string): Promise<string> {
 
 async function writeProjectCatalog(root: string, content: string): Promise<void> {
   await writeFile(projectCatalogPath(root), content, "utf-8");
+}
+
+/** Drops one `agents[]` entry whole — every field, not just its `kind`. */
+function removeCatalogEntry(catalog: string, id: string): string {
+  const lines = catalog.split("\n");
+  const start = lines.indexOf(`  - id: ${id}`);
+  if (start < 0) {
+    throw new Error(`catalog entry not found: ${id}`);
+  }
+  let end = start + 1;
+  while (end < lines.length && !lines[end].startsWith("  - id: ")) {
+    end += 1;
+  }
+  lines.splice(start, end - start);
+  return lines.join("\n");
 }
 
 async function addProjectAgent(root: string, kind: "worker" | "reviewer"): Promise<void> {
@@ -229,10 +247,7 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
   it("classifies an agent the project's own catalog never heard of", async () => {
     const root = await initProject();
     const catalog = await readProjectCatalog(root);
-    await writeProjectCatalog(
-      root,
-      catalog.replace("  - id: doc-steward\n    kind: worker\n", "  - id: doc-steward\n"),
-    );
+    await writeProjectCatalog(root, removeCatalogEntry(catalog, "doc-steward"));
     await rm(codexAgentPath(root, "doc-steward"), { force: true });
 
     await runInit({ dir: root, force: true, dryRun: false, yes: true });
@@ -244,6 +259,137 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     if (!rendered.ok) return;
     const written = await readFile(codexAgentPath(root, "doc-steward"), "utf-8");
     expect(written.replace(/\r\n/g, "\n")).toBe(rendered.toml);
+  });
+
+  // Filling in the shipped kind is for IDs the project never mentions. An ID it
+  // mentions without classifying is a broken local statement about that agent,
+  // and answering it with the shipped `worker` would hand back exactly the write
+  // access the classification guard withholds.
+  it("does not fill in the shipped kind for an entry the project declares without one", async () => {
+    const root = await initProject();
+    const catalog = await readProjectCatalog(root);
+    await writeProjectCatalog(
+      root,
+      catalog.replace("  - id: doc-steward\n    kind: worker\n", "  - id: doc-steward\n"),
+    );
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("doc-steward");
+    await expect(readFile(codexAgentPath(root, "doc-steward"), "utf-8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  // A catalog that is not a catalog classifies nobody: falling back to the
+  // shipped document wholesale would re-grant every kind the project meant to
+  // override.
+  it("refuses every profile when the project catalog cannot be parsed", async () => {
+    const root = await initProject();
+    await writeProjectCatalog(root, "agents:\n  - id: [unbalanced\n");
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    const left = await readdir(path.join(root, ...CODEX_AGENT_WRAPPER_DIR.split("/")));
+    expect(left.filter((name) => name.endsWith(CODEX_AGENT_WRAPPER_SUFFIX))).toEqual([]);
+  });
+
+  // The generated profile is a self-contained snapshot, not a symlink that goes
+  // dangling with its referent, so an agent deleted from the catalog and from
+  // `assistant/agents/` kept working in Codex — and only in Codex.
+  it("--force prunes the profile of an agent that left the roster, keeping hand-written ones", async () => {
+    const root = await initProject();
+    await addProjectAgent(root, "worker");
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    expect(await readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).toContain(
+      PROJECT_AGENT_ID,
+    );
+
+    // `.codex/agents/` is not qfai's alone: a project may keep its own Codex
+    // profiles beside the generated ones, and they carry keys the generator
+    // never emits.
+    const handWritten = codexAgentPath(root, "team-scribe");
+    await writeFile(
+      handWritten,
+      'name = "team-scribe"\nmodel = "o3"\ndescription = "ours"\ndeveloper_instructions = "Write it down."\n',
+      "utf-8",
+    );
+
+    const catalog = await readProjectCatalog(root);
+    await writeProjectCatalog(root, removeCatalogEntry(catalog, PROJECT_AGENT_ID));
+    await rm(path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`), {
+      force: true,
+    });
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+    expect(await readFile(handWritten, "utf-8")).toContain('model = "o3"');
+  });
+
+  // The roster accepts whatever `.qfai/assistant/agents/` holds, symlinks
+  // included, so an unbounded `readFile` there was a hang (a FIFO) or an OOM
+  // (`/dev/zero`) away.
+  it("refuses a canonical document that is not a bounded regular file", async () => {
+    const root = await initProject();
+    await addProjectAgent(root, "reviewer");
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+    const canonical = path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`);
+    await rm(canonical, { force: true });
+    await symlink(path.join(root, ".qfai", "assistant"), canonical, "dir");
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("通常ファイル");
+    await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  it("refuses a canonical document larger than the read ceiling", async () => {
+    const root = await initProject();
+    await addProjectAgent(root, "reviewer");
+
+    await writeFile(
+      path.join(root, ".qfai", "assistant", "agents", `${PROJECT_AGENT_ID}.md`),
+      `${PROJECT_AGENT_MARKDOWN}\n${"x".repeat(5 * 1024 * 1024)}\n`,
+      "utf-8",
+    );
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+    expect(output).toContain("上限");
+    await expect(readFile(codexAgentPath(root, PROJECT_AGENT_ID), "utf-8")).rejects.toMatchObject({
+      code: "ENOENT",
+    });
+  });
+
+  // `--force` overwrites `assistant/agents/**` from the assets one step before
+  // this generator runs — but `--dry-run` only announces that copy. Reading the
+  // destination made the preview describe a state the real run replaces.
+  it("--force --dry-run previews the profile the real --force writes", async () => {
+    const root = await initProject();
+    const target = codexAgentPath(root, "qa-gatekeeper");
+    const generated = await readFile(target, "utf-8");
+
+    // A stale copy from an older release, missing the heading the renderer
+    // needs. `--force` replaces it before the profile is rendered.
+    const canonical = path.join(root, ".qfai", "assistant", "agents", "qa-gatekeeper.md");
+    const stale = (await readFile(canonical, "utf-8")).replace(/^## Mission\b/m, "## Purpose");
+    await writeFile(canonical, stale, "utf-8");
+
+    const preview = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: true, yes: true });
+    });
+    expect(preview).not.toContain(`skip: ${target}`);
+    expect(await readFile(target, "utf-8")).toBe(generated);
+
+    await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    expect(await readFile(target, "utf-8")).toBe(generated);
   });
 
   // `writeFile` follows a symlink and truncates its referent, so a profile
@@ -342,6 +488,53 @@ describe("the TOML renderer", () => {
       ),
     );
     expect([...kinds]).toEqual([["good", "reviewer"]]);
+  });
+
+  // "declared but unclassifiable" and "not declared at all" are different
+  // statements, and only the second may be answered by the shipped default.
+  it("separates an unclassified declaration from an absent one", () => {
+    const declarations = parseAgentCatalogDeclarations(
+      ["agents:", "  - id: good", "    kind: reviewer", "  - id: bad", "    kind: helper", ""].join(
+        "\n",
+      ),
+    );
+    expect([...declarations.kinds]).toEqual([["good", "reviewer"]]);
+    expect([...declarations.unclassified]).toEqual(["bad"]);
+    expect(declarations.unusable).toBe(false);
+
+    expect(parseAgentCatalogDeclarations("agents:\n  - id: [oops\n").unusable).toBe(true);
+    expect(parseAgentCatalogDeclarations("roster: []\n").unusable).toBe(true);
+  });
+
+  it("recognises its own output, and only its own", () => {
+    const worker = buildCodexAgentToml({
+      name: "demo",
+      description: "d",
+      body: "## Mission\n\n- Do it.",
+      kind: "worker",
+    });
+    const reviewer = buildCodexAgentToml({
+      name: "demo",
+      description: "d",
+      body: "## Mission\n\n- Read it.",
+      kind: "reviewer",
+    });
+    expect(isGeneratedCodexAgentToml(worker, "demo")).toBe(true);
+    expect(isGeneratedCodexAgentToml(reviewer, "demo")).toBe(true);
+    // A profile whose name disagrees with its filename is not this generator's.
+    expect(isGeneratedCodexAgentToml(worker, "other")).toBe(false);
+    expect(
+      isGeneratedCodexAgentToml(
+        'name = "demo"\nmodel = "o3"\ndescription = "d"\ndeveloper_instructions = "x"\n',
+        "demo",
+      ),
+    ).toBe(false);
+    expect(
+      isGeneratedCodexAgentToml(
+        'name = "demo"\ndescription = "d"\ndeveloper_instructions = """\nx\n"""\n',
+        "demo",
+      ),
+    ).toBe(false);
   });
 });
 

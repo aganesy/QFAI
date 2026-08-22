@@ -117,6 +117,41 @@ export function buildCodexAgentToml(input: CodexAgentTomlInput): string {
   return `${lines.join("\n")}\n`;
 }
 
+/** The key order {@link buildCodexAgentToml} emits, per kind. */
+const GENERATED_KEY_ORDER: Record<CodexAgentKind, readonly string[]> = {
+  worker: ["name", "description", "developer_instructions"],
+  reviewer: ["name", "description", "sandbox_mode", "developer_instructions"],
+};
+
+/**
+ * True when `content` has the exact shape {@link buildCodexAgentToml} emits for
+ * `agentName`: one `key = "…"` line per field, in order, nothing else.
+ *
+ * `.codex/agents/` is not a directory qfai owns end to end — a project may keep
+ * its own Codex profiles there — so pruning by filename alone would delete
+ * somebody's hand-written agent the first time they ran `--force`. Every
+ * generated profile is three or four single-line basic strings, which a
+ * hand-written profile carrying a `model`, a `tools` array or a multi-line
+ * string is not, so the shape is the licence to delete.
+ */
+export function isGeneratedCodexAgentToml(content: string, agentName: string): boolean {
+  const lines = content.replace(/\r\n/g, "\n").replace(/\n+$/, "").split("\n");
+  const expected =
+    lines.length === GENERATED_KEY_ORDER.reviewer.length
+      ? GENERATED_KEY_ORDER.reviewer
+      : GENERATED_KEY_ORDER.worker;
+  if (lines.length !== expected.length) {
+    return false;
+  }
+  if (lines[0] !== `name = ${escapeTomlBasicString(agentName)}`) {
+    return false;
+  }
+  return lines.every((line, index) => {
+    const key = expected[index];
+    return key !== undefined && line.startsWith(`${key} = "`) && line.endsWith('"');
+  });
+}
+
 export type CodexAgentTomlResult = { ok: true; toml: string } | { ok: false; error: string };
 
 /**
@@ -152,6 +187,23 @@ export function renderCodexAgentToml(markdown: string, kind: CodexAgentKind): Co
   };
 }
 
+export type AgentCatalogDeclarations = {
+  /** Entries declaring both a usable `id` and a `worker` / `reviewer` `kind`. */
+  kinds: Map<string, CodexAgentKind>;
+  /**
+   * IDs the document names but does not classify — a missing, misspelt or
+   * non-string `kind`.
+   *
+   * Kept apart from "absent from the document" so a caller merging two catalogs
+   * can refuse to fill one in from the other. An unclassified entry is a
+   * project's broken statement about an agent; a missing one is no statement at
+   * all, and only the second may be answered by the shipped default.
+   */
+  unclassified: Set<string>;
+  /** True when the document as a whole is not an agent catalog. */
+  unusable: boolean;
+};
+
 /**
  * Reads `agents[].kind` out of `agent-catalog.yml`.
  *
@@ -160,20 +212,21 @@ export function renderCodexAgentToml(markdown: string, kind: CodexAgentKind): Co
  * classify, because defaulting an unknown agent to `worker` would drop
  * `sandbox_mode` from a reviewer and hand it write access.
  */
-export function parseAgentCatalogKinds(catalogYaml: string): Map<string, CodexAgentKind> {
+export function parseAgentCatalogDeclarations(catalogYaml: string): AgentCatalogDeclarations {
   const kinds = new Map<string, CodexAgentKind>();
+  const unclassified = new Set<string>();
   let parsed: unknown;
   try {
     parsed = parseYaml(catalogYaml);
   } catch {
-    return kinds;
+    return { kinds, unclassified, unusable: true };
   }
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return kinds;
+    return { kinds, unclassified, unusable: true };
   }
   const agents: unknown = Reflect.get(parsed, "agents");
   if (!Array.isArray(agents)) {
-    return kinds;
+    return { kinds, unclassified, unusable: true };
   }
   for (const entry of agents) {
     if (!entry || typeof entry !== "object" || Array.isArray(entry)) {
@@ -185,9 +238,15 @@ export function parseAgentCatalogKinds(catalogYaml: string): Map<string, CodexAg
       continue;
     }
     if (kind !== "worker" && kind !== "reviewer") {
+      unclassified.add(id.trim());
       continue;
     }
     kinds.set(id.trim(), kind);
   }
-  return kinds;
+  return { kinds, unclassified, unusable: false };
+}
+
+/** {@link parseAgentCatalogDeclarations}, keeping only the classified entries. */
+export function parseAgentCatalogKinds(catalogYaml: string): Map<string, CodexAgentKind> {
+  return parseAgentCatalogDeclarations(catalogYaml).kinds;
 }
