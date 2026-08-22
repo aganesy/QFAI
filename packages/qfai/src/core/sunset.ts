@@ -52,6 +52,13 @@ export const SUNSETS = {
  * re-observe anything. The rule was right; shipping it without a window was
  * what latched that gate.
  *
+ * Each entry records both halves of its window: `introducedIn`, the release the
+ * code first shipped in, and `promoteAt`, the release it becomes an `error`
+ * at. The first is not recoverable from the second once the tool has moved
+ * past the pin, and the contract below is about the *distance* between them —
+ * so `tests/core/sunsetLedger.test.ts` needs it written down to check that a
+ * window is a window at all.
+ *
  * The policy a new code follows:
  *
  * 1. ship it here at `warning`, pinned to a promotion release at least one
@@ -71,7 +78,7 @@ export const RULE_PROMOTIONS = {
    * row past RED. Introduced during the 1.10.0 line, so the promotion sits a
    * full minor beyond it.
    */
-  tddListEvidenceEmpty: "1.12.0",
+  tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

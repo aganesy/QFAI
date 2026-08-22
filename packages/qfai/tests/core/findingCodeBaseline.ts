@@ -11,8 +11,11 @@
  * registry cannot be the thing that detects it.
  *
  * The population has to come from the emitting side instead, and "new" needs a
- * baseline to be measured against. This is that baseline: every code emitted by
- * a literal `issue("CODE", …)` call in `src/` at the moment the policy landed.
+ * baseline to be measured against. This is that baseline: every code `src/`
+ * emitted at the moment the policy landed — reached through a literal
+ * `issue("CODE", …)`, through the `const FINDING_CODE = "CODE"` alias that half
+ * the validators use, or, where the call site is data-driven, as a code-shaped
+ * literal in a file the extractor reads as opaque.
  * `TDDLIST_EVIDENCE_EMPTY` is deliberately absent — it is the first code to run
  * a promotion window, so it must pass through `RULE_PROMOTIONS`, not through
  * here.
@@ -20,10 +23,16 @@
  * **This list is frozen.** A code missing from it is a code introduced after
  * P7, and the remedy is a `RULE_PROMOTIONS` entry naming it — never a new line
  * here. Removing a retired code is fine; the list is only ever read as an
- * allowlist.
+ * allowlist. The one exception, spent once already: widening the extractor
+ * reveals codes that predate P7 and were merely invisible to the narrower
+ * version, and those belong here. Adding a line is only legitimate when the
+ * code demonstrably shipped before the policy did.
  */
 export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "D-DEPRECATED-PATH",
+  "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+  "D-SAAS-PACKAGE-HANDOFF-SCHEMA",
+  "D-SAAS-PACKAGE-VERIFY-SKIPPED",
   "D-SCAFFOLD-FOREIGN-HOME",
   "D-SCAFFOLD-PLACEHOLDER",
   "D-SURFACE-TYPE-MISSING",
@@ -40,6 +49,9 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "E_UPWARD_REF_FORBIDDEN",
   "I-ASSISTANT-LAYER-UNSEEDED",
   "QFAI-AC-001",
+  "QFAI-AGENT-001",
+  "QFAI-AGENT-002",
+  "QFAI-AGENT-003",
   "QFAI-AGENT-004",
   "QFAI-AGENT-005",
   "QFAI-AGENT-006",
@@ -99,6 +111,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-CONTRACT-020",
   "QFAI-CONTRACT-021",
   "QFAI-CONTRACT-030",
+  "QFAI-CONTRACT-031",
   "QFAI-CONTRACT-040",
   "QFAI-COV-101",
   "QFAI-COV-102",
@@ -149,6 +162,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-DPACK-008",
   "QFAI-DPACK-009",
   "QFAI-DPACK-010",
+  "QFAI-DRIFT-001",
   "QFAI-DT-001",
   "QFAI-DT-002",
   "QFAI-DT-003",
@@ -175,6 +189,8 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
+  "QFAI-FID-010",
+  "QFAI-FID-011",
   "QFAI-FLOW-001",
   "QFAI-FLOW-002",
   "QFAI-FLOW-004",
@@ -237,6 +253,8 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-PROT-335",
   "QFAI-PROT-336",
   "QFAI-REQCTX-000",
+  "QFAI-REQCTX-001",
+  "QFAI-REQCTX-002",
   "QFAI-REQCTX-003",
   "QFAI-REQCTX-004",
   "QFAI-REQCTX-010",
@@ -272,6 +290,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-SPACK-000",
   "QFAI-SPACK-090",
   "QFAI-SPACK-091",
+  "QFAI-SPACK-095",
   "QFAI-SPACK-101",
   "QFAI-SPLIT-100",
   "QFAI-SPLIT-101",
@@ -286,6 +305,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-STATUS-005",
   "QFAI-STATUS-006",
   "QFAI-STATUSLEAK-001",
+  "QFAI-TABLE-001",
   "QFAI-TC-001",
   "QFAI-TEST-001",
   "QFAI-TEST-002",
@@ -337,9 +357,15 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "R-AUTOPILOT-POLICY-WIDENED",
   "R-CERTIFY-VERIFY-CIRCULAR",
   "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
+  "R-EVIDENCE-MUTATION-UNLOGGED",
+  "R-EXPLORATION-CERTIFY-ATTEMPT",
   "R-HANDOFF-INCOMPLETE",
+  "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
+  "R-REJECTED-READOPT",
+  "R-SKILL-MANIFEST-DRIFT",
+  "R-WORKLOG-DRIFT",
   "TDDLIST_BLOCKED_MISSING_REF",
   "TDDLIST_COVERAGE_LAYER_MISMATCH",
   "TDDLIST_DUPLICATE_ID",

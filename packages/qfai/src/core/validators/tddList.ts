@@ -1270,13 +1270,11 @@ async function validateSpecTddList(
   // `resolveToolVersion` resolves rather than rejects — its own read failures
   // return `"unknown"`, which the comparator reads as inside the window, so an
   // unreadable version can never be what escalates this into a build failure.
-  const evidenceEmptySeverity = newRuleSeverity(
-    await resolveToolVersion(),
-    RULE_PROMOTIONS.tddListEvidenceEmpty,
-  );
+  const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
+  const evidenceEmptySeverity = newRuleSeverity(await resolveToolVersion(), evidenceEmptyPromotion);
   const evidenceEmptyWindowNote =
     evidenceEmptySeverity === "warning"
-      ? ` Reported as a warning until the ${RULE_PROMOTIONS.tddListEvidenceEmpty} release, then an error`
+      ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
       : "";
   for (const ref of ledgerRows()) {
     const status = cell(ref, "Status").toLowerCase();
@@ -1289,13 +1287,13 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_EMPTY",
-          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).${evidenceEmptyWindowNote}`,
+          `Evidence is empty for spec-${specNumber} ${rowLabel}, Status=${status}. A row past RED owes the command and its result in its evidence file, with the cell pointing at that entry ("Empty evidence entries are rejected", qfai-implement Evidence hard rules).${evidenceEmptyWindowNote}`,
           evidenceEmptySeverity,
           relPath,
           "tddList.evidencePresent",
           undefined,
           "change",
-          `Evidence 列に実際に実行したコマンドとその結果を記録してください（例: \`npx vitest run tests/foo.test.ts\` → 3 passed）。Status=done のような終端の行は、Status を変えずに Evidence セルだけを追記します（Evidence の追記は状態遷移ではありません）。まだ実行していない場合は Status を todo / red に戻してください。`,
+          `実行したコマンドとその結果は evidence ファイルに記録し、Evidence 列には結果の要約とその anchor への pointer だけを書いてください（例: RED fail / GREEN pass — evidence at \`.qfai/evidence/implement-spec-${specNumber}.md#tdd-0042\`）。コマンドと出力をセルへ直接貼ると、改行や \`|\` が台帳の行を打ち切ったり列をずらしたりします（qfai-implement \`references/execution-ledger.md\`）。Status=done のような終端の行は、Status を変えずに Evidence セルだけを追記します（Evidence の追記は状態遷移ではありません）。実行記録が残っていない場合は evidence ファイルに backfill entry を作成し、その anchor をセルに記録してください。まだ実行していない場合は Status を todo / red に戻してください。`,
         ),
       );
       continue;

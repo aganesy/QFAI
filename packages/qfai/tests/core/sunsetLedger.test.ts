@@ -25,7 +25,7 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
-import { RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
+import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunset.js";
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 // tests/core/<this file> -> packages/qfai
@@ -47,12 +47,106 @@ async function collectSources(dir: string): Promise<string[]> {
   return out;
 }
 
+/** The shape of a finding code, shared by every regex below. */
+const CODE = "[A-Z][A-Z0-9_.-]{2,}";
+
 /**
- * A finding code as written at its `issue(...)` call site — the first argument,
- * a bare literal. Wrapper helpers that pass a code through are out of the
- * ratchet's reach on purpose: this is a ratchet, not a proof.
+ * The first argument of an `issue(...)` call: a bare literal, or an identifier
+ * to be resolved. A literal-only regex would have missed every code emitted the
+ * way `validators/handoffSchemaDrift.ts` and `saasPackage/profile.ts` emit
+ * theirs — `const FINDING_CODE = "…"; issue(FINDING_CODE, …)` — which is enough
+ * of the codebase that a new hard error could have followed the house style
+ * straight past the ratchet.
  */
-const ISSUE_CODE_RE = /\bissue\(\s*\n?\s*"([A-Z][A-Z0-9_.-]{2,})"\s*,/g;
+const ISSUE_ARG_RE = new RegExp(
+  `\\bissue\\(\\s*\\n?\\s*(?:"(${CODE})"|([A-Za-z_$][\\w$]*))\\s*,`,
+  "g",
+);
+
+/**
+ * `const NAME = "CODE";` — with an optional type annotation, an optional
+ * `as const`, and the `cond ? "A" : "B"` pair that `validators/designFidelity.ts`
+ * uses to pick between two codes.
+ */
+const CODE_CONST_RE = new RegExp(
+  `\\bconst\\s+([A-Za-z_$][\\w$]*)\\s*(?::[^=;\\n]+)?=\\s*(?:[^;\\n]*?\\?\\s*)?"(${CODE})"(?:\\s*:\\s*"(${CODE})")?(?:\\s+as\\s+const)?\\s*;`,
+  "g",
+);
+
+/** The same, exported — visible to every importer, so it resolves globally. */
+const EXPORTED_CODE_CONST_RE = new RegExp(
+  `\\bexport\\s+const\\s+([A-Za-z_$][\\w$]*)\\s*(?::[^=;\\n]+)?=\\s*"(${CODE})"(?:\\s+as\\s+const)?\\s*;`,
+  "g",
+);
+
+/** Any code-shaped literal, for files whose emissions cannot be followed. */
+const CODE_LITERAL_RE = new RegExp(`"(${CODE})"`, "g");
+
+/** A clean GA release: no prerelease tag, no build metadata, no leading zeros. */
+const GA_SEMVER_RE = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
+
+/**
+ * Every finding code `src/` emits, resolved through the constant when the call
+ * site names one.
+ *
+ * A file whose `issue(...)` first argument is neither a literal nor a resolvable
+ * constant — a code destructured out of a table of tuples
+ * (`validators/agentDefinition.ts`), or one read back off an already-parsed
+ * finding (`validators/reviewerJustification.ts`) — is read as opaque: every
+ * code-shaped literal in it joins the set. The over-read costs a handful of
+ * baseline lines once; skipping the file is the hole this ratchet exists to
+ * close, and it is the direction that fails loudly rather than silently.
+ */
+async function collectIssueCodes(): Promise<Set<string>> {
+  const bodies = new Map<string, string>();
+  for (const file of await collectSources(SRC)) {
+    bodies.set(file, await readFile(file, "utf-8"));
+  }
+
+  const exported = new Map<string, string[]>();
+  for (const body of bodies.values()) {
+    for (const m of body.matchAll(EXPORTED_CODE_CONST_RE)) {
+      const [, name, code] = m;
+      if (name && code) exported.set(name, [code]);
+    }
+  }
+
+  const codes = new Set<string>();
+  for (const body of bodies.values()) {
+    // File-local first: `FINDING_CODE` is declared once per validator with a
+    // different value in each, so a global map would resolve most of them to
+    // whichever file was read last.
+    const local = new Map<string, string[]>();
+    for (const m of body.matchAll(CODE_CONST_RE)) {
+      const [, name, first, second] = m;
+      if (!name || !first) continue;
+      local.set(name, second ? [first, second] : [first]);
+    }
+
+    let opaque = false;
+    for (const m of body.matchAll(ISSUE_ARG_RE)) {
+      const [, literal, identifier] = m;
+      if (literal) {
+        codes.add(literal);
+        continue;
+      }
+      const bound = identifier ? (local.get(identifier) ?? exported.get(identifier)) : undefined;
+      if (bound) {
+        for (const code of bound) codes.add(code);
+        continue;
+      }
+      opaque = true;
+    }
+
+    if (opaque) {
+      for (const m of body.matchAll(CODE_LITERAL_RE)) {
+        const code = m[1];
+        if (code) codes.add(code);
+      }
+    }
+  }
+  return codes;
+}
 
 /**
  * The **entries** of the `RULE_PROMOTIONS` object literal — the text between
@@ -75,6 +169,17 @@ async function readRulePromotionEntries(): Promise<string> {
   expect(start, "RULE_PROMOTIONS is not an object literal").toBeGreaterThan(-1);
   expect(end, "RULE_PROMOTIONS literal is not closed by `} as const;`").toBeGreaterThan(start);
   return body.slice(start + 1, end);
+}
+
+/** The version this package ships as — the ceiling on any `introducedIn`. */
+async function readShippedVersion(): Promise<string> {
+  const raw: unknown = JSON.parse(await readFile(path.join(packageRoot, "package.json"), "utf-8"));
+  const version =
+    typeof raw === "object" && raw !== null && "version" in raw && typeof raw.version === "string"
+      ? raw.version
+      : "";
+  expect(version, "package.json#version is not a readable string").toMatch(GA_SEMVER_RE);
+  return version;
 }
 
 /** Every `src/` file, minus `sunset.ts` — the declaration is not a consumer. */
@@ -118,14 +223,7 @@ describe("sunset ledger", () => {
     // (a new `issue("NEW_CODE", …, "error", …)` whose promotion was never
     // registered) writes nothing into the registry, so it has to be found from
     // the emitting side, measured against a frozen baseline.
-    const codes = new Set<string>();
-    for (const file of await collectSources(SRC)) {
-      const body = await readFile(file, "utf-8");
-      for (const m of body.matchAll(ISSUE_CODE_RE)) {
-        const code = m[1];
-        if (code) codes.add(code);
-      }
-    }
+    const codes = await collectIssueCodes();
     expect(
       codes.size,
       "no issue codes extracted — did the `issue(...)` shape change?",
@@ -145,6 +243,52 @@ describe("sunset ledger", () => {
         "a new finding code ships behind a promotion window (docs/design-principles.md P7); " +
         "do not add it to findingCodeBaseline.ts, which is frozen at the codes that predate the policy",
     ).toEqual([]);
+  });
+
+  it("every RULE_PROMOTIONS entry opens a window at least one minor wide", async () => {
+    // Naming a code in the registry is not the same as giving it a window. A
+    // pin at or before the release that introduced the code makes
+    // `newRuleSeverity` return `error` from day one — the exact regression P7
+    // was written after — and a pin that is not parseable semver makes the
+    // conservative fallback in `isAtOrPastSunset` return `warning` forever, so
+    // the promotion never happens at all. Both read as "registered" to the
+    // assertion above.
+    const shipped = await readShippedVersion();
+
+    for (const [key, window] of Object.entries(RULE_PROMOTIONS)) {
+      const introduced = GA_SEMVER_RE.exec(window.introducedIn);
+      const promoted = GA_SEMVER_RE.exec(window.promoteAt);
+
+      expect(
+        introduced,
+        `${key}.introducedIn is not a GA release: ${window.introducedIn}`,
+      ).not.toBeNull();
+      expect(
+        promoted,
+        `${key}.promoteAt is not a GA release: ${window.promoteAt} — ` +
+          "an unparseable pin leaves the finding a warning forever, because " +
+          "`isAtOrPastSunset` treats what it cannot read as pre-sunset",
+      ).not.toBeNull();
+      if (!introduced || !promoted) continue;
+
+      const from = { major: Number(introduced[1]), minor: Number(introduced[2]) };
+      const to = { major: Number(promoted[1]), minor: Number(promoted[2]) };
+      expect(
+        to.major > from.major || (to.major === from.major && to.minor >= from.minor + 1),
+        `${key} promotes at ${window.promoteAt}, less than one minor past the ` +
+          `${window.introducedIn} release that introduced the code — P7 requires a window ` +
+          "the consuming repository can actually migrate inside of",
+      ).toBe(true);
+
+      // The other way the distance can be faked: backdate `introducedIn` to
+      // buy a pin that has already passed. A code cannot have shipped in a
+      // release this package has not cut yet.
+      expect(
+        isAtOrPastSunset(shipped, window.introducedIn),
+        `${key}.introducedIn (${window.introducedIn}) is ahead of the shipped ` +
+          `version ${shipped} — record the release the code actually shipped in`,
+      ).toBe(true);
+    }
   });
 
   it("every finding code named by a sunset-bearing constraint row exists in src/", async () => {

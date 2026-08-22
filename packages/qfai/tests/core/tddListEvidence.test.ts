@@ -182,10 +182,28 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
       expect(found?.suggested_action).toContain("Status を変えずに Evidence セルだけを追記");
     });
   });
+
+  it("routes the payload to the evidence file and leaves a pointer in the cell", async () => {
+    // The remedy has to match the ledger the same release redefined: the cell
+    // is a pointer, and a command plus its output pasted into it ends the row
+    // at the first newline or splits it at the first `|`. Advice that says
+    // "write the command and its result here" would reintroduce exactly the
+    // corruption `references/execution-ledger.md` documents.
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+      expect(found?.suggested_action).toContain("evidence ファイルに記録");
+      expect(found?.suggested_action).toContain("pointer");
+      // The terminal-row remedy is a backfill entry in that file, anchored
+      // from the cell — not prose about the missing run written into the row.
+      expect(found?.suggested_action).toContain("backfill entry");
+    });
+  });
 });
 
 describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
-  const promotion = RULE_PROMOTIONS.tddListEvidenceEmpty;
+  const promotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
 
   async function severityAt(version: string): Promise<{ severity: string; message: string }> {
     toolVersion.override = version;
