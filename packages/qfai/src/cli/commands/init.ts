@@ -1178,18 +1178,6 @@ async function syncIntegrationWrappers(
       copied.push(dest);
       if (!options.dryRun) {
         await mkdir(path.dirname(dest), { recursive: true });
-        // Replace the entry, not whatever it points at. `pathExists` is
-        // lstat-based, so `alreadyExists` is true for a symlink here — and
-        // `writeFile` follows one. A `--force` refresh would then rewrite the
-        // link's target, which for a link out of the project is a file this
-        // command was never asked to touch (and for a dangling link is a file
-        // it silently creates elsewhere). Unlink first so `dest` is recreated
-        // as a regular file, the same remove-then-recreate `ensureSymlink`
-        // performs for a wrapper it must replace.
-        const existingEntry = alreadyExists ? await safeLstat(dest) : undefined;
-        if (existingEntry?.isSymbolicLink()) {
-          await rm(dest, { recursive: true, force: true });
-        }
         const templateSrc = path.join(getInitAssetsDir(), ".github", "instructions", fileName);
         let content: string;
         try {
@@ -1202,6 +1190,20 @@ async function syncIntegrationWrappers(
             `instructions テンプレートの読み込みに失敗しました: ${templateSrc}` +
               ` (${code ?? detail})。パッケージが正しくインストールされているか確認してください。`,
           );
+        }
+        // Replace the entry, not whatever it points at. `pathExists` is
+        // lstat-based, so `alreadyExists` is true for a symlink here — and
+        // `writeFile` follows one. A `--force` refresh would then rewrite the
+        // link's target, which for a link out of the project is a file this
+        // command was never asked to touch (and for a dangling link is a file
+        // it silently creates elsewhere). Unlink first so `dest` is recreated
+        // as a regular file, the same remove-then-recreate `ensureSymlink`
+        // performs for a wrapper it must replace. Done after the template read,
+        // so a failed read leaves the existing entry alone rather than deleting
+        // it and having nothing to put back.
+        const existingEntry = alreadyExists ? await safeLstat(dest) : undefined;
+        if (existingEntry?.isSymbolicLink()) {
+          await rm(dest, { recursive: true, force: true });
         }
         await writeFile(dest, content, "utf-8");
       }
