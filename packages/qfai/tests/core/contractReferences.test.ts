@@ -492,4 +492,48 @@ describe("QFAI-CONTRACT-034 — a contract missing from every index", () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  it("does not let one row stand in for the two contracts it names", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "api", "api-0002-sample.yaml"),
+        ["# QFAI-CONTRACT-ID: CON-API-0002", 'openapi: "3.1.0"', "x-qfai-depends-on: []", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+      // Crediting both ids left the pair with no unique row anywhere and no
+      // finding: `QFAI-CONTRACT-030` stays silent because both exist, and the
+      // row check skips the row on the same `size !== 1` test.
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "05_Contracts.md"),
+        [
+          "# 05 Contracts",
+          "",
+          "## API Contracts",
+          "",
+          "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+          "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+          "| - | /api/orders | CON-API-0001, CON-API-0002 | `.qfai/contracts/api/` | - | create draft |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const issues = await validateContractReferences(root, defaultConfig);
+
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(false);
+      expect(
+        issues
+          .filter((item) => item.code === "QFAI-CONTRACT-034")
+          .flatMap((item) => item.refs ?? [])
+          .sort(),
+      ).toEqual(["CON-API-0001", "CON-API-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });

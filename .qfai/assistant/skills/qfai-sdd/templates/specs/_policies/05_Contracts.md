@@ -12,7 +12,7 @@
 0 items
 
 <!-- Example row (remove this comment block and add real rows when contracts exist):
-| DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | draft persistence |
+| DB-001   | order_drafts | CON-DB-0001 | `.qfai/contracts/db/db-0001-<slug>.sql` | - | draft persistence |
 -->
 
 | Short ID | Entity | Declared ID | File | Depends On | Purpose |
@@ -23,7 +23,7 @@
 0 items
 
 <!-- Example row:
-| API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | create draft |
+| API-001  | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-<slug>.yaml` | CON-DB-0001 | create draft |
 -->
 
 | Short ID | Router | Declared ID | File | Depends On | Purpose |
@@ -34,7 +34,7 @@
 0 items
 
 <!-- Example row:
-| UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | draft input form |
+| UI-001   | order-create | CON-UI-0001 | `.qfai/contracts/ui/ui-0001-<slug>.yaml` | - | draft input form |
 -->
 
 | Short ID | Screen | Declared ID | File | Depends On | Purpose |

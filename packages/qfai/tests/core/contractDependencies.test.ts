@@ -66,6 +66,17 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     );
   });
 
+  it("reads a YAML flow sequence carrying a trailing comment", () => {
+    // `# …` is a comment, not part of the value, and explaining *why* the order
+    // holds is the natural thing to write there. An end-of-line anchor made the
+    // declaration invisible, so a conforming file earned `QFAI-CONTRACT-015`
+    // and its correct index row `QFAI-CONTRACT-033`.
+    expect(
+      extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001] # DB を先に適用\n", "a.yaml"),
+    ).toEqual(["CON-DB-0001"]);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: [] # 依存なし\n", "a.yaml")).toBe(true);
+  });
+
   it("reads the key from a JSON contract, quoted and across lines", () => {
     // `.json` is collected as an API contract, but every other lane here is a
     // regex over an unquoted YAML key on one line.
@@ -228,6 +239,20 @@ describe("the declaration itself is distinguishable from its absence", () => {
     expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": []'))).toBe(true);
     expect(hasDependencyDeclaration(json(',\n  "x-qfai-depends-on": "-"'))).toBe(true);
     expect(hasDependencyDeclaration(json(""))).toBe(false);
+  });
+
+  it("does not accept a JSON value that is not an array", () => {
+    // Reading ids out of a stringification of the whole value accepted anything
+    // that merely *contained* one, so an object or a bare string suppressed
+    // `QFAI-CONTRACT-015` and fed the id to the `-014` / `-033` checks as
+    // though an apply order had been stated.
+    const json = (value: string): string =>
+      `// QFAI-CONTRACT-ID: CON-API-0001\n{\n  "x-qfai-depends-on": ${value}\n}\n`;
+    expect(extractDeclaredDependencies(json('{ "note": "CON-API-0002" }'))).toEqual([]);
+    expect(extractDeclaredDependencies(json('"CON-API-0002"'))).toEqual([]);
+    expect(hasDependencyDeclaration(json('{ "note": "CON-API-0002" }'))).toBe(false);
+    expect(hasDependencyDeclaration(json('"CON-API-0002"'))).toBe(false);
+    expect(extractDeclaredDependencies(json('["CON-API-0002"]'))).toEqual(["CON-API-0002"]);
   });
 
   it("does not accept a JSON array holding no contract id", () => {

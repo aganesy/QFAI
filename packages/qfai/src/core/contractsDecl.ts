@@ -56,7 +56,16 @@ export function stripContractDeclarationLines(text: string): string {
  * declaration.
  */
 const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+?)[ \t]*$/gim;
-const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*$/im;
+/**
+ * A trailing `#` comment is part of the line, not part of the value.
+ *
+ * `x-qfai-depends-on: [CON-DB-0001] # DB を先に適用` is valid YAML and the
+ * natural way to say *why* the order holds, but an end-of-line anchor stopped
+ * matching it. The scalar fallback then read `[CON-DB-0001] # …` as a value that
+ * is not one of the "none" spellings, so a conforming declaration produced
+ * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-033`.
+ */
+const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#[^\n]*)?$/im;
 const DEPENDS_ON_YAML_BLOCK_RE = /^x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
 const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
 /** The explicit ways to write "nothing must be applied before this contract". */
@@ -140,20 +149,52 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
   return Object.entries(parsed);
 }
 
+/** A cell/element holding a contract id and nothing else. */
+const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
+
+/**
+ * The ids a JSON `x-qfai-depends-on` value declares, or `undefined` if it is not
+ * a well-formed declaration.
+ *
+ * The value must be an **array**, and every element a bare contract id. Reading
+ * ids out of a stringification of the whole value instead accepted anything that
+ * merely *contained* one: `{"note": "CON-API-0002"}`, or a single unwrapped
+ * `"CON-API-0002"`, yielded a dependency and returned early from
+ * `hasDependencyDeclaration`, so a value that states no apply order passed
+ * parsing, the `QFAI-CONTRACT-014` reference check and the `QFAI-CONTRACT-033`
+ * index mirror as though it did. `["TBD"]` / `[null]` are rejected for the same
+ * reason: they would suppress `QFAI-CONTRACT-015` while leaving nothing for
+ * `QFAI-CONTRACT-014` to check.
+ */
+function jsonDependencyIds(value: unknown): string[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined;
+  }
+  const ids: string[] = [];
+  for (const element of value) {
+    if (typeof element !== "string") {
+      return undefined;
+    }
+    const trimmed = element.trim();
+    if (!CONTRACT_ID_EXACT_RE.test(trimmed)) {
+      return undefined;
+    }
+    ids.push(trimmed.toUpperCase());
+  }
+  return ids;
+}
+
 /**
  * Whether a JSON `x-qfai-depends-on` value states an apply order.
  *
- * Only the **empty** array is a statement on its own — it is the JSON spelling
- * of "nothing must be applied first". A non-empty array states an apply order
- * only if `extractDeclaredDependencies` found contract ids in it, which the
- * caller has already asked; accepting any array would let `["TBD"]` or `[null]`
- * suppress `QFAI-CONTRACT-015` while `QFAI-CONTRACT-014` saw no id to check,
- * leaving the apply order undetermined and the file unreported. A string counts
- * only as one of the explicit "none" spellings.
+ * The empty array is the JSON spelling of "nothing must be applied first", and a
+ * non-empty one states an order only when every element is a contract id — the
+ * same shape `jsonDependencyIds` extracts from, so declaration and extraction
+ * never disagree. A string counts only as one of the explicit "none" spellings.
  */
 function statesJsonDependencies(value: unknown): boolean {
   if (Array.isArray(value)) {
-    return value.length === 0;
+    return jsonDependencyIds(value) !== undefined;
   }
   return typeof value === "string" && DEPENDS_ON_NONE_VALUE_RE.test(value.trim());
 }
@@ -177,7 +218,11 @@ export function extractDeclaredDependencies(text: string, file?: string): string
     const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
     if (block) push(block[1] ?? "");
     const json = readJsonDependsOn(text);
-    if (json && json.value !== undefined) push(JSON.stringify(json.value));
+    if (json) {
+      for (const id of jsonDependencyIds(json.value) ?? []) {
+        found.add(id);
+      }
+    }
   }
   return Array.from(found).sort();
 }
@@ -216,6 +261,12 @@ export function hasDependencyDeclaration(text: string, file?: string): boolean {
   const json = readJsonDependsOn(text);
   if (json) {
     return statesJsonDependencies(json.value);
+  }
+  // `[]` is the flow spelling of "none", with or without a trailing comment; the
+  // scalar fallback below would read `[] # なし` as a value that is neither.
+  const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
+  if (flow) {
+    return (flow[1] ?? "").trim().length === 0;
   }
   const scalar = DEPENDS_ON_YAML_SCALAR_RE.exec(text);
   return scalar !== null && DEPENDS_ON_NONE_VALUE_RE.test((scalar[1] ?? "").trim());

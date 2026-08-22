@@ -165,6 +165,13 @@ function extractContractIds(text: string): string[] {
  * `Declared ID` names no contract: the row checks skip it because they cannot
  * read an id, so counting the short form as coverage silenced
  * `QFAI-CONTRACT-034` as well and the broken row produced no finding at all.
+ *
+ * A cell resolving to *several* ids is skipped for the same reason. One row
+ * reading `CON-API-0001, CON-API-0002` indexes neither contract — it states no
+ * single `File` or `Depends On` for either — and `validateDependsOnRows` skips
+ * it on the identical `size !== 1` test. Crediting both would have left the pair
+ * with no unique row anywhere and no finding: `QFAI-CONTRACT-030` stays silent
+ * because both ids exist, and `-033` never runs on the row.
  */
 function extractMirroredContractIds(text: string): Set<string> {
   const ids = new Set<string>();
@@ -179,7 +186,14 @@ function extractMirroredContractIds(text: string): Set<string> {
     }
     for (const row of table.rows) {
       for (const columnIndex of canonicalColumns) {
-        extractCellContractIds(row.cells[columnIndex] ?? "", ids);
+        const cellIds = new Set<string>();
+        extractCellContractIds(row.cells[columnIndex] ?? "", cellIds);
+        if (cellIds.size !== 1) {
+          continue;
+        }
+        for (const contractId of cellIds) {
+          ids.add(contractId);
+        }
       }
     }
   }
