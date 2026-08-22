@@ -19,7 +19,12 @@
  *   - filename pass: `grep -rn` only ever matches line content, so a
  *     marker encoded in a path component used to ship green. The name
  *     scan must report it with its own message, while honouring the
- *     documented `assistant/process/migrations/` version exemption.
+ *     documented version exemption — which covers only the exact
+ *     `.qfai/assistant/process/migrations/v<X.Y.Z>[-*].md` name shape,
+ *     not everything sharing that path fragment.
+ *   - name pass scope: the name regexes run over paths relative to
+ *     `$ROOT`, so an absolute `QFAI_LEAKAGE_SCAN_ROOT` whose own
+ *     ancestors carry a version marker does not fail a clean surface.
  *
  * Tests stage a temp directory with a controllable `package.json` and
  * spawn the script with cwd=tempDir so the script's auto-ROOT detection
@@ -58,10 +63,11 @@ interface RunResult {
   stderr: string;
 }
 
-function runGuard(cwd: string): RunResult {
+function runGuard(cwd: string, env: NodeJS.ProcessEnv = {}): RunResult {
   const child = spawnSync("bash", [SCRIPT], {
     cwd,
     encoding: "utf-8",
+    env: { ...process.env, ...env },
   });
   return {
     status: child.status,
@@ -213,6 +219,59 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     const r = runGuard(tmp);
     expect(r.status).toBe(1);
     expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+  });
+
+  it("keeps a non-memo-shaped name in the migrations directory a failure (exit 1)", async () => {
+    // The exemption covers `<version>-*.md` names minted by
+    // `migrationMemoRelativePath()`, not every file that happens to sit
+    // in the memo directory.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [
+      ["init/.qfai/assistant/process/migrations/notes-v2.0-draft.md", "clean body\n"],
+    ]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/notes-v2[.]0-draft[.]md/);
+  });
+
+  it("keeps a version-stamped subdirectory under migrations/ a failure (exit 1)", async () => {
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [
+      ["init/.qfai/assistant/process/migrations/drafts-v2.0/clean.md", "clean body\n"],
+    ]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/drafts-v2[.]0/);
+  });
+
+  it("keeps the same path fragment in an unrelated tree a failure (exit 1)", async () => {
+    // The exemption is anchored at `.qfai/assistant/process/migrations/`;
+    // a look-alike directory elsewhere in the surface is not exempt.
+    const tmp = await newTempDir();
+    await stageAssets(tmp, [["docs/assistant/process/migrations/v2.0.0-notes.md", "clean body\n"]]);
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/v2[.]0[.]0-notes[.]md/);
+  });
+
+  it("ignores version markers in the scan root's own ancestors (exit 0)", async () => {
+    // Regression: the name pass used to run over `find "$ROOT/$entry"`
+    // output, so an absolute `QFAI_LEAKAGE_SCAN_ROOT` such as
+    // `/tmp/qfai-v2.0/package` matched the version regex on every path
+    // even when the distributed surface itself was clean. Only the
+    // files[] entries are the distributed surface.
+    const outer = await newTempDir();
+    const root = path.join(outer, "qfai-v2.0", "package");
+    await mkdir(root, { recursive: true });
+    await stageAssets(root, [["init/clean.md", "clean body\n"]]);
+    // bash treats `\` as an escape, so hand the script a POSIX-separated
+    // absolute path on every platform.
+    const r = runGuard(outer, { QFAI_LEAKAGE_SCAN_ROOT: root.split(path.sep).join("/") });
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/OK: no internal spec ids/);
   });
 
   it("warns and passes when every files[] entry is absent on disk (exit 0)", async () => {

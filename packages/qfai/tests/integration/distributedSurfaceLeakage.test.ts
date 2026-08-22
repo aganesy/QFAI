@@ -104,14 +104,29 @@ interface Hit {
 }
 
 /**
- * Name-pass exemption, mirroring `MIGRATION_MEMO_DIR_RE` in
+ * Name-pass exemption, mirroring `MIGRATION_MEMO_STAMP_SED` in
  * `scripts/check-no-internal-version-leakage.sh`: migration memo file
  * names are version-stamped on purpose (ADR-style citation targets, and
  * `migrationMemoRelativePath()` mints one per `--upgrade-assistant-tree`
  * run). Version class only — spec ids and trace ids in a migration path
  * are still a leak — and names only; memo contents keep the full scan.
+ *
+ * The exemption rewrites the *sanctioned name* instead of skipping every
+ * path that mentions the memo directory: skipping the whole path would
+ * also excuse `.../migrations/notes-v2.0-draft.md`,
+ * `.../migrations/drafts-v2.0/clean.md`, and same-named directories in
+ * an unrelated tree. Only the exact documented shape
+ * `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md`,
+ * directly in that directory, loses its stamp.
  */
-const MIGRATION_MEMO_DIR_RE = /assistant[/\\]process[/\\]migrations[/\\]/;
+const MIGRATION_MEMO_STAMP_RE =
+  /(^|[/\\])\.qfai[/\\]assistant[/\\]process[/\\]migrations[/\\]v[0-9]+\.[0-9]+\.[0-9]+(-[^/\\]*)?\.md$/;
+
+function stripSanctionedMemoStamp(relativePath: string): string {
+  return relativePath.replace(MIGRATION_MEMO_STAMP_RE, (_full, lead: string, tail?: string) =>
+    [lead, ".qfai/assistant/process/migrations/MEMO", tail ?? "", ".md"].join(""),
+  );
+}
 
 /**
  * Scan a relative path for forbidden tokens carried by the *name*.
@@ -124,11 +139,10 @@ function scanPathName(relativePath: string): Hit[] {
   const found: Hit[] = [];
   for (const { name, re } of PATTERNS) {
     if (name === "schemaVersion field") continue;
-    if (name === "internal version marker" && MIGRATION_MEMO_DIR_RE.test(relativePath)) {
-      continue;
-    }
+    const subject =
+      name === "internal version marker" ? stripSanctionedMemoStamp(relativePath) : relativePath;
     re.lastIndex = 0;
-    const m = re.exec(relativePath);
+    const m = re.exec(subject);
     if (m) {
       found.push({ file: relativePath, line: 0, match: m[0], className: name });
     }
@@ -230,6 +244,18 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     expect(classNames(path.join(memoDir, "spec-0042-recut.md"))).toEqual([
       "internal spec id (spec-0010+)",
     ]);
+    // ...and to the sanctioned name shape only: a file that merely sits in
+    // the memo directory, a nested directory, or the same fragment in
+    // another tree all keep the version scan.
+    expect(classNames(path.join(memoDir, "notes-v2.0-draft.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(classNames(path.join(memoDir, "drafts-v2.0", "clean.md"))).toEqual([
+      "internal version marker",
+    ]);
+    expect(
+      classNames(path.join("docs", "assistant", "process", "migrations", "v2.0.0-notes.md")),
+    ).toEqual(["internal version marker"]);
     expect(classNames(path.join(".qfai", "assistant", "steering", "test-layers.md"))).toEqual([]);
   });
 

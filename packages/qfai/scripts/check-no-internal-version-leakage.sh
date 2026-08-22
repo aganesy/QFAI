@@ -82,7 +82,18 @@ INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|
 # class only — a spec id or trace id in a migration path is still a
 # leak — and it applies to names only; memo *contents* keep the full
 # content scan.
-MIGRATION_MEMO_DIR_RE='assistant/process/migrations/'
+#
+# The exemption is expressed as a *rewrite of the sanctioned name*, not
+# as a `grep -v` of every line mentioning the memo directory. Dropping
+# whole lines would also excuse `.../migrations/notes-v2.0-draft.md`,
+# `.../migrations/drafts-v2.0/clean.md`, and any file in an unrelated
+# tree that happens to carry the same path fragment. Instead the exact
+# shape documented in `.agents/rules/distributed-surface.md` —
+# `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md`,
+# directly in that directory — has its version stamp replaced by a
+# placeholder before the version regex runs, so anything else in the
+# same directory is still scanned.
+MIGRATION_MEMO_STAMP_SED='s#(^|/)\.qfai/assistant/process/migrations/v[0-9]+\.[0-9]+\.[0-9]+(-[^/]*)?\.md$#\1.qfai/assistant/process/migrations/MEMO\2.md#'
 
 # Schema version field (any literal "schemaVersion") in distributed
 # surfaces. Generated artifact schemas no longer carry this field.
@@ -118,6 +129,16 @@ files_listing=$(node -e '
 mapfile -t FILES_FIELD <<< "$files_listing"
 
 SCAN_PATHS=()
+# `SCAN_RELATIVES` keeps each surface as its `package.json#files` entry,
+# i.e. relative to `$ROOT`. The FILE NAME pass must use these: when
+# `QFAI_LEAKAGE_SCAN_ROOT` points at an absolute path (the release
+# workflow unpacks the tarball into a temp dir), `find "$ROOT/$entry"`
+# emits the *root's own* ancestors on every line, so a checkout under
+# e.g. `/tmp/qfai-v2.0/package` would fail the version regex on every
+# path even when the distributed surface is clean. The distributed
+# surface is the files[] entry, not the directory that happens to hold
+# it.
+SCAN_RELATIVES=()
 SKIPPED_PATHS=()
 for entry in "${FILES_FIELD[@]}"; do
   # `package.json#files` is treated as literal paths (or directories).
@@ -138,6 +159,7 @@ for entry in "${FILES_FIELD[@]}"; do
   # guessing whether scan coverage was complete.
   if [[ -e "$candidate" ]]; then
     SCAN_PATHS+=("$candidate")
+    SCAN_RELATIVES+=("$entry")
   else
     SKIPPED_PATHS+=("$candidate")
   fi
@@ -157,7 +179,9 @@ elif [[ "${#SKIPPED_PATHS[@]}" -gt 0 ]]; then
   echo "WARN: scanned ${#SCAN_PATHS[@]} surface(s); skipped ${#SKIPPED_PATHS[@]} that are not on disk yet (e.g. dist/ before build): ${SKIPPED_PATHS[*]}" >&2
 fi
 
-for target in "${SCAN_PATHS[@]}"; do
+for idx in "${!SCAN_PATHS[@]}"; do
+  target="${SCAN_PATHS[$idx]}"
+  relative_target="${SCAN_RELATIVES[$idx]}"
   hits=$(grep -rnE "$INTERNAL_SPEC_RE|$INTERNAL_VERSION_RE|$INTERNAL_ID_RE" "$target" 2>/dev/null || true)
   if [[ -n "$hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in $target:" >&2
@@ -172,11 +196,11 @@ for target in "${SCAN_PATHS[@]}"; do
   # project. Run the same regexes over the path list to close that
   # dimension, and report it separately so the operator can tell a name
   # leak from a content leak.
-  target_paths=$(find "$target" -print 2>/dev/null || true)
+  target_paths=$(cd "$ROOT" && find "$relative_target" -print 2>/dev/null || true)
   name_hits=$(printf '%s\n' "$target_paths" \
     | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE" || true)
   version_name_hits=$(printf '%s\n' "$target_paths" \
-    | grep -vE "$MIGRATION_MEMO_DIR_RE" \
+    | sed -E "$MIGRATION_MEMO_STAMP_SED" \
     | grep -E "$INTERNAL_VERSION_RE" || true)
   if [[ -n "$name_hits" || -n "$version_name_hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in a FILE NAME under $target:" >&2

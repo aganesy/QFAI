@@ -29,12 +29,17 @@ QFAI npm パッケージとして配布されるファイル群を「配布サ�
 - `spec-0001..0009` はサンプル / Category B として配布物に登場してよい
   (`qfai init` で生成される spec の例示)。
 - `package.json` の `"version"` フィールドは正規版番なので除外。
-- `.qfai/assistant/process/migrations/<version>-*.md` の **ファイル名** に
-  含まれる版番は意図的な刻印なので、ファイル名 scan の version クラスから
-  除外する。memo は ADR 的な引用先であり公開後に名前を変えられず、
-  `src/core/paths/assistantPaths.ts` の `migrationMemoRelativePath()` が
-  `--upgrade-assistant-tree` のたびに 1 件生成する。除外は version クラス
-  かつファイル名のみ — memo 本文と、spec ID / trace ID は従来どおり検出する。
+- `.qfai/assistant/process/migrations/v<MAJOR>.<MINOR>.<PATCH>[-*].md` の
+  **ファイル名** に含まれる版番は意図的な刻印なので、ファイル名 scan の
+  version クラスから除外する。memo は ADR 的な引用先であり公開後に名前を
+  変えられず、`src/core/paths/assistantPaths.ts` の
+  `migrationMemoRelativePath()` が `--upgrade-assistant-tree` のたびに
+  1 件生成する。除外は version クラスかつファイル名のみ — memo 本文と、
+  spec ID / trace ID は従来どおり検出する。
+  除外は「この形の basename だけを無害化する」書き換えとして実装する
+  (パスを丸ごと skip しない)。したがって同ディレクトリの
+  `notes-v2.0-draft.md`、下位ディレクトリ `drafts-v2.0/`、`.qfai/` 配下
+  でない別ツリーの同名パスは引き続き検出される。
 
 ## Canonical Version Source
 
