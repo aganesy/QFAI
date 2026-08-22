@@ -119,7 +119,14 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
     const source = await readFile(initSourcePath, "utf-8");
 
     expect(contract).not.toMatch(/copied-path list/);
-    expect(contract).toMatch(/git status --short \.qfai\/assistant\//);
+    // `--untracked-files=all` is required: the default `normal` mode collapses
+    // a wholly-new directory into one `?? dir/` entry, which names no file.
+    expect(contract).toMatch(/git status --short --untracked-files=all \.qfai\/assistant\//);
+    expect(contract).not.toMatch(/git status --short \.qfai\/assistant\//);
+    // …and the listing covers the whole invocation, because the init flow that
+    // follows seeds into the same layers. The contract must not sell it as the
+    // migration step's own rollback set.
+    expect(contract).toMatch(/never the enclosing directory/);
 
     expect(source).toMatch(/info\(`\s+created: \$\{copied\.length\}`\)/);
     expect(source).not.toMatch(/copied paths:/);
@@ -147,9 +154,41 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
  * it, and no mechanism notices. `E-WORKLOG-SECRET` sat in the delta table as a
  * security hard block that no validator raises, so the table is now checked
  * against the source that would have to emit each code.
+ *
+ * "Appears under src/" would not have caught it: a bare substring search is
+ * satisfied by a JSDoc line, a prose comment, or a dead constant. The check
+ * below instead demands a *reachable emission*: the code must reach a finding
+ * constructor (or a CLI note the command prints), inside a module the runner
+ * actually invokes. Pasting `E-WORKLOG-SECRET` into a comment or an unused
+ * table no longer satisfies it.
  */
+
+const SRC_DIR = path.join(ROOT, "packages", "qfai", "src");
+
+/**
+ * Drop whole-line comments and trailing `//` comments so a code mentioned in
+ * prose cannot pass for behaviour. Line-oriented on purpose (same technique,
+ * and same known limitation, as `scripts/lint-shipping.ts`): it can never eat
+ * a statement, so a false pass is possible but a false failure is not.
+ */
+function stripComments(source: string): string {
+  return source
+    .split(/\r?\n/)
+    .filter((line) => {
+      const trimmed = line.trimStart();
+      return !(trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*"));
+    })
+    .map((line) => line.replace(/(^|[^:"'`\\])\/\/.*$/, "$1"))
+    .join("\n");
+}
+
+/** The code sitting inside a string literal — the only form an emitter can use. */
+function literalRe(code: string): RegExp {
+  return new RegExp(`["'\`]\\s*${code}\\b`);
+}
+
 describe("qfai-validate.md documents only finding codes the source can emit", () => {
-  it("every code in the delta table appears somewhere under src/", async () => {
+  it("every code in the delta table is emitted by a validator the runner invokes", async () => {
     const contract = await readFile(path.join(CONTRACTS_DIR, "cli", "qfai-validate.md"), "utf-8");
     const section = contract.split("## New finding codes (this delta)")[1] ?? "";
     const table = section.split(/^## /m)[0] ?? "";
@@ -159,11 +198,84 @@ describe("qfai-validate.md documents only finding codes the source can emit", ()
       .filter((code) => code.length > 0);
     expect(codes.length).toBeGreaterThan(5);
 
-    const sourceFiles = await collectFiles(path.join(ROOT, "packages", "qfai", "src"), ".ts");
-    const bodies = await Promise.all(sourceFiles.map((file) => readFile(file, "utf-8")));
-    const haystack = bodies.join("\n");
+    const sourceFiles = await collectFiles(SRC_DIR, ".ts");
+    const sources = new Map<string, string>();
+    await Promise.all(
+      sourceFiles.map(async (file) => {
+        const rel = path.relative(SRC_DIR, file).replace(/\\/g, "/");
+        sources.set(rel, stripComments(await readFile(file, "utf-8")));
+      }),
+    );
 
-    const orphans = codes.filter((code) => !haystack.includes(code));
+    const runner = sources.get("core/validate.ts") ?? "";
+    const cliEntry = sources.get("cli/main.ts") ?? "";
+    expect(runner).not.toBe("");
+    expect(cliEntry).not.toBe("");
+
+    /** A validator module counts only if `core/validate.ts` calls one of its exports. */
+    const runnerInvokes = (rel: string, body: string): boolean => {
+      if (rel === "core/validate.ts") return true;
+      const exported = [...body.matchAll(/export\s+(?:async\s+)?function\s+(\w+)/g)].map(
+        (match) => match[1] ?? "",
+      );
+      return exported.some((name) => name.length > 0 && runner.includes(`${name}(root`));
+    };
+
+    /** A CLI module counts only if `cli/main.ts` imports it. */
+    const cliDispatches = (rel: string): boolean => {
+      if (!rel.startsWith("cli/commands/")) return false;
+      const specifier = `./${rel.slice("cli/".length).replace(/\.ts$/, ".js")}`;
+      return cliEntry.includes(specifier);
+    };
+
+    const emitters = new Map<string, string[]>();
+    for (const code of codes) {
+      const found: string[] = [];
+      const literal = literalRe(code);
+      for (const [rel, body] of sources) {
+        if (!literal.test(body)) continue;
+
+        // Shape 1 — the literal is the code argument of a finding.
+        const direct =
+          new RegExp(`issue\\(\\s*"${code}"`).test(body) ||
+          new RegExp(`code:\\s*"${code}"`).test(body);
+        // Shape 2 — the literal sits in a registered code table that the same
+        // module feeds to `issue(code, …)` (e.g. ADVISORY_FAILING_CODES).
+        const tableDriven = /issue\(\s*code[,\s)]/.test(body);
+        if ((direct || tableDriven) && runnerInvokes(rel, body)) {
+          found.push(`${rel} (${direct ? "issue-literal" : "issue-table"})`);
+          continue;
+        }
+
+        // Shape 3 — a note the CLI command prints or collects for printing.
+        if (cliDispatches(rel)) {
+          const lines = body.split("\n");
+          const printed = lines.some((line, index) => {
+            if (!literal.test(line)) return false;
+            const window = lines.slice(Math.max(0, index - 3), index + 1).join("\n");
+            return /(?:push|info|warn|error|log)\(|=\s*[`"']/.test(window);
+          });
+          if (printed) found.push(`${rel} (cli-note)`);
+        }
+      }
+      emitters.set(code, found);
+    }
+
+    const orphans = codes.filter((code) => (emitters.get(code) ?? []).length === 0);
     expect(orphans).toEqual([]);
+  });
+
+  it("rejects a code that only appears in a comment or a dead constant", async () => {
+    // Guards the check above against regressing to `haystack.includes(code)`:
+    // both of these are how `E-WORKLOG-SECRET` could have been smuggled back in.
+    const mention = stripComments(
+      ["// E-WORKLOG-SECRET is planned.", "/** E-WORKLOG-SECRET */", "const x = 1;"].join("\n"),
+    );
+    expect(literalRe("E-WORKLOG-SECRET").test(mention)).toBe(false);
+
+    const deadConstant = stripComments('const PLANNED = ["E-WORKLOG-SECRET"];');
+    expect(literalRe("E-WORKLOG-SECRET").test(deadConstant)).toBe(true);
+    expect(/issue\(\s*"E-WORKLOG-SECRET"/.test(deadConstant)).toBe(false);
+    expect(/issue\(\s*code[,\s)]/.test(deadConstant)).toBe(false);
   });
 });
