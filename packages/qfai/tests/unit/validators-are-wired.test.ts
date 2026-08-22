@@ -239,6 +239,9 @@ const ATDD_GATE_MODULE = path.resolve(VALIDATORS_DIR, "atddCodeTraceability.ts")
 /** The exported entry point every `qfai validate` profile runs through. */
 const VALIDATE_ENTRY = "validateProject";
 
+/** The orchestrator `--profile atdd` dispatches to; the ATDD profile boundary. */
+const ATDD_PROFILE_ENTRY = "runAtddValidators";
+
 const ATDD_CODE_PATTERN = /^QFAI-ATDD-\d+$/;
 /** Static `from "./x.js"` plus dynamic `await import("./x.js")` specifiers. */
 const MODULE_SPECIFIER_RE = /(?:from\s*|import\s*\(\s*)["'](\.\.?\/[\w./-]+)["']/g;
@@ -319,19 +322,30 @@ function collectExportedValidatorNames(fileName: string, body: string): string[]
 }
 
 // ---------------------------------------------------------------------------
-// Function-level call graph
+// Declaration-level call graph
 //
 // Module-level reachability is not wiring. A text (or even AST) hit anywhere in
 // an importable module says nothing about whether that code ever runs: the call
 // may sit in a helper nobody invokes, or in a comment. Reachability is
-// therefore computed over *functions* — who calls whom — rooted at the
-// `validateProject` entry point plus the top level of every module the entry
-// imports (top-level statements do run on import).
+// therefore computed over *declarations* — who calls whom.
+//
+// A node is the pair (declaring file, declared name), never a bare name. Bare
+// names merge every same-named declaration in the import graph: a reachable
+// `check()` in one module and an unreachable `check()` in another that calls a
+// validator would collapse into one node and report the validator as executed.
+// Callees are resolved through the caller's own import bindings (following
+// `export { x } from` barrels), so an edge always lands on the declaration the
+// call actually reaches.
 // ---------------------------------------------------------------------------
 
-/** Owner id for statements outside any function; importing the module runs them. */
+/** A call-graph node: the declaration `name` inside `file`. */
+function declId(file: string, name: string): string {
+  return `${file}#${name}`;
+}
+
+/** Node for statements outside any function; importing the module runs them. */
 function moduleTopLevelOwner(file: string): string {
-  return `#top:${file}`;
+  return declId(file, "<module>");
 }
 
 function calleeName(expression: ts.Expression): string | undefined {
@@ -349,29 +363,193 @@ function boundName(node: ts.Node): string | undefined {
   return undefined;
 }
 
+/** Where an imported / re-exported binding comes from. */
+type ImportTarget = { file: string; name: string };
+
+type ModuleFacts = {
+  file: string;
+  source: ts.SourceFile;
+  /** Names declared in this module (functions, methods, function-valued bindings). */
+  declared: Set<string>;
+  /** Local binding name -> origin, for static and `await import()` named imports. */
+  imports: Map<string, ImportTarget>;
+  /** `export { a as b } from "./x.js"` — exported name -> origin. */
+  reExports: Map<string, ImportTarget>;
+  /** `export * from "./x.js"` targets. */
+  starReExports: string[];
+};
+
+/** Resolve a relative specifier to the `.ts` path this repo compiles it from. */
+function specifierTarget(fromFile: string, specifier: string): string {
+  return path.resolve(path.dirname(fromFile), specifier.replace(/\.js$/, ".ts"));
+}
+
+/** `await import("./x.js")` / `import("./x.js")` initializer -> resolved path. */
+function dynamicImportTarget(file: string, initializer?: ts.Expression): string | undefined {
+  let expr: ts.Expression | undefined = initializer;
+  if (expr !== undefined && ts.isAwaitExpression(expr)) expr = expr.expression;
+  if (expr === undefined || !ts.isCallExpression(expr)) return undefined;
+  if (expr.expression.kind !== ts.SyntaxKind.ImportKeyword) return undefined;
+  const arg = expr.arguments[0];
+  if (arg === undefined || !ts.isStringLiteralLike(arg) || !arg.text.startsWith(".")) {
+    return undefined;
+  }
+  return specifierTarget(file, arg.text);
+}
+
+/** Declarations and binding origins of one module — the input to edge resolution. */
+function moduleFacts(file: string, body: string): ModuleFacts {
+  const source = parse(file, body);
+  const declared = new Set<string>();
+  const imports = new Map<string, ImportTarget>();
+  const reExports = new Map<string, ImportTarget>();
+  const starReExports: string[] = [];
+
+  const relativeTarget = (specifier?: ts.Expression): string | undefined =>
+    specifier !== undefined && ts.isStringLiteralLike(specifier) && specifier.text.startsWith(".")
+      ? specifierTarget(file, specifier.text)
+      : undefined;
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isFunctionDeclaration(node) && node.name) {
+      declared.add(node.name.text);
+    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
+      declared.add(node.name.text);
+    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
+      const bound = boundName(node);
+      if (bound !== undefined) declared.add(bound);
+    }
+
+    if (
+      ts.isImportDeclaration(node) &&
+      node.importClause?.namedBindings !== undefined &&
+      ts.isNamedImports(node.importClause.namedBindings)
+    ) {
+      const target = relativeTarget(node.moduleSpecifier);
+      if (target !== undefined) {
+        for (const element of node.importClause.namedBindings.elements) {
+          imports.set(element.name.text, {
+            file: target,
+            name: (element.propertyName ?? element.name).text,
+          });
+        }
+      }
+    }
+
+    if (ts.isExportDeclaration(node)) {
+      const target = relativeTarget(node.moduleSpecifier);
+      if (target !== undefined) {
+        if (node.exportClause !== undefined && ts.isNamedExports(node.exportClause)) {
+          for (const element of node.exportClause.elements) {
+            reExports.set(element.name.text, {
+              file: target,
+              name: (element.propertyName ?? element.name).text,
+            });
+          }
+        } else if (node.exportClause === undefined) {
+          starReExports.push(target);
+        }
+      }
+    }
+
+    if (ts.isVariableDeclaration(node) && ts.isObjectBindingPattern(node.name)) {
+      const target = dynamicImportTarget(file, node.initializer);
+      if (target !== undefined) {
+        for (const element of node.name.elements) {
+          if (!ts.isIdentifier(element.name)) continue;
+          const imported =
+            element.propertyName !== undefined && ts.isIdentifier(element.propertyName)
+              ? element.propertyName.text
+              : element.name.text;
+          imports.set(element.name.text, { file: target, name: imported });
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return { file, source, declared, imports, reExports, starReExports };
+}
+
+/** Follow `export { x } from` / `export *` chains to the declaring module. */
+function resolveExport(
+  facts: ReadonlyMap<string, ModuleFacts>,
+  file: string,
+  name: string,
+  seen: Set<string>,
+): string | undefined {
+  const key = declId(file, name);
+  if (seen.has(key)) return undefined;
+  seen.add(key);
+  const module = facts.get(file);
+  if (module === undefined) return undefined;
+  if (module.declared.has(name)) return key;
+  const reExport = module.reExports.get(name);
+  if (reExport !== undefined) return resolveExport(facts, reExport.file, reExport.name, seen);
+  for (const star of module.starReExports) {
+    const hit = resolveExport(facts, star, name, seen);
+    if (hit !== undefined) return hit;
+  }
+  return undefined;
+}
+
+/** The declaration a call site named `callee` inside `file` actually reaches. */
+function resolveCallee(
+  facts: ReadonlyMap<string, ModuleFacts>,
+  file: string,
+  callee: string,
+): string | undefined {
+  const module = facts.get(file);
+  if (module === undefined) return undefined;
+  if (module.declared.has(callee)) return declId(file, callee);
+  const imported = module.imports.get(callee);
+  if (imported === undefined) return undefined;
+  return resolveExport(facts, imported.file, imported.name, new Set<string>());
+}
+
 /** Add every `caller -> callee` edge in one module to the shared graph. */
-function collectCallEdges(fileName: string, body: string, edges: Map<string, Set<string>>): void {
+function collectCallEdges(
+  facts: ReadonlyMap<string, ModuleFacts>,
+  module: ModuleFacts,
+  edges: Map<string, Set<string>>,
+): void {
   const walk = (node: ts.Node, owner: string): void => {
     let nextOwner = owner;
     if (ts.isFunctionDeclaration(node) && node.name) {
-      nextOwner = node.name.text;
+      nextOwner = declId(module.file, node.name.text);
     } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
-      nextOwner = node.name.text;
+      nextOwner = declId(module.file, node.name.text);
     } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
-      nextOwner = boundName(node) ?? owner;
+      const bound = boundName(node);
+      nextOwner = bound === undefined ? owner : declId(module.file, bound);
     }
 
     if (ts.isCallExpression(node)) {
       const callee = calleeName(node.expression);
-      if (callee !== undefined) {
+      const target = callee === undefined ? undefined : resolveCallee(facts, module.file, callee);
+      if (target !== undefined) {
         const targets = edges.get(owner) ?? new Set<string>();
-        targets.add(callee);
+        targets.add(target);
         edges.set(owner, targets);
       }
     }
     ts.forEachChild(node, (child) => walk(child, nextOwner));
   };
-  walk(parse(fileName, body), moduleTopLevelOwner(fileName));
+  walk(module.source, moduleTopLevelOwner(module.file));
+}
+
+/** Declaration-level call graph over a `path -> source` module set. */
+function buildCallGraph(modules: ReadonlyMap<string, string>): Map<string, Set<string>> {
+  const facts = new Map<string, ModuleFacts>();
+  for (const [file, body] of modules) {
+    facts.set(file, moduleFacts(file, body));
+  }
+  const edges = new Map<string, Set<string>>();
+  for (const module of facts.values()) {
+    collectCallEdges(facts, module, edges);
+  }
+  return edges;
 }
 
 /** Names transitively invoked starting from `roots`. */
@@ -427,15 +605,34 @@ async function buildImportedModules(): Promise<Map<string, string>> {
   return modules;
 }
 
-/** Function names that actually run when `qfai validate` executes. */
-async function buildExecutedFunctionNames(): Promise<Set<string>> {
+type ExecutionGraph = { edges: Map<string, Set<string>>; modules: ReadonlyMap<string, string> };
+
+async function buildExecutionGraph(): Promise<ExecutionGraph> {
   const modules = await buildImportedModules();
-  const edges = new Map<string, Set<string>>();
-  for (const [file, body] of modules) {
-    collectCallEdges(file, body, edges);
-  }
-  const roots = [VALIDATE_ENTRY, ...[...modules.keys()].map(moduleTopLevelOwner)];
-  return reachableFrom(edges, roots);
+  return { edges: buildCallGraph(modules), modules };
+}
+
+/**
+ * Declarations that run for *some* profile. `runProfileOwnValidators` dispatches
+ * on `switch (profile)`, which a static graph cannot evaluate, so every branch
+ * merges here — this set answers "does this run at all", never "does this run
+ * for a given profile".
+ */
+function executedFromEntry(graph: ExecutionGraph): Set<string> {
+  const roots = [
+    declId(VALIDATE_TS, VALIDATE_ENTRY),
+    ...[...graph.modules.keys()].map(moduleTopLevelOwner),
+  ];
+  return reachableFrom(graph.edges, roots);
+}
+
+/**
+ * Declarations that run for `qfai validate --profile atdd`. Rooted at the
+ * profile's own orchestrator so that a validator moved to another profile's
+ * branch — still reachable from `validateProject` — reads as unwired here.
+ */
+function executedFromAtddProfile(graph: ExecutionGraph): Set<string> {
+  return reachableFrom(graph.edges, [declId(VALIDATE_TS, ATDD_PROFILE_ENTRY)]);
 }
 
 type AtddModule = { file: string; codes: string[]; exports: string[] };
@@ -457,47 +654,136 @@ async function collectAtddEmittingModules(): Promise<AtddModule[]> {
 }
 
 describe("meta-test: ATDD validators are reachable from the production graph", () => {
-  it("neither a barrel re-export nor a commented-out call is a call site", () => {
-    const edges = new Map<string, Set<string>>();
-    collectCallEdges(
-      "barrel.ts",
-      [
-        'export { validateAtddSample } from "./atddSample.js";',
-        'import { validateAtddSample } from "./atddSample.js";',
-        "async function runAtddValidators() {",
-        "  // return [...(await validateAtddSample(root, config))];",
-        "  return [];",
-        "}",
-      ].join("\n"),
-      edges,
-    );
-    expect(reachableFrom(edges, ["runAtddValidators"]).has("validateAtddSample")).toBe(false);
+  const SAMPLE_FILE = path.join(SRC_ROOT, "atddSample.ts");
+  const SAMPLE_SOURCE = "export async function validateAtddSample() {\n  return [];\n}";
+  const sampleDecl = declId(SAMPLE_FILE, "validateAtddSample");
+  const caller = (file: string, source: string): ReadonlyMap<string, string> =>
+    new Map([
+      [SAMPLE_FILE, SAMPLE_SOURCE],
+      [file, source],
+    ]);
 
-    const live = new Map<string, Set<string>>();
-    collectCallEdges(
-      "live.ts",
-      "async function runAtddValidators() {\n  return [...(await validateAtddSample())];\n}",
-      live,
+  it("neither a barrel re-export nor a commented-out call is a call site", () => {
+    const barrel = path.join(SRC_ROOT, "barrel.ts");
+    const edges = buildCallGraph(
+      caller(
+        barrel,
+        [
+          'export { validateAtddSample } from "./atddSample.js";',
+          'import { validateAtddSample } from "./atddSample.js";',
+          "async function runAtddValidators() {",
+          "  // return [...(await validateAtddSample(root, config))];",
+          "  return [];",
+          "}",
+        ].join("\n"),
+      ),
     );
-    expect(reachableFrom(live, ["runAtddValidators"]).has("validateAtddSample")).toBe(true);
+    expect(reachableFrom(edges, [declId(barrel, "runAtddValidators")]).has(sampleDecl)).toBe(false);
+
+    const live = path.join(SRC_ROOT, "live.ts");
+    const liveEdges = buildCallGraph(
+      caller(
+        live,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "async function runAtddValidators() {",
+          "  return [...(await validateAtddSample())];",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachableFrom(liveEdges, [declId(live, "runAtddValidators")]).has(sampleDecl)).toBe(
+      true,
+    );
   });
 
   it("a call inside a function nobody invokes is not reachable", () => {
-    const edges = new Map<string, Set<string>>();
-    collectCallEdges(
-      "orphanHelper.ts",
-      [
-        "async function runAtddValidators() {",
-        "  return [];",
-        "}",
-        "async function unusedHelper() {",
-        "  return validateAtddSample();",
-        "}",
-      ].join("\n"),
-      edges,
+    const orphan = path.join(SRC_ROOT, "orphanHelper.ts");
+    const edges = buildCallGraph(
+      caller(
+        orphan,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "async function runAtddValidators() {",
+          "  return [];",
+          "}",
+          "async function unusedHelper() {",
+          "  return validateAtddSample();",
+          "}",
+        ].join("\n"),
+      ),
     );
-    expect(reachableFrom(edges, ["runAtddValidators"]).has("validateAtddSample")).toBe(false);
-    expect(reachableFrom(edges, ["unusedHelper"]).has("validateAtddSample")).toBe(true);
+    expect(reachableFrom(edges, [declId(orphan, "runAtddValidators")]).has(sampleDecl)).toBe(false);
+    expect(reachableFrom(edges, [declId(orphan, "unusedHelper")]).has(sampleDecl)).toBe(true);
+  });
+
+  it("same-named declarations in different modules are distinct graph nodes", () => {
+    // A bare-name graph merges both `check()` declarations into one node, so the
+    // orphan module's call to the validator becomes reachable from the wired
+    // `check()` and the validator reads as executed while nothing invokes it.
+    const wired = path.join(SRC_ROOT, "wired.ts");
+    const orphan = path.join(SRC_ROOT, "orphanModule.ts");
+    const edges = buildCallGraph(
+      new Map([
+        [SAMPLE_FILE, SAMPLE_SOURCE],
+        [
+          wired,
+          [
+            "function check() {",
+            "  return [];",
+            "}",
+            "async function runAtddValidators() {",
+            "  return check();",
+            "}",
+          ].join("\n"),
+        ],
+        [
+          orphan,
+          [
+            'import { validateAtddSample } from "./atddSample.js";',
+            "function check() {",
+            "  return validateAtddSample();",
+            "}",
+          ].join("\n"),
+        ],
+      ]),
+    );
+    expect(reachableFrom(edges, [declId(wired, "runAtddValidators")]).has(sampleDecl)).toBe(false);
+    expect(reachableFrom(edges, [declId(orphan, "check")]).has(sampleDecl)).toBe(true);
+  });
+
+  it("a validator reached only from another profile's branch is not ATDD-wired", () => {
+    // `switch (profile)` is not evaluated by a static graph: rooting at
+    // validateProject merges every branch, so profile membership must be read
+    // from the profile's own orchestrator instead.
+    const entry = path.join(SRC_ROOT, "profileEntry.ts");
+    const edges = buildCallGraph(
+      caller(
+        entry,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "export async function validateProject(profile) {",
+          "  return runProfileOwnValidators(profile);",
+          "}",
+          "async function runProfileOwnValidators(profile) {",
+          "  switch (profile) {",
+          '    case "atdd":',
+          "      return runAtddValidators();",
+          "    default:",
+          "      return runUiuxValidators();",
+          "  }",
+          "}",
+          "async function runAtddValidators() {",
+          "  return [];",
+          "}",
+          "async function runUiuxValidators() {",
+          "  return validateAtddSample();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachableFrom(edges, [declId(entry, "validateProject")]).has(sampleDecl)).toBe(true);
+    expect(reachableFrom(edges, [declId(entry, "runAtddValidators")]).has(sampleDecl)).toBe(false);
   });
 
   it("prose that merely names an ATDD code does not make a module an emitter", () => {
@@ -524,17 +810,26 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         "stopped emitting, the reachability assertions below go vacuous.",
     ).toBe(ATDD_GATE_MODULE);
     // US -> tests/e2e/**, TC -> tests/integration/**, CON-API -> tests/api/**.
+    // QFAI-ATDD-113 is the CON-API leg: without it pinned here, dropping the
+    // CON-API coverage gate alone leaves every assertion in this file green.
     expect(gate?.codes).toEqual(
-      expect.arrayContaining(["QFAI-ATDD-111", "QFAI-ATDD-112", "QFAI-ATDD-121", "QFAI-ATDD-122"]),
+      expect.arrayContaining([
+        "QFAI-ATDD-111",
+        "QFAI-ATDD-112",
+        "QFAI-ATDD-113",
+        "QFAI-ATDD-121",
+        "QFAI-ATDD-122",
+      ]),
     );
   });
 
-  it("every exported validator of an ATDD-emitting module runs when validate does", async () => {
+  it("every exported validator of an ATDD-emitting module runs on the atdd profile", async () => {
     const modules = await collectAtddEmittingModules();
-    const executed = await buildExecutedFunctionNames();
+    const graph = await buildExecutionGraph();
+    const executed = executedFromAtddProfile(graph);
 
     expect(
-      executed.has("runAtddValidators"),
+      executedFromEntry(graph).has(declId(VALIDATE_TS, ATDD_PROFILE_ENTRY)),
       "runAtddValidators must itself be reachable from validateProject, or the check below " +
         "measures nothing.",
     ).toBe(true);
@@ -549,17 +844,18 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       // Per validator, not per module: a module that co-locates a wired
       // `validateA` with an unwired `validateB` must still fail on B.
       for (const name of exports) {
-        if (!executed.has(name)) unwired.push(`${rel}#${name}`);
+        if (!executed.has(declId(file, name))) unwired.push(`${rel}#${name}`);
       }
     }
 
     expect(
       unwired,
-      "Each ATDD validator must be invoked on a path that actually executes — runAtddValidators, " +
-        "or an orchestrator reached from validateProject. Being importable is not wiring: " +
-        "a re-export from validators/index.ts, a commented-out call, and a call inside a helper " +
-        "nobody invokes all leave the validator's issue codes unable to appear in validate.json — " +
-        "exactly the dead-validator state QFAI-ATDD-001 was in.",
+      "Each ATDD validator must be invoked on a path that actually executes under " +
+        "`--profile atdd` — runAtddValidators, or an orchestrator it reaches. Being importable " +
+        "is not wiring: a re-export from validators/index.ts, a commented-out call, and a call " +
+        "inside a helper nobody invokes all leave the validator's issue codes unable to appear " +
+        "in validate.json — exactly the dead-validator state QFAI-ATDD-001 was in. Reachability " +
+        "from some *other* profile's branch is not wiring either.",
     ).toEqual([]);
   });
 
