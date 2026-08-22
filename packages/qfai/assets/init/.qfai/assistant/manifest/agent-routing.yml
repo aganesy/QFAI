@@ -30,11 +30,14 @@ routing:
   # `skills/qfai-sdd/SKILL.md` `## Stage and Phase Order (Fixed)` declares — the
   # two documents use different vocabularies on purpose. The mapping is
   # normative and lives in `skills/qfai-sdd/SKILL.md`
-  # `### Routing Phase Crosswalk (Normative)`; it is also the scope
-  # `rerun_policy` is evaluated against. Without it an orchestrator cannot tell
-  # which of the nine phases a blocking agent gates, and two conforming runs can
-  # place the same blocking reviewer at different points. Keep both sides in
-  # sync; the drift guard is `tests/assets/sddRoutingPhaseCrosswalk.test.ts`.
+  # `### Routing Phase Crosswalk (Normative)`, together with the two exceptions
+  # that bound it (contract-scoped runs, no-argument batch fan-out). Without it
+  # an orchestrator cannot tell which of the nine phases a blocking agent gates,
+  # and two conforming runs can place the same blocking reviewer at different
+  # points. The spans scope blocking, not rerun: `rerun_policy` keeps the
+  # vocabulary defined at the bottom of this file, so a changed artifact re-runs
+  # its dependents in any span. Keep both sides in sync; the drift guard is
+  # `tests/assets/sddRoutingPhaseCrosswalk.test.ts`.
   - skill: qfai-sdd
     phases:
       - id: slice-and-scope
