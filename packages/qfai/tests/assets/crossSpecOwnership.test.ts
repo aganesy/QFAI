@@ -35,24 +35,54 @@ const read = async (tree: string, rel: string): Promise<string> =>
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("detects the collision where it happens — before the edit, in Refactor", async () => {
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("**Before editing a production file or a test file**");
-    expect(skill).toContain("another spec's `tdd/test-list.md` names it in `Owning module`");
+    expect(skill).toContain("**Before editing a production file or a test file");
+    expect(skill).toContain("against every other spec's `tdd/test-list.md`");
+    expect(skill).toContain("the file is named in that row's `Owning module`");
   });
 
   it("triggers the check on test-file edits too, not only production ones", async () => {
     // `Test file` is the column that covers a shared test, so a trigger scoped
     // to production files alone left that branch unreachable.
     const reference = await read(tree, REFERENCE);
-    expect(reference).toContain("Before editing a production file **or a test file** in Refactor");
+    expect(reference).toContain("Before editing a production file **or a test file**");
+  });
+
+  it("runs the check in every phase, not only Refactor", async () => {
+    // Phase Red writes the test before Refactor is ever reached, so a shared
+    // test amended there and not touched again was never checked.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "in **any phase**, not only Refactor, because Phase Red writes to a test file before Refactor is ever reached",
+    );
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "**Before editing a production file or a test file — here or in any other phase**",
+    );
+    expect(skill).toContain(
+      "run the cross-spec check of `references/cross-spec-ownership.md` before writing it",
+    );
+  });
+
+  it("scopes detection to the rows that actually carry a certification", async () => {
+    // A `todo` / `red` / `green` row still has its run ahead of it, so an
+    // obligation opened against it would block completion for nothing.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain("reading only the rows at `Status = done`");
+    expect(reference).toContain(
+      "a `todo` / `red` / `green` row has its run still ahead of it and needs no obligation",
+    );
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain("over its `Status = done` rows only");
   });
 
   it("matches a dotted `Owning module` against the file being edited", async () => {
     // `execution-ledger.md` allows either form in that column, so a literal
     // string compare missed every ledger that used the dotted one.
     const reference = await read(tree, REFERENCE);
-    expect(reference).toContain(
-      "compare the two on a normalized form rather than as literal strings",
-    );
+    expect(reference).toContain("Decide which form the cell holds **before** touching its dots");
+    // A repo-relative `src/foo.bar.ts` must not collapse onto `src/foo/bar.ts`
+    // and manufacture a hit against an unrelated row.
+    expect(reference).toContain("read `.` as a separator **only** in the dotted form");
     expect(reference).toContain(
       "`shirube.domain.notification` and `src/shirube/domain/notification.ts` are the same module",
     );
@@ -69,7 +99,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "**A production module another spec's ledger names in `Owning module` is that spec's to certify.**",
     );
     expect(reference).toContain(
-      "under `Owning module` — that is the only column that holds a production path",
+      "that row's `Owning module` — the only column that holds a production path",
     );
     // `Test file` survives only for the narrower case it can actually cover.
     expect(reference).toContain("where the file being edited is itself that spec's test");
@@ -81,26 +111,26 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // dispatch, rather than clear the edit.
     const reference = await read(tree, REFERENCE);
     expect(reference).toContain("An undeclared seam is a restriction, not a clearance");
-    expect(reference).toContain("fall back to a repo-wide search");
     expect(reference).toContain(
       "Detection never passes silently just because the column is absent",
     );
-    const skill = await read(tree, SKILL);
-    expect(skill).toContain(
-      "every row that declares no `Owning module` falls back to the repo-wide search",
-    );
   });
 
-  it("applies the fallback per row, not per ledger", async () => {
-    // `-` is legal row by row, so a ledger that mixes declared and undeclared
-    // rows is not "a ledger with no production path" — scoping the fallback to
-    // the whole ledger left its undeclared rows undetected again.
+  it("applies the reverse-dependency fallback to every unmatched `done` row", async () => {
+    // `-` is legal row by row, and the ordinary `shared <- service <- service
+    // test` shape leaves a *declared* row unmatched too — so scoping the
+    // fallback to ledgers that declare nothing left both cases undetected.
     const reference = await read(tree, REFERENCE);
     expect(reference).toContain("`-` is legal **per row**");
+    expect(reference).toContain("This applies to **every `done` row that did not match directly**");
     expect(reference).toContain(
-      "Every row that did not match directly and declares no module must fall back to a repo-wide search",
+      "the fallback leaves a row that declares `src/service.ts` unmatched exactly as it leaves an undeclared one",
     );
-    expect(reference).toContain("A ledger's declared rows never clear its undeclared ones");
+    expect(reference).toContain("a ledger's declared rows never clear its undeclared ones");
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "every `done` row that did not match directly is still checked through the reverse dependency closure",
+    );
   });
 
   it("gives the evidence file a place to record it", async () => {
@@ -123,7 +153,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // duplication removal one line above unperformable.
     const reference = await read(tree, REFERENCE);
     expect(reference).toContain(
-      "Editing it does not require permission — it requires a record and a re-review",
+      "Editing such a file does not require permission — it requires a record and a re-review",
     );
   });
 
@@ -155,5 +185,19 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "**test or production artifacts another spec's completed implement run certifies**",
     );
     expect(drift).toContain("Changing one is not forbidden");
+  });
+
+  it("keeps the constitution's ownership columns in step with this rule", async () => {
+    // The reference keys production ownership on `Owning module`; while the
+    // Drift Protocol still defined upstream by `Test file` alone, a module
+    // declared only in `Owning module` was cross-spec here and not upstream
+    // there, so the CR route could be skipped for it.
+    const drift = await read(tree, DRIFT);
+    expect(drift).toContain(
+      "a production module in that row's `Owning module` column, a test in its `Test file` column",
+    );
+    expect(drift).toContain(
+      "a production file declared there is upstream even though no `Test file` cell names it",
+    );
   });
 });

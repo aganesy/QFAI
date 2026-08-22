@@ -28,30 +28,46 @@ route never fired for them.
 **A production module another spec's ledger names in `Owning module` is that
 spec's to certify.** So is a test file another spec's ledger names in
 `Test file`, for the narrower case where the file being edited is itself that
-spec's test. Editing it does not require permission — it requires a record and
-a re-review.
+spec's test. In both columns it is the `done` rows that carry the certification
+— `constitution/drift-protocol.md` reads the two columns the same way. Editing
+such a file does not require permission — it requires a record and a re-review.
 
-1. **Detect.** Before editing a production file **or a test file** in Refactor,
-   look the file up in every other spec's `tdd/test-list.md` under
-   `Owning module` — that is the only column that holds a production path
-   (`execution-ledger.md`). When the file being edited is a test file, look it
-   up under `Test file` as well. A hit in either column means the edit is
-   cross-spec.
-   - **Normalize before comparing.** `Owning module` legally holds a
-     repo-relative path **or** a dotted module path (`execution-ledger.md`), so
-     compare the two on a normalized form rather than as literal strings: strip
-     the source-root prefix and the file extension, then read `.` and `/` as the
-     same separator. `shirube.domain.notification` and
-     `src/shirube/domain/notification.ts` are the same module and must match.
-   - **Undeclared seam.** `Owning module` is optional and `-` is legal **per
-     row**, so a ledger may carry declared and undeclared rows side by side. An
-     undeclared seam is a restriction, not a clearance — the same reading
-     `execution-ledger.md` gives it for parallel dispatch. Every row that did
-     not match directly and declares no module must fall back to a repo-wide
-     search: find the test files that exercise the file about to be edited, then
-     look those paths up in that row's `Test file`. A ledger's declared rows
-     never clear its undeclared ones. Detection never passes silently just
-     because the column is absent.
+1. **Detect.** Before editing a production file **or a test file** — in **any
+   phase**, not only Refactor, because Phase Red writes to a test file before
+   Refactor is ever reached — look the file up in every other spec's
+   `tdd/test-list.md`, reading only the rows at `Status = done`. Those are the
+   rows this rule protects: `done` has no outbound edge, so what they certify
+   cannot be re-tested by reopening them, while a `todo` / `red` / `green` row
+   has its run still ahead of it and needs no obligation. A `done` row matches
+   in either of two ways, and either one means the edit is cross-spec.
+   - **Direct.** The file is that row's `Owning module` — the only column that
+     holds a production path (`execution-ledger.md`) — or, when the file being
+     edited is itself a test, that row's `Test file`.
+   - **Reverse dependency.** The row names the file in neither column, but a
+     test it does name reaches it. Walk the reverse dependency closure of the
+     file about to be edited out to the tests that exercise it
+     (`relevant-test-suite.md`), then look those paths up in that row's
+     `Test file`. This applies to **every `done` row that did not match
+     directly**, declared or not: in the ordinary reverse-dependency shape
+     `relevant-test-suite.md` describes — a shared module behind a service
+     behind that service's test — the fallback leaves a row that declares
+     `src/service.ts` unmatched exactly as it leaves an undeclared one, and `-`
+     is legal **per row**, so a ledger's declared rows never clear its
+     undeclared ones. An undeclared seam is a
+     restriction, not a clearance — the same reading `execution-ledger.md` gives
+     it for parallel dispatch. Detection never passes silently just because the
+     column is absent.
+
+   **Normalize before comparing.** `Owning module` legally holds a
+   repo-relative path **or** a dotted module path (`execution-ledger.md`).
+   Decide which form the cell holds **before** touching its dots — a value
+   carrying `/` or ending in a source extension is a path — and read `.` as a
+   separator **only** in the dotted form, so `src/foo.bar.ts` keeps its dot
+   instead of collapsing onto `src/foo/bar.ts` and manufacturing a hit. Then
+   compare with the source-root prefix and the extension dropped:
+   `shirube.domain.notification` and `src/shirube/domain/notification.ts` are
+   the same module and must match.
+
 2. **Record.** Add a `## Cross-spec obligations` entry to this spec's evidence
    file (fields below).
 3. **Re-review.** Run `completion-reviewer` against the affected specs'

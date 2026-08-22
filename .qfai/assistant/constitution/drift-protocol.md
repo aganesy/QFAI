@@ -15,8 +15,11 @@ Upstream artifacts include, at minimum:
 - contracts and schema decisions owned by earlier phases
 - outputs of discussion/sdd/review stages
 - **test or production artifacts another spec's completed implement run
-  certifies** — a file named in another `tdd/test-list.md`'s `Test file` column
-  on a `done` row. Changing one is not forbidden (the codebase is not
+  certifies** — a file named on a `done` row of another `tdd/test-list.md`: a
+  production module in that row's `Owning module` column, a test in its
+  `Test file` column. `Owning module` is the only column that holds a
+  production path, so a production file declared there is upstream even though
+  no `Test file` cell names it. Changing one is not forbidden (the codebase is not
   partitioned and duplication removal is mandated), but it must be recorded and
   re-reviewed per
   `skills/qfai-implement/references/cross-spec-ownership.md`. It becomes drift
