@@ -1228,20 +1228,6 @@ const STRUCTURAL_ANNOTATION_EXTENSIONS = ["feature", "md", "markdown"] as const;
 const PROSE_CARRIER_EXTENSIONS: ReadonlySet<string> = new Set(["md", "markdown"]);
 
 /**
- * Declarations a runner actually collects, in the ecosystems the scan can meet.
- *
- * An extension is not executability: a `.test.ts` whose whole body is an
- * annotation comment is prose that happens to end in `.ts`, and classifying by
- * extension alone would let a markdown ledger clear the same obligation with
- * the same bytes simply by being renamed. A non-prose carrier therefore counts
- * as a test only when it declares one the way its language does.
- *
- * Deliberately broad, and deliberately blind to skip state — `describe.skip(`
- * matches. The claim these support is "a test is declared here", not "it is
- * enabled" or "it passes": a disabled skeleton is owned by the scaffold
- * placeholder gate, and a green run is owned by the test command itself.
- */
-/**
  * Chain segments that still leave a call declaring a test or a suite.
  *
  * An open `[\w$]+` chain accepted the configuration and hook forms too, and
@@ -1255,6 +1241,20 @@ const PROSE_CARRIER_EXTENSIONS: ReadonlySet<string> = new Set(["md", "markdown"]
 const TEST_MODIFIER_SEGMENT =
   "skip|only|todo|fails|failing|concurrent|sequential|serial|parallel|each|for|runIf|skipIf|describe";
 
+/**
+ * Declarations a runner actually collects, in the ecosystems the scan can meet.
+ *
+ * An extension is not executability: a `.test.ts` whose whole body is an
+ * annotation comment is prose that happens to end in `.ts`, and classifying by
+ * extension alone would let a markdown ledger clear the same obligation with
+ * the same bytes simply by being renamed. A non-prose carrier therefore counts
+ * as a test only when it declares one the way its language does.
+ *
+ * Deliberately broad, and deliberately blind to skip state — `describe.skip(`
+ * matches. The claim these support is "a test is declared here", not "it is
+ * enabled" or "it passes": a disabled skeleton is owned by the scaffold
+ * placeholder gate, and a green run is owned by the test command itself.
+ */
 const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   // xUnit / BDD call form with the modifier chains the frameworks allow:
   // `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
