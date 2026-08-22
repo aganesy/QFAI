@@ -1095,10 +1095,44 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // flag, and the next branch's legacy rows were never read again.
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain('{ "migrations": { "preSplitEvidence": { "ledgers"');
-    expect(migration).toContain("`git rev-parse HEAD:.qfai/specs`");
     expect(migration).toContain("Absent covers a recorded fingerprint that no longer matches");
     const implement = flat(await read(tree, IMPLEMENT));
-    expect(implement).toContain("**the fingerprint of the tracked ledgers it read**");
+    expect(implement).toContain(
+      "**the fingerprint of the ledgers it read, taken from the working tree after it wrote its markers**",
+    );
+  });
+
+  it("fingerprints the ledgers themselves, not a commit-tree address", async () => {
+    // A tree object reads the same before and after an uncommitted marker
+    // write, so discarding those edits left a fingerprint that still matched
+    // while every legacy row had lost its marker.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("`path + NUL + git hash-object <path>`");
+    expect(migration).toContain(
+      "**Not a commit-tree address such as `git rev-parse HEAD:.qfai/specs`.**",
+    );
+  });
+
+  it("takes the last advance from Status or the anchor, not from the line moving", async () => {
+    // A post-split reflow or typo fix on the row's line dated a legacy row's
+    // last advance after the split, and the boundary test then refused it the
+    // marker it lawfully needs.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('**Take "advanced" semantically, not as "the line moved".**');
+    expect(migration).toContain("`git show <sha>^:<test-list.md>`");
+    expect(migration).toContain("the newest commit where **either one changed**");
+  });
+
+  it("refuses the marker where the split boundary cannot be proven", async () => {
+    // Reading an unprovable boundary as "everything predates it" marks the
+    // post-split row written to the wrong file — the one case the boundary
+    // test exists to catch.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain("**`B(L)` cannot be resolved → mark nothing for that layer.**");
+    expect(migration).toContain("**Fail closed**");
+    expect(migration).toContain("`migrations.preSplitEvidence.boundary.<layer>`");
+    expect(migration).toContain("**A run that refused a layer records no fingerprint**");
+    expect(migration).not.toContain("no split has landed in this history, every row here predates");
   });
 
   it("marks only a row advanced before its layer's split", async () => {
@@ -1108,7 +1142,7 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain("## The split boundary, per layer");
     expect(migration).toContain("`git merge-base --is-ancestor <B(L)> <A>` succeeds");
-    expect(migration).toContain("No `B(L)` exists");
+    expect(migration).toContain("**`B(L)` cannot be resolved");
   });
 
   it("covers the legacy `Integration` rows the later split left behind", async () => {

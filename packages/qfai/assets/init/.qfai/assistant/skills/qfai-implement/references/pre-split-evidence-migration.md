@@ -32,15 +32,25 @@ keyed to the ledgers it actually read, not to the checkout. Its record is
 { "migrations": { "preSplitEvidence": { "ledgers": "<fingerprint>" } } }
 ```
 
-`<fingerprint>` addresses the tracked spec tree: `git rev-parse HEAD:.qfai/specs`,
-or the string `untracked` where that resolves to nothing (no commit yet, or
-`.qfai/specs` outside the index). It moves when any ledger moves and it differs
-between branches that carry different ledgers, which is the whole point of
-recording it.
+`<fingerprint>` addresses the ledgers this pass actually read and wrote, taken
+from the **working tree** and recomputed after it has written its markers: for
+every ledger it enumerated, `path + NUL + git hash-object <path>`, sorted by
+path, joined with newlines, SHA-256 — the manifest form
+`references/evidence-revision.md` already defines. **Not a commit-tree address
+such as `git rev-parse HEAD:.qfai/specs`.** The markers are written to the
+working tree and are usually not committed in the same breath, so a tree object
+reads identically before and after the pass: discard those uncommitted edits
+afterwards and the recorded fingerprint still matches while every legacy row has
+lost its marker, and the guard then skips the pass forever. A working-tree
+manifest also gives an untracked spec tree a real address instead of one
+constant string for every state it can be in. It moves when any ledger moves and
+it differs between branches that carry different ledgers, which is the whole
+point of recording it.
 
-- **Flag set → skip.** Set means present **and** carrying this checkout's
-  current fingerprint. Read no ledger, walk no history; report the skip in one
-  line and continue with the next Preflight obligation.
+- **Flag set → skip.** Set means present **and** carrying the fingerprint
+  recomputed over the ledgers as they stand now — which costs one
+  `git hash-object` per ledger and nothing else. Parse no row, walk no history;
+  report the skip in one line and continue with the next Preflight obligation.
 - **Flag absent → run the procedure below, then set the flag.** Absent covers a
   recorded fingerprint that no longer matches — a branch switch, a pull, a
   merge. `.qfai/state.json` is checkout-local, so a flag pinned to nothing but
@@ -50,6 +60,8 @@ recording it.
   those rows forever. Set the flag even when the pass marked nothing: "these
   ledgers have no legacy row" is the answer, and re-deriving it every session is
   exactly the cost that put the migration in a per-item gate in the first place.
+  The one exception is a run that refused a layer for an unresolvable boundary —
+  that run reached no answer, so it records none.
 - Write the flag with the same create-or-merge rule as every other key in that
   file: preserve unrelated top-level keys, never rewrite the file wholesale.
 - **A re-run is cheap by construction.** Step 1 below filters to the rows that
@@ -89,18 +101,28 @@ For each such row:
    history**, not with `git log -S`. The id is on both sides of a status-only
    change, and `-S` matches a filepair only when one side contains the string,
    so it walks back to the commit that _added_ the row instead. Use
-   `git log -p -- <test-list.md>` and take the newest commit whose hunk changes
-   that `TDD-ID`'s line (`git log -L` on the row also works where the line is
-   stable). Call it `A`.
-3. Read the row's `Evidence` anchor **as of `A`**. It named
+   `git log -p -- <test-list.md>`, newest first, as the candidate list
+   (`git log -L` on the row narrows it where the line number is stable). Call
+   the commit it settles on `A`.
+3. **Take "advanced" semantically, not as "the line moved".** For each candidate,
+   read the row's `Status` cell and its `Evidence` anchor at that commit and at
+   its parent — `git show <sha>:<test-list.md>` against
+   `git show <sha>^:<test-list.md>` — and take the newest commit where **either
+   one changed**. A commit that reflowed the table, re-wrapped a cell, fixed a
+   typo in the row's prose or edited another column is not an advance: taken as
+   `A`, it dates a legacy row's last advance to a post-split formatting commit,
+   the boundary test below then reads that row as post-split, and a row that has
+   lawfully held its implement anchor since before the split is refused the
+   marker and stays ungateable — the failure this pass exists to remove.
+4. Read the row's `Evidence` anchor **as of `A`**. It named
    `atdd-<spec-id>.md` → the row was advanced after the split; it gets no
    marker.
-4. It named `implement-<spec-id>.md` → check **when** as well as where, against
+5. It named `implement-<spec-id>.md` → check **when** as well as where, against
    the boundary below. `A` before the boundary → append
    `Pre-split-evidence: implement` to the row's `Evidence` cell. `A` at or after
    it → no marker; that row wrote to the wrong file after the split, and the
    marker is not the fix for it.
-5. Leave `Status`, `DR-ID` and the anchor itself untouched. The marker is the
+6. Leave `Status`, `DR-ID` and the anchor itself untouched. The marker is the
    only thing this pass writes.
 
 ## The split boundary, per layer
@@ -127,15 +149,31 @@ git log --reverse --format=%H -- \
 git show <sha>:.qfai/assistant/skills/qfai-implement/references/execution-ledger.md
 ```
 
-Then, with `A` from step 2:
+An operator can name the boundary instead: `migrations.preSplitEvidence.boundary`
+in `.qfai/state.json`, keyed by layer, holding any commit-ish. Where it is set
+for `L`, that is `B(L)` and no derivation runs.
+
+Then, with `A` from step 3:
 
 - `git merge-base --is-ancestor <B(L)> <A>` succeeds → `A` is at or after the
   split. No marker.
-- It fails → `A` predates the split reaching this repository, and step 4's
+- It fails → `A` predates the split reaching this repository, and step 5's
   anchor test decides.
-- No `B(L)` exists — the skill tree is untracked, or no committed copy of it
-  routes `L` to the ATDD file — then no split has landed in this history, every
-  row here predates it, and the anchor test decides alone.
+- **`B(L)` cannot be resolved → mark nothing for that layer.** The skill tree is
+  untracked, or the clone is too shallow to hold the commit that introduced the
+  split. **Fail closed**: an unproven boundary is not evidence that every row
+  predates it, and reading it that way marks the post-split row written to the
+  wrong file — handing item 10's acceptance to a row that never produced an ATDD
+  handoff, which nothing downstream re-examines. Refusing the marker leaves such
+  rows reported and re-markable the moment the boundary is available; granting
+  it wrongly is not recoverable. Report the refusal in one line — the layer, why
+  (untracked / shallow), and the two ways out: restore the history
+  (`git fetch --unshallow`, or commit the vendored `.qfai/` tree) or set
+  `migrations.preSplitEvidence.boundary.<layer>` above.
+- **A run that refused a layer records no fingerprint**, so the next Preflight
+  tries again once the history is there. That re-run costs one ledger read per
+  spec plus the boundary derivation — step 1 filters every settled row out
+  before any per-row history is walked.
 
 Resolve `B(L)` once per layer per run and cache it: it is at most three walks of
 one file's history, never one per row.
