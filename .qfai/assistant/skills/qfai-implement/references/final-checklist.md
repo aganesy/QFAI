@@ -19,8 +19,12 @@ releases completion.
 - [ ] Red phase: test was written first and confirmed to fail, and `qa-gatekeeper` confirmed the
       failure is **admissible** — an assertion or expected-exception check inside the row's
       `Selector`, not a load or fixture error (`red-admissibility.md`) — or, on the _RED not
-      observable_ path, the correct test was written first and the falsifiability trio replaces the
-      natural RED (`red-not-observable.md`) (gate items 2, 3).
+      observable_ path, the correct test was written first, the falsifiability trio replaces the
+      natural RED, **and `qa-gatekeeper` returned PASS on that mutation run**, recorded in the
+      entry. The trio on its own is the implementer's own account of what was broken and why it
+      failed; the gatekeeper reads the mutated tree and is the only thing that confirms the
+      predicate broken is the one `Satisfied-by` names, which is why that path routes it too
+      (`red-not-observable.md`, `SKILL.md#phase-red-write-failing-test` step 3c) (gate items 2, 3).
 - [ ] Green phase: minimal code was written, `qa-gatekeeper` confirmed the test passes, **and**
       `Oracle proof` (or `equivalent-mutant` naming the weaker contract clause) is recorded, reverted,
       and absent from the commit — exit code 0 alone does not distinguish a discriminating test from
@@ -35,19 +39,37 @@ releases completion.
       run, and both verdicts are appended to the evidence file the row's `Layer` owns, leaving 0
       blocking reviewer issues (gate items 7, 8, 11). Never waived — the verdict is required even on
       a row whose review produced only advisories (`finding-classification.md`).
-- [ ] Every UI-affecting row carries a `product-surface-reviewer` prototype-parity PASS (gate item 9).
+- [ ] Every UI-affecting row carries a `product-surface-reviewer` prototype-parity PASS, **and that
+      reviewer's response is in the round's review pack** — its own `R0N_product-surface-reviewer.md`
+      file with a matching `reviewers[]` entry in `summary.json`, like the two verdicts above
+      (`review-artifact-layout.md`). `Prototype parity: PASS` in the evidence entry records the
+      verdict; it is not the verdict, and the `--profile tdd` run this list ends on reports no
+      `QFAI-REVIEW-*` finding, so a pack that never held a UI review passes it (gate item 9).
 - [ ] `test-list.md` statuses are accurate **and** each row's `Evidence` anchor resolves to a fresh
       entry in the file its `Layer` owns, with `Review pack seal` and each `Audited evidence hash`
-      recomputed — **except** an `E2E` / `API` row carrying the `Pre-split-evidence: implement`
-      marker, whose `implement-<spec-id>.md` anchor is the accepted legacy location; requiring the
-      ATDD file there would leave an already-complete row permanently ungateable (gate item 10).
+      recomputed, **and the entry's identity copy still matches the ledger row** — `TDD-ID`, `Layer`,
+      `Test file`, `Selector` and the obligation reference the row's `Layer` selects (`TC-ref` for
+      `Unit` / `Component` / `Integration`, `US-ref` for `E2E`, `CON-API-ref` for `API`). A handback
+      or review-fix that renames a `Selector` or `Test file` in the ledger alone leaves every hash
+      recomputing correctly over the stale copy, so the row completes with the reviewers having
+      audited a selector it no longer names. **Except** an `E2E` / `API` row carrying the
+      `Pre-split-evidence: implement` marker, whose `implement-<spec-id>.md` anchor is the accepted
+      legacy location; requiring the ATDD file there would leave an already-complete row permanently
+      ungateable (gate item 10).
 - [ ] Every handed-over `E2E` / `API` / `Integration` row's `Round N: RED test hash` **recomputes**
       here over the manifest recorded beside it, and matches. The other three recomputations above
       address the evidence entry, not the test: a fixture, snapshot or the test body edited after
       `/qfai-atdd` observed the RED leaves anchor, pack seal and `Audited evidence hash` all correct
       while the row's RED describes a test that no longer exists. A mismatch sends the row back for a
-      fresh RED unless a `Shared-artifact re-verify` entry names this row's spec and `TDD-ID` and
-      carries the artifact's new manifest and hash (gate item 10, `round-evidence.md#round-block`).
+      fresh RED unless a `Shared-artifact re-verify` entry names this row's spec and `TDD-ID` **and
+      carries the re-verification itself**: the selector re-run under the changed artifact with its
+      result, the row's own mutation — the one its `Oracle proof` plan or `Satisfied-by` names —
+      re-applied, its failure, the restored GREEN after the revert, and the artifact's new manifest
+      and hash. The manifest and hash address the current bytes and nothing else: an assertion
+      helper, snapshot or expected-value fixture weakened until the row's test cannot fail hashes
+      exactly as cleanly as a sound one, and its recorded proof was taken against the artifact as it
+      was. Re-taking that proof is what the exception is for (gate item 10,
+      `round-evidence.md#round-block`).
 - [ ] Checkpoint verification passed for **every** row advanced this run — the **full** suite where
       the row sits on a checkpoint boundary, the narrow relevant suite from Phase: Refactor step 2
       (the touched module plus its reverse-dependency closure, or the package fallback when that

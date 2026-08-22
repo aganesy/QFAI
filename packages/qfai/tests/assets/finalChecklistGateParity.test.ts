@@ -23,6 +23,8 @@ const SKILL_DIRS = [
 ];
 
 const GATE_HEADING = "### Item completion checklist (12-point gate)";
+const SPEC_CONDITIONS_HEADING = "### Spec completion conditions";
+const PROHIBITIONS_HEADING = "### Completion prohibition conditions";
 
 /** GitHub's heading slug: lowercase, drop punctuation, spaces to hyphens. */
 function slug(heading: string): string {
@@ -44,13 +46,36 @@ function headingSlugs(markdown: string): Set<string> {
   return slugs;
 }
 
+/** The body of one `###` section of `SKILL.md`, heading excluded. */
+function skillSection(skill: string, heading: string): string {
+  const start = skill.indexOf(heading);
+  expect(start, `${heading} must exist`).toBeGreaterThanOrEqual(0);
+  const rest = skill.slice(start + heading.length);
+  const end = rest.search(/\n#{2,3} /);
+  return end === -1 ? rest : rest.slice(0, end);
+}
+
+/**
+ * The top-level `- ` bullets of a section, each joined with its continuation
+ * lines and whitespace-collapsed so a rewrap does not change the text.
+ */
+function sectionBullets(skill: string, heading: string): string[] {
+  const bullets: string[] = [];
+  for (const line of skillSection(skill, heading).split(/\r?\n/)) {
+    if (/^- \S/.test(line)) {
+      bullets.push(line.trim());
+      continue;
+    }
+    if (bullets.length > 0 && /^\s+\S/.test(line)) {
+      bullets[bullets.length - 1] = `${bullets[bullets.length - 1]} ${line.trim()}`;
+    }
+  }
+  return bullets.map((bullet) => bullet.replace(/\s+/g, " "));
+}
+
 /** The numbered items of the 12-point gate, by their own numbering. */
 function gateItemNumbers(skill: string): number[] {
-  const start = skill.indexOf(GATE_HEADING);
-  expect(start, `${GATE_HEADING} must exist`).toBeGreaterThanOrEqual(0);
-  const rest = skill.slice(start + GATE_HEADING.length);
-  const end = rest.indexOf("\n### ");
-  const section = end === -1 ? rest : rest.slice(0, end);
+  const section = skillSection(skill, GATE_HEADING);
   const numbers: number[] = [];
   for (const line of section.split(/\r?\n/)) {
     const match = /^(\d+)\.\s/.exec(line);
@@ -132,6 +157,103 @@ function withoutBoxesCovering(checklist: string, item: number): string {
   return lines.filter((_, index) => !dropped.has(index)).join("\n");
 }
 
+/**
+ * The spec-level half of the derivation rule, condition by condition.
+ *
+ * `condition` is a distinctive substring of one `SKILL.md` bullet; `box` is a
+ * substring of the checklist box that covers it. The pairing is asserted in
+ * both directions, so adding a condition (nothing matches it), deleting or
+ * rewording one (its `condition` matches nothing) and dropping its box all
+ * fail — the numbered gate items get that from `citedGateItems`, and these
+ * conditions had no equivalent.
+ */
+const SPEC_LEVEL_PARITY: readonly {
+  readonly heading: string;
+  readonly condition: string;
+  readonly box: string;
+}[] = [
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "with applicable layer are present in `test-list.md`",
+    box: "Every applicable `TC-*` from `06_Test-Cases.md` is present in `test-list.md`",
+  },
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "`QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec",
+    box: "`QFAI-ATDD-111` / `QFAI-ATDD-113` are clean for this spec",
+  },
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "Each item reached `done` or valid `exception`",
+    box: "Every ledger row reached a **terminal** status",
+  },
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "0 blocking reviewer issues remain",
+    box: "leaving 0 blocking reviewer issues",
+  },
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "Checkpoint verification passed at the spec-level boundary",
+    box: "Spec-level checkpoint verification ran against the terminal ledger",
+  },
+  {
+    heading: SPEC_CONDITIONS_HEADING,
+    condition: "No unresolved Change Request or waiver dependency exists",
+    box: "No in-scope Change Request or waiver dependency is unresolved",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "No RED fresh evidence exists for the item",
+    box: "Red phase: test was written first and confirmed to fail",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "No GREEN fresh evidence exists for the item",
+    box: "Green phase: minimal code was written",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "has not been run or returned REVISE",
+    box: "`completion-reviewer` and `implementation-reviewer` returned PASS",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "does not record both reviewer verdicts for the item",
+    box: "both verdicts are appended to the evidence file the row's `Layer` owns",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "A `## Cross-spec obligations` entry in this spec's evidence file is still open",
+    box: "No `## Cross-spec obligations` entry",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "Items with `todo`, `red`, `green`, `refactor`, or `review-fix` status still exist",
+    box: "No `todo`, `red`, `green`, `refactor` or `review-fix` row remains",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "Items with `exception` status still exist",
+    box: "user-approved accepted-risk waiver",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "Parallel slices were used but integration verify has not been run post-merge",
+    box: "integration verify ran on the **merged** result and passed",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "A checkpoint boundary was reached",
+    box: "Checkpoint verification passed for **every** row advanced this run",
+  },
+  {
+    heading: PROHIBITIONS_HEADING,
+    condition: "stubs remain in any file covered by",
+    box: "zero `QFAI-TEST-001` findings",
+  },
+];
+
 const readSkill = async (dir: string): Promise<string> =>
   await readFile(path.join(dir, "SKILL.md"), "utf-8");
 
@@ -151,6 +273,15 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     const cited = citedGateItems(await readChecklist(dir));
     const uncovered = numbers.filter((n) => !cited.has(n));
     expect(uncovered).toEqual([]);
+  });
+
+  it("requires the gate's own numbering to be exactly 1..n, with no repeat", async () => {
+    // Coverage alone cannot see a misnumbering: write item 12 as a second
+    // item 11 and the list is still 12 long, while every number in it is
+    // already cited — so `uncovered` is empty and the real item 12 has no box
+    // that parity would miss if it were deleted.
+    const numbers = gateItemNumbers(await readSkill(dir));
+    expect(numbers).toEqual(numbers.map((_, index) => index + 1));
   });
 
   it("counts a gate item as covered only from a box, never from prose", async () => {
@@ -176,6 +307,17 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("`product-surface-reviewer` prototype-parity PASS");
   });
 
+  it("requires the prototype-parity verdict in the review pack, not only in the entry", async () => {
+    // `review-artifact-layout.md` makes gate items 7-9 all pack-bearing, and
+    // `--profile tdd` — the run this list ends on — reports no `QFAI-REVIEW-*`
+    // finding. A `Prototype parity: PASS` line with no reviewer response
+    // behind it therefore passed every mechanical check there is.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("that reviewer's response is in the round's review pack");
+    expect(checklist).toContain("`R0N_product-surface-reviewer.md`");
+    expect(checklist).toContain("`reviewers[]` entry in `summary.json`");
+  });
+
   it("asks for the Oracle proof, not just a passing test", async () => {
     // Exit code 0 alone does not separate a discriminating test from a vacuous
     // one — the half-box asked only "test confirmed to pass".
@@ -190,6 +332,30 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("**admissible**");
     expect(checklist).toContain("`Evidence` anchor resolves");
     expect(checklist).toContain("`Audited evidence hash`");
+  });
+
+  it("requires the gatekeeper PASS on the falsifiability path too", async () => {
+    // Phase Red step 3c routes `qa-gatekeeper` on the mutation run and writes
+    // `todo -> red` only on PASS. Asking for the trio alone let the
+    // implementer self-report which predicate was broken and why it failed —
+    // the one check that separates a falsifiability row from a test that
+    // would pass against anything.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain(
+      "**and `qa-gatekeeper` returned PASS on that mutation run**, recorded in the entry",
+    );
+    expect(checklist).toContain("the predicate broken is the one `Satisfied-by` names");
+  });
+
+  it("checks the evidence entry's identity copy against the ledger row", async () => {
+    // Gate item 10 compares the copy, not just the anchor: a handback or
+    // review-fix that renames a `Selector` in the ledger alone leaves the
+    // anchor resolving, the pack seal sealing and every `Audited evidence
+    // hash` recomputing over the stale entry.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("the entry's identity copy still matches the ledger row");
+    expect(checklist).toContain("`TDD-ID`, `Layer`, `Test file`, `Selector`");
+    expect(checklist).toContain("`TC-ref` for `Unit` / `Component` / `Integration`");
   });
 
   it("asks for the spec-level checkpoint boundary gate item 12 never reaches", async () => {
@@ -238,6 +404,46 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("`Round N: RED test hash` **recomputes**");
     expect(checklist).toContain("over the manifest recorded beside it, and matches");
     expect(checklist).toContain("`Shared-artifact re-verify`");
+  });
+
+  it("makes the shared-artifact exception carry the re-taken proof, not just a new hash", async () => {
+    // A hash addresses the current bytes. An assertion helper or snapshot
+    // weakened until the row's test cannot fail hashes exactly as cleanly as
+    // a sound one, so a re-verify entry holding only spec/`TDD-ID`, manifest
+    // and hash clears the mismatch on a row that is now tautological.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("carries the re-verification itself");
+    expect(checklist).toContain("the selector re-run under the changed artifact with its result");
+    expect(checklist).toContain("re-applied, its failure, the restored GREEN after the revert");
+  });
+
+  it("covers every spec-level completion condition and prohibition with a box", async () => {
+    // The numbered gate items are covered by `citedGateItems`; the spec-level
+    // conditions the same derivation rule claims had no analysis at all, so a
+    // new bullet in either section drifted with the checklist still green.
+    const skill = await readSkill(dir);
+    const boxes = checklistBoxes(await readChecklist(dir)).map((box) =>
+      box.text.replace(/\s+/g, " "),
+    );
+    for (const heading of [SPEC_CONDITIONS_HEADING, PROHIBITIONS_HEADING]) {
+      const bullets = sectionBullets(skill, heading);
+      expect(bullets.length).toBeGreaterThan(0);
+      const expected = SPEC_LEVEL_PARITY.filter((entry) => entry.heading === heading);
+      for (const entry of expected) {
+        const matched = bullets.filter((bullet) => bullet.includes(entry.condition));
+        expect(matched, `${heading}: "${entry.condition}" names exactly one bullet`).toHaveLength(
+          1,
+        );
+        expect(
+          boxes.filter((box) => box.includes(entry.box)).length,
+          `${heading}: "${entry.condition}" has a checklist box`,
+        ).toBeGreaterThan(0);
+      }
+      const unmapped = bullets.filter(
+        (bullet) => !expected.some((entry) => bullet.includes(entry.condition)),
+      );
+      expect(unmapped, `${heading}: every bullet is covered by a checklist box`).toEqual([]);
+    }
   });
 
   it("refuses completion while a cross-spec obligation is still open", async () => {
