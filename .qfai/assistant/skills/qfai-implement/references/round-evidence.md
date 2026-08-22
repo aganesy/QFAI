@@ -18,6 +18,12 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: RED command` — the exact command executed to observe failure
 - `Round N: RED result` — the failure output (result completeness is
   best-effort; truncated output is acceptable)
+- `Round N: RED failure mode` — `assertion` | `expected-error` |
+  `falsifiability`, classifying **that round's** RED (`red-admissibility.md`).
+  A round-1 `falsifiability` row whose corrected acceptance test fails naturally
+  in round 2 (`../../qfai-atdd/references/review-fix-rounds.md`) changes mode
+  between rounds, so one row-level field either rewrote round 1's
+  classification or left round 2 misclassified
 - `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
   — **in place of the RED pair** on a `falsifiability` row. It is that row's
   RED observation, so it sits where the RED pair sits and takes the same prefix;
@@ -42,10 +48,20 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   procedure: `evidence-revision.md`). Each review round creates a new pack, so a
   bare row-level hash left the completion gate unable to say which directory to
   recompute over — it either checked another round's pack or stopped a correct
-  item
+  item. **One pair per review attempt, not one per round**: a `REVISE` that
+  needs no new production behaviour re-reviews inside the same round (below),
+  and every review creates its own pack (`../SKILL.md`), so write the pair once
+  per attempt and qualify it `Round N: Review pack (attempt M)` /
+  `Round N: Review pack seal (attempt M)`, `M` numbered from 1 in review order
+  and omitted where the round holds a single attempt. Overwriting the pair lost
+  the `REVISE` attempt's audit trail; keeping the first left the completion gate
+  recomputing over a pack the round did not close on. `M` qualifies the field
+  name only — the pack directory layout is unchanged (`../SKILL.md`)
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
   `REVISE` plus the finding, and which rework path it took). Absent on round 1
-  when no review has run yet.
+  when no review has run yet. A round with several review attempts records each
+  attempt's verdict here in review order, under the same `(attempt M)`
+  qualifier, so every pack in the round has the verdict it carried beside it.
 
 ## What opens a round
 
@@ -57,8 +73,9 @@ as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio and
-its revision in its place), the GREEN pair, the `Oracle proof`, the review pack
-and its seal, the reviewer verdict. Row-level fields are not round fields and
+its revision in its place), the `RED failure mode` that classifies it, the
+GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer
+verdict. Row-level fields are not round fields and
 take no prefix: `TDD-ID`, the obligation reference, `Test file`, `Selector`,
 `Layer`, and the refactor-verify pair. `RED revision`, `RED test hash` and
 `Falsifiability revision` were on that list until a second round showed they

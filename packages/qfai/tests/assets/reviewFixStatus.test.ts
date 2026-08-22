@@ -81,18 +81,37 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
         "`Round N: Oracle proof`",
         "`Round N: Review pack`",
         "`Round N: Review pack seal`",
+        // A round-1 `falsifiability` row can get a natural RED in round 2, so
+        // the classification of a round's RED moves with the round.
+        "`Round N: RED failure mode`",
       ]) {
         expect(reference).toContain(field);
       }
       // ...and the paragraph that closes the list names them, so the summary
       // and the enumeration cannot drift apart again.
       expect(flat(reference)).toContain(
-        "the GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer verdict",
+        "the `RED failure mode` that classifies it, the GREEN pair, the `Oracle proof`, the review pack and its seal, the reviewer verdict",
       );
       // The rule that decides where a newly added field lands, so the next
       // omission is answerable without re-deriving it in SKILL.md.
       expect(flat(reference)).toContain(
         "a field its producer writes once per round takes the prefix",
+      );
+    });
+
+    it(`${relativePath}: a round keeps one review pack per review attempt`, async () => {
+      // A behaviour-preserving REVISE re-reviews inside the same round and
+      // every review creates its own pack, so one slot per round either
+      // discarded the REVISE pack's audit trail or left the completion gate
+      // recomputing over a pack the round did not close on.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(flat(reference)).toContain("**One pair per review attempt, not one per round**");
+      expect(flat(reference)).toContain(
+        "`Round N: Review pack (attempt M)` / `Round N: Review pack seal (attempt M)`",
+      );
+      // Each pack in the round is answerable to the verdict it carried.
+      expect(flat(reference)).toContain(
+        "A round with several review attempts records each attempt's verdict here in review order, under the same `(attempt M)` qualifier",
       );
     });
 
