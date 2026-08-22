@@ -16,10 +16,11 @@ import { exists, issue } from "./utils.js";
  * older document beside it never had, and the failure is silent — not a link an
  * agent notices, but an instruction that does nothing.
  *
- * Scope is deliberately anchor integrity, not file existence. A citation whose
- * target this rule cannot place inside the assistant tree is skipped: the tree
- * also cites the consumer's own spec packs and evidence files, which are not
- * QFAI's to require.
+ * Scope is what the tree owns. A citation whose target this rule cannot place
+ * inside the assistant tree is skipped: the tree also cites the consumer's own
+ * spec packs and evidence files, which are not QFAI's to require. A citation
+ * that does name a document inside the tree is held to both halves — the file
+ * is there, and the heading is in it.
  */
 
 /** Heading text with the markup GitHub drops before it slugs. */
@@ -69,8 +70,24 @@ export type AnchorReference = {
   readonly anchor: string;
 };
 
+/** An inline image — its `alt` never reaches the rendered heading text. */
+const INLINE_IMAGE_RE = /!\[[^\]]*\]\([^()]*\)/g;
+
+/** An inline link: the target is markup, the label is the heading's text. */
+const INLINE_LINK_RE = /\[([^\]]*)\]\([^()]*\)/g;
+
+/** A reference link — same story, with the target held in a label. */
+const REFERENCE_LINK_RE = /\[([^\]]*)\]\[[^\]]*\]/g;
+
 /**
  * A heading's GitHub slug.
+ *
+ * GitHub slugs the heading's **rendered text**, so inline markup is unwrapped
+ * to what it renders as before anything else: `## [Install](setup.md)` is the
+ * anchor `install`, not the `installsetupmd` that survives stripping the
+ * punctuation out of the source line — which both reported a working
+ * `guide.md#install` as dangling and let a `#installsetupmd` that exists
+ * nowhere pass.
  *
  * Backticks and `**` come off **before** punctuation is removed — several real
  * headings carry both, and stripping punctuation first would eat the words
@@ -78,6 +95,9 @@ export type AnchorReference = {
  */
 export function slugifyHeading(heading: string): string {
   return heading
+    .replace(INLINE_IMAGE_RE, "")
+    .replace(INLINE_LINK_RE, "$1")
+    .replace(REFERENCE_LINK_RE, "$1")
     .replace(/`/g, "")
     .replace(/\*\*/g, "")
     .trim()
@@ -123,21 +143,30 @@ function* contentLines(body: string): Generator<{ line: number; text: string }> 
  * Repeats carry GitHub's disambiguation: the first `## Entry` keeps `entry` and
  * each later one takes `entry-1`, `entry-2`, … in document order. Without it a
  * working `file.md#entry-1` citation was reported as dangling.
+ *
+ * The suffix advances until the slug is free across the **whole document**, not
+ * just across that base's own repeats. `## Entry-1` before two `## Entry`
+ * headings already owns `entry-1`, so the second `## Entry` takes `entry-2` —
+ * counting the base alone re-issued `entry-1` and left the citation that does
+ * resolve, `file.md#entry-2`, reported as dangling.
  */
 export function collectHeadingSlugs(body: string): Set<string> {
-  const occurrences = new Map<string, number>();
-  const slugs = new Set<string>();
+  const taken = new Map<string, number>();
   for (const { text } of contentLines(body)) {
     const match = HEADING_RE.exec(text);
     const heading = match?.[2];
     if (heading === undefined) continue;
     const base = slugifyHeading(heading);
     if (base === "") continue;
-    const seen = occurrences.get(base) ?? 0;
-    occurrences.set(base, seen + 1);
-    slugs.add(seen === 0 ? base : `${base}-${String(seen)}`);
+    let slug = base;
+    while (taken.has(slug)) {
+      const next = (taken.get(base) ?? 0) + 1;
+      taken.set(base, next);
+      slug = `${base}-${String(next)}`;
+    }
+    taken.set(slug, 0);
   }
-  return slugs;
+  return new Set(taken.keys());
 }
 
 /** The body of every inline code span on `text`, as `[start, end)` offsets. */
@@ -255,7 +284,13 @@ type IndexedDocument = {
 type TreeIndex = {
   /** Absolute path → its headings and its citations. */
   readonly documents: Map<string, IndexedDocument>;
-  /** Lowercased basename → every absolute path carrying it. */
+  /**
+   * Lowercased basename → every absolute path carrying it.
+   *
+   * The key is folded only so that names differing in case are grouped and
+   * weighed for ambiguity together; the fallback still compares the basename
+   * exactly before it binds one. See {@link resolveTarget}.
+   */
   readonly byBasename: Map<string, string[]>;
 };
 
@@ -285,12 +320,36 @@ async function buildTreeIndex(files: readonly string[]): Promise<TreeIndex> {
   return { documents, byBasename };
 }
 
+/** Whether `candidate` sits strictly under `dir`. */
+function isUnder(dir: string, candidate: string): boolean {
+  const relative = path.relative(dir, candidate);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
 /** The `skills/<id>/` directory owning `file`, when it sits under one. */
 function owningSkillDir(skillsDir: string, file: string): string | null {
-  const relative = path.relative(skillsDir, path.dirname(file));
-  if (relative === "" || relative.startsWith("..") || path.isAbsolute(relative)) return null;
-  const skillId = relative.split(path.sep)[0];
+  const dirname = path.dirname(file);
+  if (!isUnder(skillsDir, dirname)) return null;
+  const skillId = path.relative(skillsDir, dirname).split(path.sep)[0];
   return skillId === undefined || skillId === "" ? null : path.join(skillsDir, skillId);
+}
+
+/**
+ * The directory this rule walks.
+ *
+ * `paths.skillsDir` is configurable, and the canonical `.qfai/assistant/skills`
+ * puts the rest of the tree — constitution, catalog, agents — one level above
+ * it. Taking that parent unconditionally handed the walk the repository root
+ * for a project that relocates skills to `skills/`, and the directory *above*
+ * the repository for `skillsDir: "."`: every spec, README and user document
+ * then counted as assistant tree, and a `README.md#missing` that is nobody's
+ * business here became a `QFAI-LINK-002` in every profile. The parent is the
+ * tree only when it is the `assistant` directory the layout names; anywhere
+ * else the configured skills root is the whole of it.
+ */
+function resolveAssistantDir(skillsDir: string): string {
+  const parent = path.dirname(skillsDir);
+  return path.basename(parent) === "assistant" ? parent : skillsDir;
 }
 
 type ResolutionRoots = {
@@ -315,7 +374,20 @@ function isTemplateDocument(assistantDir: string, absolute: string): boolean {
 }
 
 /**
- * The document a citation names, or `null` when it names none in the tree.
+ * What a citation names.
+ *
+ * `outside` covers everything this rule declines to own: the consumer's spec
+ * packs, its evidence files, and any bare name that could be either.
+ */
+type Resolution =
+  | { readonly kind: "document"; readonly path: string }
+  | { readonly kind: "missing"; readonly path: string }
+  | { readonly kind: "outside" };
+
+const OUTSIDE: Resolution = { kind: "outside" };
+
+/**
+ * The document a citation names, when the tree holds one.
  *
  * The tree mixes every spelling, so each is tried in turn: relative to the
  * citing file, to its own skill directory (which is how a bare `SKILL.md`
@@ -325,13 +397,24 @@ function isTemplateDocument(assistantDir: string, absolute: string): boolean {
  * validate a citation against the wrong document — and only when the match is
  * QFAI's own document rather than a template standing in for a consumer
  * artifact.
+ *
+ * A path spelled from the repository root **into** the assistant tree is not
+ * ambiguous the way a bare name is: `.qfai/assistant/constitution/missing.md`
+ * can only be QFAI's own document, so an absent one is reported rather than
+ * skipped. Nothing else guarantees it exists — `QFAI-LINK-001` covers the
+ * symlinked entrypoints, not every document the tree cites.
+ *
+ * The basename comparison is case-exact even though the index is keyed folded:
+ * a unique `workflow.md` cited as `Workflow.md#entry` does not resolve in a
+ * case-sensitive checkout, and binding it here passed a citation that is
+ * dangling everywhere the tree is actually consumed.
  */
 function resolveTarget(
   index: TreeIndex,
   roots: ResolutionRoots,
   citingFile: string,
   targetPath: string,
-): string | null {
+): Resolution {
   const skillDir = owningSkillDir(roots.skillsDir, citingFile);
   const bases = [
     path.dirname(citingFile),
@@ -342,13 +425,17 @@ function resolveTarget(
   ];
   for (const base of bases) {
     const candidate = path.resolve(base, targetPath);
-    if (index.documents.has(candidate)) return candidate;
+    if (index.documents.has(candidate)) return { kind: "document", path: candidate };
   }
-  if (targetPath.includes("/")) return null;
+  if (targetPath.includes("/")) {
+    const fromRoot = path.resolve(roots.root, targetPath);
+    return isUnder(roots.assistantDir, fromRoot) ? { kind: "missing", path: fromRoot } : OUTSIDE;
+  }
   const sameName = index.byBasename.get(targetPath.toLowerCase()) ?? [];
-  const only = sameName.length === 1 ? (sameName[0] ?? null) : null;
-  if (only === null || isTemplateDocument(roots.assistantDir, only)) return null;
-  return only;
+  const exact = sameName.filter((candidate) => path.basename(candidate) === targetPath);
+  const only = exact.length === 1 ? (exact[0] ?? null) : null;
+  if (only === null || isTemplateDocument(roots.assistantDir, only)) return OUTSIDE;
+  return { kind: "document", path: only };
 }
 
 export async function validateAssistantAnchorReferences(
@@ -356,7 +443,7 @@ export async function validateAssistantAnchorReferences(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const skillsDir = resolvePath(root, config, "skillsDir");
-  const assistantDir = path.dirname(skillsDir);
+  const assistantDir = resolveAssistantDir(skillsDir);
   if (!(await exists(assistantDir))) return [];
 
   const files = await collectMarkdownFiles(assistantDir);
@@ -380,11 +467,37 @@ function danglingIssues(
   const issues: Issue[] = [];
   for (const reference of references) {
     const target = resolveTarget(index, roots, citingFile, reference.targetPath);
-    if (target === null) continue;
-    if (index.documents.get(target)?.slugs.has(reference.anchor) === true) continue;
-    issues.push(danglingIssue(roots.root, relativeCiting, target, reference));
+    if (target.kind === "outside") continue;
+    if (target.kind === "missing") {
+      issues.push(missingTargetIssue(roots.root, relativeCiting, target.path, reference));
+      continue;
+    }
+    if (index.documents.get(target.path)?.slugs.has(reference.anchor) === true) continue;
+    issues.push(danglingIssue(roots.root, relativeCiting, target.path, reference));
   }
   return issues;
+}
+
+/** A citation into the assistant tree whose document is not there at all. */
+function missingTargetIssue(
+  root: string,
+  relativeCiting: string,
+  target: string,
+  reference: AnchorReference,
+): Issue {
+  const citation = `${reference.targetPath}#${reference.anchor}`;
+  const relativeTarget = toRelative(root, target);
+  return issue(
+    "QFAI-LINK-002",
+    `${relativeCiting}:${String(reference.line)} が参照する \`${citation}\` は解決できません。参照先 ${relativeTarget} が assistant tree に存在しません。エージェントはこの引用をたどれず、指示は黙って何も適用しません。`,
+    "error",
+    relativeCiting,
+    "assistantAnchorReferences.missingTarget",
+    [citation],
+    "canonical",
+    "引用パスの綴りを確認してください。ドキュメントが移動または改名されている場合は引用を現在のパスに更新し、vendored tree が部分的にしか再同期されていない場合は `qfai init` を再実行して `.qfai/assistant/**` を揃えてください。",
+    { relatedFiles: [relativeTarget], loc: { line: reference.line } },
+  );
 }
 
 function danglingIssue(

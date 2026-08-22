@@ -737,7 +737,7 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-LINK-001":
     "Every qfai-owned entry in .claude/.agents/.codex/.github skill and agent directories is a symlink that resolves.",
   "QFAI-LINK-002":
-    "Every `file.md#anchor` citation inside .qfai/assistant/** resolves to a heading in the document it names.",
+    "Every `file.md#anchor` citation inside .qfai/assistant/** names a document that is there, and a heading that is in it.",
   "QFAI-DPACK-001":
     "A latest discussion-pack directory exists under `.qfai/discussion/discussion-<timestamp>/`.",
   "QFAI-DPACK-002":

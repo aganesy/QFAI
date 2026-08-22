@@ -18,6 +18,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { loadConfig } from "../../src/core/config.js";
+import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { validateProject } from "../../src/core/validate.js";
 import {
   collectAnchorReferences,
@@ -61,6 +62,16 @@ describe("slugifyHeading", () => {
       "layer-derivation-procedure-normative",
     );
   });
+
+  it("slugs the rendered text of an inline link, not its source", () => {
+    // GitHub ids the heading from what it renders. Stripping punctuation out of
+    // the source line instead produced `installsetupmd`: a working
+    // `guide.md#install` was reported dangling, and `#installsetupmd` — an
+    // anchor that exists nowhere — passed.
+    expect(slugifyHeading("[Install](setup.md)")).toBe("install");
+    expect(slugifyHeading("[Install][setup] the tool")).toBe("install-the-tool");
+    expect(slugifyHeading("![logo](logo.png) Overview")).toBe("overview");
+  });
 });
 
 describe("collectHeadingSlugs", () => {
@@ -75,6 +86,14 @@ describe("collectHeadingSlugs", () => {
     // Without the suffixes a working `file.md#entry-1` citation is reported as
     // dangling, because only the bare `entry` was ever registered.
     const slugs = collectHeadingSlugs(["## Entry", "", "## Entry", "", "## Entry"].join("\n"));
+    expect([...slugs].sort()).toEqual(["entry", "entry-1", "entry-2"]);
+  });
+
+  it("advances the suffix past a slug an earlier heading already took", () => {
+    // `## Entry-1` owns `entry-1` outright, so the second `## Entry` lands on
+    // `entry-2`. Counting each base on its own re-issued `entry-1` and left the
+    // citation that does resolve, `file.md#entry-2`, reported as dangling.
+    const slugs = collectHeadingSlugs(["## Entry-1", "", "## Entry", "", "## Entry"].join("\n"));
     expect([...slugs].sort()).toEqual(["entry", "entry-1", "entry-2"]);
   });
 
@@ -302,6 +321,85 @@ describe("validateAssistantAnchorReferences", () => {
     );
   });
 
+  it("reports a citation into the assistant tree whose document is not there", async () => {
+    // A path spelled from the repository root into `.qfai/assistant/**` can
+    // only be QFAI's own document, so an absent one is drift, not the
+    // consumer-owned ambiguity the rule declines to judge. Skipping it let an
+    // instruction nobody can follow pass in every profile.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Classify per `.qfai/assistant/constitution/missing.md#drift-classes`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+        expect(issues[0]?.rule).toBe("assistantAnchorReferences.missingTarget");
+        expect(issues[0]?.loc?.line).toBe(3);
+        expect(issues[0]?.message).toContain("missing.md");
+      },
+    );
+  });
+
+  it("stays silent when an absent cited path is the consumer's own artifact", async () => {
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Record it in `.qfai/specs/spec-0001/spec.md#requirements`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
+
+  it("does not bind a bare name whose case a case-sensitive checkout would reject", async () => {
+    // `Workflow.md` never resolves to `workflow.md` on Git/GitHub or on any
+    // case-sensitive filesystem. Folding the basename bound it anyway and
+    // validated the citation against a document the consumer cannot reach.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/constitution/workflow.md": ["# Workflow", "", "## Entry", ""].join("\n"),
+        ".qfai/assistant/catalog/test-layers.md": [
+          "# Test layers",
+          "",
+          "See `Workflow.md#no-such-heading`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
+
+  it("does not treat the parent of a relocated skills root as the assistant tree", async () => {
+    // `paths.skillsDir: skills` puts the parent at the repository root. Walking
+    // it read every spec, README and user document as assistant tree, and a
+    // `README.md#missing` that is nobody's business here became an error.
+    await withAssistantTree(
+      {
+        "qfai.config.yaml": ["paths:", "  skillsDir: skills", ""].join("\n"),
+        "README.md": ["# Project", "", "See `README.md#missing-section`.", ""].join("\n"),
+        "skills/qfai-sdd/SKILL.md": ["# qfai-sdd", "", "## Entry", ""].join("\n"),
+        "skills/qfai-sdd/references/notes.md": ["# Notes", "", "See `SKILL.md#entry`.", ""].join(
+          "\n",
+        ),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
+
   it("returns nothing when the project has no assistant tree", async () => {
     await withAssistantTree({ "README.md": "# project\n" }, async (root) => {
       expect(await run(root)).toEqual([]);
@@ -395,12 +493,19 @@ describe("profile wiring", () => {
 });
 
 describe("the shipped assistant tree", () => {
-  it("has no dangling anchored cross-reference", async () => {
-    // The rule is only a gate if the tree QFAI ships passes it. A partial
-    // re-sync of the vendored tree shows up here first.
-    const repoRoot = path.resolve(__dirname, "..", "..", "..", "..");
-    const { config } = await loadConfig(repoRoot);
-    const issues = await validateAssistantAnchorReferences(repoRoot, config);
+  // The rule is only a gate if the tree QFAI ships passes it, and the tree QFAI
+  // ships is `packages/qfai/assets/init/**` — the repository's own
+  // `.qfai/assistant/**` is the installed mirror of it. Checking the mirror
+  // alone let a broken citation that had only reached the packaged source pass
+  // until the next `sync:ssot`, which is exactly the window this guards.
+  const roots: ReadonlyArray<readonly [string, string]> = [
+    ["the packaged init assets", getInitAssetsDir()],
+    ["the repository's installed mirror", path.resolve(__dirname, "..", "..", "..", "..")],
+  ];
+
+  it.each(roots)("has no dangling anchored cross-reference in %s", async (_label, root) => {
+    const { config } = await loadConfig(root);
+    const issues = await validateAssistantAnchorReferences(root, config);
     expect(issues.map((entry) => `${entry.file ?? ""}: ${entry.message}`)).toEqual([]);
   });
 });
