@@ -2373,6 +2373,9 @@ differ.
 | 18    | `implementation-reviewer` | REVISE  |       11 | B1-B5, M1, m1-m4, A1   |      11 |
 | 18    | `completion-reviewer`     | REVISE  |       12 | B1-B5, M1-M3, m1-m3, A1 |    12 |
 | 18    | `qa-gatekeeper` (stage)   | REVISE  |       11 | B1-B2, M1-M4, m1-m3, A1-A2 | 11 |
+| 19    | `implementation-reviewer` | REVISE  |        8 | B1, M1-M3, m1-m3, A1   |       8 |
+| 19    | `completion-reviewer`     | REVISE  |       13 | B1-B6, M1-M2, m1-m3, A1-A2 | 13 |
+| 19    | `qa-gatekeeper` (stage)   | REVISE  |       10 | B1-B3, M1-M3, m1-m3, A1 |     10 |
 
 **Where the two columns disagree, the derived one is the one to trust, and the reason is a rule that
 does not fit every report.** The declared rule counts distinct finding identifiers "or the count of
@@ -2806,8 +2809,11 @@ before any reviewer had read anything — which is what five earlier rounds' fin
 them a version of this sentence written one round behind. The response count and the verdict split will
 move again when the reports land, and the guard will fail again then. Two of the three are computed from
 `.qfai/review/review-2026082*/R0*.md` from `FIRST_PACK` onwards; the third is pinned by having to sum to
-the second, because a verdict is not written in any parseable form by more than two of twenty-nine
-reports and inventing a marker now would pin only the reports written after it.
+the second, because a verdict is not written in one parseable form — measured over the 17 closed packs'
+50 reports, 5 carry `**Verdict: X**`, 14 carry `Verdict: **X**` and 46 carry a line holding both — and
+inventing a marker now would pin only the reports written after it. The figure that stood here, "two of
+twenty-nine", was wrong in numerator and denominator; round 18 filed it and round 19 found it standing
+in a second place after the first was corrected.
 
 **The per-round table that used to sit here is deleted.** It carried the reviewers, the revision and
 the verdict for rounds 1 to 12 and stopped there, three rounds behind the derived numeral three
@@ -2927,7 +2933,7 @@ Review pack seal:  bcfe4dd3586a4e3d14d07b369ba44bdcab37a072ee901f7dfaa7f9fbaa5dc
 Review pack:       .qfai/review/review-20260822150000000/            (round 18 — stage gates only)
 Review pack seal:  b62a5174cf942a19308c18c9bccfccd6cf460ffd3e1d2b6f9c7a97a099e47a29
 Review pack:       .qfai/review/review-20260822180000000/            (round 19 — stage gates only)
-Review pack seal:  IN FLIGHT — sealed when its last reviewer response lands
+Review pack seal:  084ba5ee9d2b676aa87d15534d4badb01a028c4bd81bd40efcdade51ddbdb810
 ```
 
 Round 8 routes no P1d pass. That gate closed at round 7 and re-routing a closed gate would be asking a
