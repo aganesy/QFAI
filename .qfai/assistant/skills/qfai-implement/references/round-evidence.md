@@ -94,6 +94,18 @@ A single-round item satisfies the contract with `Round 1: ...` and no
 reviewer-verdict line, which is the same content the previous one-pair
 contract required. Nothing existing becomes non-conformant.
 
+**An entry written before a field joined this list carries it unprefixed**, so
+read an unprefixed occurrence of any field above as that entry's `Round 1:`
+value — the completion gate accepts it there, and both forms together are a
+duplicate, not two rounds. Re-taking it is usually not available: the tree an
+`Oracle proof` or a RED addressed is destroyed by the revert or by Phase Green,
+so requiring the prefix on a row already at `refactor` or `review-fix` would
+strand a correctly evidenced row with no way to produce what it asks for.
+Rewrite it with the prefix the next time the row opens a round — that round
+writes its own prefixed fields, and leaving the old value bare beside them is
+what makes the two indistinguishable. A row that never opens another round
+keeps the unprefixed form and reaches `done` on it.
+
 ## Where the rounds happen
 
 An item at `review-fix` may re-enter the RED/GREEN cycle as many times as the

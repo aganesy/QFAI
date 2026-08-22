@@ -99,6 +99,31 @@ describe("a reviewer REVISE has a legal state and an evidence slot", () => {
       );
     });
 
+    it(`${relativePath}: the producers write RED failure mode with the round prefix`, async () => {
+      // The closed list is the sole authority on the prefix, so a producer
+      // still writing the field bare leaves the completion gate unable to find
+      // round 1's classification at all.
+      const skill = await read(relativePath, "SKILL.md");
+      expect(skill).toContain("`Round 1: RED failure mode: falsifiability`");
+      expect(skill).not.toContain("the `RED failure mode: falsifiability`");
+      const admissibility = await read(relativePath, "references/red-admissibility.md");
+      expect(flat(admissibility)).toContain("`Round N: RED failure mode`");
+      expect(flat(admissibility)).toContain("`Round N: RED failure mode: falsifiability`");
+    });
+
+    it(`${relativePath}: an entry predating the list reads its bare fields as Round 1`, async () => {
+      // The tree an `Oracle proof` or a RED addressed is gone by the revert or
+      // by Phase Green, so a row already at `refactor`/`review-fix` cannot
+      // re-take what the prefix would demand.
+      const reference = await read(relativePath, "references/round-evidence.md");
+      expect(flat(reference)).toContain(
+        "**An entry written before a field joined this list carries it unprefixed**",
+      );
+      expect(flat(reference)).toContain(
+        "read an unprefixed occurrence of any field above as that entry's `Round 1:` value",
+      );
+    });
+
     it(`${relativePath}: a round keeps one review pack per review attempt`, async () => {
       // A behaviour-preserving REVISE re-reviews inside the same round and
       // every review creates its own pack, so one slot per round either
