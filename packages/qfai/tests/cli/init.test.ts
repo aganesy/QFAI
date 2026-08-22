@@ -595,6 +595,53 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps a one-line agent file padded with whitespace out of the prune", async () => {
+    // Git writes a flattened link's target verbatim — no trailing newline and
+    // none of the padding an editor or a shell `echo` leaves behind. A
+    // project's own note that happens to end in a space is not a wrapper, and
+    // `--force` must not delete it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const padded = path.join(root, ".claude", "agents", "custom-note.md");
+      const content = "../../.qfai/assistant/agents/custom.md ";
+      await writeFile(padded, content, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(padded, "utf-8")).toBe(content);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not prune through an integration directory that is a symlink", async () => {
+    // `readdir` follows the link, so enumerating `.claude/agents` lists an
+    // external tree — while an entry's target is resolved against the lexical
+    // in-project path. A link living out there reads as a retired wrapper, and
+    // the delete that follows destroys data the project never owned.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const foreign = path.join(outside, "retired-agent.md");
+      await symlink("../../.qfai/assistant/agents/retired-agent.md", foreign, "file");
+
+      const claudeAgents = path.join(root, ".claude", "agents");
+      await rm(claudeAgents, { recursive: true, force: true });
+      await symlink(outside, claudeAgents, process.platform === "win32" ? "junction" : "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await lstat(foreign)).isSymbolicLink()).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(outside, { recursive: true, force: true });
+    }
+  });
+
   it("replaces old non-symlink skill wrappers with symlinks on --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {

@@ -1020,10 +1020,14 @@ describe("what init wrote is still checked after the roster moves on", () => {
       expect(found?.refs).toContain(".claude/skills/legacy-research");
       expect(found?.message).toContain("which this version does not ship");
       // The remedy names the command that repairs it, and says where the
-      // repair stops: `--force` prunes the wrapper, never the canonical
-      // document behind it.
+      // repair stops — twice over: `--force` prunes the wrapper and never the
+      // canonical document behind it, and on the skill side it reaches only
+      // the `qfai-` prefixed names. `legacy-research` is this very case, so a
+      // remedy that promised `--force` would clear it would be wrong here.
       expect(found?.suggested_action).toContain("`qfai init --force`");
       expect(found?.suggested_action).toContain("canonical 側");
+      expect(found?.suggested_action).toContain("`qfai-` で始まる skill wrapper");
+      expect(found?.suggested_action).toContain("prune 対象外なので、報告されたパスを手で削除");
     });
   });
 

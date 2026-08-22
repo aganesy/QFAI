@@ -1975,7 +1975,7 @@ async function pruneStaleAgentWrappers(
 
   for (const { dir } of AGENT_INTEGRATION_CONFIGS) {
     const fullDir = path.join(destRoot, dir);
-    if (!(await exists(fullDir))) {
+    if (!(await isSymlinkFreeDirectory(destRoot, dir))) {
       continue;
     }
     const entries = await readdir(fullDir, { withFileTypes: true });
@@ -1999,12 +1999,104 @@ async function pruneStaleAgentWrappers(
       if (path.dirname(resolved) !== agentsDir || shipped.has(path.basename(resolved))) {
         continue;
       }
-      removed.push(entryPath);
-      if (!dryRun) {
-        await rm(entryPath, { recursive: true, force: true });
+      if (dryRun) {
+        removed.push(entryPath);
+        continue;
+      }
+      if (await removeJudgedAgentWrapper(entryPath, target)) {
+        removed.push(entryPath);
       }
     }
   }
+}
+
+/**
+ * True when `dir` is a real directory under `root` reached without crossing a
+ * symlink.
+ *
+ * `readdir` follows a link. A `.claude/agents` — or any ancestor of it —
+ * pointing at a tree outside the project therefore lists somebody else's
+ * entries, while the target of an entry found there is resolved against the
+ * **lexical** in-project path: a link or a one-line file living in that
+ * external directory reads as a retired wrapper, and the delete that follows
+ * destroys data the project never owned. `retiredWrappers` refuses to
+ * enumerate a damaged directory for exactly this reason, and prune — which
+ * deletes rather than reports — has to refuse too.
+ *
+ * An `lstat` that cannot answer counts as "do not enumerate": for a step whose
+ * action is a delete, refusing is the safe direction to be wrong in. Only the
+ * components **below** `root` are examined, because a project legitimately
+ * sits behind a symlinked parent (`/tmp` on macOS is one).
+ */
+async function isSymlinkFreeDirectory(root: string, dir: string): Promise<boolean> {
+  let current = root;
+  for (const segment of dir.split("/")) {
+    current = path.join(current, segment);
+    const stats = await safeLstat(current);
+    if (stats === undefined || !stats.isDirectory()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/**
+ * Delete a wrapper this prune has judged, claiming its pathname first.
+ *
+ * Reading the target and deleting by pathname are two operations, and between
+ * them another process — an editor, a second agent, a concurrent
+ * `qfai init --force` — can leave a different file, or a whole directory, at
+ * the same path. A delete on the strength of the earlier read then destroyed
+ * content nothing had examined. `rename` is atomic against the pathname, so
+ * afterwards this process holds the very entry it is about to remove: it
+ * re-derives the target from what actually moved, and anything that is no
+ * longer the wrapper it judged goes straight back. Same claim-then-verify
+ * shape as {@link recreateFlattenedLink}, and the sidecar it claims carries
+ * the one name prune leaves alone.
+ *
+ * Returns whether the wrapper was removed.
+ */
+async function removeJudgedAgentWrapper(entryPath: string, target: string): Promise<boolean> {
+  const sidecar = await claimSidecar(entryPath);
+  try {
+    await rename(entryPath, sidecar);
+  } catch (renameErr: unknown) {
+    // Nothing moved, so the claim is a stray empty file — and it is one prune
+    // deliberately leaves alone, while a later attempt sidesteps it with a
+    // numbered name. Absence is a race with something else removing the
+    // wrapper: there is nothing left to prune.
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    if (isEnoent(renameErr)) {
+      return false;
+    }
+    throw renameErr;
+  }
+  // What actually moved, not what `readdir` reported a moment ago. A probe that
+  // cannot answer is not a licence to delete: the entry goes back, `validate`
+  // reports it again, and the operator still has the file.
+  const moved = await safeLstat(sidecar);
+  const movedTarget =
+    moved === undefined ? null : await agentWrapperTarget(sidecar, moved).catch(() => null);
+  if (movedTarget !== target) {
+    try {
+      await restoreSidecar(sidecar, entryPath);
+    } catch (restoreErr: unknown) {
+      throw new Error(
+        [
+          `退役 wrapper の削除を中止しましたが、退避したファイルを元に戻せませんでした: ${entryPath}`,
+          `原因: ${describeError(restoreErr)}`,
+          `元のファイルは次の場所にあります: ${sidecar}`,
+        ].join("\n"),
+        { cause: restoreErr },
+      );
+    }
+    info(`  note: ${entryPath} は検査後に内容が変わったため削除していません`);
+    return false;
+  }
+  // A symlink or a small regular file — that is all the check above accepts —
+  // so `recursive` would only widen this to a directory it never judged.
+  await rm(sidecar, { force: true });
+  return true;
 }
 
 /**
@@ -2017,8 +2109,15 @@ async function pruneStaleAgentWrappers(
  * A file holding anything else (an agent document a project wrote by hand) is
  * not a wrapper and is preserved: the content has to be a single-line relative
  * path landing on a canonical agent for this to remove it.
+ *
+ * Takes whatever already carries the entry's kind — the `Dirent` from the
+ * listing, or the `Stats` of the inode that was claimed for deletion — so the
+ * second read judges the thing that moved rather than a pathname.
  */
-async function agentWrapperTarget(entryPath: string, entry: Dirent): Promise<string | null> {
+async function agentWrapperTarget(
+  entryPath: string,
+  entry: Pick<Dirent, "isSymbolicLink" | "isFile">,
+): Promise<string | null> {
   if (entry.isSymbolicLink()) {
     try {
       return await readlink(entryPath);
@@ -2041,7 +2140,14 @@ async function agentWrapperTarget(entryPath: string, entry: Dirent): Promise<str
     }
     throw err;
   });
-  if (content === null || content.length === 0 || /[\r\n]/.test(content)) {
+  // **No whitespace anywhere**, the same test `wrapperTarget` applies in the
+  // validator. Git writes the target for mode `120000` verbatim, with no
+  // trailing newline and none of the padding an editor or a shell `echo`
+  // leaves behind — so a project's own one-line note ending in a space or a
+  // tab is not a flattened wrapper. Refusing only `\r` and `\n` accepted
+  // `../../.qfai/assistant/agents/custom.md ` as one, and `--force` deleted a
+  // file init had never written.
+  if (content === null || content.length === 0 || /\s/.test(content)) {
     return null;
   }
   return content;
