@@ -25,15 +25,30 @@ function tableCells(line: string): string[] {
     .map((cell) => cell.trim());
 }
 
+interface CatalogRow {
+  readonly capId: string;
+  /** The declared spec directory, or `null` when the row left the cell empty. */
+  readonly specId: string | null;
+}
+
+interface DeclaredCatalog {
+  /** Every CAP row of the catalog table, in declaration order. */
+  readonly rows: readonly CatalogRow[];
+  /** The first directory each CAP declared; a CAP with only blank cells is absent. */
+  readonly byCap: ReadonlyMap<string, string>;
+}
+
 /**
- * Reads the declared CAP -> spec directory mapping from the CAP catalog table.
+ * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
  *
- * The mapping is only honoured when the catalog table carries an explicit spec
- * column, so a catalog that merely mentions a directory in prose keeps the
- * positional derivation. Returns `null` when no mapping is declared.
+ * Declared mode is decided by the presence of the spec column, not by how many
+ * cells are filled in: a catalog that adds the column and leaves every cell
+ * empty declares an empty mapping (every CAP then draws `QFAI-SPLIT-106`)
+ * rather than silently falling back to the positional derivation. Returns
+ * `null` only when the table carries no spec column at all.
  */
-function parseDeclaredSpecMap(capabilityText: string): Map<string, string> | null {
-  const declared = new Map<string, string>();
+function parseDeclaredCatalog(capabilityText: string): DeclaredCatalog | null {
+  const rows: CatalogRow[] = [];
   let capColumn = -1;
   let specColumn = -1;
   for (const line of capabilityText.split(/\r?\n/)) {
@@ -51,23 +66,64 @@ function parseDeclaredSpecMap(capabilityText: string): Map<string, string> | nul
       continue;
     }
     const capId = cells[capColumn]?.match(CAP_ID_CELL_RE)?.[0];
-    const specId = cells[specColumn]?.match(SPEC_ID_CELL_RE)?.[0];
-    if (!capId || !specId || declared.has(capId)) {
+    if (!capId) {
       continue;
     }
-    declared.set(capId, specId.toLowerCase());
+    const specCell = cells[specColumn]?.match(SPEC_ID_CELL_RE)?.[0];
+    rows.push({ capId, specId: specCell ? specCell.toLowerCase() : null });
   }
-  return declared.size > 0 ? declared : null;
+  if (capColumn < 0 || specColumn < 0) {
+    return null;
+  }
+  const byCap = new Map<string, string>();
+  for (const row of rows) {
+    if (row.specId !== null && !byCap.has(row.capId)) {
+      byCap.set(row.capId, row.specId);
+    }
+  }
+  return { rows, byCap };
+}
+
+/** CAP ids whose catalog row declares no spec directory. */
+function undeclaredCapIds(catalog: DeclaredCatalog, capIds: string[]): string[] {
+  return capIds.filter((capId) => !catalog.byCap.has(capId));
+}
+
+/** CAP ids that occupy more than one catalog row. */
+function repeatedCapIds(catalog: DeclaredCatalog): string[] {
+  const seen = new Set<string>();
+  const repeated: string[] = [];
+  for (const row of catalog.rows) {
+    if (!seen.has(row.capId)) {
+      seen.add(row.capId);
+      continue;
+    }
+    if (!repeated.includes(row.capId)) {
+      repeated.push(row.capId);
+    }
+  }
+  return repeated;
+}
+
+/** Spec directories claimed by more than one CAP, rendered for the message. */
+function reusedSpecIds(catalog: DeclaredCatalog): string[] {
+  const owners = new Map<string, string[]>();
+  for (const [capId, specId] of catalog.byCap) {
+    owners.set(specId, [...(owners.get(specId) ?? []), capId]);
+  }
+  return Array.from(owners.entries())
+    .filter(([, caps]) => caps.length > 1)
+    .map(([specId, caps]) => `${specId} (${caps.join(", ")})`);
 }
 
 /** Flags CAP rows the declared mapping cannot resolve, and spec ids it reuses. */
 function declaredMappingIssues(
-  declared: Map<string, string>,
+  catalog: DeclaredCatalog,
   capIds: string[],
   capabilitiesPath: string,
 ): Issue[] {
   const issues: Issue[] = [];
-  const undeclared = capIds.filter((capId) => !declared.has(capId));
+  const undeclared = undeclaredCapIds(catalog, capIds);
   if (undeclared.length > 0) {
     issues.push(
       issue(
@@ -80,13 +136,20 @@ function declaredMappingIssues(
       ),
     );
   }
-  const owners = new Map<string, string[]>();
-  for (const [capId, specId] of declared) {
-    owners.set(specId, [...(owners.get(specId) ?? []), capId]);
+  const repeated = repeatedCapIds(catalog);
+  if (repeated.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-106",
+        `同じ CAP が複数の行に登場しています: ${repeated.join(", ")}`,
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.declaredMapping",
+        repeated,
+      ),
+    );
   }
-  const duplicated = Array.from(owners.entries())
-    .filter(([, caps]) => caps.length > 1)
-    .map(([specId, caps]) => `${specId} (${caps.join(", ")})`);
+  const duplicated = reusedSpecIds(catalog);
   if (duplicated.length > 0) {
     issues.push(
       issue(
@@ -105,7 +168,7 @@ function declaredMappingIssues(
 /** Requires each spec's `01_Spec.md` to cite the CAP that owns it. */
 async function capReferenceIssues(
   capIds: string[],
-  expectedSpecIds: string[],
+  expectedSpecIds: (string | null)[],
   layeredEntries: SpecEntry[],
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
@@ -204,15 +267,21 @@ export async function validateSpecSplitByCapability(
   // The catalog may declare the CAP -> spec directory pairing explicitly. When
   // it does, that declaration is the SSOT and ID gaps left by an approved
   // DELETE stay legal; otherwise the pairing stays positional.
-  const declaredSpecIds = parseDeclaredSpecMap(capabilityText);
-  if (declaredSpecIds) {
-    issues.push(...declaredMappingIssues(declaredSpecIds, capIds, capabilitiesPath));
+  const catalog = parseDeclaredCatalog(capabilityText);
+  const undeclared = catalog ? undeclaredCapIds(catalog, capIds) : [];
+  if (catalog) {
+    issues.push(...declaredMappingIssues(catalog, capIds, capabilitiesPath));
   }
-  const expectedSpecIds = capIds.map(
-    (capId, index) => declaredSpecIds?.get(capId) ?? `spec-${to4(index + 1)}`,
+  // Declared mode never synthesises a directory for a blank cell: that row is
+  // already reported as QFAI-SPLIT-106, and inventing `spec-<row number>` for
+  // it would raise a 103 for a directory nobody asked for.
+  const expectedSpecIds: (string | null)[] = capIds.map((capId, index) =>
+    catalog ? (catalog.byCap.get(capId) ?? null) : `spec-${to4(index + 1)}`,
   );
 
-  const missingSpecIds = expectedSpecIds.filter((specId) => !actualSpecIds.has(specId));
+  const missingSpecIds = expectedSpecIds.filter(
+    (specId): specId is string => specId !== null && !actualSpecIds.has(specId),
+  );
   if (missingSpecIds.length > 0) {
     issues.push(
       issue(
@@ -226,9 +295,13 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  const extraSpecIds = Array.from(actualSpecIds).filter(
-    (specId) => !expectedSpecIds.includes(specId),
-  );
+  // While a CAP row is still undeclared, an unnamed directory may well be the
+  // one that row owns, so 104 ("no CAP owns this directory") cannot be trusted
+  // until QFAI-SPLIT-106 is cleared.
+  const extraSpecIds =
+    undeclared.length > 0
+      ? []
+      : Array.from(actualSpecIds).filter((specId) => !expectedSpecIds.includes(specId));
   if (extraSpecIds.length > 0) {
     issues.push(
       issue(

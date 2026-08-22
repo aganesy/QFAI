@@ -16,6 +16,10 @@ const SLICE_TEMPLATES = [
   "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
   ".qfai/assistant/skills/qfai-sdd/templates/specs/_policies/11_Slice-Policy.md",
 ];
+const TRIAGE_REFERENCES = [
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
+  ".qfai/assistant/skills/qfai-sdd/references/sdd-triage.md",
+];
 
 /** Collapse markdown soft wraps so assertions pin wording, not the wrap column. */
 const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
@@ -64,6 +68,19 @@ describe("the CAP catalog declares the spec mapping the gap policy depends on", 
       );
       // The ID-stability rule must stay: a DELETE never renumbers survivors.
       expect(content).toContain("Do not renumber surviving specs only to close gaps");
+    });
+  }
+
+  for (const relativePath of TRIAGE_REFERENCES) {
+    it(`${relativePath}: the DELETE lifecycle step also drops the CAP row`, async () => {
+      const content = unwrap(await read(relativePath));
+      // SKILL.md points at this file as the precise procedure, so a DELETE step
+      // that only removes the directory leaves the CAP row behind and strands
+      // the run on a QFAI-SPLIT-103 it was never told to clear.
+      expect(content).toContain(
+        "DELETE removes the spec directory entirely and drops the capability's row from `_policies/03_Capabilities.md`",
+      );
+      expect(content).toContain("QFAI-SPLIT-103");
     });
   }
 });

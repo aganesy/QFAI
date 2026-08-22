@@ -185,6 +185,10 @@ ops), `Rationale` (recommended for every row).
 
 - SUPERSEDE rewrites the source spec's `01_Spec.md` to
   `Status: superseded` and sets `Superseded-by: spec-NNNN`.
-- DELETE removes the spec directory entirely (record reason in delta).
+- DELETE removes the spec directory entirely and drops the capability's row
+  from `_policies/03_Capabilities.md` (record reason in delta). Leaving the row
+  behind makes `validateSpecSplitByCapability` raise `QFAI-SPLIT-103` for the
+  deleted directory. Surviving specs keep their IDs — see the gap policy in
+  `_policies/11_Slice-Policy.md`.
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.

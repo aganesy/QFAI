@@ -20,6 +20,7 @@
 ## Authoring rules
 
 - This file is the policy-layer SSOT for capability mapping across all specs.
-- Every CAP row must name exactly one spec directory, and no two rows may name
-  the same one; `QFAI-SPLIT-106` reports both breaches.
+- Every CAP appears on exactly one row, that row must name exactly one spec
+  directory, and no two rows may name the same one; `QFAI-SPLIT-106` reports
+  all three breaches.
 - Do not copy spec-level details (US/AC/BR/EX/TC) into this file.

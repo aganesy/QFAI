@@ -118,6 +118,70 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("treats an all-blank Spec column as a declared mapping, not as a legacy catalog", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The column exists, so the catalog opted into the declared mapping; the
+      // sequential directories must not smuggle the positional derivation back.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not synthesise a positional directory for a blank Spec cell", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0003"], ["spec-0001", null]);
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const codes = issues.map((issue) => issue.code);
+      // Only the missing declaration is reported: no 103 for a phantom
+      // spec-0002, and no 104 for the directory the blank row still owns.
+      expect(codes).toEqual(["QFAI-SPLIT-106"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a CAP that occupies more than one catalog row", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"], ["spec-0001", "spec-0001"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a repeated CAP row even when the second row names another spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0001"], ["spec-0001", "spec-0002"]);
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping.map((issue) => issue.refs)).toEqual([["CAP-0001"]]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the positional derivation when the catalog declares no Spec column", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
