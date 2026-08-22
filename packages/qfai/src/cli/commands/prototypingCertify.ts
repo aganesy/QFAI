@@ -775,9 +775,9 @@ export async function runPrototypingCertify(
       }
       // Spec directories OUTSIDE the frozen set are never visited by
       // the loop above, yet the certificate digests them all the same:
-      // `spec-9999/old.review.json` from a spec dropped out of the
-      // frozen set would ship unread. Sweep every canonical
-      // `spec-NNNN` directory the accepted iteration actually holds.
+      // an `old.review.json` under a spec directory that dropped out
+      // of the frozen set would ship unread. Sweep every canonical
+      // per-spec directory the accepted iteration actually holds.
       const frozenDirNames = new Set(frozenSpecsPreview.map(normalizeSpecDirName));
       for (const straySpecDir of await listSpecDirs(acceptedIterAbs)) {
         if (frozenDirNames.has(straySpecDir)) continue;
