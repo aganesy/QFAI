@@ -19,32 +19,54 @@ const ROWS = [
 
 type Issues = Awaited<ReturnType<typeof validateTddList>>;
 
+/** Write the layered skeleton every spec in these fixtures needs. */
+async function writeSpecPack(specsRoot: string, dirName: string, body: string): Promise<string> {
+  const specDir = path.join(specsRoot, dirName);
+  await mkdir(specDir, { recursive: true });
+  await writeFile(path.join(specDir, "01_Spec.md"), body, "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
+  await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
+  await writeFile(path.join(specDir, "06_Test-Cases.md"), "# TC\n", "utf-8");
+  return specDir;
+}
+
 /**
  * A spec whose ledger owes both a warning (`TDDLIST_EXCEPTION_PARKED`) and an
  * error (`TDDLIST_EVIDENCE_EMPTY`), with the `Status:` bullet under test.
+ *
+ * `spec-0002` exists alongside it unless `successor: false` says otherwise, so
+ * a `Superseded-by: spec-0002` names a spec that can inherit the rows. The
+ * assertion sees only spec-0001's findings — the successor has no ledger of
+ * its own and its `TDDLIST_MISSING` is not what any of these cases is about.
  */
 async function withSpecStatus(
   statusBullets: readonly string[],
   assertion: (issues: Issues) => void,
+  options: { successor?: boolean } = {},
 ): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-spec-status-"));
   try {
-    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-    await mkdir(path.join(specDir, "tdd"), { recursive: true });
-    await writeFile(
-      path.join(specDir, "01_Spec.md"),
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specDir = await writeSpecPack(
+      specsRoot,
+      "spec-0001",
       ["# SPEC-0001 Sample", "", ...statusBullets, ""].join("\n"),
-      "utf-8",
     );
-    await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
-    await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
-    await writeFile(path.join(specDir, "06_Test-Cases.md"), "# TC\n", "utf-8");
+    if (options.successor !== false) {
+      await writeSpecPack(
+        specsRoot,
+        "spec-0002",
+        ["# SPEC-0002 Successor", "", "- Status: active", ""].join("\n"),
+      );
+    }
+    await mkdir(path.join(specDir, "tdd"), { recursive: true });
     await writeFile(
       path.join(specDir, "tdd", "test-list.md"),
       [HEADERS, SEP, ...ROWS].join("\n"),
       "utf-8",
     );
-    assertion(await validateTddList(root, defaultConfig));
+    const issues = await validateTddList(root, defaultConfig);
+    assertion(issues.filter((entry) => (entry.file ?? "").includes("spec-0001")));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -125,6 +147,43 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     });
   });
 
+  it("does not retire a spec whose Superseded-by names no spec", async () => {
+    // `QFAI-STATUS-004` reports the dangling reference, but only under
+    // `--profile full`. Demoting here would drop every outstanding row out of
+    // the gate with no spec left owing it.
+    await withSpecStatus(
+      ["- Status: superseded", "- Superseded-by: spec-0002"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+      { successor: false },
+    );
+  });
+
+  it("ignores a retirement parked in an HTML comment or a fenced sample", async () => {
+    // Both are how a rewrite keeps what it replaced, and both sit in the
+    // header block above the live bullet. Unmasked, the hidden declaration
+    // wins and the whole ledger stops gating.
+    await withSpecStatus(
+      [
+        "<!--",
+        "- Status: superseded",
+        "- Superseded-by: spec-0002",
+        "-->",
+        "",
+        "```markdown",
+        "- Status: deprecated",
+        "- Deprecated-at: 2026-01-01",
+        "```",
+        "",
+        "- Status: active",
+      ],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
   it("names every non-done ledger status in the migration instruction", async () => {
     // `blocked` and `review-fix` are live obligations too: a migration that
     // lists only some of them retires work that was never delivered.
@@ -134,6 +193,10 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
         expect(action).toContain(status);
       }
       expect(action).toContain("TC-Ref");
+      // `Layer=E2E` rows carry their obligation in `US-Refs`, and nothing
+      // downstream catches one copied out of the retired spec's namespace.
+      expect(action).toContain("US-Refs");
+      expect(action).toContain("02_User-stories.md");
     });
   });
 });

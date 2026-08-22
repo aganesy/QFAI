@@ -200,12 +200,18 @@ Retiring a spec retires its execution ledger with it, so move the work
    `exception`. `blocked` is an obligation nobody has started and
    `review-fix` is a reviewer's REVISE still owed — leaving either
    behind retires work that was never delivered.
-2. Remap each migrated `TC-Refs` cell onto the successor's own TC IDs.
-   TC IDs are spec-namespaced (`TC-NNNN-MMMM`, `NNNN` = spec number),
-   so a copied `TC-Refs` fails `TDDLIST_UNKNOWN_REF` in the successor
-   and leaves its matching TC at `TDDLIST_TC_NOT_COVERED`. Build the
-   correspondence from the successor's `06_Test-Cases.md`; if it has no
-   TC for a migrated row, add one there first.
+2. Remap every spec-namespaced obligation on a migrated row onto the
+   successor's own IDs — both `TC-Refs` and the `US-Refs` that
+   `Layer=E2E` rows carry instead. `TC-NNNN-MMMM` and `US-NNNN-MMMM`
+   both encode the spec number in `NNNN`, so a copied cell keeps
+   pointing at the retired spec. A copied `TC-Refs` at least fails
+   `TDDLIST_UNKNOWN_REF` in the successor and leaves its matching TC at
+   `TDDLIST_TC_NOT_COVERED`; a copied `US-Refs` fails nothing —
+   `validateObligationColumn()` checks the token's shape and the row's
+   `Layer`, not whether the US exists — so the E2E row stays silently
+   bound to the retired spec's user story. Build both correspondences
+   from the successor's `06_Test-Cases.md` and `02_User-stories.md`; if
+   it has no TC or US for a migrated row, add one there first.
 3. Leave `done` rows where they are — they are the historical record of
    what the retired spec delivered.
 4. Then rewrite `Status:` (and `Superseded-by:` / `Deprecated-at:`).

@@ -579,19 +579,20 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
  * `--fail-on error` / `--fail-on warning`.
  *
  * Only a complete declaration retires a ledger: `SpecEntry.status` is set from
- * the header block alone, and only once the retirement carries the companion
- * field it requires. An absent, unparseable, out-of-header or half-written
- * `Status:` leaves the spec current here and is reported by its own
- * `QFAI-STATUS-00N` rule — which matters because `--profile tdd` runs this
- * validator without `validateSpecPacks`, so a demotion it granted on an
- * unvalidated declaration would answer to nothing.
+ * the header block alone, only once the retirement carries the companion field
+ * it requires, and — for `superseded` — only once that `Superseded-by` names a
+ * spec that exists to inherit the rows. An absent, unparseable, out-of-header,
+ * half-written or dangling `Status:` leaves the spec current here and is
+ * reported by its own `QFAI-STATUS-00N` rule — which matters because
+ * `--profile tdd` runs this validator without `validateSpecPacks`, so a
+ * demotion it granted on an unvalidated declaration would answer to nothing.
  */
 function demoteRetiredSpecIssues(issues: readonly Issue[], entry: SpecEntry): Issue[] {
   const status = entry.status;
   if (status === undefined || status === "active") {
     return [...issues];
   }
-  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (${LIVE_LEDGER_STATUSES.join(" / ")}) to the successor spec's \`${TDD_LIST_REL_PATH}\`, remapping each TC-Ref onto the successor's own TC IDs from its 06_Test-Cases.md, and leave done rows as the historical record.`;
+  const migration = `spec-${entry.specNumber} is retired (Status: ${status}), so its ledger no longer gates. Migrate every live row (${LIVE_LEDGER_STATUSES.join(" / ")}) to the successor spec's \`${TDD_LIST_REL_PATH}\`, remapping every spec-namespaced obligation onto the successor's own IDs — TC-Refs from its 06_Test-Cases.md, and US-Refs on each Layer=E2E row from its 02_User-stories.md — and leave done rows as the historical record.`;
   return issues.map((found): Issue => {
     return {
       ...found,

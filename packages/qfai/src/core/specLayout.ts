@@ -151,10 +151,11 @@ export type SpecEntry = {
    * present only when the declaration is one a caller may act on.
    *
    * Absent for a spec with no bullet, an unparseable value, an unreadable spec
-   * file, or a retirement missing the companion field it requires
-   * (`Superseded-by` / `Deprecated-at`). Every one of those is reported by its
-   * own rule (`QFAI-STATUS-001` … `-006`), and a caller that branches on the
-   * lifecycle must treat them all as still current.
+   * file, a retirement missing the companion field it requires
+   * (`Superseded-by` / `Deprecated-at`), or a `Superseded-by` naming a spec
+   * that does not exist. Every one of those is reported by its own rule
+   * (`QFAI-STATUS-001` … `-006`), and a caller that branches on the lifecycle
+   * must treat them all as still current.
    */
   status?: SpecStatus;
   // Backwards-compatible field name. Points to `.qfai/specs/_policies`.
@@ -282,9 +283,12 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
       });
     }),
   );
+  // The same id set `validateSpecStatus` builds for `QFAI-STATUS-004`, so a
+  // `Superseded-by` is judged against the spec set both readers see.
+  const knownSpecIds = new Set(entries.map((entry) => `spec-${entry.specNumber}`));
   const withStatus = await Promise.all(
     entries.map(async (entry) => {
-      const status = await readSpecStatus(entry.specMetaPath);
+      const status = await readSpecStatus(entry.specMetaPath, knownSpecIds);
       return status === undefined ? entry : { ...entry, status };
     }),
   );
@@ -303,8 +307,20 @@ export async function collectSpecEntries(specsRoot: string): Promise<SpecEntry[]
  * {@link isLifecycleDeclarationComplete}. The gate lives here rather than in
  * each consumer so that every reader of `SpecEntry.status` retires a spec on
  * the same evidence.
+ *
+ * A `superseded` spec whose `Superseded-by` names no spec in `knownSpecIds`
+ * stays current for the same reason. SUPERSEDE retires a spec by moving its
+ * obligations to the successor, so a successor that does not exist means the
+ * work moved nowhere: demoting the ledger there would drop every outstanding
+ * row out of the gate with no spec left owing it. `QFAI-STATUS-004` reports
+ * the dangling reference, but only under `--profile full` — `--profile tdd`
+ * runs `validateTddList` without `validateSpecPacks`, which is exactly the
+ * profile the completion gate uses.
  */
-async function readSpecStatus(specMetaPath: string): Promise<SpecStatus | undefined> {
+async function readSpecStatus(
+  specMetaPath: string,
+  knownSpecIds: ReadonlySet<string>,
+): Promise<SpecStatus | undefined> {
   let md: string;
   try {
     md = await readFile(specMetaPath, "utf-8");
@@ -313,6 +329,9 @@ async function readSpecStatus(specMetaPath: string): Promise<SpecStatus | undefi
   }
   const lifecycle = parseSpecLifecycle(md);
   if (lifecycle === undefined || !isLifecycleDeclarationComplete(lifecycle)) {
+    return undefined;
+  }
+  if (lifecycle.status === "superseded" && !knownSpecIds.has(lifecycle.supersededBy ?? "")) {
     return undefined;
   }
   return lifecycle.status;

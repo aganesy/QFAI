@@ -38,11 +38,25 @@ function tddTable(rows: Array<{ id: string; tcRefs: string; status: string; drId
   ].join("\n");
 }
 
-async function collectFor(tdd: string, testCases: string = TC_TABLE, specMd = "# 01 Spec\n") {
+async function collectFor(
+  tdd: string,
+  testCases: string = TC_TABLE,
+  specMd = "# 01 Spec\n",
+  options: { successor?: boolean } = {},
+) {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tddcov-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
     await mkdir(path.join(specDir, "tdd"), { recursive: true });
+    if (options.successor === true) {
+      // A `Superseded-by` naming no spec does not retire anything — the work
+      // would have moved nowhere. The successor carries no `06_Test-Cases.md`,
+      // so it stays out of the coverage set on the `fileMissing` branch.
+      const successorDir = path.join(root, ".qfai", "specs", "spec-0002");
+      await mkdir(successorDir, { recursive: true });
+      await writeFile(path.join(successorDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+      await writeFile(path.join(successorDir, "02_User-stories.md"), "# 02\n", "utf-8");
+    }
     await writeFile(path.join(specDir, "01_Spec.md"), specMd, "utf-8");
     await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User Stories\n", "utf-8");
     await writeFile(path.join(specDir, "05_Examples.md"), "# 05 Examples\n", "utf-8");
@@ -258,8 +272,22 @@ describe("a retired spec's ledger is history, not progress", () => {
       OPEN_ROW,
       TC_TABLE,
       "# 01 Spec\n\n- Status: superseded\n- Superseded-by: spec-0002\n",
+      { successor: true },
     );
     expect(coverage.specs).toEqual([]);
+  });
+
+  it("keeps counting a spec whose Superseded-by names no spec", async () => {
+    // Nothing inherited the rows, so they are still open work. `report` and
+    // `validate` agree here too: neither retires a spec on a dangling
+    // `Superseded-by`.
+    const coverage = await collectFor(
+      OPEN_ROW,
+      TC_TABLE,
+      "# 01 Spec\n\n- Status: superseded\n- Superseded-by: spec-0002\n",
+    );
+    expect(coverage.specs.map((spec) => spec.specNumber)).toEqual(["0001"]);
+    expect(coverage.specs[0]?.openCount).toBe(1);
   });
 });
 

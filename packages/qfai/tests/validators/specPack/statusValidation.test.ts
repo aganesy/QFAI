@@ -81,4 +81,24 @@ describe("validateSpecStatus", () => {
     const issues = validateSpecStatus(parsed, SPEC_PATH, KNOWN);
     expect(issues).toEqual([]);
   });
+
+  it("reads past a retirement parked in an HTML comment", () => {
+    // A rewrite that keeps the old declaration in a comment above the live one
+    // is a spec that says `active`, not one that says `superseded`.
+    const parsed = parse(
+      `${HEADER}<!--\n- Status: superseded\n- Superseded-by: spec-0099\n-->\n\n- Status: active\n`,
+    );
+    expect(parsed.status).toBe("active");
+    expect(parsed.supersededBy).toBeUndefined();
+    expect(validateSpecStatus(parsed, SPEC_PATH, KNOWN)).toEqual([]);
+  });
+
+  it("reads past a fenced sample of the SUPERSEDE bullets", () => {
+    const parsed = parse(
+      `${HEADER}\`\`\`markdown\n- Status: deprecated\n- Deprecated-at: 2026-05-02\n\`\`\`\n\n- Status: active\n`,
+    );
+    expect(parsed.status).toBe("active");
+    expect(parsed.deprecatedAt).toBeUndefined();
+    expect(validateSpecStatus(parsed, SPEC_PATH, KNOWN)).toEqual([]);
+  });
 });

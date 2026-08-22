@@ -1,3 +1,4 @@
+import { maskNonSpecRegions } from "../specPackParsers.js";
 import { parseContractRefs, type ParsedContractRefs } from "./contractRefs.js";
 import { extractH2Sections, parseHeadings } from "./markdown.js";
 
@@ -108,17 +109,26 @@ const HEADER_BLOCK_END_RE = /^#{2,6}\s/m;
 
 /**
  * The leading metadata block of `01_Spec.md`: everything before its first `##`
- * heading.
+ * heading, with the regions that are not the spec blanked out.
  *
- * `extractBulletField` matches the first bullet anywhere in the document, so an
- * illustrative `- Status: deprecated` quoted in a prose section would otherwise
- * read as the spec's own lifecycle. `QFAI-STATUS-001` places the bullet in
- * "01_Spec.md の冒頭 bullet ブロック", so a lifecycle branch honours exactly
- * that block.
+ * `extractBulletField` matches the first bullet anywhere in the text it is
+ * given, so an illustrative `- Status: deprecated` quoted in a prose section
+ * would otherwise read as the spec's own lifecycle. `QFAI-STATUS-001` places
+ * the bullet in "01_Spec.md の冒頭 bullet ブロック", so a lifecycle branch
+ * honours exactly that block.
+ *
+ * The block is masked first, because the header block is where a rewrite parks
+ * what it replaced: an old declaration retired into an HTML comment, or a
+ * fenced sample of the bullets SUPERSEDE writes, both sit above the first
+ * heading and both would otherwise outrank the live `- Status: active` below
+ * them. Masking preserves line count, so the slice still ends at the same line
+ * of the document — and a `##` that only appears inside a comment or a fence
+ * no longer ends the header block early.
  */
 function specHeaderBlock(md: string): string {
-  const firstSection = HEADER_BLOCK_END_RE.exec(md);
-  return firstSection === null ? md : md.slice(0, firstSection.index);
+  const visible = maskNonSpecRegions(md);
+  const firstSection = HEADER_BLOCK_END_RE.exec(visible);
+  return firstSection === null ? visible : visible.slice(0, firstSection.index);
 }
 
 /**
@@ -159,8 +169,12 @@ export function parseSpecLifecycle(md: string): SpecLifecycle | undefined {
  * must not do so on half a declaration: `--profile tdd` never runs
  * `validateSpecPacks`, so `- Status: superseded` with no `Superseded-by` would
  * otherwise retire a ledger with nothing anywhere reporting the omission.
- * Whether the named successor exists is `QFAI-STATUS-004`'s question and
- * changes only which spec inherits the work, not that the source retired.
+ *
+ * Shape only: whether the named successor exists is a question about the spec
+ * set, which this function does not see. `collectSpecEntries` answers it
+ * before setting `SpecEntry.status`, on the same evidence `QFAI-STATUS-004`
+ * uses — a `Superseded-by` naming no spec means the work has nowhere to go,
+ * and the ledger has to keep gating until it does.
  */
 export function isLifecycleDeclarationComplete(lifecycle: SpecLifecycle): boolean {
   switch (lifecycle.status) {
@@ -254,7 +268,13 @@ export function parseSpec(md: string, file: string): ParsedSpec {
     parsed.specId = specId;
   }
 
-  const statusRaw = extractBulletField(md, "Status");
+  // Read the lifecycle bullets from the masked document. `validateSpecStatus`
+  // is the rule that answers for them, and it has to see what the spec says,
+  // not what a retired declaration parked in an HTML comment or a fenced
+  // example of the SUPERSEDE bullets says. Only these three fields are masked:
+  // the BR scan above walks the raw lines because it reports line numbers.
+  const lifecycleSource = maskNonSpecRegions(md);
+  const statusRaw = extractBulletField(lifecycleSource, "Status");
   if (statusRaw !== undefined) {
     parsed.statusRaw = statusRaw;
     if (isSpecStatus(statusRaw)) {
@@ -268,11 +288,11 @@ export function parseSpec(md: string, file: string): ParsedSpec {
   // duplicates requires either a new helper (`extractBulletFields`)
   // and a new validator code (QFAI-STATUS-007 "duplicate Status
   // bullets") — design beyond PR #206 scope (review #44).
-  const supersededBy = extractBulletField(md, "Superseded-by");
+  const supersededBy = extractBulletField(lifecycleSource, "Superseded-by");
   if (supersededBy !== undefined) {
     parsed.supersededBy = supersededBy;
   }
-  const deprecatedAt = extractBulletField(md, "Deprecated-at");
+  const deprecatedAt = extractBulletField(lifecycleSource, "Deprecated-at");
   if (deprecatedAt !== undefined) {
     parsed.deprecatedAt = deprecatedAt;
   }

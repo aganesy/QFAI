@@ -143,6 +143,17 @@ describe("references/sdd-triage.md", () => {
     expect(ref).toMatch(/06_Test-Cases\.md/);
   });
 
+  it("tells the migration to remap US-Refs too", async () => {
+    // A `Layer=E2E` row carries its obligation in `US-Refs`, and US IDs are
+    // spec-namespaced the same way TC IDs are. Nothing catches a copied one:
+    // `validateObligationColumn()` checks shape and Layer, not existence, so
+    // the migrated row keeps pointing at the retired spec's user story.
+    const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
+    expect(ref).toMatch(/US-Refs/);
+    expect(ref).toMatch(/02_User-stories\.md/);
+    expect(ref).toMatch(/Layer=E2E/);
+  });
+
   it("documents the append-first principle and impact cascade", async () => {
     const ref = await readFile(TRIAGE_REF_PATH, "utf-8");
     expect(ref).toMatch(/append-first/i);
