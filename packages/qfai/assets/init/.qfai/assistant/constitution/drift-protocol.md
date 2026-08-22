@@ -321,12 +321,27 @@ is a defect.
 ### Line endings in the artifacts under review
 
 Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and
-`npx qfai init` seeds a `.gitattributes` at the project root that keeps them
-that way. That seed is create-only: a project that already had a
-`.gitattributes` keeps its own, so on Windows a whole-file rewrite can still
-flip a blob from LF to CRLF and report every line as changed. A diff that reads
-as "all lines changed" is therefore not evidence of drift on its own — re-read
-it with `git diff --ignore-cr-at-eol` before adjudicating it.
+`npx qfai init` seeds a `.gitattributes` at the project root that keeps the
+paths QFAI owns — `.qfai/**`, `qfai.config.yaml`, `DESIGN.md` — that way. It
+sets no repository-wide rule on purpose: the rest of the tree keeps whatever
+line-ending policy the project already chose, so seeding the file never
+rewrites product code the framework does not own.
+
+That seed is create-only, so a project that already had a `.gitattributes`
+keeps its own and a whole-file rewrite on Windows can still flip a protected
+blob from LF to CRLF. Such a diff reads as "all lines changed" and is not
+evidence of drift on its own — re-read it with the revision range the detector
+itself uses, `git diff --ignore-cr-at-eol <baseBranch>..HEAD -- <path>`; a bare
+`git diff` compares the working tree against the index and will show nothing
+for a change that is already committed. An empty patch there means the change
+is EOL-only. `QFAI-DRIFT-001` reads the branch diff with `--ignore-cr-at-eol`
+too, so it does not report those paths and no Change Request is owed for them.
+
+Line endings that git hides are still real bytes on disk. A working-tree file
+saved as CRLF stages back to LF and shows no diff, but content hashes read the
+file as it lies, so a frozen `DESIGN.md` can fail its lock check while git
+calls it unchanged. Re-save that file with LF endings — do not re-freeze the
+lock to match the CRLF bytes.
 
 ## Non-negotiable constraints
 

@@ -36,6 +36,10 @@ async function newRepo(seed: Record<string, string>): Promise<string> {
   git(root, "init", "--initial-branch=base");
   git(root, "config", "user.email", "test@example.com");
   git(root, "config", "user.name", "test");
+  // The EOL case below needs the CRLF bytes to reach the blob. Git for Windows
+  // installs `core.autocrlf=true` globally, which would renormalise them away
+  // and turn that test into a tautology.
+  git(root, "config", "core.autocrlf", "false");
   for (const [rel, content] of Object.entries(seed)) {
     await write(root, rel, content);
   }
@@ -107,6 +111,27 @@ describe("validateUpstreamSsotGuard", () => {
     await commitEdits(root, {
       ".qfai/specs/spec-0001/tdd/test-list.md": "# list\n\n| TDD-0001 |\n",
     });
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("ignores a protected file whose only change is its line endings", async () => {
+    // `drift-protocol.md#line-endings-in-the-artifacts-under-review` tells the
+    // reviewer that an all-lines-changed diff is not evidence of drift. If the
+    // detector still reported the path, the operator would owe a Change
+    // Request for a change carrying no content, and nothing but reverting the
+    // line endings could discharge it.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\nSELECT 2;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\r\nSELECT 2;\r\n",
+    });
+
+    // Guard the premise: the CRLF really did land in the committed blob.
+    const named = execFileSync("git", ["diff", "--name-only", "base..HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(named).toContain(".qfai/contracts/db/CON-DB-0007.sql");
 
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
   });

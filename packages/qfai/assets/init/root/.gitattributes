@@ -1,35 +1,27 @@
 # QFAI が seed する既定値。`qfai init` はこのファイルが無いときだけ作成し、
 # 既存の .gitattributes を上書きしない。
 #
-# QFAI が配置する SSOT 成果物（.qfai/ 配下の markdown / yaml / sql）はすべて
-# LF で配布される。Drift Protocol はそれらの diff をレビュー成果物と定めて
-# いるため、チェックアウトやエディタ保存でファイル全体の改行コードが反転すると
-# 「全行が変更された」diff になりレビューが成立しなくなる。
+# 規則は QFAI が管理するパスだけに限定する。`*` でリポジトリ全体に eol=lf を
+# 課すと、CRLF のままコミット済みのファイルを持つ既存リポジトリでは未編集の
+# ファイルまで「全行変更」として現れ、SSOT のノイズを防ぐはずの設定が逆に
+# 大規模な無関係差分を生む。製品コードの改行方針はプロジェクト側に委ねる。
+#
+# QFAI が配置する SSOT 成果物（.qfai/ 配下の markdown / yaml / json / sql）は
+# すべて LF で配布される。Drift Protocol はそれらの diff をレビュー成果物と
+# 定めているため、チェックアウトやエディタ保存でファイル全体の改行コードが
+# 反転すると「全行が変更された」diff になりレビューが成立しなくなる。
 # 改行コードをここで固定することでそれを防ぐ。
+#
+# text=auto: バイナリは Git が自動判定して変換対象から外す。
 
-# 既定: テキストは自動判定し、作業ツリーでも LF で取り出す
-* text=auto eol=lf
-
-# SSOT 成果物と設定ファイルは常に LF
-*.md    text eol=lf
-*.yml   text eol=lf
-*.yaml  text eol=lf
-*.json  text eol=lf
-*.sql   text eol=lf
+# QFAI が所有する SSOT ツリー
+.qfai/** text=auto eol=lf
 
 # Windows 専用スクリプトのみ CRLF を維持
-*.bat   text eol=crlf
-*.cmd   text eol=crlf
+.qfai/**/*.bat text eol=crlf
+.qfai/**/*.cmd text eol=crlf
 
-# バイナリは変換しない
-*.png   binary
-*.jpg   binary
-*.jpeg  binary
-*.gif   binary
-*.ico   binary
-*.pdf   binary
-*.woff  binary
-*.woff2 binary
-*.ttf   binary
-*.eot   binary
-*.zip   binary
+# QFAI が seed するルート直下の成果物 / 設定
+/qfai.config.yaml text=auto eol=lf
+/DESIGN.md text=auto eol=lf
+/.github/workflows/qfai-validate.yml text=auto eol=lf

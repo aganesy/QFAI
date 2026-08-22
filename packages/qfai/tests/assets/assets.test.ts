@@ -872,8 +872,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith("#"));
 
-    expect(rules).toContain("* text=auto eol=lf");
-    for (const pattern of ["*.md", "*.yml", "*.yaml", "*.json", "*.sql"]) {
+    // Every rule must be scoped to a path QFAI owns. A repository-wide `*`
+    // rule reaches product files the framework never wrote: in a project that
+    // committed them as CRLF, dropping this file in reports untouched sources
+    // as fully rewritten, which is the exact noise the seed exists to prevent.
+    for (const rule of rules) {
+      const pattern = rule.split(/\s+/)[0] ?? "";
+      expect(
+        pattern.startsWith(".qfai/") || pattern.startsWith("/"),
+        `.gitattributes rule '${rule}' must be scoped to a QFAI-owned path`,
+      ).toBe(true);
+    }
+
+    for (const pattern of [".qfai/**", "/qfai.config.yaml", "/DESIGN.md"]) {
       expect(
         rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=lf")),
         `.gitattributes must pin ${pattern} to eol=lf`,
@@ -881,7 +892,7 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
     // Windows-only scripts are the documented exception: forcing LF on them
     // breaks the interpreter that reads them.
-    for (const pattern of ["*.bat", "*.cmd"]) {
+    for (const pattern of [".qfai/**/*.bat", ".qfai/**/*.cmd"]) {
       expect(
         rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=crlf")),
         `.gitattributes must keep ${pattern} at eol=crlf`,

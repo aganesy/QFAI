@@ -1293,7 +1293,10 @@ describe("qfai init", { timeout: 60000 }, () => {
         "utf-8",
       );
       expect(seeded).toBe(templateBytes);
-      expect(seeded).toContain("* text=auto eol=lf");
+      expect(seeded).toContain(".qfai/** text=auto eol=lf");
+      // Scoped, not repository-wide: a `*` rule would renormalise product
+      // files the project committed as CRLF and never handed to QFAI.
+      expect(seeded).not.toMatch(/^\*\s/m);
 
       // Create-only: the root tree copies with force:false, so a project that
       // already made its own line-ending decision keeps it — even under --force.

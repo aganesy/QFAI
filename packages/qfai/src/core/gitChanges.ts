@@ -20,14 +20,26 @@ export function normalizeRepoPath(p: string): string {
  * resolved, or the directory is not a repository. Callers treat "no changed
  * files" as "nothing to check": a validator that hard-failed outside a git
  * checkout would make `qfai validate` unusable in a tarball export.
+ *
+ * `--ignore-cr-at-eol` drops paths whose only difference is the line ending.
+ * A whole-file CRLF rewrite on Windows changes every byte of a protected
+ * artifact without changing a single line of its content, and the drift
+ * protocol tells the reviewer to read exactly such a diff as "not evidence of
+ * drift". Listing the path anyway would leave the operator owing a Change
+ * Request for a change that carries no content — with no edit that could ever
+ * satisfy it short of reverting the line endings.
  */
 export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> {
   try {
-    const output = execFileSync("git", ["diff", "--name-only", `${baseBranch}..HEAD`], {
-      cwd: root,
-      encoding: "utf-8",
-      stdio: ["ignore", "pipe", "ignore"],
-    });
+    const output = execFileSync(
+      "git",
+      ["diff", "--ignore-cr-at-eol", "--name-only", `${baseBranch}..HEAD`],
+      {
+        cwd: root,
+        encoding: "utf-8",
+        stdio: ["ignore", "pipe", "ignore"],
+      },
+    );
     return new Set(
       output
         .split("\n")
