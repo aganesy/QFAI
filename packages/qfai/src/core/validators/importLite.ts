@@ -1,18 +1,13 @@
-import { readdir } from "node:fs/promises";
+import { stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectFiles } from "../fs.js";
+import { findPacks } from "../packLocator.js";
+import { findImportLiteEvidence } from "../preflight/importLiteEvidence.js";
 import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-
-// The suffix is optional on purpose. The remedy names `import-lite-<ts>.md`,
-// but the shipped template is `templates/evidence/import-lite.md`; requiring
-// the `-` meant an operator who copied the template under its own name still
-// got the warning it was supposed to clear.
-const IMPORT_LITE_EVIDENCE_RE = /^import-lite(-.*)?\.md$/i;
 
 export async function validateImportLiteEvidencePresence(
   root: string,
@@ -25,19 +20,11 @@ export async function validateImportLiteEvidencePresence(
   }
 
   const discussionRoot = resolvePath(root, config, "discussionDir");
-  const discussionFiles = await collectFiles(discussionRoot, {
-    extensions: [".md"],
-  });
-  const hasDiscussionIndex = discussionFiles.some(
-    (filePath) => path.basename(filePath).toLowerCase() === "06_req.md",
-  );
-  if (hasDiscussionIndex) {
+  if (await hasDiscussionPackReq(discussionRoot)) {
     return [];
   }
 
-  const evidenceRoot = path.join(path.dirname(discussionRoot), "evidence");
-  const hasImportLiteEvidence = await existsImportLiteEvidence(evidenceRoot);
-  if (hasImportLiteEvidence) {
+  if ((await findImportLiteEvidence(root)) !== null) {
     return [];
   }
 
@@ -59,13 +46,29 @@ export async function validateImportLiteEvidencePresence(
   ];
 }
 
-async function existsImportLiteEvidence(evidenceRoot: string): Promise<boolean> {
+/**
+ * The catalogue requires the REQ index at `discussion-<ts>/06_REQ.md`, so the
+ * input source must be a `06_REQ.md` sitting directly inside a discussion pack
+ * directory. Matching on the basename anywhere under `discussionDir`
+ * accepted a parked copy (`archive/06_REQ.md`) or a loose file at the
+ * discussion root, both of which cleared the warning without the project
+ * having the input source the catalogue asks for.
+ */
+async function hasDiscussionPackReq(discussionRoot: string): Promise<boolean> {
+  const packs = await findPacks(discussionRoot, "discussion");
+  for (const pack of packs) {
+    if (await isFile(path.join(pack.path, "06_REQ.md"))) {
+      return true;
+    }
+  }
+  return false;
+}
+
+async function isFile(filePath: string): Promise<boolean> {
   try {
-    const entries = await readdir(evidenceRoot, { withFileTypes: true });
-    return entries.some(
-      (entry) => entry.isFile() && IMPORT_LITE_EVIDENCE_RE.test(entry.name.trim()),
-    );
+    return (await stat(filePath)).isFile();
   } catch {
+    // ENOENT / EACCES: an unreadable candidate is not an input source.
     return false;
   }
 }

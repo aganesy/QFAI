@@ -14,10 +14,11 @@ import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
-import { resolveIssueExpected } from "../../src/cli/commands/validate.js";
-import { loadConfig } from "../../src/core/config.js";
+import { resolveIssueExpected, runValidate } from "../../src/cli/commands/validate.js";
+import { defaultConfig, loadConfig } from "../../src/core/config.js";
+import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateProject } from "../../src/core/validate.js";
 import { validateImportLiteEvidencePresence } from "../../src/core/validators/importLite.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
@@ -159,5 +160,106 @@ describe("importLite profile wiring", () => {
     expect(skill).toContain("QFAI-IMPLITE-001");
     expect(skill).toContain(".qfai/evidence/import-lite-<timestamp>.md");
     expect(skill).toContain("templates/evidence/import-lite.md");
+  });
+});
+
+describe("QFAI-IMPLITE-001 input-source shape", () => {
+  // The catalogue asks for `discussion-<ts>/06_REQ.md`. A basename match
+  // anywhere under `discussionDir` also cleared the warning from a parked copy,
+  // so a project with no real input source looked compliant.
+  it("does not accept a 06_REQ.md parked outside a discussion pack", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    const archiveDir = path.join(root, ".qfai", "discussion", "archive");
+    await mkdir(archiveDir, { recursive: true });
+    await writeFile(path.join(archiveDir, "06_REQ.md"), "# REQ\n", "utf-8");
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  it("does not accept a 06_REQ.md sitting at the discussion root", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+    await writeFile(path.join(discussionDir, "06_REQ.md"), "# REQ\n", "utf-8");
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  // Evidence lives at the canonical `<root>/.qfai/evidence` — every producer
+  // writes there, including the Stage 0 step. Deriving it from `discussionDir`
+  // made a relocated discussion root look for `requirements/evidence`, so the
+  // warning could not be cleared on such a project at all.
+  it("reads evidence from .qfai/evidence even when discussionDir is relocated", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      ["paths:", "  discussionDir: requirements/discussion", ""].join("\n"),
+      "utf-8",
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    expect(await run(root)).toEqual([]);
+  });
+});
+
+describe("runSddPreflight import-lite entrypoint", () => {
+  // `runSddPreflight` is exported from the package root, so a consumer running
+  // Stage 0 through it must reach the same verdict the validator does.
+  it("is ready from import-lite evidence when there is no discussion pack", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("ready");
+    expect(result.source).toBe("import-lite");
+    expect(result.selectedInputPath).toContain("import-lite-20260401000000000.md");
+    expect(result.blockers).toEqual([]);
+    expect(result.nextCommands).not.toContain("/qfai-discussion");
+
+    const summary = await readFile(result.preflightSummaryPath, "utf-8");
+    expect(summary).toContain("status: ready");
+    expect(summary).toContain("source: import-lite");
+  });
+
+  // Evidence is an entrypoint, not an override: a pack that exists but is
+  // incomplete must still block.
+  it("stays blocked when a discussion pack exists but is incomplete", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedDiscussionReq(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.source).toBe("discussion-pack");
+  });
+});
+
+describe("QFAI-IMPLITE-001 CLI output", () => {
+  // The catalogue entry only pays off if a formatter prints it. Both formatters
+  // gated `expected` / `fix` on `severity === "error"`, so this warning-only
+  // rule never showed its expected state — not even under `--fail-on warning`,
+  // where it is what fails the run.
+  it("prints the catalogue entry under --fail-on warning", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    const chunks: string[] = [];
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation((chunk: unknown): boolean => {
+      chunks.push(String(chunk));
+      return true;
+    });
+    try {
+      await runValidate({ root, strict: false, failOn: "warning", format: "text", profile: "sdd" });
+    } finally {
+      spy.mockRestore();
+    }
+    const output = chunks.join("");
+    expect(output).toContain("QFAI-IMPLITE-001");
+    expect(output).toContain("expected: A project that has spec packs");
+    expect(output).toContain("fix:");
   });
 });

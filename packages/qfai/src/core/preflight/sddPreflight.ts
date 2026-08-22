@@ -4,10 +4,19 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import { findImportLiteEvidence } from "./importLiteEvidence.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 
-export type SddPreflightSource = "discussion-pack";
+/**
+ * `import-lite` is the entrypoint for a project that already carries specs but
+ * never ran `/qfai-discussion`: Stage 0 records the input source as
+ * `.qfai/evidence/import-lite-<timestamp>.md` instead, which is the same
+ * artifact `QFAI-IMPLITE-001` accepts. Without it here, a consumer driving
+ * Stage 0 through this public entrypoint stayed `blocked` forever on a project
+ * the validator considered compliant.
+ */
+export type SddPreflightSource = "discussion-pack" | "import-lite";
 export type SddPreflightStatus = "ready" | "blocked";
 
 export type RunSddPreflightOptions = {
@@ -42,6 +51,24 @@ export async function runSddPreflight(
   const blockers = resolvePreflightBlockers(readiness);
 
   if (blockers.length > 0) {
+    // No discussion pack at all is the one shape the import-lite entrypoint
+    // covers. A pack that exists but is incomplete stays blocked: dropping an
+    // evidence file must not become a way to skip a half-finished pack.
+    const importLiteEvidencePath =
+      readiness.latestPackDir === null ? await findImportLiteEvidence(root) : null;
+    if (importLiteEvidencePath !== null) {
+      return await completeReadyPreflight({
+        source: "import-lite",
+        selectedInputPath: importLiteEvidencePath,
+        reqSourcePath: importLiteEvidencePath,
+        summaryPath,
+        openQuestions: carryOverOpenQuestions,
+        // `/qfai-discussion` is not the follow-up here — the input source is
+        // already recorded, so the caller continues the SDD workflow.
+        nextCommands: ["/qfai-sdd"],
+      });
+    }
+
     await writeFile(
       summaryPath,
       `${buildBlockedPreflightSummary({
@@ -65,29 +92,53 @@ export async function runSddPreflight(
   }
 
   const selectedInputPath = readiness.latestPackDir;
-  const reqPath = selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md");
-  const reqText = reqPath ? await readSafe(reqPath) : "";
+
+  return await completeReadyPreflight({
+    source: "discussion-pack",
+    selectedInputPath,
+    reqSourcePath: selectedInputPath === null ? null : path.join(selectedInputPath, "06_REQ.md"),
+    summaryPath,
+    openQuestions: carryOverOpenQuestions,
+    nextCommands,
+  });
+}
+
+/**
+ * Count the imported REQ ids of the selected input, write the ready summary and
+ * return the result. Shared by both sources so `preflight_summary.md` and the
+ * returned record cannot drift apart between them.
+ */
+async function completeReadyPreflight(input: {
+  source: SddPreflightSource;
+  selectedInputPath: string | null;
+  reqSourcePath: string | null;
+  summaryPath: string;
+  openQuestions: string[];
+  nextCommands: string[];
+}): Promise<SddPreflightResult> {
+  const reqText = input.reqSourcePath === null ? "" : await readSafe(input.reqSourcePath);
   const reqCount = countReqIds(reqText);
 
   await writeFile(
-    summaryPath,
+    input.summaryPath,
     `${buildReadyPreflightSummary({
-      selectedDiscussionPack: selectedInputPath,
+      source: input.source,
+      selectedInputPath: input.selectedInputPath,
       importedReqCount: reqCount,
-      openQuestions: carryOverOpenQuestions,
+      openQuestions: input.openQuestions,
     })}\n`,
     "utf-8",
   );
 
   return {
     status: "ready",
-    source: "discussion-pack",
-    selectedInputPath,
+    source: input.source,
+    selectedInputPath: input.selectedInputPath,
     importedReqCount: reqCount,
-    openQuestions: carryOverOpenQuestions,
+    openQuestions: input.openQuestions,
     blockers: [],
-    nextCommands,
-    preflightSummaryPath: summaryPath,
+    nextCommands: input.nextCommands,
+    preflightSummaryPath: input.summaryPath,
   };
 }
 
@@ -164,12 +215,15 @@ function buildBlockedPreflightSummary(input: {
 }
 
 function buildReadyPreflightSummary(input: {
-  selectedDiscussionPack: string | null;
+  source: SddPreflightSource;
+  selectedInputPath: string | null;
   importedReqCount: number;
   openQuestions: string[];
 }): string {
   const openQuestions =
     input.openQuestions.length > 0 ? input.openQuestions.map((item) => `- ${item}`) : ["- none"];
+  const inputLabel =
+    input.source === "import-lite" ? "selected import-lite evidence" : "selected discussion-pack";
 
   return [
     "# Preflight Summary",
@@ -177,8 +231,8 @@ function buildReadyPreflightSummary(input: {
     "## Status",
     "",
     "- status: ready",
-    "- source: discussion-pack",
-    `- selected discussion-pack: ${input.selectedDiscussionPack ?? "(unknown)"}`,
+    `- source: ${input.source}`,
+    `- ${inputLabel}: ${input.selectedInputPath ?? "(unknown)"}`,
     "",
     "## Requirement Intake",
     "",
