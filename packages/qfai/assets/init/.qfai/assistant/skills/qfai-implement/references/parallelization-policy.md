@@ -137,14 +137,20 @@ So after the slices merge, and **independently of whether the merged suite
 passes**:
 
 1. For each slice, list the paths it actually touched under the production roots
-   `catalog/structure.md` declares — its `## Key packages / entrypoints` section,
-   which Stage 0 already required be read and refreshed against the repository
+   `catalog/structure.md` declares — the `Production roots` field of its
+   `## Key packages / entrypoints` section, which Stage 0 already required be
+   read and refreshed against the repository
    (`git diff --name-only <base>..<slice-head> -- <source root>`, substituting
-   `<source root>` from that section rather than assuming `src/`; a repo may
+   `<source root>` from that field rather than assuming `src/`; a repo may
    keep production code under `app/`, `lib/`, `internal/`, `cmd/` or
-   `packages/*/src`). A zero-path result is never evidence of a clean seam:
-   re-read `catalog/structure.md`, correct the roots and re-run before
-   continuing.
+   `packages/*/src`). A zero-path result is not by itself evidence of a clean
+   seam, and it is not automatically a mis-read root either. It is legitimate
+   only when the slice's own evidence accounts for it — every item on the slice
+   took the falsifiability path, which adds no production code and reverts its
+   mutation (`references/red-not-observable.md`). Confirm that from the slice's
+   evidence blocks; if even one item claims production code, treat the empty
+   diff as a mis-read root, re-read `catalog/structure.md`, correct the roots
+   and re-run before continuing.
 2. Compare that list against the slice's declared `Owning module`.
 3. Report every touched path that no slice declared, and every path touched by
    more than one slice, as a **deny-condition breach**. It is a breach whether

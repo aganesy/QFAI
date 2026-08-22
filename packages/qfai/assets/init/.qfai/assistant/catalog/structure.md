@@ -13,6 +13,9 @@
 - Package(s) of interest: <list packages>
 - CLI / service entry: <entrypoint files>
 - Core modules: <key module directories>
+- Production roots: <every directory that holds shipped source, exhaustively —
+  e.g. `src/`, `app/`, `lib/`, `internal/`, `cmd/`, `packages/*/src`; exclude
+  tests, fixtures, build output and config>
 
 ## Architecture constraints
 

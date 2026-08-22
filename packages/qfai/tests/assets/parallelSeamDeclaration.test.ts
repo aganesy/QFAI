@@ -21,6 +21,7 @@ const IMPLEMENT = "assistant/skills/qfai-implement";
 const SKILL = `${IMPLEMENT}/SKILL.md`;
 const LEDGER = `${IMPLEMENT}/references/execution-ledger.md`;
 const POLICY = `${IMPLEMENT}/references/parallelization-policy.md`;
+const STRUCTURE = "assistant/catalog/structure.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -103,14 +104,38 @@ describe("declared seam", () => {
       expect(policy).toContain(
         "For each slice, list the paths it actually touched under the production roots `catalog/structure.md` declares",
       );
+      // The operand is a named field, not a section the reader has to infer.
       expect(policy).toContain(
-        "substituting `<source root>` from that section rather than assuming",
+        "the `Production roots` field of its `## Key packages / entrypoints` section",
       );
-      // An empty diff is a mis-read root, not a clean seam.
-      expect(policy).toContain(
-        "A zero-path result is never evidence of a clean seam: re-read `catalog/structure.md`",
-      );
+      expect(policy).toContain("substituting `<source root>` from that field rather than assuming");
       expect(policy).not.toContain("list the `src/` paths it actually touched");
+    });
+
+    it(`${tree}: structure steering carries an exhaustive Production roots field`, async () => {
+      const structure = flat(await read(tree, STRUCTURE));
+
+      // Stage 0 fills `<...>` placeholders, so the field must exist to be filled.
+      expect(structure).toContain("## Key packages / entrypoints");
+      expect(structure).toContain(
+        "- Production roots: <every directory that holds shipped source, exhaustively",
+      );
+      expect(structure).toContain("exclude tests, fixtures, build output and config>");
+    });
+
+    it(`${tree}: a legitimately empty diff is not an infinite re-read loop`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Zero paths is ambiguous, and the falsifiability path makes it legal.
+      expect(policy).toContain("A zero-path result is not by itself evidence of a clean seam");
+      expect(policy).toContain("it is not automatically a mis-read root either");
+      expect(policy).toContain(
+        "every item on the slice took the falsifiability path, which adds no production code and reverts its mutation (`references/red-not-observable.md`)",
+      );
+      // Re-reading the roots is the branch for the *other* case only.
+      expect(policy).toContain(
+        "if even one item claims production code, treat the empty diff as a mis-read root",
+      );
     });
 
     it(`${tree}: the SKILL carries both the gate note and the reconcile step`, async () => {
