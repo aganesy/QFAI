@@ -109,6 +109,13 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
       expect(block).toMatch(/top-level key/);
       expect(block).toMatch(/defers the whole file/);
       expect(block).toMatch(/QFAI-ATDD-113/);
+      // `isPlannedApiContract` falls back to `PLANNED_CONTRACT_RE`, which also
+      // accepts the marker as an unindented comment, whenever the parsed
+      // document carries no top-level key (or does not parse at all). Claiming
+      // "top-level key only" makes the skill over-count API volume for a
+      // contract deferred in that compatible form.
+      expect(block).toMatch(/column-0 comment/);
+      expect(block).toContain("# x-qfai-status: planned");
     });
 
     it(`${tree}: the read set carries the project-wide opt-in inputs`, async () => {
@@ -120,6 +127,14 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
         expect(body).toContain("qfai.config.yaml");
         expect(body).toContain(".qfai/contracts/ui/**");
         expect(body).toContain("01_Spec.md` frontmatter");
+        // `resolveSurfaceUnion` walks `paths.specsDir` / `paths.contractsDir`,
+        // so a read set naming only the defaults misses a sibling surface in a
+        // project that overrides either one.
+        expect(body).toContain("paths.specsDir");
+        expect(body).toContain("paths.contractsDir");
+        // `resolveTitleMarkerSpecs` scans the whole `01_Spec.md`, so a
+        // frontmatter-only read set misses a heading-only opt-in.
+        expect(body).toMatch(/prototyping …` heading/);
       }
     });
 
