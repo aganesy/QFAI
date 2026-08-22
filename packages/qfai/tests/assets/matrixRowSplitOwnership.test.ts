@@ -117,6 +117,54 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).toContain("one new `todo` row is appended per remaining boundary");
   });
 
+  it("migrates an existing ledger's columns instead of only seeding new ones", async () => {
+    // The template is copied only when the ledger is absent, so an upgraded
+    // project keeps its eight-column table and the residual path's
+    // `Blocked-By` write has no cell to land in.
+    const phase2b = section(
+      await read(tree, CHECKLISTS),
+      "## Phase 2b: Seed `tdd/test-list.md`",
+      "## Phase 2c",
+    );
+
+    expect(phase2b).toContain(
+      "**Migrate an existing ledger's columns to the template's, every run.**",
+    );
+    expect(phase2b).toContain("`TDDLIST_BLOCKED_MISSING_REF`");
+    expect(await read(tree, SDD_SKILL)).toContain(
+      "**migrate an existing ledger's columns to the template's**",
+    );
+    expect(await read(tree, TEMPLATE)).toContain("Phase 2b's column migration");
+  });
+
+  it("re-issues status, evidence and verdicts together on a narrowed row", async () => {
+    // Narrowing `Selector` changes the row's identity, which completion item 10
+    // matches against the evidence entry and the verdicts hash over; keeping the
+    // status would leave evidence naming a selector the row no longer has.
+    const phase2b = section(
+      await read(tree, CHECKLISTS),
+      "## Phase 2b: Seed `tdd/test-list.md`",
+      "## Phase 2c",
+    );
+
+    expect(phase2b).toContain(
+      "in every case — including when its recorded RED/GREEN would still hold against the narrowed selector",
+    );
+    expect(phase2b).toContain("`Audited evidence hash`");
+    expect(phase2b).not.toContain("unless its recorded RED/GREEN still holds");
+  });
+
+  it("carries the Phase 2b exceptions into project_memory", async () => {
+    // The short form is what a Phase 2b run summarises from; left at
+    // "one row per coverage-target TC" it re-derives the un-split ledger.
+    const skill = await read(tree, SDD_SKILL);
+    const memory = skill.slice(skill.indexOf("project_memory:"));
+
+    expect(memory).toContain("one row per independently observable boundary");
+    expect(memory).toContain("always return the kept row to todo");
+    expect(memory).toContain("columns are migrated to the template's");
+  });
+
   it("keeps every downstream row-creation path upstream too", async () => {
     // Phase 2b claims to be the only row author, so the two paths that used to
     // open rows downstream have to hand off, or the claim is false where an
@@ -174,6 +222,23 @@ describe.each(TREES)("%s", (tree) => {
     );
     expect(red).toContain("wait for explicit user approval");
     expect(red).toContain("write `todo -> blocked` with that `CR-*` in `Blocked-By`");
+  });
+
+  it("blocks the residual row before the approval wait, not after the rerun", async () => {
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    // The approval wait spans sessions: a row left at `todo` across it is
+    // re-selected every pass, and after the rerun Phase 2b has already
+    // re-scoped the row the write was aimed at.
+    expect(red).toContain(
+      "at the protocol's step 2, ahead of its step 3 wait for approval, never after the owner rerun",
+    );
+    expect(red).toContain("The row leaves `blocked` only through that owner rerun");
+    expect(red).toContain("returns it to `todo`");
   });
 
   it("judges the shape at selection, ahead of the `todo -> red` write", async () => {

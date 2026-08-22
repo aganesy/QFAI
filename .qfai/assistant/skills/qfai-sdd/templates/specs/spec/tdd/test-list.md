@@ -62,7 +62,9 @@ Required columns, in the order used above:
 | Evidence  | RED/GREEN command+result pairs proving the TDD cycle         |
 
 `Blocked-By` is an **optional** column, seeded here so a downstream `blocked`
-row never has to add one: `/qfai-implement` may write the `Status`, `DR-ID`,
+row never has to add one — and added to an already-seeded eight-column ledger by
+Phase 2b's column migration, which runs whether or not this template was copied:
+`/qfai-implement` may write the `Status`, `DR-ID`,
 `Evidence` and `Blocked-By` cells and nothing else, and a `Status = blocked` row
 with no blocker named raises `TDDLIST_BLOCKED_MISSING_REF`. It takes a Change
 Request ID (`CR-YYYYMMDD-NNNN`), a contract path with line, or a cross-spec row
