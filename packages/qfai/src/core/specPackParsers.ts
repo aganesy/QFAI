@@ -132,8 +132,15 @@ const FENCE_LINE = /^ {0,3}(`{3,}|~{3,})/;
  *
  * Returns the visible remainder plus whether a comment is still open at the end
  * of the line, so the caller can carry the state across lines.
+ *
+ * Exported so every reader that has to tell a document's own text from a
+ * commented-out sample carries the state the same way — a second, private copy
+ * of this loop is how one reader ends up parsing what another one hides.
  */
-function maskLineComments(line: string, inComment: boolean): { text: string; open: boolean } {
+export function maskLineComments(
+  line: string,
+  inComment: boolean,
+): { text: string; open: boolean } {
   let visible = "";
   let index = 0;
   let open = inComment;

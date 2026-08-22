@@ -60,9 +60,13 @@ the scheme or `Re-opens:` is missing, malformed, self-referential or circular,
 `QFAI-DECISION-002` when it resolves to no declared record, `QFAI-DECISION-003`
 when the approval is absent or `Approved at:` is not a real
 `YYYY-MM-DDThh:mm:ssZ` instant, `QFAI-DECISION-004` when the delta's
-`Re-opened by:` and this entry do not name each other, and
-`QFAI-DECISION-005` when `Decision:` is missing. A re-open asserted anywhere
-else — a PR description, a commit message — is not one.
+`Re-opened by:` and this entry do not name each other,
+`QFAI-DECISION-005` when `Decision:` is missing, `QFAI-DECISION-006` when a
+candidate the delta lists under `## Rejected` reappears under `## Adopted` with
+no `Re-opened by:` of its own, and `QFAI-DECISION-007` when the same `DR-*` is
+declared twice in this file, which leaves the re-opened decision ambiguous. A
+re-open asserted anywhere else — a PR description, a commit message — is not
+one.
 
 ## Empty State
 

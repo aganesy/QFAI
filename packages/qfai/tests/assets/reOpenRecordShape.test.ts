@@ -50,9 +50,19 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "QFAI-DECISION-003",
       "QFAI-DECISION-004",
       "QFAI-DECISION-005",
+      // The candidate cross-check and the duplicate-id check: the guard's own
+      // sentence is enforced by matching the two candidate lists, not only by
+      // reading the back-reference someone remembered to write.
+      "QFAI-DECISION-006",
+      "QFAI-DECISION-007",
     ]) {
       expect(decisions).toContain(code);
     }
+  });
+
+  it("tells the delta which code fires when a rejected candidate is re-adopted", async () => {
+    const delta = await read(tree, DELTA);
+    expect(delta).toContain("QFAI-DECISION-006");
   });
 
   it("puts the back-reference in the `## Rejected` block the guard is about", async () => {

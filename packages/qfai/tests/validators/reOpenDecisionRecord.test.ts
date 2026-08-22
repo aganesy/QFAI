@@ -352,3 +352,127 @@ describe("QFAI-DECISION-004 gates the delta back-reference", () => {
     });
   });
 });
+
+describe("QFAI-DECISION-006 matches the two candidate lists", () => {
+  /** `DELTA_BASE` with `name` re-adopted under `## Adopted`. */
+  function readopting(name: string, ...backRefs: string[]): string {
+    return DELTA_BASE.replace(
+      "## Adopted\n",
+      `## Adopted\n\n- Adopted: ${name}\n- Why: the size bound landed\n`,
+    ).concat(backRefs.map((id) => `\n- Re-opened by: ${id}`).join(""), "\n");
+  }
+
+  it("reports a rejected candidate re-adopted with no record at all", async () => {
+    // The case the `Re-opened by:` checks cannot see: the delta writes nothing
+    // for them to read, so without this the whole family stays silent.
+    await withSpec({ delta: readopting("in-process cache") }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("matches the names through case, backticks and trailing punctuation", async () => {
+    await withSpec({ delta: readopting("`In-Process Cache`.") }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("accepts the re-adoption once the candidate carries a resolvable back-reference", async () => {
+    await withSpec(
+      {
+        decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]),
+        delta: readopting("in-process cache", RE_OPEN_ID),
+      },
+      async (root) => {
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
+  });
+
+  it("leaves an adopted candidate that was never rejected alone", async () => {
+    await withSpec({ delta: readopting("a bounded LRU") }, async (root) => {
+      expect(await codes(root)).not.toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("does not read the template's own `<candidate name>` placeholders as a match", async () => {
+    const delta = DELTA_BASE.replace(
+      "- Candidate: in-process cache",
+      "- Candidate: <candidate name>",
+    ).replace("## Adopted\n", "## Adopted\n\n- Adopted: <candidate name>\n");
+    await withSpec({ delta }, async (root) => {
+      const found = await codes(root);
+      expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+    });
+  });
+});
+
+describe("non-spec regions are not the delta and not the record", () => {
+  it("ignores a `Re-opened by:` retired into a multi-line HTML comment", async () => {
+    const delta = [DELTA_BASE, "", "<!--", `- Re-opened by: ${RE_OPEN_ID}`, "-->", ""].join("\n");
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        // The commented line must not stand in for the record's back-reference.
+        expect(await codes(root)).toContain("QFAI-DECISION-004");
+      },
+    );
+  });
+
+  it("ignores a `Re-opened by:` parked in a fenced example", async () => {
+    const delta = [DELTA_BASE, "", "```markdown", `- Re-opened by: ${RE_OPEN_ID}`, "```", ""].join(
+      "\n",
+    );
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-004");
+      },
+    );
+  });
+
+  it("ignores a Decision Record commented out as a block", () => {
+    const text = [
+      "## Decisions",
+      "",
+      "<!--",
+      "### DR-0001-0002: disabled re-open",
+      "",
+      "- Status: re-open",
+      "- Re-opens: DR-0001-0001",
+      "- Approved by: ops-lead",
+      "-->",
+      "",
+    ].join("\n");
+    // A block someone disabled by wrapping it is not an approval.
+    expect(collectReOpenEntries(text)).toEqual([]);
+  });
+});
+
+describe("QFAI-DECISION-007 rejects a duplicated Decision Record id", () => {
+  it("reports the same `DR-*` declared twice", async () => {
+    const decisions = [
+      reOpen(["- Re-opens: DR-0001-0001", APPROVED]),
+      `### ${RE_OPEN_ID}: a second block with the same id`,
+      "",
+      "- Status: re-open",
+      "- Decision: a different reason entirely",
+      "- Re-opens: DR-0001-0001",
+      APPROVED,
+      "",
+    ].join("\n");
+    await withSpec({ decisions, delta: deltaFor(RE_OPEN_ID) }, async (root) => {
+      // One back-reference would otherwise satisfy both records.
+      expect(await codes(root)).toContain("QFAI-DECISION-007");
+    });
+  });
+
+  it("does not report a file whose ids are unique", async () => {
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta: deltaFor(RE_OPEN_ID) },
+      async (root) => {
+        expect(await codes(root)).not.toContain("QFAI-DECISION-007");
+      },
+    );
+  });
+});

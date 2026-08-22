@@ -18,6 +18,7 @@
 import path from "node:path";
 
 import { escapeRegExp } from "./regex.js";
+import { maskLineComments } from "./specPackParsers.js";
 import { exists, readSafe } from "./validators/utils.js";
 
 /**
@@ -196,17 +197,31 @@ function closeFenceRe(token: string): RegExp | null {
  * one. Both templates follow the entries with prose that describes the same
  * field names, so a record left open would absorb the description's `- Re-opens:`
  * line and report the documentation's value as the record's own.
+ *
+ * Multi-line HTML comments are removed the same way {@link maskNonSpecRegions}
+ * removes them, and for the same reason: a block a project disabled by wrapping
+ * it in `<!-- ... -->` is not a declaration. Reading one as a record would let a
+ * commented-out `Status: re-open` and a commented-out approval satisfy the delta
+ * back-reference — the hard gate would pass on an approval nobody gave. Fence
+ * state wins over comment state (a `<!--` inside a quoted sample is sample
+ * text), and comments are stripped before the fence check so a fence marker that
+ * exists only inside a comment cannot open a block.
  */
 export function parseDecisionRecordEntries(text: string): DecisionRecordEntry[] {
   const entries: DecisionRecordEntry[] = [];
   let current: DecisionRecordEntry | null = null;
   let openFence: RegExp | null = null;
+  let inComment = false;
 
-  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+  for (const raw of text.replace(/\r\n/g, "\n").split("\n")) {
     if (openFence) {
-      if (openFence.test(line)) openFence = null;
+      if (openFence.test(raw)) openFence = null;
       continue;
     }
+    const masked = maskLineComments(raw, inComment);
+    inComment = masked.open;
+    const line = masked.text;
+
     const fenceOpen = FENCE_OPEN_RE.exec(line);
     if (fenceOpen?.[1]) {
       openFence = closeFenceRe(fenceOpen[1]);

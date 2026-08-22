@@ -711,6 +711,10 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A delta's `## Rejected` `Re-opened by:` and the spec's `Status: re-open` record name each other.",
   "QFAI-DECISION-005":
     "A `Status: re-open` Decision Record states in `Decision:` what changed since the rejection.",
+  "QFAI-DECISION-006":
+    "No candidate listed under a delta's `## Rejected` reappears under `## Adopted` unless that candidate's `Re-opened by:` names a `Status: re-open` record.",
+  "QFAI-DECISION-007":
+    "A `DR-*` id is declared once per Decisions file, so a `Re-opens:` or `Re-opened by:` reference resolves to one decision.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
   "QFAI-TRIAGE-007":

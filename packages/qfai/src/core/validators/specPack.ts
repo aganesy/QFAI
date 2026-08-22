@@ -6,10 +6,10 @@ import { resolvePath } from "../config.js";
 import { buildContractIndex } from "../contractIndex.js";
 import {
   collectDeclaredDrHeadingIds,
-  collectReOpenEntries,
   DR_ID_FORMAT,
   isAuditableInstant,
   isPlaceholderValue,
+  parseDecisionRecordEntries,
   RE_OPEN_STATUS,
   type DecisionRecordEntry,
 } from "../decisionRecords.js";
@@ -37,6 +37,7 @@ import {
   type SpecPackIdKind,
 } from "../specPackIds.js";
 import {
+  maskNonSpecRegions,
   parseAcceptanceCriteriaIds,
   parseAllMarkdownTables,
   parseExamplesFeature,
@@ -1493,11 +1494,22 @@ const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
  */
 async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Promise<Issue[]> {
   const decisionsText = await readSafe(entry.decisionsPath);
-  const deltaText = entry.deltaPath ? await readSafe(entry.deltaPath) : "";
-  const reOpens = collectReOpenEntries(decisionsText);
+  // Masked once, here: fenced samples, HTML comments and indented code are not
+  // the delta. Without it a `Re-opened by:` parked in a comment or a fenced
+  // example counted as a live back-reference, which is a way past
+  // `QFAI-DECISION-004` and `-006` that leaves the real candidate unreferenced.
+  const deltaText = entry.deltaPath ? maskNonSpecRegions(await readSafe(entry.deltaPath)) : "";
+  const records = parseDecisionRecordEntries(decisionsText);
+  const reOpens = records.filter((record) => record.status === RE_OPEN_STATUS);
   const backRefs = extractReOpenedByRefs(deltaText);
+  const decisionsName = path.basename(entry.decisionsPath);
+  // Runs whether or not a re-open exists: a candidate moved from `## Rejected`
+  // to `## Adopted` with no record at all is the reintroduction the guard is
+  // about, and it is exactly the case the two `Re-opened by:` checks below
+  // cannot see, because nothing was written for them to read.
+  const readopted = validateReadoptedCandidates(entry, deltaText, decisionsName);
   if (reOpens.length === 0 && backRefs.length === 0) {
-    return [];
+    return readopted;
   }
 
   const context: ReOpenContext = {
@@ -1507,13 +1519,167 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
     declared: await collectDeclaredDrHeadingIds(entry.dir, specsRoot, entry.decisionsPath),
     cyclic: collectCyclicReOpenIds(reOpens),
     decisionsPath: entry.decisionsPath,
-    decisionsName: path.basename(entry.decisionsPath),
+    decisionsName,
   };
-  const issues: Issue[] = [];
+  const issues: Issue[] = [...readopted, ...validateUniqueDecisionIds(records, context)];
   for (const record of reOpens) {
     issues.push(...validateReOpenRecord(record, context));
   }
   issues.push(...validateReOpenBackReferences(entry, reOpens, backRefs, context.decisionsName));
+  return issues;
+}
+
+/**
+ * One `- Candidate:` block of a delta's `## Rejected`, with the back-references
+ * written under it.
+ */
+type RejectedCandidate = { name: string; reOpenedBy: string[] };
+
+const CANDIDATE_LINE = /^\s*[-*]\s*candidate\s*[:：]\s*(.*)$/i;
+const ADOPTED_LINE = /^\s*[-*]\s*adopted\s*[:：]\s*(.*)$/i;
+
+/** Strip the decoration a delta field carries around a candidate name. */
+function candidateKey(raw: string): string {
+  return raw
+    .replace(/`/g, "")
+    .replace(/^\s*["'“”「『]+|["'“”」』]+\s*$/g, "")
+    .replace(/[.,;。、]+\s*$/, "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
+/**
+ * The rejected candidates that reappear under `## Adopted` without a re-open.
+ *
+ * This is the guard's own sentence, checked: "no candidate listed under a
+ * spec's `## Rejected` may appear under `## Adopted` unless a `Status: re-open`
+ * DR names it". The `Re-opened by:` checks alone cannot enforce it — a delta
+ * that simply moves the candidate up and leaves `Re-opened by: -` writes
+ * nothing for them to read, so every `QFAI-DECISION-*` stays silent and the
+ * reintroduction lands. Both sections name the candidate in a field
+ * (`- Adopted:` / `- Candidate:`), so the correspondence is a field comparison,
+ * not a prose-similarity guess: names are matched after case, whitespace,
+ * backticks, quotes and trailing punctuation are normalised, and a candidate
+ * still carrying the template placeholder is not a name at all.
+ *
+ * The binding is per candidate: the back-reference has to sit under the block
+ * of the candidate that was re-adopted, so a delta re-adopting two candidates
+ * cannot cover both with one `Re-opened by:`.
+ */
+function validateReadoptedCandidates(
+  entry: SpecEntry,
+  deltaText: string,
+  decisionsName: string,
+): Issue[] {
+  if (deltaText.length === 0) {
+    return [];
+  }
+  const rejected = collectRejectedCandidates(deltaText);
+  if (rejected.length === 0) {
+    return [];
+  }
+  const adopted = collectAdoptedCandidateKeys(deltaText);
+  if (adopted.size === 0) {
+    return [];
+  }
+
+  const issues: Issue[] = [];
+  for (const candidate of rejected) {
+    const key = candidateKey(candidate.name);
+    if (key.length === 0 || isPlaceholderValue(candidate.name) || !adopted.has(key)) {
+      continue;
+    }
+    if (candidate.reOpenedBy.length > 0) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-DECISION-006",
+        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。`,
+        "error",
+        entry.deltaPath.length > 0 ? entry.deltaPath : entry.decisionsPath,
+        RE_OPENED_BY_RULE,
+        [candidate.name],
+        "canonical",
+        `${decisionsName} に \`Status: re-open\` の Decision Record を追加し、この候補の \`Re-opened by:\` にその ID を記載してください。再採用しないなら \`## Adopted\` から外します。`,
+      ),
+    );
+  }
+  return issues;
+}
+
+/** The `- Candidate:` blocks of a delta's `## Rejected`, in document order. */
+function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
+  const candidates: RejectedCandidate[] = [];
+  let current: RejectedCandidate | null = null;
+  for (const line of extractMarkdownSection(deltaText, "Rejected")
+    .replace(/\r\n/g, "\n")
+    .split("\n")) {
+    const candidate = CANDIDATE_LINE.exec(line);
+    if (candidate) {
+      current = { name: cleanFieldValue(candidate[1] ?? ""), reOpenedBy: [] };
+      candidates.push(current);
+      continue;
+    }
+    const reOpenedBy = RE_OPENED_BY_LINE.exec(line);
+    if (reOpenedBy && current) {
+      current.reOpenedBy.push(...splitReOpenedByRefs(reOpenedBy[1] ?? ""));
+    }
+  }
+  return candidates;
+}
+
+/** The normalised `- Adopted:` names of a delta's `## Adopted`. */
+function collectAdoptedCandidateKeys(deltaText: string): Set<string> {
+  const adopted = new Set<string>();
+  for (const line of extractMarkdownSection(deltaText, "Adopted")
+    .replace(/\r\n/g, "\n")
+    .split("\n")) {
+    const match = ADOPTED_LINE.exec(line);
+    if (!match) continue;
+    const value = cleanFieldValue(match[1] ?? "");
+    if (isPlaceholderValue(value)) continue;
+    const key = candidateKey(value);
+    if (key.length > 0) adopted.add(key);
+  }
+  return adopted;
+}
+
+/**
+ * A `DR-*` id is declared at most once per Decisions file.
+ *
+ * Two blocks declaring the same id each pass the per-record checks on their
+ * own, and one delta `Re-opened by:` naming it then satisfies the
+ * back-reference of both — the audit record no longer says which prior decision
+ * was reconsidered, or which approval lifted the rejection. The template already
+ * states the rule for the ID scheme ("an ID declared twice has two owners");
+ * this reports it while the re-open gate is live.
+ */
+function validateUniqueDecisionIds(
+  records: DecisionRecordEntry[],
+  context: ReOpenContext,
+): Issue[] {
+  const counts = new Map<string, number>();
+  for (const record of records) {
+    counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
+  }
+  const issues: Issue[] = [];
+  for (const [id, count] of counts) {
+    if (count < 2) continue;
+    issues.push(
+      issue(
+        "QFAI-DECISION-007",
+        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。`,
+        "error",
+        context.decisionsPath,
+        RE_OPEN_RULE,
+        [id],
+        "canonical",
+        "重複した Decision Record のいずれかに別の `DR-NNNN-MMMM` を割り当てるか、1 件に統合してください。delta の `Re-opened by:` も残した ID に合わせます。",
+      ),
+    );
+  }
   return issues;
 }
 
@@ -1737,7 +1903,31 @@ function validateReOpenBackReferences(
   return issues;
 }
 
-/** The non-placeholder `Re-opened by:` values in a delta's `## Rejected`. */
+/** Strip the decoration a delta field carries around its value. */
+function cleanFieldValue(raw: string): string {
+  return raw
+    .replace(/<!--.*?-->/g, "")
+    .replace(/`/g, "")
+    .trim();
+}
+
+/** The non-placeholder ids on one `Re-opened by:` line. */
+function splitReOpenedByRefs(raw: string): string[] {
+  const refs: string[] = [];
+  for (const token of cleanFieldValue(raw).split(/[,;\s]+/)) {
+    if (token.length > 0 && !isPlaceholderValue(token)) refs.push(token);
+  }
+  return refs;
+}
+
+/**
+ * The non-placeholder `Re-opened by:` values in a delta's `## Rejected`.
+ *
+ * `deltaText` is expected to be {@link maskNonSpecRegions}-masked already: the
+ * section is extracted from it, and an unmasked document hands a
+ * `- Re-opened by: DR-*` retired into a multi-line HTML comment or a fenced
+ * example back as a live back-reference.
+ */
 function extractReOpenedByRefs(deltaText: string): string[] {
   if (deltaText.length === 0) {
     return [];
@@ -1747,13 +1937,7 @@ function extractReOpenedByRefs(deltaText: string): string[] {
   for (const line of rejected.replace(/\r\n/g, "\n").split("\n")) {
     const match = RE_OPENED_BY_LINE.exec(line);
     if (!match) continue;
-    const value = (match[1] ?? "")
-      .replace(/<!--.*?-->/g, "")
-      .replace(/`/g, "")
-      .trim();
-    for (const token of value.split(/[,;\s]+/)) {
-      if (token.length > 0 && !isPlaceholderValue(token)) refs.push(token);
-    }
+    refs.push(...splitReOpenedByRefs(match[1] ?? ""));
   }
   return refs;
 }
