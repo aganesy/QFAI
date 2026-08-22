@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
+import { TRIAGE_NO_EXISTING_SPEC } from "../../../src/core/sddTriage.js";
 import {
   validateCreateRowCapabilityRefs,
   validateTriageSection,
@@ -253,8 +254,88 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-008)", () => 
 
   it("reports the Existing Spec defect alongside the approval gate on the same row", () => {
     expect(
-      codesFor([["REQ-1", "drop spec-0003", "spec-0009", "DELETE", "-", "-", "why"]], KNOWN),
+      codesFor([["REQ-1", "retire spec-0003", "spec-0009", "SUPERSEDE", "-", "-", "why"]], KNOWN),
     ).toEqual(["QFAI-TRIAGE-008", "QFAI-TRIAGE-005"]);
+  });
+
+  it("rejects a spec token that carries a suffix past the ID", () => {
+    // The token is read to the next separator, so `_` / `/` suffixes cannot
+    // borrow the existence of the spec whose ID they start with.
+    for (const cell of ["spec-0001_old", "spec-0001/01_Spec.md", "spec-0001-draft"]) {
+      const issues = validateTriageSection(
+        buildDelta([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]]),
+        DELTA_PATH,
+        KNOWN,
+      );
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-008"]);
+      expect(issues[0]?.refs).toEqual([cell]);
+    }
+  });
+
+  it("rejects a cell that only contains the `_policies` literal", () => {
+    for (const cell of ["_policies_typo", "not_policies", "`_policies` かどこか"]) {
+      expect(codesFor([["REQ-1", "policy", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-008",
+      ]);
+    }
+  });
+
+  it("does not turn a completed removal into a permanent existence error", () => {
+    // DELETE removes the spec directory, and MERGE / SPLIT collapse their
+    // source into other IDs, so the row outlives the directory it names.
+    for (const op of ["DELETE", "MERGE", "SPLIT"]) {
+      expect(
+        codesFor(
+          [["REQ-1", "retire the subject", "spec-0017", op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual([]);
+    }
+    // The shape is still enforced on those rows.
+    expect(
+      codesFor(
+        [["REQ-1", "retire the subject", "spec-00170", "DELETE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+    // SUPERSEDE keeps the directory, so existence still applies there.
+    expect(
+      codesFor(
+        [["REQ-1", "retire the subject", "spec-0017", "SUPERSEDE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
+  });
+
+  it("accepts the `-` the classifier renders for a targetless DELETE proposal", () => {
+    // `classifyTriage` emits `op: "DELETE", existingSpec: null`, which
+    // `renderTriageMarkdown` writes as `TRIAGE_NO_EXISTING_SPEC`.
+    expect(
+      codesFor(
+        [
+          [
+            "REQ-1",
+            "retire the subject",
+            TRIAGE_NO_EXISTING_SPEC,
+            "DELETE",
+            "-",
+            "user@host",
+            "why",
+          ],
+        ],
+        KNOWN,
+      ),
+    ).toEqual([]);
+    // An unfilled cell is still a defect, and other ops still require a target.
+    expect(codesFor([["REQ-1", "retire", "", "DELETE", "-", "user@host", "why"]], KNOWN)).toEqual([
+      "QFAI-TRIAGE-008",
+    ]);
+    expect(
+      codesFor(
+        [["REQ-1", "retire", TRIAGE_NO_EXISTING_SPEC, "SUPERSEDE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
   });
 });
 

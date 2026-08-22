@@ -327,13 +327,16 @@ const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE"
 
 /**
  * Every `spec-`-prefixed token a single `Existing Spec` cell names, taken
- * whole: the match runs to the end of the alphanumeric run and may not start
- * inside one. Matching the four-digit form directly would read a token that
- * carries one digit too many as the shorter spec it happens to start with,
- * so the existence check would pass on a misspelled ID. The token is captured
- * whole here and checked against the well-formed shape below.
+ * whole: the match may not start inside another token and runs until one of
+ * the separators that legitimately ends a target — whitespace, an
+ * enumeration separator, a backtick, a closing bracket, or the end of the
+ * cell. Stopping at the end of the *alphanumeric* run instead would read
+ * `spec-0001_old` / `spec-0001/01_Spec.md` as the bare `spec-0001` they
+ * happen to start with, so a misspelling or an unsupported path form would
+ * inherit that spec's existence. The token is captured whole here and
+ * checked against the well-formed shape below.
  */
-const EXISTING_SPEC_TOKEN_RE = /(?<![0-9A-Za-z])spec-[0-9A-Za-z]*/g;
+const EXISTING_SPEC_TOKEN_RE = /(?<![0-9A-Za-z])spec-[^\s`+,、，;；*)）\]】」]*/g;
 
 /** The only well-formed spec token: `spec-` plus exactly four digits. */
 const EXISTING_SPEC_ID_RE = /^spec-\d{4}$/;
@@ -349,10 +352,41 @@ const EXISTING_SPEC_RANGE_RE = /spec-\d{4}\s*(?:[〜～~…–—ー]|\.\.\.?)\s
 /**
  * A policy-only row acts on `_policies/**` rather than on a spec
  * directory, so `_policies` (bare, backticked, or as a path to one of its
- * files) is an accepted target. The literal may arrive markdown-escaped
- * (`\_policies`), hence the substring test rather than an anchored match.
+ * files) is an accepted target. The match is anchored to the whole value:
+ * a cell that merely *contains* the literal (`not_policies`,
+ * `_policies_typo`) resolves to nothing and must not pass as a policy row.
  */
-const EXISTING_SPEC_POLICY_RE = /_policies/;
+const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/[0-9A-Za-z._-]+)*$/;
+
+/** Separators that may join several targets inside one `Existing Spec` cell. */
+const EXISTING_SPEC_SEPARATOR_RE = /[+,、，]/;
+
+/**
+ * Whether every target in the cell is a `_policies` path. The value may
+ * arrive markdown-escaped (`\_policies`) or backticked (`` `_policies` ``),
+ * so those decorations are stripped before each part is matched whole.
+ */
+function isPolicyOnlyTarget(cell: string): boolean {
+  const parts = cell
+    .replace(/[`\\]/g, "")
+    .split(EXISTING_SPEC_SEPARATOR_RE)
+    .map((part) => part.trim())
+    .filter((part) => part.length > 0);
+  return parts.length > 0 && parts.every((part) => EXISTING_SPEC_POLICY_RE.test(part));
+}
+
+/**
+ * Operations whose completion removes the spec directory the row names.
+ * `sdd-triage.md` "Status field interaction" defines DELETE as removing the
+ * directory entirely, and MERGE / SPLIT collapse or decompose their source
+ * into other spec IDs — so once such a row has been carried out, its target
+ * is gone by construction while the row itself stays in delta.md as history.
+ * Checking those targets against the specs currently on disk would turn every
+ * completed removal into a permanent `QFAI-TRIAGE-008`. Shape is still
+ * enforced for them; only the existence check is skipped. SUPERSEDE is not
+ * in the set: it flips the source spec's Status and keeps the directory.
+ */
+const SPEC_REMOVING_TRIAGE_OPS = new Set<string>(["DELETE", "MERGE", "SPLIT"]);
 
 const EXISTING_SPEC_GRAMMAR_HINT =
   "Existing Spec は `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies`、対象 spec がまだ無い CREATE 行は `-` を記載してください。";
@@ -588,9 +622,11 @@ export async function validateCreateRowCapabilityRefs(
  * way by every author. The grammar is declared in
  * `references/sdd-triage.md`: one or more `spec-NNNN` joined by `+`,
  * `_policies` for a policy-only row, or `-` when the row has no existing
- * spec (CREATE). `knownSpecIds` is the set of spec directories actually on
- * disk; when it is absent (callers that validate a delta.md in isolation)
- * only the grammar is checked, not existence.
+ * spec (CREATE, and DELETE — see below). `knownSpecIds` is the set of spec
+ * directories actually on disk; when it is absent (callers that validate a
+ * delta.md in isolation) only the grammar is checked, not existence.
+ * Existence is also skipped for the operations that remove their own target
+ * (`SPEC_REMOVING_TRIAGE_OPS`), whose rows outlive the directory they name.
  */
 function validateExistingSpecCell(
   cell: string,
@@ -624,8 +660,21 @@ function validateExistingSpecCell(
           [cell],
         );
   }
-  if (cell.length === 0 || isNoneLiteral) {
+  if (cell.length === 0) {
     return report(`Triage ${opUpper} の Existing Spec が空です`, [cell]);
+  }
+  if (isNoneLiteral) {
+    // DELETE is the one non-CREATE op that may legitimately name nothing.
+    // `classifyTriage` emits `op: "DELETE", existingSpec: null` when a
+    // removal-shaped REQ was absorbed by no active spec, and
+    // `renderTriageMarkdown` writes that as `-`; a DELETE already carried
+    // out has no surviving directory to name either. Rejecting the literal
+    // here would make the library's own DELETE proposal impossible to
+    // persist, so it is accepted and the approval gate
+    // (`QFAI-TRIAGE-005`, mandatory for DELETE) carries the review burden.
+    return opUpper === "DELETE"
+      ? []
+      : report(`Triage ${opUpper} の Existing Spec が空です`, [cell]);
   }
   if (EXISTING_SPEC_RANGE_RE.test(cell)) {
     return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
@@ -638,11 +687,11 @@ function validateExistingSpecCell(
   }
   const namedIds = namedTokens;
   if (namedIds.length === 0) {
-    return EXISTING_SPEC_POLICY_RE.test(cell)
+    return isPolicyOnlyTarget(cell)
       ? []
       : report(`Existing Spec が対象を名指ししていません: ${cell}`, [cell]);
   }
-  if (!knownSpecIds) {
+  if (!knownSpecIds || SPEC_REMOVING_TRIAGE_OPS.has(opUpper)) {
     return [];
   }
   const missing = namedIds.filter((specId) => !knownSpecIds.has(specId));

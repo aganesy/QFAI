@@ -166,16 +166,24 @@ it has exactly one grammar (enforced by `QFAI-TRIAGE-008`):
 - **One spec** — `spec-NNNN`, e.g. `spec-0003`.
 - **Several specs** — join them with `+`, e.g. `spec-0003+spec-0004`.
   This is what the classifier emits for a MERGE row.
-- **Policy-only row** — `_policies` (a path such as
-  `_policies/05_Contracts.md` is also accepted).
+- **Policy-only row** — `_policies`, or a path under it such as
+  `_policies/05_Contracts.md`. The whole cell must be that target; a cell
+  that merely contains the word (`not_policies`) resolves to nothing.
 - **No existing spec yet (CREATE)** — the literal `-`. A CREATE row MUST
   NOT name the spec it is about to create; the new spec ID belongs in
   `Subject`. (`(none)` is the legacy spelling of this literal and is still
-  accepted, but new rows should use `-`.)
+  accepted, but new rows should use `-`.) A **DELETE** row may also carry
+  `-`, for the classifier's "no active spec absorbed this removal" proposal;
+  its `Approved By` gate is what forces the target to be settled.
 
 A **range is not a form**: `spec-0003〜spec-0008` names no spec directory
-and is rejected. Enumerate the specs with `+` instead. Every `spec-NNNN`
-named here must resolve to a directory under `.qfai/specs/`.
+and is rejected. Enumerate the specs with `+` instead. A spec token is read
+whole, so a suffixed ID (`spec-0003_old`, `spec-0003/01_Spec.md`) is
+rejected rather than read as `spec-0003`.
+
+Every `spec-NNNN` named here must resolve to a directory under
+`.qfai/specs/` — except on `DELETE` / `MERGE` / `SPLIT`, whose completion
+removes the directory the row names while the row stays as history.
 
 ## Validators
 
@@ -195,9 +203,11 @@ named here must resolve to a directory under `.qfai/specs/`.
   `QFAI-TRIAGE-003` is a membership check on the Operation label and provably
   cannot catch this.
 - `QFAI-TRIAGE-008` (error): `Existing Spec` does not follow the grammar
-  above — the cell is empty, uses range notation, names a `spec-NNNN`
-  that has no directory under `.qfai/specs/`, names nothing resolvable,
-  or is a CREATE row carrying a spec ID instead of `-`.
+  above — the cell is empty, uses range notation, carries a malformed or
+  suffixed spec token, names a `spec-NNNN` that has no directory under
+  `.qfai/specs/` (checked only for the operations that keep their target),
+  names nothing resolvable, or is a CREATE row carrying a spec ID instead
+  of `-`.
 - `QFAI-TRIAGE-006` (error): CREATE row without a `CAP-NNNN` reference
   in the Rationale column, or referencing a CAP that is not registered
   in `_policies/03_Capabilities.md`. This is the structural gate that
