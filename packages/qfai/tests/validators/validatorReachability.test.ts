@@ -2,6 +2,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 // Anchored to this file, not to `process.cwd()`: a runner launched from the
@@ -232,6 +233,44 @@ async function collectValidatorModules(): Promise<string[]> {
   return modules;
 }
 
+/**
+ * Every identifier a module actually *uses*, read off the TypeScript AST.
+ *
+ * Text search cannot answer this: a name inside a comment (`// TODO: call
+ * validateFoo`) or inside a string literal is not a use, and the name in an
+ * `import { validateFoo }` clause only says the binding was pulled in, not
+ * that anything ever evaluates it. The AST distinguishes all three — comments
+ * and string bodies are not identifier nodes at all, and an import/export
+ * specifier is excluded here — so what survives is a real value reference:
+ * `validateFoo(...)`, or the function handed to a dispatch table.
+ */
+function referencedIdentifiers(file: string, source: string): Set<string> {
+  const parsed = ts.createSourceFile(file, source, ts.ScriptTarget.ESNext, true, ts.ScriptKind.TS);
+  const names = new Set<string>();
+
+  const isModuleBinding = (node: ts.Identifier): boolean => {
+    const parent = node.parent;
+    return (
+      parent !== undefined &&
+      (ts.isImportSpecifier(parent) ||
+        ts.isExportSpecifier(parent) ||
+        ts.isImportClause(parent) ||
+        ts.isNamespaceImport(parent) ||
+        ts.isNamespaceExport(parent))
+    );
+  };
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isIdentifier(node) && !isModuleBinding(node)) {
+      names.add(node.text);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(parsed);
+
+  return names;
+}
+
 /** The barrel every profile imports its validators from. */
 const BARREL = path.join(coreRoot, "validators", "index.ts");
 
@@ -329,11 +368,9 @@ describe("validator reachability", () => {
       } catch {
         continue;
       }
+      const referenced = referencedIdentifiers(file, source);
       for (const [name, owner] of declaredIn) {
-        if (dispatched.has(name) || owner === file) {
-          continue;
-        }
-        if (new RegExp(`\\b${name}\\b`).test(source)) {
+        if (owner !== file && referenced.has(name)) {
           dispatched.add(name);
         }
       }
