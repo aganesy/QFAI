@@ -23,6 +23,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.md";
+const VOLUME = "assistant/skills/qfai-implement/references/volume-policy.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -139,6 +140,45 @@ describe("evidence and verdicts carry a revision", () => {
       // In the completion reviewers' audit subject: it is what their own
       // `Reviewed revision` is checked against.
       expect(delegation).toContain("`Refactor verify command` / `result` / `revision`");
+    });
+
+    it(`${tree}: the three places share a procedure, not one address`, async () => {
+      // The list summarises where the field is written. Calling the three
+      // "the same address" contradicts the table two sections down: the round
+      // block's `Revision` is the pre-refactor tree, the other two are final.
+      // A producer following the summary would overwrite one of them.
+      const reference = flat(await read(tree, REFERENCE));
+
+      expect(reference).not.toContain("It appears in three places, all carrying the same address");
+      expect(reference).toContain(
+        "All three compute the address by the same procedure, but **each names the tree its own observation was taken against**",
+      );
+      expect(reference).toContain(
+        "a round block's `Revision` names the pre-refactor tree, while `Refactor verify revision` and the reviewers' `Reviewed revision` name the final one",
+      );
+    });
+
+    it(`${tree}: a T1 batched review re-takes item 6 on the closed tree`, async () => {
+      // Members park in `refactor` while the rest of the coherent group is
+      // implemented, so every later member's change moves the parked members'
+      // `Refactor verify revision` while the group's single review pair reads
+      // the closed tree — items 6, 7 and 8 could then never agree.
+      const reference = flat(await read(tree, REFERENCE));
+      const volume = flat(await read(tree, VOLUME));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(volume).toContain(
+        "**Re-verify every member on the closed tree, before the reviews.**",
+      );
+      expect(volume).toContain(
+        "refresh all three of its `Refactor verify` fields — `command`, `result` and `revision`",
+      );
+      expect(reference).toContain(
+        "**On a T1 batched review, item 6 is re-taken when the group closes.**",
+      );
+      expect(skill).toContain(
+        "Item 6 stays per member, and the group's close re-takes it on the closed tree",
+      );
     });
 
     it(`${tree}: staleness is defined mechanically`, async () => {

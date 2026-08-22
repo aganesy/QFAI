@@ -152,7 +152,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 3. Transition status to `refactor`.
 4. Submit for completion review (`completion-reviewer`) and code quality review
    (`implementation-reviewer`). A T1 row submits with its coherent group and stays in
-   `refactor` until the group closes (Volume Policy > Group formation).
+   `refactor` until the group closes (Volume Policy > Group formation), which re-verifies every member on the closed tree and refreshes its `Refactor verify` fields before these two reviews are requested.
 5. After all routed blocking reviewers return PASS, run checkpoint verification
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
@@ -307,7 +307,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-fai
 
 ### Item completion checklist (12-point gate)
 
-An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied. For T1 rows, items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived.
+An item in `test-list.md` may transition to `done` only when ALL of the following are satisfied. For T1 rows, items 3, 5, 7 and 8 are satisfied by the confirmation covering the row's coherent group; they are never waived. Item 6 stays per member, and the group's close re-takes it on the closed tree — every member re-runs its relevant suite and refreshes its `Refactor verify` fields before the group's two reviews are requested, because a member parked in `refactor` had its address moved by every later member's change and item 10 wants items 6, 7 and 8 equal (`references/volume-policy.md#group-formation-states-and-transitions`).
 
 1. Corresponding `TDD-ID` has been selected and is in progress
 2. A failing test was added first (test-first) — **or**, on the _RED not observable_ path, the correct test was added first and proven falsifiable by mutation instead of by a natural failure

@@ -145,7 +145,14 @@ evidence hash`** beside its `Reviewed revision`. **What it covers is the
   the hash explicitly. `git stash create` does not do it either: it has no
   `-u`, and the tree it builds omits untracked files.
 
-It appears in three places, all carrying the same address:
+It appears in three places. All three compute the address by the same procedure,
+but **each names the tree its own observation was taken against**, and those are
+not one tree: a round block's `Revision` names the pre-refactor tree, while
+`Refactor verify revision` and the reviewers' `Reviewed revision` name the final
+one — the table under _Which tree each gate item addresses_ says which is which.
+Reading "the same address" into this list is what would make a producer overwrite
+item 5's `Revision` with the final value, or pull a reviewer's back to the
+pre-refactor one, and break that table or gate item 10. The three places:
 
 1. **Reviewer responses** — as `Reviewed revision`, per
    `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
@@ -194,6 +201,16 @@ stands after Phase: Refactor.
 
 **Items 6, 7 and 8 MUST name the same revision. Items 3 and 5 each name their
 own**, and are exempt from that rule for the reason below.
+
+**On a T1 batched review, item 6 is re-taken when the group closes.** Members are
+parked in `refactor` while the rest of the coherent group is implemented, so each
+later member's change moves the tree under the ones already parked, and the
+group's single pair of reviews reads the closed tree. The close therefore re-runs
+every member's relevant suite on that tree and refreshes all three
+`Refactor verify` fields before the reviews are requested
+(`volume-policy.md#group-formation-states-and-transitions`). Without it the rule
+above is unsatisfiable for every member but the last — not because batching
+exempts anything, but because the address was taken too early.
 
 ## A transient observation names its own revision
 
