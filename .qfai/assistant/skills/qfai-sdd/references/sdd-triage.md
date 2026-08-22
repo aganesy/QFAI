@@ -95,6 +95,14 @@ and that none were added or dropped — in the `Rationale` column of the
 ## Inputs
 
 1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
+   **Import-lite exception** — when Stage 0 took the missing-pack route
+   (specs present, no discussion pack at all), input 1 is instead the
+   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md`: its
+   `## Sources` and `## User provided excerpt` are the canonical REQ/NFR
+   intake for this run, and its `## Assumptions / Missing information`
+   items become Open Questions on whichever spec each row lands on.
+   The evidence file is a pointer, not SSOT — do not invent REQs beyond
+   what it cites; if it cites nothing usable, stop and ask.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
 4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.

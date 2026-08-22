@@ -28,6 +28,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const SKILL_REL = "assistant/skills/qfai-sdd/SKILL.md";
 const TEMPLATE_REL = "assistant/skills/qfai-sdd/templates/evidence/import-lite.md";
+const TRIAGE_REL = "assistant/skills/qfai-sdd/references/sdd-triage.md";
 
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s+/g, " ");
@@ -111,10 +112,38 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
       expect(template).toContain("`.qfai/evidence/import-lite-<ts>.md`");
     });
 
+    it(`${tree}: the template carries the same collision rule as the skill`, async () => {
+      // Second precision is not uniqueness: a re-run or a parallel run inside
+      // the same second must not overwrite an earlier run's audit trail, and a
+      // reader holding only the template has to be told so too.
+      const template = flat(await read(tree, TEMPLATE_REL));
+      expect(template).toContain("`-<n>` counter");
+      expect(template).toContain("until the name is free");
+    });
+
+    it(`${tree}: the template's Metadata names a real entrypoint`, async () => {
+      const template = flat(await read(tree, TEMPLATE_REL));
+      expect(template).toContain("entrypoint: qfai-sdd");
+      // `import-lite` is the mode, not a skill anyone can invoke.
+      expect(template).not.toContain("entrypoint: import-lite");
+    });
+
+    it(`${tree}: Stage 1 has a defined intake when Stage 0 took the import-lite route`, async () => {
+      // The Stage 0 exception continues without a pack, so the Stage 1 Inputs
+      // list must say what stands in for `06_REQ.md` / `07_NFR.md`.
+      const triage = flat(await read(tree, TRIAGE_REL));
+      const start = triage.indexOf("## Inputs");
+      const end = triage.indexOf("## Procedure");
+      expect(start, "the Inputs heading moved").toBeGreaterThanOrEqual(0);
+      expect(end, "the section after Inputs moved").toBeGreaterThan(start);
+      expect(triage.slice(start, end)).toContain("import-lite-<ts>.md");
+    });
+
     it(`${tree}: every documented import-lite path satisfies the detector`, async () => {
       const documented = [
         ...documentedEvidencePaths(await read(tree, SKILL_REL)),
         ...documentedEvidencePaths(await read(tree, TEMPLATE_REL)),
+        ...documentedEvidencePaths(await read(tree, TRIAGE_REL)),
       ];
       expect(documented.length, "no import-lite output path is documented").toBeGreaterThan(0);
 

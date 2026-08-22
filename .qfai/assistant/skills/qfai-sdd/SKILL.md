@@ -327,6 +327,10 @@ a copy kept under the template's own name is not seen. Stamp the run to the seco
 import run, never an overwrite of an earlier one. This artifact is a pointer for preflight, never
 requirement/spec SSOT — carry unresolved items into the spec's Open Questions.
 
+On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file
+instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` /
+`07_NFR.md`. See `references/sdd-triage.md`, Inputs — never guess the intake from existing specs.
+
 The paths above are the defaults. When `qfai.config.yaml` overrides `paths.specsDir` or
 `paths.discussionDir`, resolve them first and write under those: the check reads specs from the
 configured specs directory and looks for the evidence in the `evidence/` sibling of the configured
