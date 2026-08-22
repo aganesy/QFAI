@@ -78,7 +78,7 @@ are checked one at a time against all nine rejected options:
 | `tests/assets/coverageDepthMatrix.test.ts` | same                                          | measured |
 | `tests/assets/stageEvidenceCounts.test.ts` | same                                          | measured |
 | `tests/assets/retractedClaims.test.ts` | same                                              | measured |
-| `tests/helpers/markdownQuotation.ts` | "a second parser over the same surface" (`:133`) | not a parser at all: one line predicate, extracted because two of this stage's own guards answered "is a blockquoted line an assertion" opposite ways |
+| `tests/helpers/recordProse.ts` | "a second parser over the same surface" (`:133`) | not a parser at all: one line predicate, extracted because two of this stage's own guards answered "is a blockquoted line an assertion" opposite ways |
 | `tests/e2e/spec0017RunnerParallelismE2E.test.ts` | "a row that cannot fail looks like coverage" (delta) | measured, and the fixture rebuilt when round 12 showed it could not express the inert state |
 | `tests/integration/spec0017OwnWorkflowScope.test.ts` | "annotate a row the pack has not settled" (`CR-20260818-0007`) | **not annotated**, deliberately — see § "TC-0017-0016" |
 | `packages/qfai/tsconfig.tests.json` | "a second gate over the same surface" | not a second gate: nothing was checking this surface at all |

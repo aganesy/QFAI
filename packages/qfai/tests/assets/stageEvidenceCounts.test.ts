@@ -29,6 +29,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { WORDS } from "../helpers/recordProse.js";
+
 const ROOT = path.resolve(__dirname, "../../../..");
 
 /** The first review pack this stage opened; earlier directories belong to other stages. */
@@ -73,7 +75,7 @@ const TRACKED = [
 const HELPERS = [
   "packages/qfai/tests/helpers/buildCommand.ts",
   "packages/qfai/tests/helpers/shippedLaneCommands.ts",
-  "packages/qfai/tests/helpers/markdownQuotation.ts",
+  "packages/qfai/tests/helpers/recordProse.ts",
 ] as const;
 
 /** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */
@@ -160,45 +162,6 @@ async function packsOnDisk(): Promise<string[]> {
     .filter((name) => name >= FIRST_PACK)
     .sort();
 }
-
-// Spelled-out numerals, because that is how the sentence reads. The table ran out at `fifteen`
-// until round 15's gatekeeper pointed out that round 16 was therefore red whatever the record said —
-// a pin whose needle is a closed enumeration, which is the defect the retracted-claims guard names in
-// its own words about its own alternation. The table's job is to READ a numeral, not to bound one, so
-// it now covers every value this stage could reach and an unreadable word is reported rather than
-// treated as a mismatch.
-const WORDS: Record<string, number> = {
-  one: 1,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19,
-  twenty: 20,
-  "twenty-one": 21,
-  "twenty-two": 22,
-  "twenty-three": 23,
-  "twenty-four": 24,
-  "twenty-five": 25,
-  "twenty-six": 26,
-  "twenty-seven": 27,
-  "twenty-eight": 28,
-  "twenty-nine": 29,
-  thirty: 30,
-};
 
 describe("the stage evidence's counts are derived, not typed", () => {
   it("reasons about every file it added against the rejected options", async () => {

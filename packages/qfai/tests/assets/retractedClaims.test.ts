@@ -57,7 +57,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { isQuotation } from "../helpers/markdownQuotation.js";
+import { isQuotation, WORDS } from "../helpers/recordProse.js";
 
 const ROOT = path.resolve(__dirname, "../../../..");
 
@@ -277,7 +277,12 @@ const COUNTED_CLAIMS: ReadonlyArray<{
     // already covered. A word `WORDS` cannot read is now reported rather than skipped.
     // Spaces and tabs, not `\s`: `\s` crosses a line break, so the heading Review packs and their
     // seals sitting two lines above the sentence made `seals` the captured numeral.
-    pattern: /\b(\w+)[ \t]+(?:\w+[ \t]+)?packs[ \t]*[,—–-]?[ \t]*one per round\b/gi,
+    // `[\w-]+`, not `\w+`: a hyphen is not a word character, so at round 21 the group failed at
+    // `Twenty`, backtracked, and matched at `one` — reporting "states one where the tree holds 21"
+    // against a correct record, without reaching the branch built to say the numeral is unreadable.
+    // Extending the numeral table was necessary and not sufficient; the needle could not capture the
+    // key the table had gained. Measured against every sentence this record can hold through round 32.
+    pattern: /\b([\w-]+)[ \t]+(?:\w+[ \t]+)?packs[ \t]*[,—–-]?[ \t]*one per round\b/gi,
     actual: async () => {
       const { readdir } = await import("node:fs/promises");
       const entries = await readdir(path.join(ROOT, ".qfai/review"), { withFileTypes: true });
@@ -291,29 +296,6 @@ const COUNTED_CLAIMS: ReadonlyArray<{
     why: "the pack count said Three, then Four, against four and then seven directories",
   },
 ];
-
-const WORDS: Record<string, number> = {
-  one: 1,
-  eleven: 11,
-  twelve: 12,
-  thirteen: 13,
-  fourteen: 14,
-  fifteen: 15,
-  sixteen: 16,
-  seventeen: 17,
-  eighteen: 18,
-  nineteen: 19,
-  twenty: 20,
-  two: 2,
-  three: 3,
-  four: 4,
-  five: 5,
-  six: 6,
-  seven: 7,
-  eight: 8,
-  nine: 9,
-  ten: 10,
-};
 
 /**
  * Claims whose wording has been removed from the records outright rather than quoted.

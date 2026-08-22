@@ -17,7 +17,7 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
-import { isQuotation } from "../helpers/markdownQuotation.js";
+import { isQuotation } from "../helpers/recordProse.js";
 
 const MATRIX = path.resolve(__dirname, "../../../../.qfai/evidence/coverage-depth-spec-0017.md");
 /**
