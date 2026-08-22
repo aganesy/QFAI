@@ -525,7 +525,11 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     maxLines: report.maxLines,
     scanned: report.scanned,
     oversized: report.oversized,
+    // The baseline promises the exemption is visible to the reader, not just to
+    // the implementation: the generated agent catalog is listed with its paths.
+    exempt: report.exempt,
     unreadable: report.unreadable,
+    unscannable: report.unscannable,
   };
 
   if (report.status === "skipped_missing_assistant") {
@@ -549,16 +553,55 @@ async function buildAssetLineBudgetCheck(root: string): Promise<DoctorCheck> {
     };
   }
 
+  const unmeasured = report.unreadable.length + report.unscannable.length;
+
+  if (report.status === "incomplete") {
+    return {
+      id: "assets.lineBudget",
+      severity: "warning",
+      title,
+      message: `${unmeasured} 件の assistant asset を読み取れず、行数を検査できませんでした`,
+      details: {
+        ...details,
+        nextActions: ["読み取れなかったパスの権限・存在を確認してから doctor を再実行する"],
+      },
+    };
+  }
+
+  const unmeasuredNote = unmeasured > 0 ? `（うち ${unmeasured} 件は読み取れず未検査）` : "";
   return {
     id: "assets.lineBudget",
     severity: "warning",
     title,
-    message: `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています（references/ へ節を切り出してください）`,
+    message: `${report.oversized.length} 件の assistant asset が ${report.maxLines} 行を超えています${unmeasuredNote}`,
     details: {
       ...details,
-      nextActions: ["超過ファイルの1トピックを skill 配下の references/ に移す"],
+      nextActions: assetLineBudgetNextActions(report.oversized),
     },
   };
+}
+
+/**
+ * Repair guidance for the layers the oversized files actually sit in.
+ *
+ * `assets.lineBudget` measures every assistant asset, not just skills, so a
+ * blanket "move a section under the skill's references/" would tell a reader to
+ * relocate a constitution document or a manifest YAML into an unrelated skill
+ * and break the loader contract that reads it from its own layer.
+ */
+function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>): string[] {
+  const actions: string[] = [];
+  const hasSkillAsset = oversized.some((entry) => entry.path.startsWith("assistant/skills/"));
+  const hasOtherAsset = oversized.some((entry) => !entry.path.startsWith("assistant/skills/"));
+  if (hasSkillAsset) {
+    actions.push("超過した skill の1トピックを、その skill 配下の references/ に移す");
+  }
+  if (hasOtherAsset) {
+    actions.push(
+      "skill 以外の資産（constitution/ catalog/ manifest/ など）は同じレイヤー内でトピック単位に分割し、参照元のパスを更新する",
+    );
+  }
+  return actions;
 }
 
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {

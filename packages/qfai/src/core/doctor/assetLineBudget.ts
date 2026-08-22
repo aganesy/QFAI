@@ -1,7 +1,7 @@
-import { access, readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 
-import { collectFiles } from "../fs.js";
 import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 
 /**
@@ -50,9 +50,46 @@ export function countLines(content: string): number {
   return content.split(/\r?\n/).length;
 }
 
+const NEWLINE_BYTE = 0x0a;
+
+/**
+ * Counts the lines of a file without holding it in memory.
+ *
+ * Same arithmetic as {@link countLines} — `split(/\r?\n/).length` is the number
+ * of `\n` separators plus one — but streamed, so a mis-generated asset of any
+ * size costs a constant-size buffer instead of the whole file plus a per-line
+ * array. Doctor has to survive the malformed tree it is being asked to
+ * diagnose; the exact count is kept because the finding reports it.
+ */
+async function countFileLines(absolute: string): Promise<number> {
+  const stream = createReadStream(absolute);
+  let newlines = 0;
+  try {
+    await new Promise<void>((resolve, reject) => {
+      stream.on("data", (chunk: string | Buffer) => {
+        const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+        let index = buffer.indexOf(NEWLINE_BYTE);
+        while (index !== -1) {
+          newlines += 1;
+          index = buffer.indexOf(NEWLINE_BYTE, index + 1);
+        }
+      });
+      stream.on("error", reject);
+      stream.on("end", resolve);
+    });
+  } finally {
+    stream.destroy();
+  }
+  return newlines + 1;
+}
+
 export type OversizedAssistantAsset = { path: string; lines: number };
 
-export type AssistantAssetBudgetStatus = "ok" | "over_budget" | "skipped_missing_assistant";
+export type AssistantAssetBudgetStatus =
+  | "ok"
+  | "over_budget"
+  | "incomplete"
+  | "skipped_missing_assistant";
 
 export type AssistantAssetBudgetReport = {
   status: AssistantAssetBudgetStatus;
@@ -63,20 +100,80 @@ export type AssistantAssetBudgetReport = {
   oversized: OversizedAssistantAsset[];
   /** Exempt paths that were present and therefore skipped. */
   exempt: string[];
-  /** Paths that could not be read; reported rather than silently passed. */
+  /** Files that could not be read; reported rather than silently passed. */
   unreadable: string[];
+  /** Directories that could not be listed; their contents were never measured. */
+  unscannable: string[];
 };
 
 function toQfaiRelativePath(assistantDir: string, absolute: string): string {
+  const assistantName = path.basename(ASSISTANT_DIR);
+  if (path.resolve(absolute) === path.resolve(assistantDir)) {
+    return assistantName;
+  }
   const rel = path.relative(assistantDir, absolute).replace(/[\\/]+/g, "/");
-  return `${path.basename(ASSISTANT_DIR)}/${rel}`;
+  return `${assistantName}/${rel}`;
+}
+
+type AssistantAssetScan = {
+  files: string[];
+  /** Directories whose listing failed (permission, or removed mid-scan). */
+  unscannable: string[];
+};
+
+/**
+ * Walks the assistant tree without the repository-wide default ignore list.
+ *
+ * The baseline promises that *every* `.qfai/assistant/**` asset is measured, so
+ * this cannot reuse `collectFiles`: that walker always drops directories named
+ * `node_modules` / `.git` / `dist` / `.pnpm` / `tmp` / `.mcp-tools`, which would
+ * silently exempt e.g. `skills/<id>/references/tmp/*.md` from the ceiling.
+ *
+ * A directory that cannot be listed is recorded instead of thrown: doctor is a
+ * diagnostic and must still print its other checks when one subtree is locked
+ * or is removed while the scan runs. Symlinked directories are not followed —
+ * `Dirent.isDirectory()` is false for a link — so the walk stays inside the
+ * real assistant tree.
+ */
+async function scanAssistantAssets(assistantDir: string): Promise<AssistantAssetScan> {
+  const files: string[] = [];
+  const unscannable: string[] = [];
+
+  const visit = async (dir: string): Promise<void> => {
+    let entries;
+    try {
+      entries = await readdir(dir, { withFileTypes: true });
+    } catch {
+      unscannable.push(toQfaiRelativePath(assistantDir, dir));
+      return;
+    }
+    for (const entry of entries) {
+      const absolute = path.join(dir, entry.name);
+      if (entry.isDirectory()) {
+        await visit(absolute);
+        continue;
+      }
+      if (!entry.isFile()) {
+        continue;
+      }
+      const ext = path.extname(entry.name).toLowerCase();
+      if (ASSISTANT_ASSET_EXTENSIONS.includes(ext)) {
+        files.push(absolute);
+      }
+    }
+  };
+
+  await visit(assistantDir);
+  return { files: files.sort(), unscannable: unscannable.sort() };
 }
 
 /**
  * Measures every `.qfai/assistant/**` asset against {@link ASSISTANT_ASSET_MAX_LINES}.
  *
  * Returns `skipped_missing_assistant` when the tree has not been created yet,
- * so a project that has not run init is not reported as a failure.
+ * so a project that has not run init is not reported as a failure, and
+ * `incomplete` when nothing was over budget but some path could not be measured
+ * — an unmeasured asset must not be reported as compliant.
  */
 export async function checkAssistantAssetLineBudget(
   root: string,
@@ -97,27 +194,26 @@ export async function checkAssistantAssetLineBudget(
       oversized: [],
       exempt: [],
       unreadable: [],
+      unscannable: [],
     };
   }
 
-  const files = await collectFiles(assistantDir, {
-    extensions: [...ASSISTANT_ASSET_EXTENSIONS],
-  });
+  const scan = await scanAssistantAssets(assistantDir);
 
   const oversized: OversizedAssistantAsset[] = [];
   const exempt: string[] = [];
   const unreadable: string[] = [];
   let scanned = 0;
 
-  for (const absolute of files.sort()) {
+  for (const absolute of scan.files) {
     const relPath = toQfaiRelativePath(assistantDir, absolute);
     if (LINE_BUDGET_EXEMPT.has(relPath)) {
       exempt.push(relPath);
       continue;
     }
-    let content: string;
+    let lines: number;
     try {
-      content = await readFile(absolute, "utf-8");
+      lines = await countFileLines(absolute);
     } catch {
       // An unreadable asset cannot be measured. Surfacing it beats counting it
       // as compliant, which would let a permission error hide an overrun.
@@ -125,19 +221,23 @@ export async function checkAssistantAssetLineBudget(
       continue;
     }
     scanned += 1;
-    const lines = countLines(content);
     if (lines > ASSISTANT_ASSET_MAX_LINES) {
       oversized.push({ path: relPath, lines });
     }
   }
 
+  const incomplete = unreadable.length > 0 || scan.unscannable.length > 0;
+  const status: AssistantAssetBudgetStatus =
+    oversized.length > 0 ? "over_budget" : incomplete ? "incomplete" : "ok";
+
   return {
-    status: oversized.length > 0 ? "over_budget" : "ok",
+    status,
     assistantDir,
     maxLines: ASSISTANT_ASSET_MAX_LINES,
     scanned,
     oversized,
     exempt,
     unreadable,
+    unscannable: scan.unscannable,
   };
 }
