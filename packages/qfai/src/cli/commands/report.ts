@@ -11,9 +11,14 @@ import { writeSpecPackReports } from "../../core/specPackReport.js";
 import { buildSpecScope } from "../../core/specScope.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { validateProject } from "../../core/validate.js";
+import { resolveToolVersion } from "../../core/version.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
-import { scopedReportPath } from "./validate.js";
+import {
+  configTargetsLegacyValidateJsonPath,
+  legacyValidateJsonSeverity,
+  scopedReportPath,
+} from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -25,6 +30,12 @@ export type ReportOptions = {
   profile?: ValidationProfile;
   /** `--spec <id>` values; empty / absent = the whole repo. */
   specIds?: readonly string[];
+  /**
+   * Override the tool version observed by the legacy-path migration gate.
+   * Tests use this to pin either side of the sunset; production reads
+   * `packages/qfai/package.json#version`, same as `validate`.
+   */
+  toolVersionOverride?: string;
 };
 
 type ReportPaths = {
@@ -69,6 +80,44 @@ function resolveReportPaths(
   };
 }
 
+/**
+ * The ENOENT guidance for a missing validate result.
+ *
+ * A scoped run reads `validate.spec-<ids>.json`, so the unscoped text — "run
+ * `qfai validate`, output `.qfai/report/validate.json`" — named a file this
+ * command will never read: following it verbatim left the scoped input missing
+ * and the very same `report --spec` exited 2 again. The scoped branch therefore
+ * repeats the caller's own `--spec` values on both suggested commands.
+ */
+function buildMissingInputGuidance(
+  inputPath: string,
+  specIds: readonly string[],
+  scopedValidateJsonPath: string,
+): string {
+  const header = [`qfai report: 入力ファイルが見つかりません: ${inputPath}`, ""];
+  if (specIds.length === 0) {
+    return [
+      ...header,
+      "まず qfai validate を実行してください。例:",
+      "  qfai validate",
+      "（デフォルトの出力先: .qfai/report/validate.json）",
+      "",
+      "または report に --run-validate を指定してください。",
+      "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+    ].join("\n");
+  }
+  const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+  return [
+    ...header,
+    `--spec 付きの report は scoped な validate 結果を読みます。まず同じ --spec で validate を実行してください。例:`,
+    `  qfai validate ${specArgs}`,
+    `（出力先: ${scopedValidateJsonPath}）`,
+    "",
+    `または report 自身に --run-validate を指定してください。例:`,
+    `  qfai report ${specArgs} --run-validate`,
+  ].join("\n");
+}
+
 export async function runReport(options: ReportOptions): Promise<void> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
@@ -89,6 +138,25 @@ export async function runReport(options: ReportOptions): Promise<void> {
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
+    }
+    // Same migration gate `runValidate` enforces, read through the same two
+    // exported predicates. Post-sunset, a config still pointing at
+    // `.qfai/output/validate.json` gets no write — least of all a brand-new
+    // `validate.spec-<ids>.json` inside the directory the sunset exists to
+    // retire, which would read as "still fine to write here". Checked before
+    // the run so the refusal costs nothing.
+    const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
+    const legacyWriteEnabled = legacyValidateJsonSeverity(effectiveToolVersion) === "warning";
+    const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
+    if (configTargetsLegacyValidateJsonPath(configuredValidateJsonPath) && !legacyWriteEnabled) {
+      error(
+        [
+          `qfai report: qfai.config.yaml#output.validateJsonPath が sunset 済みの legacy SSOT (${configuredValidateJsonPath}) を指しています。`,
+          "validate 結果の書き込みを拒否しました。output.validateJsonPath を .qfai/report/validate.json に更新してから再実行してください。",
+        ].join("\n"),
+      );
+      process.exitCode = 2;
+      return;
     }
     const ciProfileIssue = buildCiProfileIssue(options.profile);
     const validated = await validateProject(root, configResult, {
@@ -113,18 +181,7 @@ export async function runReport(options: ReportOptions): Promise<void> {
       validation = await readValidationResult(inputPath);
     } catch (err) {
       if (isEnoent(err)) {
-        error(
-          [
-            `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
-            "",
-            "まず qfai validate を実行してください。例:",
-            "  qfai validate",
-            "（デフォルトの出力先: .qfai/report/validate.json）",
-            "",
-            "または report に --run-validate を指定してください。",
-            "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
-          ].join("\n"),
-        );
+        error(buildMissingInputGuidance(inputPath, specIds, paths.validateJsonPath));
         process.exitCode = 2;
         return;
       }
@@ -132,7 +189,15 @@ export async function runReport(options: ReportOptions): Promise<void> {
     }
   }
 
-  const data = await createReportData(root, validation, configResult);
+  // The rendered body has to honour the same scope as the filename: a scoped
+  // run that re-walked every spec put sibling specs — including ones another
+  // worker was mid-edit on — inside `report.spec-<ids>.md`.
+  const data = await createReportData(
+    root,
+    validation,
+    configResult,
+    specIds.length > 0 ? { specIds } : {},
+  );
   warnIfTruncated(data.traceability.testFiles, "report");
   const output =
     options.format === "json"

@@ -11,6 +11,7 @@ import {
   collectSpecFiles,
 } from "./discovery.js";
 import { collectFiles } from "./fs.js";
+import { buildSpecScope, isPathInSpecScope, isSpecInScope, type SpecScope } from "./specScope.js";
 import { ID_PREFIXES, extractAllIds, extractIds, type IdPrefix } from "./ids.js";
 import { normalizeValidationResult } from "./normalize.js";
 import { parseSpec } from "./parse/spec.js";
@@ -365,10 +366,30 @@ const REPORT_GUARDRAILS_MAX = 20;
 const REPORT_TEST_STRATEGY_SAMPLE_LIMIT = 20;
 const SC_TAG_RE = /^SC-\d{4}-\d{4}$/;
 
+export type CreateReportDataOptions = {
+  /**
+   * `--spec <id>` values; empty / absent = the whole repo.
+   *
+   * Scoping the rendered report is not cosmetic. `report --spec 0004` names its
+   * output `report.spec-0004.md`, but the body was still assembled from a fresh
+   * repo-wide walk, so a slice worker's own report counted every sibling spec —
+   * including specs another worker was mid-edit on. The scope narrows the
+   * spec-owned inputs (`collectSpecEntries` / `collectSpecFiles` /
+   * `collectScenarioFiles` and the delta + ledger walks) to the named specs.
+   *
+   * Repo-level inputs are deliberately NOT narrowed: contracts, `_policies/**`
+   * and the decision guardrails are shared by every spec, and a worker that
+   * ignored them would render a report that hid its own violations. This is the
+   * same ownership split `isFindingInSpecScope` applies to validate findings.
+   */
+  specIds?: readonly string[];
+};
+
 export async function createReportData(
   root: string,
   validation?: ValidationResult,
   configResult?: ConfigLoadResult,
+  options: CreateReportDataOptions = {},
 ): Promise<ReportData> {
   const resolvedRoot = path.resolve(root);
   const resolved = configResult ?? (await loadConfig(resolvedRoot));
@@ -383,9 +404,17 @@ export async function createReportData(
   const srcRoot = resolvePath(resolvedRoot, config, "srcDir");
   const testsRoot = resolvePath(resolvedRoot, config, "testsDir");
 
-  const specEntries = await collectSpecEntries(specsRoot);
-  const specFiles = await collectSpecFiles(specsRoot);
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  const specScope = buildSpecScope(options.specIds);
+  const scopeRoots = { root: resolvedRoot, specsRoot };
+  const specEntries = (await collectSpecEntries(specsRoot)).filter((entry) =>
+    isSpecInScope(entry.specNumber, specScope),
+  );
+  const specFiles = (await collectSpecFiles(specsRoot)).filter((file) =>
+    isPathInSpecScope(file, scopeRoots, specScope),
+  );
+  const scenarioFiles = (await collectScenarioFiles(specsRoot)).filter((file) =>
+    isPathInSpecScope(file, scopeRoots, specScope),
+  );
   const scenarioCount = await countScenarios(scenarioFiles);
   const testStrategy = await collectTestStrategy(
     scenarioFiles,
@@ -393,6 +422,7 @@ export async function createReportData(
     config,
     REPORT_TEST_STRATEGY_SAMPLE_LIMIT,
     specsRoot,
+    specScope,
   );
   const {
     api: apiFiles,
@@ -423,7 +453,13 @@ export async function createReportData(
 
   const upstreamIds = await collectUpstreamIds([...specFiles, ...scenarioFiles]);
   const traceability = await evaluateTraceability(upstreamIds, srcRoot, testsRoot);
-  const resolvedValidationRaw = validation ?? (await validateProject(resolvedRoot, resolved));
+  const resolvedValidationRaw =
+    validation ??
+    (await validateProject(
+      resolvedRoot,
+      resolved,
+      options.specIds && options.specIds.length > 0 ? { specIds: options.specIds } : {},
+    ));
   const normalizedValidation = normalizeValidationResult(resolvedRoot, resolvedValidationRaw);
   const scCoverage = normalizedValidation.traceability.sc;
   const testFiles = normalizedValidation.traceability.testFiles;
@@ -449,7 +485,7 @@ export async function createReportData(
     path: toRelativePath(resolvedRoot, item.path),
     message: item.message,
   }));
-  const changeTypeSummary = await collectChangeTypeSummary(specsRoot);
+  const changeTypeSummary = await collectChangeTypeSummary(specsRoot, specScope);
   const ctypeWarnings = normalizedValidation.issues
     .filter((item) => item.code === "QFAI-CTYPE-002")
     .map((item) => {
@@ -1645,7 +1681,10 @@ type SpecContractRefEntry = {
   ids: Set<string>;
 };
 
-async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChangeTypeSummary> {
+async function collectChangeTypeSummary(
+  specsRoot: string,
+  scope: SpecScope | undefined,
+): Promise<ReportChangeTypeSummary> {
   const summary: ReportChangeTypeSummary = {
     totalEntries: 0,
     primary: {
@@ -1671,7 +1710,10 @@ async function collectChangeTypeSummary(specsRoot: string): Promise<ReportChange
     },
   };
 
-  const deltaFiles = await collectSpecDeltaFiles(specsRoot);
+  // Delta entries are spec-owned, so a scoped run must not count a sibling's.
+  const deltaFiles = (await collectSpecDeltaFiles(specsRoot)).filter((file) =>
+    isPathInSpecScope(file, { root: specsRoot, specsRoot }, scope),
+  );
 
   for (const deltaFile of deltaFiles) {
     const text = await readFile(deltaFile, "utf-8");
@@ -2075,7 +2117,10 @@ function describeLayerSource(source: ReportTestStrategy["layerSource"]): string 
  * layout is the Markdown `05_Examples.md`; the parse failed and every bucket
  * printed 0.
  */
-async function collectLedgerLayerCounts(specsRoot: string): Promise<{
+async function collectLedgerLayerCounts(
+  specsRoot: string,
+  scope: SpecScope | undefined,
+): Promise<{
   total: number;
   counts: Record<"unit" | "component" | "integration" | "api" | "e2e" | "none" | "unknown", number>;
 }> {
@@ -2091,6 +2136,9 @@ async function collectLedgerLayerCounts(specsRoot: string): Promise<{
   let total = 0;
 
   for (const entry of await collectSpecEntries(specsRoot)) {
+    if (!isSpecInScope(entry.specNumber, scope)) {
+      continue;
+    }
     const ledgerPath = path.join(entry.dir, "tdd", "test-list.md");
     let text: string;
     try {
@@ -2130,6 +2178,7 @@ async function collectTestStrategy(
   config: ConfigLoadResult["config"],
   limit: number,
   specsRoot: string,
+  scope: SpecScope | undefined,
 ): Promise<ReportTestStrategy> {
   const layerCounts = {
     unit: 0,
@@ -2190,7 +2239,7 @@ async function collectTestStrategy(
   let layerSource: ReportTestStrategy["layerSource"] =
     totalScenarios > 0 ? "scenario-tags" : "none";
   if (totalScenarios === 0) {
-    const fromLedger = await collectLedgerLayerCounts(specsRoot);
+    const fromLedger = await collectLedgerLayerCounts(specsRoot, scope);
     if (fromLedger.total > 0) {
       layerSource = "ledger-layer";
       for (const [bucket, count] of Object.entries(fromLedger.counts)) {
