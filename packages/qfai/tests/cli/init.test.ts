@@ -834,6 +834,127 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("previews the core.symlinks write when --dir does not exist yet", async () => {
+    // --dry-run creates nothing, so the target directory is still missing when
+    // the git probe runs; spawning a child in a missing cwd fails with ENOENT
+    // and the preview said nothing about a write the real run performs against
+    // the enclosing repository (the template copy creates the directory first).
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: repo });
+
+      const missing = path.join(repo, "not-created-yet");
+      const dryRunOutput = await captureStdout(async () => {
+        await runInit({ dir: missing, force: false, dryRun: true, yes: true });
+      });
+
+      expect(dryRunOutput).toContain("would set: git config --local core.symlinks true");
+
+      const realOutput = await captureStdout(async () => {
+        await runInit({ dir: missing, force: false, dryRun: false, yes: true });
+      });
+
+      expect(realOutput).toContain("git config: core.symlinks=true");
+      const { stdout: after } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(after.trim()).toBe("true");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports that a worktree-scope override keeps core.symlinks off", async () => {
+    // `--local` reads the common .git/config, but with
+    // extensions.worktreeConfig=true the per-worktree config.worktree outranks
+    // it. A local `true` there was reported as "already true" while the
+    // effective value git acts on stayed false.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const main = path.join(root, "main");
+      await mkdir(main, { recursive: true });
+      await execFile("git", ["init"], { cwd: main });
+      await execFile("git", ["config", "--local", "core.symlinks", "true"], { cwd: main });
+      await execFile(
+        "git",
+        [
+          "-c",
+          "user.email=qfai@example.com",
+          "-c",
+          "user.name=qfai",
+          "-c",
+          "commit.gpgsign=false",
+          "commit",
+          "--allow-empty",
+          "-m",
+          "root",
+        ],
+        { cwd: main },
+      );
+
+      const linked = path.join(root, "linked");
+      await execFile("git", ["worktree", "add", linked], { cwd: main });
+      await execFile("git", ["config", "extensions.worktreeConfig", "true"], { cwd: linked });
+      await execFile("git", ["config", "--worktree", "core.symlinks", "false"], { cwd: linked });
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: linked, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks already true");
+      expect(output).toContain("core.symlinks の実効値は false のままです");
+      const { stdout: effective } = await execFile("git", ["config", "--get", "core.symlinks"], {
+        cwd: linked,
+      });
+      expect(effective.trim()).toBe("false");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still writes core.symlinks when GIT_CONFIG is set in the environment", async () => {
+    // GIT_CONFIG is a historical alias for --file, so git counts it as a second
+    // config-file selection and every --local form exits 129 with
+    // "only one config file at a time". The read swallowed that, so the failure
+    // only surfaced at the write — after the template copy had already run.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    const previous = process.env.GIT_CONFIG;
+    try {
+      const repo = path.join(root, "repo");
+      await mkdir(repo, { recursive: true });
+      await execFile("git", ["init"], { cwd: repo });
+      await execFile("git", ["config", "--local", "core.symlinks", "false"], { cwd: repo });
+      process.env.GIT_CONFIG = path.join(root, "unrelated-gitconfig");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: repo, force: false, dryRun: false, yes: true });
+      });
+
+      expect(output).toContain("git config: core.symlinks=true");
+      // The verification read must not inherit GIT_CONFIG either — git would
+      // refuse it for the same reason.
+      delete process.env.GIT_CONFIG;
+      const { stdout: stored } = await execFile(
+        "git",
+        ["config", "--local", "--get", "core.symlinks"],
+        { cwd: repo },
+      );
+      expect(stored.trim()).toBe("true");
+    } finally {
+      if (previous === undefined) {
+        delete process.env.GIT_CONFIG;
+      } else {
+        process.env.GIT_CONFIG = previous;
+      }
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("does not overwrite specs/contracts even with --force", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
