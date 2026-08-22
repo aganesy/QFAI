@@ -44,7 +44,7 @@ function allowedTools(content: string): string[] {
 
 describe("shipped skills declare the delegation tool they mandate", () => {
   for (const tree of QFAI_TREES) {
-    it(`${tree}: every skill mandating sub-agent delegation allows \`${DELEGATION_TOOL}\``, async () => {
+    it(`${tree}: every skill mandating sub-agent delegation allows both \`${DELEGATION_TOOL}\` and \`${LEGACY_DELEGATION_TOOL}\``, async () => {
       const files = await skillFiles(tree);
       expect(files.length).toBeGreaterThan(0);
 
@@ -56,8 +56,12 @@ describe("shipped skills declare the delegation tool they mandate", () => {
           continue;
         }
         mandating += 1;
-        if (!allowedTools(content).includes(DELEGATION_TOOL)) {
-          offenders.push(path.relative(repoRoot, filePath));
+        const tools = allowedTools(content);
+        const missing = [DELEGATION_TOOL, LEGACY_DELEGATION_TOOL].filter(
+          (tool) => !tools.includes(tool),
+        );
+        if (missing.length > 0) {
+          offenders.push(`${path.relative(repoRoot, filePath)} (missing: ${missing.join(", ")})`);
         }
       }
 
