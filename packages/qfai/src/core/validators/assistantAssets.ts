@@ -254,6 +254,10 @@ function skillsDirPrefixPattern(root: string, skillsDir: string): RegExp | null 
  * document reaches. Each token is instead resolved against the citing
  * document's own directory, its skill root, the skills root and the project
  * root — so a cross-skill edge exists only where the path spells one out.
+ *
+ * A second pass covers the documents no path-ish token can name — a space or a
+ * bracket in the file name — by searching the prose for that document's own
+ * path instead of for a pattern.
  */
 function resolveCitations(
   context: CitationContext,
@@ -270,7 +274,103 @@ function resolveCitations(
       cited.add(target);
     }
   }
+  for (const target of documents.keys()) {
+    if (cited.has(target) || target === citingFile || isTokenScannable(context, target)) {
+      continue;
+    }
+    if (citesByExplicitPath(context, citingFile, target, content)) {
+      cited.add(target);
+    }
+  }
   return [...cited];
+}
+
+/**
+ * Whether the token scan above can span this document's path at all.
+ *
+ * `collectFiles` puts no constraint on a name, so a document may be called
+ * `references/My Guide.md` — a space no path-ish token can cross, which would
+ * leave the scanner matching `Guide.md` and resolving nothing. Such a document
+ * is looked up by its own path instead of by pattern.
+ */
+function isTokenScannable(context: CitationContext, file: string): boolean {
+  return toPosixRelative(context.root, file)
+    .split("/")
+    .every((segment) => SCANNABLE_SEGMENT_PATTERN.test(segment));
+}
+
+const SCANNABLE_SEGMENT_PATTERN = /^[\p{L}\p{N}\p{M}._-]+$/u;
+
+/** Every way `target` can be spelled from `citingFile`, URI form included. */
+function citationSpellings(context: CitationContext, citingFile: string, target: string): string[] {
+  const skillRoot = skillRootOf(context.skillsDir, citingFile);
+  const bases = [
+    path.dirname(citingFile),
+    ...(skillRoot === null ? [] : [skillRoot]),
+    context.skillsDir,
+    context.root,
+  ];
+  const spellings = new Set<string>();
+  for (const base of bases) {
+    const relative = toPosixRelative(base, target);
+    if (relative === "") {
+      continue;
+    }
+    spellings.add(relative);
+    // `[Guide](references/My%20Guide.md)` names the same file.
+    spellings.add(encodeURI(relative));
+  }
+  return [...spellings];
+}
+
+function citesByExplicitPath(
+  context: CitationContext,
+  citingFile: string,
+  target: string,
+  content: string,
+): boolean {
+  return citationSpellings(context, citingFile, target).some((spelling) =>
+    containsPathToken(content, spelling),
+  );
+}
+
+/**
+ * A path appears in the prose as a whole path, not as the tail of a longer one.
+ *
+ * Without the boundary check `references/guide.md` would also be found inside
+ * `other/references/guide.md.bak`, which is a different file — the same
+ * one-citation-one-file rule the token scan follows.
+ */
+function containsPathToken(content: string, spelling: string): boolean {
+  for (
+    let index = content.indexOf(spelling);
+    index !== -1;
+    index = content.indexOf(spelling, index + 1)
+  ) {
+    if (isHeadBoundary(content, index) && isTailBoundary(content, index + spelling.length)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const PATH_CHARACTER_PATTERN = /[\p{L}\p{N}\p{M}._\-/\\]/u;
+const NAME_CHARACTER_PATTERN = /[\p{L}\p{N}\p{M}_-]/u;
+
+function isHeadBoundary(content: string, index: number): boolean {
+  return index === 0 || !PATH_CHARACTER_PATTERN.test(content.charAt(index - 1));
+}
+
+function isTailBoundary(content: string, index: number): boolean {
+  const next = content.charAt(index);
+  if (next === "") {
+    return true;
+  }
+  // A trailing `.` ends the sentence unless a name continues after it.
+  if (next === ".") {
+    return !NAME_CHARACTER_PATTERN.test(content.charAt(index + 1));
+  }
+  return !PATH_CHARACTER_PATTERN.test(next);
 }
 
 function citationCandidates(context: CitationContext, citingFile: string, token: string): string[] {

@@ -108,6 +108,36 @@ async function writeCharsetSkillFixture(root: string): Promise<string> {
   return referencesDir;
 }
 
+/**
+ * A skill whose reference names carry a space.
+ *
+ * No path-ish token can cross the space, so these are found by their own path
+ * — in prose as written, and in a Markdown link in its percent-encoded form.
+ */
+async function writeSpacedNameSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "spaced-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# spaced-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "Read `references/My Guide.md` first.",
+      "",
+      "Then [the appendix](references/My%20Appendix.md).",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "My Guide.md"), "# My Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "My Appendix.md"), "# My Appendix\n", "utf-8");
+  await writeFile(path.join(referencesDir, "My Orphan.md"), "# My Orphan\n", "utf-8");
+  return referencesDir;
+}
+
 /** A project that moved `paths.skillsDir` away from the default location. */
 async function writeRelocatedSkillFixture(root: string): Promise<string> {
   await writeFile(
@@ -174,6 +204,18 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
       const issues = await reachabilityIssues(root);
 
       expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves citations of reference names that contain a space", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-spaced-"));
+    try {
+      const referencesDir = await writeSpacedNameSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "My Orphan.md")]);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
