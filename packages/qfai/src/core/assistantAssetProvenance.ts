@@ -1,5 +1,7 @@
-import { createHash } from "node:crypto";
-import { readFile, readdir, writeFile } from "node:fs/promises";
+import { createHash, randomUUID } from "node:crypto";
+import { constants } from "node:fs";
+import { open, readFile, readdir, rename, rm, writeFile } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
@@ -46,8 +48,14 @@ export type AssistantAssetsLock = {
  * owns: `<layer>/<name>.local.md` is never shipped, never recorded and never
  * reported. Extending the catalog in place is what produces an unmergeable
  * fork; an overlay beside it is additive and survives every upgrade.
+ *
+ * The extension is pinned to `md`, not left open. `catalog/` also ships
+ * `review-gate.rules.yml` and `spec_required_files.json`, and a pattern that
+ * accepted any extension read `review-gate.local.yml` as an overlay — so a
+ * non-markdown normative file added beside them dropped out of the record
+ * entirely and out of `QFAI-ASSETS-005` with it.
  */
-const LOCAL_OVERLAY_PATTERN = /\.local\.[^./\\]+$/;
+const LOCAL_OVERLAY_PATTERN = /\.local\.md$/i;
 
 export function isLocalAssistantOverlay(relativePath: string): boolean {
   return LOCAL_OVERLAY_PATTERN.test(path.posix.basename(toPosix(relativePath)));
@@ -65,17 +73,47 @@ export function hashAssistantAssetText(text: string): string {
 }
 
 /**
- * Hash of the file at `filePath`, or `null` when it does not exist or cannot
- * be read. Absence is a legitimate answer here — the caller compares three
+ * Hash of the file at `filePath`, or `null` when no readable regular file is
+ * there. Absence is a legitimate answer here — the caller compares three
  * possibly-missing hashes — so it is reported rather than thrown.
+ *
+ * The read is pinned to the inode that is opened, non-blocking where the
+ * platform has it, and refused unless `fstat` on that handle says regular
+ * file. A plain `readFile` on a governed path that a checkout left as a FIFO
+ * blocks until a writer appears, which hung `qfai validate` and `qfai init`
+ * with no diagnostic; a directory or a device node is not a governed asset
+ * either. A symlink to a regular file is still followed — reading through one
+ * is harmless, and the write paths are what must never do it.
  */
 export async function hashAssistantAssetFile(filePath: string): Promise<string | null> {
+  let handle: FileHandle | undefined;
   try {
-    return hashAssistantAssetText(await readFile(filePath, "utf-8"));
+    handle = await open(filePath, OPEN_READ_FLAGS);
+    const pinned = await handle.stat();
+    if (!pinned.isFile()) {
+      return null;
+    }
+    return hashAssistantAssetText(await handle.readFile("utf-8"));
   } catch {
     return null;
+  } finally {
+    try {
+      await handle?.close();
+    } catch {
+      // The hash is already decided; a close fault must not replace it.
+    }
   }
 }
+
+/**
+ * Read-only, non-blocking where the platform defines it. Opening a FIFO for
+ * reading otherwise waits for a writer. Windows has neither `O_NONBLOCK` nor
+ * FIFOs in this sense.
+ */
+const OPEN_READ_FLAGS =
+  typeof constants.O_NONBLOCK === "number"
+    ? constants.O_RDONLY | constants.O_NONBLOCK
+    : constants.O_RDONLY;
 
 /**
  * POSIX paths, relative to the assistant root, of every governed file under
@@ -167,6 +205,17 @@ function parseAssistantAssetsLock(value: unknown): AssistantAssetsLock | null {
   return { files: parsed };
 }
 
+/**
+ * Writes the record by creating a fresh file beside it and renaming over the
+ * path.
+ *
+ * A plain `writeFile` follows a symlink: a checkout that leaves
+ * `.assets.lock.json` pointing anywhere — a file outside the repository, or
+ * another governed file inside it — had that target overwritten with lock JSON
+ * by an ordinary `qfai init`, no `--force` needed. `rename` replaces the link
+ * itself, and the temporary is created with `wx` so it can never land on
+ * something already there either.
+ */
 export async function writeAssistantAssetsLock(
   assistantRoot: string,
   lock: AssistantAssetsLock,
@@ -178,11 +227,20 @@ export async function writeAssistantAssetsLock(
       ordered[key] = value;
     }
   }
-  await writeFile(
-    assistantAssetsLockPath(assistantRoot),
-    `${JSON.stringify({ files: ordered }, null, 2)}\n`,
-    "utf-8",
-  );
+  const target = assistantAssetsLockPath(assistantRoot);
+  const staging = `${target}.${randomUUID()}.tmp`;
+  try {
+    await writeFile(staging, `${JSON.stringify({ files: ordered }, null, 2)}\n`, {
+      encoding: "utf-8",
+      flag: "wx",
+    });
+    await rename(staging, target);
+  } catch (error: unknown) {
+    await rm(staging, { force: true }).catch(() => {
+      // Best effort: the write fault below is the one worth reporting.
+    });
+    throw error;
+  }
 }
 
 /**
@@ -195,8 +253,12 @@ export async function writeAssistantAssetsLock(
  *   or it was written by a release whose provenance was never recorded.
  * - `unshipped` — present in the project but absent from the release, and not
  *   an overlay.
+ * - `missing` — shipped by the release, but no readable regular file is at
+ *   that path in the project: deleted, or replaced by a directory or a special
+ *   file. Deleting a governed rule was the one way to make it stop applying
+ *   without anything saying so.
  */
-export type AssistantAssetStatus = "shipped" | "stale" | "forked" | "unshipped";
+export type AssistantAssetStatus = "shipped" | "stale" | "forked" | "unshipped" | "missing";
 
 export function classifyAssistantAsset(
   currentHash: string | null,
@@ -205,6 +267,9 @@ export function classifyAssistantAsset(
 ): AssistantAssetStatus {
   if (shippedHash === undefined) {
     return "unshipped";
+  }
+  if (currentHash === null) {
+    return "missing";
   }
   if (currentHash === shippedHash) {
     return "shipped";

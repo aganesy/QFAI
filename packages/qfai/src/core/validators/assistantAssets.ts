@@ -1,8 +1,9 @@
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import {
   ASSISTANT_ASSETS_LOCK_BASENAME,
+  GOVERNED_ASSISTANT_LAYERS,
   buildShippedAssistantHashes,
   classifyAssistantAsset,
   collectGovernedAssistantFiles,
@@ -12,6 +13,7 @@ import {
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
+import { ASSISTANT_DIR } from "../paths/assistantPaths.js";
 import { getInitAssetsDir } from "../../shared/assets.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
@@ -139,8 +141,12 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
 async function validateAssistantAssetProvenance(assistantDir: string): Promise<Issue[]> {
   let shipped: Record<string, string>;
   try {
+    // Path SSOT (`.qfai/contracts/cli/qfai-init.md`): the assistant-tree
+    // segments come from `assistantPaths.ts` in init and in validate alike, so
+    // a future move of `ASSISTANT_DIR` cannot leave the two reading different
+    // trees.
     shipped = await buildShippedAssistantHashes(
-      path.join(getInitAssetsDir(), ".qfai", "assistant"),
+      path.join(getInitAssetsDir(), ...ASSISTANT_DIR.split("/")),
     );
   } catch {
     // No readable template tree (an unusual installation, or a library
@@ -158,13 +164,43 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     return [];
   }
 
-  for (const relative of vendored) {
+  // The union of both key sets, not just what is on disk. Walking only the
+  // vendored files never classified a governed file the project deleted, so
+  // removing a normative rule was the one edit that passed `validate` in
+  // silence — the exact bypass this check exists to close.
+  const relatives = [...new Set([...Object.keys(shipped), ...vendored])].sort((a, b) =>
+    a.localeCompare(b),
+  );
+
+  // An absence is only reportable inside a layer the project actually has. A
+  // consumer that never ran `init` here, or one still on the pre-recut
+  // `instructions/` + `steering/` layout, is not missing files — it has no
+  // governed layer at all, and reporting every shipped rule at it would be
+  // noise, not governance.
+  const presentLayers = new Set<string>();
+  for (const layer of GOVERNED_ASSISTANT_LAYERS) {
+    if (await isDirectory(path.join(assistantDir, layer))) {
+      presentLayers.add(layer);
+    }
+  }
+
+  for (const relative of relatives) {
     const filePath = path.join(assistantDir, ...relative.split("/"));
     const status = classifyAssistantAsset(
       await hashAssistantAssetFile(filePath),
       shipped[relative],
       lock?.files[relative],
     );
+    if (status === "missing" && !presentLayers.has(relative.split("/")[0] ?? "")) {
+      continue;
+    }
+    if (status === "missing" && EXISTENCE_CHECKED_ELSEWHERE.has(relative)) {
+      // QFAI-ASSETS-001/002 already own these two, and they own the legacy
+      // pre-recut fallback with them: reporting the absence again here would
+      // both duplicate the finding and penalise every project still on
+      // `instructions/` or `steering/`.
+      continue;
+    }
     const finding = provenanceIssue(status, relative, filePath);
     if (finding !== null) {
       issues.push(finding);
@@ -173,6 +209,15 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
 
   return issues;
 }
+
+/**
+ * Governed paths whose absence is already reported, with a legacy fallback, by
+ * the existence probes above.
+ */
+const EXISTENCE_CHECKED_ELSEWHERE = new Set([
+  "constitution/drift-protocol.md",
+  "catalog/test-layers.md",
+]);
 
 function provenanceIssue(
   status: ReturnType<typeof classifyAssistantAsset>,
@@ -185,7 +230,7 @@ function provenanceIssue(
     case "stale":
       return issue(
         "QFAI-ASSETS-003",
-        `.qfai/assistant/${relative} は導入時に qfai が書いた内容のままですが、インストール済みリリースの内容と異なります（stale copy）。`,
+        `${ASSISTANT_DIR}/${relative} は導入時に qfai が書いた内容のままですが、インストール済みリリースの内容と異なります（stale copy）。`,
         "warning",
         filePath,
         "assistantAssets.staleVendoredAsset",
@@ -196,7 +241,7 @@ function provenanceIssue(
     case "forked":
       return issue(
         "QFAI-ASSETS-004",
-        `.qfai/assistant/${relative} はインストール済みリリースの内容とも ${ASSISTANT_ASSETS_LOCK_BASENAME} の記録とも一致しません（local fork）。`,
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースの内容とも ${ASSISTANT_ASSETS_LOCK_BASENAME} の記録とも一致しません（local fork）。`,
         "warning",
         filePath,
         "assistantAssets.forkedVendoredAsset",
@@ -207,13 +252,24 @@ function provenanceIssue(
     case "unshipped":
       return issue(
         "QFAI-ASSETS-005",
-        `.qfai/assistant/${relative} はインストール済みリリースに存在しないファイルです（overlay 以外の追加）。`,
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースに存在しないファイルです（overlay 以外の追加）。`,
         "warning",
         filePath,
         "assistantAssets.unshippedVendoredAsset",
         undefined,
         "canonical",
         "`*.local.md` overlay として置き直してください。overlay は qfai init が書かず、provenance 検査も対象外です。",
+      );
+    case "missing":
+      return issue(
+        "QFAI-ASSETS-006",
+        `${ASSISTANT_DIR}/${relative} はインストール済みリリースが出荷する規範ファイルですが、通常ファイルとして存在しません（欠落）。`,
+        "warning",
+        filePath,
+        "assistantAssets.missingVendoredAsset",
+        undefined,
+        "canonical",
+        "`npx qfai init` を実行すると欠落した出荷ファイルを復元します。適用対象外にしたい規範がある場合は、削除ではなく Change Request を残してください。",
       );
   }
 }
@@ -255,6 +311,14 @@ function collectMissingReviewerGateTerms(section: string): string[] {
     missing.push("not gates/signals");
   }
   return missing;
+}
+
+async function isDirectory(target: string): Promise<boolean> {
+  try {
+    return (await stat(target)).isDirectory();
+  } catch {
+    return false;
+  }
 }
 
 async function exists(target: string): Promise<boolean> {

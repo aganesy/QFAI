@@ -353,9 +353,11 @@ approved` that **names the changed path** silences it; an `open` CR does not,
   release, is `QFAI-ASSETS-003` and is refreshed by `npx qfai init --force`. A
   file matching neither the release nor the record is `QFAI-ASSETS-004` — a
   local fork, left untouched by `--force` and reported for a human merge. An
-  added file that is not a `*.local.md` overlay is `QFAI-ASSETS-005`. All three
-  are `warning`, not `error`: a project may have a standing reason to diverge,
-  and what this replaces is not the reason but its invisibility.
+  added file that is not a `*.local.md` overlay is `QFAI-ASSETS-005`, and a
+  shipped rule the project deleted is `QFAI-ASSETS-006` — restore it with
+  `npx qfai init`. All four are `warning`, not `error`: a project may have a
+  standing reason to diverge, and what this replaces is not the reason but its
+  invisibility.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**
   and report blockers. Work outside every open CR's blocked set proceeds; an

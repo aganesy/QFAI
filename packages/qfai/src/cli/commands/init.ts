@@ -113,7 +113,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 
   if (options.force) {
     info(
-      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。assistant/constitution/** と assistant/catalog/** は .assets.lock.json の記録と一致するファイル（= qfai が書いた内容のまま）だけを最新リリースへ更新し、乖離しているファイルは手動マージとして報告します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
+      "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します。assistant/constitution/** と assistant/catalog/** は .assets.lock.json の記録と一致するファイル（= qfai が書いた内容のまま）だけを最新リリースへ更新し（本リリースで出荷されなくなったファイルも、記録と一致する場合のみ削除します）、乖離しているファイルは手動マージとして報告します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。",
     );
   }
 
@@ -167,7 +167,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
-  const removed = [...removedLegacySkills, ...wrappersResult.removed];
+  const removed = [...removedLegacySkills, ...wrappersResult.removed, ...governedResult.removed];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
   // These run AFTER copyTemplateTree so they can detect when the
@@ -247,6 +247,7 @@ export async function runInit(options: InitOptions): Promise<void> {
 type GovernedAssetsResult = {
   copied: string[];
   skipped: string[];
+  removed: string[];
   manualMergeNotes: string[];
 };
 
@@ -261,6 +262,9 @@ type GovernedAssetsResult = {
  * function refreshes only the former. A fork is never overwritten — it is
  * reported for a human merge, because the content it holds is the project's,
  * not the template's.
+ *
+ * A file the release no longer ships is retired by the same rule, in
+ * `retireWithdrawnGovernedAssets`.
  */
 async function syncGovernedAssistantAssets(
   assistantAssets: string,
@@ -270,13 +274,14 @@ async function syncGovernedAssistantAssets(
   const destAssistant = path.join(destQfai, "assistant");
   const copied: string[] = [];
   const skipped: string[] = [];
+  const removed: string[] = [];
   const manualMergeNotes: string[] = [];
 
   let shipped: Record<string, string>;
   try {
     shipped = await buildShippedAssistantHashes(assistantAssets);
   } catch {
-    return { copied, skipped, manualMergeNotes };
+    return { copied, skipped, removed, manualMergeNotes };
   }
 
   const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
@@ -297,6 +302,13 @@ async function syncGovernedAssistantAssets(
     if (refreshable) {
       if (!options.dryRun) {
         await mkdir(path.dirname(dest), { recursive: true });
+        // The link, not what it points at. `copyFile` follows a symlink, so a
+        // governed path left pointing at another file — the repository's own
+        // `package.json`, say — had that file replaced with shipped markdown
+        // by `--force`. Removing the entry first makes the refresh land on the
+        // governed path as a regular file, which is the only thing this
+        // function claims to write.
+        await rm(dest, { force: true });
         await copyFile(source, dest);
       }
       copied.push(dest);
@@ -313,12 +325,76 @@ async function syncGovernedAssistantAssets(
     }
   }
 
+  await retireWithdrawnGovernedAssets(destAssistant, shipped, previous, recorded, options, {
+    removed,
+    skipped,
+    manualMergeNotes,
+  });
+
   if (!options.dryRun) {
     await mkdir(destAssistant, { recursive: true });
     await writeAssistantAssetsLock(destAssistant, { files: recorded });
   }
 
-  return { copied, skipped, manualMergeNotes };
+  return { copied, skipped, removed, manualMergeNotes };
+}
+
+/**
+ * Removes the governed files a new release withdrew, under `--force`, when the
+ * project still holds exactly what qfai wrote there.
+ *
+ * A file that is deleted or renamed upstream used to survive every upgrade: the
+ * refresh loop walks the *current* shipped set, so the old path was never
+ * visited and only its lock entry disappeared. From the next `validate` on, an
+ * untouched retired rule read as `QFAI-ASSETS-005` — a file the project added —
+ * and no number of `qfai init --force` runs could clear it, while a rule qfai
+ * had repealed went on sitting in the tree being cited.
+ *
+ * A retired file whose content was edited is *not* removed: it stops being
+ * qfai's the moment the project changed it, and deleting it would throw away
+ * work. It keeps its recorded hash so a later `--force`, after the edit is
+ * reverted, can still recognise and retire it.
+ */
+async function retireWithdrawnGovernedAssets(
+  destAssistant: string,
+  shipped: Record<string, string>,
+  previous: Record<string, string>,
+  recorded: Record<string, string>,
+  options: { force: boolean; dryRun: boolean },
+  out: { removed: string[]; skipped: string[]; manualMergeNotes: string[] },
+): Promise<void> {
+  for (const [relative, previousHash] of Object.entries(previous)) {
+    if (relative in shipped) {
+      continue;
+    }
+    const dest = path.join(destAssistant, ...relative.split("/"));
+    const currentHash = await hashAssistantAssetFile(dest);
+    if (currentHash === null) {
+      // Already gone (or never a readable regular file): nothing to retire,
+      // and nothing left worth recording.
+      continue;
+    }
+    if (currentHash !== previousHash) {
+      recorded[relative] = previousHash;
+      out.skipped.push(dest);
+      if (options.force) {
+        out.manualMergeNotes.push(
+          `NOTE: ${dest} は本リリースでは出荷されなくなりましたが、内容が編集されているため削除しませんでした（不要であれば手動で削除してください）。`,
+        );
+      }
+      continue;
+    }
+    if (!options.force) {
+      // Keep the record so a later `--force` can still identify the file as
+      // qfai's own withdrawn copy rather than a project addition.
+      recorded[relative] = previousHash;
+      continue;
+    }
+    if (!options.dryRun) {
+      await rm(dest, { force: true });
+    }
+    out.removed.push(dest);
+  }
 }
 
 // ---------------------------------------------------------------------------
