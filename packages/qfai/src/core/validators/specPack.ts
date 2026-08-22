@@ -28,6 +28,7 @@ import {
   type SpecPackIdKind,
 } from "../specPackIds.js";
 import {
+  maskNonSpecRegions,
   parseAcceptanceCriteriaIds,
   parseAllMarkdownTables,
   parseExamplesFeature,
@@ -461,9 +462,15 @@ type TriageSection = {
  * セクションに積まれた行が QFAI-TRIAGE-* の検査対象から丸ごと外れて
  * いた。セクション内の複数テーブル対応 (PR #206 review LWri) は
  * セクションをまたげないので、呼び出し側で全セクションを走査する。
+ *
+ * 走査前に `maskNonSpecRegions` で非仕様領域 (fenced code block / HTML
+ * コメント / indented code) を blank する。delta が自分の書式を例示する
+ * ために `## Triage` を code fence 内へ置いた場合、生テキストのままだと
+ * その例示が 2 つ目のセクションとして収集され、テーブルが無ければ
+ * QFAI-TRIAGE-002 が誤発火して正当な文書が `--fail-on error` で落ちる。
  */
 function collectTriageSections(text: string): TriageSection[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
   const sections: TriageSection[] = [];
   let cursor = 0;
   while (cursor < lines.length) {
@@ -487,9 +494,13 @@ function collectTriageSections(text: string): TriageSection[] {
  * canonical セクション内部の `### Triage Table` などは本文ごと検査対象な
  * ので除外する。ここに残るものだけが「Triage を名乗るのに何の検査も
  * 受けていない」見出しであり、QFAI-TRIAGE-008 の対象になる。
+ *
+ * `collectTriageSections` と同じく非仕様領域を先に blank する。書式例と
+ * して fenced code block に置かれた `### Triage` は誰も読まない見出しでは
+ * なく単なる例示なので、warning を出す理由がない。
  */
 function collectUncheckedTriageHeadings(text: string): string[] {
-  const lines = text.replace(/\r\n/g, "\n").split("\n");
+  const lines = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
   const headings: string[] = [];
   let cursor = 0;
   while (cursor < lines.length) {

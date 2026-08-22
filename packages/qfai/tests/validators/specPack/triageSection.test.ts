@@ -201,6 +201,54 @@ describe("validateTriageSection", () => {
     expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
   });
 
+  it("ignores a `## Triage` example inside a fenced code block", () => {
+    // 書式例を fence に置いた delta が、例示を 2 つ目のセクションとして
+    // 収集され QFAI-TRIAGE-002 で落ちてはならない。
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Notes",
+      "",
+      "追記するときの書式:",
+      "",
+      "```markdown",
+      "## Triage",
+      "",
+      "(ここに表を書く)",
+      "",
+      "### Triage Table",
+      "```",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
+  it("ignores a Triage heading inside an HTML comment", () => {
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Change Summary",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "<!--",
+      "## Triage — 2026-07-26",
+      "",
+      "(過去の草案。復活させる場合はこの上の表に追記する)",
+      "-->",
+      "",
+    ].join("\n");
+    expect(validateTriageSection(text, DELTA_PATH)).toEqual([]);
+  });
+
   it("returns no issues when Triage exists without Change Summary", () => {
     const text = [
       "# 09 Delta",
@@ -294,6 +342,28 @@ describe("validateCreateRowCapabilityRefs (QFAI-TRIAGE-006)", () => {
     const issues = await validateCreateRowCapabilityRefs(text, DELTA_PATH, capPath);
     expect(issues.map((i) => i.code)).toEqual(["QFAI-TRIAGE-006"]);
     expect(issues[0]?.message).toContain("section 2");
+  });
+
+  it("ignores a CREATE row in a `## Triage` example inside a fenced code block", async () => {
+    const capPath = await newTempCapabilitiesPath("# 03 Capabilities\n\n- CAP-0001 sample\n");
+    const text = [
+      "# 09 Delta",
+      "",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-1", "extend", "spec-0001", "UPDATE", "APPEND", "-", "-"]]),
+      "",
+      "## Notes",
+      "",
+      "```markdown",
+      "## Triage",
+      "",
+      ...triageTable([["REQ-9", "例示", "(none)", "CREATE", "-", "user@host", "no CAP"]]),
+      "```",
+      "",
+    ].join("\n");
+    const issues = await validateCreateRowCapabilityRefs(text, DELTA_PATH, capPath);
+    expect(issues).toEqual([]);
   });
 
   it("returns no issues when delta has no Triage section", async () => {
