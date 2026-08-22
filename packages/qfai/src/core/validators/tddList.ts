@@ -257,6 +257,26 @@ function hasCommandShape(evidence: string): boolean {
 }
 
 /**
+ * Layers whose tests `/qfai-atdd` authors, so whose RED provenance comes from
+ * that stage. `Integration` is among them because `QFAI-ATDD-112` covers every
+ * `L3` TC — and every TC with no declared `Level` — from `tests/integration/**`
+ * and that stage's P4 writes those tests.
+ *
+ * Lower-case membership, like the other layer sets: normalize before `has()`.
+ */
+const ATDD_OWNED_LAYERS = new Set(["e2e", "api", "integration"]);
+
+/**
+ * The ATDD-owned layers that can hold a **pre-split** row.
+ *
+ * `qfai-implement/SKILL.md` completion item 10 scopes the compatibility marker
+ * pass to `E2E` / `API` rows and to nothing else, so those are the only layers
+ * on which the marker can license an `implement-` anchor. An `Integration` row
+ * has no legacy form to grandfather.
+ */
+const PRE_SPLIT_COMPAT_LAYERS = new Set(["e2e", "api"]);
+
+/**
  * The anchor half of the pointer: which evidence file, and where in it.
  *
  * A trailing `[^\s`]+` accepted **any** non-empty token, so
@@ -268,6 +288,14 @@ function hasCommandShape(evidence: string): boolean {
  * `E2E` / `API` / `Integration` rows `/qfai-atdd` authors. The `#fragment` is
  * what makes the pointer per-item rather than per-spec, so it is required.
  *
+ * Both halves are **bound** to the row (`evidenceAnchorTail`) rather than left
+ * as an alternation. Reading only the anchor's outline let an `Integration`
+ * row point at some other spec's implement-stage evidence file and validate:
+ * neither the generating stage item 10 assigns from the `Layer`, nor the spec
+ * whose ledger the row sits in, was checked — so a `done` row could name
+ * another spec's evidence, or evidence from the stage that did not author its
+ * test, and still read as proved.
+ *
  * The directory is fixed rather than configurable: `paths` has no
  * `evidenceDir` key and every shipped skill writes `.qfai/evidence/`
  * (`dbContractExecutability.ts#EVIDENCE_REL_DIR`).
@@ -277,8 +305,22 @@ function hasCommandShape(evidence: string): boolean {
  * git-ignored, so a resolution check would report every project that keeps its
  * evidence out of version control.
  */
-const EVIDENCE_ANCHOR =
-  "\\.qfai/evidence/(?:implement|atdd)-[A-Za-z0-9][\\w.-]*\\.md#[A-Za-z0-9][\\w.-]*";
+function evidenceAnchor(stage: string, specId: string): string {
+  return `\\.qfai/evidence/${stage}-${specId}\\.md#[A-Za-z0-9][\\w.-]*`;
+}
+
+/** The anchor bare, or inside a backtick span. Both spellings are legal. */
+function evidenceAnchorSpan(anchor: string): string {
+  return `(?:\`${anchor}\`|${anchor})`;
+}
+
+/**
+ * Any anchor at all: either stage, any spec. This is the *permissive* reading,
+ * used only to tell a cell that is no pointer whatsoever from one that is a
+ * well-formed pointer bound to the wrong file — two different things to say to
+ * the author, and only the first is prose the status-only rule may also judge.
+ */
+const EVIDENCE_ANCHOR_ANY = evidenceAnchor("(?:implement|atdd)", "[A-Za-z0-9][\\w.-]*");
 
 /**
  * The one thing permitted after the anchor.
@@ -291,8 +333,35 @@ const EVIDENCE_ANCHOR =
  * gate demands permanently malformed: a `done` row has no legal transition
  * that would let it re-observe a RED, so it can neither drop the marker nor
  * earn a new anchor, and the only remaining exit was a standing waiver.
+ *
+ * On a pre-split `E2E` / `API` row the marker is not decoration but the thing
+ * that **licenses** the `implement-` anchor: item 10 says "a row with no marker
+ * is judged by the current rule whatever its status", so an ATDD-owned row that
+ * names the implement file without it is exactly the row that never produced
+ * its ATDD handoff.
  */
-const EVIDENCE_COMPAT_MARKER = "(?:\\s+Pre-split-evidence:\\s*implement)?";
+const EVIDENCE_COMPAT_MARKER_SOURCE = "\\s+Pre-split-evidence:\\s*implement";
+
+/**
+ * The anchor and its permitted tail, bound to the row's `Layer` and spec.
+ *
+ * `implement-owned` — the rows `qfai-implement` runs itself — take the
+ * implement file; the marker is tolerated but licenses nothing there.
+ * `atdd-owned` take the ATDD file and only that. `atdd-pre-split` (`E2E` /
+ * `API`) take either, but the implement form **only** with the marker.
+ */
+function evidenceAnchorTail(specId: string, layerClass: EvidenceLayerClass): string {
+  const implementAnchor = evidenceAnchorSpan(evidenceAnchor("implement", specId));
+  const marker = EVIDENCE_COMPAT_MARKER_SOURCE;
+  if (layerClass === "implement-owned") {
+    return `${implementAnchor}(?:${marker})?`;
+  }
+  const atddAnchor = `${evidenceAnchorSpan(evidenceAnchor("atdd", specId))}(?:${marker})?`;
+  if (layerClass === "atdd-owned") {
+    return atddAnchor;
+  }
+  return `(?:${atddAnchor}|${implementAnchor}${marker})`;
+}
 
 /**
  * How the failing observation was obtained, per `Layer`.
@@ -337,26 +406,73 @@ const RED_PROVENANCE_ATDD = "fail|falsifiability";
  * Everything the oversized cells carry today already belongs in the evidence
  * file the anchor points at, so this moves content rather than deleting it.
  */
-function buildEvidenceGrammar(redProvenance: string): RegExp {
+function buildEvidenceGrammar(redProvenance: string, anchorTail: string): RegExp {
   return new RegExp(
     `^RED:(?:${redProvenance})\\s+GREEN:pass\\s+ORACLE:(?:proved|equivalent-mutant)` +
-      `(?:\\s+TIER:T[1-3])?\\s+REV:${REVISION_FORM_SOURCE}\\s+->\\s+` +
-      `(?:\`${EVIDENCE_ANCHOR}\`|${EVIDENCE_ANCHOR})${EVIDENCE_COMPAT_MARKER}$`,
+      `(?:\\s+TIER:T[1-3])?\\s+REV:${REVISION_FORM_SOURCE}\\s+->\\s+${anchorTail}$`,
   );
 }
 
-const EVIDENCE_CELL_GRAMMAR = buildEvidenceGrammar(RED_PROVENANCE_ANY);
-const EVIDENCE_CELL_GRAMMAR_ATDD = buildEvidenceGrammar(RED_PROVENANCE_ATDD);
+/** The anchor-permissive grammar: any stage, any spec, any RED provenance. */
+const EVIDENCE_CELL_GRAMMAR = buildEvidenceGrammar(
+  RED_PROVENANCE_ANY,
+  `${evidenceAnchorSpan(EVIDENCE_ANCHOR_ANY)}(?:${EVIDENCE_COMPAT_MARKER_SOURCE})?`,
+);
 
 /**
- * Layers whose tests `/qfai-atdd` authors, so whose RED provenance comes from
- * that stage. `Integration` is among them because `QFAI-ATDD-112` covers every
- * `L3` TC — and every TC with no declared `Level` — from `tests/integration/**`
- * and that stage's P4 writes those tests.
+ * Which anchor and which RED provenance a row's `Layer` obliges.
  *
- * Lower-case membership, like the other layer sets: normalize before `has()`.
+ * Three classes rather than the `Layer` itself, so the compiled-grammar cache
+ * has one entry per spec per class instead of one per layer spelling.
  */
-const ATDD_OWNED_LAYERS = new Set(["e2e", "api", "integration"]);
+type EvidenceLayerClass = "implement-owned" | "atdd-pre-split" | "atdd-owned";
+
+function evidenceLayerClass(layer: string): EvidenceLayerClass {
+  if (!ATDD_OWNED_LAYERS.has(layer)) {
+    return "implement-owned";
+  }
+  return PRE_SPLIT_COMPAT_LAYERS.has(layer) ? "atdd-pre-split" : "atdd-owned";
+}
+
+/**
+ * The two readings a row is judged by, plus the grammar as an operator reads
+ * it.
+ *
+ * `provenance` keeps the anchor permissive so a cell rejected *only* for its
+ * RED provenance can be named as such — sending the author of a well-formed
+ * pointer to look for a typo in the anchor would be a worse message than no
+ * message.
+ */
+type EvidenceRowGrammar = {
+  bound: RegExp;
+  provenance: RegExp;
+  text: string;
+  anchorText: string;
+};
+
+const EVIDENCE_ROW_GRAMMARS = new Map<string, EvidenceRowGrammar>();
+
+function evidenceRowGrammar(specId: string, layer: string): EvidenceRowGrammar {
+  const layerClass = evidenceLayerClass(layer);
+  const key = `${specId} ${layerClass}`;
+  const cached = EVIDENCE_ROW_GRAMMARS.get(key);
+  if (cached !== undefined) {
+    return cached;
+  }
+  const redProvenance = layerClass === "implement-owned" ? RED_PROVENANCE_ANY : RED_PROVENANCE_ATDD;
+  const anchorText = evidenceAnchorText(specId, layerClass);
+  const built: EvidenceRowGrammar = {
+    bound: buildEvidenceGrammar(redProvenance, evidenceAnchorTail(specId, layerClass)),
+    provenance: buildEvidenceGrammar(
+      redProvenance,
+      `${evidenceAnchorSpan(EVIDENCE_ANCHOR_ANY)}(?:${EVIDENCE_COMPAT_MARKER_SOURCE})?`,
+    ),
+    text: evidenceGrammarText(redProvenance, anchorText),
+    anchorText,
+  };
+  EVIDENCE_ROW_GRAMMARS.set(key, built);
+  return built;
+}
 
 /**
  * The cap, in characters, on an `Evidence` cell.
@@ -379,19 +495,81 @@ const EVIDENCE_CELL_MAX_CHARS = 240;
 export const EVIDENCE_CELL_MALFORMED_RULE_ID = "TDDLIST-007";
 export const EVIDENCE_CELL_OVERSIZE_RULE_ID = "TDDLIST-008";
 
-/** The anchor as an operator reads it, for the finding message. */
-const EVIDENCE_ANCHOR_TEXT = ".qfai/evidence/<implement|atdd>-<spec-id>.md#<heading>";
+/**
+ * The anchor this row owes, as an operator reads it.
+ *
+ * Naming the concrete file — `.qfai/evidence/atdd-spec-0007.md#<heading>`,
+ * not `<implement|atdd>-<spec-id>` — is the whole value of binding the anchor:
+ * the finding says which file to write to instead of leaving the author to
+ * re-derive it from item 10.
+ */
+function evidenceAnchorText(specId: string, layerClass: EvidenceLayerClass): string {
+  const stage = layerClass === "implement-owned" ? "implement" : "atdd";
+  const owned = `.qfai/evidence/${stage}-${specId}.md#<heading>`;
+  return layerClass === "atdd-pre-split"
+    ? `${owned} (or .qfai/evidence/implement-${specId}.md#<heading> Pre-split-evidence: implement)`
+    : owned;
+}
 
 /** The grammar as an operator reads it, for the finding message. */
-function evidenceGrammarText(redProvenance: string): string {
+function evidenceGrammarText(redProvenance: string, anchorText: string): string {
   return (
     `RED:<${redProvenance}> GREEN:pass ORACLE:<proved|equivalent-mutant> ` +
-    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${EVIDENCE_ANCHOR_TEXT}`
+    `[TIER:<T1|T2|T3>] REV:<rev|working-tree+<sha256>> -> ${anchorText}`
   );
 }
 
-const EVIDENCE_CELL_GRAMMAR_TEXT = evidenceGrammarText(RED_PROVENANCE_ANY);
-const EVIDENCE_CELL_GRAMMAR_TEXT_ATDD = evidenceGrammarText(RED_PROVENANCE_ATDD);
+/**
+ * Why a cell failed the grammar. Naming the real cause matters: a cell that is
+ * a well-formed pointer everywhere except its RED provenance, or except the
+ * file its anchor names, would otherwise be reported against the full grammar,
+ * sending the author to look for a typo that is not there.
+ */
+type EvidenceMalformedCause = "provenance" | "anchor" | "grammar";
+
+type EvidenceMalformedContext = {
+  cause: EvidenceMalformedCause;
+  specNumber: string;
+  rowLabel: string;
+  rawLayer: string;
+  evidence: string;
+  grammar: EvidenceRowGrammar;
+  relPath: string;
+};
+
+function evidenceMalformedMessage(ctx: EvidenceMalformedContext): string {
+  const head = `Evidence for spec-${ctx.specNumber} ${ctx.rowLabel}`;
+  if (ctx.cause === "provenance") {
+    return `${head} uses RED:n-a on an ATDD-owned Layer="${ctx.rawLayer}" row, which owes an observed RED or a falsifiability argument — "There is no waiver here" (execution-ledger.md#atdd-owned-rows): "${ctx.evidence}"`;
+  }
+  if (ctx.cause === "anchor") {
+    return `${head} is a well-formed pointer, but its anchor is not the evidence this row owns: a Layer="${ctx.rawLayer}" row in spec-${ctx.specNumber} must point at ${ctx.grammar.anchorText}: "${ctx.evidence}"`;
+  }
+  return `${head} does not match the pointer grammar "${ctx.grammar.text}": "${ctx.evidence}"`;
+}
+
+function evidenceMalformedHint(ctx: EvidenceMalformedContext): string {
+  if (ctx.cause === "provenance") {
+    return `E2E / API / Integration 行の RED provenance は \`/qfai-atdd\` が産みます。\`RED:n-a\` は使えません — 観測した RED なら \`RED:fail\`、観測できない場合は \`references/red-not-observable.md\` の falsifiability 手順を踏んで \`RED:falsifiability\` にしてください。`;
+  }
+  if (ctx.cause === "anchor") {
+    return `anchor が指す証跡ファイルは行の \`Layer\` と spec が決めます（qfai-implement 完了項目 10）。Layer="${ctx.rawLayer}" の spec-${ctx.specNumber} 行は \`${ctx.grammar.anchorText}\` を指してください。`;
+  }
+  return `Evidence 列は \`${ctx.grammar.text}\` の一形だけを許します（例: \`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-spec-0001.md#tdd-0001\`）。散文は anchor 先の証跡ファイルに移してください。`;
+}
+
+function evidenceMalformedIssue(ctx: EvidenceMalformedContext): Issue {
+  return issue(
+    "TDDLIST_EVIDENCE_CELL_MALFORMED",
+    evidenceMalformedMessage(ctx),
+    "warning",
+    ctx.relPath,
+    EVIDENCE_CELL_MALFORMED_RULE_ID,
+    undefined,
+    "change",
+    evidenceMalformedHint(ctx),
+  );
+}
 
 /**
  * Test directories a `Layer` value implies. `null` means the layer has no
@@ -1420,21 +1598,46 @@ async function validateSpecTddList(
 
     // Phase 2 – Check 9d: the cell is a pointer, in one legal shape, capped.
     //
-    // An oversize cell is reported once. It is malformed too — every cell that
-    // outgrew the cap did so by holding prose — but a cap breach and a grammar
-    // breach on one cell are one defect to fix, and reporting both would make
-    // the cap read as a second, separate obligation.
+    // The `Layer` and the spec together decide which cell is legal: an
+    // ATDD-owned row has no `RED:n-a` (`RED_PROVENANCE_ATDD`), and its anchor
+    // must name the evidence file that row owns in *this* spec
+    // (`evidenceAnchorTail`). `structuralPointer` stays the permissive test on
+    // purpose — a cell rejected only for one of those bindings is still
+    // structurally a pointer, so it must not also be reported as prose by the
+    // status-only rule below.
+    const rawLayer = cell(ref, "Layer");
+    const grammar = evidenceRowGrammar(`spec-${specNumber}`, rawLayer.trim().toLowerCase());
+    const structuralPointer = EVIDENCE_CELL_GRAMMAR.test(evidence);
+    const provenanceOk = grammar.provenance.test(evidence);
+    const isPointer = grammar.bound.test(evidence);
+
+    // A **binding** breach — the wrong RED provenance, or an anchor pointing
+    // outside what this row owns — is reported whatever the cell's length.
+    // Folding it into the cap branch let an ATDD-owned row record `RED:n-a`
+    // behind a long anchor, draw only `TDDLIST_EVIDENCE_CELL_OVERSIZE`, and
+    // then waive `TDDLIST-008` per the migration procedure — silencing a
+    // violation of which the contract says "There is no waiver here". The two
+    // differ in both the fix they ask for and whether a waiver may cover them,
+    // so they are two findings.
     //
-    // The `Layer` decides which RED provenances are legal: an ATDD-owned row
-    // has no `n-a` (`RED_PROVENANCE_ATDD`). `hasPointerShape` stays the
-    // permissive test on purpose — a cell rejected only for its provenance is
-    // still structurally a pointer, so it must not also be reported as prose
-    // by the status-only rule below.
-    const layer = cell(ref, "Layer").trim().toLowerCase();
-    const atddOwned = ATDD_OWNED_LAYERS.has(layer);
-    const grammarText = atddOwned ? EVIDENCE_CELL_GRAMMAR_TEXT_ATDD : EVIDENCE_CELL_GRAMMAR_TEXT;
-    const hasPointerShape = EVIDENCE_CELL_GRAMMAR.test(evidence);
-    const isPointer = atddOwned ? EVIDENCE_CELL_GRAMMAR_ATDD.test(evidence) : hasPointerShape;
+    // A plain grammar breach still yields to the cap: every cell that outgrew
+    // the cap did so by holding prose, so a cap breach and a prose breach on
+    // one cell are one defect to fix.
+    const cause: EvidenceMalformedCause | null =
+      isPointer || !structuralPointer ? null : provenanceOk ? "anchor" : "provenance";
+    if (cause !== null) {
+      issues.push(
+        evidenceMalformedIssue({
+          cause,
+          specNumber,
+          rowLabel,
+          rawLayer,
+          evidence,
+          grammar,
+          relPath,
+        }),
+      );
+    }
     if (evidence.length > EVIDENCE_CELL_MAX_CHARS) {
       issues.push(
         issue(
@@ -1445,36 +1648,27 @@ async function validateSpecTddList(
           EVIDENCE_CELL_OVERSIZE_RULE_ID,
           undefined,
           "change",
-          `Evidence 列は証跡ファイルへの pointer です。コマンドと出力は \`.qfai/evidence/\` 配下のファイルに移し、セルには \`${grammarText}\` の形だけを ${EVIDENCE_CELL_MAX_CHARS} 文字以内で書いてください。`,
+          `Evidence 列は証跡ファイルへの pointer です。コマンドと出力は \`.qfai/evidence/\` 配下のファイルに移し、セルには \`${grammar.text}\` の形だけを ${EVIDENCE_CELL_MAX_CHARS} 文字以内で書いてください。`,
         ),
       );
-    } else if (!isPointer) {
-      // Naming the real cause matters here: a cell that is a well-formed
-      // pointer everywhere except its provenance would otherwise be reported
-      // against the full grammar, sending the author to look for a typo.
-      const provenanceOnly = hasPointerShape;
+    } else if (cause === null && !isPointer) {
       issues.push(
-        issue(
-          "TDDLIST_EVIDENCE_CELL_MALFORMED",
-          provenanceOnly
-            ? `Evidence for spec-${specNumber} ${rowLabel} uses RED:n-a on an ATDD-owned Layer="${cell(ref, "Layer")}" row, which owes an observed RED or a falsifiability argument — "There is no waiver here" (execution-ledger.md#atdd-owned-rows): "${evidence}"`
-            : `Evidence for spec-${specNumber} ${rowLabel} does not match the pointer grammar "${grammarText}": "${evidence}"`,
-          "warning",
+        evidenceMalformedIssue({
+          cause: "grammar",
+          specNumber,
+          rowLabel,
+          rawLayer,
+          evidence,
+          grammar,
           relPath,
-          EVIDENCE_CELL_MALFORMED_RULE_ID,
-          undefined,
-          "change",
-          provenanceOnly
-            ? `E2E / API / Integration 行の RED provenance は \`/qfai-atdd\` が産みます。\`RED:n-a\` は使えません — 観測した RED なら \`RED:fail\`、観測できない場合は \`references/red-not-observable.md\` の falsifiability 手順を踏んで \`RED:falsifiability\` にしてください。`
-            : `Evidence 列は \`${grammarText}\` の一形だけを許します（例: \`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-spec-0001.md#tdd-0001\`）。散文は anchor 先の証跡ファイルに移してください。`,
-        ),
+        }),
       );
     }
 
     // A conforming pointer names its verdict as `GREEN:pass` and carries no
     // command, so the status-only rule would reject the exact shape the
     // grammar mandates. The grammar is the stronger statement, so it wins.
-    if (hasPointerShape) continue;
+    if (structuralPointer) continue;
 
     // Only a cell that *claims a verdict* can be status-only evidence. A cell
     // holding some other note without a command is under-specified, but

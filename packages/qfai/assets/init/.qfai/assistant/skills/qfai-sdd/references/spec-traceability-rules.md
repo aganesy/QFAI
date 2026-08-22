@@ -207,7 +207,11 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   `REV:` takes only the two spellings `evidence-revision.md` defines, so the
   uncommitted `working-tree+<sha256>` form is legal here too; and `RED:n-a` is
   rejected on an `Integration` / `API` / `E2E` row, which owes an observed RED
-  or a falsifiability argument. Ledgers predating the grammar waive
+  or a falsifiability argument. The anchor is bound to the row: its stage is
+  the one the `Layer` assigns and its `<spec-id>` is this spec's, so evidence
+  from another spec or from the stage that did not author the test is rejected
+  too. A binding breach is reported even when the cell is also oversize —
+  `TDDLIST-008` must not waive it. Ledgers predating the grammar waive
   `TDDLIST-007` / `TDDLIST-008` while they migrate.
 - `DR-ID` carries Decision Record (`DR-*`) **and** Change Request (`CR-*`)
   references, so it carries the approval that authorised an upstream reset, not

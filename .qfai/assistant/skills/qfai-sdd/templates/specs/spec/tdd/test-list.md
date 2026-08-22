@@ -67,7 +67,9 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
 ```
 
 `RED:n-a` is **not** available on an `Integration` / `API` / `E2E` row — those
-owe an observed RED or a falsifiability argument. Anything else raises
+owe an observed RED or a falsifiability argument. The anchor is checked against
+the row, not only for shape: its stage is the one the `Layer` assigns and its
+`<spec-id>` is this spec's. Anything else raises
 `TDDLIST_EVIDENCE_CELL_MALFORMED` / `TDDLIST_EVIDENCE_CELL_OVERSIZE`; the full
 grammar is in
 `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.

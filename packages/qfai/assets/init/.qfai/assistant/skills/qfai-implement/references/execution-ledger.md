@@ -125,7 +125,13 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   both.
 - `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<heading>`:
   the evidence file this row's `Layer` owns, and the heading of **this item's**
-  entry in it. The fragment is required — a pointer to the file alone does not
+  entry in it. Both halves are checked **against the row**, not merely for
+  shape: the stage is the one the `Layer` assigns (`implement` for the rows
+  this skill runs itself, `atdd` for `E2E` / `API` / `Integration`), and
+  `<spec-id>` is **this** spec's. An anchor into another spec's file, or into
+  the file of the stage that did not author the test, is
+  `TDDLIST_EVIDENCE_CELL_MALFORMED` — it names proof that was never taken for
+  this row. The fragment is required — a pointer to the file alone does not
   say which item's proof to read. Backticks around the anchor are allowed.
 
 Nothing follows the anchor, with **one** exception: an `E2E` / `API` row that
@@ -133,7 +139,12 @@ completed before the ATDD evidence split carries the compatibility marker
 `Pre-split-evidence: implement` after it, which `qfai-implement/SKILL.md`
 completion item 10 requires and reads. It is legal in the grammar for that
 reason — a `done` row cannot re-observe a RED, so it can neither drop the
-marker nor earn a new anchor.
+marker nor earn a new anchor. The marker is what **licenses** the `implement-`
+anchor there: item 10 judges an unmarked row by the current rule whatever its
+status, so an `E2E` / `API` row naming the implement file **without** the
+marker is the row that never produced its ATDD handoff, and is malformed. Item
+10 scopes the marker pass to `E2E` / `API` rows, so the marker licenses nothing
+on an `Integration` row — that layer has no pre-split form to grandfather.
 
 Everything else the cell used to carry belongs in the evidence file the anchor
 names. This is a move, not a deletion.
@@ -198,9 +209,15 @@ build on them is a migration rather than a gate. An empty cell is unambiguous,
 so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
 
 The two grammar findings are warnings for the same reason, waivable under
-`TDDLIST-007` (malformed) and `TDDLIST-008` (oversize). An oversize cell is
-reported **once**: it is malformed too, but a cap breach and a grammar breach
-on one cell are one defect to fix.
+`TDDLIST-007` (malformed) and `TDDLIST-008` (oversize). An oversize cell whose
+only other fault is prose is reported **once**, as the cap breach: every cell
+that outgrew the cap did so by holding prose, so the two are one defect to fix.
+A cell that is a well-formed pointer but breaks a **binding** — the RED
+provenance its `Layer` owes, or the evidence file its `Layer` and spec own — is
+reported as `TDDLIST_EVIDENCE_CELL_MALFORMED` whatever its length. Those ask
+for a different fix from a cap breach, and folding them into it would let
+`TDDLIST-008` waive a violation of which "ATDD-owned rows" says "There is no
+waiver here".
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which

@@ -477,4 +477,168 @@ describe("TDDLIST_EVIDENCE_CELL_OVERSIZE", () => {
       expect(found?.rule).toBe(EVIDENCE_CELL_OVERSIZE_RULE_ID);
     });
   });
+
+  // A **binding** breach is not a length breach, and unlike prose it is not
+  // waivable under the migration story: `execution-ledger.md#atdd-owned-rows`
+  // says of ATDD-owned RED provenance "There is no waiver here". Reporting
+  // only the cap let a long anchor carry the violation past `TDDLIST-008`.
+  it("still reports RED:n-a on an ATDD-owned row when the cell is oversize", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([
+          {
+            status: "done",
+            layer: "Integration",
+            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/atdd-spec-0001.md#tdd-0001-${"x".repeat(200)}`,
+          },
+        ]),
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+
+  it("still reports an anchor the row does not own when the cell is oversize", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([
+          {
+            status: "done",
+            layer: "Integration",
+            evidence: `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> .qfai/evidence/implement-spec-9999.md#tdd-0001-${"x".repeat(200)}`,
+          },
+        ]),
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+});
+
+/**
+ * The anchor names a file, and `qfai-implement/SKILL.md` completion item 10
+ * says **which** file: the one this row's `Layer` owns, for **this** spec.
+ * A grammar that read only the anchor's outline accepted any spec's evidence
+ * from either producing stage, so a `done` row could point at proof that was
+ * never taken for it and still validate.
+ */
+describe("Evidence anchor binding", () => {
+  const bound = (
+    evidence: string,
+    layer: string,
+  ): Array<{ status: string; evidence: string; layer: string }> => [
+    { status: "done", evidence, layer },
+  ];
+
+  for (const [label, layer, anchor] of [
+    // Another spec's evidence file is not this row's proof.
+    ["another spec", "Unit", ".qfai/evidence/implement-spec-9999.md#tdd-0001"],
+    // The reviewer's case: an ATDD-owned row naming the implement file, with
+    // no compatibility marker to license it, for a spec that is not its own.
+    [
+      "another spec from the wrong stage",
+      "Integration",
+      ".qfai/evidence/implement-spec-9999.md#other",
+    ],
+    // Right spec, wrong stage: item 10 assigns an `Integration` row to
+    // `/qfai-atdd`, and an unmarked implement anchor is exactly the row that
+    // never produced its ATDD handoff.
+    ["the wrong stage", "Integration", ".qfai/evidence/implement-spec-0001.md#tdd-0001"],
+    ["the wrong stage", "E2E", ".qfai/evidence/implement-spec-0001.md#tdd-0001"],
+    // And the reverse: a row this skill runs itself writes the implement file.
+    [
+      "the ATDD stage on an implement-owned row",
+      "Unit",
+      ".qfai/evidence/atdd-spec-0001.md#tdd-0001",
+    ],
+  ] as const) {
+    it(`reports ${label} on a Layer=${layer} row`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger(bound(`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`${anchor}\``, layer)),
+        );
+        expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+        // The cell is still shaped like a pointer, so the status-only rule
+        // must not read its `GREEN:pass` as a bare prose verdict as well.
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+      });
+    });
+  }
+
+  it("names the file the row owes", async () => {
+    await withProject(async (root) => {
+      await runOn(
+        root,
+        ledger(
+          bound(
+            "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-9999.md#other`",
+            "Integration",
+          ),
+        ),
+      );
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(found?.rule).toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
+      expect(found?.message).toContain(".qfai/evidence/atdd-spec-0001.md#<heading>");
+    });
+  });
+
+  for (const [layer, anchor] of [
+    ["Unit", ".qfai/evidence/implement-spec-0001.md#tdd-0001"],
+    ["Component", ".qfai/evidence/implement-spec-0001.md#tdd-0001"],
+    ["Integration", ".qfai/evidence/atdd-spec-0001.md#tdd-0001"],
+    ["API", ".qfai/evidence/atdd-spec-0001.md#tdd-0001"],
+    ["E2E", ".qfai/evidence/atdd-spec-0001.md#tdd-0001"],
+  ] as const) {
+    it(`accepts the file a Layer=${layer} row owns`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger(bound(`RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`${anchor}\``, layer)),
+        );
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  // Completion item 10's compatibility case: the marker is what licenses the
+  // implement anchor on a pre-split `E2E` / `API` row, and it licenses nothing
+  // without it. Such a row cannot re-observe a RED, so rejecting it would
+  // leave it no exit but a standing waiver.
+  for (const layer of ["E2E", "API"] as const) {
+    it(`accepts the pre-split implement anchor on a marked Layer=${layer} row`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger(
+            bound(
+              "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0001` Pre-split-evidence: implement",
+              layer,
+            ),
+          ),
+        );
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  // Item 10 scopes the marker pass to `E2E` / `API` rows, so an `Integration`
+  // row has no legacy form for the marker to grandfather.
+  it("does not let the marker license an implement anchor on an Integration row", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger(
+          bound(
+            "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0001` Pre-split-evidence: implement",
+            "Integration",
+          ),
+        ),
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
 });
