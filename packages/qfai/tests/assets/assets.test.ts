@@ -469,7 +469,16 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toMatch(/certify --check`/);
       expect(reviewerRef).toMatch(/cannot\s+waive a finding by writing `\[\]` yourself/);
       expect(reviewerRef).toMatch(/on a convergence stop/);
-      expect(reviewerRef).toMatch(/gate is non-waivable/);
+      expect(reviewerRef).toMatch(/gate is\s+non-waivable/);
+      // The reviewer half must carry the same `--upgrade-scope full`
+      // carve-out as the generator half: `runPrototypingCertify` branches
+      // to `runUpgradeScopeFull` before the HTML scan, so an unqualified
+      // "certify re-scans unconditionally" here would tell a Reviewer that
+      // promoting a scope-limited certificate re-checks HTML it never
+      // reads. `--check` is the named recovery on both sides.
+      expect(reviewerRef).toMatch(/certify --upgrade-scope full` is not\s+an issuing path/);
+      expect(reviewerRef).toMatch(/without re-scanning HTML/);
+      expect(reviewerRef).toMatch(/certify --check`/);
 
       // DESIGN.md is frozen for the run: `evaluateCycleGteOneGate`
       // compares live DESIGN.md / lock / cycle-0 cached sha256 and exits 2
