@@ -2109,7 +2109,10 @@ pnpm verify:pack                                exit 0
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 error=48 with the round sealed; see § "The full profile"
+node ... validate --profile full                 error=49 here, of which 43 are QFAI-REVIEW-007 against
+                                                untracked local packs; error=4 at the committed
+                                                revision. The deltas are the property; see § "The
+                                                full profile"
 ```
 
 **`--project assets` does not exist**, and an earlier version of this block named it. The workspace
@@ -2516,8 +2519,38 @@ does.** Round 16 recorded 49 as a property of the tree; round 17's gate measured
 revision and reconstructed the sequence from the run-log timestamps.
 
 A number that moves three ways without the subject changing is not a measurement of the subject, so what
-is recorded here is the rule and the sealed value. **48 with this round sealed**, re-measured at that
-state.
+is recorded here is the rule and the deltas — and **the absolute is not a property of any revision of
+this repository, which round 19's gate found and this stage confirmed by measuring it.**
+
+`git clone` + `pnpm build` + the recorded command gives **4**, not 48. The gate ran the profile on a
+`git archive 7fbac2d3` shadow with all 83 symlinks re-materialised and got `error=4`; at `19b751ca`, with
+the pack just opened, `error=6`. Both are the same five rules the table below lists, minus the
+`QFAI-REVIEW-007` term entirely.
+
+The gap is one rule and it is local. `.qfai/review/` is ignored and its packs are force-added, so the
+directory holds far more than any revision contains: measured here, **64 pack directories and 317 files
+on disk against 22 directories and 98 files tracked**. `QFAI-REVIEW-007` fires once per pack whose
+`summary.json` fails the minimum schema, and this stage attributed every finding of the current run to
+the pack it names: **45 packs cited, 43 of them untracked.** Those 43 belong to other stages, on this
+machine, and no revision of this repository contains them.
+
+So the figure recorded through rounds 15 to 18 has the defect this record spent four rounds naming about
+the two suite totals, one size larger. "Round 16 recorded 49 as a property of the tree" is quoted below
+as an error; 48 was then recorded as a property of the ROUND, which is a smaller claim and still not the
+true one. It is a property of **this working copy**, in a block whose own first sentence says the numbers
+are measured at the working tree of this commit — which for this line is false in the way that matters,
+because that commit checked out fresh does not produce it. The seal sealed the ±2 term and left the 92 %
+term unsealed, and that term moves whenever anyone on this machine opens or closes a pack for **any**
+spec.
+
+What is a property of the subject, checkable at any revision, is the rule and its deltas:
+
+> `+2` on opening a pack, `−1` once reports land in it, `−1` once a `summary.json` does.
+
+Both committed revisions above satisfy it (4 sealed → 6 just-opened). On a working copy the same rule
+holds on top of however many untracked packs it carries: **48 sealed / 50 just-opened / 49 with reports
+and no summary**, re-measured at each state, with 43 untracked packs present. Cite the deltas. If an
+absolute is cited, it is meaningless without the count of untracked packs beside it.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
 and never re-run, in the block whose own first sentence says it is re-measured rather than carried.
 
