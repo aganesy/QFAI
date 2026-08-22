@@ -229,12 +229,29 @@ describe("the stage evidence's counts are derived, not typed", () => {
     // BOTH fence markers. Stripping only backticks let a `~~~`-fenced decoy table satisfy this with
     // the real row deleted — and the sibling guard in this same stage's work already carried the
     // tilde form, so this was one rule in two copies with only one of them corrected.
-    const unfenced = section.replace(/^(?:```|~~~)[\s\S]*?^(?:```|~~~)/gm, "");
+    // UP TO THREE SPACES of indent, because CommonMark says a fence is still a fence there and
+    // renders it as code. `^` under `m` requires column zero, so a one-space-indented decoy table
+    // survived the strip and satisfied this with the real row deleted — the fifth spelling in five
+    // rounds, and the second time the fence pattern itself was the hole. It also cut the other way:
+    // a true, complete table went RED when an ordinary four-line EXCERPT of it was quoted above in a
+    // one-space-indented fence, so the verdict on an unchanged table depended on the indentation of
+    // an unrelated code block.
+    const unfenced = section.replace(/^ {0,3}(?:```|~~~)[\s\S]*?^ {0,3}(?:```|~~~)/gm, "");
     // And the TABLE, found by its header row, rather than any pipe-line in the section: round 17
     // deleted the real row and satisfied this with a sentence two paragraphs below it. Third version,
     // third time vacuous, and the third time for the same reason — the check read a wider region than
     // the claim it was making. That is now the stated failure mode of this whole family.
-    const header = unfenced.indexOf("| artifact ");
+    // THE table, not the first thing shaped like one. `indexOf` took the first header it found, so a
+    // plain second copy of the table pasted above the live one satisfied this with the live row
+    // deleted — no fence needed at all. Round 18 fixed the fence delimiter and left this, which is the
+    // wider-region defect one more time: the check read `some table in this section` where the claim
+    // is about `the table`. Two of them is not a table this check can be about, so two is a failure.
+    const headers = [...unfenced.matchAll(/^\|\s*artifact\s+\|/gm)];
+    expect(
+      headers.length,
+      "the section must hold exactly one artifact table — a second one makes `the table` ambiguous, and taking the first is how a decoy satisfied this with the real row deleted",
+    ).toBe(1);
+    const header = headers[0]?.index ?? -1;
     expect(header, "the table must be findable by its header row").toBeGreaterThan(-1);
     const afterHeader = unfenced.slice(header);
     const blank = afterHeader.search(/\n[ \t]*\n/);
@@ -308,14 +325,65 @@ describe("the stage evidence's counts are derived, not typed", () => {
       sectionStart === -1 ? 0 : sectionStart,
       sectionEnd === -1 ? prose.length : sectionStart + 1 + sectionEnd,
     );
-    const sites = [
-      ...section.matchAll(/(\d+)(?:\s+\S+){0,2}\s+mechanisms?\b/g),
-      ...section.matchAll(/mechanisms? (?:pinned|held)[^.]{0,24}?(\d+)\b/g),
-      ...section.matchAll(/lets all (\d+) through/g),
-      ...section.matchAll(/with all (\d+) listed/g),
+
+    // **Round 19: the region was right and the needle was a closed enumeration of four phrasings**,
+    // which is the defect the comment above says a pin cannot have. Five wrong sizes passed it — three
+    // intervening words, four intervening words, a spelled-out numeral, a verb outside `{pinned,held}`,
+    // and the noun `corpus` — and two TRUE sentences were reported as wrong sizes, because the needle
+    // had no model of the word being used for anything but the total.
+    //
+    // The spelled-out escape is not contrived: it is this record's own house style, which writes
+    // "nineteen rounds" and "fourteen confirmed escapes" a few lines away, and `WORDS` exists in this
+    // file for exactly that reason and was not consulted here.
+    //
+    // So the needle is as WIDE as the language allows — any numeral, digits or spelled out, within
+    // three words before the noun or forty characters after it — and the sentences that legitimately
+    // carry a nearby numeral which is NOT the total are enumerated instead. Widening the needle and
+    // enumerating the exceptions is the shape every other allowlist in this stage's work has; the four
+    // rounds spent narrowing a needle until it stopped accusing true sentences lost a spelling each
+    // time, because "which numerals are near this word" and "which of them claim to be the total" are
+    // two questions and one regex was being asked both.
+    const NOT_THE_TOTAL: ReadonlyArray<string> = [
+      // A RATE — twenty agents, one mechanism each. It says nothing about how many the corpus holds,
+      // and the wide needle reads its `one` as a corpus size of 1.
+      "one mechanism per agent",
+      // A DE-DUPLICATION of the corpus into classes. How many classes the entries fall into is a
+      // different quantity from how many entries there are, and both are true at once.
+      "De-duplicated by mechanism rather than by spelling they are six classes on three levels",
+      // How many of the forty-two are STILL OPEN, which is the sweep's result rather than its size.
+      // Quoted WITHOUT the leading `42 `: that `42` is one of the four true sites, and an exemption
+      // spanning it swallowed a site the record correctly states. An exemption is as narrow as the
+      // thing it exempts, or it is a hole.
+      "mechanisms, 0 still open",
+      // The SITE COUNT — the sentence this guard reads `SITES` out of, four lines up. The wide
+      // needle reads its `four` as a corpus size, so the check would accuse the sentence that tells
+      // it how many sentences to expect.
+      "corpus size appears four times in this section",
     ];
+    const stale = NOT_THE_TOTAL.filter((phrase) => !section.includes(phrase));
+    expect(
+      stale,
+      "an exempted phrase that is no longer in the section — a dead entry here is a hole this guard " +
+        "would keep open for whatever is written next at that spot",
+    ).toEqual([]);
+    const exemptSpans = NOT_THE_TOTAL.map((phrase) => {
+      const at = section.indexOf(phrase);
+      return [at, at + phrase.length] as const;
+    });
+
+    const NUMERAL = `\\d+|${Object.keys(WORDS).join("|")}`;
+    const sites = [
+      ...section.matchAll(new RegExp(`(${NUMERAL})(?:\\s+\\S+){0,3}\\s+mechanisms?\\b`, "gi")),
+      ...section.matchAll(new RegExp(`\\bmechanisms?\\b[^.\\n]{0,40}?\\b(${NUMERAL})\\b`, "gi")),
+      ...section.matchAll(new RegExp(`\\bcorpus\\b[^.\\n]{0,40}?\\b(${NUMERAL})\\b`, "gi")),
+    ].filter(
+      (match) =>
+        !exemptSpans.some(([from, to]) => (match.index ?? -1) >= from && (match.index ?? -1) < to),
+    );
+    const valueOf = (token: string): number =>
+      /^\d+$/.test(token) ? Number(token) : (WORDS[token.toLowerCase()] ?? Number.NaN);
     const wrong = sites
-      .filter((match) => Number(match[1]) !== held)
+      .filter((match) => valueOf(match[1] ?? "") !== held)
       .map((match) => `${match[0]}: corpus holds ${String(held)}`);
     expect(wrong, "a mechanism-corpus size the record states and the corpus does not hold").toEqual(
       [],
