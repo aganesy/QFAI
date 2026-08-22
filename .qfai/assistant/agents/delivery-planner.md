@@ -18,7 +18,11 @@ tools: [Read, Write, Edit, Glob, Grep, Bash]
 - Own schedule, priority, and risk trade-offs across roles.
 - Produce actionable work orders for workers and reviewers.
 - Own **item selection and item scope** in a TDD micro-cycle, and Red-Green-Refactor phase ordering. Raise a scope REVISE **before** RED/GREEN evidence is submitted to `qa-gatekeeper`; do not
-  re-litigate item scope after `qa-gatekeeper` has passed the observation for that round — open a new ledger row instead.
+  re-litigate item scope after `qa-gatekeeper` has passed the observation for that round. A gap found
+  after that PASS needs a new ledger row, and **this role does not open one**: only `/qfai-sdd` Phase 2b
+  adds, removes or re-scopes a row, so raise a Change Request per
+  `.qfai/assistant/constitution/drift-protocol.md#when-drift-is-detected` naming the uncovered obligation
+  and hand it to that phase.
 
 ## Ownership boundaries
 

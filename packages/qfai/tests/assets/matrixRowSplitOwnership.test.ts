@@ -131,6 +131,12 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).toContain("Do not demand a recorded RED there and do not invent one");
     expect(phase2b).toContain("the driving `CR-*` names first among the ones it says the row");
     expect(phase2b).toContain("`06_Test-Cases.md` lists them under that `TC-*`");
+    // A `falsifiability` row records a mutation trio in place of a natural RED,
+    // so `red` and `done` rows on that branch have no first failing assert either.
+    expect(phase2b).toContain(
+      "**Read the row's evidence branch before assuming a natural RED exists at all**",
+    );
+    expect(phase2b).toContain("Keep the boundary the predicate its `Satisfied-by` names covers");
   });
 
   it("migrates an existing ledger's columns instead of only seeding new ones", async () => {
@@ -297,7 +303,64 @@ describe.each(TREES)("%s", (tree) => {
       "**A named `TDD-ID` that is already `blocked` is reported, never re-judged.**",
     );
     expect(red).toContain("Return that row's existing `Blocked-By` as this id's outcome");
-    expect(red).toContain("Everything below applies only to a row actually at `Status = todo`.");
+    // Scoped to the shape judgement: step 1 also selects `review-fix` rows,
+    // which are not `todo` and must still reach step 3b and Phase Green.
+    expect(red).toContain("this narrows that judgement and nothing else");
+    expect(red).toContain("a `review-fix` row selected for rework is not a `todo` row");
+  });
+
+  it("requires the `Blocked-By` column to exist before the row is blocked", async () => {
+    // An upgraded eight-column ledger only gains the column on a `/qfai-sdd`
+    // pass, so a `/qfai-implement` rerun straight after the upgrade would write
+    // a blocker with no cell to hold it.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    expect(red).toContain("check it is there before writing");
+    expect(red).toContain("a table-shape write only Phase 2b may make");
+    expect(red).toContain("asking for that column migration");
+  });
+
+  it("keeps the row blocked while another open CR still names it", async () => {
+    // Blocked sets compose per CR: a row on two of them resumes only when both
+    // release, so clearing `Blocked-By` on the matrix CR alone re-runs a test
+    // whose other approved change has not landed.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    expect(red).toContain("**but only when no other open `CR-*` still names the row**");
+    expect(red).toContain("recomposes every open CR's set before it writes");
+  });
+
+  it("reverts the falsifiability mutation before the residual handoff", async () => {
+    // Step 3c's own revert sits after the gatekeeper's answer, but the residual
+    // path stops at an approval wait that spans sessions — so the deliberately
+    // broken predicate would outlive the run.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+
+    expect(red).toContain(
+      "**revert the mutation and re-run for the restored GREEN before that handoff**",
+    );
+  });
+
+  it("stops the delivery-planner role card opening the row itself", async () => {
+    // The role that owns item scope is where a post-PASS gap is actually found;
+    // left at "open a new ledger row instead" it bypasses Phase 2b's ownership.
+    const card = await read(tree, "assistant/agents/delivery-planner.md");
+
+    expect(card).toContain("**this role does not open one**");
+    expect(card).toContain("only `/qfai-sdd` Phase 2b adds, removes or re-scopes a row");
+    expect(card).not.toContain("that round — open a new ledger row instead");
   });
 
   it("judges the shape at selection, ahead of the `todo -> red` write", async () => {
