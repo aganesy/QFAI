@@ -127,7 +127,9 @@ below read. Write it once, in its own file, and link it from the stage evidence.
 - `completion-reviewer`: Confirm the matrix was reviewed and any ⚠️ cells have rationale.
 - `npx qfai validate --profile atdd` reports the three file-level facts the readings
   above assume: `QFAI-ATDD-131` when a spec with ATDD-owned tests has no matrix,
-  `QFAI-ATDD-132` when the matrix is excluded by `.gitignore`, and
-  `QFAI-ATDD-133` when the stage evidence inlines the table, links no matrix,
-  or links one without the ✅ / ⚠️ / ❌ totals beside it. None of them reads the
-  cells — that judgement stays with the reviewer.
+  `QFAI-ATDD-132` when the matrix is excluded by a `.gitignore` — any of them,
+  from the git worktree root down — without already being tracked, and
+  `QFAI-ATDD-133` when the stage evidence has no `## Coverage Depth Matrix`
+  section at all, inlines the table, points at no matrix file, or points at one
+  without the counted `✅ N / ⚠️ N / ❌ N` totals beside it. None of them reads
+  the cells — that judgement stays with the reviewer.

@@ -14,6 +14,7 @@
  * rules delete from history.
  */
 
+import { execFileSync } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -54,11 +55,27 @@ type Seed = {
   apiTest?: boolean;
   /** Body of `.qfai/specs/spec-0001/tdd/test-list.md`, or absent. */
   ledger?: string;
+  /**
+   * Puts the project at `packages/app-a/` of a git worktree whose root carries
+   * this `.gitignore` — the monorepo shape, where git applies the parent file
+   * to the matrix and a project-root-only enumeration never opens it.
+   */
+  worktreeGitignore?: string;
+  /** Runs `git init` + `git add -f` on the matrix, so the index tracks it. */
+  trackMatrix?: boolean;
 };
 
 async function seedProject(seed: Seed): Promise<string> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-coverage-depth-"));
-  tempDirs.push(root);
+  const base = await mkdtemp(path.join(os.tmpdir(), "qfai-coverage-depth-"));
+  tempDirs.push(base);
+  const root = seed.worktreeGitignore === undefined ? base : path.join(base, "packages", "app-a");
+  if (seed.worktreeGitignore !== undefined) {
+    // A bare marker is enough: the walk stops at the first `.git`, and it is
+    // `path.dirname` that decides where the chain ends, not git itself.
+    await mkdir(path.join(base, ".git"), { recursive: true });
+    await writeFile(path.join(base, ".gitignore"), seed.worktreeGitignore, "utf-8");
+    await mkdir(root, { recursive: true });
+  }
   await writeFile(path.join(root, ".gitignore"), seed.gitignore ?? QFAI_GITIGNORE_BLOCK, "utf-8");
 
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -123,6 +140,15 @@ async function seedProject(seed: Seed): Promise<string> {
   }
   if (seed.stageEvidence !== undefined) {
     await writeFile(path.join(evidenceDir, "atdd-spec-0001.md"), seed.stageEvidence, "utf-8");
+  }
+  if (seed.trackMatrix ?? false) {
+    const git = (args: string[]): void => {
+      execFileSync("git", args, { cwd: root, stdio: ["ignore", "ignore", "ignore"] });
+    };
+    git(["init"]);
+    // `-f` is the whole point: the file is ignored, and this is the project
+    // that committed it anyway before the ignore line arrived.
+    git(["add", "-f", "--", ".qfai/evidence/coverage-depth-spec-0001.md"]);
   }
   return root;
 }
@@ -235,6 +261,45 @@ describe("QFAI-ATDD-132: the matrix must survive `.gitignore`", () => {
     expect(codes).not.toContain("QFAI-ATDD-132");
   });
 
+  it("reports a parent `.gitignore` above the project root", async () => {
+    // A monorepo project root is not the worktree root, and git applies every
+    // `.gitignore` from the worktree root down — so a parent rule really does
+    // keep the matrix out of history while an enumeration that starts at the
+    // project root sees nothing wrong.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      gitignore: ".qfai/report/*\n.qfai/evidence/*\n",
+      worktreeGitignore: "packages/*/.qfai/evidence/coverage-depth-*.md\n",
+    });
+
+    expect(codes).toContain("QFAI-ATDD-132");
+  });
+
+  it("lets the project's own negation outrank that parent rule", async () => {
+    // The other half of the same precedence rule: the deeper file has the last
+    // word, so the managed block at the project root re-includes what the
+    // worktree root ignored — and git agrees.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      worktreeGitignore: "packages/*/.qfai/evidence/coverage-depth-*.md\n",
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-132");
+  });
+
+  it("accepts a matrix git already tracks despite a matching ignore line", async () => {
+    // `.gitignore` does not untrack anything: the audit record is in history
+    // and its edits still stage, so erroring here would block a project for a
+    // state git itself considers fine.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      gitignore: ".qfai/report/*\n.qfai/evidence/*\n",
+      trackMatrix: true,
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-132");
+  });
+
   it("reports a nested re-ignore that outranks the root negation", async () => {
     // The other direction, and the one a root-only read silently missed: the
     // deepest matching file has the last word, so a nested `*` with no
@@ -316,6 +381,82 @@ describe("QFAI-ATDD-133: the stage evidence links the matrix instead of inlining
     });
 
     expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("reports an evidence file with no `## Coverage Depth Matrix` section at all", async () => {
+    // The section is a required output of the stage, so a file that never
+    // wrote one is the most incomplete shape there is — not the one shape the
+    // gate skips.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: "# ATDD\n\n## Final status (PASS/FAIL) + who confirmed\n\nPASS\n",
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("reports a legend that carries the three signs but no counts", async () => {
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See `.qfai/evidence/coverage-depth-spec-0001.md`; Legend: ✅ covered / ⚠ partial / ❌ missing",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("reports a reference that only contains the file name as a substring", async () => {
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See `.qfai/evidence/coverage-depth-spec-0001.md.bak`. Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("reports prose that names the matrix without pointing at it", async () => {
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "coverage-depth-spec-0001.md は使用しない。Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("accepts a markdown link written relative to the evidence directory", async () => {
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See [matrix](coverage-depth-spec-0001.md) (committed). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-133");
   });
 
   it("accepts a bare ⚠ without the variation selector", async () => {

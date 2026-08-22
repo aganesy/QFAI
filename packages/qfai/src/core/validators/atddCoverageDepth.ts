@@ -1,3 +1,4 @@
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 import type { AtddCodeTraceabilityResult } from "../atddTraceability.js";
@@ -21,8 +22,9 @@ import { exists, issue, readSafe } from "./utils.js";
  * - the file exists for every spec that has ATDD-owned tests — E2E, Integration
  *   and API alike, the last resolved through the spec's ledger because an API
  *   test names a contract and never a spec;
- * - it is not swallowed by `.gitignore` — every file in the chain, the legacy
- *   `.qfai/evidence/.gitignore` included, so the claim that the matrix and its
+ * - it is not swallowed by `.gitignore` — every file in the chain from the git
+ *   worktree root down, the legacy `.qfai/evidence/.gitignore` included, and
+ *   not already tracked in the index, so the claim that the matrix and its
  *   justifications are committed is falsified the way git would falsify it;
  * - the stage evidence links it and states the totals instead of inlining the
  *   table, which is the exact shape that puts the justifications inside an
@@ -132,31 +134,115 @@ async function specsWithAtddTests(
 }
 
 /**
+ * The `.gitignore` chain governing the matrix, plus the path to judge with it.
+ *
+ * `layers` are relative to the git worktree root — not the QFAI project root —
+ * so `toIgnorePath` re-expresses a project-relative path in the same frame
+ * before it reaches {@link isPathIgnoredByLayers}.
+ */
+type IgnoreScope = {
+  layers: GitignoreLayer[];
+  toIgnorePath: (rel: string) => string;
+};
+
+/**
+ * The directory git reads the topmost `.gitignore` from, walking up from `root`.
+ *
+ * `.git` is a directory in a normal clone and a file in a linked worktree or a
+ * submodule; either marks the top of the tree. A project with no `.git` above
+ * it at all — a temp directory, an unpacked tarball — answers with `root`,
+ * which is the pre-existing behaviour and the only defensible one when there is
+ * no repository to be a subdirectory of.
+ */
+async function gitWorktreeRoot(root: string): Promise<string> {
+  const start = path.resolve(root);
+  let current = start;
+  for (;;) {
+    if (await exists(path.join(current, ".git"))) {
+      return current;
+    }
+    const parent = path.dirname(current);
+    if (parent === current) {
+      return start;
+    }
+    current = parent;
+  }
+}
+
+/**
  * Every `.gitignore` governing `EVIDENCE_DIR_REL`, root-first, read once per run.
  *
- * Not just the root file. `qfai init` still maintains a legacy
- * `.qfai/evidence/.gitignore` whose first line is `*`
- * (`cli/commands/init.ts#ensureLegacyEvidenceIgnoreNegations`), and git gives
- * the deepest matching file the last word — so a root-only read disagrees with
- * `git check-ignore` in both directions on exactly the projects that still
- * carry one: the nested `!coverage-depth-*.md` re-includes a matrix the root
- * block ignores (a false `QFAI-ATDD-132`), and a nested re-ignore hides one the
- * root block re-included (a missed one).
+ * Not just the project root's file, in two directions:
+ *
+ * - **downwards.** `qfai init` still maintains a legacy
+ *   `.qfai/evidence/.gitignore` whose first line is `*`
+ *   (`cli/commands/init.ts#ensureLegacyEvidenceIgnoreNegations`), and git gives
+ *   the deepest matching file the last word — so a root-only read disagrees
+ *   with `git check-ignore` in both directions on exactly the projects that
+ *   still carry one: the nested `!coverage-depth-*.md` re-includes a matrix the
+ *   root block ignores (a false `QFAI-ATDD-132`), and a nested re-ignore hides
+ *   one the root block re-included (a missed one).
+ * - **upwards.** A QFAI project root is not always the worktree root: in a
+ *   monorepo it is `packages/app-a`, and git applies every `.gitignore` from
+ *   the worktree root down to the file. A parent rule such as
+ *   `packages/<name>/.qfai/evidence/coverage-depth-*.md` really does delete the
+ *   matrix from history while a project-root-only enumeration reported nothing.
+ *   Walking up also means an ignored ancestor directory — a project root inside
+ *   an ignored `vendor/` — is seen, which is how git decides it too.
  *
  * A missing file at any level is not an empty ignore set by accident — it
  * genuinely ignores nothing, which is the right answer for `QFAI-ATDD-132`.
  */
-async function readGitignoreLayers(root: string): Promise<GitignoreLayer[]> {
-  const segments = EVIDENCE_DIR_REL.split("/").filter((segment) => segment.length > 0);
+async function readIgnoreScope(root: string): Promise<IgnoreScope> {
+  const worktreeRoot = await gitWorktreeRoot(root);
+  const above = path
+    .relative(worktreeRoot, path.resolve(root))
+    .split(path.sep)
+    .filter((segment) => segment.length > 0 && segment !== ".");
+  const segments = [
+    ...above,
+    ...EVIDENCE_DIR_REL.split("/").filter((segment) => segment.length > 0),
+  ];
   const dirs = ["", ...segments.map((_, index) => segments.slice(0, index + 1).join("/"))];
-  return Promise.all(
+  const layers = await Promise.all(
     dirs.map(async (dir) => ({
       dir,
-      lines: (await readSafe(path.join(root, ...dir.split("/").filter(Boolean), ".gitignore")))
+      lines: (
+        await readSafe(path.join(worktreeRoot, ...dir.split("/").filter(Boolean), ".gitignore"))
+      )
         .replace(/\r\n/g, "\n")
         .split("\n"),
     })),
   );
+  const prefix = above.length === 0 ? "" : `${above.join("/")}/`;
+  return { layers, toIgnorePath: (rel) => `${prefix}${rel}` };
+}
+
+/**
+ * True when git already tracks `rel`, asked of the index rather than the tree.
+ *
+ * `.gitignore` does not untrack anything. A matrix committed before a matching
+ * ignore line arrived stays in history, and its later edits still stage the
+ * normal way — so the audit record `QFAI-ATDD-132` exists to protect is intact,
+ * and failing `--fail-on error` on it would block a project for a state git
+ * itself considers fine. Asked only about a matrix the layers already called
+ * ignored, so at most one probe per spec and none at all on the healthy path.
+ *
+ * A repository git cannot answer for — no `git` on `PATH`, no repository at
+ * `root` — reads as untracked, which keeps the finding for exactly the projects
+ * where nothing proves the file reached a commit.
+ */
+function isTrackedByGit(root: string, rel: string): boolean {
+  try {
+    execFileSync("git", ["ls-files", "--error-unmatch", "--", rel], {
+      cwd: root,
+      encoding: "utf-8",
+      stdio: ["ignore", "ignore", "ignore"],
+    });
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 /** The body of the `## Coverage Depth Matrix` section, or `null` when absent. */
@@ -182,12 +268,19 @@ function hasTableRow(body: readonly string[]): boolean {
 }
 
 /**
- * The three cell verdicts the totals line counts.
+ * The three cell verdicts, each with the count the totals line puts after it.
  *
- * `⚠` without the variation selector: `⚠️` is two code points and an author who
- * typed the bare sign meant the same thing.
+ * The variation selector is optional: `⚠️` is two code points and an author who
+ * typed the bare `⚠` meant the same thing.
+ *
+ * The digit is the point. A presence test for the three signs passed a legend —
+ * ``See `…`; Legend: ✅ covered / ⚠ partial / ❌ missing`` — which names the
+ * scale and counts nothing, so a section could carry every sign the template
+ * asks for and still report no result at all.
  */
-const TOTALS_MARKS: readonly string[] = ["✅", "⚠", "❌"];
+const TOTALS_PATTERNS: readonly RegExp[] = ["✅", "⚠", "❌"].map(
+  (mark) => new RegExp(`${mark}\\uFE0F?\\s*\\d+`),
+);
 
 /**
  * Whether the section carries the totals, not only the link.
@@ -199,7 +292,63 @@ const TOTALS_MARKS: readonly string[] = ["✅", "⚠", "❌"];
  * says where the matrix is and nothing about what it found.
  */
 function hasTotals(body: readonly string[]): boolean {
-  return TOTALS_MARKS.every((mark) => body.some((line) => line.includes(mark)));
+  return TOTALS_PATTERNS.every((pattern) => body.some((line) => pattern.test(line)));
+}
+
+/**
+ * Paths written as paths: a markdown link destination or a code span.
+ *
+ * Prose is deliberately not a source. A substring test for the file name also
+ * accepted `coverage-depth-spec-0001.md.bak` and the sentence
+ * 「coverage-depth-spec-0001.md は使用しない」 — a section that mentions the
+ * matrix while pointing the reader at something else, or at nothing.
+ */
+function pathCandidates(body: readonly string[]): string[] {
+  const found: string[] = [];
+  for (const line of body) {
+    for (const match of line.matchAll(/\]\(\s*<?([^)>\s]+)>?/g)) {
+      found.push(match[1] ?? "");
+    }
+    for (const match of line.matchAll(/`([^`]+)`/g)) {
+      found.push(match[1] ?? "");
+    }
+  }
+  return found;
+}
+
+/**
+ * One reference in repo-relative POSIX form, or `""` when it resolves nowhere.
+ *
+ * Both spellings the evidence file legitimately uses resolve to the same
+ * string: the template's repo-relative ``.qfai/evidence/coverage-depth-…`` and
+ * a link written relative to the evidence directory the file itself sits in.
+ */
+function resolveReference(candidate: string): string {
+  const cleaned = candidate
+    .trim()
+    .replace(/\\/g, "/")
+    .replace(/[#?].*$/, "");
+  const anchored = cleaned.replace(/^\//, "");
+  const base = anchored.startsWith(`${EVIDENCE_DIR_REL}/`)
+    ? anchored
+    : `${EVIDENCE_DIR_REL}/${anchored}`;
+  const resolved: string[] = [];
+  for (const segment of base.split("/")) {
+    if (segment.length === 0 || segment === ".") {
+      continue;
+    }
+    if (segment === "..") {
+      resolved.pop();
+      continue;
+    }
+    resolved.push(segment);
+  }
+  return resolved.join("/");
+}
+
+/** Whether the section points at the matrix file itself. */
+function referencesMatrix(body: readonly string[], matrixRel: string): boolean {
+  return pathCandidates(body).some((candidate) => resolveReference(candidate) === matrixRel);
 }
 
 export async function validateAtddCoverageDepth(
@@ -207,7 +356,7 @@ export async function validateAtddCoverageDepth(
   result: AtddCodeTraceabilityResult,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const ignoreLayers = await readGitignoreLayers(root);
+  const ignoreScope = await readIgnoreScope(root);
 
   for (const [specId, specDir] of await specsWithAtddTests(result)) {
     const matrixRel = coverageDepthRelPath(specId);
@@ -233,7 +382,10 @@ export async function validateAtddCoverageDepth(
       );
       continue;
     }
-    if (isPathIgnoredByLayers(ignoreLayers, matrixRel)) {
+    if (
+      isPathIgnoredByLayers(ignoreScope.layers, ignoreScope.toIgnorePath(matrixRel)) &&
+      !isTrackedByGit(root, matrixRel)
+    ) {
       issues.push(
         issue(
           "QFAI-ATDD-132",
@@ -260,22 +412,30 @@ export async function validateAtddCoverageDepth(
 /**
  * What is wrong with the `## Coverage Depth Matrix` section, or `null`.
  *
- * Three shapes, in the order a reader hits them: the table inlined here instead
- * of in the committed matrix, no reference to the matrix at all, and a
- * reference with no totals beside it. The section owes both halves — the
- * pointer and the tally — so a link on its own is still a section a reviewer
- * cannot read a coverage summary out of.
+ * Four shapes, in the order a reader hits them: no such section at all, the
+ * table inlined here instead of in the committed matrix, no reference to the
+ * matrix, and a reference with no totals beside it. The section owes both
+ * halves — the pointer and the tally — so a link on its own is still a section
+ * a reviewer cannot read a coverage summary out of.
+ *
+ * The absent heading is the same failure as the empty one, not an exemption.
+ * `qfai-atdd/SKILL.md` lists it among the evidence file's required sections and
+ * gives it a contract the heading cannot carry, so skipping a file that never
+ * wrote it let the oldest and most incomplete evidence — the shape with no link
+ * to the matrix anywhere — be the one thing `QFAI-ATDD-133` never saw.
  */
 function sectionProblem(
-  body: readonly string[],
+  body: readonly string[] | null,
   evidenceRel: string,
   matrixRel: string,
-  specId: string,
 ): string | null {
+  if (body === null) {
+    return `${evidenceRel} に \`## Coverage Depth Matrix\` セクションがありません`;
+  }
   if (hasTableRow(body)) {
     return `${evidenceRel} の \`## Coverage Depth Matrix\` に表が直接書かれています`;
   }
-  if (!body.some((line) => line.includes(`coverage-depth-${specId}.md`))) {
+  if (!referencesMatrix(body, matrixRel)) {
     return `${evidenceRel} の \`## Coverage Depth Matrix\` が ${matrixRel} を参照していません`;
   }
   if (!hasTotals(body)) {
@@ -300,11 +460,8 @@ async function stageEvidenceIssues(
       continue;
     }
     const body = matrixSection(await readSafe(path.join(root, evidenceRel)));
-    if (body === null) {
-      continue;
-    }
     const matrixRel = coverageDepthRelPath(specId);
-    const problem = sectionProblem(body, evidenceRel, matrixRel, specId);
+    const problem = sectionProblem(body, evidenceRel, matrixRel);
     if (problem === null) {
       continue;
     }
