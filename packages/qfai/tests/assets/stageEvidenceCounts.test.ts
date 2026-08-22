@@ -236,6 +236,23 @@ describe("the stage evidence's counts are derived, not typed", () => {
     ).toEqual([]);
   });
 
+  it("keeps the governance scan pointed at every helper this stage wrote", async () => {
+    // `HELPERS` and `GOVERNANCE` are two lists of the same thing — files this stage authored that
+    // carry claims — maintained in two files, and round 20 found them disagreeing about the newest
+    // one. A helper outside `GOVERNANCE` is a file the retracted-claims guard cannot see, which is
+    // the guard whose entire subject is a refuted wording standing as an assertion.
+    const guard = await source("packages/qfai/tests/assets/retractedClaims.test.ts");
+    const declared = guard.slice(
+      guard.indexOf("const GOVERNANCE"),
+      guard.indexOf("];", guard.indexOf("const GOVERNANCE")),
+    );
+    const missing = HELPERS.filter((file) => !declared.includes(`"${file}"`));
+    expect(
+      missing,
+      "a helper this stage wrote that the retracted-claims scan does not read",
+    ).toEqual([]);
+  });
+
   it("states the size of the mechanism corpus it cites as its falsification", async () => {
     // The sweep block cites this number four times, and the corpus grows every round a reviewer
     // proves a new escape — so it is derived rather than typed.

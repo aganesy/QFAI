@@ -305,7 +305,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 13 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 14 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
@@ -330,7 +330,7 @@ sweep cannot reach. That guard exists because the previous version of this line 
 - **new** `packages/qfai/tests/assets/coverageDepthMatrix.test.ts` — 5 tests deriving the Coverage
   Depth Matrix's totals, partition, class assignment, per-class justification and row width from the
   table itself
-- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 12 tests deriving this record's own
+- **new** `packages/qfai/tests/assets/stageEvidenceCounts.test.ts` — 13 tests deriving this record's own
   counts from the artifacts they describe, after every review round found at least one that the tree
   did not hold. The eighth derives `## Final status`'s own round and response counts, which were correct
   and underived through five findings of exactly that shape
@@ -369,7 +369,7 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 13 passed (13), exit 0
+  -> Tests 14 passed (14), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
       confirmed executing, added with the repairs that close them. The 12th is
       the digest collision found by attacking the new gate rather than by a
@@ -387,7 +387,7 @@ pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotat
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 5 passed (5), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts
-  -> Tests 12 passed (12), exit 0
+  -> Tests 13 passed (13), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/retractedClaims.test.ts
   -> Tests 11 passed (11), exit 0
 pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017RunnerParallelismE2E.test.ts
@@ -2014,25 +2014,50 @@ something is written, believed without reading it.
      the only check that reads an adopter-facing body at all. What it is not, after the sweep, is the
      thing standing between an unreviewed body and the shipped tree — `ALLOWED_STEP_BODIES` is.
 
-10. **The Coverage Depth Matrix enumerates and justifies every `❌` and says nothing about any `⚠️`,
-    which is the value a reader most needs a reason for.** Round 19's `qa-gatekeeper` filed this as a
-    residual under a section it explicitly did not raise as a `REVISE`: the depth check passed, because
-    each `❌ ❌` row is enumerated with the ledger rows that would close it and the one normal-path-only
-    row is answered in the class C roster.
+10. **A `⚠️` cell cannot be justified in this artifact, whatever anyone writes, and that is a contract
+    gap rather than a prose gap.** Round 19's `qa-gatekeeper` filed the symptom as a residual under a
+    check it explicitly passed; round 20's `completion-reviewer` found the cause, and found this item's
+    first version wrong in three ways at once.
 
-    But `§ "Every ❌ cell, named"` and the guard that reads it both key on `❌`. Counted from the
-    table's own rows, **sixteen `⚠️` cells across the seven depth columns** — `US-0017-0001`'s error
-    path and special values, `-0002`'s boundary and combinatorial, `-0003`'s and `-0007`'s and
-    `-0009`'s boundary and special values, `-0004` through `-0006`'s and `-0008`'s oracle strength, and
-    `-0008`'s normal path — carry no reason anywhere, and `⚠️` means PARTIALLY covered: the reader
-    cannot tell which part, or what would finish it. `❌` at least says "nothing here"; `⚠️` says
-    "something here" and stops.
+    `§ "Every ❌ cell, named"` and `coverageDepthMatrix.test.ts` both key on `❌`. So a `⚠️` cell is
+    outside the enumeration by construction, and `US-0017-0002` and `US-0017-0009` have no
+    justification section at all — the artifact gives one only to a row whose `Status` is `❌`. Writing
+    prose does not close that; changing what the enumeration covers does.
 
-    **It is recorded rather than repaired, and the reason is the one this record keeps arguing.**
-    Sixteen justifications written quickly would be sixteen sentences that sound like reasons, in the
-    artifact whose entire value is that its justifications are judgements a human re-makes each round —
-    which is the "tidy summary" failure lesson 5 warns about, at the scale of a whole section. It is
-    named here so the next round owns it as work rather than finding it again as a gap.
+    **The measurement, by the parse the guard itself uses.** Fifteen `⚠️` cells across the seven depth
+    columns:
+
+    ```text
+    US-0017-0001  Error path, Special values
+    US-0017-0002  Boundary values, Combinatorial
+    US-0017-0003  Boundary values, Special values
+    US-0017-0004  Oracle strength
+    US-0017-0005  Oracle strength
+    US-0017-0006  Oracle strength
+    US-0017-0007  Boundary values, Special values
+    US-0017-0008  Normal path, Oracle strength
+    US-0017-0009  Boundary values, Special values
+    ```
+
+    **Seven of the fifteen already carry a reason** — `-0003`'s two, `-0004`, `-0005`, `-0007`'s two and
+    `-0008`'s normal path, each quoted in round 20's `R02`. Eight genuinely carry nothing: `-0001`'s
+    two, `-0002`'s two, `-0006`'s and `-0008`'s oracle strength, and `-0009`'s two. So the work is
+    **eight reasons and one contract change**, not fifteen sentences — and a round that discharged this
+    item as first written would have written seven reasons for cells that already have one, in a second
+    place, which is lesson 2 turned into a work order.
+
+    **What the first version of this item got wrong, recorded because the shape matters more than the
+    numbers.** It said sixteen while its own enumeration listed fifteen — a numeral contradicting the
+    list beside it, in the paragraph arguing against writing things quickly, in the record whose
+    most-repeated defect is a numeral nothing derives. It said all of them "carry no reason anywhere",
+    which seven counter-examples refute. And it cited lesson 5 as warning against "tidy summaries",
+    which lesson 5 does not say: lesson 5 is that a deferral needs the evidence any other claim needs.
+    **Applied properly it is the standard this item failed**, not the licence it claimed — the evidence
+    offered for deferring was a count the table does not hold and a universal the artifact refutes.
+
+    The deferral itself stands, and round 20's reviewer said so before filing the rest: the obligation
+    was one round old, it arrived as a residual under a passing check, and it landed in the commit that
+    OPENS a review round — the one moment this stage's own rule says the subject must stop moving.
 
 ## Round 2, and the P7 evidence for it
 
@@ -2122,7 +2147,7 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 913
+e2e callsites at this tree: 914
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
@@ -2170,10 +2195,12 @@ pnpm verify:pack                                exit 0 (ok=16 info=2 warning=1 e
    is one of the three helpers that reach a build through `spawnSync` and so cannot be scanned)
 node ... validate --profile atdd --spec 0017     info=2 warning=0 error=1
   artifact  .qfai/report/validate.spec-0017.json
-node ... validate --profile full                 info=4 warning=403 error=48 on THIS working copy, of
-                                                which 44 are QFAI-REVIEW-007 against untracked local
-                                                packs. The absolute is not a property of any revision;
-                                                the deltas are. See § "The full profile"
+node ... validate --profile full                 info=4 warning=403 error=48 on THIS working copy with
+                                                round 20's pack open and its reports landed, of which
+                                                44 are QFAI-REVIEW-007 against untracked local packs.
+                                                The absolute is not a property of any revision; the
+                                                deltas are. See § "The full profile", which states the
+                                                same number for the same state
 ```
 
 **`QFAI-ATDD-111` left that decomposition during this round, and not because of anything here.** It was
@@ -2691,10 +2718,15 @@ the pack just opened, `error=6`. Both are the same five rules the table below li
 `QFAI-REVIEW-007` term entirely.
 
 The gap is one rule and it is local. `.qfai/review/` is ignored and its packs are force-added, so the
-directory holds far more than any revision contains: measured here, **64 pack directories and 317 files
-on disk against 22 directories and 98 files tracked**. `QFAI-REVIEW-007` fires once per pack whose
+directory holds far more than any revision contains. **These four numbers move while you read them**,
+which is the point rather than an inconvenience: round 19 recorded 64 / 317 / 22 / 98, round 20's
+reviewer measured 65 / 319 / 23 / 103 during its own run, and this stage measured **65 pack
+directories and 322 files on disk against 23 directories and 103 files tracked** an hour later. Every
+difference is a review pack landing on this machine. What is stable is the RATIO of the thing to its
+tracked part, and the fact that the untracked remainder drives the figure below. `QFAI-REVIEW-007` fires once per pack whose
 `summary.json` fails the minimum schema, and this stage attributed every finding of the current run to
-the pack it names: **45 packs cited, 43 of them untracked.** Those 43 belong to other stages, on this
+the pack it names: **45 packs cited, 43 of them untracked** — measured twice, an hour apart, with the
+same answer even as the totals above moved. Those 43 belong to other stages, on this
 machine, and no revision of this repository contains them.
 
 So the figure recorded through rounds 15 to 18 has the defect this record spent four rounds naming about
@@ -2712,8 +2744,13 @@ What is a property of the subject, checkable at any revision, is the rule and it
 
 Both committed revisions above satisfy it (4 sealed → 6 just-opened). On a working copy the same rule
 holds on top of however many untracked packs it carries: **47 sealed / 49 just-opened / 48 with reports
-and no summary**, re-measured at round 19 with 42 untracked packs present, and 49 is the state this
-commit is in. Cite the deltas. An absolute cited without the untracked-pack count beside it, and the
+and no summary**, re-measured at round 20 with 42 untracked packs present, and **48 is the state this
+commit is in** — round 20's pack open, its three reports landed, no `summary.json` yet.
+
+Round 20's `completion-reviewer` found this section saying 49 while `## Commands executed` said 48,
+one working copy and two answers, because the commit that moved the figure here moved it in one place.
+That is lesson 4 — a correction costs following it to whatever cites it — inside the round that
+rewrote lesson 4. Both now read 48, and both name the state that produces it. Cite the deltas. An absolute cited without the untracked-pack count beside it, and the
 date it was taken, is not a measurement of anything a reader can reproduce.
 Re-measured at round 15, which found this figure certifying `error=4` — a number carried since round 4
 and never re-run, in the block whose own first sentence says it is re-measured rather than carried.

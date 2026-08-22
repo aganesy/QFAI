@@ -30,6 +30,7 @@ import {
   bodyDigest,
   commandsOf,
   HARMLESS_PROGRAMS,
+  initMustNotShip,
   BUILD_DECORATION,
   LIVE_DECORATIONS,
   INERT_DECORATIONS,
@@ -391,6 +392,129 @@ describe("the shipped-lane allowlist", () => {
       if (payloadDigest(left) === payloadDigest(right)) survived.push(`payloadDigest: ${why}`);
     }
     expect(survived, "two inputs that behave differently must not share a digest").toEqual([]);
+  });
+
+  it("answers every question `initMustNotShip` asks, including the ones no real file reaches", () => {
+    // **Round 20's gate found all four branches unexercised.** Every one of the 191 blobs in the init
+    // source is mode `100644` with an ordinary extension, and `initMustNotShip` has exactly two
+    // callers, both walking real trees — so the executable-bit branch and all three byte-order-mark
+    // branches were dead code on every platform, verified only by a reviewer's throwaway probe and by
+    // this stage's, both deleted at the end of their rounds.
+    //
+    // That is the same shape as the bash oracle: the only thing that ever exercised the rule lived in
+    // scratch. A branch nothing reaches is a branch nothing protects, and the tree being clean is
+    // exactly why it stays that way.
+    const bom = (bytes: number[], rest: string): Buffer =>
+      Buffer.concat([
+        Buffer.from(bytes),
+        Buffer.from(rest, bytes[0] === 0xff || bytes[0] === 0xfe ? "utf16le" : "utf8"),
+      ]);
+    const utf16be = (rest: string): Buffer =>
+      Buffer.concat([Buffer.from([0xfe, 0xff]), Buffer.from(rest, "utf16le").swap16()]);
+
+    const CASES: ReadonlyArray<readonly [string, string, Buffer, number, string | undefined]> = [
+      ["a plain shebang", "docs/note.md", Buffer.from("#!/bin/sh\n"), 0o644, "carries a shebang"],
+      // The round-19 escape: three bytes in front of `#!`, and `sh <file>` runs it anyway.
+      [
+        "a UTF-8 BOM before the shebang",
+        "docs/note.md",
+        bom([0xef, 0xbb, 0xbf], "#!/bin/sh\n"),
+        0o644,
+        "carries a shebang",
+      ],
+      [
+        "a UTF-16LE BOM before it",
+        "docs/note.md",
+        bom([0xff, 0xfe], "#!/bin/sh\n"),
+        0o644,
+        "carries a shebang",
+      ],
+      [
+        "a UTF-16BE BOM before it",
+        "docs/note.md",
+        utf16be("#!/bin/sh\n"),
+        0o644,
+        "carries a shebang",
+      ],
+      [
+        "blank lines before it",
+        "docs/note.md",
+        Buffer.from("\n\n   #!/bin/sh\n"),
+        0o644,
+        "carries a shebang",
+      ],
+      [
+        "a BOM and a blank line",
+        "docs/note.md",
+        bom([0xef, 0xbb, 0xbf], "\n #!/bin/sh\n"),
+        0o644,
+        "carries a shebang",
+      ],
+      // The bit is real on the Linux runner and unobservable on Windows, where Node reports 0o666 for
+      // every file — which is why it is asked HERE, with the mode supplied rather than read off disk.
+      [
+        "the executable bit alone",
+        "docs/note.md",
+        Buffer.from("echo x\n"),
+        0o755,
+        "arrives executable",
+      ],
+      [
+        "a name a tool knows",
+        "tools/run.sh",
+        Buffer.from("echo x\n"),
+        0o644,
+        "is a manifest or a script by name",
+      ],
+      [
+        "a manifest",
+        "package.json",
+        Buffer.from("{}\n"),
+        0o644,
+        "is a manifest or a script by name",
+      ],
+      [
+        "a hook directory",
+        "hooks/pre-commit",
+        Buffer.from("echo x\n"),
+        0o644,
+        "is a manifest or a script by name",
+      ],
+      // …and the other direction, which is what stops the rule from refusing the tree it guards.
+      ["ordinary markdown", "docs/note.md", Buffer.from("# Title\n\nProse.\n"), 0o644, undefined],
+      [
+        "markdown behind a BOM",
+        "docs/note.md",
+        bom([0xef, 0xbb, 0xbf], "# Title\n"),
+        0o644,
+        undefined,
+      ],
+      [
+        "yaml opening with a comment",
+        "a.yml",
+        Buffer.from("# comment\nkey: value\n"),
+        0o644,
+        undefined,
+      ],
+      ["json", "a.json", Buffer.from('{"a":1}\n'), 0o644, undefined],
+      [
+        "a shebang further down the file",
+        "docs/note.md",
+        Buffer.from("# Title\n\n#!/bin/sh\n"),
+        0o644,
+        undefined,
+      ],
+    ];
+
+    const wrong = CASES.filter(
+      ([, file, bytes, mode, want]) => initMustNotShip(file, bytes, mode) !== want,
+    ).map(
+      ([label, file, bytes, mode, want]) =>
+        `${label}: expected ${String(want)}, got ${String(initMustNotShip(file, bytes, mode))}`,
+    );
+    expect(wrong, "a question `initMustNotShip` answers differently than the rule says").toEqual(
+      [],
+    );
   });
 
   it("refuses a build wherever the mask says the text is code", () => {

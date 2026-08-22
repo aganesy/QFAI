@@ -75,6 +75,11 @@ const GOVERNANCE = [
   ".qfai/evidence/coverage-depth-spec-0017.md",
   "packages/qfai/tests/helpers/shippedLaneCommands.ts",
   "packages/qfai/tests/helpers/buildCommand.ts",
+  // Round 20: this file was in `HELPERS` and in the Delta Rejected Guard table and NOT here, and
+  // nothing tied the lists — so a refuted claim written into the newest governance-bearing file
+  // this stage owns would have been invisible to the guard whose subject is exactly that. The tie
+  // is asserted below rather than left to whoever remembers.
+  "packages/qfai/tests/helpers/recordProse.ts",
   "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
   "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
   "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",

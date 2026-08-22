@@ -33,10 +33,9 @@ export function isQuotation(line: string): boolean {
  * alternation.
  *
  * **That fix reached one of the two copies.** The other stopped at `twenty`, and round 19 evaluated what
- * it would do at round 21: against "Twenty-one packs, one per round" the needle fails at `Twenty`,
- * backtracks, matches at `one`, and reports "states one where the tree holds 21" — a true record called
- * wrong, without even reaching the branch built to say "no numeral table here can read this". The
- * hyphenated keys are the point: `[ \t]+` does not cross a hyphen, so `twenty-one` has to be one key.
+ * it would do at the twenty-first round: the needle failed at the hyphenated word, backtracked, and
+ * matched at the trailing `one`, reporting a count of 1 against a correct record — without even
+ * reaching the branch built to say a numeral table cannot read it. The hyphenated keys are the point: `[ \t]+` does not cross a hyphen, so `twenty-one` has to be one key.
  */
 export const WORDS: Record<string, number> = {
   one: 1,
