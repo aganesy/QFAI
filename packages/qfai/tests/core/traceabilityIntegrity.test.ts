@@ -49,6 +49,21 @@ const stubConfig: QfaiConfig = {
   baseBranch: "origin/main",
 };
 
+/**
+ * Creates a spec directory the layout SSOT recognises as **layered**.
+ *
+ * `16_Traceability-ledger.md` names two unrelated schemas: the layered
+ * `BR/AC | Implementation File | …` table this validator reads, and the legacy
+ * spec-pack nine-column SSOT ledger owned by `QFAI-LEDGER-001`. The validator
+ * only enumerates layered specs, so a fixture that is only `mkdir spec-NNNN` is
+ * classified spec-pack and is deliberately invisible to it.
+ */
+async function seedLayeredSpec(specDir: string): Promise<void> {
+  await mkdir(specDir, { recursive: true });
+  await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# 02 User stories\n", "utf-8");
+}
+
 // ---------------------------------------------------------------------------
 // TDD-0011 (TC-0013-0010): Spec BR changed + impl unchanged → QFAI-TRACE-001
 // ---------------------------------------------------------------------------
@@ -70,7 +85,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
     // Set up spec directory with traceability ledger
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -111,7 +126,7 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
   it("returns no issues when spec BR changed and linked impl also changed", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -155,7 +170,7 @@ describe("ledger reads only the first Markdown table", () => {
   it("ignores BR/AC-shaped rows in a supplementary table below the ledger", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -184,7 +199,7 @@ describe("ledger reads only the first Markdown table", () => {
   it("still reports the first table's unchanged implementation files", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
 
     const ledger = [
       "# Traceability Ledger",
@@ -228,7 +243,7 @@ describe("TDD-0013: ledger absent", () => {
   it("emits warning and skips when 16_Traceability-ledger.md is missing", async () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
     // No ledger file created
 
     vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
@@ -269,7 +284,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
     const specsRoot = path.join(tmpRoot, ".qfai", "specs");
     const specDir = path.join(specsRoot, "spec-0001");
     const evidenceDir = path.join(tmpRoot, ".qfai", "evidence");
-    await mkdir(specDir, { recursive: true });
+    await seedLayeredSpec(specDir);
     await mkdir(evidenceDir, { recursive: true });
 
     // Write an evidence file WITHOUT a Diff Context section
@@ -356,7 +371,7 @@ describe("ledger presence is checked without a branch diff", () => {
 
   async function seedSpecDirs(...specIds: string[]): Promise<void> {
     for (const specId of specIds) {
-      await mkdir(path.join(tmpRoot, ".qfai", "specs", specId), { recursive: true });
+      await seedLayeredSpec(path.join(tmpRoot, ".qfai", "specs", specId));
     }
   }
 
@@ -461,7 +476,7 @@ describe("an unavailable diff is reported, not swallowed", () => {
   });
 
   it("emits QFAI-TRACE-003 (info) when git cannot resolve the base ref", async () => {
-    await mkdir(path.join(tmpRoot, ".qfai", "specs", "spec-0001"), { recursive: true });
+    await seedLayeredSpec(path.join(tmpRoot, ".qfai", "specs", "spec-0001"));
     vi.mocked(execFileSync).mockImplementation(() => {
       throw new Error("fatal: ambiguous argument 'origin/main..HEAD'");
     });
@@ -478,6 +493,120 @@ describe("an unavailable diff is reported, not swallowed", () => {
   it("does not emit QFAI-TRACE-003 when git answers with an empty diff", async () => {
     vi.mocked(execFileSync).mockReturnValue("");
     const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// PR #856 review: the unconditional scan must not reach past the layered
+// layout, must not open a non-regular file, and must not put the history-based
+// gate in front of `/qfai-sdd`.
+// ---------------------------------------------------------------------------
+describe("the unconditional scan stays inside its own layout and profile", () => {
+  let tmpRoot: string;
+  let specsRoot: string;
+
+  beforeEach(async () => {
+    vi.mocked(execFileSync).mockReset();
+    tmpRoot = await import("node:fs/promises").then((fs) =>
+      fs.mkdtemp(path.join(os.tmpdir(), "qfai-trace-int-")),
+    );
+    specsRoot = path.join(tmpRoot, ".qfai", "specs");
+  });
+
+  afterEach(async () => {
+    await rm(tmpRoot, { recursive: true, force: true });
+  });
+
+  it("does not judge a legacy spec-pack ledger against the layered schema", async () => {
+    // A valid spec-pack: its required 16_Traceability-ledger.md is the
+    // nine-column SSOT ledger QFAI-LEDGER-001 owns. It has no
+    // "Implementation File" column and never will.
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), "# 01 Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "02_Objective.md"), "# 02 Objective\n", "utf-8");
+    await writeFile(
+      path.join(specDir, "16_Traceability-ledger.md"),
+      [
+        "# 16 Traceability Ledger (SSOT)",
+        "",
+        "| trace_id | obj_id | init_id | cap_id | flow_id | us_id | ac_id | ex_ids | tc_ids |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| TR-0001 | OBJ-0001 | INIT-0001 | CAP-0001 | FLOW-0001 | US-0001 | AC-0001 | EX-0001 | TC-0001 |",
+      ].join("\n"),
+      "utf-8",
+    );
+    vi.mocked(execFileSync).mockReturnValue("");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toEqual([]);
+  });
+
+  it("reports a non-regular ledger path instead of opening it", async () => {
+    // A directory stands in for the FIFO the reviewer named: both are
+    // non-regular, and only the directory case is portable to Windows. The
+    // point is that `stat` decides, so `readFile` never runs — on a FIFO that
+    // call would block until a writer appeared and hang the whole run.
+    const specDir = path.join(specsRoot, "spec-0001");
+    await seedLayeredSpec(specDir);
+    await mkdir(path.join(specDir, "16_Traceability-ledger.md"), { recursive: true });
+    vi.mocked(execFileSync).mockReturnValue("");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig);
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-TRACE-002");
+    expect(issues[0]?.severity).toBe("warning");
+    expect(issues[0]?.rule).toBe("traceability.integrity.ledgerNotAFile");
+  });
+
+  it("skips the history gate entirely when includeImplementationDiff is false", async () => {
+    const specDir = path.join(specsRoot, "spec-0001");
+    await seedLayeredSpec(specDir);
+    await writeFile(
+      path.join(specDir, "16_Traceability-ledger.md"),
+      [
+        "# Traceability Ledger",
+        "",
+        "| BR/AC | Implementation File | Test File |",
+        "| --- | --- | --- |",
+        "| BR-0001-0001 | src/core/someModule.ts | tests/core/someModule.test.ts |",
+      ].join("\n"),
+      "utf-8",
+    );
+    // Exactly what `/qfai-sdd` leaves behind: BR/AC moved, implementation not.
+    vi.mocked(execFileSync).mockReturnValue(".qfai/specs/spec-0001/04_Business-Rules.md\n");
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig, {
+      includeImplementationDiff: false,
+    });
+    expect(issues).toEqual([]);
+    // The diff is not merely ignored — it is never asked for.
+    expect(vi.mocked(execFileSync)).not.toHaveBeenCalled();
+  });
+
+  it("still reports a missing ledger when includeImplementationDiff is false", async () => {
+    await seedLayeredSpec(path.join(specsRoot, "spec-0001"));
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig, {
+      includeImplementationDiff: false,
+    });
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-TRACE-002");
+    expect(issues[0]?.rule).toBe("traceability.integrity.ledgerMissing");
+  });
+
+  it("does not emit QFAI-TRACE-003 for sdd when git cannot answer", async () => {
+    await seedLayeredSpec(path.join(specsRoot, "spec-0001"));
+    vi.mocked(execFileSync).mockImplementation(() => {
+      throw new Error("fatal: ambiguous argument 'origin/main..HEAD'");
+    });
+
+    const issues = await validateTraceabilityIntegrity(tmpRoot, stubConfig, {
+      includeImplementationDiff: false,
+    });
+    // QFAI-TRACE-003 only ever explains why QFAI-TRACE-001 was skipped; the
+    // sdd profile never asks for that check, so the notice would be noise.
     expect(issues.some((entry) => entry.code === "QFAI-TRACE-003")).toBe(false);
   });
 });

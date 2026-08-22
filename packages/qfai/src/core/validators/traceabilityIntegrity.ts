@@ -1,16 +1,15 @@
-import { readdir, readFile } from "node:fs/promises";
+import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { getChangedFilesAgainstBase } from "../gitChanges.js";
+import { collectSpecEntries } from "../specLayout.js";
 import { parseFirstMarkdownTable, type MarkdownTable } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
 const BR_AC_FILES = new Set(["04_Business-Rules.md", "03_Acceptance-Criteria.md"]);
-
-const SPEC_DIR_RE = /^spec-\d{4}$/i;
 
 const LEDGER_FILE = "16_Traceability-ledger.md";
 
@@ -94,18 +93,36 @@ function findChangedSpecDirs(changedFiles: Set<string>, specsRelDir: string): Se
   return specDirs;
 }
 
+type LayeredSpec = { readonly specId: string; readonly ledgerPath: string };
+
 /**
- * Spec directory names directly under `specsDir`, sorted so findings come out
- * in a stable order. A missing / unreadable specs directory is not a
- * traceability finding — the spec-pack validators own that — so it yields none.
+ * The **layered** spec directories under `specsDir`, sorted so findings come
+ * out in a stable order.
+ *
+ * Layout matters because `16_Traceability-ledger.md` is two different files
+ * wearing one name. In the layered layout it is the optional `BR/AC ->
+ * Implementation File` table this validator reads. In the legacy `spec-pack`
+ * layout it is a **required** nine-column SSOT ledger
+ * (`trace_id, obj_id, …, tc_ids`) owned by `QFAI-LEDGER-001` /
+ * `E_LEDGER_MISSING_COLUMN`, whose header can never carry `Implementation
+ * File` — so enumerating it here would file a bogus `QFAI-TRACE-002` against
+ * every valid legacy pack on every `sdd` / `tdd` / `full` run, and fail the run
+ * outright under `--strict` / `--fail-on warning`. `collectSpecEntries` is the
+ * layout SSOT; anything it does not call `layered` owns a different ledger.
+ *
+ * A missing / unreadable specs directory is not a traceability finding — the
+ * spec-pack validators own that — so it yields none.
  */
-async function listSpecIds(specsDir: string): Promise<string[]> {
+async function listLayeredSpecs(specsDir: string): Promise<LayeredSpec[]> {
   try {
-    const entries = await readdir(specsDir, { withFileTypes: true });
+    const entries = await collectSpecEntries(specsDir);
     return entries
-      .filter((entry) => entry.isDirectory() && SPEC_DIR_RE.test(entry.name))
-      .map((entry) => entry.name)
-      .sort();
+      .filter((entry) => entry.layout === "layered")
+      .map((entry) => ({
+        specId: path.basename(entry.dir),
+        ledgerPath: path.join(entry.dir, LEDGER_FILE),
+      }))
+      .sort((a, b) => a.specId.localeCompare(b.specId));
   } catch {
     return [];
   }
@@ -121,9 +138,15 @@ type LedgerRead =
  * `QFAI-TRACE-001` check cannot run for that spec.
  */
 async function readSpecLedger(specId: string, ledgerPath: string): Promise<LedgerRead> {
-  let ledgerContent: string;
+  // `stat` before `readFile`, never the other way round. This scan now visits
+  // every layered spec instead of only the ones named in the branch diff, and
+  // opening a FIFO blocks until a writer appears — one such path anywhere under
+  // `specsDir` would hang `qfai validate` indefinitely, even on an empty diff.
+  // `stat` never opens the file, and it follows symlinks, so a ledger symlinked
+  // to a real file still reads.
+  let ledgerStats;
   try {
-    ledgerContent = await readFile(ledgerPath, "utf-8");
+    ledgerStats = await stat(ledgerPath);
   } catch {
     return {
       ok: false,
@@ -133,6 +156,35 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
         "warning",
         ledgerPath,
         "traceability.integrity.ledgerMissing",
+      ),
+    };
+  }
+
+  if (!ledgerStats.isFile()) {
+    return {
+      ok: false,
+      issue: issue(
+        "QFAI-TRACE-002",
+        `Traceability ledger for ${specId} is not a regular file (FIFO, socket, device or directory). It is not read, and the BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec. Replace it with a Markdown file shaped like .qfai/assistant/skills/qfai-sdd/templates/specs/spec/${LEDGER_FILE}.`,
+        "warning",
+        ledgerPath,
+        "traceability.integrity.ledgerNotAFile",
+      ),
+    };
+  }
+
+  let ledgerContent: string;
+  try {
+    ledgerContent = await readFile(ledgerPath, "utf-8");
+  } catch {
+    return {
+      ok: false,
+      issue: issue(
+        "QFAI-TRACE-002",
+        `Traceability ledger for ${specId} could not be read. The BR/AC to implementation integrity check (QFAI-TRACE-001) is skipped for this spec.`,
+        "warning",
+        ledgerPath,
+        "traceability.integrity.ledgerUnreadable",
       ),
     };
   }
@@ -157,6 +209,23 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
   return { ok: true, entries: parseLedger(ledgerTable) };
 }
 
+export type TraceabilityIntegrityOptions = {
+  /**
+   * Whether to run the history-based `QFAI-TRACE-001` check.
+   *
+   * `false` for `--profile sdd`. That profile is the completion gate of
+   * `/qfai-sdd`, which updates a spec's BR/AC and its ledger and then hands the
+   * implementation to `/qfai-implement` — so at the moment the gate runs, the
+   * linked implementation files are *supposed* to be untouched. Asking for the
+   * diff there would fail the mandatory `--fail-on error` run on exactly the
+   * flow the profile exists to certify. `sdd` therefore checks only that the
+   * ledger it owns is present and well-shaped (`QFAI-TRACE-002`); drift between
+   * a changed BR/AC and its implementation stays with `--profile tdd` / `full`,
+   * which gate after the code exists.
+   */
+  readonly includeImplementationDiff?: boolean;
+};
+
 /**
  * Two questions, two gates.
  *
@@ -169,35 +238,40 @@ async function readSpecLedger(specId: string, ledgerPath: string): Promise<Ledge
  *
  * Whether a BR/AC changed without its linked implementation is a property of
  * the **history**, so `QFAI-TRACE-001` stays behind `changedFiles` and behind
- * `BR_AC_FILES`.
+ * `BR_AC_FILES` — and behind {@link TraceabilityIntegrityOptions.includeImplementationDiff},
+ * because only a profile that gates *after* implementation may ask it.
  */
 export async function validateTraceabilityIntegrity(
   root: string,
   config: QfaiConfig,
+  options: TraceabilityIntegrityOptions = {},
 ): Promise<Issue[]> {
+  const includeImplementationDiff = options.includeImplementationDiff ?? true;
   const issues: Issue[] = [];
   const baseBranch = config.baseBranch ?? "origin/main";
   const specsDir = resolvePath(root, config, "specsDir");
 
-  const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
-  const changedSpecIds = changedFiles
-    ? findChangedSpecDirs(changedFiles, config.paths.specsDir)
-    : new Set<string>();
-
-  if (!changedFiles) {
-    issues.push(
-      issue(
-        "QFAI-TRACE-003",
-        `Could not diff against "${baseBranch}", so the BR/AC to implementation integrity check (QFAI-TRACE-001) was skipped for every spec. Fetch the base ref (a shallow CI clone does not carry it) or set validation baseBranch in qfai.config.yaml. Ledger presence is still checked.`,
-        "info",
-        undefined,
-        "traceability.integrity.diffUnavailable",
-      ),
-    );
+  let changedFiles: Set<string> | null = null;
+  let changedSpecIds = new Set<string>();
+  if (includeImplementationDiff) {
+    changedFiles = getChangedFilesAgainstBase(root, baseBranch);
+    if (changedFiles) {
+      changedSpecIds = findChangedSpecDirs(changedFiles, config.paths.specsDir);
+    } else {
+      issues.push(
+        issue(
+          "QFAI-TRACE-003",
+          `Could not diff against "${baseBranch}", so the BR/AC to implementation integrity check (QFAI-TRACE-001) was skipped for every spec. Fetch the base ref (a shallow CI clone does not carry it) or set validation baseBranch in qfai.config.yaml. Ledger presence is still checked.`,
+          "info",
+          undefined,
+          "traceability.integrity.diffUnavailable",
+        ),
+      );
+    }
   }
 
-  for (const specId of await listSpecIds(specsDir)) {
-    const ledger = await readSpecLedger(specId, path.join(specsDir, specId, LEDGER_FILE));
+  for (const { specId, ledgerPath } of await listLayeredSpecs(specsDir)) {
+    const ledger = await readSpecLedger(specId, ledgerPath);
     if (!ledger.ok) {
       issues.push(ledger.issue);
       continue;

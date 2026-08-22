@@ -361,6 +361,11 @@ async function runSddValidators(
   includeCodeReferences = false,
   enforceNoPrematurePrototypingContracts = true,
   specScope?: SpecScope,
+  // `full` is the repo-wide audit and covers the downstream stage too, so it
+  // opts into the history-based `QFAI-TRACE-001` here — `runTddValidators`
+  // opts out in exchange, so the ledger is still read exactly once.
+  // `--profile sdd` on its own must never ask for it: see below.
+  includeImplementationDrift = false,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -382,10 +387,20 @@ async function runSddValidators(
       enforceNoPrematurePrototypingContracts,
     })),
     ...(await validateTraceability(root, config, { includeCodeReferences })),
-    // `16_Traceability-ledger.md` is a spec-pack artifact `/qfai-sdd` writes,
-    // and `--profile sdd` is that skill's completion gate — so the profile that
+    // `16_Traceability-ledger.md` is an artifact `/qfai-sdd` writes, and
+    // `--profile sdd` is that skill's completion gate — so the profile that
     // owns the file is the one that must hear `QFAI-TRACE-002` about it.
-    ...(await validateTraceabilityIntegrity(root, config)),
+    //
+    // Presence and shape only for `--profile sdd`. `/qfai-sdd` updates BR/AC
+    // and the ledger and leaves the implementation to `/qfai-implement`, so the
+    // linked code is untouched *by design* when that gate runs; asking for the
+    // history-based `QFAI-TRACE-001` there would fail the mandatory
+    // `--profile sdd --fail-on error` run on the flow the profile exists to
+    // certify. `QFAI-TRACE-001` gates the downstream profiles, which run after
+    // the code exists.
+    ...(await validateTraceabilityIntegrity(root, config, {
+      includeImplementationDiff: includeImplementationDrift,
+    })),
     ...(await validateDefinedIds(root, config)),
     ...(await validateContracts(root, config)),
     ...(await validateNavigationFlow(root, config)),
@@ -492,7 +507,8 @@ async function runTddValidators(
   // `full` runs the sdd profile, which already calls `validateContracts`.
   includeContracts = true,
   // Same reason: the sdd profile owns the traceability ledger and now runs
-  // `validateTraceabilityIntegrity` itself, so `full` opts out here.
+  // `validateTraceabilityIntegrity` itself — under `full` with the
+  // implementation-drift check switched on — so `full` opts out here.
   includeTraceabilityIntegrity = true,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
@@ -535,7 +551,7 @@ async function runFullValidators(
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
     ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true, false, specScope)),
+    ...(await runSddValidators(root, config, true, false, specScope, true)),
     ...(await validateReviewArtifacts(root)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
