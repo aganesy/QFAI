@@ -719,13 +719,25 @@ describe("qfai init", { timeout: 60000 }, () => {
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      const generated = [
+      // The per-tool entry points ...
+      const entryPoints = [
         path.join(root, ".github", "copilot-instructions.md"),
         path.join(root, ".codex", "README.md"),
         path.join(root, ".agents", "README.md"),
         path.join(root, ".claude", "agents", "README.md"),
         path.join(root, ".github", "agents", "README.md"),
       ];
+      // ... plus the whole instruction surface they hand the agent:
+      // constitution, catalog contracts, skills and their references.
+      const assistantSurface = await fg("assistant/**/*.{md,yml,yaml}", {
+        cwd: path.join(root, ".qfai"),
+        onlyFiles: true,
+        followSymbolicLinks: false,
+        absolute: true,
+      });
+      expect(assistantSurface.length).toBeGreaterThan(0);
+
+      const generated = [...entryPoints, ...assistantSurface];
 
       for (const generatedPath of generated) {
         const content = await readFile(generatedPath, "utf-8");
