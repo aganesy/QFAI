@@ -372,7 +372,7 @@ Completion MUST NOT be declared when any of the following are true:
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
   DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a step 1 command exited 0 with no test named in its recorded output — a run that selected zero tests exits 0 too, so the exit code alone never settles step 1 — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
@@ -421,8 +421,8 @@ review is requested.
 - `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
 - `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
-- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
-- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary, step 1 included in full: one command per `Selector` entry, each recorded literally
+- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0 **and** every step 1 run's recorded output names the `Selector` entry it ran; an exit 0 naming no test selected nothing and is a FAIL) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
 
 These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
 absence as a blocking gap during review — an evidence file complete in its phase-authored part and
@@ -444,8 +444,8 @@ reached **per item** (after all routed blocking reviewers return PASS, before `r
 and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
 
 It PASSES only when **every** command in the verification command set exits 0; a partial run is not
-a pass. The boundary definition, command set, pass criteria and evidence fields are in
-`references/checkpoint-verification.md`.
+a pass — and **step 1 is not settled by its exit code**: it is emitted one command per `Selector` entry, and each run passes only when its recorded output names the entry it ran, because a run that selected zero tests exits 0 as well. The boundary definition, command set, pass criteria and evidence
+fields are in `references/checkpoint-verification.md`.
 
 ## FINAL CHECKLIST (Check Last)
 

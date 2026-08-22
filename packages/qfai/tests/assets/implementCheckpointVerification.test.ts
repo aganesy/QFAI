@@ -163,6 +163,34 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // The reference is loaded on demand; the body is always in context. While the
+  // body still defined PASS as "every command exits 0" and the completion
+  // prohibition still spoke only of a non-zero exit, an agent reading the body
+  // alone would record a zero-selection step 1 as PASS and advance to `done` —
+  // the exact outcome the reference now calls a FAIL.
+  it("carries step 1's output condition in the skill body too", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+
+      // Evidence definition: the recorded command set is per-entry, not one command.
+      expect(skill).toContain("one command per `Selector` entry, each recorded literally");
+      // Pass criteria, in both places the body states them.
+      expect(skill).toContain(
+        "every step 1 run's recorded output names the `Selector` entry it ran",
+      );
+      expect(skill).toContain("**step 1 is not settled by its exit code**");
+      // Completion prohibition: a nameless exit 0 blocks completion as a non-zero exit does.
+      expect(skill).toContain(
+        "or a step 1 command exited 0 with no test named in its recorded output",
+      );
+      // The bare exit-code definitions must not survive anywhere unqualified.
+      expect(skill).not.toContain("(PASS only when every command exits 0)");
+      expect(skill).not.toMatch(
+        /verification command set exits 0; a partial run is not\r?\na pass\. /,
+      );
+    }
+  });
+
   // pytest and `go test` print no test name by default, so the criterion above
   // would FAIL every correct run unless the command asks for the names.
   it("makes step 1's command print the names it ran", async () => {
