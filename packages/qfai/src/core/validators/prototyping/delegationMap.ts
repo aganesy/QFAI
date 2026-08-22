@@ -12,7 +12,7 @@ import path from "node:path";
 
 import { PROTOTYPING_JSON_REL } from "../../prototyping/paths.js";
 import type { Issue } from "../../types.js";
-import { PROTOTYPING_DELEGATION_SCOPE } from "../../prototyping/policy.js";
+import { PROTOTYPING_DELEGATION_SCOPE, resolveDelegationScope } from "../../prototyping/policy.js";
 import { issue } from "../utils.js";
 
 export const DELEGATION_CATEGORIES = Object.keys(PROTOTYPING_DELEGATION_SCOPE) as readonly string[];
@@ -23,14 +23,36 @@ export const DELEGATION_CATEGORIES = Object.keys(PROTOTYPING_DELEGATION_SCOPE) a
  * `runPrototypingValidators`.
  *
  * Silent no-op when prototyping.json is missing / unparseable / carries no
- * `executionPlan.delegationMap` object: a project without an execution plan
- * is unaffected, and prototyping.json shape errors are owned by
- * `validatePrototypingEvidence`.
+ * `executionPlan.delegationMap`: a project without an execution plan is
+ * unaffected. A `delegationMap` that IS present but is not an object
+ * (string / array / null) is a violation reported here — no other
+ * validator owns the executionPlan block, so it would otherwise pass
+ * every profile silently.
  */
 export async function validatePrototypingDelegationMap(root: string): Promise<Issue[]> {
   const doc = await readPrototypingJsonObject(path.join(root, PROTOTYPING_JSON_REL));
   const executionPlan = asRecord(doc?.executionPlan);
-  return validateDelegationMapIssues(asRecord(executionPlan?.delegationMap), PROTOTYPING_JSON_REL);
+  if (executionPlan === undefined || !Object.hasOwn(executionPlan, "delegationMap")) {
+    return [];
+  }
+  const rawMap = executionPlan.delegationMap;
+  const delegationMap = asRecord(rawMap);
+  if (delegationMap === undefined) {
+    return [
+      issue(
+        "QFAI-PROT-311",
+        `Delegation violation: executionPlan.delegationMap must be an object mapping categories to roles (got: ${describeRoleType(rawMap)}).`,
+        "error",
+        PROTOTYPING_JSON_REL,
+        "prototyping.executionPlan.delegationMap",
+        undefined,
+        "canonical",
+        "`executionPlan.delegationMap` を category -> role の object にしてください " +
+          "(不要になった executionPlan ブロックは削除してください)。",
+      ),
+    ];
+  }
+  return validateDelegationMapIssues(delegationMap, PROTOTYPING_JSON_REL);
 }
 
 async function readPrototypingJsonObject(
@@ -76,14 +98,15 @@ export function validateDelegationMapIssues(
 
   const issues: Issue[] = [];
   for (const [category, rawRole] of Object.entries(delegationMap)) {
-    if (!Object.hasOwn(PROTOTYPING_DELEGATION_SCOPE, category)) {
+    // Resolves both the canonical scope keys and the shipped SKILL.md
+    // Delegation Scope Table labels (e.g. "Generation"), so a map written
+    // against the distributed table is actually checked.
+    const allowedRoles = resolveDelegationScope(category);
+    if (allowedRoles === undefined) {
       // Unknown category is not flagged here (scope violation is a separate
       // concern handled outside this validator).
       continue;
     }
-    const allowedRoles = PROTOTYPING_DELEGATION_SCOPE[
-      category as keyof typeof PROTOTYPING_DELEGATION_SCOPE
-    ] as readonly string[];
     // Non-string values used to be filtered out in stateGate.extractDelegationMap
     // and slipped through silently. Flag them explicitly so malformed entries
     // like { UI実装: 123 } surface a real violation. (Codex review on PR #201.)

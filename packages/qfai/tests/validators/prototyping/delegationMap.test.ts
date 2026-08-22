@@ -5,9 +5,10 @@
  *
  * spec-0012 TC-0012-0286 / AC-0012-0171
  */
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import nodePath from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
 
@@ -15,6 +16,8 @@ import {
   validateDelegationMapIssues,
   validatePrototypingDelegationMap,
 } from "../../../src/core/validators/prototyping/delegationMap.js";
+
+const PROTO_JSON_REL_SSOT = ".qfai/evidence/prototyping/prototyping.json";
 
 describe("validateDelegationMapIssues (v1.8.4 standard adapter)", () => {
   const path = ".qfai/evidence/prototyping/prototyping.json";
@@ -175,8 +178,89 @@ describe("validatePrototypingDelegationMap (prototyping.json reader)", () => {
     expect(issues[0]?.message).toMatch(/non-string/);
   });
 
-  it("returns empty when executionPlan.delegationMap is not an object", async () => {
-    const root = await seedRoot(JSON.stringify({ executionPlan: { delegationMap: "frontend" } }));
+  it("returns empty when executionPlan carries no delegationMap key", async () => {
+    const root = await seedRoot(JSON.stringify({ executionPlan: { plannedAt: "2025-01-01" } }));
     expect(await validatePrototypingDelegationMap(root)).toEqual([]);
+  });
+
+  // A present-but-malformed delegationMap has no other owner: the
+  // executionPlan block is not inspected by validatePrototypingEvidence,
+  // so without this branch `delegationMap: "frontend"` passes every
+  // profile silently.
+  it.each([
+    ["string", JSON.stringify({ executionPlan: { delegationMap: "frontend" } }), "string"],
+    ["array", JSON.stringify({ executionPlan: { delegationMap: ["frontend"] } }), "array"],
+    ["null", JSON.stringify({ executionPlan: { delegationMap: null } }), "null"],
+  ])("emits QFAI-PROT-311 when delegationMap is a %s", async (_label, contents, describedType) => {
+    const issues = await validatePrototypingDelegationMap(await seedRoot(contents));
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("QFAI-PROT-311");
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.file).toBe(PROTO_JSON_REL);
+    expect(issues[0]?.message).toMatch(/must be an object/);
+    expect(issues[0]?.message).toMatch(new RegExp(`got: ${describedType}`));
+  });
+});
+
+// ─── Shipped Delegation Scope Table ↔ policy SSOT ────────────────────────
+// The distributed qfai-prototyping/SKILL.md renders the same policy with
+// English category labels. When the two drift apart the validator simply
+// does not recognise a table-conformant category and never checks its
+// assignment, which is how { "Generation": <any role> } used to pass.
+
+describe("shipped Delegation Scope Table categories are validated", () => {
+  const SKILL_MD = nodePath.resolve(
+    fileURLToPath(import.meta.url),
+    "../../../..",
+    "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
+  );
+
+  async function readShippedScopeRows(): Promise<{ category: string; role: string }[]> {
+    const body = await readFile(SKILL_MD, "utf-8");
+    const table = body.split("## Delegation Scope Table")[1]?.split("\n## ")[0] ?? "";
+    return table
+      .split("\n")
+      .filter((line) => line.trim().startsWith("|"))
+      .map((line) =>
+        line
+          .split("|")
+          .slice(1, -1)
+          .map((cell) => cell.trim()),
+      )
+      .filter(
+        (cells) =>
+          cells.length === 2 &&
+          cells[0] !== undefined &&
+          cells[0] !== "Work" &&
+          !/^-+$/.test(cells[0]),
+      )
+      .map((cells) => ({ category: cells[0] ?? "", role: cells[1] ?? "" }));
+  }
+
+  it("parses the shipped table", async () => {
+    expect((await readShippedScopeRows()).length).toBeGreaterThan(0);
+  });
+
+  it("accepts every shipped category paired with its documented role", async () => {
+    for (const { category, role } of await readShippedScopeRows()) {
+      expect(
+        validateDelegationMapIssues({ [category]: role }, PROTO_JSON_REL_SSOT),
+        `shipped row "${category}" -> "${role}" must be an allowed assignment`,
+      ).toEqual([]);
+    }
+  });
+
+  it("flags every shipped category assigned to an out-of-scope role", async () => {
+    for (const { category } of await readShippedScopeRows()) {
+      const issues = validateDelegationMapIssues(
+        { [category]: "qa-gatekeeper" },
+        PROTO_JSON_REL_SSOT,
+      );
+      expect(
+        issues.map((i) => i.code),
+        `shipped category "${category}" must be recognised`,
+      ).toEqual(["QFAI-PROT-311"]);
+    }
   });
 });
