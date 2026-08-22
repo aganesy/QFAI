@@ -14,7 +14,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { lstat, mkdir, readFile, readdir, rm, writeFile } from "node:fs/promises";
+import { lstat, mkdir, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -39,13 +39,16 @@ function normalizeArtifact(value: string): string {
   return `${lines.join("\n")}\n`;
 }
 
-function phaseAuditHash(evidenceFile: string, content: string): string {
-  const section = content.split(/^### TDD-0001\s*$/m)[1] ?? "";
+function phaseAuditHash(evidenceFile: string, content: string, tddId = "TDD-0001"): string {
+  const after = content.split(new RegExp(`^### ${tddId}\\s*$`, "m"))[1] ?? "";
+  // Stop at the next entry heading, so a file that carries an editing item
+  // beside the consumer hashes each entry over its own lines.
+  const section = after.split(/^#{1,3} /m)[0] ?? "";
   const authored =
     section.split(
       /^\s*(?:\|\s*)?(?:- )?(?:Spec review|Spec audited|Code quality review|Code quality audited|Checkpoint verification)/m,
     )[0] ?? "";
-  const artifact = normalizeArtifact(`### TDD-0001\n${authored}`);
+  const artifact = normalizeArtifact(`### ${tddId}\n${authored}`);
   return digest(`${evidenceFile}\0${digest(artifact)}`);
 }
 
@@ -76,16 +79,47 @@ async function packSeal(root: string, packPath: string): Promise<string> {
   return digest(records.join("\n"));
 }
 
+/** A full-length git rev: the form `evidence-revision.md` asks for. */
+const DEFAULT_REVISION = "abc1230000000000000000000000000000000000";
+
+interface EvidenceOptions {
+  requestOnlyPassRole?: string;
+  reviewRequestTddId?: string;
+  summaryTargetPath?: string;
+  omitReviewPacks?: boolean;
+  revision?: string;
+  /** Write this role's blocking `REVISE` where the gate used to miss it. */
+  hiddenVerdictRole?: string;
+  hiddenVerdictWrapper?: "fence" | "comment" | "duplicate";
+}
+
+/**
+ * A reviewer response body.
+ *
+ * `hiddenVerdictRole` is the evasion the visible-field rule exists for: the
+ * verdict a reader sees is `REVISE`, while the fields the gate reads sit in a
+ * fenced sample or an HTML comment — or the two verdicts stand side by side and
+ * the first one wins a `.test()`. `summary.json` still says PASS and the pack
+ * seal is computed from these bytes, so nothing else disagrees.
+ */
+function responseBody(role: string, passRecord: string, options: EvidenceOptions): string {
+  if (options.requestOnlyPassRole === role) return "Result: REVISE\n";
+  if (options.hiddenVerdictRole !== role) return passRecord;
+  if (options.hiddenVerdictWrapper === "duplicate") {
+    return passRecord.replace("Result: PASS\n", "Result: PASS\nResult: REVISE\n");
+  }
+  return options.hiddenVerdictWrapper === "comment"
+    ? `Result: REVISE\n\n<!--\n${passRecord}-->\n`
+    : `Result: REVISE\n\n\`\`\`\n${passRecord}\`\`\`\n`;
+}
+
 async function materializeEvidence(
   root: string,
   evidenceFile: string,
   rawContent: string,
-  options: {
-    requestOnlyPassRole?: string;
-    reviewRequestTddId?: string;
-    summaryTargetPath?: string;
-  } = {},
+  options: EvidenceOptions = {},
 ): Promise<string> {
+  const revision = options.revision ?? DEFAULT_REVISION;
   const testPath = path.join(root, TEST_FILE);
   const metadata = await lstat(testPath);
   const testBlob = digest(await readFile(testPath));
@@ -94,6 +128,10 @@ async function materializeEvidence(
   );
   let content = rawContent.replaceAll("{{RED_TEST_HASH}}", redHash);
   const auditHash = phaseAuditHash(evidenceFile, content);
+  content = content.replaceAll(
+    "{{EDITING_AUDIT_HASH}}",
+    phaseAuditHash(evidenceFile, content, "TDD-0002"),
+  );
   content = content.replaceAll("{{AUDIT_HASH}}", auditHash);
 
   for (const [name, role, placeholder] of [
@@ -103,7 +141,7 @@ async function materializeEvidence(
     const packPath = `.qfai/review/review-${name}`;
     const packDir = path.join(root, packPath);
     await mkdir(packDir, { recursive: true });
-    const passRecord = `Result: PASS\nReviewed revision: abc123\nAudited evidence hash: ${auditHash}\n`;
+    const passRecord = `Result: PASS\nReviewed revision: ${revision}\nAudited evidence hash: ${auditHash}\n`;
     await writeFile(
       path.join(packDir, "review_request.md"),
       options.requestOnlyPassRole === role
@@ -113,7 +151,7 @@ async function materializeEvidence(
     );
     await writeFile(
       path.join(packDir, `R01_${role}.md`),
-      options.requestOnlyPassRole === role ? "Result: REVISE\n" : passRecord,
+      responseBody(role, passRecord, options),
       "utf8",
     );
     await writeFile(
@@ -121,7 +159,7 @@ async function materializeEvidence(
       `${JSON.stringify(
         {
           overall_status: "PASS",
-          revision: "abc123",
+          revision,
           target: {
             kind: "spec",
             path: options.summaryTargetPath ?? ".qfai/specs/spec-0001",
@@ -135,7 +173,7 @@ async function materializeEvidence(
     );
     content = content.replaceAll(placeholder, await packSeal(root, packPath));
   }
-  return content.replaceAll("{{CHECKPOINT_SEAL}}", checkpointSeal("abc123", "npm test", "PASS"));
+  return content.replaceAll("{{CHECKPOINT_SEAL}}", checkpointSeal(revision, "npm test", "PASS"));
 }
 
 const TC_TABLE = `# 06 Test Cases
@@ -189,12 +227,7 @@ async function runOn(
   root: string,
   testList: string,
   evidenceFiles: Readonly<Record<string, string>> = {},
-  options: {
-    requestOnlyPassRole?: string;
-    reviewRequestTddId?: string;
-    summaryTargetPath?: string;
-    omitReviewPacks?: boolean;
-  } = {},
+  options: EvidenceOptions = {},
 ): Promise<string[]> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
@@ -400,8 +433,8 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 - Test file: tests/unit/sample.test.ts
 - Selector: sample
 - ${obligation}
-- Round 1: Revision: abc123
-- Round 1: RED revision: def456
+- Round 1: Revision: abc1230000000000000000000000000000000000
+- Round 1: RED revision: def4560000000000000000000000000000000000
 - Round 1: RED test hash: {{RED_TEST_HASH}}
 - Round 1: RED test manifest: tests/unit/sample.test.ts
 - RED failure mode: assertion
@@ -414,12 +447,12 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 - Oracle proof: equivalent-mutant
 - qa-gatekeeper: PASS
 - Spec review: PASS
-- Spec reviewed revision: abc123
+- Spec reviewed revision: abc1230000000000000000000000000000000000
 - Spec audited evidence hash: {{AUDIT_HASH}}
 - Spec review pack: .qfai/review/review-20260811000000001
 - Spec review pack seal: {{SPEC_PACK_SEAL}}
 - Code quality review: PASS
-- Code quality reviewed revision: abc123
+- Code quality reviewed revision: abc1230000000000000000000000000000000000
 - Code quality audited evidence hash: {{AUDIT_HASH}}
 - Code quality review pack: .qfai/review/review-20260811000000002
 - Code quality review pack seal: {{CODE_PACK_SEAL}}
@@ -624,8 +657,8 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
       const evidence = completeEntry("Unit").replace(
         "- Refactor verify command: npm test",
         `- Round 1: reviewer verdict: REVISE — update behavior
-- Round 2: Revision: abc123
-- Round 2: RED revision: def789
+- Round 2: Revision: abc1230000000000000000000000000000000000
+- Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED command: npm test
 - Round 2: GREEN command: npm test
 - Round 2: GREEN result: 1 passed
@@ -692,7 +725,10 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     await withProject(async (root) => {
       const evidence = completeEntry("Unit")
         .replace("- Spec review: PASS\n", "")
-        .replace("- Round 1: Revision: abc123", "- Spec review: PASS\n- Round 1: Revision: abc123");
+        .replace(
+          "- Round 1: Revision: abc1230000000000000000000000000000000000",
+          "- Spec review: PASS\n- Round 1: Revision: abc1230000000000000000000000000000000000",
+        );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
       });
@@ -761,8 +797,8 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         .replace(
           "- Refactor verify command: npm test",
           `- Round 1: reviewer verdict: REVISE — update the shared fixture
-- Round 2: Revision: abc123
-- Round 2: RED revision: def789
+- Round 2: Revision: abc1230000000000000000000000000000000000
+- Round 2: RED revision: def7890000000000000000000000000000000000
 - Round 2: RED test hash: {{RED_TEST_HASH}}
 - Round 2: RED test manifest: tests/unit/sample.test.ts
 - Round 2: RED command: npm test
@@ -780,32 +816,61 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
     });
   });
 
-  it("accepts a canonical shared-artifact re-verify for a changed current manifest", async () => {
-    await withProject(async (root) => {
-      const pointer =
-        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
-      const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", "f".repeat(64))
-        .concat(`
-## Shared-artifact re-verify
+  const ATDD_POINTER =
+    "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
 
-### spec-0001/TDD-0001
-
-- Evidence file: .qfai/evidence/atdd-spec-0001.md
-- Revision: abc123
+  const REVERIFY_FIELDS = `- Evidence file: .qfai/evidence/atdd-spec-0001.md
+- Revision: abc1230000000000000000000000000000000000
 - Selector: sample
 - Re-verify command: npm test -- sample
 - Re-verify result: PASS
 - Proof command: npm test -- sample --mutated
-- Proof result: 1 failed
+- Proof result: {{PROOF_RESULT}}
 - Restored GREEN command: npm test -- sample
 - Restored GREEN result: PASS
 - RED test manifest: tests/unit/sample.test.ts
-- RED test hash: {{RED_TEST_HASH}}
-`);
+- RED test hash: {{RED_TEST_HASH}}`;
+
+  /**
+   * The entry of the row that edited the shared artifact.
+   *
+   * The re-verify record sits in its **phase-authored** region — before the
+   * gate fields — so the audit hash its reviewers recorded addresses those
+   * bytes. That is what makes the record evidence rather than an assertion
+   * anyone can append, and the validator now requires it.
+   */
+  function editingEntry(options: { proofResult?: string; auditHash?: string } = {}): string {
+    return `
+### TDD-0002
+
+- TDD-ID: TDD-0002
+- Layer: Integration
+- Test file: tests/unit/sample.test.ts
+- Selector: shared-fixture
+- TC-ref: TC-0001
+- Round 1: Revision: abc1230000000000000000000000000000000000
+
+#### Shared-artifact re-verify
+
+##### spec-0001/TDD-0001
+
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", options.proofResult ?? "1 failed")}
+
+- Spec audited evidence hash: ${options.auditHash ?? "{{EDITING_AUDIT_HASH}}"}
+- Code quality audited evidence hash: ${options.auditHash ?? "{{EDITING_AUDIT_HASH}}"}
+`;
+  }
+
+  function staleConsumerEntry(): string {
+    return completeEntry("Integration").replace("{{RED_TEST_HASH}}", "f".repeat(64));
+  }
+
+  it("accepts a shared-artifact re-verify recorded in the editing item's audited entry", async () => {
+    await withProject(async (root) => {
       const codes = await runOn(
         root,
-        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
-        { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        { ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(editingEntry()) },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
@@ -813,30 +878,72 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
 
   it("rejects a shared-artifact re-verify whose proof does not fail", async () => {
     await withProject(async (root) => {
-      const pointer =
-        "RED fail / GREEN pass — evidence at `.qfai/evidence/atdd-spec-0001.md#tdd-0001`";
-      const evidence = completeEntry("Integration").replace("{{RED_TEST_HASH}}", "f".repeat(64))
-        .concat(`
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
+            editingEntry({ proofResult: "PASS" }),
+          ),
+        },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // The hole this binding closes: the record used to clear a stale RED hash
+  // from anywhere under `.qfai/evidence/`, audited by nobody.
+  it("rejects a shared-artifact re-verify no item's audit hash covers", async () => {
+    await withProject(async (root) => {
+      const evidence = staleConsumerEntry().concat(`
 ## Shared-artifact re-verify
 
 ### spec-0001/TDD-0001
 
-- Evidence file: .qfai/evidence/atdd-spec-0001.md
-- Revision: abc123
-- Selector: sample
-- Re-verify command: npm test -- sample
-- Re-verify result: PASS
-- Proof command: npm test -- sample --mutated
-- Proof result: PASS
-- Restored GREEN command: npm test -- sample
-- Restored GREEN result: PASS
-- RED test manifest: tests/unit/sample.test.ts
-- RED test hash: {{RED_TEST_HASH}}
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
 `);
       const codes = await runOn(
         root,
-        ledger([{ status: "done", evidence: pointer, layer: "Integration" }]),
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
         { ".qfai/evidence/atdd-spec-0001.md": evidence },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects a shared-artifact re-verify the editing item's audit hash no longer matches", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry().concat(
+            editingEntry({ auditHash: "e".repeat(64) }),
+          ),
+        },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("rejects an unaudited block dropped into an unrelated evidence file", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          // Written first so the shared review packs are (re)materialised from
+          // the entry that records their seals, not from this file.
+          ".qfai/evidence/notes.md": `# Notes
+
+## Shared-artifact re-verify
+
+### spec-0001/TDD-0001
+
+${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
+`,
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+        },
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
@@ -902,7 +1009,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
               `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
-- Round 1: Falsifiability revision: fedcba
+- Round 1: Falsifiability revision: fedcba0000000000000000000000000000000000
 - Refactor verify command: npm test`,
             );
         }
@@ -956,7 +1063,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
           `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
-- Round 1: Falsifiability revision: fedcba
+- Round 1: Falsifiability revision: fedcba0000000000000000000000000000000000
 - Refactor verify command: npm test`,
         );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
@@ -1017,7 +1124,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
-- Round 1: Falsifiability revision: fedcba
+- Round 1: Falsifiability revision: fedcba0000000000000000000000000000000000
 - Refactor verify command: npm test`,
       );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
@@ -1038,7 +1145,7 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
           `- Round 1: Satisfied-by: existing-test
 - Round 1: Falsifiability command: npm test -- sample
 - Round 1: Falsifiability result: mutation failed
-- Round 1: Falsifiability revision: fedcba
+- Round 1: Falsifiability revision: fedcba0000000000000000000000000000000000
 - Refactor verify command: npm test`,
         );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
@@ -1142,6 +1249,208 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         { ".qfai/evidence/implement-spec-0001.md": evidence },
       );
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  /**
+   * A manifest entry that is not a file addresses nothing stable.
+   *
+   * A directory hashed as an empty byte string never moved, so every fixture,
+   * snapshot and helper under it could be rewritten while the recorded RED test
+   * hash still recomputed. `legacyRecord` below reproduces exactly what the
+   * validator used to compute, so the case fails only because the manifest
+   * contract now names files.
+   */
+  async function manifestArtifacts(root: string): Promise<{
+    fileRecord: string;
+    mode: (target: string) => Promise<string>;
+  }> {
+    const mode = async (target: string): Promise<string> =>
+      ((await lstat(target)).mode & 0o777).toString(8).padStart(3, "0");
+    const testPath = path.join(root, TEST_FILE);
+    await mkdir(path.dirname(testPath), { recursive: true });
+    await writeFile(testPath, "// test\n", "utf-8");
+    const fileRecord = `${TEST_FILE}\0file\0${await mode(testPath)}\0${digest(
+      await readFile(testPath),
+    )}`;
+    return { fileRecord, mode };
+  }
+
+  function fencedManifest(paths: readonly string[]): string {
+    return `${[
+      "- Round 1: RED test manifest:",
+      "",
+      "  ```",
+      ...paths.map((entry) => `  ${entry}`),
+      "  ```",
+    ].join("\n")}\n`;
+  }
+
+  it("rejects a RED test manifest entry that names a directory", async () => {
+    await withProject(async (root) => {
+      const { fileRecord, mode } = await manifestArtifacts(root);
+      const fixtureDir = path.join(root, "tests", "fixtures");
+      await mkdir(fixtureDir, { recursive: true });
+      await writeFile(path.join(fixtureDir, "data.json"), "{}\n", "utf-8");
+      const legacyRecord = `tests/fixtures\0dir\0${await mode(fixtureDir)}\0${digest(
+        Buffer.alloc(0),
+      )}`;
+      const evidence = completeEntry("Integration")
+        .replace("{{RED_TEST_HASH}}", digest([legacyRecord, fileRecord].join("\n")))
+        .replace(
+          `- Round 1: RED test manifest: ${TEST_FILE}\n`,
+          fencedManifest(["tests/fixtures", TEST_FILE]),
+        );
+      await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          ".qfai/evidence/atdd-spec-0001.md": evidence,
+        },
+      );
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(found?.message).toContain("valid RED test manifest");
+    });
+  });
+
+  // Windows: the case needs a real symlink, which needs elevation there.
+  it.skipIf(process.platform === "win32")(
+    "rejects a RED test manifest entry reached through a symlinked parent",
+    async () => {
+      await withProject(async (root) => {
+        const { fileRecord, mode } = await manifestArtifacts(root);
+        const outside = path.join(root, "outside");
+        await mkdir(outside, { recursive: true });
+        await writeFile(path.join(outside, "data.json"), "{}\n", "utf-8");
+        await mkdir(path.join(root, "tests"), { recursive: true });
+        await symlink(outside, path.join(root, "tests", "fixtures"), "dir");
+        const linked = path.join(root, "tests", "fixtures", "data.json");
+        const legacyRecord = `tests/fixtures/data.json\0file\0${await mode(linked)}\0${digest(
+          await readFile(linked),
+        )}`;
+        const evidence = completeEntry("Integration")
+          .replace("{{RED_TEST_HASH}}", digest([fileRecord, legacyRecord].join("\n")))
+          .replace(
+            `- Round 1: RED test manifest: ${TEST_FILE}\n`,
+            fencedManifest([TEST_FILE, "tests/fixtures/data.json"]),
+          );
+        await runOn(
+          root,
+          ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+          { ".qfai/evidence/atdd-spec-0001.md": evidence },
+        );
+        const issues = await validateTddList(root, defaultConfig);
+        const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        expect(found?.message).toContain("valid RED test manifest");
+      });
+    },
+  );
+
+  for (const wrapper of ["fence", "comment"] as const) {
+    it(`rejects a reviewer PASS hidden in a ${wrapper}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+          { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: wrapper },
+        );
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  it("rejects a second visible Result line beside the PASS", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { hiddenVerdictRole: "completion-reviewer", hiddenVerdictWrapper: "duplicate" },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // The review pack is local-only, so on a fresh clone nothing else looks at
+  // the revision at all: the committed evidence has to carry a form that names
+  // a tree, or item 10 verifies against nothing.
+  it("rejects a committed revision that names no tree when no pack is present", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replaceAll(DEFAULT_REVISION, "abc123");
+      await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { omitReviewPacks: true, revision: "abc123" },
+      );
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(found?.message).toContain("Revision naming a git rev or working-tree+<sha256>");
+    });
+  });
+
+  it("accepts a working-tree content hash as a revision", async () => {
+    await withProject(async (root) => {
+      const workingTree = `working-tree+${"a".repeat(64)}`;
+      const evidence = completeEntry("Unit").replaceAll(DEFAULT_REVISION, workingTree);
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": evidence },
+        { revision: workingTree },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  it("does not also report a missing anchor when the pointer resolves", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_ANCHOR_MISSING", () => {
+  const OUTCOME_ONLY =
+    "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed";
+
+  it("warns on a done row whose Evidence carries no anchor", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: OUTCOME_ONLY }]));
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      expect(found?.severity).toBe("warning");
+      expect(found?.rule).toBe("TDDLIST-007");
+    });
+  });
+
+  // A row mid-cycle has not claimed completion yet, and the pointer is written
+  // together with the evidence entry the completion gate reads.
+  for (const status of ["green", "refactor", "review-fix"]) {
+    it(`stays silent at Status=${status}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status, evidence: OUTCOME_ONLY }]));
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
+      });
+    });
+  }
+
+  // A malformed pointer is already an error; reporting the absence of an anchor
+  // on top of it would name the same gap twice.
+  it("stays silent when a malformed pointer is already reported", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: "evidence at ./notes/run.md" }]),
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_MISSING");
     });
   });
 });

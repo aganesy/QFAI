@@ -478,6 +478,21 @@ function isFailingEvidenceResult(value: string): boolean {
 
 const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
 
+/**
+ * The two revision forms `qfai-implement/references/evidence-revision.md`
+ * defines: a git rev (abbreviated or full) or `working-tree+<content hash>`.
+ *
+ * Only the review pack checked this, and a pack is intentionally local-only —
+ * so on a fresh clone nothing did. `Revision: abc123` and
+ * `Reviewed revision: not-a-revision` then agreed with each other, the
+ * checkpoint seal recomputed over them, and a `done` row shipped evidence that
+ * names no tree anyone can identify. Freshness cannot be judged against a value
+ * that addresses nothing, so the form is checked where the value is committed.
+ */
+const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,40}|working-tree\+[0-9a-f]{64})$/i;
+
+const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
+
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
 }
@@ -486,10 +501,39 @@ function bareSha256(value: string): string {
   return value.replace(/^sha256:/i, "").toLowerCase();
 }
 
-function exactLineField(content: string, field: string, value: string): boolean {
+/**
+ * Every value a `Field: value` line states in the **visible** Markdown of a
+ * review artifact.
+ *
+ * A raw-text scan read the non-specification regions too. A response whose real
+ * `Result` is `REVISE` could carry `Result: PASS`, `Reviewed revision` and
+ * `Audited evidence hash` inside a fenced sample or an HTML comment — invisible
+ * to the human reading the verdict, and enough for every field probe here — so
+ * a blocking response passed as long as `summary.json` said PASS and the pack
+ * seal was recomputed from the doctored contents. Masking is the same one the
+ * evidence entries use, so "what the reader sees" means one thing in both.
+ */
+function visibleLineFieldValues(content: string, field: string): string[] {
   const escapedField = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const escapedValue = value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`^${escapedField}:\\s*${escapedValue}\\s*$`, "im").test(content);
+  const pattern = new RegExp(`^${escapedField}:[ \\t]*(.*)$`, "i");
+  return maskEvidenceRegions(content.replace(/\r\n/g, "\n"))
+    .split("\n")
+    .flatMap((line) => {
+      const match = pattern.exec(line);
+      return match === null ? [] : [(match[1] ?? "").trim()];
+    });
+}
+
+/**
+ * True when the artifact states `field` exactly once, visibly, and states
+ * `value`.
+ *
+ * Uniqueness is part of the claim: two visible `Result:` lines are not a
+ * verdict, they are a document from which a reader can pick either answer.
+ */
+function exactLineField(content: string, field: string, value: string): boolean {
+  const values = visibleLineFieldValues(content, field);
+  return values.length === 1 && values[0] === value;
 }
 
 function normalizeAuditArtifact(value: string): string {
@@ -557,9 +601,35 @@ function safeRepoRelativePath(value: string): string | null {
   return normalized;
 }
 
+/**
+ * True when every directory component leading to `safePath` is a real
+ * directory inside the project.
+ *
+ * `lstat` only declines to follow the **last** component. A manifest entry is
+ * relative and rejects `..`, but a tracked intermediate symlink —
+ * `tests/fixtures -> /shared/fixtures` — still sends `tests/fixtures/data.json`
+ * outside the repository, so the RED hash addressed bytes a fresh clone does
+ * not have and a manifest could be pointed at anything by moving one link.
+ * Checking each parent keeps the final entry's own symlink payload hashable
+ * (the recorded contract) while confining the walk to the tree.
+ */
+async function hasPlainParentComponents(root: string, safePath: string): Promise<boolean> {
+  const parts = safePath.split("/");
+  for (let depth = 1; depth < parts.length; depth += 1) {
+    const parent = path.join(root, ...parts.slice(0, depth));
+    try {
+      if (!(await lstat(parent)).isDirectory()) return false;
+    } catch {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function artifactRecord(root: string, relativePath: string): Promise<string | null> {
   const safePath = safeRepoRelativePath(relativePath);
   if (safePath === null) return null;
+  if (!(await hasPlainParentComponents(root, safePath))) return null;
   const absolute = path.join(root, ...safePath.split("/"));
   let metadata;
   try {
@@ -567,15 +637,18 @@ async function artifactRecord(root: string, relativePath: string): Promise<strin
   } catch {
     return null;
   }
-  const kind = metadata.isSymbolicLink() ? "symlink" : metadata.isDirectory() ? "dir" : "file";
+  // A directory hashed as an empty byte string is a hash that never moves: the
+  // fixtures, snapshots and helpers under it could all be rewritten and the
+  // recorded RED test hash still recomputed, so a `done` row kept evidence it
+  // no longer had. The manifest contract names each input file, so a directory
+  // — and any device, FIFO or socket, which `readFile` may block on — is not a
+  // manifest entry at all.
+  const kind = metadata.isSymbolicLink() ? "symlink" : metadata.isFile() ? "file" : null;
+  if (kind === null) return null;
   let bytes: Buffer;
   try {
     bytes =
-      kind === "symlink"
-        ? Buffer.from(await readlink(absolute), "utf8")
-        : kind === "dir"
-          ? Buffer.alloc(0)
-          : await readFile(absolute);
+      kind === "symlink" ? Buffer.from(await readlink(absolute), "utf8") : await readFile(absolute);
   } catch {
     return null;
   }
@@ -664,29 +737,44 @@ interface CompletedEvidenceExpectation {
   preSplit: boolean;
 }
 
+/**
+ * The `<target>` subsections of every `Shared-artifact re-verify` block in
+ * `content`.
+ *
+ * Heading levels are read **relatively**: the block heading may be the
+ * document-level `## Shared-artifact re-verify` a zero-row stage writes, or the
+ * one nested inside an editing row's entry (`#### …` under `### TDD-NNNN`), and
+ * a consumer subsection is one level below whichever it is. Pinning them to
+ * `##`/`###` made the nested form — the one the contract calls "record it on
+ * the editing row" — unreadable, and the nested form is the only one an item's
+ * audit hash can cover.
+ */
 function sharedArtifactReverifySections(content: string, target: string): string[] {
   const normalized = content.replace(/\r\n/g, "\n");
   const originalLines = normalized.split("\n");
   const visibleLines = maskEvidenceRegions(normalized).split("\n");
   const sections: string[] = [];
-  let inReverifyBlock = false;
+  let blockLevel: number | null = null;
 
   for (let index = 0; index < visibleLines.length; index += 1) {
     const heading = /^\s*(#{1,6})\s+(.+?)\s*$/.exec(visibleLines[index] ?? "");
     if (heading === null) continue;
     const level = heading[1]?.length ?? 0;
     const title = (heading[2] ?? "").trim();
-    if (level === 2) {
-      inReverifyBlock = title.toLowerCase() === "shared-artifact re-verify";
+    if (title.toLowerCase() === "shared-artifact re-verify") {
+      blockLevel = level;
       continue;
     }
-    if (!inReverifyBlock || level !== 3 || title.toLowerCase() !== target.toLowerCase()) {
+    if (blockLevel === null) continue;
+    if (level <= blockLevel) {
+      blockLevel = null;
       continue;
     }
+    if (level !== blockLevel + 1 || title.toLowerCase() !== target.toLowerCase()) continue;
     let end = index + 1;
     while (end < visibleLines.length) {
       const nextHeading = /^\s*(#{1,6})\s+/.exec(visibleLines[end] ?? "");
-      if (nextHeading !== null && (nextHeading[1]?.length ?? 7) <= 3) break;
+      if (nextHeading !== null && (nextHeading[1]?.length ?? 7) <= level) break;
       end += 1;
     }
     sections.push(originalLines.slice(index + 1, end).join("\n"));
@@ -694,6 +782,141 @@ function sharedArtifactReverifySections(content: string, target: string): string
   return sections;
 }
 
+/** An item evidence file, and the spec it belongs to. */
+const ITEM_EVIDENCE_FILE_NAME = /^(?:implement|atdd)-spec-\d{4}\.md$/i;
+
+/** The stage evidence file a zero-row ATDD stage records into. */
+const STAGE_EVIDENCE_FILE_NAME = /^coverage-depth-spec-\d{4}\.md$/i;
+
+/**
+ * True when a `Shared-artifact re-verify` record inside `section` is covered by
+ * the audit its item declares.
+ *
+ * The record is only evidence because the editing item's reviewers hashed it.
+ * That is true exactly when it sits in the phase-authored region — the part
+ * `completedEvidenceAuditHash` addresses — of an entry whose recorded audit
+ * hashes still recompute to that value. Without the check, an independent block
+ * appended anywhere under `.qfai/evidence/` cleared a stale RED hash while no
+ * reviewer had ever seen it.
+ */
+function itemAuditCoversAuthoredEvidence(
+  evidenceFile: string,
+  section: string,
+  tddId: string,
+): boolean {
+  const expectedHash = completedEvidenceAuditHash(evidenceFile, section, tddId);
+  return (["Spec", "Code quality"] as const).every((prefix) => {
+    const recorded = rowEvidenceFieldValue(section, `${prefix} audited evidence hash`);
+    return (
+      recorded !== null && SHA256_VALUE.test(recorded) && bareSha256(recorded) === expectedHash
+    );
+  });
+}
+
+/**
+ * True when a stage evidence file's `## Final status` carries the pack seal
+ * that makes the stage's record tamper-evident.
+ *
+ * A zero-row stage owns no item entry, so there is no audit hash to hang its
+ * re-verify record on; `qfai-atdd/SKILL.md` puts a `Review pack` and
+ * `Review pack seal` in `## Final status` for exactly that case and asks the
+ * completion gate to recompute the seal over the recorded path. As with the
+ * per-item packs, a pack that is simply absent (a fresh clone: packs are
+ * local-only) is not a failure — a present pack that no longer seals is.
+ */
+async function hasSealedStageStatus(root: string, content: string): Promise<boolean> {
+  const section = markdownEvidenceIndex(content).sections.get("final-status");
+  if (section === undefined) return false;
+  const pack = rowEvidenceFieldValue(section, "Review pack");
+  const seal = rowEvidenceFieldValue(section, "Review pack seal");
+  if (
+    pack === null ||
+    seal === null ||
+    !SHA256_VALUE.test(seal) ||
+    !/^\.qfai\/review\/review-\d{17}$/.test(pack)
+  ) {
+    return false;
+  }
+  const safePack = safeRepoRelativePath(pack);
+  if (safePack === null) return false;
+  try {
+    await lstat(path.join(root, ...safePack.split("/")));
+  } catch (error) {
+    return (error as NodeJS.ErrnoException).code === "ENOENT";
+  }
+  const files = await collectReviewPackFiles(root, pack);
+  return files !== null && reviewPackSeal(files) === bareSha256(seal);
+}
+
+/** One `Shared-artifact re-verify` subsection, judged on its own fields. */
+async function isCurrentReverifyRecord(
+  root: string,
+  evidenceFile: string,
+  expected: CompletedEvidenceExpectation,
+  section: string,
+): Promise<boolean> {
+  const revision = rowEvidenceFieldValue(section, "Revision");
+  const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
+  const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
+  const proofCommand = rowEvidenceFieldValue(section, "Proof command");
+  const proofResult = rowEvidenceFieldValue(section, "Proof result");
+  const restoredCommand = rowEvidenceFieldValue(section, "Restored GREEN command");
+  const restoredResult = rowEvidenceFieldValue(section, "Restored GREEN result");
+  const manifest = rowEvidenceFieldValue(section, "RED test manifest");
+  const recordedHash = rowEvidenceFieldValue(section, "RED test hash");
+  if (
+    rowEvidenceFieldValue(section, "Evidence file") !== evidenceFile ||
+    revision === null ||
+    !EVIDENCE_REVISION_FORM.test(revision) ||
+    rowEvidenceFieldValue(section, "Selector") !== expected.selector ||
+    reverifyCommand === null ||
+    !isExecutedEvidenceCommand(reverifyCommand) ||
+    reverifyResult === null ||
+    !isPassingEvidenceResult(reverifyResult) ||
+    proofCommand === null ||
+    !isExecutedEvidenceCommand(proofCommand) ||
+    proofResult === null ||
+    !isFailingEvidenceResult(proofResult) ||
+    restoredCommand === null ||
+    !isExecutedEvidenceCommand(restoredCommand) ||
+    restoredResult === null ||
+    !isPassingEvidenceResult(restoredResult) ||
+    manifest === null ||
+    recordedHash === null ||
+    !SHA256_VALUE.test(recordedHash)
+  ) {
+    return false;
+  }
+  const manifestPaths = manifest
+    .replace(/\r\n/g, "\n")
+    .split("\n")
+    .map((line) => line.trim().replace(/^[-*]\s+/, ""))
+    .filter((line) => line.length > 0);
+  if (!manifestPaths.includes(expected.testFile)) return false;
+  const computed = await redTestManifestHash(root, manifest);
+  return computed !== null && bareSha256(recordedHash) === computed;
+}
+
+/**
+ * True when some **audited** record re-verifies this row against the current
+ * shared artifact.
+ *
+ * Where the record may live is half the rule. Any Markdown under
+ * `.qfai/evidence/` used to qualify, and nothing tied the block to the change
+ * that moved the artifact: appending an independent
+ * `## Shared-artifact re-verify` block to an unrelated file cleared a `done`
+ * row's stale RED hash with a record no reviewer had audited and no seal
+ * covered. Two homes are accepted now, and each carries its own binding:
+ *
+ * - **the editing item's entry** in `implement-`/`atdd-spec-NNNN.md`, inside
+ *   the phase-authored region its `Spec` and `Code quality audited evidence
+ *   hash` address — so editing the record invalidates the verdicts that closed
+ *   that item. An item cannot re-verify itself: the consumer is `done` and has
+ *   no edge on which to observe anything.
+ * - **a zero-row stage's `coverage-depth-spec-NNNN.md`**, which owns no item
+ *   entry, where `## Final status` must carry the stage `Review pack` and a
+ *   `Review pack seal` that still recomputes from it.
+ */
 async function hasCurrentSharedArtifactReverify(
   root: string,
   evidenceFile: string,
@@ -708,59 +931,31 @@ async function hasCurrentSharedArtifactReverify(
   }
   const target = `spec-${expected.specNumber}/${expected.tddId}`;
   for (const entry of entries) {
-    if (!entry.isFile() || !entry.name.endsWith(".md")) continue;
+    const isItemFile = entry.isFile() && ITEM_EVIDENCE_FILE_NAME.test(entry.name);
+    const isStageFile = entry.isFile() && STAGE_EVIDENCE_FILE_NAME.test(entry.name);
+    if (!isItemFile && !isStageFile) continue;
     let content: string;
     try {
       content = await readFile(path.join(evidenceDir, entry.name), "utf8");
     } catch {
       continue;
     }
-    for (const section of sharedArtifactReverifySections(content, target)) {
-      const recordedFile = rowEvidenceFieldValue(section, "Evidence file");
-      const revision = rowEvidenceFieldValue(section, "Revision");
-      const selector = rowEvidenceFieldValue(section, "Selector");
-      const reverifyCommand = rowEvidenceFieldValue(section, "Re-verify command");
-      const reverifyResult = rowEvidenceFieldValue(section, "Re-verify result");
-      const proofCommand = rowEvidenceFieldValue(section, "Proof command");
-      const proofResult = rowEvidenceFieldValue(section, "Proof result");
-      const restoredCommand = rowEvidenceFieldValue(section, "Restored GREEN command");
-      const restoredResult = rowEvidenceFieldValue(section, "Restored GREEN result");
-      const manifest = rowEvidenceFieldValue(section, "RED test manifest");
-      const recordedHash = rowEvidenceFieldValue(section, "RED test hash");
-      if (
-        recordedFile !== evidenceFile ||
-        revision === null ||
-        selector !== expected.selector ||
-        reverifyCommand === null ||
-        !isExecutedEvidenceCommand(reverifyCommand) ||
-        reverifyResult === null ||
-        !isPassingEvidenceResult(reverifyResult) ||
-        proofCommand === null ||
-        !isExecutedEvidenceCommand(proofCommand) ||
-        proofResult === null ||
-        !isFailingEvidenceResult(proofResult) ||
-        restoredCommand === null ||
-        !isExecutedEvidenceCommand(restoredCommand) ||
-        restoredResult === null ||
-        !isPassingEvidenceResult(restoredResult) ||
-        manifest === null ||
-        recordedHash === null ||
-        !SHA256_VALUE.test(recordedHash)
-      ) {
-        continue;
+    if (isStageFile) {
+      if (!(await hasSealedStageStatus(root, content))) continue;
+      for (const section of sharedArtifactReverifySections(content, target)) {
+        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
       }
-      const manifestPaths = manifest
-        .replace(/\r\n/g, "\n")
-        .split("\n")
-        .map((line) => line.trim().replace(/^[-*]\s+/, ""))
-        .filter((line) => line.length > 0);
-      const computed = await redTestManifestHash(root, manifest);
-      if (
-        manifestPaths.includes(expected.testFile) &&
-        computed !== null &&
-        bareSha256(recordedHash) === computed
-      ) {
-        return true;
+      continue;
+    }
+    const ownerFile = `.qfai/evidence/${entry.name}`;
+    for (const [anchor, ownerSection] of markdownEvidenceIndex(content).sections) {
+      if (!/^tdd-\d{4}$/.test(anchor)) continue;
+      const ownerTddId = anchor.toUpperCase();
+      if (ownerFile === evidenceFile && ownerTddId === expected.tddId) continue;
+      if (!itemAuditCoversAuthoredEvidence(ownerFile, ownerSection, ownerTddId)) continue;
+      const audited = phaseAuthoredEvidence(ownerSection, ownerTddId);
+      for (const section of sharedArtifactReverifySections(audited, target)) {
+        if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
       }
     }
   }
@@ -840,6 +1035,9 @@ function missingCompletedEvidenceFields(
     const greenCommand = roundEvidenceFieldValue(section, round, "GREEN command");
     const greenResult = roundEvidenceFieldValue(section, round, "GREEN result");
     if (revision === null) missing.push(`Round ${round}: Revision`);
+    if (revision !== null && !EVIDENCE_REVISION_FORM.test(revision)) {
+      missing.push(`Round ${round}: Revision naming ${REVISION_FORM_HINT}`);
+    }
     if (greenCommand === null) missing.push(`Round ${round}: GREEN command`);
     if (greenResult === null) missing.push(`Round ${round}: GREEN result`);
     if (greenCommand !== null && !isExecutedEvidenceCommand(greenCommand)) {
@@ -885,6 +1083,14 @@ function missingCompletedEvidenceFields(
     if (validObservedRed && typeof redResult === "string" && !isFailingEvidenceResult(redResult)) {
       missing.push(`Round ${round}: failing RED result`);
     }
+    const redRevision = observedValues[2];
+    if (
+      validObservedRed &&
+      typeof redRevision === "string" &&
+      !EVIDENCE_REVISION_FORM.test(redRevision)
+    ) {
+      missing.push(`Round ${round}: RED revision naming ${REVISION_FORM_HINT}`);
+    }
     const falsifiabilityCommand = falsifiabilityValues[1];
     const falsifiabilityResult = falsifiabilityValues[2];
     if (
@@ -900,6 +1106,14 @@ function missingCompletedEvidenceFields(
       !isFailingEvidenceResult(falsifiabilityResult)
     ) {
       missing.push(`Round ${round}: failing falsifiability result`);
+    }
+    const falsifiabilityRevision = falsifiabilityValues[3];
+    if (
+      validFalsifiability &&
+      typeof falsifiabilityRevision === "string" &&
+      !EVIDENCE_REVISION_FORM.test(falsifiabilityRevision)
+    ) {
+      missing.push(`Round ${round}: Falsifiability revision naming ${REVISION_FORM_HINT}`);
     }
     if (validObservedRed && failureMode !== "assertion" && failureMode !== "expected-error") {
       missing.push("RED failure mode: assertion or expected-error for observed RED");
@@ -956,6 +1170,9 @@ function missingCompletedEvidenceFields(
       reviewedRevision !== latestRevision
     ) {
       missing.push(`${prefix} reviewed revision matching latest Revision`);
+    }
+    if (reviewedRevision !== null && !EVIDENCE_REVISION_FORM.test(reviewedRevision)) {
+      missing.push(`${prefix} reviewed revision naming ${REVISION_FORM_HINT}`);
     }
     if (auditedHash !== null && !SHA256_VALUE.test(auditedHash)) {
       missing.push(`${prefix} audited evidence hash: sha256`);
@@ -1088,7 +1305,7 @@ async function invalidCompletedEvidenceArtifacts(
       !exactLineField(request.content, "TDD-ID", expected.tddId) ||
       response === undefined ||
       !summaryMatches ||
-      !/^Result:\s*PASS\s*$/im.test(responseBody) ||
+      !exactLineField(responseBody, "Result", "PASS") ||
       recordedRevision === null ||
       !exactLineField(responseBody, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
@@ -1296,6 +1513,25 @@ export const STALE_STATUS_RULE_ID = "TDDLIST-005";
 
 /** Waiver rule id for `TDDLIST_SELECTOR_UNRESOLVED`. */
 export const SELECTOR_UNRESOLVED_RULE_ID = "TDDLIST-006";
+
+/**
+ * Waiver rule id for `TDDLIST_EVIDENCE_ANCHOR_MISSING`.
+ *
+ * Every completed-evidence check below hangs off an anchor, so a `done` row
+ * whose `Evidence` cell is a bare command and result — command-shaped, so
+ * `TDDLIST_EVIDENCE_STATUS_ONLY` passes over it too — reached `done` with no
+ * evidence entry, no reviewer verdict and no checkpoint, and produced no
+ * finding at all. The execution-ledger contract makes the cell a pointer, so
+ * the absent anchor is itself the unresolved thing.
+ *
+ * Reported at `warning` for the same reason `TDDLIST_EVIDENCE_STATUS_ONLY` is:
+ * ledgers written before the pointer contract carry outcome prose on hundreds
+ * of `done` rows — this repository's own carry ~350 — and turning those into
+ * build failures on upgrade is a migration, not a gate. A project that has
+ * moved its ledger onto pointers raises it by treating warnings as failures;
+ * one still migrating waives it per path.
+ */
+export const EVIDENCE_ANCHOR_MISSING_RULE_ID = "TDDLIST-007";
 
 /**
  * Read a ledger row's `Test file` cell, or `null` when it names nothing this
@@ -2171,6 +2407,24 @@ async function validateSpecTddList(
       ? "the pointer is not a canonical .qfai/evidence/<owner>-spec-NNNN.md#tdd-NNNN anchor"
       : "";
     let relatedFile: string | undefined;
+
+    // A `done` row owes a pointer, not merely a plausible cell. Everything the
+    // completion gate checks lives behind the anchor, so without one the row
+    // asserts completion and offers nothing to check it against.
+    if (status === "done" && anchors.length === 0 && !malformedClaim) {
+      issues.push(
+        issue(
+          "TDDLIST_EVIDENCE_ANCHOR_MISSING",
+          `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}`,
+          "warning",
+          relPath,
+          EVIDENCE_ANCHOR_MISSING_RULE_ID,
+          undefined,
+          "change",
+          `Evidence 列を \`evidence at \\\`${expectedFile}#${expectedFragment}\\\`\` の形にし、そのファイルに \`### ${tddId}\` セクションを追加してください。移行途中のレガシー行は \`.qfai/waivers.yml\` に rule: ${EVIDENCE_ANCHOR_MISSING_RULE_ID} の waiver を登録してください。`,
+        ),
+      );
+    }
 
     for (const anchor of anchors) {
       relatedFile = anchor.file;

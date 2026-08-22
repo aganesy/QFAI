@@ -31,6 +31,12 @@ must be written to a review pack, not left in conversation. There is exactly **o
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
+- A response's `Result`, `Reviewed revision` and `Audited evidence hash`, and the `TDD-ID` in
+  `review_request.md`, are read from the **visible** Markdown and must each appear exactly once.
+  A line inside a fenced sample or an HTML comment is not a verdict — it is invisible to the
+  person reading the response — and two `Result` lines are not a verdict either, they are a
+  document a reader can take either answer from. A blocking `REVISE` beside a hidden or duplicated
+  `PASS` is rejected.
 - Review packs are local-only by default and therefore are absent in an ordinary fresh clone.
   The producer still creates and validates the pack before closing the row. At a later validation,
   gate item 10 recomputes the pack seal and its request/summary/response bindings whenever the

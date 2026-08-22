@@ -141,6 +141,7 @@ assert a cycle has run:
 | ------------------------------------ | --------------------------------------------------------------------------------------- | -------- |
 | `TDDLIST_EVIDENCE_EMPTY`             | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)                       | error    |
 | `TDDLIST_EVIDENCE_STATUS_ONLY`       | the cell claims a verdict (`PASS`, `looks good`, …) with no command                     | warning  |
+| `TDDLIST_EVIDENCE_ANCHOR_MISSING`    | a `done` row's cell carries no anchor at all                                            | warning  |
 | `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` | an `evidence at` pointer names the wrong owner/file/item, or its file/heading is absent | error    |
 
 A command is recognised by shape, not from a list of known runners, so the rule
@@ -152,6 +153,13 @@ are accepted directly.
 ledger written before the check exists carries prose verdicts, and failing a
 build on them is a migration rather than a gate. An empty cell is unambiguous,
 so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+
+`TDDLIST_EVIDENCE_ANCHOR_MISSING` is a warning for the same reason, waivable
+under `TDDLIST-007`. Every completion check hangs off the anchor, so a `done`
+row whose cell is only an outcome — command-shaped, so the status-only rule
+passes over it — claimed completion with no entry, no verdict and no checkpoint
+behind it. A project that has moved its ledger onto pointers raises this by
+failing on warnings; one still migrating waives it per path.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which

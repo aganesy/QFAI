@@ -12,6 +12,14 @@ Every observation records the revision it was made against.
 Revision: <git rev> | working-tree+<content hash>
 ```
 
+**The form is checked, in the committed evidence.** A value that is neither a
+git rev nor `working-tree+<content hash>` addresses no tree, so nothing can be
+recomputed against it and staleness has nothing to compare — and the review pack
+is local-only, so on a fresh clone the committed entry is the only thing left to
+check. Gate item 10 rejects any other shape wherever a revision is recorded:
+`Revision`, `RED revision`, `Falsifiability revision` and both
+`reviewed revision` fields.
+
 - **`<git rev>`** — the output of `git rev-parse HEAD` at the moment of the
   observation. Preferred: it is exact and someone else can reproduce from it.
 - **`working-tree+<content hash>`** — for an uncommitted tree. Not as good as
