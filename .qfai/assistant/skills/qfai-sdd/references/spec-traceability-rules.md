@@ -161,12 +161,15 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   are forbidden in `tests/e2e/**` and `tests/api/**`.
 - Optional columns detail: `Owning module` — the production module the row will write,
   one per row, `-` when not declared. `/qfai-sdd` seeds it at Phase 2b from the TC's
-  parent `BR`; it is the only evidence `delivery-planner` can judge parallel dispatch on,
-  since RED-first guarantees the module does not exist yet. A ledger without the column
-  leaves parallel dispatch unevaluable
-  (`qfai-implement/references/parallelization-policy.md`), so a ledger authored before
-  the column existed gains it at the next Phase 2b — appended to the header and
-  backfilled on every row. Column order is free; the validator resolves it by name.
+  parent `BR`, reached by `EX-Ref` -> `05_Examples.md#BR-Ref` and, only when `EX-Ref`
+  is `—`, by the TC's `AC-Refs`. It is the only evidence of a row's production write
+  set that exists before RED, since RED-first guarantees the module does not exist
+  yet — necessary for parallel dispatch, never sufficient: every other condition in
+  `qfai-implement/references/parallelization-policy.md` still has to hold. A ledger
+  without the column leaves parallel dispatch unevaluable, so a ledger authored before
+  the column existed gains it at the next Phase 2b — appended to the header of every
+  ledger table in the file, `## CHG-*` tables included, and backfilled on every row.
+  Column order is free; the validator resolves it by name.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
   explicitly inert to it — recording one does not raise or lower TC coverage.
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.

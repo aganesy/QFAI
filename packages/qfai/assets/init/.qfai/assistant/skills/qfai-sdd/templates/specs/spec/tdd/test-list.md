@@ -60,16 +60,21 @@ The header carries one optional column, seeded here because
 | Owning module | The production module this row will write; `-` = not declared |
 
 Fill it from the TC's parent `BR`, which already names the behaviour's home.
-Reach that parent through the TC's `AC-Refs` — the `04_Business-Rules.md` row
-whose `AC-Refs` names the same `AC`. `EX-Ref` never selects it, so an error or
-boundary TC carrying `—` inherits its normal-case sibling's parent on that `AC`.
+Reach that parent by `EX-Ref` first: a TC naming an `EX` takes that example's
+`BR-Ref` in `05_Examples.md`, which pins the parent 1:1. Fall back to the TC's
+`AC-Refs` only when `EX-Ref` is `—` — the `04_Business-Rules.md` rows whose
+`AC-Refs` name the same `AC` — so an error or boundary TC inherits its
+normal-case sibling's parent on that `AC`.
 Neither table carries a module path column: name the repository module that
-`BR`'s `Rule` will be implemented in, and write `-` when the ACs resolve to no
-`BR` or to several with different homes.
-A row left at `-` still executes, serially only: `delivery-planner` judges
-parallel dispatch on this column alone, because under RED-first the module
-does not exist yet. See
-`.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.
+`BR`'s `Rule` will be implemented in, and write `-` when the resolution reaches
+no `BR` or several with different homes.
+A row left at `-` still executes, serially only: this column is the only
+pre-RED evidence of what a row will write in production, because under
+RED-first the module does not exist yet. It is a necessary input to parallel
+dispatch, never a sufficient one — `delivery-planner` still applies every
+other gate in
+`.qfai/assistant/skills/qfai-implement/references/parallelization-policy.md`.
+See `.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`.
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

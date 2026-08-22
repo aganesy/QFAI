@@ -149,34 +149,68 @@ describe("declared seam has a producer", () => {
       expect(checklists).toContain("Declare each row's `Owning module` from the TC's parent `BR`");
     });
 
-    // "The TC's parent BR" is not a lookup any single table answers: the TC
-    // table carries `AC-Refs`, not `BR-Refs`, and `EX-Ref` is `—` on every
-    // error / boundary row. Left implicit, the seeding agent guesses.
-    it(`${tree}: the route from a TC to its parent BR is spelled out`, async () => {
+    // "The TC's parent BR" is not a lookup any single table answers, and the
+    // two routes are not interchangeable: a normal-case TC names an `EX`, and
+    // `05_Examples.md` pins `EX -> BR` 1:1, so that route is exact. `AC-Refs`
+    // is the fallback for the error / boundary rows carrying `—`, and it is
+    // ambiguous whenever one AC decomposes into several BRs. Naming only the
+    // fallback would strand exactly resolvable rows at `-`.
+    it(`${tree}: the route from a TC to its parent BR prefers EX-Ref`, async () => {
       const checklists = flat(await read(tree, SDD_CHECKLISTS));
       const template = flat(await read(tree, SDD_TEMPLATE));
 
       for (const text of [checklists, template]) {
         expect(text).toContain("`AC-Refs`");
         expect(text).toContain("04_Business-Rules.md");
-        expect(text).toContain("`EX-Ref` never selects it");
+        expect(text).toContain("`BR-Ref`");
+        expect(text).toContain("05_Examples.md");
+        expect(text).toMatch(/`EX-Ref` first/);
+        expect(text).toMatch(/only when `EX-Ref` is `—`/);
+        // The claim this replaces: EX-Ref does select the parent, exactly.
+        expect(text).not.toContain("`EX-Ref` never selects it");
       }
     });
 
     // Phase 2b copies the template only when the ledger is absent and is a
     // delta otherwise, so a project seeded before this column existed would
     // keep its 8-column header forever without an explicit migration step.
-    it(`${tree}: a pre-existing ledger is migrated, not left at 8 columns`, async () => {
+    // `/qfai-implement` appends a `## CHG-*` ledger table per change request
+    // (`tests/core/tddLedgerLaterTableChecks.test.ts`), so migrating only the
+    // leading table can leave every real row without the column.
+    it(`${tree}: every ledger table in a pre-existing file is migrated`, async () => {
       const checklists = flat(await read(tree, SDD_CHECKLISTS));
       const skill = flat(await read(tree, SDD_SKILL));
       const rules = flat(await read(tree, SDD_RULES));
 
       expect(checklists).toContain("Migrate a pre-existing ledger in place");
       expect(checklists).toContain(
-        "append the column to the header and separator rows and fill it for every row",
+        "append the column to **every** schema-shaped ledger table in the file",
       );
+      expect(checklists).toContain("each `## CHG-*` table");
       expect(skill).toContain("A ledger whose header predates the column is migrated here");
+      expect(skill).toContain("append the column to every ledger table in the file");
       expect(rules).toContain("gains it at the next Phase 2b");
+      expect(rules).toContain("`## CHG-*` tables included");
+    });
+
+    // The column answers one question — what will this row write in
+    // production, before RED makes it observable. It is a necessary input to
+    // `delivery-planner`, not the verdict: the test-module, write/read,
+    // fixture, schema, external-resource and worktree gates in
+    // `parallelization-policy.md` all still have to hold.
+    it(`${tree}: the column is not stated as the whole parallel gate`, async () => {
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+      const template = flat(await read(tree, SDD_TEMPLATE));
+      const rules = flat(await read(tree, SDD_RULES));
+      const skill = flat(await read(tree, SDD_SKILL));
+
+      for (const text of [checklists, template, rules, skill]) {
+        expect(text).toContain("parallelization-policy.md");
+      }
+      expect(checklists).toContain("It is not by itself a parallel verdict");
+      expect(template).toContain("never a sufficient one");
+      expect(rules).toContain("necessary for parallel dispatch, never sufficient");
+      expect(skill).toContain("not the whole gate");
     });
 
     it(`${tree}: the traceability rules list it among the optional columns`, async () => {
