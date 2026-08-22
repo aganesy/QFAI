@@ -57,6 +57,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { isQuotation } from "../helpers/markdownQuotation.js";
+
 const ROOT = path.resolve(__dirname, "../../../..");
 
 /** Every governance file this stage owns. Each claim is searched in all of them. */
@@ -426,7 +428,7 @@ function flattenDocument(raw: string, variant: 0 | 1): FlatDocument {
         // two put the claim inside a blockquote (which IS a quotation) or on a closing fence line
         // (which renders as code). Exempt the fence's CONTENT, not its delimiter.
         inFence = !inFence;
-      } else if (inFence || /^\s*>/.test(line)) {
+      } else if (inFence || isQuotation(line)) {
         exempt.push([start, end]);
       }
       // One separator per line, and none after a marker that contributed nothing.

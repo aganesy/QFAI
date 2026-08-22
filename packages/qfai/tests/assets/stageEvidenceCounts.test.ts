@@ -73,6 +73,7 @@ const TRACKED = [
 const HELPERS = [
   "packages/qfai/tests/helpers/buildCommand.ts",
   "packages/qfai/tests/helpers/shippedLaneCommands.ts",
+  "packages/qfai/tests/helpers/markdownQuotation.ts",
 ] as const;
 
 /** `packages/qfai/tests/x.test.ts` -> `tests/x.test.ts`, the spelling the recorded commands use. */

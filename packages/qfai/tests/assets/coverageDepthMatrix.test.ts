@@ -17,6 +17,8 @@ import path from "node:path";
 
 import { describe, expect, it } from "vitest";
 
+import { isQuotation } from "../helpers/markdownQuotation.js";
+
 const MATRIX = path.resolve(__dirname, "../../../../.qfai/evidence/coverage-depth-spec-0017.md");
 /**
  * The stage record, which RESTATES three of the matrix's derived numbers.
@@ -627,13 +629,35 @@ describe("the spec-0017 Coverage Depth Matrix agrees with itself", () => {
       // EVERY bullet for the column, not the first. `.exec` reads one match, so a second bullet
       // contradicting the table passed — and a section that states one column's score twice is
       // exactly the state this pin exists to catch.
-      const all = [
-        // Any bullet marker, any indent, inside a blockquote or not. Anchoring `^- ` alone let `* `,
-        // `  - `, `> - ` and a tab-indented bullet each carry a contradicting score through green.
-        ...rowSection.matchAll(
-          new RegExp(`^[ \\t>]*[-*+] \\*\\*${column} \`([^\`]+)\`\\*\\*`, "gm"),
-        ),
-      ].map((match) => match[1] ?? "");
+      // **Round 19: the marker enumeration was the wrong axis.** Round 18 closed `- `, `* `, `  - `,
+      // `> - ` and a tab-indented bullet by widening the anchor to `^[ \t>]*[-*+] `, and four more
+      // spellings walked straight through it — an ordered-list item, a table cell, `- - `, and a line
+      // with NO marker at all at column 0, which renders as an ordinary bold paragraph and reads to a
+      // human exactly as the bullet does. A closed enumeration of markers cannot be finished, because
+      // markdown keeps admitting another way to start a line.
+      //
+      // So the marker is not read. **What asserts a score is the bolded pair**, wherever on the line
+      // it sits, in either of the two spellings the record actually uses — the score inside the bold
+      // or immediately after it. The second spelling is here because round 19 reddened a TRUE record
+      // that used it: same column, same score, same claim, the code span one character outside the
+      // asterisks.
+      //
+      // And a blockquoted line is EXEMPT, which reverses half of round 18's repair. Widening the
+      // anchor to include `>` made this instrument call a quotation an assertion, while
+      // `retractedClaims.test.ts` decides the same question the other way in words — a blockquote
+      // renders AS a quotation, and that exemption is recorded there as deliberate. A record quoting
+      // its own withdrawn score is the practice that file exists to require, and it was reddening a
+      // required leg here. `isQuotation` is now the one place that decision is made.
+      const escaped = column.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const ASSERTS = new RegExp(
+        `\\*\\*${escaped} \`([^\`]+)\`\\*\\*|\\*\\*${escaped}\\*\\*\\s*\`([^\`]+)\``,
+        "g",
+      );
+      const all = rowSection
+        .split("\n")
+        .filter((line) => !isQuotation(line))
+        .flatMap((line) => [...line.matchAll(ASSERTS)])
+        .map((match) => match[1] ?? match[2] ?? "");
       if (all.length > 1) {
         disagreeing.push(`${column}: the section states it ${String(all.length)} times`);
         continue;
