@@ -730,6 +730,47 @@ function declaration(dir: string): Declaration {
   return { ...parsed, contexts: raw.filter(isContext) };
 }
 
+/**
+ * The FIRST declared context, narrowed.
+ *
+ * Every row below reads the first context, and under `noUncheckedIndexedAccess` that index
+ * is `Context | undefined` — so each read either needed an assertion the project rules
+ * forbid, or had to stay outside the type check. Throwing here keeps the narrowing honest:
+ * a declaration with an empty `contexts` array is a broken fixture, and a broken fixture
+ * must fail loudly rather than read as a passing row.
+ */
+function firstContext(dir: string): Declaration["contexts"][number] {
+  const [first] = declaration(dir).contexts;
+  if (first === undefined) {
+    throw new Error("the declaration holds an empty contexts array");
+  }
+  return first;
+}
+
+/** The first item of the first context's verification set, narrowed the same way. */
+function firstVerificationItem(dir: string): string {
+  const [item] = firstContext(dir).verificationSet;
+  if (item === undefined) {
+    throw new Error("the declared context holds an empty verificationSet");
+  }
+  return item;
+}
+
+/**
+ * The first context of a declaration OBJECT being edited in place, narrowed.
+ *
+ * The sibling above reads a declaration off disk; this one narrows one already in hand,
+ * so a planting edit mutates the real object rather than a copy. Same reason for the
+ * throw: an empty `contexts` array means the fixture no longer plants what the row claims.
+ */
+function onlyContext(decl: Declaration): Declaration["contexts"][number] {
+  const [first] = decl.contexts;
+  if (first === undefined) {
+    throw new Error("the declaration holds an empty contexts array");
+  }
+  return first;
+}
+
 /** Rewrites the declaration inside a planted tree. */
 function editDeclaration(dir: string, edit: (d: Declaration) => Declaration): void {
   const before = declaration(dir);
@@ -748,7 +789,7 @@ describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from
     // and the lane's verdict has to follow the edit.
     const dir = plantedTree((d) => {
       editDeclaration(d, (decl) => {
-        decl.contexts[0].job = "a-job-no-workflow-declares";
+        onlyContext(decl).job = "a-job-no-workflow-declares";
         return decl;
       });
     });
@@ -788,7 +829,7 @@ describe("TC-0017-0057 (TDD-0057): the expected-context declaration is read from
     // shape `TC-0017-0047` catches for a rule, one level further in.
     const hollow = plantedTree((d) => {
       editDeclaration(d, (decl) => {
-        decl.contexts[0].verificationSet = [];
+        onlyContext(decl).verificationSet = [];
         return decl;
       });
     });
@@ -821,7 +862,7 @@ describe("TC-0017-0058 (TDD-0058): a declared context resolving to no job exits 
     // direction, and a lane that only compared strings one way would pass one and fail the
     // other.
     const dir = plantedTree((d) => {
-      const declared = declaration(d).contexts[0];
+      const declared = firstContext(d);
       editWorkflow(d, declared.workflow, (text) =>
         text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
       );
@@ -868,7 +909,7 @@ describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the require
     // to see. The declared job carries no dependencies in the real tree, so the fixture adds
     // one and puts the condition there.
     const dir = plantedTree((d) => {
-      const declared = declaration(d).contexts[0];
+      const declared = firstContext(d);
       editWorkflow(d, declared.workflow, (text) =>
         text
           .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [a-gate]\n`)
@@ -905,7 +946,7 @@ describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is 
       {
         label: "a rename",
         mutate: (d: string): string => {
-          const declared = declaration(d).contexts[0];
+          const declared = firstContext(d);
           editWorkflow(d, declared.workflow, (text) =>
             text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-2:\n`),
           );
@@ -915,7 +956,7 @@ describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is 
       {
         label: "an added dependency condition",
         mutate: (d: string): string => {
-          const declared = declaration(d).contexts[0];
+          const declared = firstContext(d);
           editWorkflow(d, declared.workflow, (text) =>
             text
               .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [late-gate]\n`)
@@ -943,7 +984,7 @@ describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is 
         expect.soft(run.output, `${label}: the finding must name what went wrong`).toContain(named);
         expect
           .soft(run.output, `${label}: the finding must name the file`)
-          .toContain(declaration(REPO_ROOT).contexts[0].workflow);
+          .toContain(firstContext(REPO_ROOT).workflow);
       } finally {
         rmSync(dir, { recursive: true, force: true });
       }
@@ -959,7 +1000,7 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     // sufficient" case `BR-0017-0032` names. A lane checking only existence and
     // skippability passes that.
     const dir = plantedTree((d) => {
-      const declared = declaration(d).contexts[0];
+      const declared = firstContext(d);
       const dropped = declared.verificationSet[0];
       editWorkflow(d, declared.workflow, (text) =>
         text.replace(`- name: ${dropped}\n`, `- name: ${dropped} (moved elsewhere)\n`),
@@ -970,7 +1011,7 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       expect.soft(run.exitCode, `a shrunk verification set must exit 1:\n${run.output}`).toBe(1);
       expect
         .soft(run.output, "the finding must name the missing verification item")
-        .toContain(declaration(REPO_ROOT).contexts[0].verificationSet[0]);
+        .toContain(firstVerificationItem(REPO_ROOT));
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -987,7 +1028,7 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     // expressions to decide that — so if the rule ever grows an exemption list, this row is
     // the one that fails.
     const dir = plantedTree((d) => {
-      const declared = declaration(d).contexts[0];
+      const declared = firstContext(d);
       const guarded = declared.verificationSet[0];
       editWorkflow(d, declared.workflow, (text) =>
         text.replace(`- name: ${guarded}\n`, `- name: ${guarded}\n        if: always()\n`),
@@ -1001,7 +1042,7 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       const findings = run.output.split(/\r?\n/).filter((line) => line.includes(DECLARATION_RULE));
       expect
         .soft(findings.join("\n"), "the finding must name the item that went conditional")
-        .toContain(declaration(REPO_ROOT).contexts[0].verificationSet[0]);
+        .toContain(firstVerificationItem(REPO_ROOT));
       // And say WHY, because "missing" would send a maintainer looking for a step that is
       // still right there in the file.
       expect
@@ -1057,8 +1098,9 @@ function printedRules(output: string, heading: string): string[] {
   const ids: string[] = [];
   for (const line of lines.slice(start + 1)) {
     const m = /^\s+-\s+([a-z][a-z0-9-]*):/.exec(line);
-    if (m === null) break;
-    ids.push(m[1]);
+    const id = m?.[1];
+    if (id === undefined) break;
+    ids.push(id);
   }
   return ids.sort();
 }
@@ -1474,7 +1516,7 @@ PLANTS.push({
   label: "the declared required-status-context job is renamed away",
   file: "ci.yml",
   plant: (dir) => {
-    const declared = declaration(dir).contexts[0];
+    const declared = firstContext(dir);
     editWorkflow(dir, declared.workflow, (text) =>
       text.replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}-renamed:\n`),
     );

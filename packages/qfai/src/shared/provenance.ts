@@ -12,16 +12,21 @@
  * The record path is adopter-controlled and QFAI opens it in a repository
  * it did not create. Both ends therefore refuse to FOLLOW that path:
  *
- * - the reader `lstat`s first and reads only a regular file below a size
- *   ceiling, so a symlink to `/dev/zero`, a FIFO, or a multi-gigabyte file
- *   resolves to the empty record instead of hanging the process;
+ * - the reader opens the path ONCE and decides everything on that one
+ *   descriptor — `fstat` for "regular file, below the size ceiling" and a
+ *   bounded read from the same handle — so a symlink to `/dev/zero`, a FIFO,
+ *   or a multi-gigabyte file resolves to the empty record instead of hanging
+ *   the process, and swapping the path between the check and the read reaches
+ *   nothing: the descriptor is already bound to whatever was there at open
+ *   time;
  * - the writer never opens the record path for writing at all. It writes a
  *   fresh temp file beside it and `rename`s over the name, which REPLACES a
  *   symlink sitting there rather than truncating whatever it points at, and
  *   which leaves the previous record intact when the write fails partway.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
+import { constants as fsConstants } from "node:fs";
+import { mkdir, open, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type WorkflowProvenanceEntry = {
@@ -89,17 +94,9 @@ const ISO_TIMESTAMP_PATTERN =
 export async function readInstallProvenance(rootDir: string): Promise<InstallProvenanceRecord> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
 
-  let raw: string;
-  try {
-    // lstat, not stat, and BEFORE the open: a symlink here would otherwise be
-    // followed to a device or a FIFO and the read would never return.
-    const stats = await lstat(recordPath);
-    if (!stats.isFile() || stats.size > MAX_RECORD_BYTES) {
-      return emptyRecord();
-    }
-    raw = await readFile(recordPath, "utf-8");
-  } catch {
-    // Absent, not a regular file, or unreadable: empty record (fail-safe).
+  const raw = await readBoundedRegularFile(recordPath);
+  if (raw === undefined) {
+    // Absent, not a regular file, oversized, or unreadable: empty record (fail-safe).
     return emptyRecord();
   }
 
@@ -202,6 +199,73 @@ export function createWorkflowProvenanceEntry(
     installedByVersion,
     installedAt,
   };
+}
+
+/**
+ * Open flags for the record read: read-only, never following a symlink, never
+ * blocking on the open itself.
+ *
+ * `O_NOFOLLOW` and `O_NONBLOCK` are POSIX and are absent on Windows, where the
+ * runtime leaves them undefined; the descriptor-bound `fstat` below is the
+ * portable half of the guard and rejects a device or a FIFO on every platform.
+ * `O_NONBLOCK` matters because opening a FIFO for reading BLOCKS until a writer
+ * appears — a hang before any check could run.
+ */
+function readOnlyNoFollowFlags(): number {
+  let flags = fsConstants.O_RDONLY;
+  if (typeof fsConstants.O_NOFOLLOW === "number") {
+    flags |= fsConstants.O_NOFOLLOW;
+  }
+  if (typeof fsConstants.O_NONBLOCK === "number") {
+    flags |= fsConstants.O_NONBLOCK;
+  }
+  return flags;
+}
+
+/**
+ * Reads a regular file of at most {@link MAX_RECORD_BYTES} bytes, or
+ * `undefined` for anything else — absent, a symlink, a device, a FIFO, an
+ * oversized file, or an unreadable one.
+ *
+ * One `open`, then everything on that descriptor. A `lstat(path)` followed by
+ * `readFile(path)` resolves the name twice, and the record path is
+ * adopter-controlled: a process that swaps the name for a symlink to
+ * `/dev/zero` between the two calls gets the size ceiling and the regular-file
+ * test applied to the file it replaced, and the unbounded read applied to the
+ * device. Binding both to one handle removes the window rather than narrowing
+ * it.
+ */
+async function readBoundedRegularFile(filePath: string): Promise<string | undefined> {
+  let handle;
+  try {
+    handle = await open(filePath, readOnlyNoFollowFlags());
+  } catch {
+    return undefined;
+  }
+  try {
+    const stats = await handle.stat();
+    if (!stats.isFile() || stats.size > MAX_RECORD_BYTES) {
+      return undefined;
+    }
+    // One byte of headroom: a file that GREW past the size `fstat` reported
+    // stops being the file that was measured, and reading it is the unbounded
+    // read the ceiling exists to refuse.
+    const ceiling = Math.min(stats.size, MAX_RECORD_BYTES);
+    const buffer = Buffer.alloc(ceiling + 1);
+    let filled = 0;
+    while (filled < buffer.length) {
+      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, null);
+      if (bytesRead === 0) {
+        break;
+      }
+      filled += bytesRead;
+    }
+    return filled > ceiling ? undefined : buffer.subarray(0, filled).toString("utf-8");
+  } catch {
+    return undefined;
+  } finally {
+    await handle.close().catch(() => undefined);
+  }
 }
 
 function emptyRecord(): InstallProvenanceRecord {

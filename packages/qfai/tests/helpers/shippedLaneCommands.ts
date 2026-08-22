@@ -554,6 +554,21 @@ function matchingParen(body: string, open: number): number {
       quote = ch;
       continue;
     }
+    // A `#` starting a WORD opens a comment, and bash ignores everything to the
+    // newline — brackets included. Without this rule `$(echo x # )` closed the
+    // substitution on the `)` inside the comment, and everything the real
+    // substitution still held (`npx tsup` on the next line) was absorbed into the
+    // enclosing word, where no rule reads it. Measured: `echo "$(echo x # )` /
+    // `npx tsup` / `)"` runs the build under bash and left `refusals()` empty.
+    //
+    // "Starting a word" is what makes `curl host/x#frag` safe: a `#` glued to the
+    // previous character is not a comment in bash either.
+    if (ch === "#" && (i === open || /[\s(|&;]/.test(body[i - 1] ?? ""))) {
+      const newline = body.indexOf("\n", i);
+      if (newline < 0) return body.length;
+      i = newline;
+      continue;
+    }
     if (ch === "(") depth += 1;
     else if (ch === ")") {
       depth -= 1;
@@ -811,9 +826,27 @@ export function invocationOf(command: string): string | typeof NOTHING | typeof 
  */
 export const ALLOWED_ENV_PREFIXES: ReadonlySet<string> = new Set(["IFS"]);
 
-/** Functions a `run` body defines for itself, which are not programs. */
+/** A function-definition header: the name, and whatever of the body shares its command. */
+const FUNCTION_DEFINITION_RE = /^[ \t]*(\w+)[ \t]*\(\)[ \t]*\{?[ \t]*(.*)$/s;
+
+/**
+ * Functions a `run` body defines for itself, which are not programs.
+ *
+ * Read from the commands `commandsOf` classified as EXECUTABLE, never from the raw
+ * body. Applied to the raw text the pattern also matched non-executing data, and a
+ * name registered from there silences a real invocation of it: measured, the body
+ * `read v <<'EOF'` / `npx() {` / `EOF` / `npx tsup` runs the build under bash while
+ * the here-document's data line registered `npx` as local, so `invocationsOf`
+ * returned `read v` alone and `refusals()` was empty. The same shape works from any
+ * quoted string a shipped lane happens to print.
+ */
 export function localFunctionsOf(body: string): Set<string> {
-  return new Set([...body.matchAll(/^[ \t]*(\w+)[ \t]*\(\)[ \t]*\{/gm)].map((m) => m[1] ?? ""));
+  const names = new Set<string>();
+  for (const command of commandsOf(body)) {
+    const match = FUNCTION_DEFINITION_RE.exec(command);
+    if (match?.[1] !== undefined) names.add(match[1]);
+  }
+  return names;
 }
 
 /**
@@ -839,7 +872,15 @@ interface Resolved {
 function resolvedCommands(body: string): Resolved[] {
   const local = localFunctionsOf(body);
   const out: Resolved[] = [];
-  for (const command of commandsOf(body)) {
+  for (const raw of commandsOf(body)) {
+    // A single-line definition carries its BODY in the same command, so the header
+    // is stripped and what follows is resolved on its own. Skipping the whole
+    // command instead — which is what reading only the name did — hid the body:
+    // `bundle() { node scripts/bundle.mjs; }` was classified by the local name
+    // `bundle` and the `node` invocation inside it reached no rule at all.
+    const definition = FUNCTION_DEFINITION_RE.exec(raw);
+    const command =
+      definition === null ? raw : (definition[2] ?? "").replace(/[ \t]*;?[ \t]*\}[ \t]*$/, "");
     const invocation = invocationOf(command);
     if (invocation === NOTHING) continue;
     if (invocation === UNREADABLE) {
@@ -1023,7 +1064,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "468e7cd9676c7d9d051036b1b3f1f87db4976e4c57478b2874d0306aaeb38d33"],
-  ["qfai-validate.yml", "2ed38d4d08dcfccb9537a0bd12329a79b13e7a3dc028aa28048f082ef6e5d87a"],
+  ["qfai-validate.yml", "a8b5695f7c1ad250e843de26434882a3bae52c3ac991084cef56cc38283ee9c3"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1067,7 +1108,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
   ],
-  [".gitignore", "e24743532e16ec18882df932ab1e2ff25e0618947ed5cbfaa197fda05a06a9db"],
+  [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
@@ -1179,7 +1220,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 6de23da12b4070cd576b03c96aaeb17d5addd5a60953e4c12107809a3db0e8cc>"}',
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 4ccc74b58c41f54ebda0e0c8968ae15efb115300d340cbaf4a3d87a89bae67d1>"}',
   ],
   [
     "qfai-validate.yml#validate",

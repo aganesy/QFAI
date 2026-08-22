@@ -112,13 +112,28 @@ jobs:
           # then stops with an opaque resolution error naming neither the file
           # nor the fix - which is the failure this guard exists to replace.
           # So the pnpm route also checks the VALUE resolves to a pnpm version.
-          case "$declared" in
-            pnpm@[0-9]*) ;;
-            *)
-              printf '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json "packageManager" is %s, which does not name a pnpm version. Set it to "pnpm@<the pnpm version you use>" and commit it - the pnpm setup action resolves the version from that field only, so this lane cannot install and must not report a validate result it did not compute.\n' "$declared"
-              exit 1
-              ;;
-          esac
+          # Checked to the END of the value. `pnpm@[0-9]*` was not that check:
+          # a shell `*` is any string, not a repetition of digits, so
+          # `pnpm@9junk` matched on its first character and the opaque
+          # resolution error this guard exists to replace arrived one step
+          # later anyway. The shape required is `pnpm@` then MAJOR.MINOR.PATCH
+          # of digits, with corepack's optional `-<prerelease>` and `+<hash>`
+          # suffixes allowed but not required.
+          version="${declared#pnpm@}"
+          core="${version%%+*}"
+          core="${core%%-*}"
+          resolvable=no
+          if [ "$version" != "$declared" ]; then
+            case "$core" in
+              ""|.*|*.|*[!0-9.]*|*.*.*.*) ;;
+              [0-9]*.[0-9]*.[0-9]*) resolvable=yes ;;
+              *) ;;
+            esac
+          fi
+          if [ "$resolvable" != yes ]; then
+            printf '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json "packageManager" is %s, which does not name a pnpm version. Set it to "pnpm@<the pnpm version you use>" and commit it - the pnpm setup action resolves the version from that field only, so this lane cannot install and must not report a validate result it did not compute.\n' "$declared"
+            exit 1
+          fi
           echo "qfai validate: package manager ${declared} (from the package.json packageManager field)"
       - name: Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}

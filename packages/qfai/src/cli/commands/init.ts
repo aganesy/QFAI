@@ -2173,13 +2173,43 @@ async function recordInstalledWorkflows(
     }
     added[name] = createWorkflowProvenanceEntry(writtenBytes, toolVersion, installedAt);
   }
-  if (Object.keys(added).length === 0) {
+  const addedNames = Object.keys(added);
+  if (addedNames.length === 0) {
     return;
   }
-  await writeInstallProvenance(destRoot, {
-    ...preInit.record,
-    workflows: { ...preInit.record.workflows, ...added },
-  });
+  try {
+    await writeInstallProvenance(destRoot, {
+      ...preInit.record,
+      workflows: { ...preInit.record.workflows, ...added },
+    });
+  } catch (error) {
+    // The file and its provenance entry land TOGETHER or neither lands. The
+    // record write can still fail after the copy succeeded — `.qfai` is a
+    // regular file, the directory is read-only, the disk is full — and a
+    // workflow left on disk with no entry is read on the next run as
+    // `adopter-owned`: the create-only copy skips it, nothing ever records it,
+    // and doctor's drift check and the declined state are both lost for that
+    // name permanently. Removing what this run created returns the tree to
+    // `absent`, the one state a re-run repairs.
+    //
+    // Only the names in `added` are removed, and every one of them was absent
+    // before this run AND reported written by the copy primitive, so nothing
+    // here can delete a file the adopter owned. Removal failures are swallowed:
+    // the original error is the one worth reporting, and a stale file is a
+    // smaller loss than a masked cause.
+    //
+    // Through `pruneMatchingEntries` and not a direct `rm`: the shipped-workflows
+    // contract keeps ONE removal primitive for QFAI-owned entries in an adopter
+    // tree, and a second call site is the parallel implementation it forbids.
+    const rolledBack: string[] = [];
+    await pruneMatchingEntries(
+      workflowsDir,
+      (entry) => entry.isFile() && addedNames.includes(entry.name),
+      rolledBack,
+      false,
+    ).catch(() => undefined);
+    throw error;
+  }
 }
 
 /**

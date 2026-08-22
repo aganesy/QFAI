@@ -175,6 +175,14 @@ async function readDirectoryInto(current, sources) {
       found.push(full);
       continue;
     }
+    // A SYMLINK never backs a claim. The suffix and `*.test.*` tests both read the LINK's
+    // name, while `readFile` reads its target — so `tests/e2e/backing.test.ts -> ../../
+    // tests/e2e/qfai-traceability.md` makes the ledger its own backing corpus and every
+    // claim in it discharges itself, with no executable test anywhere. That is precisely
+    // the substitution this guard exists to refuse, arriving through the filesystem rather
+    // than through a markdown suffix. Directories are decided above, where following the
+    // link is correct: a linked SUBTREE still holds real test files of its own.
+    if (entry.isSymbolicLink()) continue;
     if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
     if (!TEST_FILE_PATTERN.test(entry.name)) continue;
     try {
@@ -321,6 +329,20 @@ async function main() {
   }
 
   const result = checkLedger(ledgerText, sources, spec === undefined ? {} : { spec });
+  // A SCOPED run that matched no claim is not a pass. `--spec 9999`, or one mistyped digit
+  // of a real number, selects nothing: `unbacked` is empty, `ok` is true, and the guard
+  // prints "0 claim(s) backed" and exits 0 — so a CI lane wired to a scope that no longer
+  // exists reports green over every unbacked claim in the ledger. The unscoped run has no
+  // such failure mode: a ledger with no claims at all is a repository with nothing to
+  // certify, which the missing-ledger branch above already reports as such.
+  if (result.ok && spec !== undefined && result.checked === 0) {
+    process.stderr.write(
+      `check-atdd-annotation-ledger: --spec ${spec} selected no claim in ${path.relative(root, ledgerPath).replace(/\\/g, "/")}. ` +
+        "A scope that matches nothing verifies nothing; check the spec number.\n",
+    );
+    process.exitCode = 1;
+    return;
+  }
   if (result.ok) {
     const scope = spec === undefined ? "all specs" : `spec-${spec}`;
     process.stdout.write(

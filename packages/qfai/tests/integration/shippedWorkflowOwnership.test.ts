@@ -390,8 +390,20 @@ describe(
 
     it("the provenance record path is not in the managed gitignore block (the record stays tracked)", () => {
       // QFAI_GITIGNORE_BLOCK is the pre-joined managed block text.
-      expect(QFAI_GITIGNORE_BLOCK).not.toContain(".qfai/install-provenance.json");
-      expect(QFAI_GITIGNORE_BLOCK).not.toContain("install-provenance");
+      //
+      // "Not in the block" was the wrong reading of the obligation, and it forbade the
+      // one construct that makes the obligation TRUE. What the record needs is to survive
+      // a fresh clone; silence delivers that only when the adopter's `.gitignore` has no
+      // broad rule of its own. Measured with `git check-ignore -v
+      // .qfai/install-provenance.json` on a tree carrying `.qfai/*` above the managed
+      // block: the broad rule wins, because `!.qfai/` re-includes the DIRECTORY and not
+      // this file. So the claim is checked as what it means — the block IGNORES the record
+      // nowhere, and re-includes it explicitly.
+      const lines = QFAI_GITIGNORE_BLOCK.split("\n");
+      expect(lines).toContain("!.qfai/install-provenance.json");
+      expect(
+        lines.filter((line) => line.includes("install-provenance") && !line.startsWith("!")),
+      ).toEqual([]);
     });
   },
 );

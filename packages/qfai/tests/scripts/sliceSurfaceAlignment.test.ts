@@ -78,6 +78,22 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 /**
+ * A capture group the pattern guarantees, narrowed.
+ *
+ * Under `noUncheckedIndexedAccess` every `match[1]` is `string | undefined`, and the project
+ * rules forbid the assertion that would silence it. A pattern that matched but produced no
+ * group means the pattern changed under the reader — a broken helper rather than a failing
+ * claim — so it throws instead of handing the caller a value to compare.
+ */
+function group(match: RegExpMatchArray | RegExpExecArray, index: number): string {
+  const value = match[index];
+  if (value === undefined) {
+    throw new Error(`the pattern matched without capture group ${index}`);
+  }
+  return value;
+}
+
+/**
  * Surface 1 — the runner project names.
  *
  * Read with a regex rather than by importing the workspace module. Importing it
@@ -87,7 +103,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  */
 function runnerProjects(): string[] {
   const source = readFileSync(WORKSPACE, "utf-8");
-  const names = [...source.matchAll(/name:\s*"([^"]+)"/g)].map((m) => m[1]);
+  const names = [...source.matchAll(/name:\s*"([^"]+)"/g)].map((m) => group(m, 1));
   if (names.length === 0) {
     throw new Error("vitest.workspace.ts declares no project names");
   }
@@ -139,7 +155,7 @@ function perSliceScriptEntries(): { key: string; slice: string }[] {
   for (const [key, body] of Object.entries(pkg["scripts"])) {
     if (typeof body !== "string") continue;
     const m = PROJECT_SELECTOR.exec(body.trim());
-    if (m !== null) out.push({ key, slice: m[1] });
+    if (m !== null) out.push({ key, slice: group(m, 1) });
   }
   return out;
 }
@@ -174,7 +190,7 @@ function declaredIncludeGlobs(): { project: string; glob: string }[] {
   const marks: { name: string; from: number }[] = [];
   const nameRe = /name:\s*"([^"]+)"/g;
   for (let m = nameRe.exec(source); m !== null; m = nameRe.exec(source)) {
-    marks.push({ name: m[1], from: m.index + m[0].length });
+    marks.push({ name: group(m, 1), from: m.index + group(m, 0).length });
   }
   if (marks.length === 0) {
     throw new Error("vitest.workspace.ts declares no project names");
@@ -182,7 +198,7 @@ function declaredIncludeGlobs(): { project: string; glob: string }[] {
 
   const out: { project: string; glob: string }[] = [];
   for (const [i, mark] of marks.entries()) {
-    const end = i + 1 < marks.length ? marks[i + 1].from : source.length;
+    const end = marks[i + 1]?.from ?? source.length;
     const region = source.slice(mark.from, end);
     const open = region.indexOf("include: [");
     if (open < 0) {
@@ -192,7 +208,7 @@ function declaredIncludeGlobs(): { project: string; glob: string }[] {
     if (close < 0) {
       throw new Error(`project ${mark.name} has an unterminated include list`);
     }
-    const globs = [...region.slice(open, close).matchAll(/"([^"]+)"/g)].map((g) => g[1]);
+    const globs = [...region.slice(open, close).matchAll(/"([^"]+)"/g)].map((g) => group(g, 1));
     if (globs.length === 0) {
       throw new Error(`project ${mark.name} declares an empty include list`);
     }
@@ -216,7 +232,7 @@ function testFileCount(glob: string): number {
   if (m === null) {
     throw new Error(`glob ${glob} is not of the shape testFileCount can count`);
   }
-  const root = path.join(PACKAGE_ROOT, m[1]);
+  const root = path.join(PACKAGE_ROOT, group(m, 1));
   if (!existsSync(root)) {
     return 0;
   }

@@ -456,14 +456,20 @@ describe(
         // A `packageManager` value carrying embedded newlines plus
         // `::`-leading workflow commands is adopter-controlled input from any
         // fork PR; echoed unsanitised it forges annotations in the adopter's
-        // PR UI. This fixture RESOLVES (it starts with a real pnpm version),
-        // so the guard authors no annotation of its own and every
-        // `::`-leading line would be forged.
+        // PR UI.
+        //
+        // The fixture no longer RESOLVES, and the change is deliberate: the
+        // guard checks the value to its END, so `pnpm@10.15.0` followed by
+        // anything is not a pnpm version. (It used to be accepted on its first
+        // digit alone, which is the hole this row's sibling rule closed.) So
+        // the guard now authors exactly ONE annotation of its own, and that is
+        // the only workflow command line this channel may carry — every other
+        // `::`-leading line would be one the manifest value forged.
         const injected = await runShell(body, await pnpmTreeWithInjectedPackageManager());
         expect(
           injected.status,
-          `${job.file}: the injected-but-valid version did not resolve: ${injected.stderr}`,
-        ).toBe(0);
+          `${job.file}: the injected value is not a resolvable pnpm version and must fail closed: ${injected.stderr}`,
+        ).toBe(1);
         // Split on every line terminator the runner honours (a bare `\r`
         // included) and trim leading whitespace before the `::` test: the
         // runner strips leading spaces and tabs before parsing a workflow
@@ -471,13 +477,20 @@ describe(
         // unreachable today — the guard collapses every whitespace run — and
         // that is exactly the hole a first-line-truncation implementation
         // would open, so the predicate closes it in advance.
-        const forged = `${injected.stdout}${injected.stderr}`
+        const commands = `${injected.stdout}${injected.stderr}`
           .split(/\r\n|\r|\n/)
           .filter((line) => line.trimStart().startsWith("::"));
+        const forged = commands.filter(
+          (line) => !line.trimStart().startsWith("::error file=package.json::"),
+        );
         expect(
           forged,
           `${job.file}: the manifest value forged workflow command line(s) on this step's output channel`,
         ).toEqual([]);
+        expect(
+          commands,
+          `${job.file}: the guard must author exactly one annotation of its own`,
+        ).toHaveLength(1);
       }
     });
 

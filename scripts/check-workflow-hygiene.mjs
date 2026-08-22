@@ -81,7 +81,7 @@ const RULES = [
   [
     "declaration",
     "required-context",
-    "the declared required-status-context job exists, is unskippable through its whole `needs` closure, and still performs its verification set",
+    "the declared required-status-context job exists, its workflow starts on every pull request, it is unskippable through its whole `needs` closure, and it still performs its verification set",
   ],
 ];
 
@@ -440,7 +440,14 @@ function checkCheckoutCredentials(root, jobs) {
   for (const entry of collectStepSites(root, jobs)) {
     for (const step of entry.steps) {
       if (!isRecord(step) || typeof step.uses !== "string") continue;
-      if (!step.uses.startsWith("actions/checkout@")) continue;
+      // Case-INSENSITIVE on the action half. GitHub resolves owner and repository
+      // names without regard to case, so `Actions/Checkout@<sha>` runs the same
+      // checkout — while a case-sensitive test reads it as some other action and
+      // stops asking about `persist-credentials`. The pin rule accepts it either
+      // way, so the credential rule was the only thing standing between that
+      // spelling and a writable token left in the work tree of a `contents: write`
+      // job. The REF keeps its case: it is a git ref, and refs are case-sensitive.
+      if (!/^actions\/checkout@/i.test(step.uses)) continue;
       const withBlock = isRecord(step.with) ? step.with : {};
       if (withBlock["persist-credentials"] === false) continue;
       findings.push({
@@ -506,12 +513,29 @@ function collectUses(root, jobs) {
   return out;
 }
 
+/**
+ * Whether a `uses:` reference is pinned to a full 40-hex commit SHA.
+ *
+ * The reference splits at the FIRST `@`: the grammar is
+ * `{owner}/{repo}{/path}@{ref}`, and everything after that `@` is one ref. A
+ * trailing-match test (`/@[0-9a-f]{40}$/`) reads `owner/repo@release@<40-hex>`
+ * as pinned, but the ref actually resolved there is the mutable branch
+ * `release@<40-hex>` — a legal ref name, as `git check-ref-format
+ * refs/heads/release@<40-hex>` confirms with exit 0. So the whole ref has to be
+ * the SHA, not merely end with one.
+ */
+function isShaPinned(uses) {
+  const at = uses.indexOf("@");
+  if (at < 0) return false;
+  return /^[0-9a-f]{40}$/.test(uses.slice(at + 1));
+}
+
 function checkActionPins(uses) {
   // A LOCAL reference (`./.github/actions/setup`) has no pin to check and must
   // not be reported: it resolves inside the repository at the same commit, which
   // is the property pinning exists to buy.
   return uses
-    .filter((u) => !u.uses.startsWith("./") && !/@[0-9a-f]{40}$/.test(u.uses))
+    .filter((u) => !u.uses.startsWith("./") && !isShaPinned(u.uses))
     .map((u) => ({
       rule: "action-pin",
       file: u.file,
@@ -647,6 +671,57 @@ function checkShippedThirdParty(uses) {
   return findings;
 }
 
+/**
+ * The declared workflow starts on EVERY pull request, unconditionally.
+ *
+ * Properties 1-3 all search inside the file and say nothing about whether the file
+ * runs. Delete `on.pull_request`, or add a `paths` / `paths-ignore` filter that
+ * excludes some pull requests, and the job, its `needs` closure and its whole
+ * verification set stay exactly as declared — while the required status context is
+ * simply never created for the pull requests the filter drops. Branch protection
+ * then waits for a check that will never report, which is a pending state no local
+ * `pnpm ci:lint` can reproduce.
+ *
+ * `branches` / `branches-ignore` are deliberately NOT rejected: a required context
+ * is required on the protected branch's pull requests, and restricting the trigger
+ * to those branches is the normal, correct shape. It is the PATH axis that drops
+ * pull requests the protection still gates.
+ *
+ * YAML 1.1's `on` -> `true` folding does not reach here: the parser this lane uses
+ * reads the key as the string `on` (measured against `.github/workflows/ci.yml`),
+ * and a document where it did fold would surface as a missing trigger — the
+ * conservative direction.
+ */
+function pullRequestTriggerFindings(rel, declaredJob, workflow) {
+  const on = isRecord(workflow) ? workflow.on : undefined;
+  const finding = (detail) => [{ rule: "required-context", file: rel, job: declaredJob, detail }];
+  if (typeof on === "string") {
+    return on === "pull_request"
+      ? []
+      : finding(`declares \`on: ${on}\`, so no pull request creates the required status context`);
+  }
+  if (Array.isArray(on)) {
+    return on.includes("pull_request")
+      ? []
+      : finding(
+          "lists no `pull_request` trigger, so no pull request creates the required status context",
+        );
+  }
+  if (!isRecord(on) || !("pull_request" in on)) {
+    return finding(
+      "declares no `pull_request` trigger, so no pull request creates the required status context",
+    );
+  }
+  const trigger = on.pull_request;
+  if (!isRecord(trigger)) return [];
+  const filters = ["paths", "paths-ignore"].filter((key) => key in trigger);
+  return filters.length === 0
+    ? []
+    : finding(
+        `filters its \`pull_request\` trigger by ${filters.join(" / ")}, so a pull request touching none of those paths never creates the required status context and branch protection stays pending`,
+      );
+}
+
 function checkRequiredContexts(root, jobs) {
   const { contexts, findings } = readDeclaration(root);
   for (const context of contexts) {
@@ -684,6 +759,9 @@ function checkRequiredContexts(root, jobs) {
       });
       continue;
     }
+
+    // PROPERTY 1b — and the workflow holding it actually starts on a pull request.
+    findings.push(...pullRequestTriggerFindings(rel, declaredJob, inFile[0]?.workflow));
 
     // PROPERTY 2 — and it is not skippable, counting the whole `needs` closure. A job whose
     // dependency is skipped is itself skipped, and a skipped job reports SUCCESS to branch

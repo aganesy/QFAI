@@ -369,16 +369,53 @@ function reachablePermissions(doc: unknown, job: Record<string, unknown>): unkno
   return isRecord(doc) ? doc["permissions"] : undefined;
 }
 
+/**
+ * The permission maps a shipped workflow may reach: nothing at all, or read on
+ * `contents` and nothing else.
+ *
+ * VALUES and not merely the presence of a mapping. A shipped file is copied into
+ * every adopter's repository, so `contents: write` there hands write access to a
+ * lane the adopter never wrote — and the gates around this one all stop short of
+ * the value: the hygiene lane asks whether a block is reachable and well-formed
+ * (`write` is both), and the E2E key allow-list reads the KEY `permissions`
+ * without descending into it. Pinning the two shapes the set actually uses means
+ * widening it is an edit to this list, which a reviewer sees.
+ */
+const ALLOWED_SHIPPED_PERMISSIONS: ReadonlyArray<Readonly<Record<string, string>>> = [
+  {},
+  { contents: "read" },
+];
+
+/** Whether a reachable permissions value is one of the pinned least-privilege maps. */
+function permissionsProblem(value: unknown): string | undefined {
+  if (!isRecord(value)) {
+    return "no reachable permissions map";
+  }
+  const rendered = Object.entries(value)
+    .map(([scope, level]) => `${scope}: ${String(level)}`)
+    .sort()
+    .join(", ");
+  const allowed = ALLOWED_SHIPPED_PERMISSIONS.some((candidate) => {
+    const keys = Object.keys(candidate);
+    return (
+      keys.length === Object.keys(value).length &&
+      keys.every((scope) => value[scope] === candidate[scope])
+    );
+  });
+  return allowed ? undefined : `permissions {${rendered}} is not a pinned least-privilege map`;
+}
+
 /** Dimension 3: per job — permissions, timeout, and the runner-selector form. */
 function jobBoundingPins(): ShapePin[] {
   const expected =
-    "every job: a reachable permissions map, timeout-minutes, and runs-on reading a repository variable with a public GitHub-hosted default";
+    "every job: a permissions map pinned to `{}` or `contents: read`, timeout-minutes, and runs-on reading a repository variable with a public GitHub-hosted default";
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(3, file.name, expected, (found) => {
       const problems: string[] = [];
       for (const { jobId, job } of collectWorkflowJobs(found.doc)) {
-        if (!isRecord(reachablePermissions(found.doc, job))) {
-          problems.push(`${jobId}: no reachable permissions map`);
+        const permissions = permissionsProblem(reachablePermissions(found.doc, job));
+        if (permissions !== undefined) {
+          problems.push(`${jobId}: ${permissions}`);
         }
         if (typeof job["timeout-minutes"] !== "number") {
           problems.push(`${jobId}: no timeout-minutes`);
@@ -478,8 +515,18 @@ function failureSuppression(line: string): string | undefined {
 /** An unconditional `exit 0` — everything after it in the same body is dead code. */
 const UNCONDITIONAL_EXIT_ZERO = /^\s*exit\s+0\s*$/;
 
-/** What a job's run bodies actually invoke, or undefined when nothing does. */
-function observedInvocation(job: Record<string, unknown>): ParsedInvocation | undefined {
+/**
+ * EVERY QFAI invocation a job's run bodies carry, in body order.
+ *
+ * All of them, not the first. Returning on the first match made a lane's
+ * dimension-5 observation the shape of its opening validate line and nothing
+ * else — so appending `npx qfai init` after the declared `qfai validate` left
+ * this dimension reporting exactly the declared values while the shipped lane
+ * ran a second, undeclared subcommand. The command allow-list one layer out
+ * admits both as `npx qfai`, so nothing else was looking.
+ */
+function observedInvocations(job: Record<string, unknown>): ParsedInvocation[] {
+  const found: ParsedInvocation[] = [];
   for (const step of collectJobSteps(job)) {
     const run = step["run"];
     if (typeof run !== "string") {
@@ -498,23 +545,23 @@ function observedInvocation(job: Record<string, unknown>): ParsedInvocation | un
       const suppressed = deadCode
         ? "an unconditional `exit 0` earlier in the same body — the invocation never runs"
         : failureSuppression(line);
-      return {
+      found.push({
         subcommand: command[1] ?? "",
         profile: /--profile[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)",
         failOn:
           suppressed === undefined
             ? (/--fail-on[ =]+(\S+)/.exec(line)?.[1] ?? "(absent)")
             : `(failure not propagated: ${suppressed})`,
-      };
+      });
     }
   }
-  return undefined;
+  return found;
 }
 
 /** Every job id in a file whose run bodies invoke QFAI. */
 function invokingJobIds(found: WorkflowFile): string[] {
   return collectWorkflowJobs(found.doc)
-    .filter(({ job }) => observedInvocation(job) !== undefined)
+    .filter(({ job }) => observedInvocations(job).length > 0)
     .map(({ jobId }) => jobId);
 }
 
@@ -559,8 +606,12 @@ function laneInvocationPins(): ShapePin[] {
               return expected;
             }
             const job = collectWorkflowJobs(found.doc).find((entry) => entry.jobId === jobId)?.job;
-            const observed = job === undefined ? undefined : observedInvocation(job);
-            return observed === undefined ? "no QFAI invocation" : render(observed);
+            const observed = job === undefined ? [] : observedInvocations(job);
+            // Every invocation is rendered and joined. A lane that declares one
+            // and runs two produces a string the single declared attribute cannot
+            // equal, which is how the second one gets reported rather than hidden
+            // behind the first.
+            return observed.length === 0 ? "no QFAI invocation" : observed.map(render).join(" + ");
           },
         });
       }
@@ -688,12 +739,17 @@ function countKeyOccurrences(node: unknown, key: string): number {
 /** Dimension 8: no secret declaration, context reference or inheritance. */
 function zeroSecretPins(): ShapePin[] {
   const expected =
-    "no `secrets:` declaration, no `secrets.` context reference and no `secrets: inherit` anywhere in the file";
+    "no `secrets:` declaration, no `secrets.` or `secrets[...]` context reference and no `secrets: inherit` anywhere in the file";
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(8, file.name, expected, (found) => {
       const problems: string[] = [];
       found.body.split(/\r\n|\r|\n/).forEach((line, index) => {
-        if (/\bsecrets\s*\./.test(line)) {
+        // Both spellings of the secrets context. `${{ secrets['TOKEN'] }}` is as
+        // valid as the dotted form and reaches the same value, but it is a plain
+        // string to the YAML parser — so it appears in neither the dotted pattern
+        // nor the `secrets` mapping-key count below, and a shipped file reading a
+        // secret through brackets would leave this whole dimension green.
+        if (/\bsecrets\s*(?:\.|\[)/.test(line)) {
           problems.push(`line ${index + 1}: secret context reference`);
         }
         if (/\bsecrets\s*:/.test(line)) {

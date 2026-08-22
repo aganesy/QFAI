@@ -79,6 +79,22 @@ const RETIRED_WORKFLOW = ".github/workflows/qfai-validate.yml";
 /** And the shipped copy, which must survive — adopters still receive it. */
 const SHIPPED_WORKFLOW = "packages/qfai/assets/init/root/.github/workflows/qfai-validate.yml";
 
+/**
+ * A capture group the pattern guarantees, narrowed.
+ *
+ * Under `noUncheckedIndexedAccess` every `match[1]` is `string | undefined`, and the
+ * project rules forbid the assertion that would silence it. A pattern that matched but
+ * produced no group means the pattern changed under the reader — a broken helper rather
+ * than a failing claim — so it throws instead of handing back a value to compare.
+ */
+function group(match: RegExpMatchArray | RegExpExecArray, index: number): string {
+  const value = match[index];
+  if (value === undefined) {
+    throw new Error(`the pattern matched without capture group ${index}`);
+  }
+  return value;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -372,7 +388,7 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
     // Only the project name is bound. The count is still REQUIRED by the pattern above, so a
     // an artifact that omits it fails CLAIM 1 — but nothing below needs its value, because the
     // size check re-counts test FILES rather than cases.
-    const [, project] = largest;
+    const project = group(largest, 1);
 
     // CLAIM 2 — at least two settings, each with a duration. Parsed as data, so a row of prose
     // claiming a comparison cannot stand in for one.
@@ -454,8 +470,8 @@ describe("TC-0017-0065 (TDD-0065): the adopted worker value matches the recorded
     const actual = countTestFiles(path.join(PACKAGE_ROOT, "tests", project));
     expect
       .soft(
-        Math.abs(actual - Number(filesMatch[1])) / Number(filesMatch[1]),
-        `the artifact says ${project} held ${filesMatch[1]} test files; it now holds ${actual}, and beyond twenty percent the comparison describes a different project`,
+        Math.abs(actual - Number(group(filesMatch, 1))) / Number(group(filesMatch, 1)),
+        `the artifact says ${project} held ${group(filesMatch, 1)} test files; it now holds ${actual}, and beyond twenty percent the comparison describes a different project`,
       )
       .toBeLessThanOrEqual(0.2);
   });

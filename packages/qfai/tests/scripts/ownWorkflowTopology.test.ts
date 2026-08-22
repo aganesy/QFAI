@@ -102,6 +102,22 @@ const VERDICT_JOB = "ci-pass";
  * would make every reader below trust a shape nothing checked, which is the
  * failure this file exists to prevent one level up.
  */
+/**
+ * A capture group the pattern guarantees, narrowed.
+ *
+ * Under `noUncheckedIndexedAccess` every `match[1]` is `string | undefined`, and the
+ * project rules forbid the assertion that would silence it. A pattern that matched but
+ * produced no group means the pattern changed under the reader — a broken helper rather
+ * than a failing claim — so it throws instead of handing back a value to compare.
+ */
+function group(match: RegExpMatchArray | RegExpExecArray, index: number): string {
+  const value = match[index];
+  if (value === undefined) {
+    throw new Error(`the pattern matched without capture group ${index}`);
+  }
+  return value;
+}
+
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
@@ -715,8 +731,9 @@ describe("TC-0017-0072 (TDD-0072): the folded run uses the local binary, not the
         "the build job must carry exactly one full-profile validate run",
       )
       .toHaveLength(1);
-    if (fullProfile.length !== 1) return;
-    const run = stepRun(fullProfile[0]);
+    const [only] = fullProfile;
+    if (fullProfile.length !== 1 || only === undefined) return;
+    const run = stepRun(only);
 
     // CLAIM 2 — it fails the job, targets the repository root, and uses the LOCAL binary.
     // The binary is the half that matters: the root manifest declares no dependency on the
@@ -913,7 +930,10 @@ function extractClassifier(): string {
       `expected exactly one quoted NODE heredoc in \`${DETECT_JOB}\`, found ${bodies.length}`,
     );
   }
-  const body = bodies[0];
+  const [body] = bodies;
+  if (body === undefined) {
+    throw new Error(`no quoted NODE heredoc in \`${DETECT_JOB}\``);
+  }
   const start = body.indexOf("\n", body.indexOf("<<'NODE'"));
   const end = body.indexOf("\nNODE", start);
   if (start < 0 || end < 0) {
@@ -959,8 +979,8 @@ function runClassifier(input: {
     const reason = /^reason=(.*)$/m.exec(written);
     return {
       status: run.status ?? -1,
-      full: full === null ? null : full[1].trim() === "true",
-      reason: reason === null ? "" : reason[1].trim(),
+      full: full === null ? null : group(full, 1).trim() === "true",
+      reason: reason === null ? "" : group(reason, 1).trim(),
       annotations: raw
         .split(/\r?\n/)
         .filter((line) => line.startsWith("::warning"))
