@@ -104,7 +104,66 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "Delta only: an unchanged TC's row keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.",
+        "Delta only, per boundary: a row whose (`TC-*`, boundary) pair is unchanged keeps its `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`.",
+      );
+    });
+
+    it(`${tree}: a split row is identified by its boundary, not by its TC`, async () => {
+      // Sibling rows of one matrix TC all carry the same `TC-*`, so a delta
+      // matched on `TC-Refs` cannot tell an added, changed or dropped boundary
+      // from an unchanged one — it would keep a retired boundary selectable.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      const phase2b = checklists.slice(
+        checklists.indexOf("## Phase 2b"),
+        checklists.indexOf("## Phase 2c"),
+      );
+      expect(phase2b).toContain(
+        "`Selector` is the only cell that tells two rows of one `TC-*` apart",
+      );
+      expect(phase2b).toContain("The unit of the delta is the boundary, not the `TC-*`");
+      expect(phase2b).toContain("Reconcile changed and removed TCs per boundary");
+      expect(phase2b).toContain("retire the row of a boundary dropped from its TC");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("a reseed matches rows on `Selector`, not on `TC-Refs`");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("identified by the boundary its `Selector` names");
+      expect(template).toContain(
+        "A boundary dropped from a surviving TC has its row retired the same way",
+      );
+    });
+
+    it(`${tree}: a legacy one-row aggregate is re-split, not preserved as unchanged`, async () => {
+      // The preserve rule ("an unchanged row keeps its Status and Evidence")
+      // would otherwise pin every ledger seeded under the old one-row-per-TC
+      // wording, so the split would only ever reach brand-new ledgers.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      const phase2b = checklists.slice(
+        checklists.indexOf("## Phase 2b"),
+        checklists.indexOf("## Phase 2c"),
+      );
+      expect(phase2b).toContain("Migrate legacy aggregate rows before applying the delta");
+      expect(phase2b).toContain("the preserve rule above does not protect it");
+      expect(phase2b).toContain("reset that row to `todo`");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain(
+        "Such a legacy aggregate row is not unchanged and the delta does not preserve it",
+      );
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain(
+        "legacy one-row aggregate for a matrix TC does **not** count as unchanged",
       );
     });
 

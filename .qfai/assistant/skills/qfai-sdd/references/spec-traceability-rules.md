@@ -167,6 +167,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - `Selector` may hold one entry, a comma-separated list, or a glob pattern. It is not limited to a single test function.
 - `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
 - A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.
+- Once split, each of those rows is identified by the boundary its `Selector` names — sibling rows share one `TC-*` and differ only there, so a reseed matches rows on `Selector`, not on `TC-Refs`. Retire the row of a boundary dropped from a surviving `TC-*`, and re-split a legacy single-row aggregate instead of preserving it as unchanged (`sdd-phase-checklists.md#phase-2b-seed-tddtest-listmd`).
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`
   appearing in TC-Refs. That measures which TCs need a `tdd/test-list.md` row;
   it says nothing about where the test file lives. A `TC-*` whose declared

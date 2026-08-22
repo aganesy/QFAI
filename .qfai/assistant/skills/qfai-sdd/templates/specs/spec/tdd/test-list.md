@@ -24,17 +24,31 @@ traced by `QFAI:` annotations in the test tree per
 `.qfai/assistant/catalog/test-layers.md`, and `/qfai-atdd` does not write to
 this ledger.
 
-Reseeding is a **delta**, never a regeneration: an unchanged TC's row keeps its
-`TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and TCs
-with no row yet are appended at `Status = todo`. Rewriting a row that has
-already progressed would destroy the RED/GREEN evidence that proves its cycle.
+A split row is identified by the boundary its `Selector` names — seeded at
+Phase 2b while `Test file` is still `-`. `TDD-ID` is a serial and `TC-Refs`
+repeats identically across sibling rows, so `Selector` is the only cell that
+tells two rows of one `TC-*` apart, and it is what the reseed matches on.
 
-The delta runs in both directions. A TC whose obligation changed has its row
-returned to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*` in
-`DR-ID`, prior `Evidence` kept); a TC deleted upstream, or no longer a
-coverage target, has its row retired the same way. Leaving a stale `done` row
-hides re-implementation work, and leaving a `todo` row for a deleted TC feeds
-`/qfai-implement` an obligation that no longer exists.
+Reseeding is a **delta**, never a regeneration, and its unit is the boundary,
+not the `TC-*`: a row whose boundary is unchanged keeps its `TDD-ID`, `Status`,
+`Test file`, `Selector`, `DR-ID` and `Evidence`, and a boundary with no row yet
+is appended at `Status = todo`. Rewriting a row that has already progressed
+would destroy the RED/GREEN evidence that proves its cycle.
+
+The delta runs in both directions. A boundary whose obligation changed has its
+row returned to `todo` under the upstream-reset rule (driving `CR-*` / `DR-*`
+in `DR-ID`, prior `Evidence` kept).
+A boundary dropped from a surviving TC has its row retired the same way,
+and a TC deleted upstream, or no longer a coverage target, has every one of
+its rows retired. Leaving a stale `done` row hides re-implementation work, and
+leaving a `todo` row for a deleted boundary feeds `/qfai-implement` an
+obligation that no longer exists.
+
+A ledger seeded before this rule holds **one** row for a matrix-shaped TC.
+Such a legacy aggregate row is not unchanged and the delta does not preserve it:
+re-split it into one row per boundary, and return it to `todo` unless its
+`Selector` already names exactly one boundary. A single RED stops at the first
+failing assert, so an aggregate row's `Evidence` proves no boundary in full.
 
 ## Ledger
 
