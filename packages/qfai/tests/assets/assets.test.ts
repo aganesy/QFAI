@@ -909,46 +909,60 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // 1. Which ParsedArgs options does the `init` command consume?
     const initCase = /case "init":([\s\S]*?)\breturn;/.exec(mainSource);
     expect(initCase, 'main.ts must keep a `case "init":` dispatch block').not.toBeNull();
-    const initOptionKeys = new Set<string>();
-    for (const match of (initCase?.[1] ?? "").matchAll(/options\.([A-Za-z][A-Za-z0-9]*)/g)) {
-      const key = match[1];
-      if (key !== undefined) {
-        initOptionKeys.add(key);
-      }
-    }
+    const initOptionKeys = collectOptionKeys(initCase?.[1] ?? "");
     expect(initOptionKeys.size).toBeGreaterThan(0);
 
-    // 2. Which `--flag` writes each of those options in the parser?
-    const flagsByOption = new Map<string, Set<string>>();
-    const caseBlocks = argsSource.split(/\n\s*case (?=")/);
-    for (const block of caseBlocks) {
-      const flagMatch = /^"(--[a-z][a-z0-9-]*)":/.exec(block);
-      const flag = flagMatch?.[1];
-      if (flag === undefined) continue;
-      for (const assignment of block.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=/g)) {
-        const key = assignment[1];
-        if (key === undefined) continue;
-        const bucket = flagsByOption.get(key) ?? new Set<string>();
-        bucket.add(flag);
-        flagsByOption.set(key, bucket);
-      }
-    }
+    // 1b. `qfai init --help` never reaches the switch: main.ts answers the
+    //     common help flags in the guard above the dispatch, so scanning only
+    //     `case "init":` would let both READMEs drop `--help` / `-h` while the
+    //     test name still promises "every qfai init flag". Derive that guard's
+    //     options too — they apply to every command, `init` included.
+    const preDispatch = mainSource.slice(0, mainSource.indexOf("switch (command) {"));
+    expect(preDispatch.length, "main.ts must keep a `switch (command) {` dispatch").toBeGreaterThan(
+      0,
+    );
+    const commonOptionKeys = collectOptionKeys(preDispatch);
+
+    // 2. Which flag writes each of those options in the parser? Short aliases
+    //    (`-h`) and fall-through label groups (`case "--help": case "-h":`)
+    //    both count, so the help flags resolve to a real registration.
+    const flagsByOption = mapCliFlagsToOptions(argsSource);
 
     // 3. Every flag that can set an init option must be documented in both
     //    READMEs. An init option with no flag at all means the derivation
     //    broke and is failed rather than skipped.
+    const expectDocumented = (flag: string, why: string): void => {
+      for (const readme of readmes) {
+        expect(
+          documentsFlag(readme, flag),
+          `README must document the init flag ${flag} (${why})`,
+        ).toBe(true);
+      }
+    };
     for (const key of initOptionKeys) {
       const flags = flagsByOption.get(key);
       expect(flags, `args.ts must register a --flag that sets options.${key}`).toBeDefined();
       expect((flags?.size ?? 0) > 0).toBe(true);
       for (const flag of flags ?? []) {
-        for (const readme of readmes) {
-          expect(
-            documentsFlag(readme, flag),
-            `README must document the init flag ${flag} (sets options.${key})`,
-          ).toBe(true);
-        }
+        expectDocumented(flag, `sets options.${key}`);
       }
+    }
+
+    // 3b. The pre-dispatch guard also reads parser-internal state that no flag
+    //     writes (`options.invalidExitCode`), so only the flag-backed keys are
+    //     required here — and at least one must survive, or the derivation rotted.
+    const commonFlags = new Set<string>();
+    for (const key of commonOptionKeys) {
+      for (const flag of flagsByOption.get(key) ?? []) {
+        commonFlags.add(flag);
+      }
+    }
+    expect(
+      commonFlags.size,
+      "main.ts's pre-dispatch guard must resolve to at least one registered flag",
+    ).toBeGreaterThan(0);
+    for (const flag of commonFlags) {
+      expectDocumented(flag, "handled before the init dispatch");
     }
 
     // Drift guard: any `qfai init --<flag>` the tool prints at operators must
@@ -1820,6 +1834,66 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).toMatch(/when `prototyping\.yaml` is present/i);
   });
 });
+
+/** Every `options.<key>` the given slice of CLI source touches. */
+function collectOptionKeys(source: string): Set<string> {
+  const keys = new Set<string>();
+  for (const match of source.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)/g)) {
+    const key = match[1];
+    if (key !== undefined) {
+      keys.add(key);
+    }
+  }
+  return keys;
+}
+
+/**
+ * Map `options.<key>` -> the CLI flags that write it, read straight out of
+ * `args.ts`. Consecutive `case` labels share the body they fall through into
+ * (`case "--help": case "-h":`), and short aliases are kept, so a flag is only
+ * missing here when the parser really does not register it.
+ */
+function mapCliFlagsToOptions(argsSource: string): Map<string, Set<string>> {
+  const flagsByOption = new Map<string, Set<string>>();
+  let pendingFlags: string[] = [];
+  let sawBody = false;
+
+  for (const line of argsSource.split("\n")) {
+    // A label line, with or without the block brace prettier keeps on it.
+    const label = /^\s*(?:case "([^"]*)"|default)\s*:\s*\{?\s*$/.exec(line);
+    if (label !== null) {
+      if (sawBody) {
+        pendingFlags = [];
+        sawBody = false;
+      }
+      const flag = label[1];
+      if (flag !== undefined && /^-{1,2}[A-Za-z][A-Za-z0-9-]*$/.test(flag)) {
+        pendingFlags.push(flag);
+      }
+      continue;
+    }
+    if (line.trim().length === 0) {
+      continue;
+    }
+    sawBody = true;
+    if (pendingFlags.length === 0) {
+      continue;
+    }
+    for (const assignment of line.matchAll(/options\.([A-Za-z][A-Za-z0-9]*)\s*=[^=]/g)) {
+      const key = assignment[1];
+      if (key === undefined) {
+        continue;
+      }
+      const bucket = flagsByOption.get(key) ?? new Set<string>();
+      for (const flag of pendingFlags) {
+        bucket.add(flag);
+      }
+      flagsByOption.set(key, bucket);
+    }
+  }
+
+  return flagsByOption;
+}
 
 function extractPathReferences(content: string): Set<string> {
   const refs = new Set<string>();
