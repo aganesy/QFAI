@@ -189,6 +189,22 @@ describe("doctor --profile <skill> does not report [ok] when nothing was probed"
     expect(finding.details?.manifest).toBe("unreadable");
   });
 
+  // Regression: `<skillsRoot>/<skill>` being a regular file is a broken
+  // filesystem, not "this skill authored no manifest" — it must not
+  // land on the `warning` that a manifest-less skill directory gets.
+  it("errors when the skill directory is a regular file, not a directory", async () => {
+    const root = await newTempDir("skilldir-file");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(skillsRoot, { recursive: true });
+    await writeFile(path.join(skillsRoot, "qfai-prototyping"), "not a directory", "utf-8");
+    const finding = await runAndFind(root, "qfai-prototyping");
+    expect(finding.severity).toBe("error");
+    expect(finding.message).toMatch(/could not be read/u);
+    expect(finding.message).not.toMatch(/no manifest for skill/u);
+    expect(finding.details?.manifest).toBe("unreadable");
+    expect(finding.details?.skillDirExists).toBe(false);
+  });
+
   it("errors when the manifest exists but cannot be parsed", async () => {
     const root = await newTempDir("unparseable");
     const dir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");

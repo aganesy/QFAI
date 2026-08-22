@@ -136,6 +136,31 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(line).toMatch(/no-such-skill/u);
   });
 
+  // A skill "directory" that is really a regular file is a corrupted
+  // tree, not a skill nobody authored a manifest for. Reporting it as
+  // "not found" would send the user chasing a --profile typo.
+  it("says the manifest is unreadable when the skill directory is a regular file", async () => {
+    const root = await newTempDir("skilldir-file");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(skillsRoot, { recursive: true });
+    await writeFile(path.join(skillsRoot, "qfai-prototyping"), "not a directory", "utf-8");
+
+    const summary = await runAutoremediate({
+      root,
+      dryRun: true,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+      skill: "qfai-prototyping",
+    });
+
+    expect(summary.lines.join("\n")).not.toContain("runtimeDependencies — all installed");
+    const line = summary.lines.find((entry) => entry.includes("runtimeDependencies"));
+    expect(line).toBeDefined();
+    expect(line).toMatch(/unreadable/u);
+    expect(line).not.toMatch(/not found/u);
+  });
+
   it("still says 'all installed' when a real manifest declares zero deps", async () => {
     const root = await newTempDir("zero-deps");
     const manifestDir = path.join(root, ".qfai", "assistant", "skills", "qfai-prototyping");

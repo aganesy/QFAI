@@ -138,6 +138,34 @@ describe("probeSkillManifest — manifest state is reported separately from find
     expect(result.findings).toEqual([]);
   });
 
+  // Regression: the skill "directory" being a regular file is a
+  // filesystem fault, not a missing manifest. `access()` alone said the
+  // skill dir existed, and the read failed with ENOTDIR (POSIX) /
+  // ENOENT (Windows) — both of which used to land on `absent`, so
+  // doctor warned "no manifest" and autoremediate said "not found".
+  it("reports manifest=unreadable when the skill directory is a regular file", async () => {
+    const root = await newTempDir("state-skilldir-file");
+    const skillsRoot = path.join(root, ".qfai", "assistant", "skills");
+    await mkdir(skillsRoot, { recursive: true });
+    await writeFile(path.join(skillsRoot, "qfai-atdd"), "not a directory", "utf-8");
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("unreadable");
+    expect(result.skillDirExists).toBe(false);
+    expect(result.skillsRootExists).toBe(true);
+    expect(result.findings).toEqual([]);
+  });
+
+  it("reports manifest=unreadable when the skills root itself is a regular file", async () => {
+    const root = await newTempDir("state-skillsroot-file");
+    await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory", "utf-8");
+    const result = await probeSkillManifest(root, "qfai-atdd");
+    expect(result.manifest).toBe("unreadable");
+    expect(result.skillDirExists).toBe(false);
+    expect(result.skillsRootExists).toBe(false);
+    expect(result.findings).toEqual([]);
+  });
+
   it("separates a missing skills root from a missing skill inside an existing root", async () => {
     const uninitialized = await newTempDir("state-noroot");
     const noRoot = await probeSkillManifest(uninitialized, "qfai-atdd");

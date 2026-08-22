@@ -582,8 +582,9 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
  *
  * The four unprobed states are diagnosed apart because they call for
  * different actions:
- * - `unparseable` / `unreadable` — the file is there but unusable, so
- *   this is an error the user must repair (bad JSON, permissions, I/O).
+ * - `unparseable` / `unreadable` — the path is occupied by something
+ *   unusable, so this is an error the user must repair (bad JSON,
+ *   permissions, I/O, or a skill "directory" that is a regular file).
  * - skills root missing — the project is uninitialized (or its
  *   configured `paths.skillsDir` is gone). Every skill name resolves
  *   to a missing directory then, so blaming `--profile` would be a
@@ -622,7 +623,7 @@ function buildUnreadableManifestCheck(
     return {
       ...base,
       severity: "error",
-      message: `manifest for skill '${skill}' at ${manifestRel} exists but could not be read (permissions, a directory in its place, or an I/O error) — runtimeDependencies were not probed`,
+      message: `manifest for skill '${skill}' at ${manifestRel} could not be read (permissions, a directory in its place, a path component that is a regular file instead of a directory, or an I/O error) — runtimeDependencies were not probed`,
     };
   }
   if (!result.skillsRootExists) {

@@ -25,7 +25,7 @@
  * convenience wrapper.
  */
 
-import { access, readFile } from "node:fs/promises";
+import { access, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../config.js";
@@ -43,12 +43,15 @@ export type SkillManifestProbeFinding = {
  * Whether the skill's manifest was located and understood.
  *
  * - `found` — manifest read and parsed (it may still declare no deps).
- * - `absent` — no manifest file at the resolved path (`ENOENT` /
- *   `ENOTDIR`: the file, or a directory on the way to it, is missing).
- * - `unreadable` — a manifest entry exists at the path but the read
- *   itself failed (permission denied, the entry is a directory, a
- *   transient I/O error). Distinct from `absent`: reporting it as
- *   "no manifest" would hide a filesystem fault as a config gap.
+ * - `absent` — no manifest file at the resolved path (`ENOENT`: the
+ *   file, or a directory on the way to it, does not exist).
+ * - `unreadable` — the manifest could not be read for a reason other
+ *   than a plainly missing path: permission denied, the entry is a
+ *   directory (`EISDIR`), a component of the path exists but is not a
+ *   directory (`ENOTDIR` — typically `<skillsRoot>/<skill>` is itself
+ *   a regular file), or a transient I/O error. Distinct from `absent`:
+ *   reporting it as "no manifest" would hide a filesystem fault as a
+ *   config gap.
  * - `unparseable` — manifest exists but is not JSON, is not an object,
  *   or declares a non-array `runtimeDependencies`.
  */
@@ -59,16 +62,19 @@ export type SkillManifestProbeResult = {
   /** Absolute path the probe resolved and read (or tried to read). */
   readonly manifestPath: string;
   /**
-   * Whether the skill's own directory exists. `false` means the skill
-   * itself is unresolvable — a typo'd or renamed `--profile <skill>`,
-   * but ONLY when `skillsRootExists` is true. See below.
+   * Whether the skill's own directory exists **and is a directory**.
+   * `false` means the skill itself is unresolvable — a typo'd or
+   * renamed `--profile <skill>`, but ONLY when `skillsRootExists` is
+   * true. See below. A path that exists but is not a directory is
+   * reported as `manifest: "unreadable"` rather than as a missing
+   * skill, so a corrupted tree never reads as a mere config gap.
    */
   readonly skillDirExists: boolean;
   /** Absolute path of the skills root the manifest was resolved under. */
   readonly skillsRootPath: string;
   /**
-   * Whether the skills root itself (`config.paths.skillsDir`) exists.
-   * `false` means the project is uninitialized or its configured
+   * Whether the skills root itself (`config.paths.skillsDir`) exists
+   * as a directory. `false` means the project is uninitialized or its configured
    * skillsDir is missing — every skill name resolves to a missing
    * directory there, so `skillDirExists === false` says nothing about
    * whether the requested `--profile` value is correct.
@@ -91,6 +97,34 @@ async function exists(target: string): Promise<boolean> {
     return true;
   } catch {
     return false;
+  }
+}
+
+/**
+ * What a path is, for the two directories the probe depends on.
+ *
+ * `access()` alone cannot tell a directory from a regular file, so a
+ * skill "directory" that is actually a file would otherwise be counted
+ * as an existing skill while the manifest read fails — surfacing a
+ * filesystem fault as a benign "no manifest" gap.
+ *
+ * - `directory` — usable.
+ * - `absent` — nothing here (`ENOENT`), or a parent component is a
+ *   regular file so this path cannot exist (`ENOTDIR`); either way the
+ *   entry itself is missing, and the offending parent is diagnosed by
+ *   its own probe.
+ * - `unusable` — the path exists but is not a directory, or `stat()`
+ *   itself failed (permissions, I/O).
+ */
+type DirectoryProbe = "directory" | "absent" | "unusable";
+
+async function probeDirectory(target: string): Promise<DirectoryProbe> {
+  try {
+    const stats = await stat(target);
+    return stats.isDirectory() ? "directory" : "unusable";
+  } catch (error: unknown) {
+    const code = errorCode(error);
+    return code === "ENOENT" || code === "ENOTDIR" ? "absent" : "unusable";
   }
 }
 
@@ -192,11 +226,13 @@ function extractRuntimeDeps(parsed: unknown): ManifestRead {
 
 /**
  * Error codes that mean "there is nothing at this path" rather than
- * "something is there but the read failed". `ENOENT` is the plain
- * missing file; `ENOTDIR` is a missing/!directory component on the way
- * to it (e.g. the skill directory is itself a file).
+ * "something is there but the read failed". Only `ENOENT` qualifies —
+ * a missing component on the way to the manifest reports `ENOENT` too.
+ * `ENOTDIR` is deliberately NOT here: it means a component exists but
+ * is a regular file (e.g. `<skillsRoot>/<skill>` is a file), which is
+ * a filesystem fault, not an absent manifest.
  */
-const ABSENT_READ_ERROR_CODES: ReadonlySet<string> = new Set(["ENOENT", "ENOTDIR"]);
+const ABSENT_READ_ERROR_CODES: ReadonlySet<string> = new Set(["ENOENT"]);
 
 function errorCode(error: unknown): string | undefined {
   if (typeof error === "object" && error !== null && "code" in error) {
@@ -212,9 +248,10 @@ async function readManifest(manifestPath: string): Promise<ManifestRead> {
     raw = await readFile(manifestPath, "utf-8");
   } catch (error: unknown) {
     // Only a genuinely missing path is `absent`. Permission denied,
-    // "manifest.json is a directory" (EISDIR), and transient I/O
-    // errors leave the manifest unprobed and MUST NOT be reported as
-    // "this skill declares no runtimeDependencies".
+    // "manifest.json is a directory" (EISDIR), "a path component is a
+    // regular file" (ENOTDIR), and transient I/O errors leave the
+    // manifest unprobed and MUST NOT be reported as "this skill
+    // declares no runtimeDependencies".
     const code = errorCode(error);
     return code !== undefined && ABSENT_READ_ERROR_CODES.has(code)
       ? { state: "absent" }
@@ -243,10 +280,26 @@ export async function probeSkillManifest(
   options?: SkillManifestProbeOptions,
 ): Promise<SkillManifestProbeResult> {
   const { manifestPath, skillsRootPath } = await resolveManifestPath(root, skill, options);
-  const skillDirExists = await exists(path.dirname(manifestPath));
-  const skillsRootExists = skillDirExists ? true : await exists(skillsRootPath);
-  const read = await readManifest(manifestPath);
+  const skillDir = await probeDirectory(path.dirname(manifestPath));
+  const skillDirExists = skillDir === "directory";
+  // A usable skill directory implies a usable skills root above it.
+  const skillsRoot: DirectoryProbe = skillDirExists
+    ? "directory"
+    : await probeDirectory(skillsRootPath);
+  const skillsRootExists = skillsRoot === "directory";
   const location = { manifestPath, skillDirExists, skillsRootPath, skillsRootExists };
+  if (skillDir === "unusable" || skillsRoot === "unusable") {
+    // One of the two directories is occupied by something that is not
+    // a directory (a stray regular file named after the skill, a
+    // half-finished extraction), or could not be stat'ed at all.
+    // Reading the manifest beneath it yields ENOTDIR on POSIX but
+    // ENOENT on Windows — reporting either as "absent" would downgrade
+    // a corrupted tree to a benign "no manifest" warning (and let
+    // autoremediate call it "not found"), so classify the fault here
+    // rather than inferring it from the read error.
+    return { manifest: "unreadable", ...location, findings: [] };
+  }
+  const read = await readManifest(manifestPath);
   if (read.state !== "found") {
     return { manifest: read.state, ...location, findings: [] };
   }
