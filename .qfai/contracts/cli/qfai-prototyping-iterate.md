@@ -173,7 +173,22 @@ unions `addedSources` into the frozen `allowedSources` AND
 `addedLicenseTiers` into the frozen `licenseTiers`. Without the tier
 replay, a cycle-0 patch that introduces both a new source and its tier
 mapping would cause cycle-1 license-verify to raise
-`license-tier-unknown` on the previously-accepted entry.
+`license-tier-unknown` on the previously-accepted entry. `sourceHosts`
+is NOT replayed — the audit row schema persists no hosts, so the
+effective `sourceHosts` is always the frozen baseline and a
+patch-added source carries no host binding. `licenseVerify` skips the
+host check for a source with no `sourceHosts` entry, so a patched
+source accepts any HTTPS host. Persisting host additions requires the
+contract amendment + classifier update named above (`addedHosts`).
+
+The ledger is NOT per-loop state: `writeSeedMetadata` resets
+`iterations[]` / `reviewerGate` / `imageSources` / the frozen fields on
+a `--cycle 0 --force` re-seed but leaves `licensePatchAudit[]` in
+place, so prior rows are unioned back into the effective catalog from
+cycle 1. Revocation is therefore a manual edit of
+`prototyping.json#licensePatchAudit[]` (the array is not covered by the
+`frozenLicenseCatalog` lock-drift gate), not a side effect of the
+re-seed.
 
 The patch apply block is NOT cycle-gated: `--license-patch` may be
 passed at any cycle, so the catalog can be broadened mid-program without

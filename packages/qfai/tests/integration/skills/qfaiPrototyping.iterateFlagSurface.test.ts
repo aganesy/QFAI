@@ -38,12 +38,16 @@ const CONTRACT_MD = path.resolve(
  * the `ParsedOptions` key `main.ts` forwards it through. `--cycle` is
  * omitted: it is the required positional-equivalent, not an opt-in.
  *
- * This table is NOT the source of truth for the flag set — the
- * `runPrototypingIterate({ ... })` call in `main.ts` is, and
- * `forwardedOptionKeys()` below derives that set and compares it to
- * this table in both directions. A flag wired into the CLI without
- * being added here therefore fails the derivation test, which in turn
- * forces the SKILL.md / contract scans to cover it.
+ * This table is NOT the source of truth for the flag set. Two
+ * independent derivations pin it in both directions:
+ * `forwardedOptionKeys()` reads the `runPrototypingIterate({ ... })`
+ * call in `main.ts`, and `parserIterateOptionKeys()` reads the
+ * `options.prototyping*` assignments in `args.ts`. A flag wired into
+ * the CLI without being added here therefore fails a derivation test,
+ * which in turn forces the SKILL.md / contract scans to cover it —
+ * including the case where `args.ts` gains a flag whose forwarding
+ * into `main.ts` was forgotten, which the `main.ts` derivation alone
+ * cannot see.
  */
 const ITERATE_FLAGS: ReadonlyArray<{ flag: string; optionKey: string }> = [
   { flag: "--target-url", optionKey: "prototypingTargetUrl" },
@@ -91,6 +95,44 @@ function forwardedOptionKeys(main: string): string[] {
 }
 
 /**
+ * `ParsedOptions` keys `args.ts` assigns under a `prototyping*` name
+ * that are NOT part of the `iterate` opt-in flag surface. Every entry
+ * carries the reason it is excluded — this set is the only
+ * hand-maintained escape from the parser-side derivation below, so a
+ * newly parsed `prototyping*` flag must be classified here or
+ * documented as an iterate flag; it cannot stay invisible.
+ */
+const NON_ITERATE_PROTOTYPING_OPTION_KEYS: ReadonlySet<string> = new Set([
+  "prototypingAction", // sub-command selector (preflight / iterate / certify / show-spec)
+  "prototypingCycle", // `--cycle` is required on iterate, not an opt-in flag
+  "prototypingCheckOnly", // `prototyping certify --check`
+  "prototypingScope", // `prototyping certify --scope`
+  "prototypingUpgradeScopeFull", // `prototyping certify --upgrade-scope full`
+]);
+
+/**
+ * Derive the iterate-owned `ParsedOptions` keys from the PARSER, with
+ * no reference to `main.ts`. Collects every `options.prototypingX =`
+ * assignment target in `args.ts` (comparisons such as
+ * `options.prototypingAction === "certify"` are excluded by the
+ * `[^=]` tail) and subtracts the non-iterate classifications above.
+ *
+ * Known limitation: `args.ts` is one flat switch shared by every
+ * sub-command, so only the `prototyping`-prefixed option names are
+ * attributable to prototyping by inspection. `--force` (`options.force`)
+ * is shared with `init` and is covered by the `main.ts` derivation and
+ * the doc scans instead.
+ */
+function parserIterateOptionKeys(args: string): string[] {
+  const keys = new Set<string>();
+  for (const match of args.matchAll(/options\.(prototyping[A-Za-z0-9_]*)\s*=[^=]/g)) {
+    const key = match[1];
+    if (key !== undefined && !NON_ITERATE_PROTOTYPING_OPTION_KEYS.has(key)) keys.add(key);
+  }
+  return [...keys].sort();
+}
+
+/**
  * Slice SKILL.md from the Step 2-B.1 heading to the next `###`
  * heading. Throws rather than returning the whole file so a renamed
  * heading surfaces as a failure instead of a silently passing scan.
@@ -114,6 +156,20 @@ describe("/qfai-prototyping — `iterate` flag surface is fully enumerated", () 
     const main = await readFile(MAIN_TS, "utf-8");
     const declared = ITERATE_FLAGS.map(({ optionKey }) => optionKey).sort();
     expect(forwardedOptionKeys(main)).toEqual(declared);
+  });
+
+  it("ITERATE_FLAGS matches the set args.ts actually parses", async () => {
+    // The second, independent pin. The `main.ts` derivation above only
+    // sees flags that were remembered to be forwarded — a flag added to
+    // `args.ts` whose forwarding block entry was forgotten leaves both
+    // `forwardedOptionKeys()` and this table unchanged, and the CLI then
+    // accepts it while silently dropping it. Deriving from the parser
+    // too fails that case here.
+    const args = await readFile(ARGS_TS, "utf-8");
+    const declared = ITERATE_FLAGS.map(({ optionKey }) => optionKey)
+      .filter((optionKey) => optionKey.startsWith("prototyping"))
+      .sort();
+    expect(parserIterateOptionKeys(args)).toEqual(declared);
   });
 
   it("the help text describes `--force` for the cycle-0 re-seed, not just init", async () => {

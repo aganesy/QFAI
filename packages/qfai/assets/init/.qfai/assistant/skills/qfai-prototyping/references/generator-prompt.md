@@ -185,10 +185,10 @@ The generator MUST express every styled surface as one of:
 There are two directory trees and they are NOT interchangeable. The
 generator writes to exactly one of them.
 
-| Tree                                  | Shape                                                    | Written by                               | Read by                                         |
-| ------------------------------------- | -------------------------------------------------------- | ---------------------------------------- | ----------------------------------------------- |
-| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)                  | `--auto-serve`, the operator, `/qfai-implement` |
-| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `npx qfai prototyping iterate --capture` | `npx qfai prototyping certify`, the reviewer    |
+| Tree                                  | Shape                                                    | Written by                                                                                                                                                | Read by                                         |
+| ------------------------------------- | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------- |
+| `.qfai/prototypes/iter-NN/`           | one `index.html`                                         | **the generator** (you)                                                                                                                                   | `--auto-serve`, the operator, `/qfai-implement` |
+| `.qfai/evidence/prototyping/iter-NN/` | `<screenId>.html` + `.png`, one pair per declared screen | `npx qfai prototyping iterate --capture` (browser snapshots) and `npx qfai prototyping iterate --cycle 0 --emit-skeletons` (placeholder seeds, HTML only) | `npx qfai prototyping certify`, the reviewer    |
 
 **The generator never writes the evidence tree.** The `--capture` step
 performs the fan-out: it drives a browser to each declared screen's
@@ -196,6 +196,16 @@ contract `route`, and writes one HTML snapshot plus one screenshot per
 screen into `.qfai/evidence/prototyping/iter-NN/`. `certify` reads only
 that tree and hard-fails with "missing HTML for N declared screen(s)"
 when a declared screen has no snapshot there.
+
+**Two CLI writers share that tree, and their provenance is not the
+same.** `--capture` writes HTML fetched from a running prototype;
+`--emit-skeletons` (cycle 0 only) writes placeholder HTML that was
+never rendered, served or reviewed. Both land as
+`iter-NN/<screenId>.html`, and `designMdViolations.ts` scans them
+alike — so the presence of a `<screenId>.html` does not by itself prove
+a capture happened. A cycle-0 file with no sibling `<screenId>.png` is
+a seed, not evidence: overwrite it with a real `--capture` before
+reading the tree as a review artifact or sealing a certificate.
 
 ### N declared screens, one file
 

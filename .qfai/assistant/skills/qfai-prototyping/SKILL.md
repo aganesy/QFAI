@@ -124,9 +124,11 @@ the help text wins and this section is stale.
   the frozen catalog stays byte-equal to the shipped default and the
   patch is appended to the audit ledger, from which the effective
   allowlist is rebuilt on every cycle. Audit and back up the ledger
-  too — the frozen catalog alone omits every added permission. Never
-  hand-edit the frozen catalog; that is a lock-drift exit 2. See
-  "License-verify hard-stop (exit 66)" below.
+  too — the frozen catalog alone omits every added permission. The
+  overlay covers sources and tiers only: a patch never pins
+  `sourceHosts`, and a `--cycle 0 --force` re-seed does not revoke
+  earlier rows. Never hand-edit the frozen catalog; that is a
+  lock-drift exit 2. See "License-verify hard-stop (exit 66)" below.
 - `--primary-spec-id <NNNN>` — compatibility escape hatch, not the
   normal path. Step 2-A runs every UI-bearing spec in one invocation;
   this flag pins the one spec cycle 0 treats as primary, so it narrows
@@ -164,8 +166,9 @@ the help text wins and this section is stale.
 axes `exceptional` AND `layoutAntiPatternsDetected` empty AND
 `designMdViolations` empty); `65` 10 cycles reached; `66` license-verify
 failure (`imageSources[]` resolved to a non-allowlisted source, unknown
-license tier, non-HTTPS URL, host mismatch vs the effective
-`sourceHosts`, or missing / empty `attribution` — see "License-verify
+license tier, non-HTTPS URL, host mismatch vs the frozen
+`sourceHosts` (host pinning is never patched — see below), or
+missing / empty `attribution` — see "License-verify
 hard-stop (exit 66)" below for recovery); `2` input error or lock drift
 (incl. DESIGN.md hash mismatch — re-run prototyping from cycle 0 after
 editing `DESIGN.md` and refreezing the lock via `/qfai-sdd` Phase 0; also
@@ -189,16 +192,27 @@ Recovery path (no in-loop retry — the verifier is fail-closed):
 
 1. Inspect `prototyping.json#frozenLicenseCatalog` **and**
    `prototyping.json#licensePatchAudit[]`: the effective
-   `allowedSources` / `licenseTiers` / `sourceHosts` is the baseline
-   plus every audit row. The frozen field alone omits every permission
-   a `--license-patch` already added.
+   `allowedSources` / `licenseTiers` is the baseline plus every audit
+   row, so the frozen field alone omits every permission a
+   `--license-patch` already added. `sourceHosts` is the exception —
+   an audit row persists no hosts, so the effective `sourceHosts` stays
+   exactly the baseline and a patch-added source carries **no** host
+   binding. The verifier skips the host check for a source with no
+   `sourceHosts` entry, so any HTTPS host passes under that source
+   name; host pinning for an added source is not available today.
 2. Edit the offending `imageSources[]` entry to use an allowlisted
    source / known tier / HTTPS URL / matching host / non-empty
    attribution. **Do not** edit `frozenLicenseCatalog` mid-loop
    (separate exit-2 lock-drift class).
 3. To broaden the allowlist, apply an add-only `--license-patch` at the
-   current cycle — no cycle-0 restart. Only deletions / modifications
-   are rejected and need a `--cycle 0 --force` re-seed.
+   current cycle — no cycle-0 restart. Deletions / modifications inside
+   a patch file are rejected outright. Revoking an already-applied
+   permission is a manual step: `--cycle 0 --force` re-seeds the loop
+   but does **not** clear `licensePatchAudit[]`, so every prior row is
+   unioned back in from cycle 1. Delete (or archive elsewhere) the
+   offending rows from `prototyping.json#licensePatchAudit[]` yourself
+   as part of the re-seed — that array is not covered by the lock-drift
+   gate, unlike `frozenLicenseCatalog`.
 
 ### Cycle 9 budget exhaustion
 
