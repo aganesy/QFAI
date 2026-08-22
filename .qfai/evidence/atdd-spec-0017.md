@@ -2902,7 +2902,21 @@ round  last report at   summary.json at   gap
  10    225a242e         225a242e          same commit
  11    2ee4874b         2ee4874b          same commit
  12    0bf5dc4e         0bf5dc4e          same commit
+ 13    none             none              pack holds a request and no reports
+ 14    f2711cdc         f2711cdc          same commit
+ 15    5d14962d         5d14962d          same commit
+ 16    7d67a719         7d67a719          same commit
+ 17    953a6afe         953a6afe          same commit
+ 18    20121003         20121003          same commit
 ```
+
+**Rows 13 to 18 were missing for six rounds while the section pointing here said it measures the gap
+per round.** Round 19 found a twelve-row table presented as the eighteen-round claim; the rows above
+are re-derived here by this section's own method rather than pasted from the finding. Nothing was
+hidden by the omission — every missing row is `same commit`, and round 13's pack never received a
+report — but the record could not know that without measuring, which is the whole argument this
+section makes about the difference between a table and a practice claim. It is the third
+hand-maintained table here to go stale, and the other two were deleted on exactly that ground.
 
 Row 9 said `(this commit)` for a round. Round 9's own `m3` made exactly that objection about row 8 and
 required `aab29486` written in; row 8 was corrected and row 9 was written in the same defective form in

@@ -1133,9 +1133,14 @@ export function fileDigest(raw: Buffer): string {
  * `no-require-imports` — a rule about how the planted file was WRITTEN — and inlining the payload evaded
  * it, which is this record's recurring class working by accident and then not working.
  *
- * `.qfai/`, `.claude/`, `.codex/` and `.agents/` are excluded by path: they are agent-instruction trees
+ * The EIGHT trees in `INIT_INSTRUCTION_TREES` are excluded by path: they are agent-instruction trees
  * that change whenever a skill does, and what matters about them is narrower than their contents, which
- * `INIT_MUST_NOT_SHIP` states.
+ * `INIT_MUST_NOT_SHIP` states. This paragraph named four of the eight for a round after the list grew —
+ * two copies of one fact, and the one nobody was looking at was wrong.
+ *
+ * **The justification is false of one file in those trees**, and `ALLOWED_PROVENANCE_SHAPE` below
+ * covers it for that reason: `.qfai/install-provenance.json` is not an agent instruction, does not
+ * change when a skill does, and gates whether init DELETES an adopter's workflow.
  */
 export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
@@ -1189,6 +1194,37 @@ export const ALLOWED_INIT_ROOT_ASSETS: ReadonlySet<string> = new Set([
   "DESIGN.md",
   "qfai.config.yaml",
 ]);
+
+/**
+ * The one file inside an instruction tree that is pinned anyway, by SHAPE.
+ *
+ * The exclusion above justifies itself on the trees being agent instructions "that change whenever a
+ * skill does, and what matters about them is narrower than their contents". `.qfai/install-provenance.json`
+ * is none of that. Another session added it while round 19 was in flight, and it is the record `doctor`
+ * reads to detect drift and `resolvePrunableRetiredWorkflows` reads to decide whether to **delete an
+ * adopter's workflow file** — so its contents are exactly what matters about it, and a file that gates
+ * a delete had no pin at all because of where it happens to sit.
+ *
+ * Its bytes cannot be pinned: it carries a timestamp, the installed version, and a digest per workflow.
+ * So the pin is the shape — which keys may appear at each level, and what each value must look like. A
+ * key nobody enumerated is a channel nobody reviewed, which is the same rule the workflow shape pins
+ * make one directory over.
+ */
+export const ALLOWED_PROVENANCE_SHAPE: {
+  readonly path: string;
+  readonly topLevelKeys: ReadonlySet<string>;
+  readonly entryKeys: ReadonlySet<string>;
+  readonly entryValues: ReadonlyMap<string, RegExp>;
+} = {
+  path: ".qfai/install-provenance.json",
+  topLevelKeys: new Set(["workflows"]),
+  entryKeys: new Set(["sha256", "installedByVersion", "installedAt"]),
+  entryValues: new Map([
+    ["sha256", /^[0-9a-f]{64}$/],
+    ["installedByVersion", /^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/],
+    ["installedAt", /^\d{4}-\d{2}-\d{2}T[\d:.]+Z$/],
+  ]),
+};
 
 /** The eight trees excluded from the PATH pin, and excluded from nothing else — the kind rule reads them. */
 export const INIT_INSTRUCTION_TREES: ReadonlyArray<string> = [
