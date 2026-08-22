@@ -319,19 +319,25 @@ function collectSteeringPlaceholders(content: string): SteeringPlaceholderSectio
   }));
 }
 
-/** Unfilled slots on one line: `<...>` tokens, else bare `TODO`/`TBD` values. */
+/**
+ * Unfilled slots on one line: `<...>` tokens **plus** bare `TODO`/`TBD` values.
+ *
+ * A partly filled row carries both shapes at once — `| <milestone name> | TBD |`
+ * is two slots, not one — so the two kinds are added rather than the first
+ * kind short-circuiting the line. Each counted `<...>` token is blanked out of
+ * the text handed to {@link countBareTodoValues} so a slot whose inner text is
+ * itself a placeholder keyword (`<placeholder>`) is still charged once.
+ */
 function countUnfilledMarkers(line: string): number {
   let count = 0;
-  for (const match of line.matchAll(PLACEHOLDER_TOKEN_PATTERN)) {
-    const inner = match[1];
-    if (inner !== undefined && isPlaceholderToken(inner)) {
+  const withoutSlots = line.replace(PLACEHOLDER_TOKEN_PATTERN, (match: string, inner: unknown) => {
+    if (typeof inner === "string" && isPlaceholderToken(inner)) {
       count += 1;
+      return "";
     }
-  }
-  if (count > 0) {
-    return count;
-  }
-  return countBareTodoValues(line);
+    return match;
+  });
+  return count + countBareTodoValues(withoutSlots);
 }
 
 function isPlaceholderToken(inner: string): boolean {
@@ -372,11 +378,18 @@ function countBareTodoValues(line: string): number {
   return isUnfilledValue(bullet ?? line) ? 1 : 0;
 }
 
-/** `TBD` / `` `TODO` `` — text that is a placeholder keyword and nothing else. */
+/**
+ * `TBD` / `` `TODO` `` / `**TBD**` — a placeholder keyword and nothing else.
+ *
+ * Code spans and markdown emphasis (`*`, `_`, `~`) are decoration an operator
+ * puts *around* a value, not part of it, so they are peeled off both ends
+ * before the keyword test. Without that, a catalog whose remaining slots read
+ * `**TBD**` passed as filled.
+ */
 function isUnfilledValue(raw: string): boolean {
   const value = raw
     .trim()
-    .replace(/^`+|`+$/g, "")
+    .replace(/^[`*_~]+|[`*_~]+$/g, "")
     .trim();
   // The shared regex also matches an empty string, but an empty bullet or
   // table cell is layout rather than an unfilled slot, so only real text is

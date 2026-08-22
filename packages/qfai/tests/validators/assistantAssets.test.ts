@@ -154,6 +154,53 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(findings[0]?.message).toContain("Open questions (1)");
   });
 
+  it("counts an angle-bracket slot and a bare TBD left on the same row", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        "| Milestone         | Description |",
+        "| ----------------- | ----------- |",
+        "| <milestone name>  | TBD         |",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    // Two slots on one row, not one: the `<...>` token and the bare `TBD`.
+    expect(findings[0]?.message).toContain("Milestones (2)");
+  });
+
+  it("flags a placeholder keyword wrapped in markdown emphasis", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## Quality gates (SSOT)",
+        "",
+        "- lint: **TBD**",
+        "- typecheck: _TODO_",
+        "- test: `pnpm test`",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Quality gates (SSOT) (2)");
+  });
+
   it("ignores a placeholder that has been commented out", async () => {
     const root = await newRoot();
     await writeCatalog(
