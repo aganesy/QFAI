@@ -16,6 +16,13 @@
  * and the second pointer to that scheme — in the execution ledger — must name
  * the file that declares it rather than saying "those files", which had two
  * candidate referents in its own sentence.
+ *
+ * Two consequences the first pass left open, and this file also holds:
+ * `qfai-implement/SKILL.md` step 5 is the instruction closest to the act of
+ * creating the record, so it has to be as concrete as the whitelist; and the
+ * two shapes do not share a declaration home — `DR-NNNN-MMMM` is declared in
+ * the spec's `07_Decisions.md`, `DR-NNNN` in `_policies/08_Decisions.md`, per
+ * the distributed templates themselves.
  */
 
 import { readFile } from "node:fs/promises";
@@ -30,6 +37,9 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const DRIFT = "assistant/constitution/drift-protocol.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
+// The instruction closest to the act of creating the file: a reader following
+// Phase Red's numbered steps never opens the reference above.
+const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 
 /** The shapes `DR_ID_FORMAT` accepts, written the way an operator reads them. */
 const SPEC_SCOPED = "DR-NNNN-MMMM";
@@ -69,9 +79,28 @@ describe.each(QFAI_TREES)("%s", (tree) => {
   it("never renders a DR filename on the CR's date form", async () => {
     // The failure mode is imitation, so no shipped text may model the shape
     // being warned against.
-    for (const rel of [DRIFT, LEDGER]) {
+    for (const rel of [DRIFT, LEDGER, SKILL]) {
       const text = await read(tree, rel);
       expect(text, `${rel} shows a date-form DR id`).not.toMatch(/DR-(?:YYYYMMDD|\d{8})-/);
+    }
+  });
+
+  it("never leaves the DR filename's id abstract", async () => {
+    // `DR-<id>-<slug>.md` is the shape that invited the date form in the first
+    // place. Every pointer at the filename has to be concrete, including the
+    // one inside Phase Red's numbered steps, which is the instruction closest
+    // to the act of creating the record.
+    for (const rel of [DRIFT, LEDGER, SKILL]) {
+      const text = await read(tree, rel);
+      expect(text, `${rel} still defers the DR id to another file`).not.toContain("DR-<id>-<slug>");
+    }
+    // The two that name the destination path spell the whole path out; the
+    // whitelist bullet carries `.qfai/decisions/` in its own lead-in and is
+    // covered by the first case above.
+    for (const rel of [LEDGER, SKILL]) {
+      const text = await read(tree, rel);
+      expect(text).toContain(`\`.qfai/decisions/${SPEC_SCOPED}-<slug>.md\``);
+      expect(text).toContain(`\`.qfai/decisions/${POLICY_LEVEL}-<slug>.md\``);
     }
   });
 
@@ -79,11 +108,29 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const ledger = await read(tree, LEDGER);
     // "those files" had two candidate referents in its own sentence — the
     // Change Requests it sits beside, and the 07_Decisions.md / 09_delta.md
-    // named next. Only the latter declares the scheme.
+    // named next. Only 07_Decisions.md declares anything, and only the
+    // spec-scoped half of the scheme.
     expect(ledger).not.toContain("ID scheme those files declare");
-    expect(ledger).toContain("`DR-*` ID scheme declared in the spec's `07_Decisions.md`");
     expect(ledger).toContain(`\`${SPEC_SCOPED}\``);
     expect(ledger).toContain(`\`${POLICY_LEVEL}\``);
+  });
+
+  it("gives each DR shape its own declaration home", async () => {
+    // The distribution templates split the two: `templates/specs/spec/
+    // 07_Decisions.md` declares `DR-NNNN-MMMM` and sends the policy-level
+    // `DR-NNNN` to `_policies/08_Decisions.md`. Text that routes both to
+    // 07_Decisions.md points a policy-level anomaly at the wrong owner, so its
+    // `TDDLIST_EXCEPTION_UNRESOLVED_DR` has no reachable fix. All three files
+    // therefore carry the same two clauses verbatim.
+    for (const rel of [DRIFT, LEDGER, SKILL]) {
+      const text = await read(tree, rel);
+      expect(text, `${rel} does not send ${SPEC_SCOPED} to 07_Decisions.md`).toContain(
+        "declared in that spec's `07_Decisions.md`",
+      );
+      expect(text, `${rel} does not send ${POLICY_LEVEL} to _policies/08_Decisions.md`).toContain(
+        "declared in `_policies/08_Decisions.md`",
+      );
+    }
   });
 });
 

@@ -75,14 +75,16 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
   it("tells the ledger writer where the DR goes and where it does not", async () => {
     const ledger = await read(tree, LEDGER);
-    expect(ledger).toContain("`.qfai/decisions/DR-<id>-<slug>.md`");
+    expect(ledger).toContain("`.qfai/decisions/DR-NNNN-MMMM-<slug>.md`");
+    expect(ledger).toContain("`.qfai/decisions/DR-NNNN-<slug>.md`");
     expect(ledger).toContain("Do **not** write `07_Decisions.md` or `09_delta.md`");
   });
 
   it("says it in Phase Red too, where the transition is ordered", async () => {
     // A reader who follows the numbered steps never opens the reference file.
     const skill = await read(tree, SKILL);
-    expect(skill).toContain("records the anomaly as `.qfai/decisions/DR-<id>-<slug>.md`");
+    expect(skill).toContain("records the anomaly as `.qfai/decisions/DR-NNNN-MMMM-<slug>.md`");
+    expect(skill).toContain("`.qfai/decisions/DR-NNNN-<slug>.md`");
   });
 });
 

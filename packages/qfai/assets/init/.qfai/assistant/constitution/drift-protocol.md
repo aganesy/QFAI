@@ -47,8 +47,10 @@ case required reading the agent roster and reasoning backwards from it.
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record (`DR-NNNN-MMMM-<slug>.md` spec-scoped, or
-  `DR-NNNN-<slug>.md` policy-level — deliberately **not** the CR's date form;
-  see the ID scheme in the spec's `07_Decisions.md`)
+  `DR-NNNN-<slug>.md` policy-level — deliberately **not** the CR's date form).
+  Each shape has its own declaration home: a spec-scoped id is
+  declared in that spec's `07_Decisions.md`, a policy-level one is
+  declared in `_policies/08_Decisions.md`
 
 Any exception beyond this list requires explicit user approval.
 
