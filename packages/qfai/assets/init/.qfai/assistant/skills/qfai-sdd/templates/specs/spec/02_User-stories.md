@@ -16,7 +16,7 @@
 > to this block. That story is then excluded from the E2E coverage obligation (`QFAI-ATDD-111`)
 > and named at `info` by `QFAI-ATDD-118`, so the deferral is recorded rather than silent — the
 > same token and the same treatment `CON-API-*` and `CON-DB-*` already have. The marker belongs
-> to the block it is written in: one above the first `## US-XXXX` heading defers nothing. Remove
+> to the block it is written in: one above the first `US-XXXX` heading defers nothing. Remove
 > it when the slice is implemented. Do not instead leave the story uncovered, write an E2E test
 > that asserts nothing, or declare the whole spec non-user-facing — that last one erases the
 > obligation for every other story in the spec.
