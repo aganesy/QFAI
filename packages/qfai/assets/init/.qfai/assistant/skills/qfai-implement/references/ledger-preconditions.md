@@ -48,10 +48,12 @@ construction.
 `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:` annotations, not
 ledger rows — they never appear as rows here.
 
-**No validator asks for the second group.** An integration-level TC is not a
-coverage target, so `TDDLIST_TC_NOT_COVERED` stays silent whether its row is
-present or absent. Phase 2b is that row's only producer, and a clean
-`npx qfai validate` is not evidence that the row was unwanted.
+**No validator asks for the second group** — with one exception, the blank
+`Level` above, which the gate counts because it counts every TC it cannot
+exclude. A TC that declares `L3` or `integration` is not a coverage target, so
+`TDDLIST_TC_NOT_COVERED` stays silent whether its row is present or absent.
+Phase 2b is that row's only producer, and a clean `npx qfai validate` is not
+evidence that the row was unwanted.
 
 ## Recovery when it is missing
 
