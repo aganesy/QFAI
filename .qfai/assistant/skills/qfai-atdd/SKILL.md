@@ -75,7 +75,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
-- Do not read `_policies/**` by default.
+- Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`: the `Owning spec` field cannot be filled from the finding, so read the generated Contract → Spec map (`npx qfai report`), falling back to the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — that column only, nothing written back (`references/cross-spec-obligations.md#resolving-the-owning-spec`).
 
 ## Sub-agent Delegation (MANDATORY)
 
@@ -116,7 +116,7 @@ Use the shared schema.
 - ATDD-specific reviewer checks:
   - coverage obligations met: E2E covers `US`, API covers `CON-API`, and every `TC` **that declares `L3`/`L4`/`L5` or no `Level`** is covered from the directory that `Level` routes to. `L1`/`Unit` and `L2`/`Component` owe nothing here (CRITICAL CONSTRAINTS): the ledger covers them. An existing L1/L2 annotation in `tests/integration/**` is not a violation — the validator declines to count it and declines to flag it — so do not require one to be added, and do not require an existing one to be removed;
   - Coverage Depth Matrix is reviewed and no unjustified `X` cells remain;
-  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;
+  - validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` reached one of its **two** passing states — exit 0, or `PASS with cross-spec obligations`: every finding this spec owns is clean, and each residual `QFAI-ATDD-113` / `-115` is recorded one row per contract under `## Cross-spec obligations` with a named sibling owner. Exit 1 alone is not `REVISE` here; residue that is unrecorded, unattributable, or attributed to this spec is (`references/cross-spec-obligations.md`);
   - Drift Protocol is enforced;
   - test-layer policy is checked against `.qfai/assistant/catalog/test-layers.md`;
   - coverage floors and ratios are signals, not gates;
@@ -307,7 +307,7 @@ Notes:
 ## Failure handling (mandatory)
 
 - If blocked/unknown, stop and raise a Decision Record.
-- Do not declare completion when any gate is FAIL; iterate until PASS.
+- Do not declare completion when any gate is FAIL; iterate until PASS. A scoped validate gate that exits 1 **only** on residue attributed and recorded per `references/cross-spec-obligations.md` is not a FAIL gate — it is `PASS with cross-spec obligations`, and iterating on it is waiting for a sibling spec that is waiting for this one.
 
 ## Evidence (MANDATORY)
 
@@ -362,7 +362,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 ## Gaps / Open risks
 
-## Final status (PASS/FAIL) + who confirmed
+## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed
 ```
 
 ## ATDD Work Orders (mandatory)
@@ -438,7 +438,7 @@ If commands cannot be run due to environment limits, request user execution and 
 - Acceptance test implementation files (with required annotations)
 - Runbook snippet (copy-paste command)
 - Verification evidence summary
-- Gate results (PASS/FAIL)
+- Gate results (`PASS` / `PASS with cross-spec obligations` / `FAIL`) — the middle one names its recorded obligations in the completion report
 
 ## DONE Declaration (Mandatory Output)
 

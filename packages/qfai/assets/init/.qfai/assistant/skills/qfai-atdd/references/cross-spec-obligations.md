@@ -53,38 +53,86 @@ What it does not license:
   `/qfai-verify` at the end of the stage. That is where the residue is settled,
   and no `/qfai-atdd` run may report the stage clean on its behalf.
 
+## Resolving the owning spec
+
+`Owning spec` cannot be read off the finding. An ordinary contract ID is
+`CON-API-NNNN` / `CON-DB-NNNN` — it carries no spec number — and the contract
+file declares only its own `QFAI-CONTRACT-ID`, never an owner. Ownership lives
+on the spec side, which the Read Set Contract's Default Mode does not cover, so
+resolve it in this order and say in the row's `Why not this stage's work` which
+source answered.
+
+1. **The generated Contract → Spec map.** `npx qfai report` (after a validate
+   run, or with `--run-validate`) writes `.qfai/report/report.md` with a
+   `### Contract → Spec` section — one line per contract ID listing every spec
+   that declares it — and `--format json` puts the same map at
+   `traceability.contracts.idToSpecs`. It is a generated report artifact, not a
+   sibling spec pack, so reading it widens no read set. It is built from the
+   `QFAI-CONTRACT-REF:` lines in each spec's `01_Spec.md`, so a spec that binds
+   its contracts only in the rule table does not appear there — which is what
+   step 2 is for.
+2. **The sibling specs' `Contract-Refs` column**, when the map is unavailable or
+   answers `(none)` for an ID some spec's rule table does bind. Read the
+   `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md` — the
+   documented per-spec contract binding. This is the one narrow exception to
+   Default Mode: that column only, no other content of a sibling pack, and
+   nothing is written back.
+
+`.qfai/specs/_policies/05_Contracts.md` does **not** answer this. It is the
+contract index — short ID, file, purpose — and has no spec column at all.
+
+What the answer means:
+
+- **One spec** — that spec is `Owning spec`.
+- **Several specs** — every one of them owns it. Name them all; the contract is
+  closed by whichever of those runs covers it first, and none of them may record
+  it as another's.
+- **No spec** — the contract is an orphan, declared under `.qfai/contracts/**`
+  and referenced by no spec. That is not attributable residue: it is this run's
+  finding to carry, it FAILs, and the fix is a `/qfai-sdd` triage of the orphan,
+  not a row here.
+
 ## The evidence entry
 
-In `.qfai/evidence/atdd-<spec-id>.md`, under `## Cross-spec obligations`, one
-row per residual finding. Write `None` when the scoped run exited 0 — an absent
+In `.qfai/evidence/atdd-<spec-id>.md`, under `## Cross-spec obligations`, **one
+row per uncovered contract ID** — not one per finding. `QFAI-ATDD-113` and
+`QFAI-ATDD-115` are emitted once per family, with every uncovered contract
+aggregated into that single finding's `refs`, so two contracts owned by two
+different sibling specs arrive as one finding whose single `Contract ID` and
+`Owning spec` cell could record only one of them. Split the finding's `refs`
+into one row each. Write `None` when the scoped run exited 0 — an absent
 section after a run that exited 1 is unrecorded residue, not a clean run.
 
-| Field                       | Meaning                                                                                       |
-| --------------------------- | --------------------------------------------------------------------------------------------- |
-| `Finding`                   | the rule code the scoped run reported — `QFAI-ATDD-113` or `QFAI-ATDD-115`                    |
-| `Contract ID`               | the `CON-API-*` / `CON-DB-*` the finding names                                                |
-| `Owning spec`               | the sibling spec that declares that contract — never this spec, and never blank               |
-| `Why not this stage's work` | one sentence tying the contract to that spec's scope, not to this run's convenience           |
-| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end |
+| Field                       | Meaning                                                                                                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Finding`                   | the rule code that reported this contract — `QFAI-ATDD-113` or `QFAI-ATDD-115`; the same code repeats across rows when one finding aggregated several contracts |
+| `Contract ID`               | exactly one `CON-API-*` / `CON-DB-*` from that finding's `refs` — one ID per row, never a list                                                                  |
+| `Owning spec`               | every sibling spec that declares that contract, resolved above — never this spec, and never blank                                                               |
+| `Why not this stage's work` | one sentence tying the contract to that spec's scope, not to this run's convenience                                                                             |
+| `Closed by`                 | the owning spec's next `/qfai-atdd` run, or `/qfai-verify` for the repo-wide run at stage end                                                                   |
 
 `Owning spec` is the load-bearing field. "A contract elsewhere is uncovered" is
-not a record; "`CON-API-0004-002` is declared by spec-0004, whose ATDD stage has
-not run" is. An entry that names no owning spec, names this spec, or omits the
-contract ID is not a hand-off, and the run is not done.
+not a record; "`CON-API-0004` is declared by spec-0004, whose ATDD stage has not
+run" is. An entry that names no owning spec, names this spec, omits the contract
+ID, or leaves any ID from the finding's `refs` without a row of its own is not a
+hand-off, and the run is not done.
 
-Example:
+Example — one `QFAI-ATDD-113` naming two contracts, split into a row each, plus
+the `QFAI-ATDD-115` beside it:
 
 ```md
 ## Cross-spec obligations
 
-| Finding       | Contract ID      | Owning spec | Why not this stage's work                                                           | Closed by                    |
-| ------------- | ---------------- | ----------- | ----------------------------------------------------------------------------------- | ---------------------------- |
-| QFAI-ATDD-113 | CON-API-0004-002 | spec-0004   | The endpoint is in spec-0004's slice; this spec declares no US or TC exercising it. | spec-0004's `/qfai-atdd` run |
+| Finding       | Contract ID  | Owning spec | Why not this stage's work                                                           | Closed by                    |
+| ------------- | ------------ | ----------- | ----------------------------------------------------------------------------------- | ---------------------------- |
+| QFAI-ATDD-113 | CON-API-0004 | spec-0004   | The endpoint is in spec-0004's slice; this spec declares no US or TC exercising it. | spec-0004's `/qfai-atdd` run |
+| QFAI-ATDD-113 | CON-API-0005 | spec-0005   | Same finding, different contract: spec-0005 binds it in its rule table.             | spec-0005's `/qfai-atdd` run |
+| QFAI-ATDD-115 | CON-DB-0007  | spec-0004   | The table is spec-0004's; this spec reads no row of it in any TC.                   | spec-0004's `/qfai-atdd` run |
 ```
 
 ## Not the same as cross-spec code ownership
 
-`../qfai-implement/references/cross-spec-ownership.md` defines a different
+`../../qfai-implement/references/cross-spec-ownership.md` defines a different
 entry that lands in this same section for an `E2E` / `API` row: a file another
 spec's ledger names in `Test file`, changed by this spec's work. That kind
 **blocks** completion while it is open, because this run changed something and

@@ -222,8 +222,90 @@ describe.each(TREES)("%s", (tree) => {
     // reports a sibling's contract, or unblock a run that left another spec's
     // assertion unverified.
     const obligations = flat(await read(tree, OBLIGATIONS));
-    expect(obligations).toContain("../qfai-implement/references/cross-spec-ownership.md");
+    // Resolved from `qfai-atdd/references/`, so the sibling skill is two levels
+    // up. `../qfai-implement/...` named `qfai-atdd/qfai-implement/...`, which
+    // does not exist, and the reader cannot tell the two kinds apart without it.
+    expect(obligations).toContain("../../qfai-implement/references/cross-spec-ownership.md");
+    expect(obligations).not.toContain("`../qfai-implement/");
     expect(obligations).toContain("That kind **blocks** completion while it is open");
+  });
+
+  it("carries the terminal state into the reviewer gate, failure handling and final status", async () => {
+    // The DoD alone left `PASS with cross-spec obligations` unreachable: the
+    // independent reviewer still required the same command to "pass", and
+    // failure handling still forbade completing on a FAIL gate, so the
+    // reviewer returned `REVISE` on every run that took the compliant path.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain("reached one of its **two** passing states");
+    expect(atdd).toContain("Exit 1 alone is not `REVISE` here");
+    expect(atdd).not.toContain(
+      "- validation evidence exists and `npx qfai validate --profile atdd --fail-on error --spec <spec-id>` passes;",
+    );
+    expect(atdd).toContain(
+      "is not a FAIL gate — it is `PASS with cross-spec obligations`, and iterating on it is waiting for a sibling spec that is waiting for this one",
+    );
+    // The status the run reports has to be able to say it, too.
+    expect(await read(tree, ATDD)).toContain(
+      "\n## Final status (PASS / PASS with cross-spec obligations / FAIL) + who confirmed\n",
+    );
+    expect(atdd).toContain("Gate results (`PASS` / `PASS with cross-spec obligations` / `FAIL`)");
+  });
+
+  it("gives the run a way to resolve the owning spec it must name", async () => {
+    // `Owning spec` is mandatory and unblankable, but a plain `CON-API-NNNN`
+    // carries no spec number and the contract file names no owner — so without
+    // a read path the mandatory field could not be filled, and the entry
+    // failed by the rule two lines above it.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("## Resolving the owning spec");
+    expect(obligations).toContain("`### Contract → Spec` section");
+    expect(obligations).toContain("traceability.contracts.idToSpecs");
+    expect(obligations).toContain(
+      "Read the `Contract-Refs` column of `.qfai/specs/*/04_Business-Rules.md`",
+    );
+    // The index is the wrong file to reach for, and it has no spec column.
+    expect(obligations).toContain(
+      "`.qfai/specs/_policies/05_Contracts.md` does **not** answer this",
+    );
+    // Several owners, and none, both have an answer.
+    expect(obligations).toContain("**Several specs** — every one of them owns it");
+    expect(obligations).toContain("**No spec** — the contract is an orphan");
+
+    // …and the Read Set Contract admits the read, or the procedure is one the
+    // skill's own mandatory read set forbids.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "Do not read `_policies/**` by default. **One narrow exception**, and only when the scoped gate exits 1 on a sibling's `QFAI-ATDD-113` / `-115`",
+    );
+    expect(atdd).toContain("#resolving-the-owning-spec");
+  });
+
+  it("records the residue per contract, since the findings aggregate per family", async () => {
+    // `QFAI-ATDD-113` / `-115` are emitted once per family with every
+    // uncovered contract in `refs`. One row per *finding* therefore had one
+    // `Contract ID` and one `Owning spec` cell for two contracts owned by two
+    // different specs — and dropping one of them still read as complete.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("**one row per uncovered contract ID** — not one per finding");
+    expect(obligations).toContain("aggregated into that single finding's `refs`");
+    expect(obligations).toContain("one ID per row, never a list");
+    expect(obligations).toContain(
+      "leaves any ID from the finding's `refs` without a row of its own",
+    );
+    // The worked example has to show the split, not a single tidy row.
+    expect(obligations).toContain("| QFAI-ATDD-113 | CON-API-0004 |");
+    expect(obligations).toContain("| QFAI-ATDD-113 | CON-API-0005 |");
+  });
+
+  it("cites only contract IDs the validator accepts", async () => {
+    // `API_CONTRACT_ID_RE` is `^CON-API-\d+$` (`core/atddTraceability.ts`), so
+    // a copied `CON-API-0004-002` is declared by nothing and annotates as a
+    // different ID than the one written.
+    const cited = (await read(tree, OBLIGATIONS)).match(/CON-(?:API|DB)-\d[\dA-Za-z-]*/g) ?? [];
+    expect(cited.length).toBeGreaterThan(0);
+    for (const id of cited) {
+      expect(id).toMatch(/^CON-(?:API|DB)-\d+$/);
+    }
   });
 
   it("limits the repo-wide TRACE claim to the findings that have no spec owner", async () => {
