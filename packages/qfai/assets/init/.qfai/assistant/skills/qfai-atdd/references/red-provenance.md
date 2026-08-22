@@ -315,8 +315,13 @@ and how the resulting hash mismatch is cleared: `shared-test-artifacts.md`.
 ## A spec with no ATDD-owned rows
 
 `/qfai-sdd` Phase 2b seeds a `Layer = E2E` row per **active** `US-*` and a
-`Layer = API` row per **active** `CON-API-*`, alongside its rows for
-coverage-target `TC-*`. Both obligations are exempt in cases
+`Layer = API` row per **active** `CON-API-*` **the spec owns** — ownership being
+the lowest-numbered spec whose own `spec-*/01..10` / `16_*` files name that
+contract — alongside its rows for
+coverage-target `TC-*`. A spec that merely references a `CON-API-*` another spec
+owns therefore carries no row for it, and that absence is correct, not an
+incomplete Phase 2b: the row exists once, in the owner's ledger.
+Both obligations are exempt in cases
 `catalog/test-layers.md` names: a spec that declares no user-facing surface
 owes no E2E reference for its `US-*`, and a contract at `x-qfai-status: planned`
 is excluded from `QFAI-ATDD-113`. The surface exemption is itself conditional —
@@ -325,21 +330,24 @@ least one UI-bearing spec**, so in a project that never declared one the
 obligation stays project-wide and every `US-*` is active. A spec whose
 obligations are all exempt therefore finds **zero** `Layer = E2E` /
 `Layer = API` rows, legitimately, and this stage cannot create them — it is not
-the ledger's writer under any circumstance. A spec with an **active** obligation
-finds a row, and this stage's primary procedure enumerates it and builds the
-handoff from it.
+the ledger's writer under any circumstance — and so does a spec whose only
+active `CON-API-*` belong to other specs. A spec with an **active** obligation
+**it owns** finds a row, and this stage's primary procedure enumerates it and
+builds the handoff from it.
 
 Zero is a count, not "nothing to do". The US and CON-API coverage obligations
 are this skill's own (Success Criteria) and are discharged by the tests and
 their annotations, not by ledger rows. Report the row count as zero with that
 reason and carry on with the obligations.
 
-**Do not raise it as a request for rows.** Check the exemption first: a spec
+**Do not raise it as a request for rows.** Check the exemption and ownership
+first: a spec
 with no user-facing surface signal — in a project where some spec does declare
-one — and no `CON-API-*` outside
+one — and no owned `CON-API-*` outside
 `x-qfai-status: planned`, is _supposed_ to have none — so the request returns
 nothing and the spec is handed back and forth for rows Phase 2b is right not to
-seed. A genuinely missing row for an **active** obligation is an incomplete
+seed. A genuinely missing row for an **active** obligation **this spec owns** is
+an incomplete
 Phase 2b: record it in this stage's report and carry on; it does not become
 writable here. Writing them
 here is not the alternative either: that would make this stage a second writer

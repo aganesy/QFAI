@@ -67,14 +67,19 @@ so an E2E or API row has no legal `TC-Refs` value. Those rows carry `-` in
 
 **Both columns are seeded, not hand-added.** `/qfai-sdd` Phase 2b writes one
 `Layer = E2E` row per active `US-*` and one `Layer = API` row per active
-`CON-API-*`, and the shipped ledger template carries the two columns in its
-header for exactly that reason — a row of that layer with nowhere to record its
-obligation is unverifiable, and `validateObligationColumn` reads an absent
-column as "this row carries no such obligation". "Active" is the
+`CON-API-*` the spec owns, and the shipped ledger template carries the two
+columns in its header for exactly that reason — a row of that layer with nowhere
+to record its obligation is unverifiable, and `validateObligationColumn` reads an
+absent column as "this row carries no such obligation". "Active" is the
 `test-layers.md` exemption: a spec with no user-facing surface owes no `US-*`
 row and a contract at `x-qfai-status: planned` owes no API row, so seeding
 either would park a completion-prohibiting row on a test that must not be
-written.
+written. **The surface half is itself conditional**: `QFAI-ATDD-111` is scoped
+by surface type **only in a project that declares at least one UI-bearing
+spec**. Where surface typing is unused the obligation stays project-wide, so
+every `US-*` is active and owes a row — reading that exemption unconditionally
+in such a project drops every E2E row and leaves the gate with nothing to
+clear it.
 
 The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,

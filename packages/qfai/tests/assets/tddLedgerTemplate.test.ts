@@ -152,11 +152,44 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
         "assistant/skills/qfai-implement/references/ledger-preconditions.md",
         "assistant/skills/qfai-atdd/references/red-provenance.md",
+        // `/qfai-implement` reads this one for what a seeded obligation row
+        // means. An unqualified exemption here has the consumer treat a
+        // missing E2E row as legitimate in a project that never opted in, so
+        // the ATDD gate fails with nothing left to restore the row.
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
       ]) {
         const text = await read(tree, surface);
         expect(text, surface).toMatch(/at least one[\s\S]{0,40}UI-bearing|some spec does declare/);
         expect(text, surface).toMatch(/project-wide|surface typing/);
       }
+    });
+
+    it(`${tree}: the API-row expectation is limited to contracts the spec owns`, async () => {
+      // One `CON-API-*` gets exactly one row, in the lowest-numbered spec that
+      // names it. A surface that demands a row for *any* active contract
+      // reports a correctly seeded non-owner spec as an incomplete Phase 2b and
+      // sends it back for a row that must not exist.
+      for (const surface of [
+        "assistant/skills/qfai-atdd/SKILL.md",
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      ]) {
+        const text = await read(tree, surface);
+        expect(text, surface).toMatch(/`CON-API-\*`[\s\S]{0,20}the spec owns/);
+      }
+
+      // Zero owned rows must read as legitimate, not as a defect to report.
+      const skill = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
+      expect(skill).toContain("owned by another spec");
+      expect(skill).toMatch(/obligation this spec owns is an incomplete Phase 2b/);
+
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance).toContain("the row exists once, in the owner's ledger");
+      expect(provenance).toMatch(/obligation \*\*this spec owns\*\* is\s+an incomplete/);
     });
 
     it(`${tree}: an API row's owning spec is resolved mechanically`, async () => {
