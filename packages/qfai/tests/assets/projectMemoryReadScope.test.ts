@@ -20,7 +20,7 @@
  * how they compose.
  */
 
-import { readFile } from "node:fs/promises";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -32,6 +32,7 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), ".."
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const CONSTITUTION = "assistant/constitution/constitution.md";
 const WORKFLOW = "assistant/constitution/workflow.md";
+const AGENTS_DIR = "assistant/agents";
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
@@ -96,6 +97,17 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(article).toContain("constitution/workflow.md");
   });
 
+  it("keeps the standing orchestrator's own catalog entry mandatory", async () => {
+    // `constitution/agent-selection.md` makes `orchestrator` the standing
+    // commander, and no phase in `manifest/agent-routing.yml` nor any profile
+    // in `manifest/review-profiles.yml` lists it. Scoping the catalog read to
+    // "every routed role" alone would therefore drop the one entry that is
+    // read on every single stage.
+    const article = articleIII(await read(tree, CONSTITUTION));
+    expect(article).toContain("`orchestrator`");
+    expect(article).toContain("constitution/agent-selection.md");
+  });
+
   it("points back from Stage 0, so neither statement can drift alone", async () => {
     const workflow = await read(tree, WORKFLOW);
     const start = workflow.indexOf("### Stage 0 — Steering refresh contract");
@@ -105,5 +117,35 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     const stage0 = workflow.slice(start, end);
     expect(stage0).toContain("Article III");
     expect(stage0).toContain("constitution/constitution.md");
+  });
+
+  // Scoping the article alone changes nothing while every agent card still
+  // opens with `## Inputs you must read` -> `.qfai/assistant/{manifest,catalog}/**`.
+  // Activating any role re-imposes the whole-tree read the article just dropped,
+  // so the cards state the same scope the article does.
+  it("scopes the same read in every agent card, not just in the article", async () => {
+    const dir = path.join(repoRoot, tree, AGENTS_DIR);
+    const cards = (await readdir(dir)).filter((name) => name.endsWith(".md"));
+    expect(cards.length, "no agent cards found").toBeGreaterThan(0);
+
+    for (const card of cards) {
+      const body = flat(await readFile(path.join(dir, card), "utf-8"));
+      expect(body, `${card}: still globs the whole manifest tree`).not.toContain(
+        ".qfai/assistant/{manifest,catalog}/",
+      );
+      expect(body, `${card}: does not name agent-routing.yml`).toContain(
+        ".qfai/assistant/manifest/agent-routing.yml",
+      );
+      expect(body, `${card}: does not name review-profiles.yml`).toContain(
+        ".qfai/assistant/manifest/review-profiles.yml",
+      );
+      // The catalog stays required — only its mirrored body is conditional.
+      expect(body, `${card}: dropped the catalog entry entirely`).toContain(
+        ".qfai/assistant/manifest/agent-catalog.yml",
+      );
+      expect(body, `${card}: does not scope the mirrored body`).toContain(
+        "`developer_instructions` body when that agent card is already in context",
+      );
+    }
   });
 });

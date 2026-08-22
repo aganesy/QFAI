@@ -47,11 +47,14 @@ Before producing deliverables, read **project memory**:
 1. `.qfai/assistant/constitution/*`
 2. `.qfai/assistant/manifest/agent-routing.yml`, `.qfai/assistant/manifest/review-profiles.yml`,
    and `.qfai/assistant/catalog/*`
-   (`.qfai/assistant/manifest/agent-catalog.yml` for every routed role: its `owned_artifacts`,
-   `tool_profile`, `permission_profile`, and `specialization_tags` are SSOT and appear in no
-   agent card, so never skip them. Only the entry's `developer_instructions` body is a
-   generated mirror of `.qfai/assistant/agents/<id>.md` — skip that body when the card is
-   already in context, and read it on demand when it is not.)
+   (`.qfai/assistant/manifest/agent-catalog.yml` for the acting `orchestrator` — the standing
+   commander named in `constitution/agent-selection.md`, which no routing phase or review
+   profile lists, so it is never reached as a "routed role" — and for every routed role:
+   `owned_artifacts`, `tool_profile`, `permission_profile`, and `specialization_tags` are SSOT
+   and appear in no agent card, so never skip them. Only the entry's `developer_instructions`
+   body is a generated mirror of `.qfai/assistant/agents/<id>.md` — skip that body when the
+   card is already in context, and read it on demand when it is not. Each
+   `agents/<id>.md` card repeats this same scope in its own `## Inputs you must read`.)
 3. discussion pack in `.qfai/discussion/` (if present)
 4. `.qfai/specs/spec-*/` (if relevant)
 5. repository config (package.json, CI, scripts)
