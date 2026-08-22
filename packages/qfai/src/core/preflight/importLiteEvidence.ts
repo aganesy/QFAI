@@ -29,8 +29,16 @@ export const IMPORT_LITE_EVIDENCE_DIR_REL = ".qfai/evidence";
  */
 const IMPORT_LITE_EVIDENCE_RE = /^import-lite(?:-(.*))?\.md$/i;
 
+/**
+ * `path.resolve`, not `path.join`: `runSddPreflight` is public and accepts a
+ * relative root (`relative/project`), and every other path it reports goes
+ * through `resolvePath`, which absolutises. Joining here left the import-lite
+ * `selectedInputPath` — alone among the fields of one `SddPreflightResult` —
+ * dependent on the caller's cwd, so a consumer reading the file later from a
+ * different directory could not resolve the input source.
+ */
 export function resolveImportLiteEvidenceRoot(root: string): string {
-  return path.join(root, ".qfai", "evidence");
+  return path.resolve(root, ".qfai", "evidence");
 }
 
 /**
@@ -140,6 +148,47 @@ async function recordsAnInputSource(filePath: string): Promise<boolean> {
 const PLACEHOLDER_RE = /^<[^>]*>$/;
 
 /**
+ * Fillers that stand in for an input source nobody supplied. `<...>` is the
+ * shape the shipped template arrives in, but a hand-edited file just as often
+ * keeps `- URLs: TBD`, `none` or `(placeholder)`, which name nothing traceable
+ * either: accepting them would clear `QFAI-IMPLITE-001` and, through
+ * `resolveImportLiteEntrypoint`, suppress `QFAI-DPACK-001` on a project with no
+ * recorded input source at all.
+ */
+const UNFILLED_VALUES = new Set([
+  "-",
+  "--",
+  "?",
+  "??",
+  "???",
+  "n/a",
+  "na",
+  "nil",
+  "none",
+  "null",
+  "pending",
+  "placeholder",
+  "tba",
+  "tbc",
+  "tbd",
+  "todo",
+  "unknown",
+  "unspecified",
+]);
+
+/** Wrappers an unfilled value is commonly dressed in: `(placeholder)`, `[TBD]`, `"none"`. */
+const VALUE_DECORATION_RE = /^[([{"'`*_]+|[)\]}"'`*_]+$/g;
+
+/** `true` when a value is blank, a `<...>` placeholder, or one of the fillers above. */
+function isUnfilledValue(value: string): boolean {
+  const bare = value.replace(VALUE_DECORATION_RE, "").trim();
+  if (bare.length === 0 || PLACEHOLDER_RE.test(bare)) {
+    return true;
+  }
+  return UNFILLED_VALUES.has(bare.toLowerCase());
+}
+
+/**
  * The `Sources` bullets the template ships with (`- URLs:`, `- Local paths:`).
  * Stripping the label is what makes the empty template read as empty while
  * `- URLs: https://example.com/spec` and an indented child bullet both read as
@@ -169,12 +218,30 @@ function recordsImportLiteInputSource(text: string): boolean {
   );
 }
 
-/** Body lines keyed by the lowercased `## ` heading that introduced them. */
+/** Opening or closing marker of a fenced code block, with CommonMark's ≤3 space indent. */
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+/**
+ * Body lines keyed by the lowercased `## ` heading that introduced them.
+ *
+ * Fenced code blocks are tracked because the template's excerpt is a fence and
+ * what an operator pastes into it is frequently Markdown of its own. Treating a
+ * `## Requirement` INSIDE that fence as a heading restarted the section map
+ * there, leaving `User provided excerpt` holding only the fence-open line — so
+ * a genuine excerpt read as empty and blocked the import-lite preflight.
+ */
 function splitSections(text: string): Map<string, string[]> {
   const sections = new Map<string, string[]>();
   let current: string[] | null = null;
+  let fence: string | null = null;
   for (const line of text.split(/\r?\n/)) {
-    const heading = /^#{2,6}\s+(.*)$/.exec(line.trim());
+    const fenced = FENCE_RE.exec(line);
+    if (fenced !== null) {
+      fence = nextFenceState(fence, fenced[1] ?? "", (fenced[2] ?? "").trim());
+      current?.push(line);
+      continue;
+    }
+    const heading = fence === null ? /^#{2,6}\s+(.*)$/.exec(line.trim()) : null;
     if (heading === null) {
       current?.push(line);
       continue;
@@ -185,6 +252,19 @@ function splitSections(text: string): Map<string, string[]> {
   return sections;
 }
 
+/**
+ * The open fence after this marker line, or `null` when none is open. A closing
+ * fence must repeat the opener's character, be at least as long, and carry no
+ * info string — so a ```` ```ts ```` inside a ```` ~~~ ```` block does not close it.
+ */
+function nextFenceState(fence: string | null, marker: string, info: string): string | null {
+  if (fence === null) {
+    return marker;
+  }
+  const closes = marker[0] === fence[0] && marker.length >= fence.length && info.length === 0;
+  return closes ? null : fence;
+}
+
 function hasRequiredMetadata(lines: string[]): boolean {
   const fields = new Map<string, string>();
   for (const line of lines) {
@@ -193,8 +273,7 @@ function hasRequiredMetadata(lines: string[]): boolean {
       fields.set((matched[1] ?? "").toLowerCase(), (matched[2] ?? "").trim());
     }
   }
-  const generatedAt = fields.get("generated_at") ?? "";
-  if (generatedAt.length === 0 || PLACEHOLDER_RE.test(generatedAt)) {
+  if (isUnfilledValue(fields.get("generated_at") ?? "")) {
     return false;
   }
   return (fields.get("entrypoint") ?? "").toLowerCase() === "import-lite";
@@ -207,15 +286,15 @@ function hasRecordedSource(lines: string[]): boolean {
       .replace(/^[-*+]\s*/, "")
       .replace(SOURCE_LABEL_RE, "")
       .trim();
-    return value.length > 0 && !PLACEHOLDER_RE.test(value);
+    return !isUnfilledValue(value);
   });
 }
 
 function hasRecordedExcerpt(lines: string[]): boolean {
-  return lines.some((line) => {
-    const value = line.trim();
-    return value.length > 0 && !value.startsWith("```") && !PLACEHOLDER_RE.test(value);
-  });
+  // The fence delimiters themselves are part of the section body now that
+  // `splitSections` keeps fenced content together; they are punctuation, not an
+  // excerpt.
+  return lines.some((line) => !FENCE_RE.test(line) && !isUnfilledValue(line.trim()));
 }
 
 /**

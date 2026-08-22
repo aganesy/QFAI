@@ -21,6 +21,7 @@ import { defaultConfig, loadConfig } from "../../src/core/config.js";
 import { findImportLiteEvidence } from "../../src/core/preflight/importLiteEvidence.js";
 import { runSddPreflight } from "../../src/core/preflight/sddPreflight.js";
 import { validateProject } from "../../src/core/validate.js";
+import type { ValidationProfile } from "../../src/core/types.js";
 import { validateImportLiteEvidencePresence } from "../../src/core/validators/importLite.js";
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 
@@ -560,5 +561,183 @@ describe("QFAI-DPACK-001 vs the import-lite entrypoint", () => {
     await seedSpec(root);
     const result = await validateProject(root, undefined, { profile: "full" });
     expect(result.issues.map((found) => found.code)).toContain("QFAI-DPACK-001");
+  });
+});
+
+describe("import-lite evidence unfilled values", () => {
+  // `<...>` was the only shape rejected, so an operator who typed `TBD`,
+  // `none` or `(placeholder)` over the template's bullets got a file that
+  // recorded no input source yet cleared `QFAI-IMPLITE-001` — and with it
+  // `QFAI-DPACK-001`.
+  for (const filler of ["TBD", "none", "(placeholder)", "n/a", "-", "TODO"]) {
+    it(`does not accept "${filler}" as a recorded source`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await writeEvidence(
+        root,
+        "import-lite-20260401000000000.md",
+        FILLED_EVIDENCE.replace("https://example.com/legacy-requirements", filler),
+      );
+      expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+      expect(await findImportLiteEvidence(root)).toBeNull();
+    });
+  }
+
+  it("does not accept an unfilled generated_at", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      FILLED_EVIDENCE.replace("2026-04-01T00:00:00Z", "TBD"),
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  it("still accepts a real source next to an unfilled sibling bullet", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      FILLED_EVIDENCE.replace("- Local paths:", "- Local paths: TBD"),
+    );
+    expect(await run(root)).toEqual([]);
+  });
+});
+
+describe("import-lite evidence with a Markdown excerpt", () => {
+  /** The template's excerpt fence holding pasted Markdown of its own. */
+  const MARKDOWN_EXCERPT = [
+    "# Evidence: import-lite (legacy-import)",
+    "",
+    "## Metadata",
+    "",
+    "- generated_at: 2026-04-01T00:00:00Z",
+    "- author: AI",
+    "- entrypoint: import-lite",
+    "",
+    "## Sources",
+    "",
+    "- URLs:",
+    "- Local paths:",
+    "",
+    "## User provided excerpt",
+    "",
+    "```text",
+    "## Requirement",
+    "",
+    "The importer must keep legacy CSV columns.",
+    "```",
+    "",
+  ].join("\n");
+
+  // A heading INSIDE the fence used to restart the section map, leaving
+  // `User provided excerpt` holding only the fence-open line: a genuine
+  // excerpt read as empty and blocked the preflight.
+  it("reads the fenced excerpt as a recorded input source", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(root, "import-lite-20260401000000000.md", MARKDOWN_EXCERPT);
+    expect(await run(root)).toEqual([]);
+    expect(await findImportLiteEvidence(root)).not.toBeNull();
+  });
+
+  // Headings after the fence CLOSES still split sections, so the rule that
+  // `Assumptions / Missing information` is not an input source survives.
+  it("still ignores assumptions written after the fence closes", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      [
+        MARKDOWN_EXCERPT.replace(
+          "The importer must keep legacy CSV columns.",
+          "<paste if available>",
+        )
+          .replace("## Requirement", "")
+          .trimEnd(),
+        "",
+        "## Assumptions / Missing information",
+        "",
+        "- the original ticket is lost",
+        "",
+      ].join("\n"),
+    );
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+});
+
+describe("import-lite evidence path shape", () => {
+  // Every other path in one `SddPreflightResult` goes through `resolvePath`,
+  // which absolutises. Joining a relative root left `selectedInputPath` alone
+  // dependent on the caller's cwd.
+  it("returns an absolute path even for a relative root", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+    const relativeRoot = path.relative(process.cwd(), root);
+
+    const selected = await findImportLiteEvidence(relativeRoot);
+
+    expect(selected).not.toBeNull();
+    expect(path.isAbsolute(selected ?? "")).toBe(true);
+    expect(selected).toBe(path.join(root, ".qfai", "evidence", "import-lite-20260401000000000.md"));
+  });
+
+  it("reports an absolute selectedInputPath from runSddPreflight", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    const result = await runSddPreflight(path.relative(process.cwd(), root), defaultConfig);
+
+    expect(result.source).toBe("import-lite");
+    expect(path.isAbsolute(result.selectedInputPath ?? "")).toBe(true);
+  });
+});
+
+describe("QFAI-IMPLITE-* in the partial-profile notice", () => {
+  const noticeFor = async (root: string, profile: ValidationProfile): Promise<string> => {
+    await runValidate({ root, strict: false, profile });
+    const body = JSON.parse(
+      await readFile(path.join(root, ".qfai", "report", "validate.json"), "utf-8"),
+    ) as { issues: { code: string; message: string }[] };
+    return body.issues.find((found) => found.code === "QFAI-PROFILE-001")?.message ?? "";
+  };
+
+  // Only `runSddValidators` dispatches the rule. Leaving the family off the
+  // `sdd` gate group let a `--profile tdd` PASS look input-source checked
+  // while nothing had looked.
+  it("names the family a profile that skips the sdd group did not evaluate", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    expect(await noticeFor(root, "tdd")).toContain("QFAI-IMPLITE-*");
+  });
+
+  it("does not name it for the profile that runs it", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    expect(await noticeFor(root, "sdd")).not.toContain("QFAI-IMPLITE-*");
+  });
+});
+
+describe("preflight summary template", () => {
+  const SUMMARY_TEMPLATE = path.join(
+    path.dirname(SKILL_MD),
+    "templates",
+    "report",
+    "preflight_summary.md",
+  );
+
+  // Stage 0 requires the summary and forbids inventing a layout when a
+  // template exists, so a template that hard-codes `source: discussion-pack`
+  // made an import-lite run record a discussion pack it never had.
+  it("offers the import-lite source and its input label", async () => {
+    const template = await readFile(SUMMARY_TEMPLATE, "utf-8");
+    expect(template).toContain("- source: <discussion-pack | import-lite>");
+    expect(template).toContain("import-lite evidence");
+    expect(template).not.toContain("- source: discussion-pack\n");
   });
 });

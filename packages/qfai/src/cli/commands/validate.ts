@@ -407,6 +407,11 @@ const GATE_GROUP_FAMILIES = {
   "assistant-assets": ["QFAI-ASSETS-*"],
   discussion: ["QFAI-DPACK-*", "QFAI-VIS-*", "QFAI-RESEARCH-*", "UIX-VAL-*"],
   sdd: [
+    // `runSddValidators` dispatches the preflight input-source rule, so a
+    // partial profile that skips the `sdd` group has not evaluated it either.
+    // Leaving it off this list let `--profile tdd` PASS look input-source
+    // checked when nothing had looked.
+    "QFAI-IMPLITE-*",
     "QFAI-SPACK-*",
     "QFAI-COV-*",
     "QFAI-ID-*",
