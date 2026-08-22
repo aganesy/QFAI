@@ -84,7 +84,7 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("**One row, one `Owning module`, split between the roles.**");
       expect(section).toContain("**One evidence block per row.**");
       expect(section).toContain("**One GREEN, judged over both outputs.**");
-      expect(section).toContain("**Seam reconciliation stays per row.**");
+      expect(section).toContain("**Seam reconciliation stays per row, and adds a per-role pass.**");
       // The summary bullet must carry the same answers, so a reader who never
       // opens the reference is not left with the disclaimer alone.
       const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
@@ -120,6 +120,54 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("each is given a disjoint set of paths within it before either");
       const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
       expect(skill).toContain("a row that cannot be split that way runs its roles one at a time");
+    });
+
+    it(`${tree}: the fan-out exemption covers the item-dispatch gates only`, async () => {
+      // Two roles running suites and dev servers at once contend for ports,
+      // temp paths, test DBs and caches exactly as two items do, and a worktree
+      // isolates none of them — so that allow condition is not exempted.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**Those two are the whole exemption.**");
+      expect(section).toContain("**External runtime resources are checked for the roles too.**");
+      expect(section).toContain(
+        "evaluate the allow list's **external runtime resource** condition over the two roles",
+      );
+      expect(section).toContain("the roles run one at a time");
+      // The blanket phrasing the finding objected to must be gone.
+      expect(section).not.toContain("the item-level gates below never apply to it");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "clears the external-runtime-resource condition over the two roles as it would over two items",
+      );
+    });
+
+    it(`${tree}: reconciliation compares each role's head, not just the merged row`, async () => {
+      // Merged output can satisfy the row's `Owning module` while both roles
+      // wrote the same file, so the merged diff cannot verify the split.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("diff **each role's own head** as well");
+      expect(section).toContain("against the path set that role was assigned");
+      expect(section).toContain("or touched by both, as a deny-condition breach");
+      expect(section).toContain("asserted at dispatch and never verified");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "has each role's head diffed against its assigned range at seam reconciliation",
+      );
+    });
+
+    it(`${tree}: out-of-module work needs an upstream row, never an invented one`, async () => {
+      // Rows are upstream (`SKILL.md` Non-goals): `delivery-planner` selects
+      // them, `/qfai-sdd` produces them.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("belongs to a **different ledger row**");
+      expect(section).toContain("`delivery-planner` may only _select_ such a row");
+      expect(section).toContain("**If no such row exists, do not fan out and do not invent one**");
+      expect(section).toContain("raise a Change Request and hand the redesign to `/qfai-sdd`");
+      expect(section).toContain("references/selector-granularity.md");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "work that does not fit the module needs an existing second row or a Change Request to `/qfai-sdd`",
+      );
     });
 
     it(`${tree}: the fan-out anchor cited from SKILL.md resolves to a heading`, async () => {

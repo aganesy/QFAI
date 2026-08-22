@@ -26,16 +26,35 @@ another specialist owns, which is one of its own stop conditions. Do not read
 the empty lists elsewhere in `agent-routing.yml` as a statement that nothing
 ever runs concurrently.
 
-That fan-out dispatches no second **item**, so the item-level gates below never
-apply to it: it needs no `delivery-planner` authorization and no user consent.
-What it does not get is an exemption from the row's own contract, nor from the
-constitution's concurrency rule:
+That fan-out dispatches no second **item**, so the gates below that exist to
+authorize a second item do not apply to it: it needs no `delivery-planner`
+authorization and no user consent. **Those two are the whole exemption.** The
+row's own contract, the constitution's concurrency rule, and the allow list's
+external-runtime-resource condition all still bind it:
 
 - **One row, one `Owning module`, split between the roles.** The fan-out does
   not widen the row's declared seam. Both roles write inside that one module,
   and each is given a disjoint set of paths within it before either starts;
-  work that will not fit the module is a second ledger row for
-  `delivery-planner` to select, not a second writer on this one.
+  work that will not fit the module belongs to a **different ledger row**, not
+  to a second writer on this one. `delivery-planner` may only _select_ such a
+  row: rows are upstream (`SKILL.md` Non-goals) and `/qfai-sdd` is their
+  producer, so neither the planner nor this skill may author one here. **If no
+  such row exists, do not fan out and do not invent one** — raise a Change
+  Request and hand the redesign to `/qfai-sdd`. This is the usual shape of one
+  full-stack behaviour that needs a frontend and a backend module at once:
+  splitting it into two rows is not the remedy either, because neither half is
+  independently observable and `references/selector-granularity.md` allows one
+  independently observable boundary per row.
+- **External runtime resources are checked for the roles too.** Two roles
+  running a suite — and often a dev server — at the same time contend exactly
+  as two items do, and separate worktrees do not help: fixed ports, paths
+  outside the worktree or under `os.tmpdir()`, shared test databases, caches,
+  queues and OS-global environment state stay shared, as
+  `## Isolation requirement (worktree separation)` states below. So evaluate
+  the allow list's **external runtime resource** condition over the two roles,
+  by the same disjoint-write-set or per-worker-isolation test, before starting
+  them. Neither disjoint nor isolated has the same outcome it has for items:
+  the roles run one at a time.
 - **No disjoint split, no fan-out.** A row whose work cannot be divided into
   non-overlapping write ranges runs its roles **one at a time** — the
   item-level gate's DENY-to-serial outcome, applied inside the row. This is not
@@ -51,10 +70,19 @@ constitution's concurrency rule:
 - **One GREEN, judged over both outputs.** `qa-gatekeeper` blocks `build` on
   the row's single GREEN observation, and that observation covers the merged
   result of both roles. Neither role's output is admissible on its own.
-- **Seam reconciliation stays per row.**
+- **Seam reconciliation stays per row, and adds a per-role pass.**
   `#seam-reconciliation-after-a-parallel-run` diffs slices, and a fanned-out
   row is one slice: its touched `src/` paths are compared against its one
-  declared `Owning module` just as a serially implemented row's are.
+  declared `Owning module` just as a serially implemented row's are. That
+  comparison alone cannot see the split, because it reads the roles' merged
+  result — two roles that both wrote the same file, whether the conflict was
+  resolved by hand or the hunks merged cleanly, still land inside the one
+  module and pass it. So diff **each role's own head** as well
+  (`git diff --name-only <base>..<role-head> -- <source root>`), against the
+  path set that role was assigned **and** against the other role's, and report
+  every path outside its assignment, or touched by both, as a deny-condition
+  breach under step 3 of that section. Without this pass the non-overlapping
+  write ranges required above are asserted at dispatch and never verified.
 
 ## Gates and precedence
 
