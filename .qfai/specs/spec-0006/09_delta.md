@@ -195,3 +195,17 @@
   `AC-0006-0026` と `BR-0006-0022` はいずれも declined だけの tree で「finding 自体が emit されない」と
   述べるが、これはコードに対して偽である (`ok` の check が 1 件出る)。`TC-0006-0035` は正しく `ok` と
   書いているので、TC が正で親の AC / BR が誤っている。`TDD-0037` はこの AC / BR に対して実装される。
+
+- **`CR-20260818-0004` finding 2, carried forward.** That change request was approved
+  2026-08-23 on option A, and its finding 1 turned out not to reproduce: the contradicting
+  `Location rule` lines for L1 and L2 had already become `Convention` plus an explicit
+  no-mandated-directory disclaimer in `59df60d82` on 2026-08-06, twelve days before the change
+  request was filed. It was written against a stale reading.
+
+  Finding 2 is untouched and is a real question: a family of `Level: unit` test cases is driven
+  through real infrastructure, which is L3 behaviour under the layer definitions. The change request
+  deliberately did not assert it, and neither does this. It needs a re-derivation per row against
+  `catalog/test-layers.md` layer-derivation procedure, not a decision.
+
+- Owner: QFAI maintainers
+- Due: 2026-10-31

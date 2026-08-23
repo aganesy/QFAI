@@ -14,6 +14,29 @@
  * claims, some E2E test file must carry the same annotation. It does not require the reverse — a
  * test annotated ahead of its ledger line is a gate that has not been told yet, not a lie.
  *
+ * ## How it is wired, and how to widen it — a ratchet, one spec at a time
+ *
+ * `CR-20260820-0011`, approved 2026-08-23, **option 2**. `ci:lint` runs this **scoped**:
+ *
+ * ```text
+ * node ./scripts/check-atdd-annotation-ledger.mjs --spec 0017
+ * ```
+ *
+ * Scoped, not repo-wide, because the ledger carries 127 claims no test backs — a backlog owned by the
+ * specs that made those claims, not by whoever wires the guard. Running unscoped today exits 1 on all
+ * of them at once and blocks every unrelated change.
+ *
+ * **Widening is the last step of a backfill, not a separate task.** When a `/qfai-atdd` run has
+ * settled its spec's claims — every `US` the ledger names for it carries a real annotation — add
+ * `--spec <that spec>` to `ci:lint` in the same change. The guard then holds that spec at zero
+ * forever, and the next spec repeats it. Run it scoped first and read the count it prints: a scoped
+ * run that selects no claim exits non-zero rather than passing quietly, so a mistyped number cannot
+ * be mistaken for a clean spec.
+ *
+ * The repo-wide sweep in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`
+ * is the other half: it ratchets the total DOWN (`toBeLessThanOrEqual`), so a new unbacked claim
+ * reddens immediately while the 127 are worked off. Do not raise that number to make a red go away.
+ *
  * Deliberately narrow:
  *
  *   - It checks presence of the annotation, not that the test asserts anything. No script can judge

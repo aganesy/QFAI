@@ -5,11 +5,11 @@
 - Raised by: `completion-reviewer (advisory A-2), spec-0006 round 3; re-measured against the validator source before filing`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — correct the sentence to status: FAIL
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `(none — the packs written for spec-0006 followed the reference, not this sentence, so nothing here is blocked)`
 
@@ -99,5 +99,7 @@ Choose A, B or C.
    zero occurrences outside a passage that documents it as rejected.
 
 ## Resolution
+
+the shipped SKILL.md now prescribes the value its 's own reference, README and validator accept
 
 Pending.

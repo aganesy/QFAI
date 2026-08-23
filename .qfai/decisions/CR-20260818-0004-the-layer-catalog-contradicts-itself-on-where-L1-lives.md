@@ -5,11 +5,11 @@
 - Raised by: `implementation-reviewer (advisory A-3) during the spec-0006 TDD-0034 … TDD-0037 review; the catalog contradiction measured separately`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — delete the L1/L2 Location rule lines
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `(none — no row is blocked; four rows have already landed under the reading the catalog's routing rule requires)`
 
@@ -116,5 +116,7 @@ its own change.
    `QFAI-SPACK-091` must report no policy-versus-built-in drift.
 
 ## Resolution
+
+finding 1 does not reproduce: the lines became Convention plus an explicit no-mandated-directory disclaimer in 59df60d82 on 2026-08-06, twelve days before this was filed. finding 2 routed as a follow-up
 
 Pending.

@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0006 item-12 checkpoint at 6be8de00; the blocking delta measured and attributed per spec before filing`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — read clause 3 per attribution, as clause 5 already is
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `spec-0006 TDD-0034, TDD-0035, TDD-0036, TDD-0037` — all four are blocked from refactor to done by this clause and by nothing else in their own scope
 
@@ -142,5 +142,7 @@ closed.
    findings while a sibling spec's findings remain outstanding, demonstrated rather than asserted.
 
 ## Resolution
+
+checkpoint-verification.md clause 3 rewritten; the raw total is still recorded beside the attributed delta so a real cross-spec regression stays visible
 
 Pending.

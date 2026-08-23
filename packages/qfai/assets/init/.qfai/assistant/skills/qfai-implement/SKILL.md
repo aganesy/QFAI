@@ -333,7 +333,7 @@ Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a revi
 conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
 `<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
-Each review round creates a new pack. Full schema and the `REVISE` -> `status: "REVISE"` mapping:
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
 `references/review-artifact-layout.md`.
 
 ### Spec completion conditions

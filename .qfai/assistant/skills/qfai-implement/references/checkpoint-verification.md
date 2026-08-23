@@ -105,11 +105,24 @@ would hold every row of every slice hostage to work outside it.
    change and recorded in the slice's evidence **before any row started**. A baseline written after the
    fact is not a baseline.
 2. Step 4 reports zero `QFAI-TEST-001` findings. This clause is never substituted.
-3. The aggregate does not worsen, on **both** measures the baseline records: no severity count is
-   higher than the baseline's, **and no finding ID appears that the baseline did not hold**. The
-   count alone is not the test — resolving one finding while introducing a different one leaves
-   every count unchanged, and clauses 4 and 5 below only ever read baseline findings, so a new ID
-   would reach none of them. A finding this slice introduced is a regression whatever its severity.
+3. The aggregate does not worsen, on **both** measures the baseline records: no severity count
+   **attributable to this slice** is higher than the baseline's, **and no finding ID appears that the
+   baseline did not hold**. The count alone is not the test — resolving one finding while introducing
+   a different one leaves every count unchanged, and clauses 4 and 5 below only ever read baseline
+   findings, so a new ID would reach none of them. A finding this slice introduced is a regression
+   whatever its severity.
+
+   **Attributable** is read the way clause 5 already reads a finding: by the spec and row each finding
+   names, which the validator prints on every line. A count that rose because a sibling spec gained
+   findings, or because a validator's own defect widened what it reports, is not this slice worsening
+   the aggregate — and the raw total made those indistinguishable from a real regression, which is
+   what stalled four rows behind a warning count they did not cause.
+
+   **Record both.** The attributed delta is what the clause is judged on; the raw total is recorded
+   beside it, unjudged, so a cross-spec regression this slice really did cause is still visible rather
+   than attributed away. A boundary that records only the attributed figure has not satisfied this
+   clause.
+
 4. **No row's `TC-*` re-enters the unreferenced-TC list.** Stated as re-entry rather than as departure,
    because departure is undischargeable for a sibling: when one `TC-*` is split across several rows,
    the first row to discharge it removes it from the list and every sibling then satisfies a departure

@@ -5,11 +5,11 @@
 - Raised by: `/qfai-atdd orchestrator, spec-0017; raised while making round 1's "the script refuses unless every declared US is covered" claim checkable, and finding the script had never existed`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `2` — wire the guard into ci:lint scoped-only, now
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `none for spec-0017 — its 8 claims are all backed, verified by scripts/check-atdd-annotation-ledger.mjs --spec 0017. The open item is repo-wide: 16 other specs.`
 
@@ -134,3 +134,7 @@ specs that own them, and no scanner change decides for them which stories have t
 `spec-0017` is clean and stays clean under any option. The guard's existence, its tests, and this
 record are what this stage owes. The 127 belong to 16 other specs' next `/qfai-atdd` runs, and are
 recorded as a cross-spec obligation in `.qfai/evidence/atdd-spec-0017.md`.
+
+## Resolution
+
+ci:lint runs the ledger guard with --spec 0017; the widening procedure is recorded in the guard own docblock so the next backfill adds its spec in the same change

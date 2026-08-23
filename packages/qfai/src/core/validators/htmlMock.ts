@@ -6,7 +6,7 @@ import fg from "fast-glob";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
-import { parseHtmlMock, extractTokenComments } from "../uiux/htmlMockParser.js";
+import { extractTokenComments } from "../uiux/htmlMockParser.js";
 import { collectHtmlMockBlocks } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
@@ -46,8 +46,12 @@ export async function validateHtmlMock(
     }
   }
 
+  // Loaded here, not at module scope: this is the only production caller, and the module it pulls
+  // in requires jsdom, which costs 910 ms measured. Static, every qfai command paid it.
+  const { parseHtmlMock } = await import("../uiux/htmlMockDom.js");
+
   for (const block of mockBlocks) {
-    const result = parseHtmlMock(block.html);
+    const result = await parseHtmlMock(block.html);
 
     for (const err of result.parseErrors) {
       issues.push(

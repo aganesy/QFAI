@@ -5,11 +5,11 @@
 - Raised by: `/qfai-atdd orchestrator, spec-0017; found while diagnosing three full-suite failures at the declared ten workers`
 - Raised at: `2026-08-23T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `3` — measure the module graph first
+- Applied at: `2026-08-23T00:00:00Z` — see Resolution
 - Superseded by: `-`
 - Blocked set: `-`
 
@@ -65,3 +65,7 @@ command, 1 is the only thing that works.
 `spec-0017` owns the CI scaffold and the acceptance tests over it, not the CLI's module graph. This is
 filed rather than fixed because choosing between the options above is a decision about the shipped
 binary's architecture, and because doing it inside a pull request already at 319 files would bury it.
+
+## Resolution
+
+jsdom measured at 910 ms of ~1000; moved behind a dynamic import; four entries now 157/166/167/190 ms, an 81-85 percent reduction, with a byte guard against regression
