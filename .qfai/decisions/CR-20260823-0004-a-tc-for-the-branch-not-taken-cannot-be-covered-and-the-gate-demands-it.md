@@ -5,11 +5,11 @@
 - Raised by: `/qfai-sdd orchestrator, spec-0017; found while clearing the last QFAI-ATDD-112 finding`
 - Raised at: `2026-08-23T08:30:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `3` — replace TC-0017-0032 with the rule its BR actually states
+- Applied at: `2026-08-23T00:00:00Z` — EX-0017-0029 / TC-0017-0032 rewritten as the conditional; covered and falsified
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0032 (TC-0017-0032)`
 

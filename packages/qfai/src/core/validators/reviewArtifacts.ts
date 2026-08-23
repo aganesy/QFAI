@@ -263,11 +263,28 @@ async function validateReviewPack(
   }
 
   const reviewerFiles = await listReviewerFiles(reviewPackDir);
-  if (reviewerFiles.length === 0) {
+  // A summary declaring `reviewers: []` says the round produced nothing, deliberately. Both directions
+  // are checked, because a one-way rule only moves the hole: a pack that forgot to seal still fails,
+  // and a pack whose declaration disagrees with the files beside it fails too.
+  const declaredZero = await declaresZeroReviewers(summaryPath);
+  if (reviewerFiles.length === 0 && !declaredZero) {
     issues.push(
       issue(
         "QFAI-REVIEW-005",
-        "review pack に `Rxx_*.md` が1件もありません。",
+        "review pack に `Rxx_*.md` が1件もありません。応答ゼロで終わった回なら " +
+          "`summary.json` に `reviewers: []` を宣言してください。",
+        "error",
+        reviewPackDir,
+        "reviewArtifacts.reviewerFiles",
+      ),
+    );
+  }
+  if (reviewerFiles.length > 0 && declaredZero) {
+    issues.push(
+      issue(
+        "QFAI-REVIEW-005",
+        "`summary.json` は `reviewers: []`（応答ゼロ）を宣言していますが `Rxx_*.md` が " +
+          `${String(reviewerFiles.length)} 件存在します。`,
         "error",
         reviewPackDir,
         "reviewArtifacts.reviewerFiles",
@@ -280,6 +297,26 @@ async function validateReviewPack(
   }
 
   return issues;
+}
+
+/**
+ * Whether the pack's summary declares, in as many words, that the round produced no responses.
+ *
+ * Read separately from the schema pass because `QFAI-REVIEW-005` runs whether or not the summary is
+ * well-formed, and a malformed summary must not silently excuse a missing report set: anything that is
+ * not a present, parseable summary carrying `reviewers: []` answers `false`, so the default is the
+ * strict one. The schema pass reports the malformedness on its own code.
+ */
+async function declaresZeroReviewers(summaryPath: string): Promise<boolean> {
+  if (!(await isFile(summaryPath))) return false;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
+  } catch {
+    return false;
+  }
+  if (!isRecord(parsed)) return false;
+  return Array.isArray(parsed.reviewers) && parsed.reviewers.length === 0;
 }
 
 async function validateSummarySchema(
@@ -563,9 +600,14 @@ function validateV2Reviewers(parsed: Record<string, unknown>, violations: string
     violations.push("`routing_profile` は非空文字列が必須です");
   }
 
+  // An EMPTY array is legal, and it is a statement rather than an omission: "this round was opened and
+  // produced no responses". A round whose reviewers die before writing anything is a real state, and
+  // before this the accurate record of it was unrepresentable — the pack could only be a pack somebody
+  // forgot to seal. The summary still has to be present and schema-valid, which is what separates the
+  // declaration from the absence. `QFAI-REVIEW-005` reads the same field and stands down for it.
   const reviewers = Array.isArray(parsed.reviewers) ? parsed.reviewers : null;
-  if (!reviewers || reviewers.length === 0) {
-    violations.push("`reviewers` は1件以上の配列が必須です");
+  if (!reviewers) {
+    violations.push("`reviewers` は配列が必須です（応答ゼロの回は空配列で宣言する）");
     return;
   }
   for (const [index, item] of reviewers.entries()) {

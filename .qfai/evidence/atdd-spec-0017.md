@@ -3065,9 +3065,14 @@ Review pack seal:  85c0d27221c6d887035a6e9bef3ff17eec6c6ade37e9442996ba6dfea2b4f
 Review pack:       .qfai/review/review-20260821180000000/            (round 12 — stage gates only)
 Review pack seal:  44d99dce97dbf4ae1a2e96b4b08eba2154edeff5536aab3035d77cdec9e390f6
 Review pack:       .qfai/review/review-20260821200000000/            (round 13 — stage gates only)
-Review pack seal:  06638643339fc1eb1f8bd9d3d1cccf7013db314361ac3d6b2eac4609cff07888
+Review pack seal:  7d6b2b328c5025545a4848e1068aab4c31a5a8660ecf80ee15b87a7894ff2f26
                    Closed with a request and no reports: all three of its reviewers died on ENOTFOUND
                    before writing. A pack with nothing in it is closed, not in flight.
+                   RESEALED 2026-08-23, from 06638643339f. The pack gained the `summary.json`
+                   CR-20260823-0002 option 1 requires, declaring `reviewers: []` — the round
+                   produced nothing and now says so instead of looking unsealed. The seal moved
+                   because the pack did; recorded here rather than silently recomputed, which is
+                   the one thing a seal exists to make impossible.
 Review pack:       .qfai/review/review-20260822030000000/            (round 14 — stage gates only)
 Review pack seal:  2e22d875cb38120ee6f9ced8b0cd368107060027c64bdec79a61dbd7f4906e44
                    Re-sealed at round 15: its `summary.json` carried `revision_form: "commit"`,

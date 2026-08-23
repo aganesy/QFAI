@@ -209,6 +209,14 @@ Companion rows live in the named spec's own delta; none of them is authored here
 
 ## Follow-ups
 
+- **Build-artifact reuse itself is still open.** `CR-20260823-0004` option 3 rewrote
+  `TC-0017-0032` to assert `BR-0017-0029` as the conditional it is written as, which is what
+  makes the case true today. That is a correction to the case, not a completion of the work: no leg
+  downloads the build, no baseline has been captured, and neither accepting branch of
+  `DR-0017-0002` has been taken. The rule now guards the adoption; adopting it is still to do.
+- Owner: QFAI maintainers
+- Due: 2026-10-31
+
 - Capture the wall-clock and runner-minute baselines before plan steps 6, 7 and 8, and quote them
   in the pull-request description and in `07_Decisions.md` — the evidence tree is ignored by git,
   so a number that lives only there is unreviewable (OQ-0017-0005, BR-0017-0030).

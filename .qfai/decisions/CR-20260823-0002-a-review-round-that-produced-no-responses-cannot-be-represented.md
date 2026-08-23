@@ -5,11 +5,11 @@
 - Raised by: `/qfai-atdd orchestrator, spec-0017; found by a pre-PR audit of feature/chg-007-layered-ci-scaffold`
 - Raised at: `2026-08-23T00:30:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1` — let a summary.json declare zero reviewers
+- Applied at: `2026-08-23T00:00:00Z` — validator + 4 cases; the abandoned round now carries a summary declaring reviewers: []
 - Superseded by: `-`
 - Blocked set: `-`
 

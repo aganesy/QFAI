@@ -41,6 +41,18 @@ async function writeReviewPack(
   await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
 }
 
+/** A pack with a request and a summary but no reviewer reports — the shape a dead round leaves. */
+async function writeAbandonedPack(
+  root: string,
+  packName: string,
+  summary: Record<string, unknown>,
+): Promise<void> {
+  const packDir = path.join(root, ".qfai", "review", packName);
+  await mkdir(packDir, { recursive: true });
+  await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+  await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
+}
+
 function makeV1Summary(overrides?: Partial<Record<string, unknown>>): Record<string, unknown> {
   return {
     version: "1.0",
@@ -123,14 +135,60 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     expect(schemaErrors[0]?.message).toContain("routing_profile");
   });
 
-  it("rejects v2.0 with empty reviewers", async () => {
+  // `CR-20260823-0002`, approved 2026-08-23, option 1. `reviewers: []` used to be a schema error, so a
+  // round whose reviewers died before writing anything had no accurate representation: the pack could
+  // only look like one somebody forgot to seal. It is now a statement, and the four cases below are
+  // the whole of what that costs — the guarantee for an unsealed pack has to survive it.
+  it("accepts a round that produced nothing, when the summary says so", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
+    await writeAbandonedPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
+    const issues = await validateReviewArtifacts(root);
+    expect(
+      issues.filter((i) =>
+        ["QFAI-REVIEW-004", "QFAI-REVIEW-005", "QFAI-REVIEW-007"].includes(i.code),
+      ),
+      "an opened round that produced no responses is a real state, and this is how it is written down",
+    ).toEqual([]);
+  });
+
+  it("rejects a reviewers: [] declaration that contradicts the reports beside it", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    // `writeReviewPack` also writes `R01_completion-reviewer.md`, so the declaration is false.
     await writeReviewPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
     const issues = await validateReviewArtifacts(root);
-    const schemaErrors = issues.filter((i) => i.code === "QFAI-REVIEW-007");
-    expect(schemaErrors.length).toBeGreaterThan(0);
-    expect(schemaErrors[0]?.message).toContain("reviewers");
+    const found = issues.filter((i) => i.code === "QFAI-REVIEW-005");
+    expect(
+      found.length,
+      "a declaration the pack's own files refute is worse than no declaration",
+    ).toBe(1);
+    expect(found[0]?.message).toContain("Rxx_*.md");
+  });
+
+  it("still rejects a pack with no reports and no declaration", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeAbandonedPack(root, "review-20260401000000000", makeV2Summary());
+    const issues = await validateReviewArtifacts(root);
+    expect(
+      issues.filter((i) => i.code === "QFAI-REVIEW-005").length,
+      "the guarantee this rule exists for: an unsealed pack is still a defect",
+    ).toBe(1);
+  });
+
+  it("does not let a malformed summary excuse a missing report set", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+    await writeFile(path.join(packDir, "summary.json"), "{ not json", "utf-8");
+    const codes = (await validateReviewArtifacts(root)).map((i) => i.code);
+    // The default is the strict one: anything that is not a present, parseable summary carrying an
+    // empty `reviewers` answers "no declaration", so the missing reports are still reported.
+    expect(codes).toContain("QFAI-REVIEW-005");
+    expect(codes).toContain("QFAI-REVIEW-006");
   });
 
   it("rejects v2.0 with non-array conditional_reviewers", async () => {
