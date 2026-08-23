@@ -88,15 +88,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream.
-- Producing the upstream artifact a row's own assertion reads. A row whose test asserts over the
-  **content** of an artifact this skill may not write — a decision record in `07_Decisions.md`, a
-  contract, another spec file — is not implementable here, and all three available moves lose:
-  writing the artifact is the prohibition above, leaving the row at `todo` strands it on a skill
-  nothing summons, and weakening the assertion discards the obligation the row exists to carry.
-  Stop at the row, raise a Change Request naming the artifact, and let `/qfai-sdd` produce it. The
-  routing constraint that prevents this lives in `../qfai-sdd/SKILL.md`; this bullet is what to do
-  when you meet a row written before it.
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream. A row whose own test asserts over the CONTENT of an artifact this skill may not write is not implementable here at all, and the three moves available to it all lose: `references/upstream-artifact-ordering.md`.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there, and the RED provenance those rows carry is defined in `../qfai-atdd/references/red-provenance.md` — this skill writes their `Status` / `DR-ID` / `Evidence` from the evidence that stage produced.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by `## Parallelization Policy` below.)
@@ -399,12 +391,43 @@ Required sections:
 
 ### Per-item evidence contract (fresh evidence required)
 
-Each TDD item MUST have fresh evidence. The contract has two parts with different write points:
-**phase-authored** fields, written before the reviewer gate because items 7-8 audit them, and
-**gate-completed** fields, appended after those reviews return `PASS`. A reviewer MUST NOT treat
-the absence of the second part as a blocking gap — an evidence file complete in its phase-authored
-part is the expected state at review time. The fields, and which of the two parts each belongs to,
-are `references/per-item-evidence-contract.md`.
+Each TDD item MUST have fresh evidence containing at minimum the fields below. The contract has two
+parts with different write points; the fields are the same, the sequencing is not.
+
+**Phase-authored (written before the reviewer gate, items 7-8):**
+
+- `TDD-ID`, `Layer`, `Test file`, `Selector` — the row identity, copied from `test-list.md`. The reviewers hash these and gate item 10 checks the copy against the ledger, so a row recorded without them has no identity record to hash and cannot pass that check (`constitution/shared-skill-delegation-baseline.md#reviewer-response-template`)
+- `TC-ref` — reference to the test case(s). On a `Layer = E2E` row read `US-ref` (the row's `US-Refs`) instead, and on a `Layer = API` row read `CON-API-ref` (the row's `CON-API-Refs`): exactly one obligation reference is required, the one the row's `Layer` selects
+- `Revision` — the state the observation was made against: `git rev-parse HEAD`, or `working-tree+<content hash>` for an uncommitted tree.
+- `RED test hash` — **required on a handed-over `E2E` / `API` / `Integration` row**, and checked, not just read. On an `observed-red` row the producer records it with the RED; on a `falsifiability` row — which has no RED pair, so nothing was hashed at handoff — **Phase Red step 3c records it against the mutation run**, which is the run this gate is about for that branch. Phase Green rewrites the production tree, so the working-tree hash cannot be recomputed from the final one and `Revision` alone cannot tell "only production changed" from "the acceptance test was edited after the handoff". Recompute it over the **same inputs the producer hashed** — the row's `Test file` column _and_ the acceptance-test-owned artifacts it names, in the manifest order `../qfai-atdd/references/red-provenance.md` defines. The producer records that manifest beside the hash for exactly this reason: recomputing over `Test file` alone yields a different value for every row that reads a fixture or a snapshot, so an unchanged row failed the gate and was sent back to `/qfai-atdd` on every pass. Recompute before GREEN is submitted and before the reviews: it is unchanged by Phase Green, so a mismatch means the test moved under the RED and the row goes back to `/qfai-atdd` for a fresh one — **unless a `Shared-artifact re-verify` entry names this row — its spec and `TDD-ID` together — and carries its re-run, re-taken proof and the artifact's new manifest and hash. Two places hold such an entry and both clear it**: a later row's evidence, and the `## Shared-artifact re-verify` block in the stage evidence file of a stage that moved the artifact. Naming only the later row left a spec with no ATDD-owned rows — the ordinary case for a fresh spec that edits a shared fixture — with nowhere its re-verify would be read, so a correctly re-verified consumer stayed stale for ever. A shared fixture edited by a later row moves this hash by construction, and a `done` row cannot take a fresh RED, so that entry is what clears it (`../qfai-atdd/references/red-provenance.md#a-shared-test-artifact-outlives-the-row-that-recorded-it`). Without this the stale RED passes gate item 10 exactly as a fresh one does. Where it lives is `references/round-evidence.md`'s list, and that list is the only statement of it — recorded at the handoff for an `observed-red` row's first round, at step 3c for a `falsifiability` one, and again by each fresh RED a REVISE opens. `Revision` is the field that is per round block and once more for the refactor-verify pair (`references/evidence-revision.md`)
+- `Falsifiability revision` — **required on a `falsifiability` row**, and distinct from `Revision` by construction. The gate now reads the mutated tree before the revert (Phase Red step 3c), so item 3's observation is made against a tree that is deliberately thrown away, while the GREEN and both reviews see the restored one. Requiring one revision across all four made every correct branch-2 row permanently stale — the same shape as the handed-over RED below, for the same reason: the observation that proves the test discriminates cannot be taken against the tree the reviewers judge. Record the mutated tree's address here; items 5, 7 and 8 agree among themselves on `Revision`
+- `Round N: RED revision` — **required in every round block with a RED pair**, not only a handed-over one, and per round because each round's RED is observed on its own tree: a RED is observed before the code that makes it pass exists, so on an uncommitted tree Phase Green moves the content address by construction and one shared `Revision` made an ordinary cycle stale at GREEN. A row whose proof was re-taken after a test-only replacement also carries `Replacement proof revision` — the tree that proof ran against — and `RED revision` keeps the tree the original RED was observed on (`../qfai-atdd/references/review-fix-rounds.md`). That RED was observed before the production code existed, so its revision is earlier than `Revision` by construction; recording both in one field made the row permanently stale (`references/evidence-revision.md`)
+- `RED command` — the exact command executed to observe failure
+- `RED result` — the failure output. Truncation is acceptable for the stack tail, never for the assertion message and its location: that is what demonstrates admissibility
+- `RED failure mode` — `assertion` | `expected-error` | `falsifiability`. There is no admissible value for a load error (`references/red-admissibility.md`)
+- **Exclusive alternative to the RED pair**: a row on the _RED not observable_ path carries `Satisfied-by`, `Falsifiability command` and `Falsifiability result` in place of the two RED fields above. Exactly one of the two forms must be present — never both, never neither (`references/red-not-observable.md`).
+- `GREEN command` — the exact command executed to observe success
+- `GREEN result` — the success output
+- Each RED/GREEN cycle is one **round block**. Which fields carry a `Round N:` prefix is `references/round-evidence.md`'s list and only that; do not re-derive it here. The **row-level** fields do not: `TDD-ID` and `TC-ref` are recorded once for the row. `RED test hash`, `RED revision` and `Falsifiability revision` were listed here as row-level while that reference put them in each round's block, and a blocking REVISE that opens Round 2 makes the two irreconcilable — one instruction overwrites Round 1's address, the other reuses it for a RED it was not taken on. Numbering, cardinality and the two rework paths are that reference's alone
+- `Refactor verify command` — the exact command re-executed after refactor. Written once for the item as a whole, so it takes no `Round N:` prefix
+- `Refactor verify result` — the output confirming GREEN is maintained (likewise once per item)
+- `Oracle proof` — the smallest production change that makes this item's test fail again, its command and its failing output, reverted immediately; or `equivalent-mutant` naming the contract clause weaker than the obligation. A row on the _RED not observable_ path satisfies this with its falsifiability fields (`references/oracle-strength.md`)
+
+These exist _for_ the reviewers: they are the evidence items 7-8 audit. They MUST be present when a
+review is requested.
+
+**Gate-completed (appended after items 7-8 return PASS):**
+
+- `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
+- `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
+- `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary
+- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
+
+These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
+absence as a blocking gap during review — an evidence file complete in its phase-authored part and
+missing only the verdict fields is the expected state at review time. It becomes blocking only at
+the completion gate (see `Completion prohibition conditions`).
 
 ### Evidence hard rules
 

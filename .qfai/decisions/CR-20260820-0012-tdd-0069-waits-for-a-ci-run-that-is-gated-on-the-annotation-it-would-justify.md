@@ -9,7 +9,7 @@
 - Approved by: `user (interactive decision, /qfai-atdd session)`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `5 then 1` — split the conjunction upstream, then narrow the signal
-- Applied at: `-`
+- Applied at: `2026-08-23T00:00:00Z` — options 5 then 1 applied; TC-0017-0069 / -0083 / -0070 covered
 - Superseded by: `-`
 - Blocked set: `spec-0017 TDD-0069`
 

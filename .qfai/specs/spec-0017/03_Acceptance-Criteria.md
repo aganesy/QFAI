@@ -316,7 +316,7 @@ Scenario: Newly created races surface instead of being masked
   When the workspace is tuned
   Then a search for a retry setting in the runner workspace returns zero results
   And each tuning change lands on its own pull request, largest project first
-  And each such pull request records three consecutive green aggregate-verdict runs before merge, with the run identifiers quoted in the description
+  And each such pull request records, before merge, three consecutive runs green on the lanes that tuning affects, with their run identifiers quoted
   And a rerun-to-green rate above one in twenty default-branch verdict runs afterwards reopens the setting
 
 # AC-0017-0030: Exactly one pull-request-triggered workflow, full profile from the build job

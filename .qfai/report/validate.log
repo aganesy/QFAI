@@ -3,20 +3,20 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260823075931557
-- started_at: 2026-08-22T22:59:31.557Z
+- run_id: run-20260823081727776
+- started_at: 2026-08-22T23:17:27.776Z
 - command: /qfai-validate
 - status: fail
 - errors: 3
 - warnings: 466
-- run_log: .qfai/report/run-20260823075931557
+- run_log: .qfai/report/run-20260823081727776
 
 # Validate Run Summary
 
-- run_id: run-20260823075931557
-- started_at: 2026-08-22T22:59:31.557Z
+- run_id: run-20260823081727776
+- started_at: 2026-08-22T23:17:27.776Z
 - status: fail
-- report_dir: .qfai/report/run-20260823075931557
+- report_dir: .qfai/report/run-20260823081727776
 - errors: 3
 - warnings: 466
 
@@ -24,7 +24,7 @@ run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
 - QFAI-REVIEW-004 (.qfai/review/review-20260821200000000): review pack に `summary.json` がありません。
 - QFAI-REVIEW-005 (.qfai/review/review-20260821200000000): review pack に `Rxx_*.md` が1件もありません。
-- QFAI-ATDD-112 (.qfai/specs/spec-0017): 宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0017:TC-0017-0032, SPEC-0017:TC-0017-0069, SPEC-0017:TC-0017-0070
+- QFAI-ATDD-112 (.qfai/specs/spec-0017): 宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0017:TC-0017-0032
 
 ## Top Warnings
 
