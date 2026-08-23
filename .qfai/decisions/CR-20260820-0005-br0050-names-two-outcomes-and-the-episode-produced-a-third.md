@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 TDD-0066; raised after the episode was resolved, not while proposing one`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — the third outcome is added to the rule, investigation first
+- Applied at: `2026-08-23T00:00:00Z` — BR-0017-0050 and EX-0017-0050 rewritten; the retry-loop prohibition kept in all three branches
 - Superseded by: `-`
 - Blocked set: `none — TDD-0066 is implemented and records what happened; what is open is whether the rule names it`
 

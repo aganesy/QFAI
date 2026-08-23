@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 6; the specified shape was implemented first, then found inert by the runner's own type and by measurement`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — each knob is declared at the scope that reads it
+- Applied at: `2026-08-23T00:00:00Z` — BR-0017-0047 and TC-0017-0060 rescoped; the root-only plant still reddens; the stale eight-project baseline corrected to seven
 - Superseded by: `-`
 - Blocked set: `none — TDD-0060 is implemented against the intent; what is open is which text moves`
 

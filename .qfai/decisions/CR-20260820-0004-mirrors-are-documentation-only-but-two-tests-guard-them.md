@@ -7,11 +7,11 @@ measuring which repository paths the test suite reads, and this is the one membe
 measurement contradicts`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — the mirror guards move into the lint lane
+- Applied at: `2026-08-23T00:00:00Z` — lint:mirror-surface added and wired into ci:lint; census re-measured at five guards across three slices
 - Superseded by: `-`
 - Blocked set: `none — change 8 implements BR-0017-0010 as written; what is open is whether the guard moves or the member does`
 

@@ -37,8 +37,13 @@
  * nothing reads is the same defect class as a test project matching zero files, and this
  * row nearly shipped one.
  *
- * `TC-0017-0060`'s wording asks that every project declare all six. It cannot; two of the
- * six are not project-scoped in this runner. `CR-20260820-0003` carries the divergence.
+ * `TC-0017-0060`'s wording used to ask that every project declare all six. It cannot; two
+ * of the six are not project-scoped in this runner, so the two declarations would have
+ * type-checked and configured nothing. `CR-20260820-0003` carried that divergence for
+ * three days and was decided 2026-08-23, **option A**: the rule and the case now say what
+ * this test has always asserted — each knob at the scope that reads it, and none at a
+ * scope that does not. The spec moved to the implementation because the implementation
+ * was right; the row was never reset.
  *
  * ## The starting value is a hypothesis, and it is the user's
  *

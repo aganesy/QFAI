@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 change 5; the assertion was written as specified, the mutation oracle proved it vacuous, and both states were then measured directly`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — the runner filters an unknown project name, it does not reject it
+- Applied at: `2026-08-23T00:00:00Z` — TC-0017-0063 and EX-0017-0055 reworded to the observable vitest implements
 - Superseded by: `-`
 - Blocked set: `none — TDD-0063 is implemented against the intent; what is open is which text moves`
 
