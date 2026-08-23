@@ -70,6 +70,16 @@
 
 ### Changed
 
+- **A review round that produced no responses can now be written down.** `summary.json`'s
+  `reviewers` array may be empty, and `QFAI-REVIEW-005` ('no `Rxx_*.md`') stands down when it
+  is. Previously a round whose reviewers died before writing anything had no accurate
+  representation: the schema rejected the empty array, so the true record was indistinguishable
+  from a pack somebody forgot to seal. The summary must still be present and schema-valid — that
+  is what makes the empty array a statement rather than an absence — and the check runs both
+  ways: a summary declaring `reviewers: []` with report files beside it is now an error too, and a
+  malformed summary does not excuse a missing report set. Adopters upgrading will see one fewer
+  blocking finding on abandoned packs, and one new one on packs whose summary contradicts their
+  contents.
 - **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
   every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
   report built its own set from the first table alone and skipped the spec
