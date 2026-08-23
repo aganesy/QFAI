@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017; raised while recording the trio the qa-gatekeeper required, not while trying to avoid it`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1 plus 4` — add the third classification, and name the seam sub-case
+- Applied at: `2026-08-23T00:00:00Z` — red-not-observable.md gains the pre-existing-state classification, the widened Satisfied-by values, and the seam sub-case
 - Superseded by: `-`
 - Blocked set: `none — all twenty-one rows carry the trio with an accurate value; what is open is whether the reference's vocabulary admits those values`
 

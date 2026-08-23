@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017; raised from qa-gatekeeper's round-6 finding N7, which it left unfiled`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `intent`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1` — scope the completion condition to specs that declare an E2E coverage-target TC
+- Applied at: `2026-08-23T00:00:00Z` — SKILL.md completion condition reworded, net-zero against the 500-line ceiling
 - Superseded by: `-`
 - Blocked set: `spec-0017 — no ledger row is blocked by this; what it blocks is the SPEC's completion, and it is one of the two reasons the item-12 checkpoint is unreachable`
 

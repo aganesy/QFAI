@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017; self-reported. Found by completion-reviewer while refuting the premise of my own CR-20260820-0008`
 - Raised at: `2026-08-20T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1` — re-observe the 35 rows per Selector
+- Applied at: `-` — HANDOFF to /qfai-implement: RED observation on ledger rows is that skill lifecycle, not this one
 - Superseded by: `-`
 - Blocked set: `spec-0017: the 35 rows enumerated in the measurement table below — every refactor row citing an aggregate run with more than one test and carrying no falsifiability trio`
 

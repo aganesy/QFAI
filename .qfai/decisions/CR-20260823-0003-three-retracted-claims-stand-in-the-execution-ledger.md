@@ -5,11 +5,11 @@
 - Raised by: `/qfai-atdd orchestrator, spec-0017; found by round 20's qa-gatekeeper and re-derived independently`
 - Raised at: `2026-08-23T00:45:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `1` — the ledger owner writes the correction
+- Applied at: `-` — HANDOFF to /qfai-implement: the Evidence cells carrying the retracted claims are its to write
 - Superseded by: `-`
 - Blocked set: `-`
 
