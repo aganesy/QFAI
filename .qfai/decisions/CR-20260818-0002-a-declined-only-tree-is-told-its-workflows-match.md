@@ -5,11 +5,11 @@
 - Raised by: `implementation-reviewer (advisory A-1) during the spec-0006 TDD-0036 / TDD-0037 review; measured against the built CLI`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — reword the ok message so it does not assert a match it did not make
+- Applied at: `2026-08-23T00:00:00Z` — the production repair landed 2026-08-22 in e6ca1ef89; the missing half was the oracle, and both ok arms are now pinned and shown to differ
 - Superseded by: `-`
 - Blocked set: `(none — the implementation conforms to TC-0006-0035 as written; the gap is upstream of it)`
 

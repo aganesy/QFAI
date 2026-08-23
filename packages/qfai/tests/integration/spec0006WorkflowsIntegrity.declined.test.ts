@@ -209,6 +209,22 @@ describe(
     it("reports severity ok with no drift finding and no declined key in the payload", async () => {
       const dir = await pool.seedAdopterTree();
 
+      // CLAIM 5, first half — the message on a tree where a comparison DID happen.
+      // `CR-20260818-0002`, approved 2026-08-23, option A. The `ok` arm has two
+      // messages and, until this, neither was pinned by any test: the production
+      // repair landed in round 18 and the assertion beside it did not, so the
+      // branch that stopped asserting a match nobody made could have been reverted
+      // in silence. Taken here rather than in a file of its own because the tree
+      // this row seeds is a matching tree until the deletions below, so both
+      // directions cost one fixture and are demonstrably the same tree.
+      const beforeDeletion = await createDoctorData({ startDir: dir, rootExplicit: true });
+      const matching = beforeDeletion.checks.find((entry) => entry.id === "workflows.integrity");
+      expect(matching?.severity, "an untouched installed tree is `ok`").toBe("ok");
+      expect(
+        matching?.message,
+        "on a tree whose installed files were compared and matched, saying so is true",
+      ).toBe("installed shipped workflow(s) match the packaged copy");
+
       // Every RECORDED name is deleted, derived from the record rather than from a
       // hard-coded list. Two reasons, and the second is the load-bearing one:
       // a literal list silently stops covering the tree when the package ships a
@@ -282,6 +298,22 @@ describe(
           "the ok payload carries `workflowsDir` only — `declined` is drift-finding payload and must not leak onto the silent arm",
         )
         .toEqual(["workflowsDir"]);
+
+      // CLAIM 5, second half — the message on a tree where NOTHING was compared.
+      // Every recorded name is declined, so "installed shipped workflow(s) match
+      // the packaged copy" would state something QFAI never observed: there are no
+      // installed shipped workflows left to match anything. Pinned against the
+      // matching message captured above, so the two arms are asserted to differ
+      // rather than each asserted alone.
+      expect
+        .soft(
+          check?.message,
+          "a declined-only tree compared nothing, and the message must not claim a match",
+        )
+        .toBe("every recorded shipped workflow was removed by this repository; nothing to compare");
+      expect
+        .soft(check?.message, "the two `ok` arms must not collapse into one message")
+        .not.toBe(matching?.message);
 
       const run = await runDoctorText(dir, "error");
 

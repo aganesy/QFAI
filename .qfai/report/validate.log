@@ -3,22 +3,22 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260823172824356
-- started_at: 2026-08-23T08:28:24.356Z
+- run_id: run-20260823181154764
+- started_at: 2026-08-23T09:11:54.764Z
 - command: /qfai-validate
 - status: pass
 - errors: 0
-- warnings: 466
-- run_log: .qfai/report/run-20260823172824356
+- warnings: 467
+- run_log: .qfai/report/run-20260823181154764
 
 # Validate Run Summary
 
-- run_id: run-20260823172824356
-- started_at: 2026-08-23T08:28:24.356Z
+- run_id: run-20260823181154764
+- started_at: 2026-08-23T09:11:54.764Z
 - status: pass
-- report_dir: .qfai/report/run-20260823172824356
+- report_dir: .qfai/report/run-20260823181154764
 - errors: 0
-- warnings: 466
+- warnings: 467
 
 ## Top Errors
 

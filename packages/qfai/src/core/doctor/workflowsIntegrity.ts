@@ -92,7 +92,11 @@ import { lstat, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
-import { readInstallProvenance } from "../../shared/provenance.js";
+import {
+  readInstallProvenance,
+  resolveWorkflowFileState,
+  type WorkflowProvenanceEntry,
+} from "../../shared/provenance.js";
 import { normalizeNewlines } from "../../shared/text.js";
 
 /** Adopter-tree location of the installed workflows, as POSIX segments. */
@@ -359,6 +363,20 @@ function isSafeProvenanceName(name: string): boolean {
   return path.basename(name) === name && !path.isAbsolute(name);
 }
 
+/**
+ * The provenance entry every input reaching `hasDrifted` is known to have.
+ *
+ * `resolveWorkflowFileState` reads the entry only for its PRESENCE — its three fields decide
+ * nothing — and the drift caller iterates recorded names, so an entry always exists by the time the
+ * state is asked for. A sentinel says that at the call site instead of threading a value nothing
+ * reads through two functions to reach a truthiness check.
+ */
+const RECORDED_NAME_ENTRY: WorkflowProvenanceEntry = {
+  sha256: "",
+  installedByVersion: "",
+  installedAt: "",
+};
+
 /** Whether `child` resolves to a direct entry of `dir`. */
 function resolvesInside(dir: string, child: string): boolean {
   return path.dirname(path.resolve(dir, child)) === path.resolve(dir);
@@ -367,12 +385,50 @@ function resolvesInside(dir: string, child: string): boolean {
 /**
  * Whether one recorded name's installed file has drifted from the packaged
  * copy. `ENOENT` on either side is not drift; any other read failure is.
+ *
+ * `CR-20260818-0003`, approved 2026-08-23, option A. This function used to
+ * compare the two digests itself, which made it a SECOND definition of the
+ * shipped-workflow state enum — and on one input the two definitions
+ * disagreed: an entry with a file on disk and no packaged counterpart (a name
+ * a later release stopped shipping) resolved to `modified` in
+ * `resolveWorkflowFileState` and to "not drift" here.
+ *
+ * The state question now has one owner. What survives here is the part that is
+ * NOT a state question:
+ *
+ * - **unreadable** has no member in the enum, and must stay drift — a file
+ *   whose state cannot be established must not render as a clean check;
+ * - **the two absences** are decided by the caller, before this is asked, and
+ *   the comment there says why. The branch below is still required — it is the
+ *   narrowing step that lets the digest values be read at all — but its RETURN
+ *   VALUE is unobservable: measured by mutating it to `return true` and running
+ *   the four drift suites, which stayed green. So it is a type guard that
+ *   happens to answer, not an answer under test, and it agrees with the caller
+ *   by construction rather than by coverage. Do not read its `false` as a
+ *   second opinion on the retired-name case.
+ *
+ * The enum's `modified` for the retired-name case is not overruled: it answers
+ * "is this still the file QFAI installed", where "cannot be compared" is
+ * conservatively "no". Drift asks the narrower question "should the adopter be
+ * told they edited this", and the answer for a name QFAI stopped shipping is
+ * no. Two questions, one answer each, and neither function now guesses at the
+ * other's.
  */
 async function hasDrifted(packagedPath: string, installedPath: string): Promise<boolean> {
   const [packaged, installed] = await Promise.all([
     digestFile(packagedPath),
     digestFile(installedPath),
   ]);
+
+  // Present but unreadable is reported as drift, the same direction the
+  // sibling takes for a permission error: a file whose state cannot be
+  // established must not be rendered as a clean check, and handing an
+  // unreadable-but-present file onward as "absent" would classify it as a
+  // deliberate removal, which is silent forever. Checked FIRST, because the
+  // enum below has no member for it and would have to be told a digest.
+  if (packaged.kind === "unreadable" || installed.kind === "unreadable") {
+    return true;
+  }
 
   // Absent on the adopter side: a deliberate removal, never re-reported.
   // Absent on the packaged side: the running package no longer ships the
@@ -381,16 +437,11 @@ async function hasDrifted(packagedPath: string, installedPath: string): Promise<
     return false;
   }
 
-  // Present but unreadable is reported as drift, the same direction the
-  // sibling takes for a permission error: a file whose state cannot be
-  // established must not be rendered as a clean check, and handing an
-  // unreadable-but-present file onward as "absent" would classify it as a
-  // deliberate removal, which is silent forever.
-  if (packaged.kind === "unreadable" || installed.kind === "unreadable") {
-    return true;
-  }
-
-  return packaged.value !== installed.value;
+  // Every remaining input is one the enum has a member for, so it decides.
+  // The entry is known to exist: the caller iterates recorded names only.
+  return (
+    resolveWorkflowFileState(RECORDED_NAME_ENTRY, installed.value, packaged.value) === "modified"
+  );
 }
 
 /**

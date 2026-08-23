@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement, TDD-0031 — found by measuring an equivalent-mutant prediction rather than accepting it`
 - Raised at: `2026-08-11T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — add a coverage-target TC for the failing direction
+- Applied at: `2026-08-23T00:00:00Z` — TC-0006-0036 / EX-0006-0029 added, TDD-0041 seeded, and the exact return-false mutant now reddens
 - Superseded by: `-`
 - Blocked set: `(none — no in-flight row depends on this)`
 

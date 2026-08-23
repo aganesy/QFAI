@@ -128,6 +128,17 @@ export async function readInstallProvenance(rootDir: string): Promise<InstallPro
  * - entry + present on disk, no packaged digest available (the current
  *   package no longer ships the name): `modified` — the conservative
  *   direction, since equality with the packaged template cannot be shown
+ *
+ * **That last row is not a drift verdict, and `CR-20260818-0003` exists because
+ * a second implementation used to give one.** This function answers "is this
+ * still the file QFAI installed", where "cannot be compared" is conservatively
+ * "no". `doctor`'s drift reader asks the narrower question "should the adopter
+ * be told they edited this", and for a name a later release stopped shipping
+ * the answer is no — so it excludes that input before asking for a state at
+ * all (`core/doctor/workflowsIntegrity.ts`, the packaged-absent `continue`).
+ * Two questions, one answer each. This function is now the only definition of
+ * the state vocabulary; `hasDrifted` was expressed in terms of it rather than
+ * comparing digests on its own, which is what made the two answers possible.
  * - entry + absent on disk: `declined` (deliberately removed — never
  *   recreated, never reported as stale, never pruned)
  */

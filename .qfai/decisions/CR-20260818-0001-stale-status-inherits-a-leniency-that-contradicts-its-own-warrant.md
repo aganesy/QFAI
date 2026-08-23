@@ -5,11 +5,11 @@
 - Raised by: `/qfai-implement orchestrator, spec-0017 step 1, measured on the first commit that created the ledger's declared test file`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — verbatim containment for the stale-status consumer only
+- Applied at: `2026-08-23T00:00:00Z` — each :: segment is required verbatim rather than the joined string - a stated departure, because the joined form broke the pytest shape the suite already covers
 - Superseded by: `-`
 - Blocked set: `(none blocked — the defect inflates a warning count and degrades a signal; no row is prevented from landing)`
 

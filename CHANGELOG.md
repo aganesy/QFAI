@@ -70,6 +70,16 @@
 
 ### Changed
 
+- **`TDDLIST_STALE_STATUS` stops firing on a selector that only shares its last word.** The
+  rule reads a ledger row whose `Status` is `todo` and warns when the named test appears to exist
+  anyway. It resolved the selector through a helper that falls back to the selector last
+  identifier — right for that helper other caller, where a match is evidence FOR a test presence and
+  leniency costs a warning rather than swallowing one, and wrong here, where the direction inverts:
+  `header` appears in almost any test file, so rows whose test does not exist were reported as
+  stale. The stale check now requires the selector itself, segment by segment for a `::`-style
+  selector so a pytest row still resolves. Adopters will see fewer of these warnings; a row whose test
+  exists under a slightly reworded title is no longer reported, which is a false negative replacing a
+  false positive on a `warning` with no error-level consequence.
 - **A review round that produced no responses can now be written down.** `summary.json`'s
   `reviewers` array may be empty, and `QFAI-REVIEW-005` ('no `Rxx_*.md`') stands down when it
   is. Previously a round whose reviewers died before writing anything had no accurate

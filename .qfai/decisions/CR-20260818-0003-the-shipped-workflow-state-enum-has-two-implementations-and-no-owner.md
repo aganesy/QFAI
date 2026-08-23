@@ -5,11 +5,11 @@
 - Raised by: `implementation-reviewer (advisory A-2) during the spec-0006 TDD-0036 / TDD-0037 review`
 - Raised at: `2026-08-18T00:00:00Z`
 - Class: `defect`
-- Status: `open`
-- Approved by: `-`
-- Approved at: `-`
-- Approved option: `-`
-- Applied at: `-`
+- Status: `approved`
+- Approved by: `user (interactive decision, /qfai-sdd session)`
+- Approved at: `2026-08-23T00:00:00Z`
+- Approved option: `A` — one implementation and one owner for the state enum
+- Applied at: `2026-08-23T00:00:00Z` — hasDrifted now asks resolveWorkflowFileState; no sixth state added
 - Superseded by: `-`
 - Blocked set: `(none — latent today, because the divergent branch has no production consumer)`
 

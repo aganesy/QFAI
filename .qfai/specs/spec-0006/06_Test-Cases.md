@@ -39,6 +39,7 @@
 | TC-0006-0033 | unit        | AC-0006-0025 | EX-0006-0026 | unrelated warning still exits 1 under `--fail-on warning` — control (Type: boundary)                        |
 | TC-0006-0034 | integration | AC-0006-0026 | EX-0006-0027 | details lists declined alongside modified without changing severity (Type: normal)                          |
 | TC-0006-0035 | integration | AC-0006-0026 | EX-0006-0028 | declined-only tree emits no finding at all (Type: boundary)                                                 |
+| TC-0006-0036 | integration | AC-0006-0022 | EX-0006-0029 | error severity の finding は `--fail-on error` で exit 非 0 になる (Type: normal)                           |
 
 ## TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright
 
