@@ -27,6 +27,12 @@
  * flake is loose enough to miss the regression. The regression has an exact textual signature instead:
  * a static `from "jsdom"` in a shipped bundle means the dependency is loaded at module scope again.
  *
+ * ## Why this lives in the integration slice
+ *
+ * It reads `dist/`, and only the `e2e` and `integration` matrix legs build before running. Placed in
+ * `tests/scripts/` first, it failed on CI for exactly the reason its own floor exists to state: no
+ * bundle on disk, so nothing was asserted. The floor did its job; the placement was wrong.
+ *
  * That signature is not hypothetical. The first repair put the `import()` only at the call site, and
  * the CJS output went lazy while the **ESM output kept its static import** — esbuild is free to inline
  * an awaited import of a module it also bundles. Half the cost came back, silently, and the comment
