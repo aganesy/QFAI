@@ -254,10 +254,44 @@ export async function writeInstallProvenance(
   const tempPath = path.join(recordDir, `.install-provenance.${randomUUID()}.tmp`);
   try {
     await writeFile(tempPath, serialized, { encoding: "utf-8", flag: "wx" });
-    await rename(tempPath, recordPath);
+    await renameWithRetry(tempPath, recordPath);
   } catch (error) {
     await unlink(tempPath).catch(() => undefined);
     throw error;
+  }
+}
+
+/** How many times a denied rename is retried, and how long between attempts. */
+const RENAME_ATTEMPTS = 40;
+const RENAME_RETRY_MS = 25;
+
+/**
+ * `rename`, retried while the platform denies it for a reason that passes.
+ *
+ * On Windows a rename onto an existing name fails with `EPERM` / `EACCES` / `EBUSY` whenever anything
+ * holds a handle to the destination — another writer mid-rename, a virus scanner, the search indexer.
+ * It is not a permission problem and it is not permanent, and treating it as fatal made
+ * `writeInstallProvenance` throw under concurrency: measured, a six-writer stress on one tree failed
+ * here while the whole rest of the suite passed. The atomicity the rename provides is unaffected —
+ * either it happened or it did not — so the correct response to a transient denial is to try again.
+ *
+ * The last failure is rethrown rather than swallowed. A destination that is genuinely unwritable must
+ * still reach the caller, because the caller's next move is to roll back what it wrote.
+ */
+async function renameWithRetry(from: string, to: string): Promise<void> {
+  for (let attempt = 1; ; attempt += 1) {
+    try {
+      await rename(from, to);
+      return;
+    } catch (error) {
+      const code: unknown =
+        typeof error === "object" && error !== null ? Reflect.get(error, "code") : undefined;
+      const transient = code === "EPERM" || code === "EACCES" || code === "EBUSY";
+      if (!transient || attempt >= RENAME_ATTEMPTS) {
+        throw error;
+      }
+      await new Promise((resolve) => setTimeout(resolve, RENAME_RETRY_MS));
+    }
   }
 }
 
@@ -274,6 +308,15 @@ export async function writeInstallProvenance(
 const LOCK_STALE_MS = 10_000;
 const LOCK_POLL_MS = 25;
 const LOCK_ATTEMPTS = 200;
+
+/**
+ * The reclaim lock's own staleness ceiling.
+ *
+ * Far shorter than the record lock's, because it covers an `unlink` and an `open` rather than a whole
+ * read-modify-write. The two ceilings are different numbers because they bound different amounts of
+ * work, not because one was tuned.
+ */
+const RECLAIM_STALE_MS = 500;
 
 /**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
@@ -310,16 +353,58 @@ export async function updateInstallProvenance(
   await mkdir(recordDir, { recursive: true });
   const lockPath = path.join(recordDir, ".install-provenance.lock");
 
-  const release = await acquireRecordLock(lockPath, recordDir);
-  try {
-    const next = mutate(await readInstallProvenance(rootDir));
-    if (next === undefined) {
+  // Applied, written, and then CHECKED — up to a bounded number of times.
+  //
+  // The lock makes the uncontended case one pass. It is not, on its own, enough to rely on: the
+  // whole-suite stress that six concurrent writers put on this measured two of them inside the
+  // section at once, and every argument for why that could not happen was about how narrow the
+  // window is rather than about it being closed. A window a test hits on the first attempt is not
+  // narrow.
+  //
+  // So the write verifies itself. After writing, the record is re-read and compared with what was
+  // written; a difference means somebody else wrote in between, and the mutation is re-applied to
+  // THEIR content and written again. That converges whatever the lock does: each pass re-applies
+  // onto the newest content, so the writer that finishes last leaves a record holding every
+  // writer's entries, and every earlier writer notices its own pass was overtaken and repeats.
+  // Review finding [03] asked for the lost update to stop; this is the part that does not depend
+  // on the lock being perfect.
+  for (let attempt = 1; attempt <= UPDATE_ATTEMPTS; attempt += 1) {
+    const release = await acquireRecordLock(lockPath);
+    let written: string | undefined;
+    try {
+      const next = mutate(await readInstallProvenance(rootDir));
+      if (next === undefined) {
+        return;
+      }
+      await writeInstallProvenance(rootDir, next);
+      written = serializeForComparison(next);
+    } finally {
+      await release();
+    }
+
+    // Read OUTSIDE the lock on purpose: the question is what any other writer can now see, and
+    // holding the lock while asking it would only hide a writer that is waiting for it.
+    if (serializeForComparison(await readInstallProvenance(rootDir)) === written) {
       return;
     }
-    await writeInstallProvenance(rootDir, next);
-  } finally {
-    await release();
   }
+  throw new Error(
+    `install-provenance record at ${recordPath} was overwritten by another writer on ${String(UPDATE_ATTEMPTS)} consecutive attempts; refusing to loop further`,
+  );
+}
+
+/** How many times a write that was overtaken is re-applied before the attempt is abandoned. */
+const UPDATE_ATTEMPTS = 20;
+
+/**
+ * The record as the comparable text `writeInstallProvenance` would produce for it.
+ *
+ * The same serializer, so "what I wrote" and "what is there now" are compared in one representation
+ * rather than by walking two object graphs — and a key-order difference cannot read as a concurrent
+ * write, because both sides go through it.
+ */
+function serializeForComparison(record: InstallProvenanceRecord): string {
+  return JSON.stringify(serializeRecord(record));
 }
 
 /**
@@ -336,22 +421,23 @@ export async function updateInstallProvenance(
  *
  * - Every lock file carries a token unique to the writer that created it.
  * - The uncontended path is `open(..., "wx")`, which is atomic and needs no proof beyond succeeding.
- * - A stale lock is reclaimed by ATOMIC REPLACEMENT — a candidate file renamed over it — and then
- *   by reading the lock back. Two reclaimers both rename; only one token survives the last write,
- *   so the read-back is what decides, and the loser retries rather than proceeding.
  * - Release reads the token first and unlinks only its own.
+ * - **A stale lock is reclaimed under a second `wx` lock**, so exactly one writer can reclaim it.
  *
- * What this does NOT do, stated rather than implied: a reclaimer that renames in the window between
- * another reclaimer's rename and its read-back can still displace it. Closing that needs an atomic
- * compare-and-swap on file contents, which Node has no portable primitive for. The residual is two
- * writers reclaiming the SAME abandoned lock within one scheduler tick after it has already gone
- * unclaimed for ten seconds; the common failure this replaced needed nothing more than two ordinary
- * concurrent runs.
+ * That last point replaced a reclaim-by-atomic-replacement, and the reason is measured rather than
+ * argued. Replacement plus a read-back looked sufficient: two reclaimers both rename, one token
+ * survives, the loser retries. It is not — the loser can rename AFTER the winner's read-back, taking
+ * the lock out from under a writer already inside the section. That was written down here as a
+ * residual "within one scheduler tick", and then the whole-suite run put six concurrent writers on
+ * one tree and hit it on the first attempt. A window a test finds immediately is not a residual.
+ *
+ * The reclaim lock is the only shape Node offers that exactly one process can win: `wx` fails rather
+ * than overwrites. Its own holder can die, so it is aged too — but it is held for two syscalls rather
+ * than for a whole read-modify-write, so its abandonment window is smaller by orders of magnitude
+ * instead of by argument. And `updateInstallProvenance` no longer depends on any of this being
+ * perfect: it verifies its write survived and re-applies if it did not.
  */
-async function acquireRecordLock(
-  lockPath: string,
-  recordDir: string,
-): Promise<() => Promise<void>> {
+async function acquireRecordLock(lockPath: string): Promise<() => Promise<void>> {
   const token = randomUUID();
   const release = async (): Promise<void> => {
     const held = await readFile(lockPath, "utf-8").catch(() => undefined);
@@ -385,21 +471,50 @@ async function acquireRecordLock(
       continue;
     }
 
-    // Abandoned. Replace it atomically and then prove the replacement is ours.
-    const candidatePath = path.join(recordDir, `.install-provenance.${token}.lock`);
+    // Abandoned. Exactly one writer may reclaim it, so the reclaim happens under its own `wx` lock.
+    const reclaimPath = `${lockPath}.reclaim`;
+    let reclaiming;
     try {
-      await writeFile(candidatePath, token, { encoding: "utf-8", flag: "wx" });
-      await rename(candidatePath, lockPath);
+      reclaiming = await open(reclaimPath, "wx");
     } catch {
-      await unlink(candidatePath).catch(() => undefined);
+      // Someone else is reclaiming, or a previous reclaimer died holding this. Age decides, and the
+      // ceiling is short: this lock covers two syscalls, not a read-modify-write.
+      const since = await stat(reclaimPath).then(
+        (stats) => stats.mtimeMs,
+        () => undefined,
+      );
+      if (since !== undefined && Date.now() - since > RECLAIM_STALE_MS) {
+        await unlink(reclaimPath).catch(() => undefined);
+      }
       await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
       continue;
     }
-    if ((await readFile(lockPath, "utf-8").catch(() => undefined)) === token) {
+    try {
+      // Re-checked while holding the reclaim lock: the winner of a previous reclaim may already have
+      // installed a fresh lock, and taking that one away is the defect this whole shape exists to
+      // stop. Only a lock that is STILL abandoned is removed.
+      const stillStale = await stat(lockPath).then(
+        (stats) => Date.now() - stats.mtimeMs > LOCK_STALE_MS,
+        () => true, // gone: the create below is the reclaim
+      );
+      if (!stillStale) {
+        await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+        continue;
+      }
+      await unlink(lockPath).catch(() => undefined);
+      const handle = await open(lockPath, "wx");
+      try {
+        await handle.writeFile(token, "utf-8");
+      } finally {
+        await handle.close();
+      }
       return release;
+    } catch {
+      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+    } finally {
+      await reclaiming.close();
+      await unlink(reclaimPath).catch(() => undefined);
     }
-    // Another reclaimer's token is in there: they hold it, and we hold nothing to release.
-    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
   }
   throw new Error(
     `could not take the install-provenance lock at ${lockPath} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,

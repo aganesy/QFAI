@@ -478,6 +478,17 @@ function runLane(root: string): LaneRun {
   };
 }
 
+/** The same lane, asked for the reviewer artifact. */
+function runLaneWithReport(root: string, reportRel: string): LaneRun {
+  const r = spawnSync(process.execPath, [LANE, "--root", root, "--report-dir", reportRel], {
+    encoding: "utf-8",
+  });
+  return {
+    exitCode: r.status ?? -1,
+    output: `${r.stdout ?? ""}${r.stderr ?? ""}`,
+  };
+}
+
 /** Rewrites one workflow file inside a planted tree. */
 function editWorkflow(dir: string, file: string, edit: (text: string) => string): void {
   const p = path.join(dir, ".github", "workflows", file);
@@ -1413,6 +1424,147 @@ const PLANTS: {
   },
 ];
 
+// ── [10] ────────────────────────────────────────────────
+describe("a version marker in a shipped file is rejected wherever it sits", () => {
+  it("catches one in a trailing comment, which every parsing gate is blind to", () => {
+    // `.agents/rules/distributed-surface.md` forbids `vN.M[.P]` across the whole distributed
+    // surface, and this lane is the rule the shipped-workflows contract nominates for the comment
+    // case: `lint:shipping` skips comment lines before its shipped-runtime rules apply, and the
+    // shape gate loses comments at parse time. Review finding [10] measured the consequence —
+    // `# v9.9.9` appended to a shipped workflow left `pnpm ci:lint` green with no finding at all.
+    const dir = plantedTree((d) => {
+      const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
+      writeFileSync(target, `${readFileSync(target, "utf-8")}# v9.9.9\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a shipped version marker must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "the finding must name the rule").toContain("shipped-version-marker");
+      expect
+        .soft(run.output, "and the marker itself, so the operator knows what to delete")
+        .toContain("v9.9.9");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("catches one in a step name, because the property is the leading v and not the location", () => {
+    // The contract's adopted resolution is to carry the version in the step `name:` with the `v`
+    // dropped. So `Setup pnpm 10.15.0` is fine and `Setup pnpm v10.15.0` is not, and this row is
+    // what keeps that distinction from being a comment-only rule.
+    const dir = plantedTree((d) => {
+      const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
+      const before = readFileSync(target, "utf-8");
+      const after = before.replace("    name: change detection", "    name: change detection v1.2");
+      if (after === before) throw new Error("the step-name needle is stale");
+      writeFileSync(target, after, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `a marker in a step name must exit 1:\n${run.output}`).toBe(1);
+      expect(run.output).toContain("v1.2");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── [14] ────────────────────────────────────────────────
+describe("a shipped runner label literal must be a public GitHub-hosted runner", () => {
+  it("rejects self-hosted, which does not resolve in an adopter's repository", () => {
+    const dir = plantedTree((d) => {
+      const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
+      const before = readFileSync(target, "utf-8");
+      const after = before.replace(
+        "runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "runs-on: self-hosted",
+      );
+      if (after === before) throw new Error("the runs-on needle is stale");
+      writeFileSync(target, after, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a private runner literal must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toContain("shipped-runner-label");
+      expect.soft(run.output).toContain("self-hosted");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts the sanctioned selector, whose only literal is a public label", () => {
+    // The other direction, and the one a whole-string rule would have failed on every job: the
+    // shipped set deliberately writes `${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}` so the
+    // adopter can choose their own runner. What they put in their own variable is not a literal
+    // QFAI ships. The unplanted tree carries exactly that form, so a green run is the assertion.
+    const dir = plantedTree(() => undefined);
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `the sanctioned selector must stay green:\n${run.output}`).toBe(0);
+      expect(
+        printedRules(run.output, SHIPPED_SCOPE),
+        "and the rule must have been evaluated, or the green means nothing",
+      ).toContain("shipped-runner-label");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+// ── [15] ────────────────────────────────────────────────
+describe("the lane writes the artifact the Reviewer Gate ingests", () => {
+  it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
+    // Review finding [15]: the lane wrote prose to stderr, the gate ingests
+    // `{ findings: [...] }` JSON under `.qfai/review/**`, and no production bridge existed between
+    // them anywhere — the E2E that demonstrates the ingestion parsed stderr and built the JSON
+    // itself. So a hygiene violation failed the CI log and never reached a reviewer.
+    const dir = plantedTree((d) => {
+      const target = path.join(d, path.join(SHIPPED_WORKFLOWS_REL, "qfai-tests.yml"));
+      writeFileSync(target, `${readFileSync(target, "utf-8")}# v9.9.9\n`, "utf-8");
+    });
+    try {
+      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
+      const run = runLaneWithReport(dir, reportRel);
+      expect.soft(run.exitCode, run.output).toBe(1);
+
+      const artifact = path.join(dir, reportRel, "workflow-hygiene.json");
+      const payload: unknown = JSON.parse(readFileSync(artifact, "utf-8"));
+      if (!isRecord(payload) || !Array.isArray(payload.findings)) {
+        throw new Error("the artifact must be an object with a findings array");
+      }
+      const first: unknown = payload.findings[0];
+      if (!isRecord(first)) throw new Error("the artifact carried no finding");
+
+      // The gate keys on `code`, and passes `file` / `job` / `rule` through untouched — so those
+      // four are the contract between the two, not a convenience.
+      expect.soft(first.code, "the code the gate keys on").toBe("R-WORKFLOW-HYGIENE-DRIFT");
+      expect.soft(first.rule).toBe("shipped-version-marker");
+      expect.soft(String(first.file)).toContain("qfai-tests.yml");
+      expect.soft(first.job, "the site, so a reviewer is not sent hunting").toBeTruthy();
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("emits an empty findings array on a clean tree, so a missing file means the bridge did not run", () => {
+    // Two different facts, and they have to stay distinguishable: nothing found, versus nothing
+    // asked. Writing on every run also overwrites a stale artifact rather than leaving one to be
+    // read as current.
+    const dir = plantedTree(() => undefined);
+    try {
+      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
+      const run = runLaneWithReport(dir, reportRel);
+      expect.soft(run.exitCode, run.output).toBe(0);
+      const artifact = path.join(dir, reportRel, "workflow-hygiene.json");
+      const payload: unknown = JSON.parse(readFileSync(artifact, "utf-8"));
+      if (!isRecord(payload)) throw new Error("the artifact must be an object");
+      expect(payload.findings).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("TC-0017-0044 (TDD-0044): the hygiene lane exits 0 over the hardened own tree", () => {
   it("passes over the real tree with every one of the five rules evaluated", () => {
     const dir = plantedTree(() => {});
@@ -1716,6 +1868,37 @@ PLANTS.push({
   },
 });
 
+// The two shipped rules review findings [10] and [14] added, registered here for the same
+// reason the third-party plant above was: `TC-0017-0047` derives the evaluated set from this
+// table, so a rule printed by every green run and demonstrated by nothing is exactly the hole
+// that check exists to find.
+PLANTS.push({
+  rule: "shipped-version-marker",
+  label: "a shipped file carries a version marker in a comment",
+  file: SHIPPED_THIRD_PARTY_FILE,
+  plant: (dir) => {
+    editShipped(dir, SHIPPED_THIRD_PARTY_FILE, (text) => `${text}# v9.9.9\n`);
+    // The marker rule reports a LINE rather than a job, because a comment belongs to no job —
+    // and the site is what an operator needs. The table's `job` field carries it.
+    return "line";
+  },
+});
+
+PLANTS.push({
+  rule: "shipped-runner-label",
+  label: "a shipped job names a private runner label",
+  file: SHIPPED_THIRD_PARTY_FILE,
+  plant: (dir) => {
+    editShipped(dir, SHIPPED_THIRD_PARTY_FILE, (text) =>
+      text.replace(
+        "runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}",
+        "runs-on: self-hosted",
+      ),
+    );
+    return "validate";
+  },
+});
+
 // The declaration-scope plant, appended for the same reason and after the same mistake.
 // `TC-0017-0047` read only the workflow and shipped scopes, while its own comment claimed
 // "EVERY printed scope" — so `required-context` was printed by every green run and
@@ -1858,8 +2041,8 @@ describe("TC-0017-0053 (TDD-0053): the shipped third-party rule is allow-list me
       // rules from the rule list, so removing the rule leaves the heading standing over
       // nothing — which the oracle caught: that mutation reddened no row at all.
       expect
-        .soft(printedRules(run.output, SHIPPED_SCOPE), "the shipped scope must declare its rule")
-        .toEqual(["shipped-third-party"]);
+        .soft(printedRules(run.output, SHIPPED_SCOPE), "the shipped scope must declare its rules")
+        .toEqual(["shipped-third-party", "shipped-version-marker", "shipped-runner-label"].sort());
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

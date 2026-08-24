@@ -34,6 +34,7 @@
  * grammar, which is why the three-digit waiver alias rule does not reach it.
  */
 import { Buffer } from "node:buffer";
+import { mkdirSync, writeFileSync } from "node:fs";
 import { createHash } from "node:crypto";
 import {
   closeSync,
@@ -89,6 +90,16 @@ const RULES = [
     "shipped",
     "shipped-third-party",
     "every third-party `uses:` owner in the shipped set is in the closed sanctioned list",
+  ],
+  [
+    "shipped",
+    "shipped-version-marker",
+    "no `vN.M[.P]` version marker anywhere in a shipped file, comments included",
+  ],
+  [
+    "shipped",
+    "shipped-runner-label",
+    "every `runs-on` label in the shipped set is a public GitHub-hosted runner",
   ],
   [
     "declaration",
@@ -1032,6 +1043,121 @@ function checkRequiredContexts(root, jobs) {
   return findings;
 }
 
+/**
+ * `[10]`: a version marker anywhere in a shipped file, comments included.
+ *
+ * This is the ONE rule in the lane that reads raw bytes rather than the parsed tree, and it has to.
+ * `.agents/rules/distributed-surface.md` forbids `vN.M[.P]` across the whole distributed surface,
+ * and the post-build leakage guard matches it with `grep -rnE` over entire files — but neither of
+ * this repository's PARSING gates can see a YAML comment: `lint:shipping` skips comment lines
+ * before its shipped-runtime rules apply, and the shape gate loses comments at parse time. So
+ * `# v9.9.9` appended to a shipped workflow passed `pnpm ci:lint` and produced no
+ * `R-WORKFLOW-HYGIENE-DRIFT` payload at all — the shipped-workflows contract requires the hygiene
+ * lane to be the rule that catches the comment case, precisely because the others are comment-blind.
+ *
+ * The pattern is the leakage guard's `INTERNAL_VERSION_RE`, deliberately identical: the operative
+ * property is a leading `v`, not where the text sits. A step name reading `Setup pnpm v10.15.0`
+ * fails exactly as a trailer comment does, and the contract's adopted resolution is to drop the `v`.
+ */
+const SHIPPED_VERSION_MARKER = /\bv[0-9]+\.[0-9]+(?:\.[0-9]+)?\b/;
+
+function checkShippedVersionMarkers(root) {
+  const findings = [];
+  for (const { rel, tree } of WORKFLOW_ROOTS) {
+    if (tree !== "shipped") continue;
+    for (const file of yamlFilesUnder(root, rel)) {
+      const text = readBoundedWorkflowText(path.join(root, file));
+      if (text === undefined) continue; // `parseFile` already reports an unreadable path
+      text.split(/\r?\n/).forEach((line, index) => {
+        const marker = SHIPPED_VERSION_MARKER.exec(line);
+        if (marker === null) return;
+        findings.push({
+          rule: "shipped-version-marker",
+          file,
+          job: `line ${index + 1}`,
+          detail:
+            `carries the version marker ${JSON.stringify(marker[0])}, which the distributed-surface ` +
+            "rule forbids anywhere in a shipped file; drop the leading `v` (the contract's adopted " +
+            "resolution) or remove the text",
+        });
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * The runner labels a shipped workflow may name.
+ *
+ * A closed set of PUBLIC GitHub-hosted runners. `[14]`: switching a shipped `runs-on` to
+ * `self-hosted`, or to an organization's private label, produced no finding — the lane applied only
+ * the third-party rule to the shipped tree, and said so in its own coverage boundary. The
+ * shipped-workflows contract requires a non-public label literal to be rejected under this code,
+ * with the file/job/rule payload, and for a concrete reason: a workflow QFAI ships runs in the
+ * adopter's repository, where a private label either does not resolve or resolves to a machine
+ * QFAI knows nothing about.
+ *
+ * `-latest` images and the pinned-version forms are both here, because an adopter pinning
+ * `ubuntu-22.04` is naming a public runner just as much as one taking the moving label.
+ */
+const PUBLIC_RUNNER_LABELS = new Set([
+  "ubuntu-latest",
+  "ubuntu-24.04",
+  "ubuntu-22.04",
+  "windows-latest",
+  "windows-2025",
+  "windows-2022",
+  "macos-latest",
+  "macos-15",
+  "macos-14",
+]);
+
+/**
+ * Every runner LABEL LITERAL a shipped file names, from one `runs-on` value.
+ *
+ * The contract forbids a non-public label LITERAL, and the shipped set deliberately writes
+ * `${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}` — the adopter selects their own runner through a
+ * repository variable, with a public default. Judging the whole string would reject that sanctioned
+ * selector on every job, which is a rule failing on the one arrangement it is supposed to allow.
+ *
+ * So an expression contributes the literals INSIDE it. An expression naming no literal ships no
+ * literal and passes: what the adopter puts in their own variable is their repository's business,
+ * and it is not a value QFAI ships. A literal of `self-hosted`, or an organization's private label,
+ * is a value QFAI ships and is exactly what this rejects.
+ */
+function runnerLabelLiterals(runsOn) {
+  if (typeof runsOn === "string") {
+    if (!runsOn.includes("${{")) return [runsOn];
+    return [...runsOn.matchAll(/'([^']*)'|"([^"]*)"/g)].map((match) => match[1] ?? match[2] ?? "");
+  }
+  if (Array.isArray(runsOn)) return runsOn.flatMap((entry) => runnerLabelLiterals(entry));
+  // A mapping, a number, anything else: not a literal this lane can read, and an unreadable
+  // `runs-on` in a SHIPPED file is reported rather than skipped — a closed set is only closed if
+  // everything is measured against it.
+  return [`<unreadable> ${JSON.stringify(runsOn)}`];
+}
+
+function checkShippedRunnerLabels(jobs) {
+  const findings = [];
+  for (const { file, job, jobKey, tree } of jobs) {
+    if (tree !== "shipped") continue;
+    const runsOn = isRecord(job) ? job["runs-on"] : undefined;
+    if (runsOn === undefined) continue;
+    for (const label of runnerLabelLiterals(runsOn)) {
+      if (PUBLIC_RUNNER_LABELS.has(label)) continue;
+      findings.push({
+        rule: "shipped-runner-label",
+        file,
+        job: jobKey,
+        detail:
+          `names the runner label ${JSON.stringify(label)}, which is not one of the public ` +
+          "GitHub-hosted runners a shipped workflow may ship; a private or self-hosted literal " +
+          "does not resolve in an adopter's repository",
+      });
+    }
+  }
+  return findings;
+}
 export function runHygieneLane(root) {
   const { jobs, findings: structural } = collectJobs(root);
   const uses = collectUses(root, jobs);
@@ -1043,10 +1169,53 @@ export function runHygieneLane(root) {
     ...checkCheckoutCredentials(root, jobs),
     ...checkActionPins(uses),
     ...checkShippedThirdParty(uses),
+    ...checkShippedVersionMarkers(root),
+    ...checkShippedRunnerLabels(jobs),
     ...checkRequiredContexts(root, jobs),
   ];
 }
 
+/**
+ * Write the findings where the Reviewer Gate can read them.
+ *
+ * Review finding [15]: the lane wrote its findings to stderr as prose, and
+ * `validateReviewerJustification` ingests only `{ findings: [...] }` JSON under `.qfai/review/**`.
+ * There was no production bridge between the two anywhere in the repository — the E2E test that
+ * demonstrates the ingestion parsed stderr and hand-built the JSON itself, which proves the GATE
+ * works and proves nothing about the path reaching it. So a hygiene violation failed the CI log and
+ * never once reached the reviewer the shipped-workflows contract promises it reaches.
+ *
+ * The lane writes it, rather than a workflow step converting it: a converter in YAML would be a
+ * second parser for this lane's own output, and the first wording change would silently empty it.
+ *
+ * Written on every run, INCLUDING a clean one. An empty `findings` array is the statement that the
+ * bridge ran and found nothing; a missing file then means the bridge did not run, which is a
+ * different fact and worth being able to tell apart. It also overwrites a stale artifact from an
+ * earlier run rather than leaving one to be read as current.
+ *
+ * `justification` is deliberately absent. `R-WORKFLOW-HYGIENE-DRIFT` sits in
+ * `DEFERRED_CATALOG_REGISTRATION_CODES`, so the gate recognizes it as ingested-and-exempt and does
+ * not require one; inventing a justification here would be this lane answering a question the
+ * reviewer is there to answer.
+ */
+function writeReviewerArtifact(reportDir, findings) {
+  mkdirSync(reportDir, { recursive: true });
+  const payload = {
+    findings: findings.map((f) => ({
+      code: CODE,
+      rule: f.rule,
+      file: f.file,
+      job: f.job,
+      detail: f.detail,
+    })),
+  };
+  const target = path.join(reportDir, WORKFLOW_HYGIENE_REPORT_FILE);
+  writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+  return target;
+}
+
+/** The artifact's filename, exported so the gate's tests can name it without a second literal. */
+export const WORKFLOW_HYGIENE_REPORT_FILE = "workflow-hygiene.json";
 function main(argv) {
   const rootFlag = argv.indexOf("--root");
   const root =
@@ -1054,7 +1223,30 @@ function main(argv) {
       ? path.resolve(argv[rootFlag + 1])
       : path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 
+  const reportFlag = argv.indexOf("--report-dir");
+  const reportDir =
+    reportFlag >= 0 && argv[reportFlag + 1] !== undefined
+      ? path.resolve(root, argv[reportFlag + 1])
+      : undefined;
+
   const findings = runHygieneLane(root);
+
+  // BEFORE the exit-code branch, so a violating run — the only run whose findings matter to a
+  // reviewer — is the run that produces the artifact rather than the one that returns early.
+  if (reportDir !== undefined) {
+    try {
+      const target = writeReviewerArtifact(reportDir, findings);
+      stdout.write(`workflow hygiene: wrote ${findings.length} finding(s) to ${target}\n`);
+    } catch (error) {
+      // A failed write must not turn a clean tree red, and must not let a dirty one look clean:
+      // the exit code below still comes from the findings. It is reported, because a silently
+      // absent artifact is the defect this whole bridge exists to remove.
+      stderr.write(
+        `workflow hygiene: could not write the reviewer artifact to ${reportDir}: ` +
+          `${error instanceof Error ? error.message : String(error)}\n`,
+      );
+    }
+  }
 
   if (findings.length > 0) {
     for (const f of findings) {
@@ -1077,7 +1269,8 @@ function main(argv) {
     }
   }
   stdout.write(
-    "Not covered here: runner-label rules, secret-reference rules, and the shipped set’s own contract shape, which lint:workflow-shape owns.\n",
+    "Not covered here: secret-reference rules and the shipped set’s own contract shape, which " +
+      "lint:workflow-shape owns.\n",
   );
   return 0;
 }

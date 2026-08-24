@@ -9,7 +9,17 @@
 
 import { createHash } from "node:crypto";
 import { readFileSync, writeFileSync } from "node:fs";
-import { mkdir, mkdtemp, readFile, rm, symlink, utimes, writeFile } from "node:fs/promises";
+import {
+  mkdir,
+  mkdtemp,
+  open,
+  readFile,
+  rename,
+  rm,
+  symlink,
+  utimes,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -232,6 +242,94 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       "every writer's entry must survive; a lost one leaves its file unrecordable forever",
     ).toEqual([...names].sort());
   });
+
+  it("writes through a transient rename denial rather than failing the run", async () => {
+    // Measured on this platform: a `rename` onto a destination another handle has open fails
+    // with `EPERM`. It is neither a permission problem nor permanent — anything can hold that
+    // handle for a moment, another writer mid-rename, a scanner, the indexer — and treating it
+    // as fatal is what made `writeInstallProvenance` throw under load while the rest of the
+    // suite passed. The atomicity is unaffected either way: the rename happened or it did not.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: { "qfai-first.yml": entryTyped() } });
+
+    // The premise, asserted rather than assumed: with the handle open, a rename onto the record
+    // really is denied on this platform. Without this the row would pass wherever it is not.
+    const held = await open(recordPath(root), "r");
+    let denied = false;
+    try {
+      const probe = path.join(root, ".qfai", "probe.tmp");
+      await writeFile(probe, "{}", "utf-8");
+      await rename(probe, recordPath(root)).catch((error: unknown) => {
+        denied =
+          typeof error === "object" && error !== null && Reflect.get(error, "code") === "EPERM";
+      });
+    } catch {
+      // fall through: `denied` stays false and the row skips below
+    }
+    if (!denied) {
+      await held.close();
+      return; // a platform that permits it has nothing to retry
+    }
+
+    // Now the real thing, with the handle released while the write is retrying.
+    const releasing = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        void held.close().then(() => {
+          resolve();
+        });
+      }, 200);
+    });
+    const updating = updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-second.yml": entryTyped() },
+    }));
+
+    await Promise.all([releasing, updating]);
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "a denial that passes must not lose the write",
+    ).toEqual(["qfai-first.yml", "qfai-second.yml"]);
+  }, 60_000);
+
+  it("keeps every entry under heavy concurrency", async () => {
+    // The six-writer row above passed on an idle machine and FAILED inside the whole-suite run,
+    // with `EPERM: rename` out of `writeInstallProvenance`. Two repairs came from that: the
+    // reclaim is now winnable by exactly one writer (a second `wx` lock, because replacement plus
+    // a read-back can be overtaken after the read-back), and the write verifies it survived and
+    // re-applies if it did not.
+    //
+    // What this row is, honestly: a LOAD row, not a reproduction. Measured — with either repair
+    // reverted it still passes here, because on an idle machine the lock alone serializes twenty
+    // writers and the loop never has to fire. The failure needs a starved event loop, which is
+    // what the whole-suite run supplies and what no in-process plant can. Its value is that it
+    // runs INSIDE that suite, where the original defect was found; the row above is the
+    // deterministic half.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+
+    const lockPath = path.join(root, ".qfai", ".install-provenance.lock");
+    await writeFile(lockPath, "a-run-that-died", "utf-8");
+    const longAgo = new Date(Date.now() - 60_000);
+    await utimes(lockPath, longAgo, longAgo);
+
+    const names = Array.from({ length: 20 }, (_, index) => `qfai-w${String(index)}.yml`);
+    await Promise.all(
+      names.map((name) =>
+        updateInstallProvenance(root, (current) => ({
+          ...current,
+          workflows: { ...current.workflows, [name]: entryTyped() },
+        })),
+      ),
+    );
+
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows).sort(),
+      "every writer's entry must survive; a lost one leaves its file unrecordable forever",
+    ).toEqual([...names].sort());
+
+    // And no lock is left behind for the next run to wait out.
+    expect(await readFile(lockPath, "utf-8").catch(() => undefined)).toBeUndefined();
+  }, 60_000);
 
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
