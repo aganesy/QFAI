@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import js from "@eslint/js";
@@ -5,6 +6,23 @@ import tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/**
+ * The typed-lint file set, READ from `packages/qfai/tsconfig.tests.json` rather than restated here.
+ *
+ * The block below re-enables four promise rules that `disableTypeChecked` turns off for `tests/**`,
+ * and its comment says the set is 'the set `tsconfig.tests.json` includes'. That sentence was false
+ * twice: by one entry at round 14, and by 35 entries when a reviewer measured it again. A list that
+ * has to be kept equal to another list is the defect; equality by construction is the fix.
+ *
+ * The tsconfig carries `//` comments, so it is JSONC. Only line comments appear in it, and no entry
+ * contains `//`, which is what makes the strip below safe rather than merely convenient — a path
+ * with a protocol in it would break this, and there is a guard test that would catch it.
+ */
+const TESTS_TSCONFIG = path.join(__dirname, "packages", "qfai", "tsconfig.tests.json");
+const TYPED_TEST_FILES = JSON.parse(
+  readFileSync(TESTS_TSCONFIG, "utf8").replace(/^\s*\/\/.*$/gm, ""),
+).include.map((rel) => `packages/qfai/${rel}`);
 
 export default [
   {
@@ -78,21 +96,7 @@ export default [
   // the four promise rules this block exists to re-enable stayed off over it. A sentence naming the set a
   // future widening will be measured against has to be true of the list beneath it.
   {
-    files: [
-      "packages/qfai/vitest.knobs.ts",
-      "packages/qfai/tests/helpers/buildCommand.ts",
-      "packages/qfai/tests/helpers/shippedLaneCommands.ts",
-      "packages/qfai/tests/unit/buildCommand.test.ts",
-      "packages/qfai/tests/unit/shippedLaneCommands.test.ts",
-      "packages/qfai/tests/assets/coverageDepthMatrix.test.ts",
-      "packages/qfai/tests/assets/retractedClaims.test.ts",
-      "packages/qfai/tests/assets/stageEvidenceCounts.test.ts",
-      "packages/qfai/tests/e2e/spec0017LayeredCiScaffoldE2E.test.ts",
-      "packages/qfai/tests/e2e/spec0017RunnerParallelismE2E.test.ts",
-      "packages/qfai/tests/integration/spec0017OwnWorkflowScope.test.ts",
-      "packages/qfai/tests/integration/shippedWorkflowDetection.test.ts",
-      "packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
-    ],
+    files: TYPED_TEST_FILES,
     languageOptions: {
       parserOptions: {
         project: ["packages/qfai/tsconfig.tests.json"],

@@ -142,7 +142,11 @@ describe("validateReviewArtifacts — summary.json schema", () => {
   it("accepts a round that produced nothing, when the summary says so", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
-    await writeAbandonedPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
+    await writeAbandonedPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ reviewers: [], overall_status: "FAIL" }),
+    );
     const issues = await validateReviewArtifacts(root);
     expect(
       issues.filter((i) =>
@@ -155,8 +159,14 @@ describe("validateReviewArtifacts — summary.json schema", () => {
   it("rejects a reviewers: [] declaration that contradicts the reports beside it", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
-    // `writeReviewPack` also writes `R01_completion-reviewer.md`, so the declaration is false.
-    await writeReviewPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
+    // `writeReviewPack` also writes `R01_completion-reviewer.md`, so the declaration is false. The
+    // summary makes the WHOLE zero-response declaration (v2, empty reviewers, FAIL) — a partial one
+    // is simply not a declaration, which the two cases below cover.
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ reviewers: [], overall_status: "FAIL" }),
+    );
     const issues = await validateReviewArtifacts(root);
     const found = issues.filter((i) => i.code === "QFAI-REVIEW-005");
     expect(
@@ -174,6 +184,30 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     expect(
       issues.filter((i) => i.code === "QFAI-REVIEW-005").length,
       "the guarantee this rule exists for: an unsealed pack is still a defect",
+    ).toBe(1);
+  });
+
+  // Review finding [22] on PR #794: the first version keyed on the empty array ALONE, so two shapes
+  // slipped through. Both are declaration failures, not report failures, which is why each still
+  // reports `QFAI-REVIEW-005` — the pack has no reports and has not said why.
+  it("does not accept a v1 roster pack that carries an unrelated empty reviewers array", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    // A full `roster` — v1's reviewer list — beside an empty `reviewers` the v1 schema never reads.
+    await writeAbandonedPack(root, "review-20260401000000000", makeV1Summary({ reviewers: [] }));
+    expect(
+      (await validateReviewArtifacts(root)).filter((i) => i.code === "QFAI-REVIEW-005").length,
+      "a v1 pack declares its reviewers in ; an empty  beside it declares nothing",
+    ).toBe(1);
+  });
+
+  it("does not accept a zero-reviewer declaration that still claims PASS", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeAbandonedPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
+    expect(
+      (await validateReviewArtifacts(root)).filter((i) => i.code === "QFAI-REVIEW-005").length,
+      "a round that returned no verdict returned no passing one, so  must be FAIL",
     ).toBe(1);
   });
 

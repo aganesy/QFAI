@@ -75,7 +75,7 @@ describe("TC-0008-0015 (TDD-0015): the seven rules and the companion rule are st
     ["parallelism costs workers, not sign-ins", /costs more workers, not more sign-ins/i],
   ];
 
-  it("states all seven session-reuse rules, each as its own statement", async () => {
+  it("states all seven session-reuse rules, each as its own statement", () => {
     const bodies = sections(guidance);
     const homes = new Map<string, number>();
     for (const [label, pattern] of RULES) {

@@ -304,8 +304,20 @@ async function validateReviewPack(
  *
  * Read separately from the schema pass because `QFAI-REVIEW-005` runs whether or not the summary is
  * well-formed, and a malformed summary must not silently excuse a missing report set: anything that is
- * not a present, parseable summary carrying `reviewers: []` answers `false`, so the default is the
+ * not a present, parseable summary making the whole declaration answers `false`, so the default is the
  * strict one. The schema pass reports the malformedness on its own code.
+ *
+ * **All three parts are required**, and the first version required only the middle one. Review finding
+ * [22] on PR #794 named both holes it left:
+ *
+ * - a `version: "1.0"` pack, whose reviewer list is `roster`, could carry an unrelated empty
+ *   `reviewers` array beside a full roster and skip `QFAI-REVIEW-005` with no report files at all;
+ * - a v2 pack could declare zero reviewers and still say `overall_status: "PASS"`, recording a round
+ *   nobody answered as a round that succeeded.
+ *
+ * `references/review-artifact-layout.md` defines the state as `reviewers: []` **and**
+ * `overall_status: "FAIL"`, so that is what is read here. A round that returned no verdict returned no
+ * passing one.
  */
 async function declaresZeroReviewers(summaryPath: string): Promise<boolean> {
   if (!(await isFile(summaryPath))) return false;
@@ -316,7 +328,9 @@ async function declaresZeroReviewers(summaryPath: string): Promise<boolean> {
     return false;
   }
   if (!isRecord(parsed)) return false;
-  return Array.isArray(parsed.reviewers) && parsed.reviewers.length === 0;
+  if (readString(parsed.version) !== "2.0") return false;
+  if (!Array.isArray(parsed.reviewers) || parsed.reviewers.length !== 0) return false;
+  return readString(parsed.overall_status) === "FAIL";
 }
 
 async function validateSummarySchema(
