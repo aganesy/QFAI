@@ -26,7 +26,7 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { constants as fsConstants } from "node:fs";
-import { mkdir, open, rename, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 export type WorkflowProvenanceEntry = {
@@ -129,6 +129,9 @@ export async function readInstallProvenance(rootDir: string): Promise<InstallPro
  *   package no longer ships the name): `modified` — the conservative
  *   direction, since equality with the packaged template cannot be shown
  *
+ * - entry + absent on disk: `declined` (deliberately removed — never
+ *   recreated, never reported as stale, never pruned)
+ *
  * **That last row is not a drift verdict, and `CR-20260818-0003` exists because
  * a second implementation used to give one.** This function answers "is this
  * still the file QFAI installed", where "cannot be compared" is conservatively
@@ -139,8 +142,6 @@ export async function readInstallProvenance(rootDir: string): Promise<InstallPro
  * Two questions, one answer each. This function is now the only definition of
  * the state vocabulary; `hasDrifted` was expressed in terms of it rather than
  * comparing digests on its own, which is what made the two answers possible.
- * - entry + absent on disk: `declined` (deliberately removed — never
- *   recreated, never reported as stale, never pruned)
  */
 export function resolveWorkflowFileState(
   provenanceEntry: WorkflowProvenanceEntry | undefined,
@@ -181,6 +182,21 @@ export async function writeInstallProvenance(
   await mkdir(recordDir, { recursive: true });
 
   const serialized = `${JSON.stringify(serializeRecord(record), null, 2)}\n`;
+  // Checked BEFORE the rename, because the reader's ceiling is on the file and the writer's
+  // indentation is what can cross it. Review finding [13]: a valid record whose compact form is
+  // well under the limit can pretty-print past it — an unknown namespace holding a large array is
+  // enough — and the write then succeeds while the very next `readInstallProvenance` treats the
+  // file as oversized and returns an EMPTY record. Every ownership and declined marker would be
+  // lost, and a workflow the adopter deliberately removed would be recreated by the next `init`.
+  //
+  // Failing here is the conservative direction: no record is written, the caller sees the error,
+  // and the previous record — which is still readable — stays in place.
+  const serializedBytes = Buffer.byteLength(serialized, "utf-8");
+  if (serializedBytes > MAX_RECORD_BYTES) {
+    throw new Error(
+      `install-provenance record would serialize to ${String(serializedBytes)} bytes, past the ${String(MAX_RECORD_BYTES)}-byte ceiling its reader enforces; refusing to write a record that would read back as empty`,
+    );
+  }
   // Same directory as the target, or the rename would cross a filesystem
   // boundary and stop being atomic. `wx` refuses to reuse an existing name.
   const tempPath = path.join(recordDir, `.install-provenance.${randomUUID()}.tmp`);
@@ -247,6 +263,24 @@ function readOnlyNoFollowFlags(): number {
  * it.
  */
 async function readBoundedRegularFile(filePath: string): Promise<string | undefined> {
+  // Where `O_NOFOLLOW` does not exist, the link has to be refused before the open. Review
+  // finding [23]: on Windows the flag is absent, so the flags reduce to `O_RDONLY`, `open`
+  // follows a symlink, and `handle.stat()` then describes the TARGET as a perfectly good regular
+  // file. A record outside the repository is read as the adopter's own, and its entries make
+  // uncreated workflows look `declined`.
+  //
+  // `lstat` first, then confirm the descriptor landed on the same object. The second half is what
+  // makes this more than a race: a link swapped in between the two calls changes `dev`/`ino`, and
+  // an object that does not match the one inspected is refused rather than read.
+  let inspected;
+  try {
+    inspected = await lstat(filePath);
+  } catch {
+    return undefined;
+  }
+  if (inspected.isSymbolicLink() || !inspected.isFile()) {
+    return undefined;
+  }
   let handle;
   try {
     handle = await open(filePath, readOnlyNoFollowFlags());
@@ -256,6 +290,9 @@ async function readBoundedRegularFile(filePath: string): Promise<string | undefi
   try {
     const stats = await handle.stat();
     if (!stats.isFile() || stats.size > MAX_RECORD_BYTES) {
+      return undefined;
+    }
+    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) {
       return undefined;
     }
     // One byte of headroom: a file that GREW past the size `fstat` reported
@@ -319,13 +356,25 @@ function extractOtherNamespaces(parsed: unknown): Record<string, unknown> | unde
   if (!isRecordObject(parsed)) {
     return undefined;
   }
-  const other: Record<string, unknown> = {};
+  // A NULL-prototype map, and `defineProperty` rather than assignment. Review finding [09]:
+  // a newer package version that adds a `__proto__` namespace to the record would, on an older
+  // version, reach `other[key] = value` — which calls the prototype setter and creates no own
+  // property at all. `seen` still went true, so the namespace vanished from the spread and from
+  // the serialization while the code reported having preserved it. That is the exact opposite of
+  // the compatibility guarantee this function exists for: unknown namespaces are kept VERBATIM,
+  // and a key the JSON carries is data, never an instruction about an object's prototype.
+  const other = Object.create(null) as Record<string, unknown>;
   let seen = false;
   for (const [key, value] of Object.entries(parsed)) {
     if (key === "workflows") {
       continue;
     }
-    other[key] = value;
+    Object.defineProperty(other, key, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
     seen = true;
   }
   return seen ? other : undefined;
@@ -361,5 +410,29 @@ function toWorkflowEntry(value: unknown): WorkflowProvenanceEntry | undefined {
 }
 
 function isIsoTimestamp(value: string): boolean {
-  return ISO_TIMESTAMP_PATTERN.test(value) && !Number.isNaN(Date.parse(value));
+  if (!ISO_TIMESTAMP_PATTERN.test(value)) {
+    return false;
+  }
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) {
+    return false;
+  }
+  // `Date.parse` NORMALIZES rather than rejecting: review finding [16] measured
+  // `Date.parse("2020-02-31T00:00:00Z")` on Node 24 returning March 2 instead of NaN, so a date
+  // that does not exist on the calendar passed as a valid timestamp. An entry carrying one keeps
+  // its name in the record, and `resolveWorkflowCopySet` then reads that name as `declined` — a
+  // workflow the adopter never removed is never created, permanently.
+  //
+  // Round-tripping is what separates a parsed date from an accepted one: the calendar fields are
+  // read back out of the resulting instant and compared with the ones written down.
+  const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})/.exec(value) ?? [];
+  if (year === undefined || month === undefined || day === undefined) {
+    return false;
+  }
+  const instant = new Date(parsed);
+  return (
+    instant.getUTCFullYear() === Number(year) &&
+    instant.getUTCMonth() + 1 === Number(month) &&
+    instant.getUTCDate() === Number(day)
+  );
 }
