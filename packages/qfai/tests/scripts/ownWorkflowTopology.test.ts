@@ -841,14 +841,23 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
     );
     const contexts =
       isRecord(declared) && Array.isArray(declared["contexts"]) ? declared["contexts"] : [];
-    const forBuild = contexts.filter(isRecord).find((entry) => entry["job"] === "build");
-    expect(forBuild, "the declaration must name the build job").not.toBeUndefined();
+    const forRequired = contexts
+      .filter(isRecord)
+      .find((entry) => entry["job"] === REQUIRED_CONTEXT_NAME);
+    expect(
+      forRequired,
+      `the declaration must name the ${REQUIRED_CONTEXT_NAME} job`,
+    ).not.toBeUndefined();
     expect
       .soft(
-        forBuild === undefined ? undefined : forBuild["verificationSet"],
+        forRequired === undefined ? undefined : forRequired["verificationSet"],
         "this row's literals and the declaration production reads must not drift apart",
       )
-      .toEqual([...REQUIRED]);
+      // The declaration names SEVEN items and this row restates six, and the difference is not
+      // drift: the seventh is the verdict step, which belongs to the declared job itself rather
+      // than to `build`. Composed here rather than added to `REQUIRED`, which is checked against
+      // `buildJobSteps()` above and would then be looking for a step that job does not have.
+      .toEqual(["Derive the verdict from the serialized needs map", ...REQUIRED]);
   });
 });
 
@@ -1471,8 +1480,22 @@ describe("TC-0017-0043 (TDD-0043): selection creates, removes and renames no che
 // together, and the "or depends on" clause is modelled rather than ignored: an item may
 // migrate to a job `build` needs, and that is legal.
 
-/** The exact name `BR-0017-0032` requires. A literal — the rule is about this string. */
-const REQUIRED_CONTEXT_NAME = "build";
+/**
+ * The exact name `BR-0017-0032` requires. A literal — the rule is about this string.
+ *
+ * Moved from `build` by review finding [28] on PR #794: `build` declares no `needs` at all, so
+ * requiring it and nothing else let every test lane fail with the merge condition satisfied.
+ */
+const REQUIRED_CONTEXT_NAME = "ci-pass";
+
+/**
+ * The job that produces the build artifact.
+ *
+ * Separate from `REQUIRED_CONTEXT_NAME` since the context moved. Two rows below assert that exactly
+ * one artifact upload is declared, and they were reading the required-context constant — which was
+ * `build` by coincidence, not because the upload has anything to do with branch protection.
+ */
+const BUILD_JOB_NAME = "build";
 
 /**
  * The items of the required-context job's enumerated verification set.
@@ -1482,6 +1505,7 @@ const REQUIRED_CONTEXT_NAME = "build";
  * list, and a shared constant would let one row's edit silently satisfy the other.
  */
 const VERIFICATION_SET = [
+  "Derive the verdict from the serialized needs map",
   "Run build & pack verification",
   "Sanity grep — no internal spec IDs or version markers leak (post-build)",
   "QFAI self-validate this repo (dogfooding — TDD gates)",
@@ -1547,11 +1571,19 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
       .soft(Object.keys(jobs), `a job of the exact name \`${REQUIRED_CONTEXT_NAME}\` must exist`)
       .toContain(REQUIRED_CONTEXT_NAME);
 
-    // CLAIM 2 — unconditional. A skipped job reports success to branch protection, so a
-    // condition here converts the gate into a rubber stamp.
+    // CLAIM 2 — unskippable. A skipped job reports success to branch protection, so a condition
+    // here would convert the gate into a rubber stamp — with ONE exception, which is why this is
+    // no longer `toBeUndefined()`: `always()` is the condition that guarantees the job runs. It is
+    // also the condition the aggregate verdict must carry, because its whole purpose is to render a
+    // result when its dependencies were skipped. Any other value fails, including an absent one
+    // being replaced by something conditional later.
+    const condition = jobs[REQUIRED_CONTEXT_NAME]?.["if"];
     expect
-      .soft(jobs[REQUIRED_CONTEXT_NAME]?.["if"], "the required-context job must carry no condition")
-      .toBeUndefined();
+      .soft(
+        condition === undefined ? "(none)" : String(condition),
+        "the required-context job must be unskippable: no condition, or `always()`",
+      )
+      .toMatch(/^(\(none\)|always\(\))$/);
 
     // CLAIM 3 — and every item is still reachable. This is the half the rule says the name
     // alone does not give: the cheap way to satisfy a required context is to keep the name
@@ -1602,16 +1634,16 @@ describe("TC-0017-0036 (TDD-0036): the required-context job keeps its name and u
     );
     const contexts =
       isRecord(declared) && Array.isArray(declared["contexts"]) ? declared["contexts"] : [];
-    const forBuild = contexts
+    const forRequired = contexts
       .filter(isRecord)
       .find((entry) => entry["job"] === REQUIRED_CONTEXT_NAME);
     expect(
-      forBuild,
+      forRequired,
       `the declaration must name the ${REQUIRED_CONTEXT_NAME} job`,
     ).not.toBeUndefined();
     expect
       .soft(
-        forBuild === undefined ? undefined : forBuild["verificationSet"],
+        forRequired === undefined ? undefined : forRequired["verificationSet"],
         "the declaration's verification set and this row's literals must not drift apart",
       )
       .toEqual([...VERIFICATION_SET]);
@@ -1641,7 +1673,7 @@ describe("TC-0017-0038 (TDD-0038): no verification-set item is weakened by conti
 
 describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and ages out sooner", () => {
   it("declines to run on a cancelled run, tolerates a missing file, and expires within a week", () => {
-    const uploads = stepsOf(REQUIRED_CONTEXT_NAME).filter(
+    const uploads = stepsOf(BUILD_JOB_NAME).filter(
       (step) => typeof step["uses"] === "string" && step["uses"].includes("upload-artifact"),
     );
     expect(uploads.length, "the build job must declare exactly one artifact upload").toBe(1);
@@ -1676,7 +1708,7 @@ describe("TC-0017-0039 (TDD-0039): the report upload skips on cancellation and a
 
 describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an unconditional run fail", () => {
   it("holds the retention boundary at seven days", () => {
-    const uploads = stepsOf(REQUIRED_CONTEXT_NAME).filter(
+    const uploads = stepsOf(BUILD_JOB_NAME).filter(
       (step) => typeof step["uses"] === "string" && step["uses"].includes("upload-artifact"),
     );
     const [upload] = uploads;

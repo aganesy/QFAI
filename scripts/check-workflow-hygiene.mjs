@@ -766,18 +766,41 @@ function checkRequiredContexts(root, jobs) {
     // PROPERTY 2 — and it is not skippable, counting the whole `needs` closure. A job whose
     // dependency is skipped is itself skipped, and a skipped job reports SUCCESS to branch
     // protection — so a condition two edges away is as fatal as one on the job itself.
-    for (const key of needsClosure(jobsByKey, declaredJob)) {
-      const job = jobsByKey.get(key);
-      if (job !== undefined && job.if !== undefined) {
-        findings.push({
-          rule: "required-context",
-          file: rel,
-          job: declaredJob,
-          detail:
-            key === declaredJob
-              ? `carries a condition of its own (if: ${String(job.if)}), so it can be skipped and report success`
-              : `is skippable through its dependency ${key}, which carries a condition (if: ${String(job.if)})`,
-        });
+    //
+    // `if: always()` is the ONE exception, and excluding it was a real cost rather than a nicety.
+    // "Any condition can skip" is a sound approximation for every condition except this one, which
+    // exists precisely to guarantee the job runs — and it barred the aggregate verdict from ever
+    // holding the context, which left the declaration naming a job with no `needs` at all. Review
+    // finding [28] on PR #794 measured the consequence: with only `build` required, every test lane
+    // could fail and the merge condition was still satisfied, because nothing connects them.
+    //
+    // So `always()` on the DECLARED job satisfies property 2 by itself, and its dependencies'
+    // conditions are then not faults: a skipped dependency is the state `always()` is for, and the
+    // job's own verdict logic is what must classify it. Any OTHER condition on the declared job stays
+    // fatal, and the closure is still walked whenever the declared job carries no condition.
+    const declared = jobsByKey.get(declaredJob);
+    const declaredCondition = declared?.if;
+    const runsUnconditionally =
+      declaredCondition !== undefined &&
+      /^\s*(\$\{\{\s*)?always\(\)\s*(\}\})?\s*$/.test(String(declaredCondition));
+    if (declaredCondition !== undefined && !runsUnconditionally) {
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail: `carries a condition of its own (if: ${String(declaredCondition)}), so it can be skipped and report success`,
+      });
+    } else if (!runsUnconditionally) {
+      for (const key of needsClosure(jobsByKey, declaredJob)) {
+        const job = jobsByKey.get(key);
+        if (job !== undefined && key !== declaredJob && job.if !== undefined) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `is skippable through its dependency ${key}, which carries a condition (if: ${String(job.if)})`,
+          });
+        }
       }
     }
 

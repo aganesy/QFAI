@@ -909,7 +909,15 @@ describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the require
     // to see. The declared job carries no dependencies in the real tree, so the fixture adds
     // one and puts the condition there.
     const dir = plantedTree((d) => {
-      const declared = firstContext(d);
+      // The declared job is `ci-pass`, which carries `if: always()` — the one condition that
+      // guarantees a job runs, so the lane deliberately stops walking its dependencies. This
+      // row is about the OTHER case, a declared job that really can be skipped through a
+      // dependency, so the declaration is re-pointed at an unconditional job first.
+      editDeclaration(d, (decl) => ({
+        ...decl,
+        contexts: decl.contexts.map((c, i) => (i === 0 ? { ...c, job: "build" } : c)),
+      }));
+      const declared = { ...firstContext(d), job: "build" };
       editWorkflow(d, declared.workflow, (text) =>
         text
           .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [a-gate]\n`)
@@ -936,6 +944,45 @@ describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the require
   });
 });
 
+// Review finding [28] on PR #794 moved the required status context from `build` to the aggregate
+// verdict, because `build` declares no `needs` at all and requiring it let every test lane fail with
+// the merge condition satisfied. Property 2 rejected any condition on a declared job, so the verdict
+// — which must carry `if: always()` to render a result when its dependencies are skipped — could
+// never hold it. The exception is narrow, and these two rows are what keeps it narrow.
+describe("the required-context job may carry always(), and nothing else", () => {
+  it("accepts always() on the declared job", () => {
+    // The live tree already declares the verdict, so this asserts the shipped arrangement rather
+    // than a fixture: an unplanted run must be green with a conditional job holding the context.
+    const dir = plantedTree(() => undefined);
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `always() must satisfy property 2:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects any other condition on the declared job", () => {
+    // The half that keeps the exception from becoming "conditions are fine now". A condition that
+    // can evaluate false skips the job, and a skipped job reports SUCCESS to branch protection.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace("\n    if: always()\n", "\n    if: ${{ github.event_name == 'push' }}\n"),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `a skippable condition must exit 1:\n${run.output}`).toBe(1);
+      expect(run.output, "the finding must name the condition it rejected").toContain(
+        "carries a condition of its own",
+      );
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is reported", () => {
   it("names the rule and the offending job in both shapes, rather than only exiting 1", () => {
     // `TC-0017-0058` and `TC-0017-0013` assert the exit code; this row asserts the FINDING.
@@ -956,7 +1003,14 @@ describe("TC-0017-0037 (TDD-0037): a rename or an added dependency condition is 
       {
         label: "an added dependency condition",
         mutate: (d: string): string => {
-          const declared = firstContext(d);
+          // Same re-point as TC-0017-0013, and for the same reason: the declared job carries
+          // `if: always()`, so the lane no longer walks its dependencies. This shape is about a
+          // declared job that really can be skipped through one.
+          editDeclaration(d, (decl) => ({
+            ...decl,
+            contexts: decl.contexts.map((c, i) => (i === 0 ? { ...c, job: "build" } : c)),
+          }));
+          const declared = { ...firstContext(d), job: "build" };
           editWorkflow(d, declared.workflow, (text) =>
             text
               .replace(`\n  ${declared.job}:\n`, `\n  ${declared.job}:\n    needs: [late-gate]\n`)
