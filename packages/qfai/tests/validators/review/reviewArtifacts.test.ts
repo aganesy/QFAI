@@ -176,6 +176,25 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     expect(found[0]?.message).toContain("Rxx_*.md");
   });
 
+  // Review finding [27]. The contradiction check used to ask whether the pack made a VALID
+  // zero-response declaration, which is a different question: a summary that is wrong twice over —
+  // an empty list AND `overall_status: "PASS"` — answered `false` to it, so neither branch fired
+  // and a pack contradicted by its own report files was accepted. Two defects cancelling is not a
+  // pack passing.
+  it("rejects an empty reviewers array beside reports even when the summary also claims PASS", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ reviewers: [], overall_status: "PASS" }),
+    );
+    expect(
+      (await validateReviewArtifacts(root)).filter((i) => i.code === "QFAI-REVIEW-005").length,
+      "`reviewers: []` beside a report file is a failure whatever else the summary says",
+    ).toBe(1);
+  });
+
   it("still rejects a pack with no reports and no declaration", async () => {
     const root = await newTempDir();
     await scaffoldRoot(root);
@@ -197,7 +216,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     await writeAbandonedPack(root, "review-20260401000000000", makeV1Summary({ reviewers: [] }));
     expect(
       (await validateReviewArtifacts(root)).filter((i) => i.code === "QFAI-REVIEW-005").length,
-      "a v1 pack declares its reviewers in ; an empty  beside it declares nothing",
+      "a v1 pack declares its reviewers in `roster`; an empty `reviewers` beside it declares nothing",
     ).toBe(1);
   });
 
@@ -207,7 +226,7 @@ describe("validateReviewArtifacts — summary.json schema", () => {
     await writeAbandonedPack(root, "review-20260401000000000", makeV2Summary({ reviewers: [] }));
     expect(
       (await validateReviewArtifacts(root)).filter((i) => i.code === "QFAI-REVIEW-005").length,
-      "a round that returned no verdict returned no passing one, so  must be FAIL",
+      "a round that returned no verdict returned no passing one, so `overall_status` must be FAIL",
     ).toBe(1);
   });
 

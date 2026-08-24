@@ -1111,6 +1111,126 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
     }
   });
 
+  // Review finding [03]. Membership in the verification set was decided by the step's NAME alone,
+  // so a step keeping its name and losing its body satisfied the lane while the required context
+  // verified nothing. The declaration pins what each step DOES.
+  it("rejects a declared verification item whose body was hollowed out", () => {
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      const guarded = declared.verificationSet[0];
+      editWorkflow(d, declared.workflow, (text) => {
+        // The whole point of the finding: the name is untouched, and only the body changes.
+        const at = text.indexOf(`- name: ${guarded}`);
+        if (at === -1) throw new Error(`no step named ${guarded} — the needle is stale`);
+        const lineEnd = text.indexOf("\n", at);
+        const nextStep = text.indexOf("      - name:", lineEnd);
+        const stop = nextStep === -1 ? text.length : nextStep;
+        return `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a hollowed-out verification must exit 1:\n${run.output}`).toBe(1);
+      const findings = run.output.split(/\r?\n/).filter((line) => line.includes(DECLARATION_RULE));
+      expect
+        .soft(findings.join("\n"), "the finding must name the item whose body moved")
+        .toContain(firstVerificationItem(REPO_ROOT));
+      expect
+        .soft(
+          findings.join("\n"),
+          "and say what to do, because a digest mismatch is otherwise unactionable",
+        )
+        .toContain("verificationBodies");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // Review finding [05]. This lane runs on a pull request, over paths the pull request adds.
+  it("reports a workflow path that is not a readable regular file rather than following it", () => {
+    const dir = plantedTree((d) => {
+      const target = path.join(d, ".github", "workflows", "planted-oversize.yml");
+      // Past the 1 MiB ceiling. A symlink to a FIFO is the case that actually hangs, but creating
+      // one is platform-conditional; an oversized file exercises the same refusal unconditionally,
+      // and the sibling unit rows cover the link and device shapes.
+      writeFileSync(target, `# ${"x".repeat(1_100_000)}` + "\n" + "name: planted", "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unreadable workflow must be reported, not read:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the path an operator has to look at")
+        .toContain("planted-oversize.yml");
+      expect.soft(run.output, "and why it was refused").toMatch(/regular file|size ceiling/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // Review finding [30]. The lane used to compare `continue-on-error` against the boolean `true`,
+  // and an expression reaches the YAML parser as a STRING — so `continue-on-error: ${{ true }}`
+  // and `${{ matrix.experimental }}` both slipped past it and the step was recorded as performed.
+  // At runtime the expression decides, the step's failure is discarded, and the required context
+  // stays green over a verification that established nothing. Two shapes, because the second is the
+  // one an author would write without meaning anything by it.
+  for (const expression of ["${{ true }}", "${{ matrix.experimental }}"]) {
+    it(`treats continue-on-error: ${expression} as shrinking the set`, () => {
+      const dir = plantedTree((d) => {
+        const declared = firstContext(d);
+        const guarded = declared.verificationSet[0];
+        editWorkflow(d, declared.workflow, (text) =>
+          text.replace(
+            `- name: ${guarded}\n`,
+            `- name: ${guarded}\n        continue-on-error: ${expression}\n`,
+          ),
+        );
+      });
+      try {
+        const run = runLane(dir);
+        expect
+          .soft(run.exitCode, `an expression-valued continue-on-error must exit 1:\n${run.output}`)
+          .toBe(1);
+        const findings = run.output
+          .split(/\r?\n/)
+          .filter((line) => line.includes(DECLARATION_RULE));
+        expect
+          .soft(findings.join(`\n`), "the finding must name the item it rejected")
+          .toContain(firstVerificationItem(REPO_ROOT));
+        expect
+          .soft(
+            findings.join(`\n`),
+            "and the reason, so a maintainer is not sent looking for a step that is still there",
+          )
+          .toContain("continue-on-error");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it(`accepts continue-on-error: false, so the rule is a check and not a ban`, () => {
+    // The other direction. An explicit `false` says exactly what the default says, and rejecting
+    // it would make the rule a prohibition on writing the field at all.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      const guarded = declared.verificationSet[0];
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace(
+          `- name: ${guarded}\n`,
+          `- name: ${guarded}\n        continue-on-error: false\n`,
+        ),
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `an explicit false must stay green:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("treats a verification item put behind a condition as shrinking the set", () => {
     // The same property, reached by the cheaper edit. Moving a step out of the job is
     // visible in a diff as a moved block; adding one line of `if:` to it is not, and it has

@@ -25,7 +25,7 @@
  *   which leaves the previous record intact when the write fails partway.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { mkdir, open, rename, stat, unlink, writeFile } from "node:fs/promises";
+import { lstat, mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { readBoundedRegularFile } from "./boundedRead.js";
@@ -95,6 +95,12 @@ const ISO_TIMESTAMP_PATTERN =
 export async function readInstallProvenance(rootDir: string): Promise<InstallProvenanceRecord> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
 
+  // Reading through a linked `.qfai` is the same escape in the other direction: the ownership
+  // and `declined` markers would come from a file outside this tree, and a workflow the adopter
+  // never removed would read as one they did. The empty record is the conservative answer.
+  if (!(await ancestorsAreRealDirectories(rootDir))) {
+    return emptyRecord();
+  }
   const raw = await readBoundedRecord(recordPath);
   if (raw === undefined) {
     // Absent, not a regular file, oversized, or unreadable: empty record (fail-safe).
@@ -159,6 +165,43 @@ export function resolveWorkflowFileState(
 }
 
 /**
+ * Whether every directory between `rootDir` and the record is a real directory rather than a link.
+ *
+ * The leaf protections — `O_NOFOLLOW` on the read, write-then-`rename` on the write — are about the
+ * FINAL component and say nothing about the path that reaches it. Review finding [09]/[31]: if the
+ * adopter's `.qfai` is itself a symlink to a writable directory outside the repository, `mkdir`,
+ * the temp file and the `rename` all land over there. `qfai init` would create and replace an
+ * `install-provenance.json` in a tree it was never pointed at, and the reader would take ownership
+ * and declined markers from a file no one in this repository wrote.
+ *
+ * Node has no portable `openat`, so the components are checked by name — `lstat` on each, refusing
+ * any symlink. That is a check and not a capability: a component swapped between the check and the
+ * write is not caught by it. It is still worth doing, because the case this closes is a persistent
+ * misconfiguration or a planted tree rather than a race, and refusing is the conservative answer to
+ * both. A missing component is fine — `mkdir` is about to create it.
+ */
+async function ancestorsAreRealDirectories(rootDir: string): Promise<boolean> {
+  let current = rootDir;
+  for (const segment of PROVENANCE_SEGMENTS.slice(0, -1)) {
+    current = path.join(current, segment);
+    const inspected = await lstat(current).catch(() => undefined);
+    if (inspected === undefined) {
+      continue; // not there yet; `mkdir` creates it, and a created directory is not a link
+    }
+    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+      return false;
+    }
+  }
+  return true;
+}
+
+/** The error a refused ancestor raises, phrased so the operator knows which component to look at. */
+function symlinkedAncestorError(rootDir: string): Error {
+  return new Error(
+    `refusing to write the install-provenance record: a directory on the way to ${path.join(rootDir, ...PROVENANCE_SEGMENTS)} is a symlink or not a directory, so the write would land outside this tree`,
+  );
+}
+/**
  * Writes the install-provenance record into the adopter tree rooted at
  * `rootDir`, creating the parent directory when needed. This is the single
  * writer for the record file; the serialized form is the pretty-printed
@@ -180,7 +223,15 @@ export async function writeInstallProvenance(
 ): Promise<void> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
   const recordDir = path.dirname(recordPath);
+  // Checked BEFORE the `mkdir`, so a linked component is never even traversed, and again after
+  // it, because `mkdir` is the step that would have followed one.
+  if (!(await ancestorsAreRealDirectories(rootDir))) {
+    throw symlinkedAncestorError(rootDir);
+  }
   await mkdir(recordDir, { recursive: true });
+  if (!(await ancestorsAreRealDirectories(rootDir))) {
+    throw symlinkedAncestorError(rootDir);
+  }
 
   const serialized = `${JSON.stringify(serializeRecord(record), null, 2)}\n`;
   // Checked BEFORE the rename, because the reader's ceiling is on the file and the writer's
@@ -252,10 +303,14 @@ export async function updateInstallProvenance(
 ): Promise<void> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
   const recordDir = path.dirname(recordPath);
+  // The lock file lands in the same directory as the record, so it escapes the same way.
+  if (!(await ancestorsAreRealDirectories(rootDir))) {
+    throw symlinkedAncestorError(rootDir);
+  }
   await mkdir(recordDir, { recursive: true });
   const lockPath = path.join(recordDir, ".install-provenance.lock");
 
-  const release = await acquireRecordLock(lockPath);
+  const release = await acquireRecordLock(lockPath, recordDir);
   try {
     const next = mutate(await readInstallProvenance(rootDir));
     if (next === undefined) {
@@ -267,30 +322,84 @@ export async function updateInstallProvenance(
   }
 }
 
-/** Takes the lock, waiting for a live holder and reclaiming an abandoned one. */
-async function acquireRecordLock(lockPath: string): Promise<() => Promise<void>> {
+/**
+ * Takes the lock, waiting for a live holder and reclaiming an abandoned one.
+ *
+ * The first version reclaimed by `unlink`, and review finding [23] showed why that is not a
+ * reclaim: two writers that observe the SAME stale lock both decide to remove it, the first
+ * removes it and creates its own, and the second — acting on an observation that is now several
+ * milliseconds out of date — removes the FIRST WRITER'S FRESH LOCK. Both then enter the
+ * read-modify-write section, which is the lost update this primitive exists to prevent, now
+ * reintroduced by the thing meant to prevent it.
+ *
+ * So nothing here ever unlinks a lock it has not proved is its own:
+ *
+ * - Every lock file carries a token unique to the writer that created it.
+ * - The uncontended path is `open(..., "wx")`, which is atomic and needs no proof beyond succeeding.
+ * - A stale lock is reclaimed by ATOMIC REPLACEMENT — a candidate file renamed over it — and then
+ *   by reading the lock back. Two reclaimers both rename; only one token survives the last write,
+ *   so the read-back is what decides, and the loser retries rather than proceeding.
+ * - Release reads the token first and unlinks only its own.
+ *
+ * What this does NOT do, stated rather than implied: a reclaimer that renames in the window between
+ * another reclaimer's rename and its read-back can still displace it. Closing that needs an atomic
+ * compare-and-swap on file contents, which Node has no portable primitive for. The residual is two
+ * writers reclaiming the SAME abandoned lock within one scheduler tick after it has already gone
+ * unclaimed for ten seconds; the common failure this replaced needed nothing more than two ordinary
+ * concurrent runs.
+ */
+async function acquireRecordLock(
+  lockPath: string,
+  recordDir: string,
+): Promise<() => Promise<void>> {
+  const token = randomUUID();
+  const release = async (): Promise<void> => {
+    const held = await readFile(lockPath, "utf-8").catch(() => undefined);
+    if (held === token) {
+      await unlink(lockPath).catch(() => undefined);
+    }
+  };
+
   for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
     try {
       const handle = await open(lockPath, "wx");
-      await handle.close();
-      return async () => {
-        await unlink(lockPath).catch(() => undefined);
-      };
-    } catch {
-      // Held, or unopenable. Age decides which: a lock older than the ceiling belonged to a run
-      // that died holding it, and removing it is the only way the command ever runs again. The
-      // unlink is unconditional-on-failure by design — losing a race to remove it means another
-      // writer removed it first, which is the outcome either way.
-      const heldSince = await stat(lockPath).then(
-        (stats) => stats.mtimeMs,
-        () => undefined,
-      );
-      if (heldSince !== undefined && Date.now() - heldSince > LOCK_STALE_MS) {
-        await unlink(lockPath).catch(() => undefined);
-        continue;
+      try {
+        await handle.writeFile(token, "utf-8");
+      } finally {
+        await handle.close();
       }
-      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+      return release;
+    } catch {
+      // Held, or unopenable. Age decides which.
     }
+
+    const heldSince = await stat(lockPath).then(
+      (stats) => stats.mtimeMs,
+      () => undefined,
+    );
+    if (heldSince === undefined) {
+      continue; // gone between the open and the stat: try to create it again immediately
+    }
+    if (Date.now() - heldSince <= LOCK_STALE_MS) {
+      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+      continue;
+    }
+
+    // Abandoned. Replace it atomically and then prove the replacement is ours.
+    const candidatePath = path.join(recordDir, `.install-provenance.${token}.lock`);
+    try {
+      await writeFile(candidatePath, token, { encoding: "utf-8", flag: "wx" });
+      await rename(candidatePath, lockPath);
+    } catch {
+      await unlink(candidatePath).catch(() => undefined);
+      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+      continue;
+    }
+    if ((await readFile(lockPath, "utf-8").catch(() => undefined)) === token) {
+      return release;
+    }
+    // Another reclaimer's token is in there: they hold it, and we hold nothing to release.
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
   }
   throw new Error(
     `could not take the install-provenance lock at ${lockPath} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
@@ -435,14 +544,31 @@ function isIsoTimestamp(value: string): boolean {
   //
   // Round-tripping is what separates a parsed date from an accepted one: the calendar fields are
   // read back out of the resulting instant and compared with the ones written down.
-  const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})/.exec(value) ?? [];
-  if (year === undefined || month === undefined || day === undefined) {
+  //
+  // In the offset the timestamp DECLARES, though, not in UTC. Review finding [28]: the pattern
+  // above admits `+05:00`, and `2020-01-01T00:00:00+05:00` is 2019-12-31 once converted — so a
+  // UTC comparison rejected a perfectly ordinary ISO 8601 instant, dropped its entry, and left the
+  // workflow it named reading as `adopter-owned`, which is the same permanent loss of drift
+  // detection the [16] repair existed to prevent. Shifting the instant by the stated offset puts
+  // the fields back in the frame they were written in; a date that is not on the calendar is still
+  // normalized away by `Date.parse` and still caught.
+  const fields = /^(\d{4})-(\d{2})-(\d{2})T[\d:.]+(Z|[+-]\d{2}:\d{2})$/.exec(value);
+  if (fields === null) {
     return false;
   }
-  const instant = new Date(parsed);
+  const [, year, month, day, zone] = fields;
+  if (year === undefined || month === undefined || day === undefined || zone === undefined) {
+    return false;
+  }
+  const offsetMinutes =
+    zone === "Z"
+      ? 0
+      : (zone.startsWith("-") ? -1 : 1) *
+        (Number(zone.slice(1, 3)) * 60 + Number(zone.slice(4, 6)));
+  const local = new Date(parsed + offsetMinutes * 60_000);
   return (
-    instant.getUTCFullYear() === Number(year) &&
-    instant.getUTCMonth() + 1 === Number(month) &&
-    instant.getUTCDate() === Number(day)
+    local.getUTCFullYear() === Number(year) &&
+    local.getUTCMonth() + 1 === Number(month) &&
+    local.getUTCDate() === Number(day)
   );
 }

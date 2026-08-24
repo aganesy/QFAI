@@ -192,6 +192,14 @@ jobs:
           if [ -f pnpm-lock.yaml ]; then
             pnpm install --frozen-lockfile
           elif [ -f yarn.lock ]; then
+            # Corepack is not bundled from Node 25 on, and the Node this workflow runs is the
+            # adopter's own `.nvmrc` / `.node-version`, which QFAI does not choose. Calling
+            # `corepack enable` unconditionally stopped the run at `command not found` before a
+            # single dependency was installed. Installed when absent, which is what this
+            # repository's own composite action does for the same reason.
+            if ! command -v corepack > /dev/null 2>&1; then
+              npm install --global corepack
+            fi
             corepack enable
             # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses
             # `--frozen-lockfile`. Pick the right flag based on the

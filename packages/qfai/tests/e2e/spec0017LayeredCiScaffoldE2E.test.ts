@@ -970,6 +970,7 @@ describe(
         .soft([...invoked].sort(), "the set of programs an adopter's lanes invoke")
         .toEqual([
           "[",
+          "command",
           "corepack",
           "cut",
           "echo",

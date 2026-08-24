@@ -266,7 +266,16 @@ async function validateReviewPack(
   // A summary declaring `reviewers: []` says the round produced nothing, deliberately. Both directions
   // are checked, because a one-way rule only moves the hole: a pack that forgot to seal still fails,
   // and a pack whose declaration disagrees with the files beside it fails too.
-  const declaredZero = await declaresZeroReviewers(summaryPath);
+  //
+  // Two questions, and they are NOT the same one. `declaresZeroReviewers` asks whether the pack
+  // makes a valid zero-response declaration — v2, empty list, `FAIL` — and it is the right test
+  // for excusing a missing report set. It is the WRONG test for the contradiction: review finding
+  // [27] showed a v2 pack declaring `reviewers: []` with `overall_status: "PASS"` beside a full
+  // set of `Rxx_*.md` answering `false` here, so neither branch fired and the pack was accepted.
+  // The contradiction only needs the empty list, whatever else the summary says.
+  const summary = await readSummaryRecord(summaryPath);
+  const declaredZero = declaresZeroReviewers(summary);
+  const declaredEmptyReviewerList = declaresEmptyReviewerList(summary);
   if (reviewerFiles.length === 0 && !declaredZero) {
     issues.push(
       issue(
@@ -279,7 +288,7 @@ async function validateReviewPack(
       ),
     );
   }
-  if (reviewerFiles.length > 0 && declaredZero) {
+  if (reviewerFiles.length > 0 && declaredEmptyReviewerList) {
     issues.push(
       issue(
         "QFAI-REVIEW-005",
@@ -319,18 +328,41 @@ async function validateReviewPack(
  * `overall_status: "FAIL"`, so that is what is read here. A round that returned no verdict returned no
  * passing one.
  */
-async function declaresZeroReviewers(summaryPath: string): Promise<boolean> {
-  if (!(await isFile(summaryPath))) return false;
+function declaresZeroReviewers(summary: Record<string, unknown> | undefined): boolean {
+  if (summary === undefined) return false;
+  if (readString(summary.version) !== "2.0") return false;
+  if (!declaresEmptyReviewerList(summary)) return false;
+  return readString(summary.overall_status) === "FAIL";
+}
+
+/**
+ * Whether the summary's `reviewers` field is present and empty — nothing more.
+ *
+ * This is the contradiction test, and it deliberately ignores `version` and `overall_status`.
+ * `references/review-artifact-layout.md` makes `reviewers: []` beside a report file a failure
+ * unconditionally, and asking the narrower question here let a pack escape by being invalid in a
+ * SECOND way (`PASS` alongside the empty list) — the two defects cancelled and the pack was
+ * accepted. A v1 pack lists its reviewers under `roster`, so an empty `reviewers` there is not an
+ * unrelated field to be tolerated: it is a v1 pack carrying a v2 key, and the report files beside
+ * it are what make that worth reporting rather than guessing about.
+ */
+function declaresEmptyReviewerList(summary: Record<string, unknown> | undefined): boolean {
+  if (summary === undefined) return false;
+  return Array.isArray(summary.reviewers) && summary.reviewers.length === 0;
+}
+
+/** The summary as a record, or `undefined` when it is absent, unreadable, or not an object. */
+async function readSummaryRecord(
+  summaryPath: string,
+): Promise<Record<string, unknown> | undefined> {
+  if (!(await isFile(summaryPath))) return undefined;
   let parsed: unknown;
   try {
     parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
   } catch {
-    return false;
+    return undefined;
   }
-  if (!isRecord(parsed)) return false;
-  if (readString(parsed.version) !== "2.0") return false;
-  if (!Array.isArray(parsed.reviewers) || parsed.reviewers.length !== 0) return false;
-  return readString(parsed.overall_status) === "FAIL";
+  return isRecord(parsed) ? parsed : undefined;
 }
 
 async function validateSummarySchema(

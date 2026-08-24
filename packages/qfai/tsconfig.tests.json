@@ -83,6 +83,8 @@
     "tests/scripts/vitestWorkspaceKnobs.test.ts",
     "tests/scripts/workflowHygiene.test.ts",
     "tests/unit/buildCommand.test.ts",
+    "tests/core/htmlMockLazyLoad.test.ts",
+    "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",

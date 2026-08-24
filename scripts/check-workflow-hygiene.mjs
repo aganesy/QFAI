@@ -33,7 +33,19 @@
  * follows the existing bare-`R-` lint namespace rather than the `QFAI-XXX-NNN`
  * grammar, which is why the three-digit waiver alias rule does not reach it.
  */
-import { existsSync, readFileSync, readdirSync } from "node:fs";
+import { Buffer } from "node:buffer";
+import { createHash } from "node:crypto";
+import {
+  closeSync,
+  constants as fsConstants,
+  existsSync,
+  fstatSync,
+  lstatSync,
+  openSync,
+  readFileSync,
+  readSync,
+  readdirSync,
+} from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { argv, exit, stderr, stdout } from "node:process";
@@ -258,6 +270,98 @@ function permissionValueFindings(entry, reportedWorkflows) {
   return details;
 }
 
+/**
+ * A digest of what one step DOES: its `run`, its `uses` and its `with`.
+ *
+ * `name` is deliberately absent — the name is the key this is looked up by, and including it would
+ * make the digest agree with itself by construction. `if` is absent too: a condition is rejected
+ * before a body is ever digested, by the branch above.
+ *
+ * Line endings and trailing whitespace are normalized, so a checkout that rewrites newlines does
+ * not read as an edited verification.
+ */
+function verificationBodyDigest(step) {
+  const normalize = (value) =>
+    typeof value === "string"
+      ? value
+          .replace(/\r\n/g, "\n")
+          .replace(/[ \t]+$/gm, "")
+          .trimEnd()
+      : value;
+  const shape = {
+    run: normalize(step.run),
+    uses: normalize(step.uses),
+    with: step["with"],
+  };
+  return createHash("sha256").update(JSON.stringify(shape)).digest("hex").slice(0, 16);
+}
+/**
+ * Read ceiling for one workflow or composite action. A real one is a few kilobytes; anything
+ * past this is not one, and reading it is the exhaustion this lane must not be vulnerable to.
+ */
+const MAX_WORKFLOW_BYTES = 1_048_576;
+
+/**
+ * The text of a regular file at `abs`, or `undefined` for anything else.
+ *
+ * This lane runs on a pull request, over paths the pull request itself can add. Review finding
+ * [05]: a `.github/workflows/blocked.yml` added as a symlink to a FIFO or to `/dev/zero` was
+ * collected by the extension test and then read by an unbounded `readFileSync` that followed the
+ * link — the lane produced no finding and hung until the job timed out, or exhausted its memory.
+ * A lane that can be made to hang blocks nothing.
+ *
+ * One descriptor for every decision: `lstat` refuses a link by name, `O_NOFOLLOW` and
+ * `O_NONBLOCK` are added where the platform has them (neither exists on Windows — measured),
+ * `fstat` on the DESCRIPTOR decides regular-file and size, and the descriptor's identity is
+ * compared with what `lstat` inspected so a path swapped between the two is refused rather than
+ * read.
+ */
+function readBoundedWorkflowText(abs) {
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return undefined;
+  }
+  if (inspected.isSymbolicLink() || !inspected.isFile()) return undefined;
+
+  let flags = fsConstants.O_RDONLY;
+  if (typeof fsConstants.O_NOFOLLOW === "number") flags |= fsConstants.O_NOFOLLOW;
+  if (typeof fsConstants.O_NONBLOCK === "number") flags |= fsConstants.O_NONBLOCK;
+
+  let fd;
+  try {
+    fd = openSync(abs, flags);
+  } catch {
+    return undefined;
+  }
+  try {
+    const stats = fstatSync(fd);
+    if (!stats.isFile() || stats.size > MAX_WORKFLOW_BYTES) return undefined;
+    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) return undefined;
+    // One byte past the measured size: a file that GREW is no longer the file `fstat` described,
+    // and the extra byte is how that is noticed rather than silently truncated.
+    const buffer = Buffer.alloc(stats.size + 1);
+    let filled = 0;
+    for (;;) {
+      const read = readSync(fd, buffer, filled, buffer.length - filled, null);
+      if (read === 0) break;
+      filled += read;
+      if (filled >= buffer.length) break;
+    }
+    if (filled > stats.size) return undefined;
+    return buffer.subarray(0, filled).toString("utf-8");
+  } catch {
+    return undefined;
+  } finally {
+    try {
+      closeSync(fd);
+    } catch {
+      // The descriptor is going away with the process; a close failure is not a finding.
+    }
+  }
+}
+
 /** Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative. */
 function yamlFilesUnder(root, rel) {
   const abs = path.join(root, rel);
@@ -275,8 +379,19 @@ function yamlFilesUnder(root, rel) {
 }
 
 function parseFile(root, rel) {
+  const text = readBoundedWorkflowText(path.join(root, rel));
+  if (text === undefined) {
+    // Present in the walk and not readable as a regular file within the ceiling: a symlink, a
+    // FIFO, a device, or something too large to be a workflow. Reported with the same shape a
+    // parse error gets, so the operator is told which path to look at rather than being handed
+    // a hang.
+    return {
+      __parseError:
+        "not a readable regular file within the size ceiling (a symlink, device, FIFO or oversized file)",
+    };
+  }
   try {
-    const doc = parseYaml(readFileSync(path.join(root, rel), "utf-8"));
+    const doc = parseYaml(text);
     return isRecord(doc) ? doc : null;
   } catch (error) {
     // A malformed workflow is reported as a finding rather than crashing the
@@ -794,6 +909,8 @@ function checkRequiredContexts(root, jobs) {
     // conditions are then not faults: a skipped dependency is the state `always()` is for, and the
     // job's own verdict logic is what must classify it. Any OTHER condition on the declared job stays
     // fatal, and the closure is still walked whenever the declared job carries no condition.
+    const bodies = new Map();
+    const pinnedBodies = isRecord(context.verificationBodies) ? context.verificationBodies : {};
     const declared = jobsByKey.get(declaredJob);
     const declaredCondition = declared?.if;
     const runsUnconditionally =
@@ -857,21 +974,49 @@ function checkRequiredContexts(root, jobs) {
         // A name appearing both ways still counts as performed: the unconditional
         // occurrence is the one that runs.
         //
-        // `continue-on-error: true` disqualifies for the same reason a condition
-        // does, and it is the WORSE of the two: the step still runs, still shows
-        // its name in the log, and its failure is discarded — so the required
-        // context stays green while the verification it names establishes
-        // nothing. It is recorded as the reason, not merged into the `if` case.
-        if (step["continue-on-error"] === true) {
+        // A `continue-on-error` that is not the literal `false` disqualifies for the same
+        // reason a condition does, and it is the WORSE of the two: the step still runs,
+        // still shows its name in the log, and its failure is discarded — so the required
+        // context stays green while the verification it names establishes nothing. It is
+        // recorded as the reason, not merged into the `if` case.
+        //
+        // Only `false` is accepted, never `!== true`. `continue-on-error: ${{ true }}` and
+        // `${{ matrix.experimental }}` reach the parser as STRINGS, and a strict comparison
+        // against `true` waves both of them through — the step then discards its failure at
+        // runtime while this lane records it as performed. This lane evaluates no GitHub
+        // expressions, and it does not need to: an expression here is exactly the invisible
+        // conditionality property 2 rejects, whatever it evaluates to.
+        const continueOnError = step["continue-on-error"];
+        if (continueOnError !== undefined && continueOnError !== false) {
           if (!performed.has(step.name)) {
-            conditional.set(step.name, "continue-on-error: true");
+            conditional.set(step.name, `continue-on-error: ${String(continueOnError)}`);
           }
-        } else if (step.if === undefined) performed.add(step.name);
-        else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
+        } else if (step.if === undefined) {
+          performed.add(step.name);
+          bodies.set(step.name, verificationBodyDigest(step));
+        } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
     for (const item of wanted) {
-      if (performed.has(item)) continue;
+      if (performed.has(item)) {
+        // Performed, unconditionally. The remaining question is whether it still DOES anything:
+        // membership was decided by the step's NAME alone, so review finding [03] pointed out
+        // that replacing `run: pnpm ci:build-verify` with `run: true` under the same name left
+        // this lane green while the required context verified nothing. The declaration pins the
+        // body, and a body that moves is a change to read — which is what every other pin in
+        // this repository means too.
+        const pinned = pinnedBodies[item];
+        const actual = bodies.get(item);
+        if (pinned !== undefined && actual !== pinned) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `performs the declared verification item "${item}" with a body that is not the pinned one (expected ${pinned}, found ${actual ?? "nothing"}); update "verificationBodies" in the declaration in the same change if the edit is intended`,
+          });
+        }
+        continue;
+      }
       const guard = conditional.get(item);
       findings.push({
         rule: "required-context",

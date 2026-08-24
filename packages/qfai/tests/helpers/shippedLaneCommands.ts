@@ -977,6 +977,46 @@ export function invocationsOf(body: string): string[] {
 }
 
 /**
+ * Commands allowed as an EXACT token sequence, flags and arguments included.
+ *
+ * The third and narrowest tier. `HARMLESS_PROGRAMS` allows a program by name whatever its
+ * arguments; `ALLOWED_INVOCATIONS` allows a two-token prefix with an enumerated flag set. Neither
+ * fits a command whose ARGUMENT is the whole point and must not generalise:
+ *
+ * - `command -v corepack` resolves a name and runs nothing, but `command <anything>` RUNS it, so
+ *   the program cannot be allowed by name.
+ * - `npm install --global corepack` carries a package name and a flag that `npm install` is
+ *   deliberately denied — `TAKES_NO_PACKAGE` exists so that `npm install left-pad` cannot ship.
+ *   Widening either would admit every global install, which is the capability the rule refuses.
+ *
+ * Both are here because Node stopped bundling Corepack at 25 and the Node a shipped lane runs is
+ * the ADOPTER's, from their own `.nvmrc` / `.node-version`. The yarn branch called `corepack
+ * enable` unconditionally and stopped at `command not found` before installing anything — review
+ * finding [22]. Adding one exact string per need is what makes that a change a reviewer reads,
+ * which is this instrument's whole purpose; the test below requires every member to be invoked by
+ * the shipped tree, so an entry cannot outlive its use.
+ */
+export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
+  "command -v corepack",
+  "npm install --global corepack",
+]);
+
+/**
+ * A command's tokens, redirections and leading prefixes removed, joined — the form
+ * `ALLOWED_EXACT_COMMANDS` is keyed by.
+ *
+ * The prefixes go because `invocationOf` drops them too, and the two tiers must agree on where a
+ * command starts: the shipped tree writes `if ! command -v corepack`, which reaches this scanner as
+ * `! command -v corepack`, and keying on that would make the enumeration depend on the syntax that
+ * happens to surround the call rather than on the call.
+ */
+function exactFormOf(command: string): string {
+  const tokens = tokensOf(withoutRedirections(command));
+  let start = 0;
+  while (start < tokens.length && COMMAND_PREFIXES.has(tokens[start] ?? "")) start += 1;
+  return tokens.slice(start).join(" ");
+}
+/**
  * Programs whose arguments cannot reach a build, allowed by NAME.
  *
  * The split between this and `ALLOWED_INVOCATIONS` is the whole design: a program that could build is
@@ -1142,7 +1182,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "72e19141b40fb058bafa7dd30cb5a92443f97e338814ae2d33074476b7937f40"],
-  ["qfai-validate.yml", "a8b5695f7c1ad250e843de26434882a3bae52c3ac991084cef56cc38283ee9c3"],
+  ["qfai-validate.yml", "6b645ef207a3faa70f75278a20a5b1df9757de2948b11ece7bc1c08aa3ebf59b"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1559,7 +1599,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body d7f6e8d3b5456c962a0062859324f37b2ffc1c3c2b136b180b3ed8b54bee3ea1>"}',
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body 6a31b2450c427ea42894c9f4b034db1493ba4318fa0458ef3c55e219bae24bef>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1971,6 +2011,9 @@ export function refusals(body: string): string[] {
       out.push(invocation);
       continue;
     }
+    // The exact tier first: a command enumerated in full has already been read as a whole, so
+    // the program, invocation, substitution and flag rules below have nothing left to decide.
+    if (ALLOWED_EXACT_COMMANDS.has(exactFormOf(command))) continue;
     const program = invocation.split(" ")[0] ?? "";
     // A removed substitution is part of the command, and nothing here runs it — so the command cannot be
     // resolved UNLESS its program is one whose arguments cannot reach a build. That is exactly what the

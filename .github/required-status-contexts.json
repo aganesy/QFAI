@@ -69,6 +69,29 @@
         "",
         "The optional report upload is deliberately absent: it ends in a tolerated failure and",
         "cannot fail the job, so it is not a verification however it is named."
+      ],
+      "verificationBodies": {
+        "Derive the verdict from the serialized needs map": "2db05aee7f0fd215",
+        "Run build & pack verification": "87de7c233056c5a3",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "4882147221bae766",
+        "QFAI self-validate this repo (dogfooding — TDD gates)": "8b2653d728aa14f5",
+        "QFAI self-validate this repo (dogfooding — SDD gates)": "a777c7d2cc06eec1",
+        "QFAI self-validate this repo (dogfooding — full profile)": "069483c31ce276d2",
+        "Run qfai validate gate (fail on error)": "700dc137f51489c2"
+      },
+      "verificationBodiesNote": [
+        "A digest of each verification step's `run` / `uses` / `with` — what the step DOES, with its",
+        "name deliberately excluded so the pin cannot agree with itself.",
+        "",
+        "Membership in `verificationSet` is decided by the step's NAME, and review finding [03] on",
+        "PR #794 measured what that alone is worth: renaming nothing and replacing",
+        "`run: pnpm ci:build-verify` with `run: true` left the hygiene lane green while the required",
+        "context verified nothing at all. The name says which obligation a step claims; this says it",
+        "still discharges it.",
+        "",
+        "Editing one of those step bodies is expected to fail this lane. Recompute with",
+        "`node tmp/pin-bodies.mjs` and land the new digest in the same change — that is the point:",
+        "a change to a required verification is a change a reviewer reads."
       ]
     }
   ]

@@ -46,6 +46,15 @@ export async function validateHtmlMock(
     }
   }
 
+  // Nothing to parse, so nothing to load. Moving the import off module scope stopped every `qfai`
+  // command paying jsdom's 910 ms; importing it here regardless handed that cost straight back to
+  // every `validate` run, including the overwhelmingly common one with no mock block at all. Worse,
+  // the import now happens AFTER `startTime`, so a project whose `htmlMockTimeout` is under 910 ms
+  // would raise QFAI-MOCK-099 having inspected nothing.
+  if (mockBlocks.length === 0) {
+    return issues;
+  }
+
   // Loaded here, not at module scope: this is the only production caller, and the module it pulls
   // in requires jsdom, which costs 910 ms measured. Static, every qfai command paid it.
   const { parseHtmlMock } = await import("../uiux/htmlMockDom.js");

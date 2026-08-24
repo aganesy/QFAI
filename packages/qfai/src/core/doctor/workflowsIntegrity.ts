@@ -497,6 +497,22 @@ export async function diffInstalledShippedWorkflows(
     }
     const installedPath = path.join(installedDir, name);
 
+    // A recorded name the running package no longer ships is EXCLUDED from the
+    // count as well as from drift, and this test comes FIRST — before the
+    // `declined` split, not after it. Review finding [26]: an entry for a
+    // retired workflow whose installed file is also gone reached the declined
+    // branch, which counted it and moved on without ever asking whether the
+    // packaged side had that name. A record holding only such entries then read
+    // as `ok` with a non-zero count, and `doctor.ts` printed "installed shipped
+    // workflow(s) match the packaged copy" over a run in which no packaged file
+    // was opened at all. `hasDrifted` already answers `false` for these names —
+    // correctly, since equality with a copy that does not exist cannot be shown.
+    // Uncounted, that tree reaches the count conjunct as zero and the check stays
+    // silent, which is what "nothing was compared" means.
+    if ((await digestFile(path.join(packagedDir, name))).kind === "absent") {
+      continue;
+    }
+
     // The `declined` split happens BEFORE the drift comparison, and it has to:
     // `hasDrifted` answers `false` for an absent installed file, so a name
     // classified only by that predicate is indistinguishable from one whose
@@ -508,18 +524,6 @@ export async function diffInstalledShippedWorkflows(
     if ((await digestFile(installedPath)).kind === "absent") {
       declined.push(`${WORKFLOWS_DIR_RELATIVE}/${name}`);
       examinedCount += 1;
-      continue;
-    }
-
-    // A recorded name the running package no longer ships is EXCLUDED from the
-    // count as well as from drift. `hasDrifted` already answers `false` for it —
-    // correctly, since equality with a copy that does not exist cannot be shown —
-    // but counting it made a record holding ONLY such names read as `ok` with a
-    // non-zero count, and `doctor.ts` then printed "installed shipped workflow(s)
-    // match the packaged copy" over a run in which no packaged file was ever
-    // opened. Uncounted, that tree reaches the count conjunct as zero and the
-    // check stays silent, which is what "nothing was compared" means.
-    if ((await digestFile(path.join(packagedDir, name))).kind === "absent") {
       continue;
     }
     examinedCount += 1;
