@@ -65,6 +65,14 @@ jobs:
           # Pull requests diff against the PR base; pushes against the
           # previous head.
           QFAI_BASE_REF: ${{ github.event.pull_request.base.sha || github.event.before }}
+          # Which diff form to take, because the two events want different ones. On a pull
+          # request the question is what THIS branch changed, which is the merge base (`A...B`).
+          # On a push the question is what the push changed, which is the previous head against
+          # the new one (`A B`) — `A...B` there is `git diff $(git merge-base A B) B`, so a
+          # non-fast-forward push drops everything the old head carried and the new one does not.
+          # A force-push whose new side touches only documentation would otherwise report no
+          # lanes, skip every test and accept a default branch that lost a source file.
+          QFAI_EVENT_NAME: ${{ github.event_name }}
         shell: bash
         run: |
           # Selects the test-lane matrix from a name-only diff against the
@@ -95,8 +103,17 @@ jobs:
           # src/foo.ts to docs/foo.md arrives here as one documentation
           # path and the source half of the change selects no lane.
           # Turning detection off makes both halves visible.
-          if ! changed="$(git diff --name-only --no-renames "${QFAI_BASE_REF}...HEAD")"; then
-            fail_open "name-only diff failed"
+          # Two calls rather than one with a computed range: a bash array reads as an unparsable
+          # program to the shipped-lane guard, which enumerates every command a shipped workflow
+          # may invoke. Written out, both branches are the same enumerated git diff.
+          if [ "${QFAI_EVENT_NAME:-}" = "pull_request" ]; then
+            if ! changed="$(git diff --name-only --no-renames "${QFAI_BASE_REF}...HEAD")"; then
+              fail_open "name-only diff failed"
+            fi
+          else
+            if ! changed="$(git diff --name-only --no-renames "${QFAI_BASE_REF}" HEAD)"; then
+              fail_open "name-only diff failed"
+            fi
           fi
           docs_only=true
           while IFS= read -r changed_path; do

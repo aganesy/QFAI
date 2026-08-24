@@ -715,10 +715,26 @@ function pullRequestTriggerFindings(rel, declaredJob, workflow) {
   const trigger = on.pull_request;
   if (!isRecord(trigger)) return [];
   const filters = ["paths", "paths-ignore"].filter((key) => key in trigger);
-  return filters.length === 0
+  if (filters.length > 0) {
+    return finding(
+      `filters its \`pull_request\` trigger by ${filters.join(" / ")}, so a pull request touching none of those paths never creates the required status context and branch protection stays pending`,
+    );
+  }
+  // And the ACTIVITY types, which review finding [N1] on PR #794 named as the other half of the same
+  // hole. A path filter stops the workflow starting on some pull requests; a `types` filter stops it
+  // starting on some EVENTS of a pull request that did start it. `types: [opened]` is the common
+  // shape: the context is created on the first push and never again, so every later push leaves
+  // branch protection pending against a SHA that has no required check at all.
+  //
+  // A superset is fine — the three defaults are what must be present, not an exact list — because
+  // adding `ready_for_review` to them removes nothing.
+  if (!("types" in trigger)) return [];
+  const declaredTypes = Array.isArray(trigger.types) ? trigger.types.map(String) : [];
+  const missing = ["opened", "synchronize", "reopened"].filter((t) => !declaredTypes.includes(t));
+  return missing.length === 0
     ? []
     : finding(
-        `filters its \`pull_request\` trigger by ${filters.join(" / ")}, so a pull request touching none of those paths never creates the required status context and branch protection stays pending`,
+        `filters its \`pull_request\` trigger to types [${declaredTypes.join(", ") || "(none)"}], omitting ${missing.join(" / ")}, so some pull request events create no required status context and branch protection stays pending on that SHA`,
       );
 }
 

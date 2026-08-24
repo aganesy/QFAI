@@ -949,6 +949,46 @@ describe("TC-0017-0013 (TDD-0013): a condition on a dependency makes the require
 // the merge condition satisfied. Property 2 rejected any condition on a declared job, so the verdict
 // — which must carry `if: always()` to render a result when its dependencies are skipped — could
 // never hold it. The exception is narrow, and these two rows are what keeps it narrow.
+// Review finding [N1] on PR #794. A `paths` filter stops the workflow starting on some pull
+// requests; a `types` filter stops it starting on some EVENTS of a pull request that did start it.
+// `types: [opened]` is the shape that bites: the context is created on the first push and never
+// again, so every later push leaves branch protection pending against a SHA with no required check.
+describe("the required-context workflow starts on every pull request event, not only the first", () => {
+  const plantTypes = (types: string): string =>
+    plantedTree((d) => {
+      const declared = firstContext(d);
+      editWorkflow(d, declared.workflow, (text) =>
+        text.replace("\n  pull_request:\n", `\n  pull_request:\n    types: [${types}]\n`),
+      );
+    });
+
+  it("exits 1 when the trigger omits synchronize", () => {
+    const dir = plantTypes("opened");
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `a types filter missing synchronize must exit 1:\n${run.output}`).toBe(
+        1,
+      );
+      expect(run.output, "the finding must name what was omitted").toContain("synchronize");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts a superset of the three defaults", () => {
+    // The half that keeps this from being "no types filter allowed". Adding an activity type
+    // removes nothing, and a lane that rejected it would be forbidding a legal narrowing of scope
+    // in the name of a hole it does not open.
+    const dir = plantTypes("opened, synchronize, reopened, ready_for_review");
+    try {
+      const run = runLane(dir);
+      expect(run.exitCode, `a superset must stay green:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the required-context job may carry always(), and nothing else", () => {
   it("accepts always() on the declared job", () => {
     // The live tree already declares the verdict, so this asserts the shipped arrangement rather

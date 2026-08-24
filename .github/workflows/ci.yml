@@ -50,6 +50,19 @@ jobs:
           # and an annotation that is always present is one nobody reads.
           BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
           HEAD_SHA: ${{ github.sha }}
+          # Which of the two diff forms to take. They are not interchangeable, and each is the
+          # wrong answer for the other event.
+          #
+          # Review finding [21] measured the pull-request half: a two-dot diff compares the two
+          # TREES, so a source file changed on base after this branch forked lands in the changed
+          # list although the pull request never touched it — and a documentation-only pull
+          # request then runs the whole matrix, which is the saving this lane exists for. Three-dot
+          # asks the merge base instead, which is the set the pull request is responsible for.
+          #
+          # On a push there is no merge base worth asking about: `github.event.before` IS the
+          # previous head, and three-dot would silently drop everything the old head carried that
+          # the new one does not — the force-push case the shipped detection lane records.
+          EVENT_NAME: ${{ github.event_name }}
         run: |
           set -uo pipefail
           # The diff is ATTEMPTED here and decided by the program. `|| true` is
@@ -67,7 +80,12 @@ jobs:
           # paths would otherwise be classified as a complete, docs-only change.
           # A non-zero status is "no path list was produced", whatever landed on
           # stdout, and the classifier fails open on it.
-          git diff --name-only --no-renames "${BASE_SHA}" "${HEAD_SHA}" \
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            diff_range=("${BASE_SHA}...${HEAD_SHA}")
+          else
+            diff_range=("${BASE_SHA}" "${HEAD_SHA}")
+          fi
+          git diff --name-only --no-renames "${diff_range[@]}" \
             > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" \
             && diff_status=0 || diff_status=$?
           printf '%s\n' "${diff_status}" > "${RUNNER_TEMP}/diff-status.txt"
@@ -279,7 +297,13 @@ jobs:
           # PR runs already have origin/main as a remote-tracking ref
           # after fetch-depth: 0, but be defensive in case the workflow
           # is invoked from a fork or a non-PR event.
-          git fetch --no-tags --depth=1 origin main || true
+          # No `--depth`: the checkout above uses `fetch-depth: 0`, and a depth-limited fetch
+          # RE-SHALLOWS the repository at the fetched tip. Review finding [15]: on a pull request
+          # against a branch that has diverged from main, that removes the merge base and
+          # `check-prompt-scanner-pair.mjs` exits 2 on `origin/main...HEAD`, failing lint for a
+          # reason nothing in the diff explains. The fetch itself stays — `fetch-depth: 0` does not
+          # create the `origin/main` remote-tracking ref that script resolves.
+          git fetch --no-tags origin main || true
         shell: bash
       # The four-step toolchain preamble, defined once in
       # `.github/actions/setup/action.yml`. It stood inline here six times.

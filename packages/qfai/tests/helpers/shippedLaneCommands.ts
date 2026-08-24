@@ -1141,7 +1141,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-tests.yml", "468e7cd9676c7d9d051036b1b3f1f87db4976e4c57478b2874d0306aaeb38d33"],
+  ["qfai-tests.yml", "72e19141b40fb058bafa7dd30cb5a92443f97e338814ae2d33074476b7937f40"],
   ["qfai-validate.yml", "a8b5695f7c1ad250e843de26434882a3bae52c3ac991084cef56cc38283ee9c3"],
 ]);
 
@@ -1507,7 +1507,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}"},"shell":"bash","run":"<body 0da681ff21deeea78a4c7af1735097bbccccdd4cca5fa22f2472a4aa41fd67f5>"}',
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 6588108a843996691ae078b242328fc90f001f5f132e394a32b611e8bd9b70c7>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1759,6 +1759,10 @@ const ALLOWED_FLAGS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
  */
 export const ALLOWED_STEP_ENV: ReadonlyMap<string, string> = new Map([
   ["QFAI_BASE_REF", "${{ github.event.pull_request.base.sha || github.event.before }}"],
+  // Which event started the run, so the detection body can take a two-dot diff on a push and a
+  // three-dot one on a pull request — review finding [32]. Its value comes from `github.event_name`,
+  // a closed set GitHub controls, and the body compares it to one literal. It reaches no program.
+  ["QFAI_EVENT_NAME", "${{ github.event_name }}"],
   ["QFAI_NEEDS_JSON", "${{ toJSON(needs) }}"],
 ]);
 
