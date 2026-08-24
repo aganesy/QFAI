@@ -87,9 +87,16 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
     const ingested = forCode(issues, HYGIENE);
 
     expect(ingested, "the hygiene drift finding was not surfaced at all").toHaveLength(1);
-    // Surfaced, not failed: the code is ingested while its catalog registration
-    // is deferred, so it must not be reported at a severity that fails a run.
-    expect(ingested[0]?.severity).toBe("info");
+    // Surfaced at the severity the LANE emits it with, which is error class.
+    //
+    // This row said `info`, with a comment reading "it must not be reported at a severity
+    // that fails a run" — a reading `BR-0015-0017` does not support, and review finding [25]
+    // measured the cost: `qfai validate --fail-on error` succeeded while holding an ingested
+    // lint failure. The BR says the gate "does not re-derive, re-word or re-classify" the
+    // payload, that both codes are "declared lint-failure codes in `CLI-WFSET`, i.e. error
+    // class", and that what is deferred is rejecting them for an empty `justification:`.
+    // Two exemptions were available and only one was granted.
+    expect(ingested[0]?.severity).toBe("error");
 
     // All three fields, each asserted on its own. Joining them into one haystack
     // would let a message carrying two of the three pass.
@@ -102,10 +109,12 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
       "job-guardrails",
     );
 
-    // …and nothing was rejected. A missing justification on this code is not a
-    // finding while the registration is deferred.
+    // …and nothing was rejected FOR ITS JUSTIFICATION. That is the deferral, and it is not
+    // the same claim as "nothing failed": the ingested finding above is error class, so the
+    // set of error-severity issues is not empty. Asserting emptiness there conflated the two
+    // exemptions, which is how the severity downgrade came to look required.
     expect(
-      issues.filter((entry) => entry.severity === "error"),
+      issues.filter((entry) => entry.rule === "reviewerJustification.empty"),
       "an ingested workflow-set code was rejected for its missing justification",
     ).toEqual([]);
   });
@@ -159,7 +168,7 @@ describe("TC-0015-0036 (TDD-0037): shipped-shape drift with an empty justificati
 
     const ingested = forCode(issues, SHIPPED_SHAPE);
     expect(ingested, "shipped-shape drift with an empty justification was dropped").toHaveLength(1);
-    expect(ingested[0]?.severity).toBe("info");
+    expect(ingested[0]?.severity).toBe("error");
     expect(ingested[0]?.message ?? "").toContain("qfai-tests.yml");
     expect(ingested[0]?.message ?? "").toContain("verdict");
     expect(ingested[0]?.message ?? "").toContain("profile-value");

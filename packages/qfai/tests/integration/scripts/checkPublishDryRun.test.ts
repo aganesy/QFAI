@@ -17,9 +17,16 @@
  * test that needs the network to decide a verdict is a test that fails for reasons unrelated to the
  * thing it checks. `classifyDryRun` is the whole decision.
  */
+import path from "node:path";
+
 import { describe, expect, it } from "vitest";
 
-import { classifyDryRun } from "../../../../../scripts/check-publish-dry-run.mjs";
+import {
+  classifyDryRun,
+  verifyTarballIndependently,
+} from "../../../../../scripts/check-publish-dry-run.mjs";
+
+const REPO_ROOT = path.resolve(__dirname, "../../../../..");
 
 /** The verbatim tail of the failure observed on PR #794's `build` job. */
 const ALREADY_PUBLISHED_STDERR = [
@@ -28,13 +35,48 @@ const ALREADY_PUBLISHED_STDERR = [
   "npm error A complete log of this run can be found in: /home/runner/.npm/_logs/2026-08-20T09_21_44_546Z-debug-0.log",
 ].join("\n");
 
+// Review finding [06]. `classifyDryRun` is pure and takes the proof as an argument, so the rows
+// above can assert the DECISION without a registry. These two assert the proof itself, which needs
+// a real `npm pack` — the whole point being that no text a lifecycle script prints can stand in for
+// one.
+describe("the tarball proof is a separate process and a file on disk", () => {
+  it("proves this package's own tarball", { timeout: 300_000 }, () => {
+    const proof = verifyTarballIndependently(path.join(REPO_ROOT, "packages", "qfai"));
+    expect.soft(proof.ok, `expected a tarball, got: ${proof.reason}`).toBe(true);
+
+    // The reason carries npm's own accounting, which is what makes the tolerance auditable rather
+    // than a bare boolean in a log.
+    expect
+      .soft(proof.reason, "the proof must name the tarball, its file count and its size")
+      .toMatch(/^`npm pack` built .+\.tgz \([0-9]+ files, [0-9]+ bytes\)$/);
+  });
+
+  it("refuses a directory that packs nothing", { timeout: 300_000 }, () => {
+    // The other direction. Without it every assertion above holds for a proof that answers `true`
+    // unconditionally — and a tolerance resting on a proof that always agrees is the defect this
+    // replaced, wearing a different implementation.
+    const proof = verifyTarballIndependently(path.join(REPO_ROOT, "packages"));
+    expect
+      .soft(
+        proof.ok,
+        "a directory with no package.json cannot produce a tarball, and must not report one",
+      )
+      .toBe(false);
+    expect.soft(proof.reason, "and the refusal must say why").not.toBe("");
+  });
+});
+
 describe("check-publish-dry-run tolerates an already-published version and nothing else", () => {
-  it("accepts the already-published failure, because the pack still built", () => {
-    const verdict = classifyDryRun({
-      status: 1,
-      stdout: "npm notice total files: 205\nnpm notice version: 1.10.0\n",
-      stderr: ALREADY_PUBLISHED_STDERR,
-    });
+  it("accepts the already-published failure when a separate pack proved the tarball", () => {
+    const verdict = classifyDryRun(
+      {
+        status: 1,
+        stdout: "npm notice total files: 205\nnpm notice version: 1.10.0\n",
+        stderr: ALREADY_PUBLISHED_STDERR,
+      },
+      { ok: true, reason: "`npm pack` built qfai-1.10.0.tgz (207 files, 4321858 bytes)" },
+      { ok: true, reason: "the registry confirms qfai@1.10.0 is published" },
+    );
     expect.soft(verdict.ok, `expected tolerance, got: ${verdict.reason}`).toBe(true);
     expect
       .soft(verdict.reason, "the tolerance must say what it tolerated")
@@ -48,11 +90,15 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     // The direction that matters: a broken pack, a missing file, a network error. If tolerance were
     // written as "ignore non-zero" rather than "ignore this message", this is the case that would
     // pass silently — and a pack verification that passes over a broken pack verifies nothing.
-    const verdict = classifyDryRun({
-      status: 1,
-      stdout: "",
-      stderr: "npm error ENOENT: no such file or directory, open 'package.json'\n",
-    });
+    const verdict = classifyDryRun(
+      {
+        status: 1,
+        stdout: "",
+        stderr: "npm error ENOENT: no such file or directory, open 'package.json'\n",
+      },
+      { ok: true, reason: "`npm pack` built qfai-1.10.0.tgz (207 files, 4321858 bytes)" },
+      { ok: true, reason: "the registry confirms qfai@1.10.0 is published" },
+    );
     expect.soft(verdict.ok, "an unrelated failure must stay fatal").toBe(false);
     expect
       .soft(verdict.reason, "and must be reported as a non-zero exit rather than as tolerated")
@@ -75,29 +121,76 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     // The boundary between the two rules. Tolerating the version must not tolerate everything else
     // that came with it, and this is the case where a careless implementation returns `ok` because
     // it matched the version message and stopped looking.
-    const verdict = classifyDryRun({
-      status: 1,
-      stdout: "npm warn publish npm-shrinkwrap.json will be ignored\n",
-      stderr: ALREADY_PUBLISHED_STDERR,
-    });
+    const verdict = classifyDryRun(
+      {
+        status: 1,
+        stdout: "npm warn publish npm-shrinkwrap.json will be ignored\n",
+        stderr: ALREADY_PUBLISHED_STDERR,
+      },
+      { ok: true, reason: "`npm pack` built qfai-1.10.0.tgz (207 files, 4321858 bytes)" },
+      { ok: true, reason: "the registry confirms qfai@1.10.0 is published" },
+    );
     expect.soft(verdict.ok, "a real warning survives the version tolerance").toBe(false);
     expect.soft(verdict.warnings.length, "and is reported").toBe(1);
   });
 
-  it("refuses the already-published message when no tarball summary was printed", () => {
-    // The phrase alone is not evidence that the pack ran. `prepublishOnly` and `prepack` execute
-    // BEFORE npm packs anything, so a lifecycle script printing the registry's sentence and exiting
-    // non-zero reproduces the whole tolerated signature with no tarball in existence — and the
-    // required `build` context would then go green over a pack that never happened.
+  it("refuses when the REGISTRY did not confirm the version, however the child described it", () => {
+    // The [06] repair hardened one conjunct and left the other reading the same child's text.
+    // Two escapes were measured through it: `npm pack` does not run `prepublishOnly` at all, so a
+    // `prepublishOnly` printing the registry's sentence and exiting 1 still reached `ok: true`;
+    // and a `prepack` can branch on npm's own `npm_command` to behave during `pack` and not
+    // during `publish`. Both leave a real tarball and a forged sentence.
+    //
+    // So the already-published claim is the registry's to make. This row plants exactly that
+    // shape — perfect text, real tarball, registry saying no — and requires a refusal.
+    const verdict = classifyDryRun(
+      {
+        status: 1,
+        stdout: "npm notice === Tarball Details ===\nnpm notice total files: 205\n",
+        stderr: ALREADY_PUBLISHED_STDERR,
+      },
+      { ok: true, reason: "`npm pack` built qfai-1.10.0.tgz (207 files, 4321858 bytes)" },
+      { ok: false, reason: "the registry did not confirm qfai@1.10.0 is published" },
+    );
+    expect(
+      verdict.ok,
+      "text the pull request controls must not establish what the registry alone can",
+    ).toBe(false);
+    expect(verdict.reason).toMatch(/registry/i);
+  });
+
+  it("refuses when the child named no already-published failure, however good the proofs", () => {
+    // The text is a NECESSARY conjunct, never a sufficient one. Dropping it entirely was tried:
+    // the tolerance then accepted ANY non-zero dry-run on a published version, `ENOENT` included,
+    // and the row above caught it. The text is what says WHICH failure is being tolerated; the two
+    // proofs are what stop a pull request from writing that sentence itself.
+    const verdict = classifyDryRun(
+      { status: 1, stdout: "", stderr: "npm error something unrecognisable\n" },
+      { ok: true, reason: "`npm pack` built qfai-1.10.0.tgz (207 files, 4321858 bytes)" },
+      { ok: true, reason: "the registry confirms qfai@1.10.0 is published" },
+    );
+    expect(verdict.ok, "an unnamed failure is not the tolerated one").toBe(false);
+  });
+  it("refuses the already-published message when no separate pack proved a tarball", () => {
+    // The phrase alone is not evidence that the pack ran. `prepublishOnly`, `prepack` and
+    // `prepare` all execute BEFORE npm packs anything, so a lifecycle script printing the
+    // registry's sentence and exiting non-zero reproduces the whole tolerated signature with no
+    // tarball in existence — and the required `build` context would then go green over a pack
+    // that never happened.
+    //
+    // Review finding [06]: the first repair for this read npm's `=== Tarball Details ===` banner
+    // out of the SAME child's output, which the same lifecycle script can print. The stdout here
+    // carries that banner deliberately — a row that omitted it would pass against the old
+    // implementation too, and prove nothing about what changed.
     const verdict = classifyDryRun({
       status: 1,
-      stdout: "",
+      stdout: "npm notice === Tarball Details ===\nnpm notice total files: 205\n",
       stderr: "npm error You cannot publish over the previously published versions: 1.10.0.\n",
     });
-    expect.soft(verdict.ok, "the phrase without a pack must not be tolerated").toBe(false);
+    expect.soft(verdict.ok, "text the pack could not have produced is not a pack").toBe(false);
     expect
       .soft(verdict.reason, "and the reason must name the missing evidence")
-      .toMatch(/no tarball summary/i);
+      .toMatch(/not confirmed out of process/i);
   });
 
   it("passes a clean run", () => {

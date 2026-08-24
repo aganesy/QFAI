@@ -21,6 +21,33 @@ description: >-
 # hard pack failure — and, more to the point, this repository's toolchain is not
 # an adopter's to inherit.
 
+inputs:
+  pin-engines-floor:
+    description: >-
+      Set to "true" to install the exact FLOOR of `package.json#engines.node` instead of
+      the newest release satisfying it. Any other value keeps the default.
+
+      This exists for review finding [13]. Every toolchain job resolving the same broad
+      `>=20.19.0` range means `setup-node` gives all of them the newest satisfying
+      release, so nothing in CI or in the release gate ever runs on the floor the package
+      promises — and an API or syntax present in Node 24 and absent in the floor passes
+      every gate while breaking exactly the supported users the range was written for.
+
+      A BOOLEAN, deliberately, and not a version string. A `node-version` input would let
+      each caller write the floor as a literal, and `TC-0017` pins the count of Node
+      literals in this repository at one for a reason worth keeping: "a second literal is
+      a second answer to one question, and the stale one wins as often as not". Raising
+      `engines.node` must move the floor lane with it, so the lane reads `engines.node`
+      rather than restating it.
+
+      An input rather than a second setup definition: `BR-0017-0027` makes this action the
+      single definition of the preamble, and a floor lane restating four steps inline is
+      the drift its extraction removed. Pinning through a root-level `.node-version` was
+      the other route and is not available — no agent may add a root file without
+      approval.
+    required: false
+    default: "false"
+
 runs:
   using: composite
   steps:
@@ -30,6 +57,7 @@ runs:
     # cosmetic: with the steps reversed the cache key cannot be derived and the
     # setup step fails.
     - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+      id: shim
       # Corepack is BUNDLED with the Node line this repository floors at, and it
       # stopped being bundled from Node 25 on. `engines.node` is `>=20.19.0` with
       # no ceiling, and step 2 resolves "latest satisfying the range", so the day
@@ -38,11 +66,62 @@ runs:
       # (lint, type checks, tests, the required build) stops being runnable at
       # once. Installing it when it is absent keeps the resolution rule as it is
       # instead of pinning the range down to whatever still bundles it.
+      #
+      # This step also RESOLVES the engines floor when the caller asked for it, rather than
+      # doing so in a fifth step. `TC-0017-0029` pins this action at exactly four steps in a
+      # fixed order, and that pin is worth more than the tidiness of a separate step: the
+      # four-step order is what makes the re-shim after Node load-bearing, and a fifth step
+      # is how that shape starts drifting. Both halves of this step prepare what step 2
+      # needs — a `pnpm` on PATH, and the version to install.
+      #
+      # The floor is READ from `engines.node` and never written here. A version literal in
+      # this file would be the second answer to a question `engines.node` already answers,
+      # and `TC-0017` pins the count of Node literals in this repository at one for that
+      # reason. `>=X.Y.Z` is the only shape this can pin: anything else is a hard failure
+      # rather than a guess, because a caller that asked for the floor and silently got the
+      # range back would report as the floor lane while testing nothing of the kind.
       run: |
+        set -euo pipefail
         if ! command -v corepack > /dev/null 2>&1; then
           npm install --global corepack
         fi
         corepack enable
+        if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
+          range="$(node -p "require('./package.json').engines.node")"
+          floor="${range#>=}"
+          case "$floor" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error file=package.json::engines.node is '${range}'; this action can pin only a '>=X.Y.Z' floor"
+              exit 1
+              ;;
+          esac
+          case "$floor" in
+            *[!0-9.]*|*.*.*.*)
+              echo "::error file=package.json::engines.node floor '${floor}' is not a bare X.Y.Z"
+              exit 1
+              ;;
+          esac
+          # Each component on its own. The globs above are "digits and dots with three parts",
+          # which `20.19.0.5` and `20.019.0` both satisfy — neither is a version setup-node
+          # resolves, and handing it one is a failure two steps later rather than here.
+          rest="$floor"
+          for _part in 1 2 3; do
+            part="${rest%%.*}"
+            case "$part" in
+              ""|*[!0-9]*|0?*)
+                echo "::error file=package.json::engines.node floor '${floor}' has a component ('${part}') that is not a bare non-negative integer"
+                exit 1
+                ;;
+            esac
+            rest="${rest#*.}"
+          done
+          echo "version=${floor}" >> "$GITHUB_OUTPUT"
+          echo "setup: pinning Node to the engines floor ${floor}"
+        fi
+      env:
+        # Through the environment, so the input cannot be spliced into the script text.
+        PIN_ENGINES_FLOOR: ${{ inputs.pin-engines-floor }}
       shell: bash
 
     # ── 2. Node, from a FILE ──────────────────────────────────────────────────
@@ -65,8 +144,14 @@ runs:
     # `cache-dependency-path` is stated explicitly. Without it `setup-node`
     # guesses from the working directory, which is right today and silently wrong
     # the moment a second lockfile appears anywhere in the tree.
+    #
+    # `node-version` carries the derived floor when the caller asked for it, and is empty
+    # otherwise — `setup-node` ignores an empty value, so the default path is unchanged
+    # and the floor lane needs no second `uses:` of its own. The literal lives in
+    # `engines.node` and nowhere else.
     - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
       with:
+        node-version: ${{ steps.shim.outputs.version }}
         node-version-file: package.json
         cache: pnpm
         cache-dependency-path: pnpm-lock.yaml

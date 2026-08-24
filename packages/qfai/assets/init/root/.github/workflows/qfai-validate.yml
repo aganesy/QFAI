@@ -119,16 +119,100 @@ jobs:
           # later anyway. The shape required is `pnpm@` then MAJOR.MINOR.PATCH
           # of digits, with corepack's optional `-<prerelease>` and `+<hash>`
           # suffixes allowed but not required.
+          # The suffixes are VALIDATED, not stripped. Dropping everything from the
+          # first `-` or `+` and checking only what was left accepted
+          # `pnpm@9.12.3-`, `pnpm@9.12.3+` and `pnpm@9.12.3-foo_bar`: the core
+          # read as 9.12.3, this guard said `resolvable=yes`, and corepack then
+          # failed with the opaque resolution error the guard exists to replace.
+          # Corepack's own grammar is `<name>@<semver>` with an optional
+          # `+<algorithm>.<hex digest>` integrity suffix, so that is what is
+          # required here - whole value, one shape at a time.
           version="${declared#pnpm@}"
-          core="${version%%+*}"
-          core="${core%%-*}"
           resolvable=no
           if [ "$version" != "$declared" ]; then
-            case "$core" in
-              ""|.*|*.|*[!0-9.]*|*.*.*.*) ;;
-              [0-9]*.[0-9]*.[0-9]*) resolvable=yes ;;
-              *) ;;
+            shape_ok=yes
+            body="$version"
+            case "$version" in
+              *+*)
+                body="${version%%+*}"
+                integrity="${version#*+}"
+                # `<algorithm>.<digest>`: an algorithm name, a dot, a hex digest.
+                # A bare `+`, a missing digest and a second `+` all fail — `+` is
+                # not a hex character, so the digest test rejects it too.
+                #
+                # The algorithm is checked for SHAPE, not against a list. A closed
+                # list of `sha1|sha224|sha256|sha384|sha512` refuses anything
+                # corepack accepts through `crypto.createHash` that is not on it —
+                # `sha3-256` is the obvious one — and refuses it with THIS guard's
+                # message, which would send an adopter to fix a value that was
+                # already correct. This guard exists to catch a value that cannot
+                # resolve, and guessing which hashes corepack supports is not that.
+                case "$integrity" in
+                  *.*) ;;
+                  *) shape_ok=no ;;
+                esac
+                case "${integrity%%.*}" in
+                  ""|*[!0-9A-Za-z-]*) shape_ok=no ;;
+                esac
+                case "${integrity#*.}" in
+                  ""|*[!0-9a-fA-F]*) shape_ok=no ;;
+                esac
+                ;;
             esac
+            case "$body" in
+              *-*)
+                core="${body%%-*}"
+                # A prerelease is dot-separated identifiers of alphanumerics and
+                # hyphens, none of them empty. `9.12.3-` has none at all.
+                case "${body#*-}" in
+                  ""|.*|*.|*..*|*[!0-9A-Za-z.-]*) shape_ok=no ;;
+                esac
+                # And a NUMERIC identifier carries no leading zero, which SemVer
+                # forbids: `9.12.3-01` is not a version, and node-semver rejects
+                # it. An alphanumeric one may start with a zero (`0alpha`), so
+                # the two cases are separated rather than lumped together.
+                ids="${body#*-}"
+                while [ -n "$ids" ]; do
+                  id="${ids%%.*}"
+                  case "$id" in
+                    "") shape_ok=no ;;
+                    *[!0-9]*) ;;
+                    0) ;;
+                    0*) shape_ok=no ;;
+                  esac
+                  case "$ids" in
+                    *.*) ids="${ids#*.}" ;;
+                    *) ids="" ;;
+                  esac
+                done
+                ;;
+              *) core="$body" ;;
+            esac
+            case "$core" in
+              ""|.*|*.|*[!0-9.]*|*.*.*.*) shape_ok=no ;;
+              [0-9]*.[0-9]*.[0-9]*) ;;
+              *) shape_ok=no ;;
+            esac
+            # MAJOR.MINOR.PATCH, each without a leading zero. The glob above is
+            # "digits and dots", not SemVer: `pnpm@9.12.03` and `pnpm@01.02.03`
+            # passed it, and neither is a version node-semver or corepack will
+            # resolve — so the guard said `resolvable` and the opaque downstream
+            # failure it exists to replace arrived one step later anyway. A
+            # dropped digit is an ordinary typo, which is exactly the case this
+            # guard is for.
+            rest="$core"
+            for _part in 1 2 3; do
+              part="${rest%%.*}"
+              case "$part" in
+                ""|*[!0-9]*) shape_ok=no ;;
+                0) ;;
+                0*) shape_ok=no ;;
+              esac
+              rest="${rest#*.}"
+            done
+            if [ "$shape_ok" = yes ]; then
+              resolvable=yes
+            fi
           fi
           if [ "$resolvable" != yes ]; then
             printf '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json "packageManager" is %s, which does not name a pnpm version. Set it to "pnpm@<the pnpm version you use>" and commit it - the pnpm setup action resolves the version from that field only, so this lane cannot install and must not report a validate result it did not compute.\n' "$declared"

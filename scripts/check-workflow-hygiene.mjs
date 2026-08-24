@@ -299,10 +299,15 @@ function verificationBodyDigest(step) {
           .replace(/[ \t]+$/gm, "")
           .trimEnd()
       : value;
+  // `env` is IN the digest. Review finding [24], second escape: the verdict step's whole input is
+  // `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression with a hardcoded all-success
+  // map neuters the aggregate verdict while `run` is untouched and every pin still matches.
+  // Measured: the lane exited 0. A step's environment is what it runs on, not decoration.
   const shape = {
     run: normalize(step.run),
     uses: normalize(step.uses),
     with: step["with"],
+    env: step["env"],
   };
   return createHash("sha256").update(JSON.stringify(shape)).digest("hex").slice(0, 16);
 }
@@ -1004,7 +1009,16 @@ function checkRequiredContexts(root, jobs) {
           }
         } else if (step.if === undefined) {
           performed.add(step.name);
-          bodies.set(step.name, verificationBodyDigest(step));
+          // EVERY digest seen under this name, not the last one. Review finding [24], first escape:
+          // `needsClosure` yields the declaring job first, so hollowing out `ci-pass`'s verdict step
+          // and pasting the original — same name — into `lint` let last-write-wins restore the
+          // pinned digest with no edit to the declaration at all. Measured: the lane exited 0.
+          //
+          // A name is not a step. Collecting the set and requiring every member to match is what
+          // makes a second step wearing the name a finding rather than a substitute for the first.
+          const seen = bodies.get(step.name) ?? new Set();
+          seen.add(verificationBodyDigest(step));
+          bodies.set(step.name, seen);
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
@@ -1018,13 +1032,35 @@ function checkRequiredContexts(root, jobs) {
         // this repository means too.
         const pinned = pinnedBodies[item];
         const actual = bodies.get(item);
-        if (pinned !== undefined && actual !== pinned) {
+        if (pinned === undefined) {
+          // Review finding [24]. `pinned !== undefined && …` skipped the comparison entirely for
+          // an item with no digest, so the repair for [03] could be undone in one move: replace a
+          // step's `run:` with `true` AND delete that item's key from `verificationBodies`. Done to
+          // "Derive the verdict from the serialized needs map", the aggregate job every required
+          // context depends on would succeed while lint, test and build failed under it.
+          //
+          // A declared item with no pinned body is therefore a finding in its own right. The
+          // declaration names what the context verifies; a name with nothing behind it is the
+          // shape this whole rule exists to reject, one level up.
           findings.push({
             rule: "required-context",
             file: rel,
             job: declaredJob,
-            detail: `performs the declared verification item "${item}" with a body that is not the pinned one (expected ${pinned}, found ${actual ?? "nothing"}); update "verificationBodies" in the declaration in the same change if the edit is intended`,
+            detail: `declares the verification item ${JSON.stringify(item)} but pins no body digest for it in \`verificationBodies\`; a named item with no pinned body is verified by nothing`,
           });
+        } else {
+          // EVERY step wearing the item's name has to carry the pinned body — not merely one of
+          // them. A mismatch is reported with the whole set, because "expected X, found Y" is
+          // misleading when the tree holds both.
+          const seen = [...(actual ?? new Set())].sort();
+          if (seen.length !== 1 || seen[0] !== pinned) {
+            findings.push({
+              rule: "required-context",
+              file: rel,
+              job: declaredJob,
+              detail: `performs the declared verification item "${item}" with ${seen.length === 0 ? "no body at all" : `body digest(s) ${JSON.stringify(seen)}`} rather than exactly the pinned ${pinned}; update "verificationBodies" in the declaration in the same change if the edit is intended, and note that a SECOND step sharing the name does not stand in for the first`,
+            });
+          }
         }
         continue;
       }

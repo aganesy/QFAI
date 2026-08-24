@@ -414,6 +414,23 @@ async function main() {
     ledgerText = await readFile(ledgerPath, "utf8");
   } catch (error) {
     if (isMissing(error)) {
+      // Review finding [27]. A SCOPED run must not pass on a missing ledger. `ci:lint` invokes
+      // this with `--spec 0017`, and returning 0 here skipped the scoped-selected-nothing check
+      // below — so deleting or renaming `tests/e2e/qfai-traceability.md` left the guard green
+      // while it examined nothing at all, for a spec it was configured to hold at zero.
+      //
+      // Unscoped, an absent ledger really is nothing to check: a repository that has not started
+      // certifying has no claims to refuse. Scoped, it is the same fail-open the
+      // selected-nothing branch exists to close, reached one step earlier.
+      if (spec !== undefined) {
+        process.stderr.write(
+          `check-atdd-annotation-ledger: --spec ${spec} was requested but there is no ledger at ` +
+            `${path.relative(root, ledgerPath).replace(/\\/g, "/")}. A scoped run that can examine ` +
+            "nothing is not a pass.\n",
+        );
+        process.exitCode = 1;
+        return;
+      }
       process.stdout.write(
         "check-atdd-annotation-ledger: no ledger at tests/e2e — nothing to check\n",
       );

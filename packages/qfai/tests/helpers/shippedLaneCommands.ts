@@ -1181,8 +1181,8 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  * one, and they say WHICH part moved. A reader needs the second, and a boundary needs the first.
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
-  ["qfai-tests.yml", "72e19141b40fb058bafa7dd30cb5a92443f97e338814ae2d33074476b7937f40"],
-  ["qfai-validate.yml", "6b645ef207a3faa70f75278a20a5b1df9757de2948b11ece7bc1c08aa3ebf59b"],
+  ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
+  ["qfai-validate.yml", "2b1fd52a4048cba1e4da46367b2454ce80c05627245f358450098973e91152f0"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1547,7 +1547,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-tests.yml#detection",
-    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 6588108a843996691ae078b242328fc90f001f5f132e394a32b611e8bd9b70c7>"}',
+    '{"name":"Select lanes from the name-only diff","id":"diff","env":{"QFAI_BASE_REF":"${{ github.event.pull_request.base.sha || github.event.before }}","QFAI_EVENT_NAME":"${{ github.event_name }}"},"shell":"bash","run":"<body 39e77d7e6e292dc3f06762cd48bedc62e22aa02d35f1504b1e56134023621401>"}',
   ],
   [
     "qfai-tests.yml#detection",
@@ -1583,7 +1583,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 4ccc74b58c41f54ebda0e0c8968ae15efb115300d340cbaf4a3d87a89bae67d1>"}',
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 54b5a9a00939c3e80f9ce0bd3c6bf5b4ca2a7b6e1a0880cbaa11bb950468cc3d>"}',
   ],
   [
     "qfai-validate.yml#validate",

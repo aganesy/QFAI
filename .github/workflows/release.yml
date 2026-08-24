@@ -147,16 +147,54 @@ jobs:
           # opens with — re-running a failed publish for an older tag — could
           # never get past this job.
           fetch-depth: 0
+      # ── The composite action, taken from THIS workflow's revision ────────────────────
+      # The checkout above put the TAG's tree in the workspace, and `uses: ./…` resolves
+      # against the workspace. Review finding [07]: re-publishing a tag created before the
+      # composite action existed — the `workflow_dispatch` path this workflow opens with —
+      # left `./.github/actions/setup/action.yml` absent, and the job failed on step
+      # resolution without ever reaching `pnpm ci:gate`. The re-publish route was documented
+      # and unreachable for exactly the tags it was written for.
+      #
+      # So the action is fetched separately, at `github.sha` — the revision of the workflow
+      # being executed, which by construction contains the action this file references. A
+      # sparse checkout of `.github/actions` into a side path, and `clean: false` so it does
+      # not wipe the tag tree already in the workspace.
+      #
+      # Not `uses: aganesy/QFAI/.github/actions/setup@main`: that is a moving reference, and
+      # this repository pins every `uses:` to an immutable ref. Not a re-inlined preamble
+      # either — `BR-0017-0027` makes the composite action the single definition, and a copy
+      # here is the drift its extraction removed.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          # CONE MODE OFF, which is the difference between fetching one directory and fetching one
+          # directory plus every file at the repository root. In cone mode the root files come too,
+          # so `.ci-actions/CHANGELOG.md` lands in the workspace and `ci:gate`'s
+          # `markdownlint-cli2 "**/*.md"` lints it — its ignore entry is the bare `CHANGELOG.md`,
+          # which does not match a nested copy. Measured: 376 errors, on every release rather than
+          # only on the re-publish path this sidecar exists for.
+          sparse-checkout-cone-mode: false
       # The one definition of how this repository installs a toolchain (BR-0017-0027). It enables
       # corepack, resolves Node from `package.json#engines`, re-shims pnpm against the toolcache Node
       # in that order, and installs frozen. Inlining any of it is what let the gate and `ci.yml` drift.
       #
-      # This job WAS pinned to `NODE_LTS: "20.19"` — the exact floor `engines.node` declares. It now
-      # resolves to the newest release satisfying `>=20.19.0`, so the gate no longer runs on the floor
-      # itself. That is the trade `.github/actions/setup/action.yml` already records for `ci.yml`:
-      # pinning exactly needs a root-level `.node-version`, which no agent may create without approval.
-      # Restoring exact-floor coverage means creating that file, not re-inlining a literal here.
-      - uses: ./.github/actions/setup
+      # Resolving the RANGE, deliberately — the newest release satisfying `engines.node`.
+      #
+      # Review finding [13] is about the floor going unexercised, and pinning this job to it was the
+      # first attempt. That trades one gap for its mirror image: the gate would then run ONLY on
+      # 20.19.0 and the inverse break — works on the floor, fails on the newest Node an adopter
+      # actually installs — would be exercised nowhere at tag time. The finding asks for a floor
+      # lane "separately from validating the newest Node", not instead of it.
+      #
+      # The floor is covered for this exact commit without pinning here: the `verify` job above
+      # refuses a tag that is not an ancestor of `origin/main`, so the tagged tree has already
+      # passed `ci.yml`, whose `node-floor` lane runs the package suite on the floor. Seven lanes on
+      # the newest, one on the floor, and this gate re-runs the aggregate on the newest.
+      - uses: ./.ci-actions/.github/actions/setup
       - name: Run the release gate
         # The same aggregate `main` is held to: SSOT sync, format, lint, types,
         # package tests and pack verification.

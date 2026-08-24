@@ -389,6 +389,42 @@ describe("the CLI entry point", () => {
     return { status: child.status, out: child.stdout ?? "", err: child.stderr ?? "" };
   }
 
+  it("fails a scoped run when the ledger is missing, and passes an unscoped one", async () => {
+    // Review finding [27]. `ci:lint` runs this with `--spec 0017`, and the missing-ledger branch
+    // returned 0 without consulting the scope — so deleting or renaming the ledger left the guard
+    // green while it examined nothing, for a spec it was configured to hold at zero. The
+    // scoped-selected-nothing branch that would have caught it sat further down and was never
+    // reached.
+    //
+    // Unscoped, an absent ledger really is nothing to check, and that half is asserted too: the
+    // repair is a scope distinction, not a new refusal.
+    const dir = await temp();
+    await mkdir(path.join(dir, "scripts"), { recursive: true });
+    await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      "utf8",
+    );
+    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
+    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+
+    const scoped = spawnSync(process.execPath, [copied, "--spec", "0017"], {
+      cwd: dir,
+      encoding: "utf-8",
+    });
+    if (scoped.error !== undefined) throw scoped.error;
+    expect(scoped.status, "a scoped run that can examine nothing is not a pass").toBe(1);
+    expect(`${scoped.stdout ?? ""}${scoped.stderr ?? ""}`).toMatch(/no ledger/i);
+
+    const unscoped = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
+    if (unscoped.error !== undefined) throw unscoped.error;
+    expect(
+      unscoped.status,
+      "a repository that has not started certifying has no claims to refuse",
+    ).toBe(0);
+  });
+
   it("does not count a root-tree test the runner never executes", async () => {
     // Review finding [09], end to end. `runnerCorpusRoots` being right is not the same as `main()`
     // USING it: a plant reverting the wiring back to the two hand-listed trees left every direct

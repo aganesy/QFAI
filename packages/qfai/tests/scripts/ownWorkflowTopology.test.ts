@@ -1211,29 +1211,49 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       )
       .toMatch(/validate output/i);
 
-    // And the mirrors go the other way, also by name.
+    // And the mirrors go the other way — they select EVERYTHING now, prose included.
+    //
+    // `CR-20260820-0004` was open on whether the guards move or the members do, and an earlier
+    // round closed only the half that needed no decision: an EXECUTABLE under one of those
+    // directories selects everything, because a PowerShell script is not a mirror. Review
+    // finding [12] closed the rest, by measuring the prose half instead of arguing it. A pull
+    // request deleting the default values and the `tmp/pr-fix/` prose from
+    // `.agents/skills/pr-fix/SKILL.md` was documentation-only and skipped the whole `test` job —
+    // while `tests/core/prFixMonitor.test.ts` asserts that prose, and `lint:mirror-surface`,
+    // which does run, does not include that test.
+    //
+    // The decision went to the members, because the count is not close: path literals in the
+    // test tree are 37 for `.claude/`, 9 for `.codex/`, 1 for `.instruction/`, and every subtree
+    // of `.agents/`. A documentation set whose every member is guarded by a test the set skips
+    // is not small — it is empty.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
-    expect.soft(mirrors.full, "the agent-integration mirrors are documentation-only").toBe(false);
-
-    // But only their PROSE. `.agents/` is in the documentation-only set and holds
-    // `skills/pr-fix/scripts/run-pr-fix.ps1` and `skills/pr-merge/scripts/run-pr-merge.ps1`,
-    // which `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts` read.
-    // Measured: ten test files across five runner projects read something under `.agents/`,
-    // and every one of them was skipped for a change to either script.
-    //
-    // `BR-0017-0010` admits the agent-integration MIRRORS, and a PowerShell script is not a
-    // mirror — so this narrows rather than contradicts the rule. `CR-20260820-0004` is open
-    // on the wider question of whether the guards move or the members do; this claim closes
-    // the half that needs no decision, because nothing in the rule calls automation prose.
-    const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
     expect
-      .soft(script.full, "an executable under a documentation directory must select everything")
+      .soft(
+        mirrors.full,
+        "a mirror the tests verify is not documentation for this purpose, whatever the rule calls it",
+      )
       .toBe(true);
     expect
-      .soft(script.reason, "and be excluded as an executable, not as an unrecognized path")
-      .toMatch(/executable inside a documentation directory/);
+      .soft(mirrors.reason, "and it is a source path, not an unrecognized one")
+      .toMatch(/source path/);
+
+    // `packages/qfai/docs/` is what is left, and it stays: its only appearance in the test tree
+    // is a FIXTURE in this classifier's own rows — a path that does not exist — rather than a
+    // file any test reads. That distinction is what decides membership.
+    const docs = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
+    expect
+      .soft(docs.full, "the one remaining documentation directory still selects nothing")
+      .toBe(false);
+
+    // The executable half still holds, and now for the plainer reason that the whole directory
+    // does. Kept as its own row because a later re-admission of a mirror must not silently take
+    // the executable case with it.
+    const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
+    expect
+      .soft(script.full, "an executable under an instruction mirror must select everything")
+      .toBe(true);
 
     // And an ordinary source path must NOT be excluded as an executable, which is the half that
     // had no test at all. The check used to run before the documentation test, so it also fired
@@ -1346,6 +1366,18 @@ const OWN_WORKFLOW_FILES = ["ci.yml", "release.yml"] as const;
  * legs appear here individually: they are seven check names, and removing a leg removes
  * one — the thing `BR-0017-0006` forbids and `TC-0017-0007` also guards from the matrix
  * side.
+ *
+ * `node-floor` was added deliberately, which is what this pin is for: it made the addition a
+ * failing test naming the new member rather than a diff to interpret. Review finding [13] —
+ * every toolchain job resolves `engines.node` (`>=20.19.0`, no ceiling), so `setup-node`
+ * gives all of them the newest satisfying release and nothing runs on the floor the package
+ * promises; an API present in Node 24 and absent in 20.19 passes every gate and breaks
+ * exactly the supported users.
+ *
+ * Creating a check name is normally a repository-settings problem. It is not one here: only
+ * `ci-pass` is required, the verdict is derived from its `needs` map, and `node-floor` is in
+ * that map — so the new lane is gated by the context that already exists, and no setting has
+ * to change for it to block a merge.
  */
 const CI_CHECK_NAMES = [
   "build",
@@ -1354,6 +1386,7 @@ const CI_CHECK_NAMES = [
   "ci-pass",
   "detect",
   "lint",
+  "node-floor",
   "scanner-coverage",
   "test (cli)",
   "test (core)",
@@ -1419,6 +1452,180 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
     expect
       .soft(matrixJobs, "the layer split is expressed as the matrix of a single job")
       .toEqual(["test"]);
+  });
+});
+
+describe("the hygiene lane's findings reach the job that runs the Reviewer Gate", () => {
+  it("writes the artifact in the same job as the dogfooding validate, and before it", () => {
+    // Review finding [26]. The lane writes `{ findings: [...] }` under `.qfai/review/**` and the
+    // gate ingests it — but the lane runs in `lint`, on that job's checkout, and the dogfooding
+    // validate runs in `build` on a fresh one. With nothing transferring the file, a hygiene
+    // violation reddened `lint` and reached no reviewer, which is the whole promise the
+    // shipped-workflows contract makes for that code.
+    //
+    // Asserted as ONE JOB and an ORDER, because either alone is the defect: an artifact written
+    // after the gate has read the directory is an artifact the gate did not see, and one written
+    // in another job is one this job's `.qfai/review/**` never contains.
+    const jobs = ciJobs();
+    const steps = Array.isArray(jobs["build"]?.["steps"])
+      ? jobs["build"]["steps"].filter(isRecord)
+      : [];
+    expect(steps.length, "the build job must declare steps").toBeGreaterThan(0);
+
+    const writesArtifact = steps.findIndex(
+      (step) =>
+        typeof step["run"] === "string" &&
+        step["run"].includes("check-workflow-hygiene.mjs") &&
+        step["run"].includes("--report-dir"),
+    );
+    expect(
+      writesArtifact,
+      "the build job must produce the hygiene findings where its own Reviewer Gate looks",
+    ).toBeGreaterThan(-1);
+
+    const readsThem = steps.findIndex(
+      (step) =>
+        typeof step["run"] === "string" &&
+        step["run"].includes("validate") &&
+        step["run"].includes("--root ."),
+    );
+    expect(
+      readsThem,
+      "the dogfooding validate — the step that ingests them — must be in this job too",
+    ).toBeGreaterThan(-1);
+
+    expect(
+      writesArtifact < readsThem,
+      "the findings must be written BEFORE the gate reads the directory; after it, the gate " +
+        "ingested nothing and the run is green over a violation",
+    ).toBe(true);
+  });
+
+  it("survives the lane exiting non-zero, and fails when no artifact appears", () => {
+    // The step's whole design is that a hygiene VIOLATION still reaches the gate — so the lane's
+    // non-zero exit must not abort the step before the validate steps below it. GitHub runs
+    // `shell: bash` as `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the
+    // INVOCATION and a `set -uo pipefail` inside the body does not remove it. Measured: the first
+    // version of this step aborted on the lane's non-zero exit and never reached the line that
+    // captured it — the exact abort its own comment said must not happen.
+    //
+    // And the other direction, which is not symmetric: a MISSING artifact is fatal. The lane
+    // failing means a violation the gate should see; no artifact at all means the bridge did not
+    // run, and a silent bridge is what this step exists to remove.
+    const jobs = ciJobs();
+    const steps = Array.isArray(jobs["build"]?.["steps"])
+      ? jobs["build"]["steps"].filter(isRecord)
+      : [];
+    const body = steps
+      .map((step) => (typeof step["run"] === "string" ? step["run"] : ""))
+      .find((run) => run.includes("check-workflow-hygiene.mjs") && run.includes("--report-dir"));
+    expect(body, "the build job must carry the artifact step").toBeDefined();
+
+    expect(
+      /check-workflow-hygiene\.mjs[^\n]*\|\|/.test(body ?? ""),
+      "the lane call must sit in an `||` list (or otherwise suspend `-e`), or a violation aborts " +
+        "the step before the Reviewer Gate below ever runs",
+    ).toBe(true);
+
+    expect(
+      body ?? "",
+      "and a missing artifact must be reported as an error rather than passed over",
+    ).toContain("::error::");
+  });
+});
+
+describe("one lane runs on the floor `engines.node` declares", () => {
+  it("asks the shared definition for the floor, and checks it got it", () => {
+    // Review finding [13]. Every other toolchain job resolves the range, so `setup-node` gives
+    // them all the newest satisfying release and nothing ever runs on the floor the package
+    // promises — an API present in Node 24 and absent in the floor passes every gate, release
+    // gate included, and breaks exactly the supported users.
+    //
+    // A plant that flipped this input to `"false"` left every other row in this file green, which
+    // is how this row came to exist: the lane's NAME was pinned, its check name was pinned, and
+    // nothing asserted the one thing it is for.
+    const jobs = ciJobs();
+    const floor = jobs["node-floor"];
+    expect(floor, "the floor lane must exist").toBeDefined();
+
+    const steps = Array.isArray(floor?.["steps"]) ? floor["steps"].filter(isRecord) : [];
+    const setup = steps.find((step) => step["uses"] === "./.github/actions/setup");
+    expect(
+      setup,
+      "and consume the shared definition, like every other toolchain job",
+    ).toBeDefined();
+
+    const withBlock = isRecord(setup?.["with"]) ? setup["with"] : {};
+    expect(
+      withBlock["pin-engines-floor"],
+      "the floor lane must ASK for the floor; without this input it is an ordinary lane wearing " +
+        "the name of a floor lane",
+    ).toBe("true");
+  });
+
+  it("builds before it tests, or the lane is red for a reason that is not the floor", () => {
+    // `dist/` is not committed and two slices read it — `cliStartupCost.test.ts` fails with "no
+    // shipped bundle was readable" and `spec0010DiscussionMockAndPointerE2E.test.ts` spawns
+    // `dist/cli/index.cjs`. Without a build the floor lane is structurally ALWAYS RED, and an
+    // always-red required lane conveys no differential signal: a genuine Node 20 break and a
+    // missing bundle look identical, so the lane gets un-required or "fixed" by dropping the pin.
+    //
+    // The ORDER is asserted, not just the presence: a build after the test step is a build that
+    // ran too late.
+    const jobs = ciJobs();
+    const steps = Array.isArray(jobs["node-floor"]?.["steps"])
+      ? jobs["node-floor"]["steps"].filter(isRecord)
+      : [];
+    const builds = steps.findIndex(
+      (step) => typeof step["run"] === "string" && /\bbuild\b/.test(step["run"]),
+    );
+    const tests = steps.findIndex(
+      (step) => typeof step["run"] === "string" && /\btest\b/.test(step["run"]),
+    );
+    expect(builds, "the floor lane must build the package").toBeGreaterThan(-1);
+    expect(tests, "and run the suite").toBeGreaterThan(-1);
+    expect(
+      builds < tests,
+      "the build must come first, or the slices that read `dist/` fail for a reason that has " +
+        "nothing to do with the Node version this lane exists to exercise",
+    ).toBe(true);
+  });
+
+  it("derives the expected version from engines.node rather than restating it", () => {
+    // The verification step inside the lane is what makes the pin observable at runtime, and it
+    // must not carry a literal either: two answers to one question, and the stale one wins.
+    const jobs = ciJobs();
+    const steps = Array.isArray(jobs["node-floor"]?.["steps"])
+      ? jobs["node-floor"]["steps"].filter(isRecord)
+      : [];
+    const bodies = steps
+      .map((step) => (typeof step["run"] === "string" ? step["run"] : ""))
+      .join("\n");
+
+    expect(
+      bodies,
+      "the lane must read the floor from `engines.node`, the same place the action derives it from",
+    ).toContain("engines.node");
+
+    // And no bare version anywhere the SHELL would use one.
+    //
+    // Comment lines are stripped first. The rule is about values, and a comment explaining which
+    // literal must not be written is legitimate documentation — this very lane carries one, and
+    // scanning it made the row fail on its own explanation. Leading-`#` lines only, which is the
+    // same granularity `lint-shipping.ts` applies for the same reason.
+    const executable = bodies
+      .split(/\r?\n/)
+      .filter((line) => !/^\s*#/.test(line))
+      .join("\n");
+    expect(
+      // `\.` and not `\\.`. The first version wrote the escaped form, which in a regex literal
+      // matches a literal BACKSLASH followed by any character — so it returned false for
+      // `v20.19.0` and the row was vacuous: writing the literal straight back into the lane kept
+      // it green, which is the exact drift the derivation exists to prevent. Verified by eval'ing
+      // the literal off disk rather than by re-reading it.
+      /\bv?[0-9]+\.[0-9]+\.[0-9]+\b/.test(executable),
+      "a version literal in the floor lane is the second answer this derivation removes",
+    ).toBe(false);
   });
 });
 

@@ -662,7 +662,19 @@ const DECLARATION_REL = path.join(".github", "required-status-contexts.json");
 const DECLARATION_RULE = "required-context";
 
 interface Declaration {
-  contexts: { workflow: string; job: string; verificationSet: string[] }[];
+  contexts: {
+    workflow: string;
+    job: string;
+    verificationSet: string[];
+    /**
+     * Item name -> digest of that step's `run` / `uses` / `with`.
+     *
+     * Optional in the TYPE and required in the LANE, which is the distinction review finding [24]
+     * turned on: a context that omits an item's digest is a declaration the lane must reject, so the
+     * shape has to be expressible here in order to be planted.
+     */
+    verificationBodies?: Record<string, string>;
+  }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
 }
@@ -1117,6 +1129,116 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       expect
         .soft(run.output, "the finding must name the missing verification item")
         .toContain(firstVerificationItem(REPO_ROOT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  // Review finding [24]. The [03] repair compared a pinned body against the step's — and skipped
+  // the comparison entirely when no digest was pinned. So the whole repair came undone in one
+  // move: hollow the step out AND delete its key from `verificationBodies`. Done to the verdict
+  // step, the aggregate job every required context depends on would succeed while the lanes under
+  // it failed.
+  it("rejects a hollowed step even when a same-named copy is pasted into a dependency", () => {
+    // The second escape review finding [24] named, measured against the lane: `needsClosure`
+    // yields the declaring job first, and the digest map was keyed by step NAME with
+    // last-write-wins. So hollowing `ci-pass`'s verdict step and pasting the original — same
+    // name — into a job it depends on restored the pinned digest, with no edit to the
+    // declaration at all. The lane exited 0.
+    //
+    // A name is not a step: every step wearing the item's name has to carry the pinned body.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      const item = declared.verificationSet[0];
+      editWorkflow(d, declared.workflow, (text) => {
+        const at = text.indexOf(`- name: ${item}`);
+        if (at === -1) throw new Error(`no step named ${item} — the needle is stale`);
+        const lineEnd = text.indexOf("\n", at);
+        const nextStep = text.indexOf("      - name:", lineEnd);
+        const stop = nextStep === -1 ? text.length : nextStep;
+        const original = text.slice(at, stop);
+
+        // Hollow the real one…
+        const hollowed = `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
+
+        // …and paste the original into `lint`, a job the declared context depends on.
+        const lintAt = hollowed.indexOf("      - name: Run lint gate");
+        if (lintAt === -1) throw new Error("the lint anchor is stale");
+        return `${hollowed.slice(0, lintAt)}      ${original.trim()}\n${hollowed.slice(lintAt)}`;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a pasted twin must not stand in for the real step:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must say a second step does not substitute")
+        .toMatch(/does not stand in/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a verification step whose env changed, which is what it runs on", () => {
+    // The third escape: the digest hashed `run` / `uses` / `with` and not `env`. The verdict
+    // step's WHOLE input is `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression
+    // with a hardcoded all-success map neuters the aggregate verdict while `run` is untouched
+    // and every pin still matches. Measured: the lane exited 0.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      editWorkflow(d, declared.workflow, (text) => {
+        const before = "NEEDS_JSON: ${{ toJSON(needs) }}";
+        if (!text.includes(before)) throw new Error(`the env needle is stale`);
+        return text.replace(before, `NEEDS_JSON: '{"lint":{"result":"success"}}'`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a rewritten step env must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "and the finding must name the item whose body moved")
+        .toContain(firstVerificationItem(REPO_ROOT));
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a declared verification item that pins no body at all", () => {
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      const item = declared.verificationSet[0];
+
+      // Both halves of the move, because either alone is already caught: the hollowed body by the
+      // digest comparison, the missing key by this row. Together they were caught by nothing.
+      editWorkflow(d, declared.workflow, (text) => {
+        const at = text.indexOf(`- name: ${item}`);
+        if (at === -1) throw new Error(`no step named ${item} — the needle is stale`);
+        const lineEnd = text.indexOf("\n", at);
+        const nextStep = text.indexOf("      - name:", lineEnd);
+        const stop = nextStep === -1 ? text.length : nextStep;
+        return `${text.slice(0, lineEnd + 1)}        run: true\n\n${text.slice(stop)}`;
+      });
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        context.verificationBodies = Object.fromEntries(
+          Object.entries(context.verificationBodies ?? {}).filter(([name]) => name !== item),
+        );
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unpinned verification item must exit 1:\n${run.output}`)
+        .toBe(1);
+      const findings = run.output.split(/\r?\n/).filter((line) => line.includes(DECLARATION_RULE));
+      expect
+        .soft(findings.join("\n"), "the finding must name the item with no digest")
+        .toContain(firstVerificationItem(REPO_ROOT));
+      expect
+        .soft(findings.join("\n"), "and say that the pin itself is missing")
+        .toMatch(/pins no body digest/i);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

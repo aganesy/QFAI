@@ -155,8 +155,9 @@ describe(
       expect(surfaced, "the gate did not surface the lane's finding at all").toHaveLength(1);
       expect(
         surfaced[0]?.severity,
-        "an ingested deferred-registration code must not fail a run",
-      ).toBe("info");
+        "an ingested deferred-registration code keeps the error class the lane emits it with; " +
+          "`BR-0015-0017` defers rejecting it for an empty justification, not its severity",
+      ).toBe("error");
 
       const message = surfaced[0]?.message ?? "";
       expect(message, "the file the lane named did not survive ingestion").toContain(emitted.file);

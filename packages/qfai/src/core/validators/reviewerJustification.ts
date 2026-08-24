@@ -122,12 +122,21 @@ export async function validateReviewerJustification(
       // gate that had simply never heard of the codes would behave identically
       // today and would stop being a record of anything the moment either set
       // moved.
+      //
+      // Emitted at `error`, not `info`. Review finding [25]: the severity was
+      // downgraded here as well, so `qfai validate --fail-on error` succeeded
+      // while holding an ingested lint failure. `BR-0015-0017` grants ONE
+      // exemption and this branch was taking two — it says the gate "does not
+      // re-derive, re-word or re-classify" the payload, that both codes are
+      // "declared lint-failure codes in `CLI-WFSET`, i.e. error class", and that
+      // what is deferred until catalog registration lands is REJECTING them for
+      // an empty `justification:`. Nothing there defers the severity.
       if (DEFERRED_CATALOG_REGISTRATION_CODE_SET.has(code)) {
         issues.push(
           issue(
             code,
             `Reviewer finding ${code} ingested from the workflow-set lint lane: ${laneSite(finding)} (${relPath}). Catalog registration is deferred, so no justification is demanded for this code yet.`,
-            "info",
+            "error",
             relPath,
             "reviewerJustification.ingested",
           ),

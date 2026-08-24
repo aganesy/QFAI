@@ -1,5 +1,15 @@
-/* global process, URL */
+/* global process, URL, Buffer */
 import { spawnSync } from "node:child_process";
+import {
+  closeSync,
+  mkdtempSync,
+  openSync,
+  readFileSync,
+  readSync,
+  rmSync,
+  statSync,
+} from "node:fs";
+import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -31,26 +41,229 @@ const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/
 const ALREADY_PUBLISHED = /cannot publish over the previously published versions/i;
 
 /**
- * Evidence that the tarball was actually built and listed.
+ * Whether the registry ITSELF says this version is already published.
  *
- * The tolerated case above rests on "the pack itself built and listed", and the phrase alone does
- * not establish that. `prepublishOnly` and `prepack` run BEFORE npm packs anything, so a lifecycle
- * script that prints the registry's sentence and exits non-zero reproduces the whole tolerated
- * signature with no tarball in existence — and the required `build` context then goes green over a
- * pack that never ran. So the tolerance needs a second, independent observation: npm's own tarball
- * summary, which only the packing step emits. Both spellings are matched — npm printed
- * `=== Tarball Details ===` for years and dropped the rules later.
+ * The tolerated case is "the version is already published, which a pull request is not asking
+ * about", and the first two versions of this check decided that by reading the dry-run child's own
+ * text. Review finding [06] closed the tarball half of that; the SAME argument applies to this half
+ * and was left open — a lifecycle script can print `npm error You cannot publish over the previously
+ * published versions` for a version that was never published, and a pull request can edit
+ * `prepublishOnly`. Two measured escapes survived the tarball repair:
+ *
+ *   - `npm pack` does not run `prepublishOnly` at all, so a `prepublishOnly` that prints the
+ *     sentence and exits 1 leaves `verifyTarballIndependently` answering `ok: true`;
+ *   - a `prepack` can branch on npm's own `npm_command`, behaving during `npm publish` and not
+ *     during `npm pack`.
+ *
+ * So the claim is put to the party that owns it. `npm view <name>@<version> version` is a separate
+ * process asking the REGISTRY, and no lifecycle script in this package can make the registry report
+ * a version it does not host. A refusal — offline, unpublished, unparseable — returns `ok: false`,
+ * and the tolerance then does not apply, which is the conservative direction: an unreachable
+ * registry already fails the dry-run for its own reasons.
+ *
+ * @param {string} pkgDir the package directory whose name and version to ask about
+ * @returns {{ ok: boolean, reason: string }}
  */
-const TARBALL_BUILT = /npm notice\s+=*\s*Tarball (?:Details|Contents)|npm notice\s+total files:/i;
+export function verifyAlreadyPublished(pkgDir) {
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(path.join(pkgDir, "package.json"), "utf-8"));
+  } catch (error) {
+    return { ok: false, reason: `could not read ${pkgDir}/package.json: ${String(error)}` };
+  }
+  const name = typeof manifest?.name === "string" ? manifest.name : "";
+  const version = typeof manifest?.version === "string" ? manifest.version : "";
+  if (name === "" || version === "") {
+    return { ok: false, reason: "package.json declares no name/version to ask the registry about" };
+  }
+
+  const viewed = spawnSync("npm", ["view", `${name}@${version}`, "version", "--json"], {
+    cwd: pkgDir,
+    encoding: "utf-8",
+  });
+  if (viewed.status !== 0) {
+    // `npm view` exits non-zero for an unpublished version (E404) and for a network failure alike.
+    // Both mean the same thing here: the registry did not confirm it.
+    return {
+      ok: false,
+      reason: `the registry did not confirm ${name}@${version} is published (\`npm view\` exited ${String(viewed.status)})`,
+    };
+  }
+  let reported;
+  try {
+    reported = JSON.parse((viewed.stdout ?? "").trim());
+  } catch {
+    return { ok: false, reason: "`npm view --json` printed something that did not parse" };
+  }
+  // A single match prints a string; an ambiguous query prints an array.
+  const versions = Array.isArray(reported) ? reported : [reported];
+  if (!versions.includes(version)) {
+    return {
+      ok: false,
+      reason: `the registry reported ${JSON.stringify(versions)} rather than ${version}`,
+    };
+  }
+  return { ok: true, reason: `the registry confirms ${name}@${version} is published` };
+}
+
+/**
+ * Whether a tarball was really built, established by a SEPARATE process and by a file on disk.
+ *
+ * The tolerated case rests on "the pack itself built", and the first version of this check read
+ * that off the dry-run's own output — npm's `=== Tarball Details ===` banner. Review finding [06]
+ * named why that establishes nothing: `prepublishOnly`, `prepack` and `prepare` all run BEFORE the
+ * pack, npm's own documentation says so, and a pull request can change any of them. A lifecycle
+ * script printing that banner and the already-published sentence, then exiting non-zero, reproduced
+ * the entire tolerated signature with no tarball in existence — and the required `build` context
+ * went green over a pack that never ran. Text from the same child is not evidence about that child.
+ *
+ * So this runs `npm pack --json` into a temporary directory and checks three things a lifecycle
+ * script cannot fake between them:
+ *
+ * 1. the separate process exited zero;
+ * 2. npm's OWN post-pack accounting — the JSON it prints after packing — names a filename and a
+ *    non-empty file list;
+ * 3. that file exists on disk, with the size npm reported and a gzip magic number.
+ *
+ * A script can print anything; it cannot make npm's post-pack JSON describe a file it did not
+ * create, and it cannot leave a gzip archive of the reported size where npm says one is without
+ * having built one. Any refusal returns `ok: false` with the reason, and the caller turns that into
+ * a fatal verdict — the conservative direction, since "could not establish a tarball" and "no
+ * tarball" cost the same thing here.
+ *
+ * @param {string} pkgDir the package directory to pack
+ * @returns {{ ok: boolean, reason: string }}
+ */
+export function verifyTarballIndependently(pkgDir) {
+  let outDir;
+  try {
+    outDir = mkdtempSync(path.join(tmpdir(), "qfai-pack-proof-"));
+  } catch (error) {
+    return { ok: false, reason: `could not create a directory to pack into: ${String(error)}` };
+  }
+  try {
+    const packed = spawnSync("npm", ["pack", "--json", "--pack-destination", outDir], {
+      cwd: pkgDir,
+      encoding: "utf-8",
+    });
+    if (packed.status !== 0) {
+      return {
+        ok: false,
+        reason: `\`npm pack\` exited ${String(packed.status)} in its own process`,
+      };
+    }
+
+    // npm prints its accounting as JSON at the END of stdout, and `prepack` has already written
+    // whatever it likes before it — this package's `prepack` runs tsup, whose ANSI colour codes
+    // contain `[`. Taking the first `[` therefore sliced from the middle of a build log and failed
+    // to parse, which is measured: the proof answered "did not parse" for a pack that succeeded.
+    //
+    // So the candidates are tried from the LAST `[` backwards, and the first slice that parses to
+    // an array wins. Only the top-level opening bracket can parse against the final `]`; anything
+    // nested or textual leaves the slice unbalanced.
+    const stdout = packed.stdout ?? "";
+    const end = stdout.lastIndexOf("]");
+    let report;
+    for (
+      let start = stdout.lastIndexOf("[", end);
+      start !== -1;
+      start = stdout.lastIndexOf("[", start - 1)
+    ) {
+      try {
+        const candidate = JSON.parse(stdout.slice(start, end + 1));
+        if (Array.isArray(candidate)) {
+          report = candidate;
+          break;
+        }
+      } catch {
+        // not the top-level array; keep walking back
+      }
+      if (start === 0) break;
+    }
+    if (report === undefined) {
+      return {
+        ok: false,
+        reason: "`npm pack --json` printed no parseable JSON array to account for the pack",
+      };
+    }
+    const entry = Array.isArray(report) ? report[0] : undefined;
+    if (entry === undefined || typeof entry !== "object" || entry === null) {
+      return { ok: false, reason: "`npm pack --json` accounted for no tarball" };
+    }
+    const filename = Reflect.get(entry, "filename");
+    const files = Reflect.get(entry, "files");
+    if (typeof filename !== "string" || filename.length === 0) {
+      return { ok: false, reason: "`npm pack --json` named no tarball file" };
+    }
+    if (!Array.isArray(files) || files.length === 0) {
+      return { ok: false, reason: `\`npm pack\` reported ${filename} with no files in it` };
+    }
+
+    // On disk, where the accounting says it is. `filename` can carry the scope as a path segment,
+    // so only its basename is joined — a name with a separator must not reach outside `outDir`.
+    const tarball = path.join(outDir, path.basename(filename));
+    let stats;
+    try {
+      stats = statSync(tarball);
+    } catch {
+      return { ok: false, reason: `\`npm pack\` reported ${filename}, which is not on disk` };
+    }
+    if (!stats.isFile() || stats.size === 0) {
+      return { ok: false, reason: `${filename} is not a non-empty regular file` };
+    }
+
+    // And it is a gzip archive, not a file something else left with the right name.
+    const head = Buffer.alloc(2);
+    let fd;
+    try {
+      fd = openSync(tarball, "r");
+      readSync(fd, head, 0, 2, 0);
+    } catch {
+      return { ok: false, reason: `${filename} could not be read back` };
+    } finally {
+      if (fd !== undefined) {
+        try {
+          closeSync(fd);
+        } catch {
+          // going away with the process
+        }
+      }
+    }
+    if (head[0] !== 0x1f || head[1] !== 0x8b) {
+      return { ok: false, reason: `${filename} is not a gzip archive` };
+    }
+
+    return {
+      ok: true,
+      reason: `\`npm pack\` built ${filename} (${String(files.length)} files, ${String(stats.size)} bytes)`,
+    };
+  } finally {
+    try {
+      rmSync(outDir, { recursive: true, force: true });
+    } catch {
+      // A leftover temp directory is not worth failing a gate over.
+    }
+  }
+}
 
 /**
  * Decide whether a dry-run result is acceptable, with no side effects, so both directions are
  * testable without a registry.
  *
  * @param {{ status: number | null, stdout?: string, stderr?: string }} result
+ * @param {{ ok: boolean, reason: string } | undefined} [tarballProof] the answer from
+ *   {@link verifyTarballIndependently}. OPTIONAL, and its absence is a state rather than a default:
+ *   `main` only runs the pack proof when the dry-run failed, because a green dry-run already packed
+ *   and packing twice would double the slowest step of the required context for no added claim.
+ *   Absent therefore means "not established", and the already-published tolerance refuses on it —
+ *   which is the conservative direction, since "could not establish a tarball" and "no tarball" cost
+ *   the same thing here.
+ * @param {{ ok: boolean, reason: string } | undefined} [publishedProof] the answer from
+ *   {@link verifyAlreadyPublished}. Absent means the registry was not asked, which is refused
+ *   for the same reason an absent tarball proof is.
  * @returns {{ ok: boolean, reason: string, warnings: string[] }}
  */
-export function classifyDryRun(result) {
+export function classifyDryRun(result, tarballProof, publishedProof) {
   const stdout = result.stdout ?? "";
   const stderr = result.stderr ?? "";
   const combined = `${stdout}\n${stderr}`;
@@ -61,14 +274,50 @@ export function classifyDryRun(result) {
     .filter((line) => !KNOWN_NOISE.some((re) => re.test(line)));
 
   if (result.status !== 0) {
-    // The one tolerated failure, and only when the registry named it. Any other non-zero status is
-    // a real failure — a broken pack, a network error, a missing file — and stays fatal.
-    if (ALREADY_PUBLISHED.test(combined) && TARBALL_BUILT.test(combined)) {
+    // The one tolerated failure, and only when the registry named it AND a SEPARATE process built
+    // a tarball. Any other non-zero status is a real failure — a broken pack, a network error, a
+    // missing file — and stays fatal.
+    //
+    // The second condition used to be `TARBALL_BUILT.test(combined)`: npm's own tarball summary,
+    // read out of the same child's output. Review finding [06] named why that is not an
+    // independent observation. `prepublishOnly`, `prepack` and `prepare` all run BEFORE the pack —
+    // npm's own documentation says so — and a pull request can change any of them. One that prints
+    // `npm notice === Tarball Details ===` and the already-published wording, then exits non-zero,
+    // satisfied both patterns with no tarball ever built, and the required `build` context passed.
+    // Text a lifecycle script can print is not evidence about what npm did after printing it.
+    //
+    // BOTH conjuncts are now established outside this child, and the second one had to move for
+    // the same reason as the first. Hardening only the tarball left the tolerance as
+    // `forgeable-text AND unforgeable-tarball`, and two escapes were measured through the text:
+    // `npm pack` does not run `prepublishOnly` at all, so a `prepublishOnly` printing the
+    // registry's sentence and exiting 1 still reached `ok: true`; and a `prepack` can branch on
+    // npm's own `npm_command` to behave during `pack` and not during `publish`.
+    //
+    // So the already-published claim is put to the REGISTRY (`verifyAlreadyPublished`, a separate
+    // `npm view`) and the tarball claim to a separate `npm pack`. Neither is something a lifecycle
+    // script in this package can produce.
+    //
+    // Three conjuncts, and the text is still one of them — as a NECESSARY condition, never a
+    // sufficient one. Dropping it was tried and is wrong: the text is what identifies WHICH failure
+    // is being tolerated, and without it any non-zero dry-run on a published version passes, ENOENT
+    // included. Measured — the row asserting "an unrelated failure must stay fatal" went red. A
+    // forged sentence can now only ADD a condition to a tolerance the registry and the pack already
+    // have to agree to.
+    //
+    // What stays open, stated rather than implied: `prepublishOnly` runs on publish and nowhere
+    // else, so a `prepublishOnly` failing for its own reason while the version is genuinely
+    // published is indistinguishable here from the tolerated case. It is also not a question a pull
+    // request can get an answer to — npm refuses that publish for the version either way.
+    if (
+      ALREADY_PUBLISHED.test(combined) &&
+      publishedProof?.ok === true &&
+      tarballProof?.ok === true
+    ) {
       return {
         ok: warnings.length === 0,
         reason:
           warnings.length === 0
-            ? "the version is already published, which a pull request is not asking about; the pack itself built and listed"
+            ? `the version is already published, which a pull request is not asking about — ${publishedProof?.reason ?? ""}; and ${tarballProof?.reason ?? ""}`
             : "warnings were produced",
         warnings,
       };
@@ -76,7 +325,7 @@ export function classifyDryRun(result) {
     return {
       ok: false,
       reason: ALREADY_PUBLISHED.test(combined)
-        ? "npm publish --dry-run reported the version as already published, but printed no tarball summary — the pack did not run"
+        ? `npm publish --dry-run reported the version as already published, but that was not confirmed out of process. Registry: ${publishedProof?.reason ?? "not asked"}. Pack: ${tarballProof?.reason ?? "not asked"}`
         : "npm publish --dry-run exited with non-zero status",
       warnings,
     };
@@ -101,7 +350,22 @@ function main() {
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");
 
-  const verdict = classifyDryRun(result);
+  // Only when the dry-run failed: a green dry-run already packed, and packing a second time on
+  // every run would double the slowest step of the required context for no added claim.
+  // Both only when the dry-run FAILED: a green dry-run already packed and needs no tolerance, and
+  // asking twice would double the slowest step of the required context for no added claim.
+  const tarballProof = result.status === 0 ? undefined : verifyTarballIndependently(pkgDir);
+  const publishedProof = result.status === 0 ? undefined : verifyAlreadyPublished(pkgDir);
+  if (tarballProof !== undefined) {
+    process.stdout.write(`publish dry-run: independent pack check — ${tarballProof.reason}.
+`);
+  }
+  if (publishedProof !== undefined) {
+    process.stdout.write(`publish dry-run: registry check — ${publishedProof.reason}.
+`);
+  }
+
+  const verdict = classifyDryRun(result, tarballProof, publishedProof);
 
   if (verdict.warnings.length > 0) {
     process.stderr.write(

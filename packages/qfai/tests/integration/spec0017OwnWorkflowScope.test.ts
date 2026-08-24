@@ -176,7 +176,23 @@ describe("the own tree takes its Node version from one shared definition", () =>
     const VERSION_SHAPE = /^\d+(?:\.\d+){0,2}$/;
     // `${{ env.NAME }}`, tolerant of the inner spacing nobody writes consistently.
     const ENV_REFERENCE = /^\$\{\{\s*env\.([A-Za-z_][A-Za-z0-9_]*)\s*\}\}$/;
-    const SHARED_SETUP = "./.github/actions/setup";
+    // The shared definition, at either of the two paths it can be reached by.
+    //
+    // `release.yml`'s gate checks out the TAG's tree, and `uses: ./…` resolves against the
+    // workspace — so for a tag created before the composite action existed the reference does not
+    // resolve and the job dies on step resolution, which is review finding [07]: the re-publish
+    // route this workflow opens with was documented and unreachable for exactly the tags it was
+    // written for. The gate therefore fetches `.github/actions` at `github.sha` into a side path
+    // and consumes it from there.
+    //
+    // Both spellings name the SAME definition — the obligation `BR-0017-0027` states is
+    // single-definition, and a second path to one file is not a second definition. What would
+    // violate it is an inlined preamble or a second action, and the negative half below still
+    // rejects both.
+    const SHARED_SETUP_PATHS = new Set([
+      "./.github/actions/setup",
+      "./.ci-actions/.github/actions/setup",
+    ]);
 
     const stepsOf = (owner: unknown): Record<string, unknown>[] => {
       if (!isRecord(owner)) return [];
@@ -207,7 +223,7 @@ describe("the own tree takes its Node version from one shared definition", () =>
 
         for (const step of stepsOf(job)) {
           const uses = typeof step["uses"] === "string" ? step["uses"] : "";
-          if (uses === SHARED_SETUP) sharedSetupUsers.push(`${file}#${id}`);
+          if (SHARED_SETUP_PATHS.has(uses)) sharedSetupUsers.push(`${file}#${id}`);
           // Set B. A composite action of our own is the sanctioned route; reaching past it to the
           // upstream action is the drift, whether or not the version beside it is a literal.
           if (/^actions\/setup-node@/.test(uses)) inlineSetups.push(`${file}#${id}`);
@@ -258,6 +274,51 @@ describe("the own tree takes its Node version from one shared definition", () =>
         "would let a release pass a gate `main` never ran",
     ).toContain("release.yml#gate");
 
+    // Set B, third clause: the release gate takes the action from a revision that HAS it.
+    //
+    // Review finding [07]. `uses: ./…` resolves against the workspace, and the gate's checkout puts
+    // the TAG's tree there — so re-publishing a tag created before the composite action existed
+    // left the reference unresolvable and the job died on step resolution, never reaching
+    // `pnpm ci:gate`. The `workflow_dispatch` re-publish route this workflow opens with was
+    // documented and unreachable for exactly the tags it was written for.
+    //
+    // Asserted as the PAIR, because either half alone is the defect: the side-path `uses:`, and a
+    // checkout of `github.sha` into that path. A plant reverting just the `uses:` passed while this
+    // suite only checked membership in the two-spelling set, which is how this clause came to
+    // exist.
+    const releaseGate = (() => {
+      const release = workflows.find((entry) => entry.file === "release.yml");
+      const jobs = isRecord(release?.document["jobs"]) ? release.document["jobs"] : {};
+      return isRecord(jobs["gate"]) ? jobs["gate"] : undefined;
+    })();
+    expect(releaseGate, "release.yml must declare the gate job").toBeDefined();
+    const gateSteps = stepsOf(releaseGate);
+
+    expect(
+      gateSteps.map((step) => step["uses"]).filter((uses) => typeof uses === "string"),
+      "the gate must consume the action from the side path, not from the tag tree it checked out",
+    ).toContain("./.ci-actions/.github/actions/setup");
+
+    const sidePathCheckout = gateSteps.find((step) => {
+      const withBlock = isRecord(step["with"]) ? step["with"] : {};
+      return (
+        typeof step["uses"] === "string" &&
+        step["uses"].startsWith("actions/checkout@") &&
+        withBlock["path"] === ".ci-actions"
+      );
+    });
+    expect(
+      sidePathCheckout,
+      "and something must put the action there — a `uses:` naming a path nothing populates is the " +
+        "same unresolvable step in a different spelling",
+    ).toBeDefined();
+
+    const checkoutWith = isRecord(sidePathCheckout?.["with"]) ? sidePathCheckout["with"] : {};
+    expect(
+      checkoutWith["ref"],
+      "at THIS workflow's revision, which by construction contains the action this file references",
+    ).toBe("${{ github.sha }}");
+
     // Non-vacuity for all three sets. An empty scan satisfies every emptiness assertion above, and a
     // sibling pin in this suite was inert at eleven packs for exactly that reason.
     expect(
@@ -280,11 +341,21 @@ describe("the own tree takes its Node version from one shared definition", () =>
         if (withBlock[key] !== undefined) sources.push(`${key}: ${String(withBlock[key])}`);
       }
     }
+    // Both keys, and NEITHER of them a version. `node-version-file` is the default path;
+    // `node-version` carries the floor the action DERIVES from that same file when a caller asks
+    // for it (review finding [13] — otherwise every lane resolves the range and nothing ever runs
+    // on the floor the package promises). The pin is the exact pair, so a literal appearing in
+    // either slot fails here: the property this row defends is that the shared definition is not
+    // "the single place the whole tree is wrong from", and an expression reading a step output is
+    // not a place anything can be wrong from — `engines.node` still is.
     expect(
       sources,
       "the shared definition must read the version from a file and never from a literal of its own, or " +
         "it becomes the single place the whole tree is wrong from",
-    ).toEqual(["node-version-file: package.json"]);
+    ).toEqual([
+      "node-version: ${{ steps.shim.outputs.version }}",
+      "node-version-file: package.json",
+    ]);
 
     // Set C, second clause: the named file carries what the indirection resolves through.
     const manifest: unknown = JSON.parse(

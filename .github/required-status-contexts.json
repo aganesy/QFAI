@@ -71,7 +71,7 @@
         "cannot fail the job, so it is not a verification however it is named."
       ],
       "verificationBodies": {
-        "Derive the verdict from the serialized needs map": "2db05aee7f0fd215",
+        "Derive the verdict from the serialized needs map": "a15efccb72563dd0",
         "Run build & pack verification": "87de7c233056c5a3",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "4882147221bae766",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "8b2653d728aa14f5",

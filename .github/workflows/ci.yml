@@ -153,15 +153,37 @@ jobs:
 
           // The documentation-only set (BR-0017-0010). Small, and measured rather than
           // guessed: every other candidate is read by at least one test file, so
-          // classifying it as documentation would skip the lane that guards it. The
-          // agent-integration mirrors are here because the rule names them.
-          const DOCUMENTATION_DIRS = [
-            ".agents/",
-            ".claude/",
-            ".codex/",
-            ".instruction/",
-            "packages/qfai/docs/",
-          ];
+          // classifying it as documentation would skip the lane that guards it.
+          //
+          // The agent-integration mirrors USED to be here because the rule names them,
+          // and review finding [12] measured what that cost. A pull request deleting the
+          // default values and the `tmp/pr-fix/` prose from
+          // `.agents/skills/pr-fix/SKILL.md` classified as documentation-only and skipped
+          // the `test` job entirely — while `tests/core/prFixMonitor.test.ts` asserts that
+          // prose explicitly, and `lint:mirror-surface`, which does run, does not include
+          // that test. Format, lint and build pass, and the change is green.
+          //
+          // An earlier round closed the half that needed no decision: an EXECUTABLE under
+          // one of these directories selects everything, because a PowerShell script is not
+          // a mirror. The PROSE half was left to `CR-20260820-0004`, open on whether the
+          // guards move or the members do. It is decided here, and the four members move —
+          // because the measurement is not close. Counting path literals in the test tree:
+          //
+          //     .agents/       every subtree (README, hooks, qfai-bootstrap, rules, skills)
+          //     .claude/       37
+          //     .codex/        9
+          //     .instruction/  1
+          //
+          // Not one of them is unread. "Documentation the tests verify" is not
+          // documentation for this purpose, whatever the rule calls it, and a set whose
+          // every member is guarded by a test the set skips is not small — it is empty.
+          //
+          // `packages/qfai/docs/` stays. Its single literal is a FIXTURE in this
+          // classifier's own tests (`packages/qfai/docs/anything.md`, a path that does not
+          // exist), not a file any test reads — which is the distinction that decides
+          // membership, and is why the count above is worth reading rather than the bare
+          // presence of a string.
+          const DOCUMENTATION_DIRS = ["packages/qfai/docs/"];
           const DOCUMENTATION_FILES = ["LICENSE", "REVIEW.md"];
 
           const under = (dirs, file) => dirs.some((dir) => file.startsWith(dir));
@@ -354,6 +376,70 @@ jobs:
       - name: Run future TypeScript compatibility check
         run: pnpm check-types:future
 
+  # ── 3b. The supported floor ──────────────────────────────────────
+  # Every other toolchain job resolves `package.json#engines` — `>=20.19.0` with no
+  # ceiling — so `setup-node` gives all of them the newest satisfying release and
+  # nothing ever runs on the floor the package promises. Review finding [13]: an API
+  # or syntax that exists in Node 24 and not in Node 20.19 passes every gate,
+  # including the release gate, and breaks exactly the supported users the range was
+  # written for.
+  #
+  # One lane, pinned exactly, through the shared action's `node-version` input rather
+  # than a second inline preamble (`BR-0017-0027`). It runs the package test suite,
+  # because a runtime floor is a claim about running code and a type check would not
+  # notice a missing runtime API.
+  #
+  # Conditional on the same detection output as its neighbours, and DECLARED either
+  # way, so its check name persists for branch protection.
+  node-floor:
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
+        with:
+          # The floor is DERIVED from `engines.node` by the action, not written here.
+          # A literal would be a second answer to the same question, and raising
+          # `engines` would leave this lane certifying a floor nobody supports.
+          pin-engines-floor: "true"
+      - name: Confirm the pinned floor is what is running
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Asserted, not assumed. `setup-node` silently ignores an empty
+          # `node-version`, so a wiring mistake in the shared action would leave this
+          # lane running the newest release while still reporting as the floor lane —
+          # a green check for a claim nothing tested.
+          #
+          # The expected value is READ from `engines.node`, the same place the action
+          # derives it from. Writing `v20.19.0` here would be the second literal the
+          # repository's one-Node-literal rule exists to prevent, and it would go stale
+          # in the direction that passes.
+          range="$(node -p "require('./package.json').engines.node")"
+          expected="v${range#>=}"
+          actual="$(node --version)"
+          echo "node-floor: engines floor ${expected}, running ${actual}"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::node-floor expected ${expected} but is running ${actual}; pin-engines-floor did not take effect"
+            exit 1
+          fi
+      # `dist/` is not committed, and the `e2e` and `integration` slices read it —
+      # `tests/integration/cliStartupCost.test.ts` fails with "no shipped bundle was readable" and
+      # `tests/e2e/spec0010DiscussionMockAndPointerE2E.test.ts` spawns `dist/cli/index.cjs`. Without
+      # this the floor lane is structurally ALWAYS RED, and an always-red required lane conveys no
+      # differential signal: a genuine Node 20 break and a missing bundle look identical, so the lane
+      # gets un-required or "fixed" by dropping the pin. Same step, same reason, as the `test` job's.
+      - name: Build qfai (the floor lane runs the slices that read dist/)
+        run: pnpm -C packages/qfai build
+      - name: Run the package test suite on the floor
+        run: pnpm -C packages/qfai test
+
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:
     needs: [detect]
@@ -433,6 +519,47 @@ jobs:
 
       - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+
+      # ── The hygiene lane's findings, where the Reviewer Gate can read them ──────────
+      # The gate ingests `{ findings: [...] }` JSON under `.qfai/review/**`, and the lane
+      # writes it — but the lane runs in `lint`, on that job's own checkout, and the
+      # dogfooding validate below runs HERE on a fresh one. Review finding [26]: with the
+      # artifact confined to another job's workspace and nothing transferring it, a hygiene
+      # violation reddened `lint` and never once reached the Reviewer Gate the
+      # shipped-workflows contract promises it reaches.
+      #
+      # Re-run rather than uploaded and downloaded between jobs. The lane parses a handful of
+      # YAML files — it is a second or two — and an artifact round trip would need `build` to
+      # wait on `lint`, serialising two lanes that run in parallel today. Producing the
+      # evidence beside the consumer also removes the transfer as a thing that can silently
+      # stop working.
+      #
+      # The lane's exit code is deliberately NOT propagated. `lint` is the job that fails on a
+      # hygiene violation, and it does; this step's job is to leave the findings where the gate
+      # looks, which it must do for a DIRTY tree above all. Failing here would abort before the
+      # validate steps that read them, so the finding would once again reach no reviewer.
+      #
+      # `|| status=$?` and not `set -uo pipefail` plus a bare call. GitHub runs `shell: bash` as
+      # `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the INVOCATION and `set -uo`
+      # does not remove it — the first version of this step aborted on the lane's non-zero exit
+      # before `status=$?` ever ran, which is precisely the abort the comment above says must not
+      # happen. Making the call part of an `||` list is what suspends `-e` for it.
+      #
+      # A MISSING artifact is fatal, though, and that asymmetry is the point: the lane failing means
+      # a violation the gate should now see, while no artifact at all means the bridge did not run —
+      # and a silent bridge is the defect this step exists to remove.
+      - name: Write the hygiene lane's findings for the Reviewer Gate
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact=".qfai/review/workflow-hygiene/workflow-hygiene.json"
+          status=0
+          node scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene || status=$?
+          if [ ! -s "$artifact" ]; then
+            echo "::error::the hygiene lane wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than a clean tree"
+            exit 1
+          fi
+          echo "hygiene findings at ${artifact}; lane exit ${status} (the lint job is what fails on a violation)"
 
       - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
@@ -539,7 +666,8 @@ jobs:
     # would read those as `skipped`, and `skipped` is accepting — a green run with
     # nothing verified. Failing OPEN is a decision the classifier makes and records;
     # failing HARD must reach the gate.
-    needs: [detect, lint, check-types, check-types-future, test, scanner-coverage, build]
+    needs:
+      [detect, lint, check-types, check-types-future, node-floor, test, scanner-coverage, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
