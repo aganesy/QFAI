@@ -47,10 +47,11 @@ import {
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
 import { resolveToolVersion } from "../../core/version.js";
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import {
   createWorkflowProvenanceEntry,
   readInstallProvenance,
-  writeInstallProvenance,
+  updateInstallProvenance,
   type InstallProvenanceRecord,
   type WorkflowProvenanceEntry,
 } from "../../shared/provenance.js";
@@ -166,6 +167,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   // doctor's drift detection from then on.
   await recordInstalledWorkflows(
     destRoot,
+    rootAssets,
     workflowPreInit,
     rootResult.copied,
     toolVersion,
@@ -220,7 +222,30 @@ export async function runInit(options: InitOptions): Promise<void> {
     (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),
     removedRetiredWorkflows,
     options.dryRun,
+    // Re-asked here, against the file as it is now. `prunableRetiredNames` was computed before
+    // the copy above ran, and between the two the adopter — or a concurrent run — can put
+    // their own content under that name. The name would still match; the bytes would not.
+    // Review finding [30].
+    async (target) =>
+      (await digestWorkflowFile(target)) === prunableRetiredNames.get(path.basename(target)),
   );
+
+  // The entry goes with the file. A pruned workflow whose provenance entry survives is read by
+  // the NEXT run as a name QFAI installed and the adopter deleted — the `declined` row — so the
+  // copy skips it forever. Retiring a workflow would silently poison the name against whatever
+  // ships under it later. Review finding [20].
+  //
+  // Under the record lock and against the record on disk, not against the pre-init snapshot:
+  // the copy between them has already written entries of its own.
+  if (!options.dryRun && removedRetiredWorkflows.length > 0) {
+    const prunedNames = new Set(removedRetiredWorkflows.map((target) => path.basename(target)));
+    await updateInstallProvenance(destRoot, (current) => {
+      const workflows = Object.fromEntries(
+        Object.entries(current.workflows).filter(([name]) => !prunedNames.has(name)),
+      );
+      return { ...current, workflows };
+    });
+  }
 
   const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
 
@@ -2105,28 +2130,43 @@ async function captureShippedWorkflowPreInitState(
  * means they edited what QFAI wrote (the `modified` row, never pruned).
  * A name that fails either test is left on disk untouched — a stale file is
  * recoverable, a deleted one is not.
+ *
+ * The recorded digest is returned with each name, not just the name: the prune re-asks the
+ * content question against it immediately before deleting, because a decision made here and
+ * acted on later is a decision about a file that may since have been replaced.
  */
 async function resolvePrunableRetiredWorkflows(
   destRoot: string,
   record: InstallProvenanceRecord,
-): Promise<Set<string>> {
-  const prunable = new Set<string>();
+): Promise<Map<string, string>> {
+  const prunable = new Map<string, string>();
   for (const name of RETIRED_WORKFLOW_NAMES) {
     const entry = record.workflows[name];
     if (entry === undefined) {
       continue;
     }
-    const bytes = await readFile(path.join(destRoot, ".github", "workflows", name)).catch(
-      () => undefined,
-    );
-    if (bytes === undefined) {
-      continue;
-    }
-    if (createHash("sha256").update(bytes).digest("hex") === entry.sha256) {
-      prunable.add(name);
+    // Bounded, regular-file-only, one descriptor. This path is adopter-controlled, and an
+    // unbounded read of it hands a FIFO, a device or a multi-gigabyte file the ability to hang
+    // `qfai init` or exhaust its memory — on a file the command was only deciding whether to
+    // delete. Every refusal leaves the name un-pruned. Review finding [05].
+    const workflowPath = path.join(destRoot, ".github", "workflows", name);
+    if ((await digestWorkflowFile(workflowPath)) === entry.sha256) {
+      prunable.set(name, entry.sha256);
     }
   }
   return prunable;
+}
+
+/**
+ * Read ceiling for one workflow file in an adopter tree. A shipped workflow is a few kilobytes;
+ * anything past this is not one, and reading it is the exhaustion the bounded reader stops.
+ */
+const MAX_WORKFLOW_BYTES = 1_048_576;
+
+/** The sha256 of a workflow file, or `undefined` for anything the bounded reader refuses. */
+async function digestWorkflowFile(filePath: string): Promise<string | undefined> {
+  const bytes = await readBoundedRegularFile(filePath, MAX_WORKFLOW_BYTES);
+  return bytes === undefined ? undefined : createHash("sha256").update(bytes).digest("hex");
 }
 
 /**
@@ -2146,6 +2186,7 @@ async function resolvePrunableRetiredWorkflows(
  */
 async function recordInstalledWorkflows(
   destRoot: string,
+  sourceRoot: string,
   preInit: ShippedWorkflowPreInitState,
   copiedPaths: readonly string[],
   toolVersion: string,
@@ -2166,22 +2207,37 @@ async function recordInstalledWorkflows(
     if (!copiedNames.has(name)) {
       continue; // the copy skipped it: a skipped file produces no entry
     }
-    const writtenPath = path.join(workflowsDir, name);
-    const writtenBytes = await readFile(writtenPath).catch(() => undefined);
-    if (writtenBytes === undefined) {
-      continue; // unreadable after the write: nothing to digest, so no entry
+    // Digested from the SOURCE the copy read, not from the destination re-read. The copy is
+    // byte-for-byte, so the two agree at the instant of the write — and only then. Re-reading
+    // the destination records whatever the file holds NOW, which is a different question: an
+    // adopter or a concurrent process that rewrites the file between the copy and the read
+    // gets their own content stamped as the bytes QFAI installed. Drift detection would then
+    // be permanently blind to that edit, and the prune above would consider the file QFAI's to
+    // delete. Review finding [07].
+    const sourceBytes = await readBoundedRegularFile(
+      path.join(sourceRoot, ".github", "workflows", name),
+      MAX_WORKFLOW_BYTES,
+    );
+    if (sourceBytes === undefined) {
+      continue; // no source bytes to attest to, so no entry
     }
-    added[name] = createWorkflowProvenanceEntry(writtenBytes, toolVersion, installedAt);
+    added[name] = createWorkflowProvenanceEntry(sourceBytes, toolVersion, installedAt);
   }
   const addedNames = Object.keys(added);
   if (addedNames.length === 0) {
     return;
   }
   try {
-    await writeInstallProvenance(destRoot, {
-      ...preInit.record,
-      workflows: { ...preInit.record.workflows, ...added },
-    });
+    // Merged onto the record as it is on disk, under the lock — never onto `preInit.record`.
+    // That snapshot was taken before the copy, and in a tree where a second `qfai init` is
+    // running (a monorepo bootstrap, a CI matrix sharing a checkout, two terminals) writing it
+    // back deletes every entry the other run recorded in between. Those files stay on disk with
+    // no entry, which the next run reads as `adopter-owned`: never recorded again, and invisible
+    // to drift detection from then on. Review finding [03].
+    await updateInstallProvenance(destRoot, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, ...added },
+    }));
   } catch (error) {
     // The file and its provenance entry land TOGETHER or neither lands. The
     // record write can still fail after the copy succeeded — `.qfai` is a
@@ -2201,12 +2257,18 @@ async function recordInstalledWorkflows(
     // Through `pruneMatchingEntries` and not a direct `rm`: the shipped-workflows
     // contract keeps ONE removal primitive for QFAI-owned entries in an adopter
     // tree, and a second call site is the parallel implementation it forbids.
+    // And only while they still hold the bytes this run wrote. `addedNames` is a name set, and
+    // the failing record write is exactly the moment another process may have replaced one of
+    // those files — rolling back on the name alone would delete their content to undo our own
+    // write. The digest is the one this run attested to, so a file that no longer matches it is
+    // not this run's to remove. Review finding [06].
     const rolledBack: string[] = [];
     await pruneMatchingEntries(
       workflowsDir,
       (entry) => entry.isFile() && addedNames.includes(entry.name),
       rolledBack,
       false,
+      async (target) => (await digestWorkflowFile(target)) === added[path.basename(target)]?.sha256,
     ).catch(() => undefined);
     throw error;
   }
@@ -2217,12 +2279,25 @@ async function recordInstalledWorkflows(
  * removes the direct entries of `dir` that match `predicate`, appending
  * each removed path to `removed`. Exported for reuse — the
  * shipped-workflows contract forbids parallel removal implementations.
+ *
+ * `confirm` is the ownership question asked at the moment of deletion. `predicate` can only
+ * ever see the `readdir` snapshot, and every caller here decides ownership by CONTENT — the
+ * file still holds the bytes QFAI recorded writing. Deciding that earlier and deleting later
+ * is a window in which the adopter, or a concurrent run, replaces the file: the name still
+ * matches, the content no longer does, and the delete destroys work QFAI never wrote. A
+ * caller with no content test passes `undefined` and gets the snapshot behaviour.
+ *
+ * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
+ * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing
+ * into it would delete a tree on the strength of a name. Refusing is the conservative
+ * direction: a stale entry is recoverable, a deleted tree is not.
  */
 export async function pruneMatchingEntries(
   dir: string,
   predicate: (entry: Dirent) => boolean,
   removed: string[],
   dryRun: boolean,
+  confirm?: (target: string) => Promise<boolean>,
 ): Promise<void> {
   if (!(await exists(dir))) {
     return;
@@ -2233,9 +2308,22 @@ export async function pruneMatchingEntries(
       continue;
     }
     const target = path.join(dir, entry.name);
+    if (confirm !== undefined && !(await confirm(target))) {
+      continue; // still QFAI's name, no longer QFAI's bytes
+    }
+    // Re-checked against the path as it is NOW, not as `readdir` reported it. Every predicate here
+    // requires `isFile()`, but that is a fact about the snapshot: a directory swapped in after it —
+    // by the adopter, or by a concurrent run — still carries a matching name, and a recursive delete
+    // would take the whole tree on the strength of it. `lstat`, so a symlink is refused rather than
+    // followed, and the `rm` below is deliberately not recursive: two independent reasons a swapped
+    // directory survives. Review finding [30].
+    const atDeletion = await lstat(target).catch(() => undefined);
+    if (atDeletion === undefined || atDeletion.isSymbolicLink() || !atDeletion.isFile()) {
+      continue;
+    }
     removed.push(target);
     if (!dryRun) {
-      await rm(target, { recursive: true, force: true });
+      await rm(target, { force: true });
     }
   }
 }

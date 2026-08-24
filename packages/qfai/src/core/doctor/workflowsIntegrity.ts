@@ -88,10 +88,11 @@
  * clean check.
  */
 import { createHash } from "node:crypto";
-import { lstat, readFile, stat } from "node:fs/promises";
+import { lstat, stat } from "node:fs/promises";
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import {
   readInstallProvenance,
   resolveWorkflowFileState,
@@ -320,25 +321,27 @@ function errorCode(error: unknown): string | undefined {
 const MAX_WORKFLOW_BYTES = 1_048_576;
 
 async function digestFile(filePath: string): Promise<FileDigest> {
+  // The digest comes from ONE descriptor, opened and checked by the shared reader: a recorded name
+  // whose file the adopter replaced with a symlink to a device or a FIFO would otherwise be followed,
+  // and inspecting the path then reading the path resolves the name twice, so what was checked is not
+  // necessarily what is read.
+  const bytes = await readBoundedRegularFile(filePath, MAX_WORKFLOW_BYTES);
+  if (bytes !== undefined) {
+    return { kind: "digest", value: digestNormalizedText(bytes.toString("utf-8")) };
+  }
+
+  // The reader returns one `undefined` for every refusal, and this module's two failure buckets must
+  // stay distinguishable — collapsing them lets an unreadable file produce the same output as an
+  // identical one. So the existence question is asked separately, and it decides only WHICH refusal
+  // to report. Nothing is read on this path, so re-resolving the name here grants no trust.
   try {
-    // lstat BEFORE the read, and never `stat`: a recorded name whose file the
-    // adopter replaced with a symlink to `/dev/zero` or a FIFO would otherwise
-    // be followed, and the read would never return — `qfai doctor` would hang
-    // or exhaust memory on a tree it is only supposed to inspect. A symlink,
-    // a device, a FIFO and an oversized file are all `unreadable`: present,
-    // state not establishable, which is the bucket the conservative direction
-    // already puts an unreadable file in.
-    const stats = await lstat(filePath);
-    if (!stats.isFile() || stats.size > MAX_WORKFLOW_BYTES) {
-      return { kind: "unreadable" };
-    }
-    return { kind: "digest", value: digestNormalizedText(await readFile(filePath, "utf-8")) };
+    await lstat(filePath);
   } catch (error) {
     if (errorCode(error) === "ENOENT") {
       return { kind: "absent" };
     }
-    return { kind: "unreadable" };
   }
+  return { kind: "unreadable" };
 }
 
 /**

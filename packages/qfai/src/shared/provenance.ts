@@ -25,9 +25,10 @@
  *   which leaves the previous record intact when the write fails partway.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { constants as fsConstants } from "node:fs";
-import { lstat, mkdir, open, rename, unlink, writeFile } from "node:fs/promises";
+import { mkdir, open, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
+
+import { readBoundedRegularFile } from "./boundedRead.js";
 
 export type WorkflowProvenanceEntry = {
   /** Hex digest of the bytes QFAI wrote (not of the current file). */
@@ -94,7 +95,7 @@ const ISO_TIMESTAMP_PATTERN =
 export async function readInstallProvenance(rootDir: string): Promise<InstallProvenanceRecord> {
   const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
 
-  const raw = await readBoundedRegularFile(recordPath);
+  const raw = await readBoundedRecord(recordPath);
   if (raw === undefined) {
     // Absent, not a regular file, oversized, or unreadable: empty record (fail-safe).
     return emptyRecord();
@@ -210,6 +211,92 @@ export async function writeInstallProvenance(
 }
 
 /**
+ * How long a lock may be held before the next writer treats it as abandoned, and how patiently a
+ * writer waits for one that is still live.
+ *
+ * A crashed `qfai init` cannot be allowed to wedge the command permanently, so the lock is
+ * TAKEABLE rather than absolute — the cost of taking one too early is the lost update this whole
+ * primitive exists to narrow, and the cost of never taking one is a repository where `qfai init`
+ * no longer runs at all. Ten seconds is far past any real record write and far under a human's
+ * patience.
+ */
+const LOCK_STALE_MS = 10_000;
+const LOCK_POLL_MS = 25;
+const LOCK_ATTEMPTS = 200;
+
+/**
+ * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
+ *
+ * Read-modify-write against a snapshot taken earlier in the run is a lost update, and this record
+ * is exactly where that is unrecoverable. Two `qfai init` runs in one tree — a monorepo bootstrap
+ * script, a CI matrix sharing a checkout, a developer in two terminals — each read the record
+ * before writing, and the second write is built on the first's stale copy: entries the first run
+ * recorded vanish. The file they describe stays on disk with no entry, which the next run reads
+ * as `adopter-owned`, so nothing ever records it again and doctor's drift check is lost for that
+ * name permanently. Review finding [03].
+ *
+ * Two mechanisms, because neither alone is enough:
+ *
+ * - The lock (`wx`, which fails rather than truncates when the name exists) serializes writers,
+ *   so the read and the write are one step from any other writer's point of view.
+ * - The read happens INSIDE the lock. A caller's snapshot is never the write's base, so even a
+ *   writer that predates this primitive — an older QFAI in the same tree, which holds no lock at
+ *   all — loses at most its own entries rather than the current run's.
+ *
+ * `mutate` receives the fresh record and returns the one to write, or `undefined` to write
+ * nothing. It must not perform I/O on the record: it runs while the lock is held.
+ */
+export async function updateInstallProvenance(
+  rootDir: string,
+  mutate: (current: InstallProvenanceRecord) => InstallProvenanceRecord | undefined,
+): Promise<void> {
+  const recordPath = path.join(rootDir, ...PROVENANCE_SEGMENTS);
+  const recordDir = path.dirname(recordPath);
+  await mkdir(recordDir, { recursive: true });
+  const lockPath = path.join(recordDir, ".install-provenance.lock");
+
+  const release = await acquireRecordLock(lockPath);
+  try {
+    const next = mutate(await readInstallProvenance(rootDir));
+    if (next === undefined) {
+      return;
+    }
+    await writeInstallProvenance(rootDir, next);
+  } finally {
+    await release();
+  }
+}
+
+/** Takes the lock, waiting for a live holder and reclaiming an abandoned one. */
+async function acquireRecordLock(lockPath: string): Promise<() => Promise<void>> {
+  for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
+    try {
+      const handle = await open(lockPath, "wx");
+      await handle.close();
+      return async () => {
+        await unlink(lockPath).catch(() => undefined);
+      };
+    } catch {
+      // Held, or unopenable. Age decides which: a lock older than the ceiling belonged to a run
+      // that died holding it, and removing it is the only way the command ever runs again. The
+      // unlink is unconditional-on-failure by design — losing a race to remove it means another
+      // writer removed it first, which is the outcome either way.
+      const heldSince = await stat(lockPath).then(
+        (stats) => stats.mtimeMs,
+        () => undefined,
+      );
+      if (heldSince !== undefined && Date.now() - heldSince > LOCK_STALE_MS) {
+        await unlink(lockPath).catch(() => undefined);
+        continue;
+      }
+      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+    }
+  }
+  throw new Error(
+    `could not take the install-provenance lock at ${lockPath} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
+  );
+}
+/**
  * Builds the record entry for one freshly written workflow file. The
  * sha256 is the hex digest of exactly the bytes that were written — never
  * of whatever the file holds later — which is what keeps a future byte
@@ -229,91 +316,14 @@ export function createWorkflowProvenanceEntry(
 }
 
 /**
- * Open flags for the record read: read-only, never following a symlink, never
- * blocking on the open itself.
+ * The record's bytes, or `undefined` for anything that is not a regular file within the ceiling.
  *
- * `O_NOFOLLOW` and `O_NONBLOCK` are POSIX and are absent on Windows, where the
- * runtime leaves them undefined; the descriptor-bound `fstat` below is the
- * portable half of the guard and rejects a device or a FIFO on every platform.
- * `O_NONBLOCK` matters because opening a FIFO for reading BLOCKS until a writer
- * appears — a hang before any check could run.
+ * The posture and the reasons live in `shared/boundedRead.ts`, which two other call sites needed
+ * identically — PR #794's review found the same defect in each of them separately.
  */
-function readOnlyNoFollowFlags(): number {
-  let flags = fsConstants.O_RDONLY;
-  if (typeof fsConstants.O_NOFOLLOW === "number") {
-    flags |= fsConstants.O_NOFOLLOW;
-  }
-  if (typeof fsConstants.O_NONBLOCK === "number") {
-    flags |= fsConstants.O_NONBLOCK;
-  }
-  return flags;
-}
-
-/**
- * Reads a regular file of at most {@link MAX_RECORD_BYTES} bytes, or
- * `undefined` for anything else — absent, a symlink, a device, a FIFO, an
- * oversized file, or an unreadable one.
- *
- * One `open`, then everything on that descriptor. A `lstat(path)` followed by
- * `readFile(path)` resolves the name twice, and the record path is
- * adopter-controlled: a process that swaps the name for a symlink to
- * `/dev/zero` between the two calls gets the size ceiling and the regular-file
- * test applied to the file it replaced, and the unbounded read applied to the
- * device. Binding both to one handle removes the window rather than narrowing
- * it.
- */
-async function readBoundedRegularFile(filePath: string): Promise<string | undefined> {
-  // Where `O_NOFOLLOW` does not exist, the link has to be refused before the open. Review
-  // finding [23]: on Windows the flag is absent, so the flags reduce to `O_RDONLY`, `open`
-  // follows a symlink, and `handle.stat()` then describes the TARGET as a perfectly good regular
-  // file. A record outside the repository is read as the adopter's own, and its entries make
-  // uncreated workflows look `declined`.
-  //
-  // `lstat` first, then confirm the descriptor landed on the same object. The second half is what
-  // makes this more than a race: a link swapped in between the two calls changes `dev`/`ino`, and
-  // an object that does not match the one inspected is refused rather than read.
-  let inspected;
-  try {
-    inspected = await lstat(filePath);
-  } catch {
-    return undefined;
-  }
-  if (inspected.isSymbolicLink() || !inspected.isFile()) {
-    return undefined;
-  }
-  let handle;
-  try {
-    handle = await open(filePath, readOnlyNoFollowFlags());
-  } catch {
-    return undefined;
-  }
-  try {
-    const stats = await handle.stat();
-    if (!stats.isFile() || stats.size > MAX_RECORD_BYTES) {
-      return undefined;
-    }
-    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) {
-      return undefined;
-    }
-    // One byte of headroom: a file that GREW past the size `fstat` reported
-    // stops being the file that was measured, and reading it is the unbounded
-    // read the ceiling exists to refuse.
-    const ceiling = Math.min(stats.size, MAX_RECORD_BYTES);
-    const buffer = Buffer.alloc(ceiling + 1);
-    let filled = 0;
-    while (filled < buffer.length) {
-      const { bytesRead } = await handle.read(buffer, filled, buffer.length - filled, null);
-      if (bytesRead === 0) {
-        break;
-      }
-      filled += bytesRead;
-    }
-    return filled > ceiling ? undefined : buffer.subarray(0, filled).toString("utf-8");
-  } catch {
-    return undefined;
-  } finally {
-    await handle.close().catch(() => undefined);
-  }
+async function readBoundedRecord(filePath: string): Promise<string | undefined> {
+  const bytes = await readBoundedRegularFile(filePath, MAX_RECORD_BYTES);
+  return bytes === undefined ? undefined : bytes.toString("utf-8");
 }
 
 function emptyRecord(): InstallProvenanceRecord {
