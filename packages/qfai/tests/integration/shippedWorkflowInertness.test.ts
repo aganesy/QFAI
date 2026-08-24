@@ -384,11 +384,16 @@ describe(
       const files = await initWorkflowSet();
       const violations: string[] = [];
       for (const [name, body] of files) {
-        // Raw-text half: a `secrets.` context reference and any `secrets:`
+        // Raw-text half: ANY mention of the secrets context, and any `secrets:`
         // mapping line (a workflow_call declaration, a job-level passing
-        // block, or `secrets: inherit`) are all named per line.
+        // block, or `secrets: inherit`), named per line.
+        //
+        // Not the dotted form alone — review finding [11]. `${{ toJSON(secrets) }}`
+        // names no property, hands the adopter's whole secret set to a step, and
+        // left this row green while the shape dimension beside it and the hygiene
+        // lane both looked elsewhere.
         body.split(/\r?\n/).forEach((line, index) => {
-          if (/\bsecrets\s*\./.test(line)) {
+          if (/\bsecrets\b/.test(line) && !/\bsecrets\s*:/.test(line)) {
             violations.push(`${name}:${index + 1}: secret context reference`);
           }
           if (/\bsecrets\s*:/.test(line)) {

@@ -45,7 +45,12 @@
  *     than propped up here.
  *   - It reads the ledger the SCANNER reads. `testsDir` is repo-root relative, so a `US` annotation
  *     living only under `packages/qfai/tests/e2e/**` is invisible to `QFAI-ATDD-111` — which is why
- *     the ledger exists at all, and why this guard needs both trees.
+ *     the ledger exists at all.
+ *   - The LEDGER is repo-root relative; the BACKING CORPUS is not. Review finding [09]: the corpus
+ *     used to span both trees, and CI runs `pnpm -C packages/qfai test:e2e`, so only the package tree
+ *     is ever executed — the root one holds the ledger and nothing else. Two different questions with
+ *     two different answers, and reading them off one list is what let a claim be backed by a file
+ *     Vitest never opens. `runnerCorpusRoots` derives the corpus from the runner's own include list.
  */
 import { readFile, readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
@@ -91,8 +96,16 @@ const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
  * ledger claim with no EXECUTING test behind it, and under that rule deleting the real
  * `*.test.ts` while leaving the annotation in a helper kept the ledger green. The corpus is
  * therefore the runner's own file shape.
+ *
+ * `.test.ts` exactly, and not `.test.<any letters>` — review finding [01]. The E2E project's include
+ * ends in `*.test.ts`, so a `backing.test.js` beside the suites is executed by nobody, and the looser
+ * pattern let the real TypeScript test be deleted and the annotation moved into a file Vitest never
+ * opens. The same hole the helper case had, wearing a different extension.
+ *
+ * This pattern and the runner's include are checked against each other in `runnerCorpusRoots` rather
+ * than kept equal by hand.
  */
-const TEST_FILE_PATTERN = /\.test\.[a-z]+$/;
+const TEST_FILE_PATTERN = /\.test\.ts$/;
 
 /**
  * Compare the claims a ledger makes against the annotations tests carry.
@@ -312,6 +325,72 @@ function parseArguments(args) {
   return spec === undefined ? {} : { spec };
 }
 
+/**
+ * The directories the E2E runner actually executes, read out of the runner's own configuration.
+ *
+ * Review finding [09]: the corpus used to include the repository-root `tests/e2e` as well as the
+ * package one, and CI runs `pnpm -C packages/qfai test:e2e`, whose include is relative to
+ * `packages/qfai`. Nothing under the root tree is ever executed — it holds the ledger and nothing
+ * else — so deleting the real package-side test and leaving the annotation in
+ * `tests/e2e/backing.test.ts` at the root kept this guard green over a claim with no running test
+ * behind it. Exactly the defect the extension test had, one directory level up.
+ *
+ * DERIVED, not enumerated. Two lists kept equal by hand are the same defect waiting for the next
+ * project to be added, so this reads `vitest.workspace.ts` and takes the `e2e` project's include
+ * globs as the answer. An unparseable configuration is a hard failure: a guard that falls back to
+ * a built-in list when it cannot read the runner is a guard that silently stops tracking it.
+ *
+ * @param {string} root repository root
+ * @returns {Promise<string[]>} absolute directories to scan
+ */
+export async function runnerCorpusRoots(root) {
+  const configPath = path.join(root, "packages", "qfai", "vitest.workspace.ts");
+  const text = await readFile(configPath, "utf8");
+  const project = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(text);
+  if (project === null) {
+    throw new Error(
+      `check-atdd-annotation-ledger: could not read the e2e project's include list from ${configPath}; ` +
+        "the backing corpus is derived from it and must not fall back to a hard-coded list",
+    );
+  }
+  const globs = [...(project[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  if (globs.length === 0) {
+    throw new Error(
+      `check-atdd-annotation-ledger: the e2e project's include list in ${configPath} parsed to nothing`,
+    );
+  }
+  const roots = [];
+  for (const glob of globs) {
+    // Every include this guard can honour has the shape `<dir>/**/*<extension>`. One that does not
+    // is a change to the runner this guard cannot follow, and saying so beats scanning the wrong
+    // tree quietly.
+    //
+    // The extension is CAPTURED rather than spelled out here. Writing `\.test\.ts` into this
+    // pattern made the check below unreachable — the shape would reject a `*.spec.ts` include before
+    // anything compared it with `TEST_FILE_PATTERN`, so two overlapping tests sat here with one of
+    // them dead. Measured: a plant removing the comparison changed no behaviour at all.
+    const shape = /^(.+?)\/\*\*\/\*(\.[A-Za-z0-9][A-Za-z0-9.]*)$/.exec(glob);
+    if (shape === null) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the e2e project includes ${JSON.stringify(glob)}, which this ` +
+          "guard cannot map to a directory; update `runnerCorpusRoots` in the same change",
+      );
+    }
+    // And the extension the runner names has to be one this guard would collect. These are the two
+    // halves of the same fact — what Vitest opens, and what counts as backing — and letting them
+    // disagree is exactly review finding [01] in the other direction: the runner would execute a
+    // file shape the corpus skips, so a real test would read as no test at all.
+    if (!TEST_FILE_PATTERN.test(`x${shape[2]}`)) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the e2e project includes ${JSON.stringify(glob)}, whose ` +
+          "extension `TEST_FILE_PATTERN` does not accept; the two must agree",
+      );
+    }
+    roots.push(path.join(root, "packages", "qfai", ...(shape[1] ?? "").split("/")));
+  }
+  return roots;
+}
+
 async function main() {
   const parsed = parseArguments(process.argv.slice(2));
   if ("error" in parsed) {
@@ -344,10 +423,7 @@ async function main() {
   }
 
   const sources = new Map();
-  for (const dir of [
-    path.join(root, "tests", "e2e"),
-    path.join(root, "packages", "qfai", "tests", "e2e"),
-  ]) {
+  for (const dir of await runnerCorpusRoots(root)) {
     for (const [file, text] of await collectTestSources(dir)) sources.set(file, text);
   }
 

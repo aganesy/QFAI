@@ -14,7 +14,7 @@
  * in one atomic commit. The script is now here, and these are its tests.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -23,6 +23,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   checkLedger,
   collectTestSources,
+  runnerCorpusRoots,
 } from "../../../../../scripts/check-atdd-annotation-ledger.mjs";
 import { removeTempTree } from "../../helpers/tempTree.js";
 
@@ -204,6 +205,115 @@ describe("collectTestSources", () => {
   });
 });
 
+// ── [01] ─────────────────────────────────────────
+describe("the corpus is the extension the runner runs, not every extension", () => {
+  it("ignores a .test.js or .test.mjs sitting beside the real suites", async () => {
+    // Review finding [01]. The E2E project includes `*.test.ts`, so these files are executed by
+    // nobody — and while the pattern accepted any alphabetic extension, deleting the real
+    // TypeScript test and moving its annotation into one of them kept the ledger green.
+    const dir = await temp();
+    await writeFile(path.join(dir, "real.test.ts"), `// ${tag("0017", "0017-0001")}\n`, "utf8");
+    for (const name of [
+      "backing.test.js",
+      "backing.test.mjs",
+      "backing.test.cjs",
+      "backing.test.tsx",
+    ]) {
+      await writeFile(path.join(dir, name), `// ${tag("0017", "0017-0002")}\n`, "utf8");
+    }
+
+    const sources = await collectTestSources(dir);
+    expect(
+      [...sources.keys()].map((file) => path.basename(file)).sort(),
+      "only the file shape Vitest opens may back a ledger claim",
+    ).toEqual(["real.test.ts"]);
+  });
+});
+
+// ── [09] ─────────────────────────────────────────
+describe("runnerCorpusRoots", () => {
+  it("returns exactly the directories the e2e project includes, all inside the package", async () => {
+    const roots = await runnerCorpusRoots(path.resolve(__dirname, "../../../../.."));
+
+    // Derived rather than asserted against a copied list: a second literal here would be the same
+    // hand-kept pair the production change removed, and it would agree with a wrong answer.
+    const workspace = await readFile(
+      path.join(
+        path.resolve(__dirname, "../../../../.."),
+        "packages",
+        "qfai",
+        "vitest.workspace.ts",
+      ),
+      "utf8",
+    );
+    const block = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(workspace);
+    const globs = [...(block?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+    expect(
+      globs.length,
+      "the premise: the workspace still declares an e2e include list",
+    ).toBeGreaterThan(0);
+
+    const expected = globs.map((glob) =>
+      path.join(
+        path.resolve(__dirname, "../../../../.."),
+        "packages",
+        "qfai",
+        ...(glob ?? "").replace(/\/\*\*\/.*$/, "").split("/"),
+      ),
+    );
+    expect([...roots].sort(), "the corpus is the runner's include list").toEqual(
+      [...expected].sort(),
+    );
+
+    // The half the finding was about: nothing outside the package tree, because nothing outside it
+    // is ever executed. The repository-root `tests/e2e` holds the ledger and no test at all.
+    for (const root of roots) {
+      expect(
+        root.startsWith(path.join(path.resolve(__dirname, "../../../../.."), "packages", "qfai")),
+        `${root} is outside the tree \`pnpm -C packages/qfai test:e2e\` runs`,
+      ).toBe(true);
+    }
+  });
+
+  it("refuses an include whose extension the corpus would skip", async () => {
+    // The two halves of one fact: what Vitest opens, and what counts as backing. If the runner
+    // is switched to `*.spec.ts` and this guard keeps collecting `*.test.ts`, every real test
+    // reads as no test at all — review finding [01] pointing the other way. The first version of
+    // this check was unreachable, because the shape pattern beside it spelled `.test.ts` out and
+    // rejected the glob before anything compared the two; a plant removing the comparison changed
+    // no behaviour, which is how that was found.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `{ test: { name: "e2e", include: ["tests/e2e/**/*.spec.ts"] } }\n`,
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/must agree/);
+  });
+
+  it("accepts an include the corpus would collect, so the check is not a refusal to read", async () => {
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }\n`,
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).resolves.toEqual([
+      path.join(dir, "packages", "qfai", "tests", "journeys"),
+    ]);
+  });
+
+  it("fails loudly when the runner configuration cannot be read", async () => {
+    // A guard that falls back to a built-in list when it cannot read the runner is a guard that has
+    // silently stopped tracking it.
+    await expect(runnerCorpusRoots(await temp())).rejects.toThrow();
+  });
+});
+
 describe("symlink cycles and the exit codes around them", () => {
   // Round 3 added the symlink walk and a lexical `seen` set; round 4 measured that set as unreachable
   // in every scenario and found the third `ELOOP` site unguarded — a mutual cycle still answered exit
@@ -278,6 +388,82 @@ describe("the CLI entry point", () => {
     if (child.error !== undefined) throw child.error;
     return { status: child.status, out: child.stdout ?? "", err: child.stderr ?? "" };
   }
+
+  it("does not count a root-tree test the runner never executes", async () => {
+    // Review finding [09], end to end. `runnerCorpusRoots` being right is not the same as `main()`
+    // USING it: a plant reverting the wiring back to the two hand-listed trees left every direct
+    // row on the helper green, which is how this gap was found.
+    //
+    // The script resolves its root from its own location, so it is COPIED into a synthetic tree
+    // rather than pointed at one. The tree is the exact shape the finding describes: the ledger
+    // claims a story, the only annotation for it sits in the repository-root `tests/e2e` — which
+    // `pnpm -C packages/qfai test:e2e` never opens — and the package tree has nothing.
+    const dir = await temp();
+    await mkdir(path.join(dir, "scripts"), { recursive: true });
+    await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+    await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
+
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+      `- ${tag("0017", "0017-0001")}\n`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "tests", "e2e", "backing.test.ts"),
+      `// ${tag("0017", "0017-0001")}\n`,
+      "utf8",
+    );
+
+    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
+    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+
+    const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
+    if (child.error !== undefined) throw child.error;
+
+    expect(
+      child.status,
+      "a claim backed only by a file the runner never opens is a claim with nothing behind it",
+    ).toBe(1);
+    expect(`${child.stdout ?? ""}${child.stderr ?? ""}`).toContain(tag("0017", "0017-0001"));
+  });
+
+  it("counts the same test once it sits where the runner runs it", async () => {
+    // The other direction, from the same fixture: move the file into the package tree and the
+    // claim is backed. Without this the row above would also hold for a guard that refuses
+    // everything.
+    const dir = await temp();
+    await mkdir(path.join(dir, "scripts"), { recursive: true });
+    await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+    await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
+
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+      `- ${tag("0017", "0017-0001")}\n`,
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "packages", "qfai", "tests", "e2e", "backing.test.ts"),
+      `// ${tag("0017", "0017-0001")}\n`,
+      "utf8",
+    );
+
+    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
+    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+
+    const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
+    if (child.error !== undefined) throw child.error;
+    expect(child.status, `${child.stdout ?? ""}${child.stderr ?? ""}`).toBe(0);
+  });
 
   it("passes for spec-0017 from the repository root", () => {
     const root = path.resolve(__dirname, "../../../../..");

@@ -739,17 +739,29 @@ function countKeyOccurrences(node: unknown, key: string): number {
 /** Dimension 8: no secret declaration, context reference or inheritance. */
 function zeroSecretPins(): ShapePin[] {
   const expected =
-    "no `secrets:` declaration, no `secrets.` or `secrets[...]` context reference and no `secrets: inherit` anywhere in the file";
+    "no `secrets:` declaration, no `secrets.`, `secrets[...]` or bare `secrets` context reference and no `secrets: inherit` anywhere in the file";
   return SHIPPED_FILE_EXPECTATIONS.map((file) =>
     filePin(8, file.name, expected, (found) => {
       const problems: string[] = [];
       found.body.split(/\r\n|\r|\n/).forEach((line, index) => {
-        // Both spellings of the secrets context. `${{ secrets['TOKEN'] }}` is as
+        // Every spelling of the secrets context, and the third one is why this is
+        // not a list of property-access shapes. `${{ secrets['TOKEN'] }}` is as
         // valid as the dotted form and reaches the same value, but it is a plain
-        // string to the YAML parser — so it appears in neither the dotted pattern
-        // nor the `secrets` mapping-key count below, and a shipped file reading a
-        // secret through brackets would leave this whole dimension green.
-        if (/\bsecrets\s*(?:\.|\[)/.test(line)) {
+        // string to the YAML parser — so it appears in neither a dotted pattern
+        // nor the `secrets` mapping-key count below.
+        //
+        // `${{ toJSON(secrets) }}` is worse than either — review finding [11].
+        // GitHub Actions lets a context OBJECT be passed to `toJSON`, so one
+        // `env:` entry hands the adopter's entire secret set to a step and from
+        // there anywhere the step can reach. It names no property, so no
+        // property-access pattern can see it; the inertness test beside this one
+        // looked only at the dotted form, and the hygiene lane does not examine
+        // secret references at all. Every gate stayed green over a workflow that
+        // exfiltrates everything. A shipped file has no business naming the
+        // context in ANY form, so that is what is checked — with the `secrets:`
+        // mapping line excluded here because the next branch reports it with its
+        // own, more precise reason.
+        if (/\bsecrets\b/.test(line) && !/\bsecrets\s*:/.test(line)) {
           problems.push(`line ${index + 1}: secret context reference`);
         }
         if (/\bsecrets\s*:/.test(line)) {
