@@ -447,6 +447,12 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     // writer took it and this row failed. A holder that is still going is precisely one whose
     // marker keeps moving; without that the row is green only while the machine is idle, which is
     // the opposite of when a lock matters.
+    //
+    // The refresh here stands for ANOTHER PROCESS, which is what a lock is for and what no
+    // in-process fixture can supply. Review finding [46] read it the other way round and was
+    // right to: the production holder had no heartbeat at all, so a writer whose own section ran
+    // past the ceiling was reclaimed while it was still inside it. That is now `acquireRecordLock`'s
+    // own interval, and the row below is what says so.
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
     const marker = await plantLock(root, "a-writer-that-is-still-going", 0);
@@ -481,6 +487,73 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
       clearInterval(stillGoing);
     }
   }, 60_000);
+
+  it("renews its marker while it holds the lock, on an interval under the ceiling", async () => {
+    // Review finding [46]. The marker was stamped once, at acquisition, so a writer whose
+    // read-modify-write ran longer than the staleness ceiling — a slow disk, a suspended process, a
+    // loaded machine — was judged abandoned and reclaimed while it was still inside the section.
+    // Two writers in there at once is the lost update this primitive exists to prevent, and it is
+    // not self-healing: the file stays on disk with no entry, reads as `adopter-owned`, and is
+    // never recorded again.
+    //
+    // Asserted on the SOURCE, and the reason is worth stating rather than hiding. The heartbeat
+    // fires on a timer, and the only seam inside the lock is `mutate`, which is synchronous by
+    // contract — a mutator that waits long enough for the timer also blocks the loop the timer runs
+    // on, and one that returns immediately releases the lock (and unlinks the marker) before any
+    // renewal could be observed. So there is no in-process interleaving that reaches it. This
+    // repository already pins a handful of properties this way, and saying which instrument was
+    // used beats a behavioural row that passes either way.
+    const source = await readFile(
+      path.resolve(__dirname, "../../../src/shared/provenance.ts"),
+      "utf-8",
+    );
+    const acquire = source.slice(source.indexOf("async function acquireRecordLock("));
+    const body = acquire.slice(0, acquire.indexOf("\n}\n") + 3);
+    expect(body, "the lock primitive must exist to be checked").not.toBe("");
+
+    expect(body, "the holder must renew its own marker while it holds the lock").toMatch(
+      /setInterval\([\s\S]*utimes\(/,
+    );
+    expect(
+      body,
+      "and stop renewing when it releases, or a released lock keeps looking alive",
+    ).toMatch(/clearInterval\(/);
+
+    // The interval has to be strictly under the ceiling, and by enough that losing one renewal is
+    // not enough to be reclaimed. Read from the constants rather than restated, so the two cannot
+    // drift apart in a later edit.
+    const stale = Number(/const LOCK_STALE_MS = ([0-9_]+);/.exec(source)?.[1]?.replace(/_/g, ""));
+    const beat = Number(
+      /const LOCK_HEARTBEAT_MS = ([0-9_]+);/.exec(source)?.[1]?.replace(/_/g, ""),
+    );
+    expect(Number.isFinite(stale) && Number.isFinite(beat), "both constants must be readable").toBe(
+      true,
+    );
+    expect(
+      beat * 2,
+      "a holder must get at least two renewals inside the ceiling, so losing one is survivable",
+    ).toBeLessThan(stale);
+  });
+
+  it("still reclaims a lock whose holder is gone, so the heartbeat is not a way to wedge one", async () => {
+    // The other direction, and the one that stops the repair from being a regression: a heartbeat
+    // lives in the holder's process, so a crashed holder renews nothing and its lock is reclaimed
+    // exactly as before. Without this row, "never reclaim a lock" would satisfy the row above.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await plantLock(root, "a-run-that-died", 60_000);
+
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-after.yml": entryTyped() },
+    }));
+
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows),
+      "a lock with no process behind it must not outlive its holder",
+    ).toEqual(["qfai-after.yml"]);
+    expect(await lockHolders(root)).toBeUndefined();
+  });
 
   it("leaves no staging directory behind, on either path", async () => {
     // The publish is a private directory renamed onto the lock name, and a rename that SUCCEEDS

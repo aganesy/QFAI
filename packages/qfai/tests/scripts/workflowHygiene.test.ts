@@ -55,6 +55,7 @@ import {
   existsSync,
   mkdirSync,
   mkdtempSync,
+  symlinkSync,
   readFileSync,
   readdirSync,
   rmSync,
@@ -71,6 +72,7 @@ import {
   invokedFileDigests,
   invokedScriptBodies,
   verificationBodyDigest,
+  yamlFilesUnder,
 } from "../../../../scripts/check-workflow-hygiene.mjs";
 
 import { DIGESTED_LANE_INPUTS_REL } from "../helpers/shippedWorkflowFixtures.js";
@@ -2008,6 +2010,93 @@ describe("a shipped runner label literal must be a public GitHub-hosted runner",
 });
 
 // ── [15] ────────────────────────────────────────────────
+describe("the workflow walk refuses a root it did not open, and is bounded", () => {
+  // Review finding [45]. This lane runs on a pull request, over paths the pull request itself
+  // controls, and `readdirSync` follows a link — so replacing `.github/workflows` (or
+  // `.github/actions`, or the shipped root) with a symlink to `/proc` or to a huge external tree
+  // started an unbounded traversal. Every guard downstream is per-FILE and descriptor-based, and
+  // none of them is reached until the walk finishes: a required lane that can be made to hang or
+  // throw instead of producing a finding blocks nothing.
+
+  /** A junction on Windows, an ordinary symlink elsewhere; neither needs privilege. */
+  function linkDir(target: string, at: string): boolean {
+    try {
+      symlinkSync(target, at, "junction");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  it("walks a real root and refuses a linked one, in the same tree", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-"));
+    try {
+      mkdirSync(path.join(dir, "real"), { recursive: true });
+      writeFileSync(path.join(dir, "real", "a.yml"), "name: a\n", "utf-8");
+
+      // The control first, so the refusal below is a refusal and not a walk that finds nothing.
+      expect(yamlFilesUnder(dir, "real"), "a real directory must still be walked").toEqual([
+        "real/a.yml",
+      ]);
+
+      if (!linkDir(path.join(dir, "real"), path.join(dir, "link"))) return;
+      expect(
+        yamlFilesUnder(dir, "link"),
+        "a root that is a link is a root this lane did not open",
+      ).toEqual([]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("does not descend into a linked entry inside a real root", () => {
+    // The same refusal one level in. `readdirSync(..., { withFileTypes: true })` reports a linked
+    // directory as a symlink and not a directory, so the explicit `isSymbolicLink()` arm is a
+    // second statement of a refusal the entry test already makes — measured: removing that arm
+    // leaves this row green. It stays because it names the intent, and this row stays because a
+    // later `{ recursive: true }`, a `statSync`, or a switch to string entries would undo the
+    // behaviour without touching either.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-entry-"));
+    try {
+      mkdirSync(path.join(dir, "outside"), { recursive: true });
+      writeFileSync(path.join(dir, "outside", "b.yml"), "name: b\n", "utf-8");
+      mkdirSync(path.join(dir, "root"), { recursive: true });
+      writeFileSync(path.join(dir, "root", "a.yml"), "name: a\n", "utf-8");
+      if (!linkDir(path.join(dir, "outside"), path.join(dir, "root", "away"))) return;
+
+      expect(
+        yamlFilesUnder(dir, "root"),
+        "a linked entry is a door out of the tree, and the walk must not take it",
+      ).toEqual(["root/a.yml"]);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("stops at its ceiling rather than walking forever, and keeps what it found", () => {
+    // Refusing links is not the same as bounding the walk: a tree that is merely enormous, or a
+    // filesystem that presents one, is still a lane that never finishes. The ceiling is a
+    // parameter with the production value as its default, so this reaches it without laying down
+    // five thousand files.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-ceiling-"));
+    try {
+      mkdirSync(path.join(dir, "root"), { recursive: true });
+      for (const name of ["a", "b", "c", "d", "e"]) {
+        writeFileSync(path.join(dir, "root", `${name}.yml`), `name: ${name}\n`, "utf-8");
+      }
+      expect(
+        yamlFilesUnder(dir, "root").length,
+        "the premise: an unbounded walk finds all five",
+      ).toBe(5);
+      expect(
+        yamlFilesUnder(dir, "root", 2).length,
+        "the walk must stop at the ceiling, and report what it collected before it",
+      ).toBe(2);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
     // Review finding [15]: the lane wrote prose to stderr, the gate ingests

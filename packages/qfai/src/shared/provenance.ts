@@ -35,6 +35,7 @@ import {
   rmdir,
   stat,
   unlink,
+  utimes,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
@@ -317,6 +318,8 @@ async function renameWithRetry(from: string, to: string): Promise<void> {
  * patience.
  */
 const LOCK_STALE_MS = 10_000;
+/** How often a holder renews its marker. Well under the ceiling, so one renewal may be lost. */
+const LOCK_HEARTBEAT_MS = 2_000;
 const LOCK_POLL_MS = 25;
 const LOCK_ATTEMPTS = 200;
 
@@ -463,7 +466,28 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   const marker = randomUUID();
   const staging = path.join(recordDir, `${LOCK_DIR_NAME}.${randomUUID()}.staging`);
 
+  // The marker's mtime is the holder's sign of life, and something has to keep moving it.
+  //
+  // Review finding [46]: it was stamped once, at acquisition, and a writer whose
+  // read-modify-write ran longer than `LOCK_STALE_MS` — a slow disk, a suspended process, a
+  // loaded machine — was then reclaimed while it was still inside the section. Two writers in
+  // there at once is the lost update this primitive exists to prevent, and it is not
+  // self-healing: the file stays on disk with no entry, reads as `adopter-owned`, and is never
+  // recorded again.
+  //
+  // Well under the ceiling, so a holder that is alive at all is renewed several times before it
+  // could be judged abandoned; `unref` so a stray interval can never hold the process open, and
+  // failures are swallowed because a heartbeat that throws would abort a write that is going
+  // fine. What it does NOT do is make a crashed holder look alive: the process is gone, so the
+  // timer is gone, and the reclaim is exactly as before.
+  const heartbeat = setInterval(() => {
+    const now = new Date();
+    void utimes(path.join(lockDir, marker), now, now).catch(() => undefined);
+  }, LOCK_HEARTBEAT_MS);
+  heartbeat.unref();
+
   const release = async (): Promise<void> => {
+    clearInterval(heartbeat);
     await unlink(path.join(lockDir, marker)).catch(() => undefined);
     await rmdir(lockDir).catch(() => undefined);
   };
@@ -487,6 +511,9 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     // A successful `rename` consumed `staging`, so this only ever removes an unpublished one.
     await rm(staging, { recursive: true, force: true }).catch(() => undefined);
   }
+  // Only reached when the lock was never taken, so the heartbeat is renewing a marker this
+  // process does not own — and would keep a lock somebody else holds looking alive forever.
+  clearInterval(heartbeat);
   throw new Error(
     `could not take the install-provenance lock at ${lockDir} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
   );

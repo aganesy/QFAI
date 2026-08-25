@@ -39,7 +39,6 @@ import { createHash } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
-  existsSync,
   fstatSync,
   lstatSync,
   openSync,
@@ -647,16 +646,55 @@ function readBoundedWorkflowText(abs) {
   }
 }
 
-/** Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative. */
-function yamlFilesUnder(root, rel) {
+/** How many directory entries one workflow tree may hold before the walk stops. */
+const MAX_WALKED_ENTRIES = 5_000;
+
+/**
+ * Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative.
+ *
+ * The ROOT is `lstat`ed and refused unless it is a real directory, and no directory ENTRY is
+ * descended into unless it is one either. Review finding [45]: this lane runs on a pull request,
+ * over paths the pull request itself controls, and `readdirSync` follows a link — so replacing
+ * `.github/workflows` (or `.github/actions`, or the shipped root) with a symlink to `/proc` or to
+ * a huge external tree started an unbounded traversal. Every guard downstream is per-FILE and
+ * descriptor-based, and none of them is reached until the walk finishes; a required lane that can
+ * be made to hang or throw instead of producing a finding blocks nothing.
+ *
+ * `readdirSync(..., { withFileTypes: true })` reports a symlinked directory as `isSymbolicLink()`
+ * and NOT `isDirectory()`, so the entry test is already the refusal — it is written explicitly
+ * rather than left implicit, because a later `{ recursive: true }` or a `statSync` would quietly
+ * undo it.
+ *
+ * And a ceiling on top, because refusing links is not the same as bounding the walk: a tree that
+ * is merely enormous, or a filesystem that presents one, is still a lane that never finishes.
+ * The ceiling is a PARAMETER with the production value as its default, so a row can reach it
+ * without laying down five thousand files to do it.
+ *
+ * Hitting it stops the walk rather than throwing — the files already collected are still checked,
+ * and the lane reports on them.
+ */
+export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES) {
   const abs = path.join(root, rel);
-  if (!existsSync(abs)) return [];
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return []; // absent: nothing to walk
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
+
   const out = [];
+  let seen = 0;
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (seen >= limit) return;
+      seen += 1;
       const p = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
       if (e.isDirectory()) walk(p);
-      else if (/\.ya?ml$/.test(e.name)) out.push(path.relative(root, p).replace(/\\/g, "/"));
+      else if (e.isFile() && /\.ya?ml$/.test(e.name)) {
+        out.push(path.relative(root, p).replace(/\\/g, "/"));
+      }
     }
   };
   walk(abs);
