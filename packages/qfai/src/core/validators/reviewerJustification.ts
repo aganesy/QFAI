@@ -56,9 +56,23 @@ type ReviewerFinding = {
   detail?: unknown;
 };
 
-/** One lane-reported field, or `undefined` when the report omitted it. */
+/**
+ * Control characters, which no file path, job id, rule name or lane detail contains.
+ *
+ * C0 and DEL. Review finding [40]: these reports come out of `.qfai/review/**`, a directory a
+ * pull request writes, and the fields here are passed through to `Issue` — where the GitHub
+ * formatter interpolates `file` into a workflow command's location metadata. A newline there
+ * split the command in two and let a fork's pull request inject one of its own. The formatter
+ * now escapes what it emits, which is the fix for every producer; this is the other half, and
+ * it is worth having: a payload carrying a newline is corrupt whoever eventually renders it.
+ */
+// eslint-disable-next-line no-control-regex -- the point of this pattern is the control range
+const LANE_CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+
+/** One lane-reported field, or `undefined` when the report omitted it or corrupted it. */
 function laneField(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
+  if (LANE_CONTROL_CHARS.test(value)) return undefined;
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
 }
