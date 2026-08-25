@@ -8,11 +8,12 @@
  */
 
 import { createHash } from "node:crypto";
-import { readFileSync, writeFileSync } from "node:fs";
+import { readdirSync, rmSync, writeFileSync } from "node:fs";
 import {
   mkdir,
   mkdtemp,
   open,
+  readdir,
   readFile,
   rename,
   rm,
@@ -49,6 +50,33 @@ afterEach(async () => {
 });
 
 const recordPath = (root: string): string => path.join(root, ".qfai", "install-provenance.json");
+
+/**
+ * The lock, as the writer now shapes it: a directory whose entry NAMES its holder.
+ *
+ * Review finding [39]. While the lock was a file whose CONTENTS named its holder, both the
+ * reclaim and the release identified it by path — read the token, then unlink the name — and a
+ * holder stalled past the staleness ceiling deleted whatever had since been published under
+ * that name. Naming the holder in the directory ENTRY makes both removals exact: `unlink` names
+ * one specific holder, and `rmdir` refuses a directory holding anybody else's marker.
+ */
+const lockDir = (root: string): string => path.join(root, ".qfai", ".install-provenance.lock.d");
+
+/** Plants a lock held by `holder`, aged `ageMs` into the past. */
+async function plantLock(root: string, holder: string, ageMs: number): Promise<string> {
+  const dir = lockDir(root);
+  await mkdir(dir, { recursive: true });
+  const markerPath = path.join(dir, holder);
+  await writeFile(markerPath, "", "utf-8");
+  const at = new Date(Date.now() - ageMs);
+  await utimes(markerPath, at, at);
+  return markerPath;
+}
+
+/** The holders named in the lock right now, or `undefined` when there is no lock. */
+async function lockHolders(root: string): Promise<string[] | undefined> {
+  return await readdir(lockDir(root)).catch(() => undefined);
+}
 
 function entry(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -254,10 +282,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     await writeInstallProvenance(root, { workflows: {} });
 
     // A lock left behind by a run that died holding it, dated well past the staleness ceiling.
-    const lockPath = path.join(root, ".qfai", ".install-provenance.lock");
-    await writeFile(lockPath, "a-run-that-died", "utf-8");
-    const longAgo = new Date(Date.now() - 60_000);
-    await utimes(lockPath, longAgo, longAgo);
+    await plantLock(root, "a-run-that-died", 60_000);
 
     // Six writers observe that same stale lock at the same moment. Reclaiming it by `unlink`
     // meant the second one deleted the first one's FRESH lock and both entered the section; the
@@ -342,10 +367,7 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
 
-    const lockPath = path.join(root, ".qfai", ".install-provenance.lock");
-    await writeFile(lockPath, "a-run-that-died", "utf-8");
-    const longAgo = new Date(Date.now() - 60_000);
-    await utimes(lockPath, longAgo, longAgo);
+    await plantLock(root, "a-run-that-died", 60_000);
 
     const names = Array.from({ length: 20 }, (_, index) => `qfai-w${String(index)}.yml`);
     await Promise.all(
@@ -363,31 +385,118 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     ).toEqual([...names].sort());
 
     // And no lock is left behind for the next run to wait out.
-    expect(await readFile(lockPath, "utf-8").catch(() => undefined)).toBeUndefined();
+    expect(await lockHolders(root)).toBeUndefined();
   }, 60_000);
 
   it("does not release a lock it no longer owns", async () => {
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
-    const lockPath = path.join(root, ".qfai", ".install-provenance.lock");
 
-    // Overwritten from INSIDE the mutator, which is the only moment this writer holds the lock.
-    // That models the state after another process reclaimed it: the file is still there, the token
-    // in it is somebody else's, and an unconditional `unlink` on the way out would delete a lock
-    // that writer is relying on — putting two of them in the section at once, which is the lost
-    // update the lock exists to prevent.
+    // Replaced from INSIDE the mutator, which is the only moment this writer holds the lock. That
+    // models the state after another process reclaimed it and published its own: this writer's
+    // marker is gone and somebody else's is there. Review finding [39] measured what the old
+    // release did about it — nothing: it read the token, found its own, and unlinked the PATH,
+    // which by then named the other writer's lock. Two of them were then in the section at once,
+    // which is the lost update the lock exists to prevent.
+    //
+    // Reproducing it needs the replacement to happen while the lock is held, and the mutator is
+    // the one callback that runs there. Sync fs, because the mutator must not do async I/O.
     await updateInstallProvenance(root, (current) => {
-      writeFileSync(lockPath, "someone-else", "utf-8");
+      const dir = lockDir(root);
+      for (const held of readdirSync(dir)) rmSync(path.join(dir, held));
+      writeFileSync(path.join(dir, "someone-else"), "", "utf-8");
       return current;
     });
 
     expect(
-      readFileSync(lockPath, "utf-8"),
-      "release must read the token first and remove only its own lock",
-    ).toBe("someone-else");
+      await lockHolders(root),
+      "release must remove only its own marker, and must not remove a directory holding another " +
+        "writer's",
+    ).toEqual(["someone-else"]);
   });
 
-  // Two plants for this family stayed green, and both are measurements rather than gaps:
+  it("removes its own lock when it is still the holder, so the release is not a refusal", async () => {
+    // The other direction. Without it every assertion above holds for a release that never
+    // removes anything — and a lock nothing releases makes the next writer wait out the whole
+    // staleness ceiling before it can reclaim.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await updateInstallProvenance(root, (current) => current);
+    expect(await lockHolders(root), "the lock must be gone after an uncontended write").toBe(
+      undefined,
+    );
+  });
+
+  it("waits out a LIVE lock and then refuses, leaving no staging directory", async () => {
+    // Two properties in one row, because one fixture establishes both and neither has another
+    // deterministic reproduction.
+    //
+    // 1. The staleness ceiling is CONSULTED. A lock whose marker is fresh belongs to a holder
+    //    that may still be inside the section, and taking it would put two writers there. With
+    //    the ceiling check removed this row's writer reclaims the live lock immediately and the
+    //    call succeeds — measured, and the reason this row is phrased as a refusal.
+    // 2. The unpublished staging directory is cleaned up. A `rename` that SUCCEEDS consumes it,
+    //    so every row where the writer gets the lock passes whether or not anything cleans up;
+    //    the exhaustion path is the only one that leaves one behind. Measured: with the cleanup
+    //    removed, every other row here stayed green.
+    //
+    // It takes `LOCK_ATTEMPTS * LOCK_POLL_MS` to give up, which is well inside the staleness
+    // ceiling — so the lock planted at age zero is still live when the writer gives up, and the
+    // refusal is about a live holder rather than about a clock.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await plantLock(root, "a-writer-that-is-still-going", 0);
+
+    await expect(
+      updateInstallProvenance(root, (current) => ({
+        ...current,
+        workflows: { ...current.workflows, "qfai-blocked.yml": entryTyped() },
+      })),
+      "a live lock must be waited out and then refused, never taken",
+    ).rejects.toThrow(/another process is writing the record/i);
+
+    expect(
+      await lockHolders(root),
+      "and the live holder's lock must still be exactly as it was",
+    ).toEqual(["a-writer-that-is-still-going"]);
+
+    expect(
+      (await readdir(path.join(root, ".qfai"))).filter((name) => name.includes("staging")),
+      "the staging directory of a write that never published must not be left behind",
+    ).toEqual([]);
+  }, 60_000);
+
+  it("leaves no staging directory behind, on either path", async () => {
+    // The publish is a private directory renamed onto the lock name, and a rename that SUCCEEDS
+    // consumes it while one that fails does not. A leftover staging directory would be litter in
+    // the adopter's `.qfai/` — and one per contended attempt, at that.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await plantLock(root, "a-run-that-died", 60_000);
+    await Promise.all(
+      ["a", "b", "c"].map((suffix) =>
+        updateInstallProvenance(root, (current) => ({
+          ...current,
+          workflows: { ...current.workflows, [`qfai-${suffix}.yml`]: entryTyped() },
+        })),
+      ),
+    );
+    expect(
+      (await readdir(path.join(root, ".qfai"))).filter((name) => name.includes("staging")),
+      "a staging directory survived the write",
+    ).toEqual([]);
+  });
+
+  // Three plants for this family stayed green, and all three are measurements rather than gaps:
+  //
+  // - Reclaiming with a recursive `rm` of the lock directory instead of unlinking the markers
+  //   this call OBSERVED. The damage needs a publish to land between one writer's observation
+  //   and its removal, so that the removal takes a lock somebody else is already holding; the
+  //   20-writer row did not produce that interleaving here. What the named removal buys is
+  //   stated rather than measured: `unlink` on a marker that is gone is `ENOENT`, and `rmdir`
+  //   on a directory holding another writer's marker is `ENOTEMPTY`, so an overtaken reclaimer
+  //   cannot destroy a live lock however late it acts. A recursive `rm` can, and between OS
+  //   processes it will.
   //
   // - Reclaiming by `unlink` instead of by atomic replacement cannot be reproduced in-process. The
   //   damage needs one writer's `unlink` to land AFTER another's successful `wx`, and inside a

@@ -25,7 +25,18 @@
  *   which leaves the previous record intact when the write fails partway.
  */
 import { createHash, randomUUID } from "node:crypto";
-import { lstat, mkdir, open, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
+import {
+  lstat,
+  mkdir,
+  open,
+  readdir,
+  rename,
+  rm,
+  rmdir,
+  stat,
+  unlink,
+  writeFile,
+} from "node:fs/promises";
 import path from "node:path";
 
 import { readBoundedRegularFile } from "./boundedRead.js";
@@ -342,7 +353,6 @@ export async function updateInstallProvenance(
     throw symlinkedAncestorError(rootDir);
   }
   await mkdir(recordDir, { recursive: true });
-  const lockPath = path.join(recordDir, ".install-provenance.lock");
 
   // Applied, written, and then CHECKED — up to a bounded number of times.
   //
@@ -360,7 +370,7 @@ export async function updateInstallProvenance(
   // Review finding [03] asked for the lost update to stop; this is the part that does not depend
   // on the lock being perfect.
   for (let attempt = 1; attempt <= UPDATE_ATTEMPTS; attempt += 1) {
-    const release = await acquireRecordLock(lockPath);
+    const release = await acquireRecordLock(recordDir);
     let written: string | undefined;
     try {
       const next = mutate(await readInstallProvenance(rootDir));
@@ -399,120 +409,127 @@ function serializeForComparison(record: InstallProvenanceRecord): string {
 }
 
 /**
+ * The lock's visible name. A DIRECTORY, whose entries name its holders.
+ *
+ * `.d` rather than the plain `.install-provenance.lock` a file used to occupy, so the two shapes
+ * can never meet at one path: a leftover regular file under the old name would block every
+ * `mkdir` and every `rename` here forever. The cost is that two QFAI versions writing the SAME
+ * tree at the SAME moment would not interlock with each other. A lock file is transient state
+ * rather than part of the record format, and that overlap is one upgrade wide.
+ */
+const LOCK_DIR_NAME = ".install-provenance.lock.d";
+
+/**
  * Takes the lock, waiting for a live holder and reclaiming an abandoned one.
  *
- * The first version reclaimed by `unlink`, and review finding [23] showed why that is not a
- * reclaim: two writers that observe the SAME stale lock both decide to remove it, the first
- * removes it and creates its own, and the second — acting on an observation that is now several
- * milliseconds out of date — removes the FIRST WRITER'S FRESH LOCK. Both then enter the
- * read-modify-write section, which is the lost update this primitive exists to prevent, now
- * reintroduced by the thing meant to prevent it.
+ * The whole difficulty is removing a lock whose owner is gone without removing one that is
+ * alive, and every earlier attempt failed the same way: it identified the lock by its PATH.
  *
- * So nothing here ever unlinks a lock it has not proved is its own:
+ * - Review finding [23]: reclaiming by `unlink` let two writers that observed the same stale
+ *   lock both remove it — the second removing the first's FRESH lock.
+ * - Then a second `wx` lock guarding the reclaim, which had the same defect one level down.
+ * - Then a two-`stat` identity check on the lock file, which narrowed the window to one syscall
+ *   and said so in a paragraph headed "what remains".
+ * - Review finding [39] pointed at the RELEASE, which still had the original shape: read the
+ *   token, then `unlink` the path. A holder stalled past the staleness ceiling reads its own
+ *   token, another writer reclaims and publishes a fresh lock at the same name, and the stalled
+ *   holder's `unlink` deletes THAT — putting two writers in the section at once, which is the
+ *   lost update this primitive exists to prevent.
  *
- * - Every lock file carries a token unique to the writer that created it.
- * - The uncontended path is `open(..., "wx")`, which is atomic and needs no proof beyond succeeding.
- * - Release reads the token first and unlinks only its own.
- * - **A stale lock is reclaimed under a second `wx` lock**, so exactly one writer can reclaim it.
+ * So the lock stops being a path whose contents identify its holder, and becomes a DIRECTORY
+ * whose ENTRY NAMES do. Every removal here then names one specific holder, or refuses:
  *
- * That last point replaced a reclaim-by-atomic-replacement, and the reason is measured rather than
- * argued. Replacement plus a read-back looked sufficient: two reclaimers both rename, one token
- * survives, the loser retries. It is not — the loser can rename AFTER the winner's read-back, taking
- * the lock out from under a writer already inside the section. That was written down here as a
- * residual "within one scheduler tick", and then the whole-suite run put six concurrent writers on
- * one tree and hit it on the first attempt. A window a test finds immediately is not a residual.
+ * - a holder publishes by building `<uuid>` inside a private staging directory and `rename`ing
+ *   that directory onto the lock name. `rename` onto a non-empty directory fails, so the rename
+ *   is the arbitration — and because the marker is inside before the rename, the lock is never
+ *   visible without a holder named in it;
+ * - release unlinks `lockDir/<its own uuid>` and then `rmdir`s. Both are exact: the unlink names
+ *   a marker only this holder created, and `rmdir` fails on a directory holding anybody else's.
+ *   A stalled holder releasing into somebody else's lock gets `ENOENT` and `ENOTEMPTY` and does
+ *   no damage;
+ * - the reclaim is the same two steps against the marker it OBSERVED, so a reclaimer overtaken
+ *   between its `readdir` and its removal gets `ENOENT` and `ENOTEMPTY` too.
  *
- * The reclaim lock is the only shape Node offers that exactly one process can win: `wx` fails rather
- * than overwrites. Its own holder can die, so it is aged too — but it is held for two syscalls rather
- * than for a whole read-modify-write, so its abandonment window is smaller by orders of magnitude
- * instead of by argument. And `updateInstallProvenance` no longer depends on any of this being
- * perfect: it verifies its write survived and re-applies if it did not.
+ * There is no path-identity comparison left anywhere in it, and so no window between deciding
+ * and acting: the kernel decides, on a name, at the moment of the call.
+ *
+ * `updateInstallProvenance` still verifies its write survived and re-applies if it did not. That
+ * belt stays: it is what makes a lost update recoverable rather than permanent, and a provenance
+ * entry lost to a race is not self-healing — the file stays on disk with no entry, reads as
+ * `adopter-owned`, and is never recorded again.
  */
-async function acquireRecordLock(lockPath: string): Promise<() => Promise<void>> {
-  const token = randomUUID();
+async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>> {
+  const lockDir = path.join(recordDir, LOCK_DIR_NAME);
+  const marker = randomUUID();
+  const staging = path.join(recordDir, `${LOCK_DIR_NAME}.${randomUUID()}.staging`);
+
   const release = async (): Promise<void> => {
-    const held = await readFile(lockPath, "utf-8").catch(() => undefined);
-    if (held === token) {
-      await unlink(lockPath).catch(() => undefined);
-    }
+    await unlink(path.join(lockDir, marker)).catch(() => undefined);
+    await rmdir(lockDir).catch(() => undefined);
   };
 
-  for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
-    if (await takeLockFile(lockPath, token)) {
-      return release;
+  await mkdir(staging, { recursive: true });
+  try {
+    const handle = await open(path.join(staging, marker), "wx");
+    await handle.close();
+
+    for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
+      try {
+        await rename(staging, lockDir);
+        return release;
+      } catch {
+        // Held, or the destination is not publishable. Age decides which.
+      }
+      await clearAbandonedLock(lockDir);
+      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
     }
-    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
+  } finally {
+    // A successful `rename` consumed `staging`, so this only ever removes an unpublished one.
+    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
   }
   throw new Error(
-    `could not take the install-provenance lock at ${lockPath} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
+    `could not take the install-provenance lock at ${lockDir} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
   );
 }
 
 /**
- * One attempt at the lock: create it, or clear an abandoned one so the NEXT attempt can.
+ * Removes an abandoned lock, and only an abandoned one.
  *
- * `open(..., "wx")` is the only step that decides who holds it. Everything else here is about
- * removing a lock whose owner is gone, and the whole difficulty is doing that without removing one
- * that is alive.
+ * Staleness is read from the MARKERS, which are written once at acquisition and never touched
+ * again — so their mtime is the age of the holder rather than of the directory. A lock with any
+ * marker inside the ceiling is left alone.
  *
- * The lock is observed ONCE and then re-observed immediately before the `unlink`, and the removal
- * only happens when the two observations name the same object — same device, same inode, same
- * mtime. A holder that renewed, or a fresh lock installed by another reclaimer in between, differs
- * in at least one of the three and is left alone.
+ * The removals name the markers this call observed. If another writer reclaimed and republished
+ * in between, those names are gone (`ENOENT`) and the `rmdir` meets that writer's own marker
+ * (`ENOTEMPTY`): the overtaken reclaimer does nothing rather than deleting a live lock.
  *
- * This replaced a SECOND `wx` lock guarding the reclaim, and removing that level is the repair
- * rather than a simplification: the second lock had the very defect it was added to fix, one level
- * down. Its own abandoned-holder path unlinked by name on an mtime observation alone, so a
- * reclaimer that stalled past the ceiling could have its lock taken, and two processes could then
- * agree the main lock was stale and race to replace it. Adding a third lock would have moved the
- * defect again.
- *
- * **What remains, stated rather than implied.** Between deciding to remove and the `unlink` itself
- * there is one syscall in which another reclaimer can remove and re-create the lock, and this
- * process then removes THEIR fresh one. Node exposes no `flock` and no compare-and-swap on a file,
- * so the window cannot be closed portably — it is now one syscall wide instead of the reclaim
- * lock's staleness ceiling. The residual matters because a lost provenance entry is not
- * self-healing: the file stays on disk with no entry, reads as `adopter-owned`, and is never
- * recorded again. Closing it properly means one file per workflow name — writers would then never
- * touch the same path — which is an on-disk format change and a compatibility event for adopters
- * who already carry `install-provenance.json`, so it is deliberately not bundled here.
+ * An EMPTY lock directory is removed outright. It holds nobody, and it can only be the residue
+ * of a holder that died between its `unlink` and its `rmdir` — left in place it would block every
+ * later `rename` permanently, which on Windows is every later acquisition (a directory rename
+ * there fails on an existing destination whether or not it is empty).
  */
-async function takeLockFile(lockPath: string, token: string): Promise<boolean> {
-  try {
-    const handle = await open(lockPath, "wx");
-    try {
-      await handle.writeFile(token, "utf-8");
-    } finally {
-      await handle.close();
+async function clearAbandonedLock(lockDir: string): Promise<void> {
+  const markers = await readdir(lockDir).catch(() => undefined);
+  if (markers === undefined) {
+    return; // not there, or not a directory: nothing this function can act on
+  }
+  if (markers.length === 0) {
+    await rmdir(lockDir).catch(() => undefined);
+    return;
+  }
+  for (const held of markers) {
+    const observed = await stat(path.join(lockDir, held)).catch(() => undefined);
+    if (observed === undefined) {
+      return; // it changed under us; the next attempt reads it afresh
     }
-    return true;
-  } catch {
-    // Held, or unopenable. Age decides which, and identity decides whether we may act on it.
+    if (Date.now() - observed.mtimeMs <= LOCK_STALE_MS) {
+      return; // a live holder
+    }
   }
-
-  const observed = await stat(lockPath).catch(() => undefined);
-  if (observed === undefined) {
-    return false; // gone between the open and the stat: the next attempt creates it
+  for (const held of markers) {
+    await unlink(path.join(lockDir, held)).catch(() => undefined);
   }
-  if (Date.now() - observed.mtimeMs <= LOCK_STALE_MS) {
-    return false; // a live holder
-  }
-
-  const before = await stat(lockPath).catch(() => undefined);
-  if (
-    before === undefined ||
-    before.dev !== observed.dev ||
-    before.ino !== observed.ino ||
-    before.mtimeMs !== observed.mtimeMs
-  ) {
-    return false; // not the object we judged abandoned
-  }
-  await unlink(lockPath).catch(() => undefined);
-
-  // Deliberately NOT creating it here. Returning false sends the caller back to the `wx` above,
-  // which is the step that can arbitrate — clearing the lock and claiming it in one breath would
-  // hand it to whichever reclaimer got there first rather than to whichever `wx` succeeded.
-  return false;
+  await rmdir(lockDir).catch(() => undefined);
 }
 /**
  * Builds the record entry for one freshly written workflow file. The
