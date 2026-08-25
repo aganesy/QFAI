@@ -627,9 +627,14 @@ function toWorkflowEntry(value: unknown): WorkflowProvenanceEntry | undefined {
   // reads a claimed name with no file as `declined` — which stops `qfai init`
   // from ever writing the workflow again. A corrupt entry must be DROPPED so
   // the name falls back to `absent`, the state that installs.
+  //
+  // TRIMMED, not raw. Review finding [31]: `length === 0` is a check about a string, and
+  // the question here is whether the entry names a version. `"   "` answers no and passed,
+  // so a record carrying it was kept, and a name whose file is absent then reads as
+  // `declined` — the one state `qfai init` never repairs. Whitespace is not a version.
   if (
     !SHA256_HEX_PATTERN.test(sha256) ||
-    installedByVersion.length === 0 ||
+    installedByVersion.trim().length === 0 ||
     !isIsoTimestamp(installedAt)
   ) {
     return undefined;

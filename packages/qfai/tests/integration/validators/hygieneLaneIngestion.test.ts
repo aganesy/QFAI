@@ -50,6 +50,18 @@ const SHIPPED_SHAPE = "R-SHIPPED-WORKFLOW-SHAPE-DRIFT";
 /** Error class, script-emitted, and a catalog member — the negative control. */
 const CONTROL = "R-PACK-LOCATION-DRIFT";
 
+/**
+ * The producers' own `detail` strings, verbatim in the shape each lane emits.
+ *
+ * They are DISTINCT from every site value in the same fixture, so an assertion that finds
+ * one has found the detail rather than a substring of the file, the job or the rule.
+ */
+const HYGIENE_DETAIL = "carries a condition of its own (if: false), so it can be skipped";
+const SHAPE_DETAIL = "expected profile=full, found profile=tdd";
+
+/** Where `writeReport` puts the report, repo-relative and POSIX-separated as the gate reports it. */
+const REPORT_REL = ".qfai/review/review-20260822000000000/reviewer-completion.json";
+
 let root: string;
 
 beforeEach(async () => {
@@ -88,6 +100,7 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
         file: ".github/workflows/ci.yml",
         job: "ci-pass",
         rule: "job-guardrails",
+        detail: HYGIENE_DETAIL,
       },
     ]);
 
@@ -116,6 +129,30 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
     expect(message, "the ingested finding lost the rule name the lane reported").toContain(
       "job-guardrails",
     );
+
+    // …and in the STRUCTURED fields, which is the half that reaches a JSON consumer.
+    //
+    // Review finding [32]: `file` held the artifact's own path and `rule` the constant
+    // `reviewerJustification.ingested`, so `qfai validate --format json` reported a finding
+    // about `.qfai/review/**` with no way back to the workflow, and the job was nowhere at
+    // all. Every assertion above passed while that was true — a message is not a field.
+    expect(
+      ingested[0]?.file,
+      "`file` must be the lane's file, not the artifact it arrived in",
+    ).toBe(".github/workflows/ci.yml");
+    expect(ingested[0]?.job, "the lane's job must survive as a field").toBe("ci-pass");
+    expect(ingested[0]?.rule, "the lane's rule must survive as a field").toBe("job-guardrails");
+    // The artifact is not lost — it moves to where evidence belongs, which is also what
+    // keeps `--spec` scoping seeing the path it saw while `file` carried it.
+    expect(
+      ingested[0]?.relatedFiles ?? [],
+      "the artifact the finding arrived in must still be reachable",
+    ).toContain(REPORT_REL);
+    // And the producer's own account of the violation, which the gate never read at all.
+    expect(
+      ingested[0]?.message ?? "",
+      "the lane said what was wrong; a gate that drops it leaves a site and no finding",
+    ).toContain(HYGIENE_DETAIL);
 
     // …and nothing was rejected FOR ITS JUSTIFICATION. That is the deferral, and it is not
     // the same claim as "nothing failed": the ingested finding above is error class, so the
@@ -233,6 +270,7 @@ describe("TC-0015-0036 (TDD-0037): shipped-shape drift with an empty justificati
         file: "qfai-tests.yml",
         job: "verdict",
         rule: "profile-value",
+        detail: SHAPE_DETAIL,
       },
       { code: CONTROL, justification: "   " },
     ]);
@@ -245,6 +283,14 @@ describe("TC-0015-0036 (TDD-0037): shipped-shape drift with an empty justificati
     expect(ingested[0]?.message ?? "").toContain("qfai-tests.yml");
     expect(ingested[0]?.message ?? "").toContain("verdict");
     expect(ingested[0]?.message ?? "").toContain("profile-value");
+    expect(ingested[0]?.file).toBe("qfai-tests.yml");
+    expect(ingested[0]?.job).toBe("verdict");
+    expect(ingested[0]?.rule).toBe("profile-value");
+    expect(ingested[0]?.message ?? "").toContain(SHAPE_DETAIL);
+
+    // The control finding is NOT given a job by the gate: nothing reported one, and a
+    // synthesized field would read as a value a producer supplied.
+    expect(forCode(issues, CONTROL)[0]?.job).toBeUndefined();
 
     const rejected = forCode(issues, CONTROL);
     expect(

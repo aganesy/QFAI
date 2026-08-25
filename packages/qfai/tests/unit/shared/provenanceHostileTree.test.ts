@@ -166,6 +166,41 @@ describe("a timestamp naming a date that does not exist is not a timestamp", () 
   });
 });
 
+// ── [31] ─────────────────────────────────────────────────────
+describe("a version made of spaces is not a version", () => {
+  it("drops an entry whose installedByVersion is whitespace only", async () => {
+    const root = await tempRoot();
+    await writeRaw(root, {
+      workflows: {
+        "qfai-tests.yml": entry({ installedByVersion: "   " }),
+        "qfai-validate.yml": entry(),
+      },
+    });
+
+    // The premise, asserted rather than assumed: the field IS a string and it IS non-empty,
+    // which is exactly why `length === 0` let it through.
+    expect(typeof "   ").toBe("string");
+    expect("   ".length).toBeGreaterThan(0);
+
+    const read = await readInstallProvenance(root);
+    expect(
+      Object.keys(read.workflows),
+      "an entry naming no version must be dropped; kept, a name whose file is absent reads as " +
+        "`declined` and the workflow is never created again",
+    ).toEqual(["qfai-validate.yml"]);
+  });
+
+  it("keeps a version with incidental surrounding whitespace, so the check is emptiness and not shape", async () => {
+    // The other direction. A record hand-edited to `" 1.0.0 "` still NAMES a version, and
+    // dropping it would resurrect the same permanent-`declined` loss from the other side.
+    const root = await tempRoot();
+    await writeRaw(root, {
+      workflows: { "qfai-tests.yml": entry({ installedByVersion: " 1.0.0 " }) },
+    });
+    expect(Object.keys((await readInstallProvenance(root)).workflows)).toEqual(["qfai-tests.yml"]);
+  });
+});
+
 // ── [09] / [31] ───────────────────────────────────
 describe("a symlinked .qfai does not let the record escape the tree", () => {
   it("refuses to write through it, and leaves the outside file untouched", async () => {

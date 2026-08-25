@@ -70,6 +70,16 @@
 
 ### Changed
 
+- **A validation issue can now carry the CI job its producer reported (`job`).** The
+  reviewer-justification gate ingests the workflow-set lint lanes' findings, and those lanes
+  report a site as `file` + `job` + `rule`. The gate previously overwrote `file` with the path
+  of the artifact the finding arrived in and `rule` with a constant naming its own branch, and
+  the job had no field to survive in at all — so a JSON consumer of `qfai validate` was told
+  which report file to open and nothing about the workflow that was wrong. The lane's `file`,
+  `job` and `rule` now pass through verbatim, the producer's own `detail` is reproduced in the
+  message, and the artifact moves to `relatedFiles`, where evidence for a finding belongs.
+  `job` is optional and set only when a producer reported one, so no existing issue changes
+  shape.
 - **`TDDLIST_STALE_STATUS` stops firing on a selector that only shares its last word.** The
   rule reads a ledger row whose `Status` is `todo` and warns when the named test appears to exist
   anyway. It resolved the selector through a helper that falls back to the selector last

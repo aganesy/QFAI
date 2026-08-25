@@ -48,6 +48,12 @@ type ReviewerFinding = {
   file?: unknown;
   job?: unknown;
   rule?: unknown;
+  /**
+   * What the lane found — the shape gate's `expected …, found …`, the hygiene lane's
+   * account of the violation. It is the only field that says WHAT is wrong rather than
+   * where, and the gate reproduces it verbatim for the same reason it reproduces the site.
+   */
+  detail?: unknown;
 };
 
 /** One lane-reported field, or `undefined` when the report omitted it. */
@@ -73,6 +79,27 @@ function laneSite(finding: ReviewerFinding): string {
   if (job !== undefined) parts.push(`job=${job}`);
   if (rule !== undefined) parts.push(`rule=${rule}`);
   return parts.length === 0 ? "no site reported by the lane" : parts.join(" ");
+}
+
+/**
+ * The structured half of the passthrough: the lane's job, and the artifact the finding
+ * arrived in.
+ *
+ * `job` is set only when the lane reported one. Under `exactOptionalPropertyTypes` an absent
+ * key and a key holding `undefined` are different types, and they should be — a `job` field
+ * present and empty reads as a job the lane named, which is the placeholder `laneSite` refuses
+ * to invent for the same reason.
+ */
+function ingestedDetails(
+  finding: ReviewerFinding,
+  artifactPath: string,
+): { relatedFiles: string[]; job?: string } {
+  const details: { relatedFiles: string[]; job?: string } = { relatedFiles: [artifactPath] };
+  const job = laneField(finding.job);
+  if (job !== undefined) {
+    details.job = job;
+  }
+  return details;
 }
 
 type ReviewerReport = {
@@ -132,13 +159,37 @@ export async function validateReviewerJustification(
       // what is deferred until catalog registration lands is REJECTING them for
       // an empty `justification:`. Nothing there defers the severity.
       if (DEFERRED_CATALOG_REGISTRATION_CODE_SET.has(code)) {
+        // Passed through in STRUCTURED fields, not folded into prose. Review finding [32]:
+        // `file` was overwritten with the artifact's own path and `rule` with a constant
+        // naming this branch, so the lane's file and rule were destroyed and its job never
+        // had a field to survive in — a JSON consumer of `qfai validate` got the artifact
+        // it came from and nothing about the offending workflow. `BR-0015-0017` says the
+        // gate passes the lane's payload through rather than reconstructing it, and a site
+        // that exists only inside a sentence has been reconstructed.
+        //
+        // The artifact path moves to `relatedFiles`, which is where a file that is evidence
+        // FOR a finding belongs rather than the file the finding is ABOUT — and it keeps
+        // `--spec` scoping seeing the same path it saw when `file` carried it.
+        //
+        // `detail` is the producer's account of the violation and is reproduced verbatim.
+        // Without it the message named a site and never said what was wrong there, so a
+        // reviewer had to open the artifact to learn anything actionable at all.
+        const detail = laneField(finding.detail);
         issues.push(
           issue(
             code,
-            `Reviewer finding ${code} ingested from the workflow-set lint lane: ${laneSite(finding)} (${relPath}). Catalog registration is deferred, so no justification is demanded for this code yet.`,
+            `Reviewer finding ${code} ingested from the workflow-set lint lane: ${laneSite(finding)}${
+              detail === undefined ? "" : ` — ${detail}`
+            } (${relPath}). Catalog registration is deferred, so no justification is demanded for this code yet.`,
             "error",
-            relPath,
-            "reviewerJustification.ingested",
+            // The lane's own file. Only when it reported none does the artifact stand in,
+            // because an issue with no `file` at all is one no reporter can place.
+            laneField(finding.file) ?? relPath,
+            laneField(finding.rule) ?? "reviewerJustification.ingested",
+            undefined,
+            undefined,
+            undefined,
+            ingestedDetails(finding, relPath),
           ),
         );
         continue;
