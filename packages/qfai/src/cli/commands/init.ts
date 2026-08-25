@@ -1,5 +1,5 @@
 import path from "node:path";
-import { createHash } from "node:crypto";
+import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -144,8 +144,26 @@ export async function runInit(options: InitOptions): Promise<void> {
     workflowPreInit.record,
     workflowPreInit.presentOnDisk,
   );
-  const declinedWorkflowExcludes = [...SHIPPED_WORKFLOW_NAMES]
-    .filter((name) => !workflowCopySet.has(name))
+  // …and every shipped name is excluded outright when the directory they would land in is
+  // not one this tree owns. Review finding [35]: `copyFile` — `COPYFILE_EXCL` included —
+  // follows a symlinked PARENT, so an adopter whose `.github` or `.github/workflows` points
+  // at a directory outside the repository had the workflows written there. The copy then
+  // reported those paths as written, the lexical comparison below counted them as in-repo
+  // (it resolves `..` and `.`, never a link), and provenance recorded QFAI as the owner of a
+  // file outside the tree — after which doctor's drift check and the retired prune both
+  // pointed at it too.
+  //
+  // Refused rather than followed, and refused for the workflows only: the rest of `init` is
+  // unaffected by what `.github` is, and failing the whole command over it would be a larger
+  // change to an adopter's tree than declining to write two files.
+  const workflowsDirIsOwn = await workflowAncestorsAreRealDirectories(destRoot);
+  if (!workflowsDirIsOwn) {
+    error(
+      ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
+    );
+  }
+  const workflowCopyExcludes = [...SHIPPED_WORKFLOW_NAMES]
+    .filter((name) => !workflowsDirIsOwn || !workflowCopySet.has(name))
     .map((name) => path.join(".github", "workflows", name));
 
   // root/ と .qfai/ は create-only（既存は skip）
@@ -155,7 +173,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     protect: ["DESIGN.md"],
-    exclude: declinedWorkflowExcludes,
+    exclude: workflowCopyExcludes,
   });
 
   // Record provenance for the shipped workflow files this copy actually
@@ -225,27 +243,33 @@ export async function runInit(options: InitOptions): Promise<void> {
     // Re-asked here, against the file as it is now. `prunableRetiredNames` was computed before
     // the copy above ran, and between the two the adopter — or a concurrent run — can put
     // their own content under that name. The name would still match; the bytes would not.
-    // Review finding [30].
-    async (target) =>
-      (await digestWorkflowFile(target)) === prunableRetiredNames.get(path.basename(target)),
+    // Review finding [30]. The primitive asks it a second time after moving the entry aside,
+    // which is why the digest is looked up by the entry's own NAME rather than by the basename
+    // of the path being read — after the move those are different strings.
+    async (target, name) => (await digestWorkflowFile(target)) === prunableRetiredNames.get(name),
+    // The entry goes with the file, in the same success unit. A pruned workflow whose provenance
+    // entry survives is read by the NEXT run as a name QFAI installed and the adopter deleted —
+    // the `declined` row — so the copy skips it forever. Retiring a workflow would silently
+    // poison the name against whatever ships under it later. Review finding [20].
+    //
+    // Review finding [34]: this ran AFTER the delete, as a separate step. A read-only `.qfai`, a
+    // full disk or a lock it could not take then left the file gone and the entry standing —
+    // which is exactly the poisoned name the paragraph above is about, reached by the code meant
+    // to prevent it. Running it while the files are still in quarantine means a failure here puts
+    // them back.
+    //
+    // Under the record lock and against the record on disk, not against the pre-init snapshot:
+    // the copy between them has already written entries of its own.
+    async (prunedPaths) => {
+      const prunedNames = new Set(prunedPaths.map((target) => path.basename(target)));
+      await updateInstallProvenance(destRoot, (current) => {
+        const workflows = Object.fromEntries(
+          Object.entries(current.workflows).filter(([name]) => !prunedNames.has(name)),
+        );
+        return { ...current, workflows };
+      });
+    },
   );
-
-  // The entry goes with the file. A pruned workflow whose provenance entry survives is read by
-  // the NEXT run as a name QFAI installed and the adopter deleted — the `declined` row — so the
-  // copy skips it forever. Retiring a workflow would silently poison the name against whatever
-  // ships under it later. Review finding [20].
-  //
-  // Under the record lock and against the record on disk, not against the pre-init snapshot:
-  // the copy between them has already written entries of its own.
-  if (!options.dryRun && removedRetiredWorkflows.length > 0) {
-    const prunedNames = new Set(removedRetiredWorkflows.map((target) => path.basename(target)));
-    await updateInstallProvenance(destRoot, (current) => {
-      const workflows = Object.fromEntries(
-        Object.entries(current.workflows).filter(([name]) => !prunedNames.has(name)),
-      );
-      return { ...current, workflows };
-    });
-  }
 
   const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
 
@@ -2102,6 +2126,36 @@ type ShippedWorkflowPreInitState = {
   presentOnDisk: Set<string>;
 };
 
+/**
+ * The path components between the adopter's root and the shipped workflows, outermost first.
+ */
+const WORKFLOW_DIR_SEGMENTS: readonly string[] = [".github", "workflows"];
+
+/**
+ * Whether every existing component of `<destRoot>/.github/workflows` is a real directory.
+ *
+ * A component that is not there yet passes: the copy creates it, and a directory this run
+ * created is not a link to somewhere else. A component that IS there and is a symlink — or is
+ * not a directory at all — fails, because every write through it lands wherever it points,
+ * and `path.resolve` cannot tell that from a write into the tree.
+ *
+ * `lstat`, so the link itself is inspected rather than its target.
+ */
+async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
+  let current = destRoot;
+  for (const segment of WORKFLOW_DIR_SEGMENTS) {
+    current = path.join(current, segment);
+    const inspected = await lstat(current).catch(() => undefined);
+    if (inspected === undefined) {
+      continue;
+    }
+    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 async function captureShippedWorkflowPreInitState(
   destRoot: string,
 ): Promise<ShippedWorkflowPreInitState> {
@@ -2195,6 +2249,14 @@ async function recordInstalledWorkflows(
   if (dryRun) {
     return;
   }
+  // Asked again, here, and not only before the copy. Review finding [35]: the check that
+  // refuses a linked parent runs before `copyTemplateTree`, and a link created between the
+  // two would still have the copy report paths that resolve lexically into the tree. An entry
+  // is a claim of OWNERSHIP, and it is the claim that outlives the run — recording nothing is
+  // recoverable, recording a file outside the repository is not.
+  if (!(await workflowAncestorsAreRealDirectories(destRoot))) {
+    return;
+  }
   const workflowsDir = path.join(destRoot, ".github", "workflows");
   const copiedNames = new Set(
     copiedPaths
@@ -2268,7 +2330,7 @@ async function recordInstalledWorkflows(
       (entry) => entry.isFile() && addedNames.includes(entry.name),
       rolledBack,
       false,
-      async (target) => (await digestWorkflowFile(target)) === added[path.basename(target)]?.sha256,
+      async (target, name) => (await digestWorkflowFile(target)) === added[name]?.sha256,
     ).catch(() => undefined);
     throw error;
   }
@@ -2280,12 +2342,28 @@ async function recordInstalledWorkflows(
  * each removed path to `removed`. Exported for reuse — the
  * shipped-workflows contract forbids parallel removal implementations.
  *
- * `confirm` is the ownership question asked at the moment of deletion. `predicate` can only
- * ever see the `readdir` snapshot, and every caller here decides ownership by CONTENT — the
- * file still holds the bytes QFAI recorded writing. Deciding that earlier and deleting later
- * is a window in which the adopter, or a concurrent run, replaces the file: the name still
- * matches, the content no longer does, and the delete destroys work QFAI never wrote. A
- * caller with no content test passes `undefined` and gets the snapshot behaviour.
+ * `confirm` is the ownership question, and it is asked TWICE: once against the path as the
+ * snapshot named it, and once against the object after it has been moved aside. `predicate`
+ * can only ever see the `readdir` snapshot, and every caller here decides ownership by
+ * CONTENT — the file still holds the bytes QFAI recorded writing. A caller with no content
+ * test passes `undefined` and gets the snapshot behaviour. `confirm` receives the path to
+ * READ and, separately, the entry's original name, because after the move the two differ and
+ * a caller looking its digest up by basename would be looking up the quarantine name.
+ *
+ * Why the move at all — review finding [33]. Checking a pathname, re-checking it and then
+ * deleting it are three operations on a NAME, and between any two of them the adopter can put
+ * their own file there: the digest that was verified and the bytes that are deleted are then
+ * different objects, and the deleted one is theirs. Renaming the entry to a name nothing else
+ * holds collapses the three into one object — everything after the rename acts on what was
+ * moved, whatever later takes the vacated name.
+ *
+ * `commit` is what makes the removal a UNIT with whatever else has to happen for it. Review
+ * finding [34]: the retired-workflow caller deleted the files and then removed their provenance
+ * entries in a second step, so a read-only `.qfai`, a full disk or a lock it could not take left
+ * the files gone and the entries standing — which the next run reads as names the adopter
+ * deliberately removed, and never installs again. It runs while the entries are still in
+ * quarantine, so a failure puts them back rather than leaving the tree half-changed. It is
+ * called only when there is something to commit, and never on a dry run.
  *
  * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
  * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing
@@ -2297,35 +2375,141 @@ export async function pruneMatchingEntries(
   predicate: (entry: Dirent) => boolean,
   removed: string[],
   dryRun: boolean,
-  confirm?: (target: string) => Promise<boolean>,
+  confirm?: (target: string, name: string) => Promise<boolean>,
+  commit?: (removedPaths: readonly string[]) => Promise<void>,
 ): Promise<void> {
   if (!(await exists(dir))) {
     return;
   }
   const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!predicate(entry)) {
-      continue;
+  const held: QuarantinedEntry[] = [];
+  const pruned: string[] = [];
+  try {
+    for (const entry of entries) {
+      if (!predicate(entry)) {
+        continue;
+      }
+      const target = path.join(dir, entry.name);
+      if (confirm !== undefined && !(await confirm(target, entry.name))) {
+        continue; // still QFAI's name, no longer QFAI's bytes
+      }
+      // Re-checked against the path as it is NOW, not as `readdir` reported it. Every predicate
+      // here requires `isFile()`, but that is a fact about the snapshot: a directory swapped in
+      // after it — by the adopter, or by a concurrent run — still carries a matching name, and a
+      // recursive delete would take the whole tree on the strength of it. `lstat`, so a symlink is
+      // refused rather than followed, and the `rm` below is deliberately not recursive: two
+      // independent reasons a swapped directory survives. Review finding [30].
+      const atDeletion = await lstat(target).catch(() => undefined);
+      if (atDeletion === undefined || atDeletion.isSymbolicLink() || !atDeletion.isFile()) {
+        continue;
+      }
+      if (dryRun) {
+        pruned.push(target);
+        continue;
+      }
+      const moved = await quarantineEntry(target);
+      if (moved === undefined) {
+        continue; // could not take it aside; a file left alone is the conservative outcome
+      }
+      // The question re-asked against the OBJECT rather than the name. Everything before the
+      // rename described a path; this describes what was moved, and it is what gets deleted.
+      if (confirm !== undefined && !(await confirm(moved.quarantinePath, entry.name))) {
+        await restoreQuarantined(moved);
+        continue;
+      }
+      held.push(moved);
+      pruned.push(target);
     }
-    const target = path.join(dir, entry.name);
-    if (confirm !== undefined && !(await confirm(target))) {
-      continue; // still QFAI's name, no longer QFAI's bytes
+    if (commit !== undefined && !dryRun && pruned.length > 0) {
+      await commit(pruned);
     }
-    // Re-checked against the path as it is NOW, not as `readdir` reported it. Every predicate here
-    // requires `isFile()`, but that is a fact about the snapshot: a directory swapped in after it —
-    // by the adopter, or by a concurrent run — still carries a matching name, and a recursive delete
-    // would take the whole tree on the strength of it. `lstat`, so a symlink is refused rather than
-    // followed, and the `rm` below is deliberately not recursive: two independent reasons a swapped
-    // directory survives. Review finding [30].
-    const atDeletion = await lstat(target).catch(() => undefined);
-    if (atDeletion === undefined || atDeletion.isSymbolicLink() || !atDeletion.isFile()) {
-      continue;
+  } catch (error) {
+    for (const moved of held) {
+      await restoreQuarantined(moved);
     }
-    removed.push(target);
-    if (!dryRun) {
-      await rm(target, { force: true });
+    throw error;
+  }
+  removed.push(...pruned);
+  for (const moved of held) {
+    await rm(moved.quarantinePath, { force: true }).catch(() => undefined);
+  }
+}
+
+/** A file moved aside under a name nothing else holds, pending its delete or its restore. */
+type QuarantinedEntry = {
+  /** Where it was, and where a restore puts it back. */
+  originalPath: string;
+  /** Where it is now — the object every step after the move acts on. */
+  quarantinePath: string;
+};
+
+/** How many times a colliding quarantine name is retried before the entry is left alone. */
+const QUARANTINE_ATTEMPTS = 8;
+
+/**
+ * Moves `target` aside under an exclusive name in the SAME directory, or answers `undefined`.
+ *
+ * The name is claimed with `wx` before the rename: that is what makes it exclusive rather than
+ * merely unlikely — a random name that happened to exist would be silently replaced by the
+ * rename, and whatever was under it would become the thing this deletes. The rename then
+ * replaces our own empty claim.
+ *
+ * Same directory, because a rename across filesystems is not one operation, and the whole point
+ * of the move is that it is one.
+ */
+async function quarantineEntry(target: string): Promise<QuarantinedEntry | undefined> {
+  const dir = path.dirname(target);
+  const base = path.basename(target);
+  for (let attempt = 0; attempt < QUARANTINE_ATTEMPTS; attempt += 1) {
+    const quarantinePath = path.join(dir, `.${base}.qfai-prune-${randomBytes(12).toString("hex")}`);
+    let claimed: FileHandle;
+    try {
+      claimed = await open(quarantinePath, "wx");
+    } catch {
+      continue; // the name is taken: try another rather than write over it
+    }
+    await claimed.close().catch(() => undefined);
+    try {
+      await rename(target, quarantinePath);
+      return { originalPath: target, quarantinePath };
+    } catch {
+      await rm(quarantinePath, { force: true }).catch(() => undefined);
+      return undefined; // the entry is gone or unmovable; either way it is not ours to delete
     }
   }
+  return undefined;
+}
+
+/**
+ * Puts a quarantined entry back, without overwriting whatever took its name meanwhile.
+ *
+ * `link` first, because it FAILS when the destination exists where `rename` would silently
+ * replace it — and the name was vacated by this function's own move, so a file standing there
+ * now is one somebody else wrote in the interval. On a filesystem with no hard links `link`
+ * fails for its own reasons, and the fallback rename is gated on the name still being free;
+ * that is a check and not a guarantee, but it is strictly better than replacing blind.
+ */
+async function restoreQuarantined(entry: QuarantinedEntry): Promise<void> {
+  try {
+    await link(entry.quarantinePath, entry.originalPath);
+    await rm(entry.quarantinePath, { force: true }).catch(() => undefined);
+    return;
+  } catch (error: unknown) {
+    if (fsErrorCode(error) === "EEXIST") {
+      return; // the name is somebody else's now; the quarantined copy stays where it is
+    }
+  }
+  if (await exists(entry.originalPath)) {
+    return;
+  }
+  await rename(entry.quarantinePath, entry.originalPath).catch(() => undefined);
+}
+
+/** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
+function fsErrorCode(error: unknown): string | undefined {
+  if (typeof error !== "object" || error === null) return undefined;
+  const code: unknown = Reflect.get(error, "code");
+  return typeof code === "string" ? code : undefined;
 }
 
 // ---------------------------------------------------------------------------

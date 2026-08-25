@@ -10,7 +10,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { mkdir, mkdtemp, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readdir, readFile, rm, stat, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -84,6 +84,132 @@ describe("the prune asks the ownership question at the moment it deletes", () =>
 
     expect(removed).toEqual([target]);
     await expect(stat(target)).rejects.toThrow();
+  });
+});
+
+// ── [33] ────────────────────────────────────────────
+describe("the object that was verified is the object that is deleted", () => {
+  it("does not delete the adopter file that took the name after the answer was given", async () => {
+    const dir = await tempRoot();
+    const target = path.join(dir, "qfai-retired.yml");
+    await writeFile(target, "installed-by-qfai\n", "utf-8");
+    const judgedDigest = sha("installed-by-qfai\n");
+
+    // The window, made deterministic. `confirm` answers about the file it was handed and THEN
+    // the adopter writes their own content under the same name — which is the interleaving a
+    // second process produces and no in-process test can otherwise reach. Checking a pathname,
+    // re-checking it and deleting it are three operations on a name; this is what it costs.
+    let answered = 0;
+    const removed: string[] = [];
+    await pruneMatchingEntries(
+      dir,
+      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
+      removed,
+      false,
+      async (candidate) => {
+        const ok = sha(await readFile(candidate, "utf-8")) === judgedDigest;
+        answered += 1;
+        if (answered === 1) {
+          await writeFile(target, "the adopter's own workflow\n", "utf-8");
+        }
+        return ok;
+      },
+    );
+
+    expect(
+      await readFile(target, "utf-8"),
+      "the file deleted must be the one whose bytes were verified, not whatever holds the name",
+    ).toBe("the adopter's own workflow\n");
+    expect(removed, "and nothing QFAI owned was found to remove").toEqual([]);
+  });
+});
+
+// ── [34] ────────────────────────────────────────────
+describe("the removal and the record change are one success unit", () => {
+  it("puts the file back when the work that had to go with the removal fails", async () => {
+    const dir = await tempRoot();
+    const target = path.join(dir, "qfai-retired.yml");
+    await writeFile(target, "installed-by-qfai\n", "utf-8");
+    const judgedDigest = sha("installed-by-qfai\n");
+
+    // What fails here stands for the provenance write: a read-only `.qfai`, a full disk, a lock
+    // the run could not take. The file being gone and its entry standing is the poisoned name
+    // the prune exists to avoid — reached by the code meant to avoid it.
+    const removed: string[] = [];
+    await expect(
+      pruneMatchingEntries(
+        dir,
+        (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
+        removed,
+        false,
+        async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
+        () => Promise.reject(new Error("the record write failed")),
+      ),
+      "the failure must reach the caller rather than be swallowed",
+    ).rejects.toThrow(/record write failed/);
+
+    expect(
+      await readFile(target, "utf-8"),
+      "a removal whose record change failed must leave the file where it was",
+    ).toBe("installed-by-qfai\n");
+    expect(removed, "and must not report a removal it rolled back").toEqual([]);
+  });
+
+  it("deletes and reports when the work succeeds, so the unit is a unit and not a refusal", async () => {
+    const dir = await tempRoot();
+    const target = path.join(dir, "qfai-retired.yml");
+    await writeFile(target, "installed-by-qfai\n", "utf-8");
+    const judgedDigest = sha("installed-by-qfai\n");
+
+    const removed: string[] = [];
+    const committed: string[] = [];
+    await pruneMatchingEntries(
+      dir,
+      (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
+      removed,
+      false,
+      async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
+      (paths) => {
+        // The record change runs while the file is still recoverable, and is told which names
+        // it is accounting for.
+        committed.push(...paths);
+        return Promise.resolve();
+      },
+    );
+
+    expect(removed).toEqual([target]);
+    expect(committed, "the commit must be handed the paths it is committing").toEqual([target]);
+    await expect(stat(target)).rejects.toThrow();
+  });
+
+  it("leaves no quarantine file behind on either path", async () => {
+    // The move is an implementation detail and must stay one: a `.qfai-prune-*` file surviving
+    // in `.github/workflows/` would be a new artifact in the adopter's tree, which is the sort
+    // of thing this whole family is about not doing.
+    for (const outcome of ["commit", "rollback"] as const) {
+      const dir = await tempRoot();
+      const target = path.join(dir, "qfai-retired.yml");
+      await writeFile(target, "installed-by-qfai\n", "utf-8");
+      const judgedDigest = sha("installed-by-qfai\n");
+      const removed: string[] = [];
+      const run = pruneMatchingEntries(
+        dir,
+        (entry) => entry.isFile() && entry.name === "qfai-retired.yml",
+        removed,
+        false,
+        async (candidate) => sha(await readFile(candidate, "utf-8")) === judgedDigest,
+        () => (outcome === "rollback" ? Promise.reject(new Error("no")) : Promise.resolve()),
+      );
+      if (outcome === "rollback") {
+        await expect(run).rejects.toThrow();
+      } else {
+        await run;
+      }
+      expect(
+        (await readdir(dir)).filter((name) => name.includes("qfai-prune-")),
+        `a quarantine file survived the ${outcome} path`,
+      ).toEqual([]);
+    }
   });
 });
 

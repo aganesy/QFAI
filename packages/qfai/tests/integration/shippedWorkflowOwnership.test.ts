@@ -11,7 +11,7 @@
  * This file grows row by row; each describe block is one ledger row.
  */
 import { createHash } from "node:crypto";
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, symlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -113,6 +113,76 @@ function extractPruneCallSites(source: string): string[] {
   return sites;
 }
 
+// ── [35] ─────────────────────────────────────────
+describe(
+  "a workflows directory reached through a link is not this tree's to write",
+  // Two guards stand behind these rows and only one of them is falsifiable here: the copy
+  // exclusion, and the recorder's own re-ask. With the copy already excluded there is nothing
+  // left for the recorder to refuse, so reverting IT alone leaves these green — which is what a
+  // second guard looks like from a test, not a gap. The falsification plants revert the pair.
+  { timeout: 60000 },
+  () => {
+    /**
+     * The link, as a JUNCTION on Windows and an ordinary symlink elsewhere.
+     *
+     * `fs.symlink(..., "junction")` needs no privilege on Windows, where a plain directory
+     * symlink does — and a fixture that silently skips on the platform whose default `copyFile`
+     * behaviour this is about would be no fixture at all. Still guarded: a filesystem that
+     * refuses either is a fixture problem, not a defect.
+     */
+    async function linkDir(target: string, at: string): Promise<boolean> {
+      try {
+        await symlink(target, at, "junction");
+        return true;
+      } catch {
+        return false;
+      }
+    }
+
+    for (const linked of [".github", ".github/workflows"] as const) {
+      it(`writes no shipped workflow through a symlinked ${linked}, and records none`, async () => {
+        const dir = await newTempDir();
+        const outside = await newTempDir();
+
+        // The link stands where the copy would create a directory, and points out of the tree.
+        if (linked === ".github/workflows") {
+          await mkdir(path.join(dir, ".github"), { recursive: true });
+        }
+        const at = path.join(dir, ...linked.split("/"));
+        if (!(await linkDir(outside, at))) return;
+
+        await runInitQuiet(dir);
+
+        // Non-vacuity: `init` ran and did its other work. Without this the two assertions below
+        // hold for a run that threw before writing anything at all.
+        expect(
+          (await readdir(path.join(dir, ".qfai"))).length,
+          "init produced nothing at all, so this row proves nothing about the workflows",
+        ).toBeGreaterThan(0);
+
+        // `copyFile` follows a symlinked PARENT — `COPYFILE_EXCL` included, since exclusivity is
+        // about the final component. So the shipped names would have landed out here.
+        const escaped = linked === ".github" ? path.join(outside, "workflows") : outside;
+        const escapedNames = await readdir(escaped).catch(() => [] as string[]);
+        for (const name of requireStringSetExport("SHIPPED_WORKFLOW_NAMES")) {
+          expect(
+            escapedNames,
+            `${name} was written outside the repository through the linked ${linked}`,
+          ).not.toContain(name);
+        }
+
+        // And nothing was claimed. An entry is the durable half: it outlives the run, and it is
+        // what makes doctor's drift check and the retired prune point at the escaped file too.
+        const record = await readInstallProvenance(dir);
+        expect(
+          Object.keys(record.workflows),
+          "a file this run could not safely write must not be recorded as one QFAI owns",
+        ).toEqual([]);
+      });
+    }
+  },
+);
+
 describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives a retired-name predicate", () => {
   it("exports pruneMatchingEntries as a function (module-private would force a parallel re-implementation)", () => {
     // Membership is asserted via the namespace object so a missing export
@@ -168,6 +238,38 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
     const body = resolver.slice(0, resolver.indexOf("\n}\n") + 3);
     expect(body).toContain("RETIRED_WORKFLOW_NAMES");
     expect(body).toContain("record.workflows[name]");
+  });
+
+  it("the retired prune removes the file and its provenance entry in one success unit", async () => {
+    const source = await readInitSource();
+    const callSites = extractPruneCallSites(source);
+    const workflowsSites = callSites.filter((site) => site.includes("prunableRetiredNames"));
+    expect(workflowsSites.length, "expected the retired-name prune call site").toBe(1);
+
+    // The record change is INSIDE the call, as the argument that runs while the files are still
+    // recoverable. Review finding [34]: it stood after the call as its own statement, so a
+    // read-only `.qfai`, a full disk or a lock the run could not take left the files gone and
+    // their entries standing — and the next run reads such a name as one the adopter
+    // deliberately removed, and never installs it again. That is the poisoned name this prune
+    // exists to avoid, reached by the code meant to avoid it.
+    expect(
+      workflowsSites[0] ?? "",
+      "the provenance entry removal must be the prune's commit, not a step after it",
+    ).toContain("updateInstallProvenance(");
+
+    // …and nowhere else in the workflows segment, or the unit would have a second half again.
+    const start = source.indexOf("const prunableRetiredNames");
+    const end = source.indexOf("const removed = [");
+    expect(start).toBeGreaterThanOrEqual(0);
+    expect(end).toBeGreaterThan(start);
+    const outsideTheCall = source
+      .slice(start, end)
+      .split(workflowsSites[0] ?? "\u0000")
+      .join("");
+    expect(
+      outsideTheCall.includes("updateInstallProvenance("),
+      "the retired-workflow segment must reach the record only through the prune's commit",
+    ).toBe(false);
   });
 
   it("no parallel removal helper: one pruneMatchingEntries definition and no second removal-flavoured export", async () => {
