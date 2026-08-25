@@ -26,7 +26,7 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -47,6 +47,7 @@ import {
   SHIPPED_WORKFLOW_SHAPE_DRIFT_CODE,
   diffShippedWorkflowShape,
   renderShapeGateReport,
+  writeShapeFindingsForReviewerGate,
   shapeValueLiterals,
 } from "./shippedWorkflowShape.js";
 
@@ -99,43 +100,6 @@ const newTempDir = useTempDirPool("qfai-wfshape-");
  */
 const shapeReviewDir = (): string =>
   path.join(repoRoot, ".qfai", "review", "shipped-workflow-shape");
-
-/**
- * Write the shape findings in the shape the Reviewer Gate ingests.
- *
- * `file` / `job` / `rule` are the three fields the gate passes through verbatim, so a shape
- * finding arrives carrying the same site information a hygiene finding does. `site` is
- * `<file>` or `<file>:<job>`, which is split back apart here rather than shipped as one string:
- * a reviewer reading `job=` should see a job, and the gate has a slot for it.
- *
- * A write failure is swallowed deliberately. This is a lint lane's reporting side effect, and
- * failing the gate assertion for an unwritable `.qfai/review` would turn a reporting problem into
- * a shape verdict — which is the confusion the artifact exists to remove.
- */
-async function writeShapeFindingsForReviewerGate(findings: readonly ShapeFinding[]): Promise<void> {
-  const payload = {
-    findings: findings.map((finding) => {
-      const [file, job] = finding.site.split(":");
-      return {
-        code: finding.code,
-        rule: `dimension ${String(finding.dimension)}`,
-        file,
-        ...(job === undefined ? {} : { job }),
-        detail: `expected ${finding.expected}, found ${finding.actual}`,
-      };
-    }),
-  };
-  try {
-    await mkdir(shapeReviewDir(), { recursive: true });
-    await writeFile(
-      path.join(shapeReviewDir(), "shipped-workflow-shape.json"),
-      `${JSON.stringify(payload, null, 2)}\n`,
-      "utf-8",
-    );
-  } catch {
-    // Reporting, not verdict. See above.
-  }
-}
 
 /** The packaged root whose `.github/workflows` is the real shipped set. */
 const shippedRootDir = (): string => path.dirname(shippedGithubDir());
@@ -582,7 +546,7 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     // the lane ran and found nothing, and a missing file then means it did not run — two different
     // facts that have to stay distinguishable. It also overwrites a stale artifact rather than
     // leaving one to be read as current.
-    await writeShapeFindingsForReviewerGate(shipped);
+    await writeShapeFindingsForReviewerGate(shapeReviewDir(), shipped);
 
     assertShapeGateAccepts(shipped);
 

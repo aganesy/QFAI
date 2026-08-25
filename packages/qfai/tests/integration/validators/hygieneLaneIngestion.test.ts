@@ -23,6 +23,7 @@
 // QFAI:SPEC-0015:TC-0015-0035
 // QFAI:SPEC-0015:TC-0015-0036
 
+import { spawnSync } from "node:child_process";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -35,6 +36,10 @@ import {
   DEFERRED_CATALOG_REGISTRATION_CODES,
 } from "../../../src/core/validators/justificationCatalog.js";
 import { validateReviewerJustification } from "../../../src/core/validators/reviewerJustification.js";
+import {
+  SHAPE_REVIEW_ARTIFACT,
+  writeShapeFindingsForReviewerGate,
+} from "../shippedWorkflowShape.js";
 import type { Issue } from "../../../src/core/types.js";
 
 /** The repository root — this row asserts against the real tree, not a fixture. */
@@ -124,35 +129,69 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
 
   it("has a production producer for BOTH exempt codes, not just the hygiene one", async () => {
     // The exemption list names two codes and the gate is required to ingest both. Review finding
-    // [03]: only `R-WORKFLOW-HYGIENE-DRIFT` had a producer — the hygiene lane writes
-    // `.qfai/review/workflow-hygiene/workflow-hygiene.json` — while
-    // `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` appeared in the catalog and in tests and nowhere else, so
-    // shape drift reddened `lint:workflow-shape` and reached no reviewer at all.
+    // on `package.json:19`: only `R-WORKFLOW-HYGIENE-DRIFT` had a producer — the hygiene lane —
+    // while `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` appeared in the catalog and in tests and nowhere
+    // else, so shape drift reddened `lint:workflow-shape` and reached no reviewer at all.
     //
-    // Asserted as the ARTIFACT each lane leaves in this repository, not as a fixture: a fixture
-    // would pass whatever the lanes actually do. Both files are gitignored and rewritten on every
-    // run, so their presence is the statement that the lane ran.
-    const reviewDir = path.join(REPO_ROOT, ".qfai", "review");
-    const producers: readonly (readonly [string, string])[] = [
-      ["workflow-hygiene", "workflow-hygiene.json"],
-      ["shipped-workflow-shape", "shipped-workflow-shape.json"],
-    ];
-    for (const [dir, file] of producers) {
-      const target = path.join(reviewDir, dir, file);
-      const raw = await readFile(target, "utf-8").catch(() => undefined);
+    // This RUNS each producer into a temp directory rather than inspecting `.qfai/review/**` in
+    // the working tree. Measured: the first version asserted the artifacts were present, and CI
+    // reddened — the hygiene lane runs in the `lint` job and this suite runs in `test`, on a
+    // different checkout, so the file it looked for had never been written there. An assertion
+    // about a producer must not depend on which job last happened to run it.
+    const outDir = await mkdtemp(path.join(os.tmpdir(), "qfai-producers-"));
+    try {
+      // 1. The hygiene lane, spawned exactly as `ci:lint` spawns it.
+      const laneDir = path.join(outDir, "workflow-hygiene");
+      const lane = spawnSync(
+        process.execPath,
+        [
+          path.join(REPO_ROOT, "scripts", "check-workflow-hygiene.mjs"),
+          "--root",
+          REPO_ROOT,
+          "--report-dir",
+          laneDir,
+        ],
+        { encoding: "utf-8" },
+      );
+      if (lane.error !== undefined) throw lane.error;
+      const laneArtifact = await readFile(
+        path.join(laneDir, "workflow-hygiene.json"),
+        "utf-8",
+      ).catch(() => undefined);
       expect(
-        raw,
-        `${dir} produced no artifact — run its lane; a code the gate must ingest with no producer ` +
-          `reaches no reviewer however good the gate is`,
+        laneArtifact,
+        "the hygiene lane produced no findings artifact; a code the gate must ingest with no " +
+          "producer reaches no reviewer however good the gate is",
       ).toBeDefined();
-      const parsed: unknown = JSON.parse(raw ?? "null");
+
+      // 2. The shape lane, through the writer the shape module owns.
+      const shapeDir = path.join(outDir, "shipped-workflow-shape");
+      await writeShapeFindingsForReviewerGate(shapeDir, []);
+      const shapeArtifact = await readFile(
+        path.join(shapeDir, SHAPE_REVIEW_ARTIFACT),
+        "utf-8",
+      ).catch(() => undefined);
       expect(
-        Array.isArray((parsed as { findings?: unknown })?.findings),
-        `${file} must carry a findings array, which is the only shape the gate reads`,
-      ).toBe(true);
+        shapeArtifact,
+        "the shape gate produced no findings artifact, which is the half that had no producer at all",
+      ).toBeDefined();
+
+      // Both in the one shape the gate reads, and both ingestible: the gate scans any `*.json`
+      // under `.qfai/review/**` that parses to `{ findings: [...] }`.
+      for (const [what, raw] of [
+        ["hygiene", laneArtifact],
+        ["shape", shapeArtifact],
+      ] as const) {
+        const parsed: unknown = JSON.parse(raw ?? "null");
+        expect(
+          Array.isArray((parsed as { findings?: unknown } | null)?.findings),
+          `the ${what} artifact must carry a findings array, which is the only shape the gate reads`,
+        ).toBe(true);
+      }
+    } finally {
+      await rm(outDir, { recursive: true, force: true });
     }
   });
-
   it("takes the exemption from an enumerated list of exactly two, not from a property", async () => {
     // Membership, asserted as equality. A subset check would accept a list that
     // had grown a third member, which is precisely the generalisation this

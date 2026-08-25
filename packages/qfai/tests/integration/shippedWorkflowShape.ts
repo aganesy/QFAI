@@ -32,7 +32,7 @@
  * condition semantics with the inertness row. Restating those here would
  * reproduce the very duplication this gate exists to remove.
  */
-import { readdir, readFile } from "node:fs/promises";
+import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 import { parse } from "yaml";
@@ -892,6 +892,51 @@ export async function diffShippedWorkflowShape(rootDir: string): Promise<ShapeFi
  * value. Empty string for an accepted tree, so the gate's own assertion can
  * compare against it directly.
  */
+/** The file the shape lane leaves for the Reviewer Gate, relative to the directory it is given. */
+export const SHAPE_REVIEW_ARTIFACT = "shipped-workflow-shape.json";
+
+/**
+ * Write the shape findings in the shape the Reviewer Gate ingests.
+ *
+ * `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in `DEFERRED_CATALOG_REGISTRATION_CODES` beside
+ * `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. The hygiene lane has a
+ * producer; this code had none anywhere in the repository — it appeared only in the catalog and in
+ * tests — so shape drift reddened `lint:workflow-shape` and reached no reviewer.
+ *
+ * It lives HERE, in the module that owns the shape, rather than in the gate that calls it: the
+ * ingestion suite has to be able to run the producer to check that one exists, and importing a
+ * `.test.ts` from another test file to reach it is not a module surface.
+ *
+ * `file` / `job` / `rule` are the three fields the gate passes through verbatim, so a shape finding
+ * arrives carrying the same site information a hygiene finding does. `site` is `<file>` or
+ * `<file>:<job>`, split back apart here — a reviewer reading `job=` should see a job.
+ *
+ * Written on EVERY run, empty array included: that is the statement that the lane ran and found
+ * nothing, so a missing file means it did not run. Two different facts.
+ */
+export async function writeShapeFindingsForReviewerGate(
+  reviewDir: string,
+  findings: readonly ShapeFinding[],
+): Promise<void> {
+  const payload = {
+    findings: findings.map((finding) => {
+      const [file, job] = finding.site.split(":");
+      return {
+        code: finding.code,
+        rule: `dimension ${String(finding.dimension)}`,
+        file,
+        ...(job === undefined ? {} : { job }),
+        detail: `expected ${finding.expected}, found ${finding.actual}`,
+      };
+    }),
+  };
+  await mkdir(reviewDir, { recursive: true });
+  await writeFile(
+    path.join(reviewDir, SHAPE_REVIEW_ARTIFACT),
+    `${JSON.stringify(payload, null, 2)}\n`,
+    "utf-8",
+  );
+}
 export function renderShapeGateReport(findings: readonly ShapeFinding[]): string {
   return findings
     .map(
