@@ -46,9 +46,17 @@ describe("the tarball proof is a separate process and a file on disk", () => {
 
     // The reason carries npm's own accounting, which is what makes the tolerance auditable rather
     // than a bare boolean in a log.
+    // The reason names what was checked, and that now includes WHICH digest — a proof that only
+    // matched a name and a gzip header read the same in the log as one that matched npm's own
+    // accounting, which is how the weaker version went unnoticed.
     expect
-      .soft(proof.reason, "the proof must name the tarball, its file count and its size")
-      .toMatch(/^`npm pack` built .+\.tgz \([0-9]+ files, [0-9]+ bytes\)$/);
+      .soft(
+        proof.reason,
+        "the proof must name the tarball, its file count, its size and the digests it verified",
+      )
+      .toMatch(
+        /^`npm pack` built .+\.tgz \([0-9]+ files, [0-9]+ bytes, (?:shasum|integrity)(?:\+(?:shasum|integrity))* verified\)$/,
+      );
   });
 
   it("refuses a directory that packs nothing", { timeout: 300_000 }, () => {

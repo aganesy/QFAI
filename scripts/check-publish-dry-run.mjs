@@ -1,14 +1,7 @@
-/* global process, URL, Buffer */
+/* global process, URL */
 import { spawnSync } from "node:child_process";
-import {
-  closeSync,
-  mkdtempSync,
-  openSync,
-  readFileSync,
-  readSync,
-  rmSync,
-  statSync,
-} from "node:fs";
+import { createHash } from "node:crypto";
+import { mkdtempSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
@@ -123,7 +116,9 @@ export function verifyAlreadyPublished(pkgDir) {
  * 1. the separate process exited zero;
  * 2. npm's OWN post-pack accounting — the JSON it prints after packing — names a filename and a
  *    non-empty file list;
- * 3. that file exists on disk, with the size npm reported and a gzip magic number.
+ * 3. that file exists on disk, and IS the archive npm accounted for — the reported size, a gzip
+ *    magic number, and whichever of `shasum` / `integrity` the report carries, recomputed over
+ *    the bytes. A report carrying neither digest is refused rather than accepted on its name.
  *
  * A script can print anything; it cannot make npm's post-pack JSON describe a file it did not
  * create, and it cannot leave a gzip archive of the reported size where npm says one is without
@@ -192,6 +187,9 @@ export function verifyTarballIndependently(pkgDir) {
     }
     const filename = Reflect.get(entry, "filename");
     const files = Reflect.get(entry, "files");
+    const entrySize = Reflect.get(entry, "size");
+    const entryShasum = Reflect.get(entry, "shasum");
+    const entryIntegrity = Reflect.get(entry, "integrity");
     if (typeof filename !== "string" || filename.length === 0) {
       return { ok: false, reason: "`npm pack --json` named no tarball file" };
     }
@@ -212,30 +210,65 @@ export function verifyTarballIndependently(pkgDir) {
       return { ok: false, reason: `${filename} is not a non-empty regular file` };
     }
 
-    // And it is a gzip archive, not a file something else left with the right name.
-    const head = Buffer.alloc(2);
-    let fd;
+    // The file on disk must be the file npm ACCOUNTED FOR — its size and its digest, not just
+    // its name and a gzip header.
+    //
+    // The docblock above claimed "with the size npm reported" while the code read neither the
+    // size nor the digest: any non-empty file whose first two bytes are the gzip magic passed.
+    // So a `postpack` — or a background process it started, which outlives the `npm pack` this
+    // waits on — could replace the archive after it was built, and the already-published
+    // tolerance would then let the required `build` context go green over an archive nobody
+    // verified. npm reports `size`, `shasum` and `integrity`; measured on npm 11 they are all
+    // present, so there is no reason to check less than it tells us.
+    if (typeof entrySize === "number" && stats.size !== entrySize) {
+      return {
+        ok: false,
+        reason: `${filename} is ${String(stats.size)} bytes on disk but npm accounted for ${String(entrySize)}`,
+      };
+    }
+
+    let bytes;
     try {
-      fd = openSync(tarball, "r");
-      readSync(fd, head, 0, 2, 0);
+      bytes = readFileSync(tarball);
     } catch {
       return { ok: false, reason: `${filename} could not be read back` };
-    } finally {
-      if (fd !== undefined) {
-        try {
-          closeSync(fd);
-        } catch {
-          // going away with the process
-        }
-      }
     }
-    if (head[0] !== 0x1f || head[1] !== 0x8b) {
+    if (bytes[0] !== 0x1f || bytes[1] !== 0x8b) {
       return { ok: false, reason: `${filename} is not a gzip archive` };
+    }
+
+    // `shasum` is npm's own sha1 over the tarball, and `integrity` its SRI form. Whichever the
+    // report carries is checked; a report carrying NEITHER is refused, because then nothing
+    // distinguishes the archive npm built from one left in its place.
+    const digestChecks = [];
+    if (typeof entryShasum === "string" && entryShasum.length > 0) {
+      digestChecks.push(["shasum", entryShasum, createHash("sha1").update(bytes).digest("hex")]);
+    }
+    if (typeof entryIntegrity === "string" && entryIntegrity.startsWith("sha512-")) {
+      digestChecks.push([
+        "integrity",
+        entryIntegrity,
+        `sha512-${createHash("sha512").update(bytes).digest("base64")}`,
+      ]);
+    }
+    if (digestChecks.length === 0) {
+      return {
+        ok: false,
+        reason: `\`npm pack --json\` reported neither a shasum nor an sha512 integrity for ${filename}, so the archive on disk cannot be tied to the one it packed`,
+      };
+    }
+    for (const [label, reported, actual] of digestChecks) {
+      if (reported !== actual) {
+        return {
+          ok: false,
+          reason: `${filename} does not match the ${label} npm reported (${reported} vs ${actual})`,
+        };
+      }
     }
 
     return {
       ok: true,
-      reason: `\`npm pack\` built ${filename} (${String(files.length)} files, ${String(stats.size)} bytes)`,
+      reason: `\`npm pack\` built ${filename} (${String(files.length)} files, ${String(stats.size)} bytes, ${digestChecks.map(([label]) => label).join("+")} verified)`,
     };
   } finally {
     try {
