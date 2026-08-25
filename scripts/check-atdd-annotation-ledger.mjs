@@ -326,77 +326,142 @@ function parseArguments(args) {
 }
 
 /**
- * `text` with every comment replaced by spaces of the same length, newlines preserved.
+ * One literal string, or `undefined` for anything whose value is not fixed in the source.
  *
- * A tiny lexer rather than a regex, because `//` inside a string literal is not a comment and a
- * regex cannot know that — and the string literals here are the include globs, which is exactly
- * what must survive. Offsets are preserved so anything reported against this text still lines up
- * with the file.
- *
- * String CONTENTS are left alone. A declaration hidden inside a string would therefore still
- * match — and be caught as a second match by the caller, which refuses rather than picks.
- *
- * @param {string} text source text
- * @returns {string} the same text with comment bodies blanked
+ * The parser is a PARAMETER rather than a module-scope binding: it is loaded on demand (see
+ * `e2eIncludeGlobs`), so a helper closing over it would read `undefined` on every path that
+ * reaches it before the load — which is every path, since the load is inside the only caller.
  */
-export function blankComments(text) {
-  let out = "";
-  let mode = "code"; // code | line | block | single | double | template
-  for (let index = 0; index < text.length; index += 1) {
-    const char = text[index];
-    const next = text[index + 1] ?? "";
-    if (mode === "code") {
-      if (char === "/" && next === "/") {
-        mode = "line";
-        out += "  ";
-        index += 1;
-        continue;
-      }
-      if (char === "/" && next === "*") {
-        mode = "block";
-        out += "  ";
-        index += 1;
-        continue;
-      }
-      if (char === "'") mode = "single";
-      else if (char === '"') mode = "double";
-      else if (char === "`") mode = "template";
-      out += char;
-      continue;
-    }
-    if (mode === "line") {
-      if (char === "\n") {
-        mode = "code";
-        out += char;
-        continue;
-      }
-      out += " ";
-      continue;
-    }
-    if (mode === "block") {
-      if (char === "*" && next === "/") {
-        mode = "code";
-        out += "  ";
-        index += 1;
-        continue;
-      }
-      out += char === "\n" ? char : " ";
-      continue;
-    }
-    // Inside a string literal: copied verbatim, and a backslash escapes whatever follows so a
-    // `\\"` does not end it early.
-    out += char;
-    if (char === "\\") {
-      out += next;
-      index += 1;
-      continue;
-    }
-    if ((mode === "single" && char === "'") || (mode === "double" && char === '"')) {
-      mode = "code";
-    }
-    if (mode === "template" && char === "`") mode = "code";
+function literalText(ts, node) {
+  if (node === undefined) return undefined;
+  if (ts.isStringLiteral(node)) return node.text;
+  if (ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
+  return undefined;
+}
+
+/** The initializer of `name` on an object literal, by identifier or by quoted key. */
+function propertyValue(ts, objectLiteral, name) {
+  for (const property of objectLiteral.properties) {
+    if (!ts.isPropertyAssignment(property)) continue;
+    const key = property.name;
+    const keyText = ts.isIdentifier(key)
+      ? key.text
+      : ts.isStringLiteral(key) || ts.isNoSubstitutionTemplateLiteral(key)
+        ? key.text
+        : undefined;
+    if (keyText === name) return property.initializer;
   }
-  return out;
+  return undefined;
+}
+
+/**
+ * The `include` globs of the project named `e2e`, read from the syntax the runner exports.
+ *
+ * Three text-level readings of this file preceded this one and each was wrong in a new way:
+ *
+ * - a bare regex over the raw file, which a COMMENT declaring an `e2e` project could shadow;
+ * - the same regex with comments blanked, which a declaration inside an unused STRING could still
+ *   reach — and, because the pattern spelled `"e2e"` with double quotes, the fake was the only
+ *   candidate the moment the real project used a template literal for its name;
+ * - and in both, an object literal that nothing exports counted the same as the exported one.
+ *
+ * Each repair moved the hole rather than closing it, because the property is syntactic and a
+ * pattern over text cannot express it. So this walks the AST: the DEFAULT EXPORT, its array (a
+ * `defineWorkspace(...)` call is unwrapped to its first argument), each element's `test` object,
+ * and the `name` and `include` on that. A comment is not a node, a string's contents are not
+ * nodes, and an object nothing exports is not reachable.
+ *
+ * A value that is not a literal — an interpolated template, an identifier, a spread of something
+ * computed — is refused rather than guessed at. This guard reads a declaration; it does not
+ * evaluate one.
+ *
+ * The parser is loaded HERE rather than at module scope, and only when a configuration is
+ * actually read. A run with no ledger answers `nothing to check` without ever resolving a
+ * corpus, and it must not fail because a devDependency is missing from wherever the guard
+ * happens to sit — the tests copy it into synthetic trees, and so could an operator.
+ *
+ * @param {string} text the configuration source
+ * @param {string} configPath its path, for the messages
+ * @returns {string[]} the include globs
+ */
+async function e2eIncludeGlobs(text, configPath) {
+  let ts;
+  try {
+    ts = (await import("typescript")).default;
+  } catch {
+    throw new Error(
+      `check-atdd-annotation-ledger: cannot load the TypeScript parser needed to read ` +
+        `${configPath}; a text-level reading of it was shadowable three different ways, so ` +
+        "this guard refuses to fall back to one",
+    );
+  }
+  const source = ts.createSourceFile(
+    configPath,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+
+  let exported;
+  for (const statement of source.statements) {
+    if (ts.isExportAssignment(statement) && statement.isExportEquals !== true) {
+      exported = statement.expression;
+    }
+  }
+  if (exported !== undefined && ts.isCallExpression(exported)) {
+    exported = exported.arguments[0];
+  }
+  if (exported === undefined || !ts.isArrayLiteralExpression(exported)) {
+    throw new Error(
+      `check-atdd-annotation-ledger: ${configPath} does not export an array of projects this guard ` +
+        "can read; the backing corpus is derived from it and must not fall back to a hard-coded list",
+    );
+  }
+
+  const found = [];
+  for (const element of exported.elements) {
+    if (!ts.isObjectLiteralExpression(element)) continue;
+    const testNode = propertyValue(ts, element, "test");
+    if (testNode === undefined || !ts.isObjectLiteralExpression(testNode)) continue;
+    if (literalText(ts, propertyValue(ts, testNode, "name")) !== "e2e") continue;
+    found.push(testNode);
+  }
+
+  if (found.length === 0) {
+    throw new Error(
+      `check-atdd-annotation-ledger: could not read the e2e project's include list from ${configPath}; ` +
+        "the backing corpus is derived from it and must not fall back to a hard-coded list",
+    );
+  }
+  if (found.length > 1) {
+    throw new Error(
+      `check-atdd-annotation-ledger: ${String(found.length)} exported e2e projects in ${configPath}; ` +
+        "this guard cannot tell which one the runner uses, and taking the first is how a shadowing " +
+        "declaration went unnoticed",
+    );
+  }
+
+  const includeNode = propertyValue(ts, found[0], "include");
+  if (includeNode === undefined || !ts.isArrayLiteralExpression(includeNode)) {
+    throw new Error(
+      `check-atdd-annotation-ledger: the e2e project in ${configPath} declares no include array this ` +
+        "guard can read",
+    );
+  }
+  const globs = [];
+  for (const entry of includeNode.elements) {
+    const value = literalText(ts, entry);
+    if (value === undefined) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the e2e project in ${configPath} includes ` +
+          `${entry.getText(source)}, which is not a literal this guard can resolve; it reads a ` +
+          "declaration rather than evaluating one",
+      );
+    }
+    globs.push(value);
+  }
+  return globs;
 }
 
 /**
@@ -427,23 +492,7 @@ export function blankComments(text) {
  */
 export async function runnerCorpusRoots(root) {
   const configPath = path.join(root, "packages", "qfai", "vitest.workspace.ts");
-  const text = blankComments(await readFile(configPath, "utf8"));
-  const matches = [...text.matchAll(/name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/g)];
-  if (matches.length === 0) {
-    throw new Error(
-      `check-atdd-annotation-ledger: could not read the e2e project's include list from ${configPath}; ` +
-        "the backing corpus is derived from it and must not fall back to a hard-coded list",
-    );
-  }
-  if (matches.length > 1) {
-    throw new Error(
-      `check-atdd-annotation-ledger: ${String(matches.length)} e2e include lists in ${configPath}; ` +
-        "this guard cannot tell which one the runner uses, and taking the first is how a shadowing " +
-        "declaration went unnoticed",
-    );
-  }
-  const project = matches[0];
-  const globs = [...(project[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+  const globs = await e2eIncludeGlobs(await readFile(configPath, "utf8"), configPath);
   if (globs.length === 0) {
     throw new Error(
       `check-atdd-annotation-ledger: the e2e project's include list in ${configPath} parsed to nothing`,

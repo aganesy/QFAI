@@ -14,7 +14,7 @@
  * in one atomic commit. The script is now here, and these are its tests.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -298,7 +298,7 @@ describe("runnerCorpusRoots", () => {
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `{ test: { name: "e2e", include: ["tests/e2e/**/*.spec.ts"] } }\n`,
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.spec.ts"] } }];\n`,
       "utf8",
     );
 
@@ -310,7 +310,7 @@ describe("runnerCorpusRoots", () => {
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }\n`,
+      `export default [{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];\n`,
       "utf8",
     );
 
@@ -319,54 +319,93 @@ describe("runnerCorpusRoots", () => {
     ]);
   });
 
-  it("reads the real project, not a commented-out one placed above it", async () => {
-    // Review finding [43]. The pattern ran over the raw file, so a comment declaring an `e2e`
-    // project above the real one matched first — and the guard then treated a tree Vitest never
-    // opens as the backing corpus, certifying a ledger claim from annotation-only files in it.
+  it("reads only the exported project, whatever a decoy elsewhere in the file looks like", async () => {
+    // Review findings [43] and [44], which are one finding measured twice. Every text-level
+    // reading of this configuration was shadowable, and each repair moved the hole:
     //
-    // Both comment shapes, because blanking one and not the other is the obvious half-repair.
+    // - a bare regex over the raw file: a COMMENT declaring an `e2e` project above the real one
+    //   matched first;
+    // - the same regex with comments blanked: a declaration inside an unused STRING still matched
+    //   — and because the pattern spelled `"e2e"` with double quotes, the decoy became the ONLY
+    //   candidate the moment the real project wrote its name as a template literal;
+    // - and throughout, an object literal nothing exports counted the same as the exported one.
     //
-    // The shadow's include is deliberately shape-INVALID (`x/*.test.ts`, not `**/*.test.ts`), so an
-    // implementation that reads it throws instead of quietly answering `tests/fake` — either way
-    // this row fails, and the thrown message names the glob it read. It also has to avoid `*/`,
-    // which would end the block-comment variant early and make that fixture not a comment at all.
-    for (const comment of [
-      '// { test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } }',
-      '/* { test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } } */',
-    ]) {
+    // So all five decoy shapes are planted against a real project that is exported, and some of
+    // them write that project's name as a template literal — the spelling the last escape needed.
+    // The fifth is the one only the export requirement stops: a real object literal, in a real
+    // binding, that nothing exports. It is not a comment and not a string, so every reading that
+    // merely learned to skip those still sees it — as a second candidate, and answers with the
+    // ambiguity refusal instead of the corpus.
+    //
+    // The decoy's include is shape-INVALID on purpose, so an implementation that reads it throws
+    // rather than quietly answering `tests/fake`; either way this row fails, and the message names
+    // the glob it read. It also avoids `*/`, which would end the block-comment decoy early.
+    const DECOY = '{ test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } }';
+    const decoys = [
+      `// ${DECOY}`,
+      `/* ${DECOY} */`,
+      `const doc = '${DECOY}';`,
+      `const tpl = \`${DECOY}\`;`,
+      `const unexported = ${DECOY};`,
+    ];
+    for (const [index, decoy] of decoys.entries()) {
+      // Half the rows name the project with a template literal, which the double-quoted pattern
+      // could not see at all.
+      const name = index % 2 === 0 ? '"e2e"' : "`e2e`";
       const dir = await temp();
       await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
       await writeFile(
         path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-        `${comment}\n{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }\n`,
+        `${decoy}\nexport default [{ test: { name: ${name}, include: ["tests/journeys/**/*.test.ts"] } }];\n`,
         "utf8",
       );
 
       await expect(
         runnerCorpusRoots(dir),
-        "a commented-out declaration must not become the backing corpus",
+        `a decoy of the form ${decoy.slice(0, 12)}… must not become the backing corpus`,
       ).resolves.toEqual([path.join(dir, "packages", "qfai", "tests", "journeys")]);
     }
   });
 
-  it("refuses a configuration declaring the e2e project twice rather than taking the first", async () => {
-    // The other half of not guessing. Blanking comments closes the shape the finding named; a
-    // declaration hidden in a string literal, or a genuinely duplicated project, still produces
-    // two candidates — and choosing by position is what made the first one exploitable. Two
-    // candidates means this guard cannot tell which one the runner uses, and it says so.
+  it("refuses a configuration exporting the e2e project twice rather than taking the first", async () => {
+    // The other half of not guessing. A decoy that is not exported is now invisible, but a
+    // genuinely duplicated project is still two candidates — and choosing by position is what made
+    // the first shadow exploitable. This guard cannot tell which one the runner uses, and it says
+    // so rather than picking.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
       [
-        'const doc = \'{ test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } }\';',
-        '{ test: { name: "e2e", include: ["tests/journeys/x/*.test.ts"] } }',
+        "export default [",
+        '  { test: { name: "e2e", include: ["tests/fake/**/*.test.ts"] } },',
+        '  { test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } },',
+        "];",
         "",
       ].join("\n"),
       "utf8",
     );
 
     await expect(runnerCorpusRoots(dir)).rejects.toThrow(/cannot tell which one/i);
+  });
+
+  it("refuses an include this guard would have to evaluate rather than read", async () => {
+    // The boundary of "reads a declaration": an interpolated template, an identifier, anything
+    // whose value is not fixed in the source. Guessing at one is how a guard starts reporting a
+    // corpus the runner does not use, and the whole family above is that mistake.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'const dir = "tests/journeys";',
+        'export default [{ test: { name: "e2e", include: [`${dir}/**/*.test.ts`] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/not a literal this guard can resolve/i);
   });
 
   it("fails loudly when the runner configuration cannot be read", async () => {
@@ -445,6 +484,30 @@ describe("the CLI entry point", () => {
   // interface a `ci:lint` member has.
   const SCRIPT = path.resolve(__dirname, "../../../../../scripts/check-atdd-annotation-ledger.mjs");
 
+  /** The repository's own TypeScript package, which the guard reads the workspace with. */
+  const TYPESCRIPT = path.resolve(__dirname, "../../../../../node_modules/typescript");
+
+  /**
+   * A synthetic repository the guard can run inside: the script, and the parser it reads with.
+   *
+   * The guard resolves its root from its own location, so these rows COPY it rather than point
+   * it at a tree — and a copy in a tree with no `node_modules` cannot resolve `typescript`. A
+   * repository that runs this guard has its devDependencies installed, and the synthetic tree
+   * is a repository; the link says so. Junction, so Windows needs no privilege, and a platform
+   * that refuses it leaves the parser unresolvable and the row's own assertion is what fails.
+   */
+  async function stageGuard(dir: string, basename: string): Promise<string> {
+    await mkdir(path.join(dir, "scripts"), { recursive: true });
+    const copied = path.join(dir, "scripts", basename);
+    const { copyFile, symlink } = await import("node:fs/promises");
+    await copyFile(SCRIPT, copied);
+    await mkdir(path.join(dir, "node_modules"), { recursive: true });
+    await symlink(TYPESCRIPT, path.join(dir, "node_modules", "typescript"), "junction").catch(
+      () => undefined,
+    );
+    return copied;
+  }
+
   function run(args: string[], cwd: string): { status: number | null; out: string; err: string } {
     const child = spawnSync(process.execPath, [SCRIPT, ...args], { cwd, encoding: "utf-8" });
     if (child.error !== undefined) throw child.error;
@@ -461,15 +524,13 @@ describe("the CLI entry point", () => {
     // Unscoped, an absent ledger really is nothing to check, and that half is asserted too: the
     // repair is a scope distinction, not a new refusal.
     const dir = await temp();
-    await mkdir(path.join(dir, "scripts"), { recursive: true });
     await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }];\n`,
       "utf8",
     );
-    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
-    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+    const copied = await stageGuard(dir, "check-atdd-annotation-ledger.mjs");
 
     const scoped = spawnSync(process.execPath, [copied, "--spec", "0017"], {
       cwd: dir,
@@ -497,13 +558,12 @@ describe("the CLI entry point", () => {
     // claims a story, the only annotation for it sits in the repository-root `tests/e2e` — which
     // `pnpm -C packages/qfai test:e2e` never opens — and the package tree has nothing.
     const dir = await temp();
-    await mkdir(path.join(dir, "scripts"), { recursive: true });
     await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
     await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
 
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }];\n`,
       "utf8",
     );
     await writeFile(
@@ -517,8 +577,7 @@ describe("the CLI entry point", () => {
       "utf8",
     );
 
-    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
-    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+    const copied = await stageGuard(dir, "check-atdd-annotation-ledger.mjs");
 
     const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
     if (child.error !== undefined) throw child.error;
@@ -535,13 +594,12 @@ describe("the CLI entry point", () => {
     // claim is backed. Without this the row above would also hold for a guard that refuses
     // everything.
     const dir = await temp();
-    await mkdir(path.join(dir, "scripts"), { recursive: true });
     await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
     await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
 
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }\n`,
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }];\n`,
       "utf8",
     );
     await writeFile(
@@ -555,8 +613,7 @@ describe("the CLI entry point", () => {
       "utf8",
     );
 
-    const copied = path.join(dir, "scripts", "check-atdd-annotation-ledger.mjs");
-    await writeFile(copied, await readFile(SCRIPT, "utf8"), "utf8");
+    const copied = await stageGuard(dir, "check-atdd-annotation-ledger.mjs");
 
     const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
     if (child.error !== undefined) throw child.error;
@@ -649,11 +706,8 @@ describe("the CLI entry point", () => {
     // only because the root no longer comes from the cwd: this needs a copy of the script in a
     // tree of its own.
     const dir = await temp();
-    const scriptDir = path.join(dir, "scripts");
-    await mkdir(scriptDir, { recursive: true });
-    const { copyFile } = await import("node:fs/promises");
-    await copyFile(SCRIPT, path.join(scriptDir, "guard.mjs"));
-    const child = spawnSync(process.execPath, [path.join(scriptDir, "guard.mjs")], {
+    const copied = await stageGuard(dir, "guard.mjs");
+    const child = spawnSync(process.execPath, [copied], {
       cwd: dir,
       encoding: "utf-8",
     });
