@@ -282,8 +282,9 @@ function permissionValueFindings(entry, reportedWorkflows) {
 }
 
 /**
- * A digest of what one step DOES: its `run`, its `uses`, its `with`, its `env` — and the package
- * scripts its `run` invokes, resolved transitively out of the manifests on disk.
+ * A digest of what one step DOES: its `run`, its `uses`, its `with`, its `env`, the shell and
+ * working directory it runs under, the package scripts it invokes, and the contents of the
+ * repository's own guard scripts it reaches.
  *
  * `name` is deliberately absent — the name is the key this is looked up by, and including it would
  * make the digest agree with itself by construction. `if` is absent too: a condition is rejected
@@ -308,8 +309,28 @@ function permissionValueFindings(entry, reportedWorkflows) {
  * name reached is recorded with the manifest directory it was resolved against, and a name the
  * manifest does not define is recorded as `null` — an absence is a fact about the tree too, and
  * a digest that silently ignored it would agree across the edit that introduced it.
+ *
+ * The SHELL and the WORKING DIRECTORY are in it, each resolved through the workflow-level and
+ * job-level `defaults.run` that a step inherits when it declares neither. Review finding [41]:
+ * neither was read at all, and both change what the step does without touching a byte of `run`.
+ * A `shell` is a command template — `bash {0} || true` wraps the body and returns 0 whatever it
+ * did — and a `working-directory` changes which manifest `pnpm ci:build-verify` resolves against,
+ * so pointing it at a package whose manifest defines a shorter `ci:build-verify` ran different
+ * work while the pin over the root manifest still matched. The working directory is also what the
+ * script resolution starts from now, rather than the repository root unconditionally.
+ *
+ * The CONTENTS of the repository's own guard scripts are in it too. Review finding [42]: pinning
+ * `run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh` pins the invocation, and
+ * replacing that file's body with `exit 0` left the step's name, its `run` and its digest all
+ * unchanged — so the same neutered guard went green in `lint` and in `build`.
+ *
+ * Content, but only inside `VERIFIED_SOURCE_ROOTS`. Outside them the PATH is recorded and the
+ * bytes are not, and that boundary is deliberate rather than a shortcut: two of the declared
+ * verification steps run `packages/qfai/dist/cli/index.mjs`, whose bytes change on every build,
+ * and a digest over those would need re-pinning after every compile and would say nothing about
+ * whether the verification still happens. Recording the path still catches the reference moving.
  */
-export function verificationBodyDigest(step, root) {
+export function verificationBodyDigest(step, root, runDefaults = {}) {
   const normalize = (value) =>
     typeof value === "string"
       ? value
@@ -317,14 +338,157 @@ export function verificationBodyDigest(step, root) {
           .replace(/[ \t]+$/gm, "")
           .trimEnd()
       : value;
+  const shell = step.shell ?? runDefaults.shell;
+  const workingDirectory = step["working-directory"] ?? runDefaults.workingDirectory;
+  const baseDir = typeof workingDirectory === "string" ? workingDirectory : ".";
   const shape = {
     run: normalize(step.run),
     uses: normalize(step.uses),
     with: step["with"],
     env: step["env"],
-    scripts: invokedScriptBodies(step.run, root),
+    shell: normalize(shell),
+    workingDirectory: normalize(workingDirectory),
+    scripts: invokedScriptBodies(step.run, root, baseDir),
+    files: invokedFileDigests(step.run, root, baseDir),
   };
   return createHash("sha256").update(JSON.stringify(shape)).digest("hex").slice(0, 16);
+}
+
+/**
+ * The `defaults.run` a step inherits: the job's value where it has one, the workflow's otherwise.
+ *
+ * GitHub resolves step > job > workflow, and only the two outer levels are invisible from the step
+ * object — which is why they are resolved here rather than left to the caller.
+ */
+function effectiveRunDefaults(workflow, job) {
+  const runBlock = (owner) => {
+    const defaults = isRecord(owner) ? owner.defaults : undefined;
+    return isRecord(defaults) && isRecord(defaults.run) ? defaults.run : {};
+  };
+  const fromWorkflow = runBlock(workflow);
+  const fromJob = runBlock(job);
+  return {
+    shell: fromJob.shell ?? fromWorkflow.shell,
+    workingDirectory: fromJob["working-directory"] ?? fromWorkflow["working-directory"],
+  };
+}
+
+/**
+ * The shells GitHub names, which run the step body and return ITS status.
+ *
+ * Anything else is a command template: `shell: bash {0} || true` runs the body through a wrapper
+ * whose exit status is 0 whatever the body did. Review finding [41] — the shipped-workflow suite
+ * already rejects that shape for the set QFAI ships; a declared verification in this repository's
+ * own tree is exactly the place it must not be available either. A closed list, for the same
+ * reason the runner-label rule uses one: the property is membership, and any predicate over the
+ * string admits the next spelling of the same trick.
+ */
+const NAMED_SHELLS = new Set(["bash", "sh", "pwsh", "powershell", "cmd", "python", "node"]);
+
+/**
+ * The directories whose file CONTENTS the digest pins: the repository's own guard and lifecycle
+ * scripts, POSIX-separated and repository-relative.
+ *
+ * Everything a verification step or a package script it invokes reaches inside these is hashed;
+ * outside them only the reference is recorded. `dist/` is the reason the boundary exists — see
+ * `verificationBodyDigest`.
+ */
+const VERIFIED_SOURCE_ROOTS = ["scripts/", "packages/qfai/scripts/"];
+
+/** How many local files one verification may reach before the walk stops and says so. */
+const MAX_VERIFIED_FILES = 200;
+
+/** Extensions that make a token a reference to code rather than to data or to a flag value. */
+const CODE_EXTENSIONS = [
+  ".mjs",
+  ".cjs",
+  ".js",
+  ".ts",
+  ".mts",
+  ".cts",
+  ".sh",
+  ".bash",
+  ".py",
+  ".ps1",
+];
+
+/**
+ * Every repository-local code file one shell body names, as repository-relative POSIX paths.
+ *
+ * A token counts when it ends in a code extension and resolves, inside the root, to a readable
+ * regular file. Quotes and shell punctuation are stripped first, so `import "./x.js"` and
+ * `node ./x.js` are both seen — a file's own imports are how a guard's real body is reached when
+ * the entry point is a two-line wrapper.
+ */
+function collectFileReferences(text, baseDir, root, out) {
+  if (typeof text !== "string") return;
+  for (const raw of text.split(/[\s;|&()<>,]+/)) {
+    const token = raw.replace(/^["'`]+|["'`]+$/g, "");
+    if (token.length === 0) continue;
+    if (!CODE_EXTENSIONS.some((extension) => token.endsWith(extension))) continue;
+    if (path.isAbsolute(token)) continue; // outside the tree by construction
+    // A reference names a PATH. Requiring a separator is what keeps `Node.js` in a comment from
+    // reading as a file next to the script that mentions it — measured, and the same scan also
+    // reached `dist/*.d.ts` out of a prose line, which the glob exclusion below drops. The cost is
+    // that `bash build.sh` beside the caller is not seen; every invocation in this tree names a
+    // path, and a reference that starts being written the other way is a change to this scan.
+    if (!token.includes("/")) continue;
+    if (/[*?[\]]/.test(token)) continue; // a glob is a pattern, not a file
+    const resolved = path.resolve(root, baseDir, token);
+    const relative = path.relative(root, resolved).split(path.sep).join(path.posix.sep);
+    if (relative.length === 0 || relative.startsWith("..")) continue;
+    out.add(relative);
+  }
+}
+
+/**
+ * The local files a `run:` body reaches, as a sorted list of `[path, digest-or-marker]`.
+ *
+ * Inside `VERIFIED_SOURCE_ROOTS` the value is a sha256 over the file's bytes, and the walk
+ * continues into that file's own references. Outside them the value is the string `outside`: the
+ * reference is pinned, the bytes are not.
+ *
+ * A path that resolves to nothing readable is recorded as `absent`, so deleting a guard a
+ * verification runs is a change to the digest rather than a silent removal from it.
+ *
+ * Sorted, and the truncation flag is part of the value, so the digest never depends on the order
+ * the walk found things in and a walk that hit the ceiling cannot read as a complete one.
+ */
+export function invokedFileDigests(runText, root, baseDir) {
+  const pending = new Set();
+  collectFileReferences(runText, baseDir, root, pending);
+  for (const [, body] of invokedScriptBodies(runText, root, baseDir)) {
+    if (body === null) continue;
+    collectFileReferences(body, baseDir, root, pending);
+  }
+  const resolved = [];
+  const seen = new Set();
+  let truncated = false;
+  while (pending.size > 0) {
+    const [relative] = pending;
+    pending.delete(relative);
+    if (seen.has(relative)) continue;
+    seen.add(relative);
+    if (seen.size > MAX_VERIFIED_FILES) {
+      truncated = true;
+      break;
+    }
+    const inside = VERIFIED_SOURCE_ROOTS.some((prefix) => relative.startsWith(prefix));
+    if (!inside) {
+      resolved.push([relative, "outside"]);
+      continue;
+    }
+    const text = readBoundedWorkflowText(path.resolve(root, relative));
+    if (text === undefined) {
+      resolved.push([relative, "absent"]);
+      continue;
+    }
+    const normalized = text.replace(/\r\n/g, "\n");
+    resolved.push([relative, createHash("sha256").update(normalized).digest("hex").slice(0, 16)]);
+    collectFileReferences(normalized, path.posix.dirname(relative), root, pending);
+  }
+  resolved.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+  return truncated ? [...resolved, ["(truncated)", String(MAX_VERIFIED_FILES)]] : resolved;
 }
 
 /** A script name as a manifest may hold it: no leading dash, no shell metacharacters. */
@@ -398,9 +562,9 @@ function manifestScripts(root, dir, cache) {
  * them in — an object's key order is a property of the traversal, and a pin whose value moved
  * because a script was reached by a different route is a pin that fails for no reason.
  */
-function invokedScriptBodies(runText, root) {
+export function invokedScriptBodies(runText, root, baseDir = ".") {
   const pending = [];
-  collectScriptInvocations(runText, ".", pending);
+  collectScriptInvocations(runText, baseDir, pending);
   const cache = new Map();
   const seen = new Set();
   const resolved = [];
@@ -1080,9 +1244,14 @@ function checkRequiredContexts(root, jobs) {
     // read as still present.
     const performed = new Set();
     const conditional = new Map();
+    /** Declared items whose effective shell is a command template rather than a named shell. */
+    const templateShells = new Map();
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
+      // Resolved once per job: the two outer `defaults.run` levels a step inherits are not
+      // visible from the step object, and both change what it does. Review finding [41].
+      const runDefaults = effectiveRunDefaults(inFile[0]?.workflow, job);
       // A DEPENDENCY that can be skipped performs nothing, whatever its steps say. Review
       // finding [37]: `always()` on the declared job stands down property 2 for the whole
       // closure — correctly, since a skipped dependency is the state `always()` is for — and
@@ -1141,12 +1310,28 @@ function checkRequiredContexts(root, jobs) {
           // A name is not a step. Collecting the set and requiring every member to match is what
           // makes a second step wearing the name a finding rather than a substitute for the first.
           const seen = bodies.get(step.name) ?? new Set();
-          seen.add(verificationBodyDigest(step, root));
+          seen.add(verificationBodyDigest(step, root, runDefaults));
+          // …and the shell it runs under must be one that returns the BODY's status. A command
+          // template wraps the body, so `bash {0} || true` performs the step's name and
+          // discards its result — which the digest records but nothing else would reject.
+          const effectiveShell = step.shell ?? runDefaults.shell;
+          if (effectiveShell !== undefined && !NAMED_SHELLS.has(String(effectiveShell))) {
+            templateShells.set(step.name, String(effectiveShell));
+          }
           bodies.set(step.name, seen);
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
     for (const item of wanted) {
+      const templateShell = templateShells.get(item);
+      if (templateShell !== undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `performs the declared verification item "${item}" under the shell ${JSON.stringify(templateShell)}, which is a command template rather than one of GitHub's named shells (${[...NAMED_SHELLS].join(", ")}) — a template wraps the body and reports its OWN status, so the step performs the name and discards the result`,
+        });
+      }
       if (performed.has(item)) {
         // Performed, unconditionally. The remaining question is whether it still DOES anything:
         // membership was decided by the step's NAME alone, so review finding [03] pointed out

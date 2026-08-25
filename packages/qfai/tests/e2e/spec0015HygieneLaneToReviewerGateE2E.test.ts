@@ -26,7 +26,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { loadConfig } from "../../src/core/config.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
 import type { Issue } from "../../src/core/types.js";
-import { DIGESTED_MANIFESTS_REL } from "../helpers/shippedWorkflowFixtures.js";
+import { DIGESTED_LANE_INPUTS_REL } from "../helpers/shippedWorkflowFixtures.js";
 import { removeTempTree } from "../helpers/tempTree.js";
 
 // tests/e2e/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -72,14 +72,13 @@ async function stageWorkflowTrees(): Promise<string> {
   await cp(path.join(repoRoot, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
     recursive: true,
   });
-  // And the manifests, because the lane's verification-body digest resolves the package scripts a
-  // declared step invokes: `run: pnpm ci:build-verify` is a reference, and pinning the reference
-  // pins the pointer rather than the work. A staged tree with no manifest is one where every
-  // declared body resolves to nothing, so the untouched-trees row would report a digest mismatch
-  // it was not staged to produce.
-  for (const manifest of DIGESTED_MANIFESTS_REL) {
-    await mkdir(path.dirname(path.join(dir, manifest)), { recursive: true });
-    await cp(path.join(repoRoot, manifest), path.join(dir, manifest));
+  // And everything else the lane's verification-body digest reads — the manifests it resolves
+  // package scripts out of, and the script directories whose file contents it hashes. A staged
+  // tree without them is one where every declared body resolves to nothing, so the
+  // untouched-trees row would report a digest mismatch it was not staged to produce.
+  for (const input of DIGESTED_LANE_INPUTS_REL) {
+    await mkdir(path.dirname(path.join(dir, input)), { recursive: true });
+    await cp(path.join(repoRoot, input), path.join(dir, input), { recursive: true });
   }
   return dir;
 }

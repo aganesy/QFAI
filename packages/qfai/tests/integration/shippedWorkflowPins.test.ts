@@ -26,7 +26,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 import {
-  DIGESTED_MANIFESTS_REL,
+  DIGESTED_LANE_INPUTS_REL,
   isRecord,
   loadShippedWorkflows,
   shippedGithubDir,
@@ -435,12 +435,12 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     await cp(path.join(repoRoot, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
       recursive: true,
     });
-    // And the manifests the lane's verification-body digest resolves package scripts against;
-    // without them every declared body resolves to nothing and the untouched-set row below
-    // reports a digest mismatch it was not staged to produce.
-    for (const manifest of DIGESTED_MANIFESTS_REL) {
-      await mkdir(path.dirname(path.join(dir, manifest)), { recursive: true });
-      await cp(path.join(repoRoot, manifest), path.join(dir, manifest));
+    // And everything else the lane's verification-body digest reads; without it every declared
+    // body resolves to nothing and the untouched-set row below reports a digest mismatch it was
+    // not staged to produce.
+    for (const input of DIGESTED_LANE_INPUTS_REL) {
+      await mkdir(path.dirname(path.join(dir, input)), { recursive: true });
+      await cp(path.join(repoRoot, input), path.join(dir, input), { recursive: true });
     }
     return dir;
   }

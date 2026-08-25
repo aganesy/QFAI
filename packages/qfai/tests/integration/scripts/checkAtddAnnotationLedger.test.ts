@@ -237,17 +237,29 @@ describe("runnerCorpusRoots", () => {
 
     // Derived rather than asserted against a copied list: a second literal here would be the same
     // hand-kept pair the production change removed, and it would agree with a wrong answer.
-    const workspace = await readFile(
-      path.join(
-        path.resolve(__dirname, "../../../../.."),
-        "packages",
-        "qfai",
-        "vitest.workspace.ts",
-      ),
-      "utf8",
-    );
-    const block = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(workspace);
-    const globs = [...(block?.[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
+    //
+    // Derived by IMPORTING the configuration, though, not by re-running the pattern under test.
+    // Review finding [43]: this row used the same regex over the same raw text, so a defect in
+    // that pattern produced the same wrong answer on both sides and the row agreed with it. The
+    // import goes through the runner's own loader, which is the only reading of this file that is
+    // authoritative — it is what Vitest itself does with it.
+    const workspace: unknown = (
+      (await import("../../../vitest.workspace.js")) as { default: unknown }
+    ).default;
+    const globs = (Array.isArray(workspace) ? workspace : [])
+      .map((project: unknown) =>
+        typeof project === "object" && project !== null
+          ? (Reflect.get(project, "test") as unknown)
+          : undefined,
+      )
+      .filter(
+        (test: unknown): test is { name: string; include: string[] } =>
+          typeof test === "object" &&
+          test !== null &&
+          Reflect.get(test, "name") === "e2e" &&
+          Array.isArray(Reflect.get(test, "include")),
+      )
+      .flatMap((test) => test.include);
     expect(
       globs.length,
       "the premise: the workspace still declares an e2e include list",
@@ -305,6 +317,56 @@ describe("runnerCorpusRoots", () => {
     await expect(runnerCorpusRoots(dir)).resolves.toEqual([
       path.join(dir, "packages", "qfai", "tests", "journeys"),
     ]);
+  });
+
+  it("reads the real project, not a commented-out one placed above it", async () => {
+    // Review finding [43]. The pattern ran over the raw file, so a comment declaring an `e2e`
+    // project above the real one matched first — and the guard then treated a tree Vitest never
+    // opens as the backing corpus, certifying a ledger claim from annotation-only files in it.
+    //
+    // Both comment shapes, because blanking one and not the other is the obvious half-repair.
+    //
+    // The shadow's include is deliberately shape-INVALID (`x/*.test.ts`, not `**/*.test.ts`), so an
+    // implementation that reads it throws instead of quietly answering `tests/fake` — either way
+    // this row fails, and the thrown message names the glob it read. It also has to avoid `*/`,
+    // which would end the block-comment variant early and make that fixture not a comment at all.
+    for (const comment of [
+      '// { test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } }',
+      '/* { test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } } */',
+    ]) {
+      const dir = await temp();
+      await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+      await writeFile(
+        path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+        `${comment}\n{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }\n`,
+        "utf8",
+      );
+
+      await expect(
+        runnerCorpusRoots(dir),
+        "a commented-out declaration must not become the backing corpus",
+      ).resolves.toEqual([path.join(dir, "packages", "qfai", "tests", "journeys")]);
+    }
+  });
+
+  it("refuses a configuration declaring the e2e project twice rather than taking the first", async () => {
+    // The other half of not guessing. Blanking comments closes the shape the finding named; a
+    // declaration hidden in a string literal, or a genuinely duplicated project, still produces
+    // two candidates — and choosing by position is what made the first one exploitable. Two
+    // candidates means this guard cannot tell which one the runner uses, and it says so.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'const doc = \'{ test: { name: "e2e", include: ["tests/fake/x/*.test.ts"] } }\';',
+        '{ test: { name: "e2e", include: ["tests/journeys/x/*.test.ts"] } }',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/cannot tell which one/i);
   });
 
   it("fails loudly when the runner configuration cannot be read", async () => {

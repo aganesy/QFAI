@@ -71,13 +71,13 @@
         "cannot fail the job, so it is not a verification however it is named."
       ],
       "verificationBodies": {
-        "Derive the verdict from the serialized needs map": "aa561732d2c46923",
-        "Run build & pack verification": "825e27ef8e9e3c0e",
-        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "da88ff96bc74267f",
-        "QFAI self-validate this repo (dogfooding — TDD gates)": "0a974493b6af80f8",
-        "QFAI self-validate this repo (dogfooding — SDD gates)": "40b1a3e874db39de",
-        "QFAI self-validate this repo (dogfooding — full profile)": "01092c148c823b66",
-        "Run qfai validate gate (fail on error)": "17bff3325ca1a4e3"
+        "Derive the verdict from the serialized needs map": "c5a7e1543adc6070",
+        "Run build & pack verification": "70a2edad01f1cfea",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "0690d5bc828167ba",
+        "QFAI self-validate this repo (dogfooding — TDD gates)": "4d9af3adcb7358a5",
+        "QFAI self-validate this repo (dogfooding — SDD gates)": "4f907af49e157349",
+        "QFAI self-validate this repo (dogfooding — full profile)": "a874c9f378fa4881",
+        "Run qfai validate gate (fail on error)": "00f9388e72b10519"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",

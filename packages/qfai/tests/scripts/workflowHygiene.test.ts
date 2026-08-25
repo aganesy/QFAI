@@ -67,7 +67,13 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
-import { DIGESTED_MANIFESTS_REL } from "../helpers/shippedWorkflowFixtures.js";
+import {
+  invokedFileDigests,
+  invokedScriptBodies,
+  verificationBodyDigest,
+} from "../../../../scripts/check-workflow-hygiene.mjs";
+
+import { DIGESTED_LANE_INPUTS_REL } from "../helpers/shippedWorkflowFixtures.js";
 
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
@@ -459,14 +465,16 @@ function plantedTree(mutate: (dir: string) => void): string {
   cpSync(path.join(REPO_ROOT, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
     recursive: true,
   });
-  // And the manifests, because the lane's body digest resolves the package scripts a
-  // verification step invokes — `run: pnpm ci:build-verify` is a reference, and review finding
-  // [36] measured that pinning the reference pins the pointer rather than the work. A planted
-  // tree with no manifest is a tree where every declared body resolves to nothing, so every
-  // required-context row would report a digest mismatch it was not planted to produce.
-  for (const manifest of DIGESTED_MANIFESTS_REL) {
-    mkdirSync(path.dirname(path.join(dir, manifest)), { recursive: true });
-    cpSync(path.join(REPO_ROOT, manifest), path.join(dir, manifest));
+  // And everything else the lane's body digest reads: the manifests it resolves package scripts
+  // out of, and the script directories whose file contents it hashes. `run: pnpm ci:build-verify`
+  // is a reference and `run: bash .../check-no-internal-version-leakage.sh` is another, and
+  // review findings [36] and [42] each measured that pinning a reference pins the pointer rather
+  // than the work. A planted tree without all of it is a tree where every declared body resolves
+  // to nothing, so every required-context row would report a mismatch it was not planted to
+  // produce.
+  for (const input of DIGESTED_LANE_INPUTS_REL) {
+    mkdirSync(path.dirname(path.join(dir, input)), { recursive: true });
+    cpSync(path.join(REPO_ROOT, input), path.join(dir, input), { recursive: true });
   }
   mutate(dir);
   return dir;
@@ -1336,6 +1344,214 @@ ${run.output}`,
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+
+  it("rejects a command-template shell on a verification step, and names it", () => {
+    // Review finding [41]. `shell:` is a command template — GitHub substitutes the step body for
+    // `{0}` and runs the WHOLE line — so `bash {0} || true` performs the step's name and reports
+    // its own status, 0, whatever the body did. `Run build & pack verification` would then fail
+    // silently and `build` and the required `ci-pass` would both go green.
+    //
+    // Two independent reasons this now fails: the effective shell is in the body digest, and a
+    // shell outside GitHub's named set is rejected in its own right. The named-shell control is
+    // the untouched tree — four declared items already carry `shell: bash` and are green there.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(anchor, `${anchor}        shell: "bash {0} || true"\n`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a template shell must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the shell that was substituted")
+        .toContain("bash {0} || true");
+      expect
+        .soft(run.output, "and must say why a template is not a shell")
+        .toMatch(/command template/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a command-template shell inherited from the job's defaults.run", () => {
+    // The same escape one level out, and the level the step object cannot see. A step that
+    // declares no `shell` inherits the job's, then the workflow's — so a rule reading only the
+    // step is a rule that can be stepped around by editing two lines somewhere else in the file.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  build:\n    runs-on: ubuntu-latest\n";
+        if (!text.includes(anchor)) throw new Error("the build-job anchor is stale");
+        return text.replace(
+          anchor,
+          '  build:\n    defaults:\n      run:\n        shell: "bash {0} || true"\n    runs-on: ubuntu-latest\n',
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a template shell in the job defaults must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the inherited shell")
+        .toContain("bash {0} || true");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves invoked scripts from the step's working directory, not from the root", () => {
+    // Review finding [41], second half. `working-directory` changes which manifest
+    // `pnpm ci:build-verify` resolves against, so pointing a verification step at a package whose
+    // manifest defines a SHORTER `ci:build-verify` ran different work while the pin over the root
+    // manifest still matched exactly.
+    //
+    // Asserted on the digest rather than through the lane, because the lane can only say "this
+    // step changed" — which it would say for any edit at all. What has to hold is narrower: the
+    // same step body, the same script NAME, two manifests, two digests.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-hygiene-wd-"));
+    try {
+      const step = { name: "x", run: "pnpm ci:build-verify" };
+      writeFileSync(
+        path.join(dir, "package.json"),
+        `${JSON.stringify({ scripts: { "ci:build-verify": "node a.mjs && node b.mjs" } })}\n`,
+        "utf-8",
+      );
+      mkdirSync(path.join(dir, "pkg"), { recursive: true });
+      writeFileSync(
+        path.join(dir, "pkg", "package.json"),
+        `${JSON.stringify({ scripts: { "ci:build-verify": "node a.mjs" } })}\n`,
+        "utf-8",
+      );
+
+      const fromRoot = verificationBodyDigest(step, dir);
+      const fromPackage = verificationBodyDigest(step, dir, { workingDirectory: "pkg" });
+      expect(
+        fromRoot,
+        "the same step must not digest the same under two manifests defining different work",
+      ).not.toBe(fromPackage);
+
+      // …and the difference is the SCRIPT, not merely the working-directory string: a step that
+      // declares the directory explicitly must agree with one that inherits it.
+      expect(
+        verificationBodyDigest({ ...step, "working-directory": "pkg" }, dir),
+        "step-level and inherited working directories must resolve to the same work",
+      ).toBe(fromPackage);
+
+      // The resolution itself, asserted directly. Without this the digests above differ for two
+      // possible reasons — the working-directory string being in the shape, or the script being
+      // resolved from it — and reverting the resolution alone would leave the row green.
+      expect(
+        invokedScriptBodies(step.run, dir, "pkg"),
+        "the script must be resolved against the manifest in the working directory",
+      ).toEqual([["pkg#ci:build-verify", "node a.mjs"]]);
+      expect(
+        invokedScriptBodies(step.run, dir, "."),
+        "and against the root manifest when there is no working directory",
+      ).toEqual([[".#ci:build-verify", "node a.mjs && node b.mjs"]]);
+
+      // And the working-directory STRING is in the shape in its own right, for a step that
+      // invokes no script and names no file — where the directory is still what it runs in.
+      expect(
+        verificationBodyDigest({ name: "x", run: "true" }, dir),
+        "the working directory must be part of the body even with nothing to resolve",
+      ).not.toBe(
+        verificationBodyDigest({ name: "x", run: "true" }, dir, { workingDirectory: "pkg" }),
+      );
+
+      // The digest's OWN use of the working directory, isolated. The assertions above all differ
+      // for a second reason — the directory string is in the shape — so reverting the resolution
+      // while keeping the string left every one of them green. Measured. Here the two trees have
+      // identical ROOT manifests and differ only in the one the working directory points at, so
+      // the digest can only tell them apart by resolving from there.
+      const other = mkdtempSync(path.join(tmpdir(), "qfai-hygiene-wd2-"));
+      try {
+        writeFileSync(
+          path.join(other, "package.json"),
+          `${JSON.stringify({ scripts: { "ci:build-verify": "node a.mjs && node b.mjs" } })}
+`,
+          "utf-8",
+        );
+        mkdirSync(path.join(other, "pkg"), { recursive: true });
+        writeFileSync(
+          path.join(other, "pkg", "package.json"),
+          `${JSON.stringify({ scripts: { "ci:build-verify": "node c.mjs" } })}
+`,
+          "utf-8",
+        );
+        expect(
+          verificationBodyDigest(step, other, { workingDirectory: "pkg" }),
+          "the digest must resolve the script from the working directory, not from the root",
+        ).not.toBe(fromPackage);
+      } finally {
+        rmSync(other, { recursive: true, force: true });
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a hollowed guard script the step runs, with the workflow untouched", () => {
+    // Review finding [42]. `run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh`
+    // is a reference too, and replacing that file's body with `exit 0` left the step's name, its
+    // `run` and its digest all unchanged — so the same neutered guard went green in `lint` and in
+    // `build`, and the leakage rule the distributed-surface contract rests on checked nothing.
+    //
+    // The workflow file is NOT edited: the digest's subject has to reach past `.github/**`.
+    const dir = plantedTree((d) => {
+      const guard = path.join(
+        d,
+        "packages",
+        "qfai",
+        "scripts",
+        "check-no-internal-version-leakage.sh",
+      );
+      if (!existsSync(guard)) throw new Error("the guard was not staged — the fixture is stale");
+      writeFileSync(guard, "#!/usr/bin/env bash\nexit 0\n", "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `hollowing a guard a verification runs must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the item that runs it")
+        .toContain("Sanity grep");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("records a reference outside the pinned script roots without hashing its bytes", () => {
+    // The boundary, pinned so it is not "improved" into hashing build output. Two declared
+    // verification steps run `packages/qfai/dist/cli/index.mjs`, whose bytes change on every
+    // compile: a digest over those would need re-pinning after every build and would say nothing
+    // about whether the verification still happens. The PATH is still recorded, so the reference
+    // moving is still a change.
+    const entries = invokedFileDigests(
+      "node packages/qfai/dist/cli/index.mjs validate --root .",
+      REPO_ROOT,
+      ".",
+    );
+    expect(
+      entries,
+      "a reference outside the pinned roots must be recorded, and recorded as outside them",
+    ).toEqual([["packages/qfai/dist/cli/index.mjs", "outside"]]);
+
+    // And the other side of the boundary really is hashed, or the row above would be describing a
+    // scan that hashes nothing at all.
+    const inside = invokedFileDigests(
+      "bash packages/qfai/scripts/check-no-internal-version-leakage.sh",
+      REPO_ROOT,
+      ".",
+    );
+    const guard = inside.find(
+      ([file]) => file === "packages/qfai/scripts/check-no-internal-version-leakage.sh",
+    );
+    expect(guard?.[1], "a guard inside the pinned roots must be hashed").toMatch(/^[0-9a-f]{16}$/);
   });
 
   it("rejects a verification step whose env changed, which is what it runs on", () => {

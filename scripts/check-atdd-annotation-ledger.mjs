@@ -326,6 +326,80 @@ function parseArguments(args) {
 }
 
 /**
+ * `text` with every comment replaced by spaces of the same length, newlines preserved.
+ *
+ * A tiny lexer rather than a regex, because `//` inside a string literal is not a comment and a
+ * regex cannot know that — and the string literals here are the include globs, which is exactly
+ * what must survive. Offsets are preserved so anything reported against this text still lines up
+ * with the file.
+ *
+ * String CONTENTS are left alone. A declaration hidden inside a string would therefore still
+ * match — and be caught as a second match by the caller, which refuses rather than picks.
+ *
+ * @param {string} text source text
+ * @returns {string} the same text with comment bodies blanked
+ */
+export function blankComments(text) {
+  let out = "";
+  let mode = "code"; // code | line | block | single | double | template
+  for (let index = 0; index < text.length; index += 1) {
+    const char = text[index];
+    const next = text[index + 1] ?? "";
+    if (mode === "code") {
+      if (char === "/" && next === "/") {
+        mode = "line";
+        out += "  ";
+        index += 1;
+        continue;
+      }
+      if (char === "/" && next === "*") {
+        mode = "block";
+        out += "  ";
+        index += 1;
+        continue;
+      }
+      if (char === "'") mode = "single";
+      else if (char === '"') mode = "double";
+      else if (char === "`") mode = "template";
+      out += char;
+      continue;
+    }
+    if (mode === "line") {
+      if (char === "\n") {
+        mode = "code";
+        out += char;
+        continue;
+      }
+      out += " ";
+      continue;
+    }
+    if (mode === "block") {
+      if (char === "*" && next === "/") {
+        mode = "code";
+        out += "  ";
+        index += 1;
+        continue;
+      }
+      out += char === "\n" ? char : " ";
+      continue;
+    }
+    // Inside a string literal: copied verbatim, and a backslash escapes whatever follows so a
+    // `\\"` does not end it early.
+    out += char;
+    if (char === "\\") {
+      out += next;
+      index += 1;
+      continue;
+    }
+    if ((mode === "single" && char === "'") || (mode === "double" && char === '"')) {
+      mode = "code";
+    }
+    if (mode === "template" && char === "`") mode = "code";
+  }
+  return out;
+}
+
+/**
  * The directories the E2E runner actually executes, read out of the runner's own configuration.
  *
  * Review finding [09]: the corpus used to include the repository-root `tests/e2e` as well as the
@@ -340,19 +414,35 @@ function parseArguments(args) {
  * globs as the answer. An unparseable configuration is a hard failure: a guard that falls back to
  * a built-in list when it cannot read the runner is a guard that silently stops tracking it.
  *
+ * Read as SOURCE, not as prose. Review finding [43]: the pattern ran over the raw file, so a
+ * comment declaring an `e2e` project whose include names a fake tree, placed above the real
+ * project matched first — and the guard then declared a tree Vitest never opens to be the backing
+ * corpus, while a ledger claim was certified by annotation-only files in it. Comments are blanked
+ * before the pattern runs, and a file that still yields more than one match is refused rather
+ * than resolved by position: two candidate declarations mean this guard cannot tell which one
+ * the runner uses, and guessing is how the defect worked.
+ *
  * @param {string} root repository root
  * @returns {Promise<string[]>} absolute directories to scan
  */
 export async function runnerCorpusRoots(root) {
   const configPath = path.join(root, "packages", "qfai", "vitest.workspace.ts");
-  const text = await readFile(configPath, "utf8");
-  const project = /name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/.exec(text);
-  if (project === null) {
+  const text = blankComments(await readFile(configPath, "utf8"));
+  const matches = [...text.matchAll(/name:\s*"e2e",\s*include:\s*\[([^\]]*)\]/g)];
+  if (matches.length === 0) {
     throw new Error(
       `check-atdd-annotation-ledger: could not read the e2e project's include list from ${configPath}; ` +
         "the backing corpus is derived from it and must not fall back to a hard-coded list",
     );
   }
+  if (matches.length > 1) {
+    throw new Error(
+      `check-atdd-annotation-ledger: ${String(matches.length)} e2e include lists in ${configPath}; ` +
+        "this guard cannot tell which one the runner uses, and taking the first is how a shadowing " +
+        "declaration went unnoticed",
+    );
+  }
+  const project = matches[0];
   const globs = [...(project[1] ?? "").matchAll(/"([^"]+)"/g)].map((match) => match[1]);
   if (globs.length === 0) {
     throw new Error(
