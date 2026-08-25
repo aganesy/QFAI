@@ -2010,6 +2010,75 @@ describe("a shipped runner label literal must be a public GitHub-hosted runner",
 });
 
 // ── [15] ────────────────────────────────────────────────
+describe("the reviewer artifact is written to its name, never through it", () => {
+  // Review finding [48]. `.qfai/review/**` is gitignored but not unwritable, and a pull request
+  // can force-add a path under it. This producer runs on an untrusted checkout — from `ci:lint`
+  // and again from the `build` bridge — so a `writeFileSync` onto a name the pull request made a
+  // symlink truncates whatever it points at: a file outside the repository on the runner, or the
+  // input of a later gate.
+
+  /** A junction on Windows, an ordinary symlink elsewhere; neither needs privilege. */
+  function link(target: string, at: string, type: "junction" | "file"): boolean {
+    try {
+      symlinkSync(target, at, type);
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  it("replaces a symlinked artifact name instead of writing through it", () => {
+    const dir = plantedTree(() => undefined);
+    const outside = mkdtempSync(path.join(tmpdir(), "qfai-artifact-outside-"));
+    try {
+      const bystander = path.join(outside, "somebody-elses-file.txt");
+      writeFileSync(bystander, "not this lane's to write\n", "utf-8");
+
+      const reportRel = path.join(".qfai", "review", "workflow-hygiene");
+      mkdirSync(path.join(dir, reportRel), { recursive: true });
+      const target = path.join(dir, reportRel, "workflow-hygiene.json");
+      if (!link(bystander, target, "file")) return;
+
+      const run = runLaneWithReport(dir, reportRel);
+      expect(run.exitCode, `the lane must still produce its artifact:\n${run.output}`).not.toBe(-1);
+      expect(
+        readFileSync(bystander, "utf-8"),
+        "the file the name pointed at must be exactly as it was",
+      ).toBe("not this lane's to write\n");
+      expect(
+        JSON.parse(readFileSync(path.join(dir, reportRel, "workflow-hygiene.json"), "utf-8")),
+        "and the artifact must be at the name, as a file of its own",
+      ).toHaveProperty("findings");
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a report directory reached through a symlinked component", () => {
+    // The other half: `mkdirSync(..., { recursive: true })` FOLLOWS an existing component and
+    // creates nothing, so a linked directory inside the checkout puts the whole write elsewhere.
+    const dir = plantedTree(() => undefined);
+    const outside = mkdtempSync(path.join(tmpdir(), "qfai-artifact-dir-"));
+    try {
+      mkdirSync(path.join(dir, ".qfai"), { recursive: true });
+      if (!link(outside, path.join(dir, ".qfai", "review"), "junction")) return;
+
+      const run = runLaneWithReport(dir, path.join(".qfai", "review", "workflow-hygiene"));
+      expect(
+        run.output,
+        "the lane must say which component it refused rather than writing through it",
+      ).toMatch(/is not a real directory/);
+      expect(
+        existsSync(path.join(outside, "workflow-hygiene")),
+        "nothing may be created beyond the link",
+      ).toBe(false);
+    } finally {
+      rmSync(outside, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 describe("the workflow walk refuses a root it did not open, and is bounded", () => {
   // Review finding [45]. This lane runs on a pull request, over paths the pull request itself
   // controls, and `readdirSync` follows a link — so replacing `.github/workflows` (or

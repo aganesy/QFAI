@@ -32,7 +32,8 @@
  * condition semantics with the inertness row. Restating those here would
  * reproduce the very duplication this gate exists to remove.
  */
-import { mkdir, readdir, readFile, writeFile } from "node:fs/promises";
+import { randomBytes } from "node:crypto";
+import { lstat, mkdir, open, readdir, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
 import { parse } from "yaml";
@@ -917,6 +918,7 @@ export const SHAPE_REVIEW_ARTIFACT = "shipped-workflow-shape.json";
 export async function writeShapeFindingsForReviewerGate(
   reviewDir: string,
   findings: readonly ShapeFinding[],
+  boundary: string = path.dirname(reviewDir),
 ): Promise<void> {
   const payload = {
     findings: findings.map((finding) => {
@@ -930,12 +932,57 @@ export async function writeShapeFindingsForReviewerGate(
       };
     }),
   };
+  // Every component from `boundary` down must be a real directory, and the artifact goes to an
+  // exclusive temp name that is RENAMED into place.
+  //
+  // Review finding [48], filed against the hygiene lane's identical writer and applying here
+  // word for word: `.qfai/review/**` is gitignored but not unwritable, and a pull request can
+  // force-add a path under it — the artifact's own name as a symlink, or a directory component
+  // as one, which `mkdir` follows without creating anything. `writeFile` then truncates whatever
+  // the link points at. `rename` REPLACES the name, link and all, rather than writing through
+  // it; it is the shape the provenance record writer uses, for the same reason.
+  let current = boundary;
+  const descent = path.relative(boundary, reviewDir);
+  if (descent.startsWith("..") || path.isAbsolute(descent)) {
+    throw new Error(`${reviewDir} is not inside ${boundary}; refusing to write there`);
+  }
+  const segments = descent.length === 0 ? [] : descent.split(path.sep);
+  // Walked BEFORE the mkdir and again after it. `mkdir(..., { recursive: true })` follows an
+  // existing component and creates nothing there, so checking only afterwards means the missing
+  // directories have already been created on the far side of the link; checking only beforehand
+  // leaves the window in which one appears. The first walk stops at the first absent component,
+  // because the mkdir is what creates it and a directory it creates is not a link.
+  const walk = async (): Promise<void> => {
+    current = boundary;
+    for (const segment of segments) {
+      current = path.join(current, segment);
+      const inspected = await lstat(current).catch(() => undefined);
+      if (inspected === undefined) return;
+      if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+        throw new Error(
+          `${current} is not a real directory; refusing to write the reviewer artifact through it`,
+        );
+      }
+    }
+  };
+  await walk();
   await mkdir(reviewDir, { recursive: true });
-  await writeFile(
-    path.join(reviewDir, SHAPE_REVIEW_ARTIFACT),
-    `${JSON.stringify(payload, null, 2)}\n`,
-    "utf-8",
-  );
+  await walk();
+
+  const target = path.join(reviewDir, SHAPE_REVIEW_ARTIFACT);
+  const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
+  const handle = await open(staging, "wx");
+  try {
+    await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+  } finally {
+    await handle.close();
+  }
+  try {
+    await rename(staging, target);
+  } catch (error) {
+    await rm(staging, { force: true }).catch(() => undefined);
+    throw error;
+  }
 }
 export function renderShapeGateReport(findings: readonly ShapeFinding[]): string {
   return findings

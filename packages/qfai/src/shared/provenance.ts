@@ -207,6 +207,25 @@ async function ancestorsAreRealDirectories(rootDir: string): Promise<boolean> {
   return true;
 }
 
+/**
+ * Refuses a lock path that is anything other than an absent name or a real directory.
+ *
+ * `lstat`, so the LINK is inspected rather than its target — the whole point is that following
+ * it is what must not happen.
+ */
+async function refuseLinkedLockPath(lockDir: string): Promise<void> {
+  const inspected = await lstat(lockDir).catch(() => undefined);
+  if (inspected === undefined) {
+    return;
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+    throw new Error(
+      `install-provenance lock path ${lockDir} is not a directory this run created; refusing to ` +
+        `read or remove anything through it. Remove it by hand if it is stale.`,
+    );
+  }
+}
+
 /** The error a refused ancestor raises, phrased so the operator knows which component to look at. */
 function symlinkedAncestorError(rootDir: string): Error {
   return new Error(
@@ -492,6 +511,18 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     await rmdir(lockDir).catch(() => undefined);
   };
 
+  // The lock path itself, before anything is created or removed under it.
+  //
+  // Review finding [47]: `ancestorsAreRealDirectories` checks the components ABOVE the record,
+  // and this is a leaf beside it. An adopter — or anything that can write `.qfai/` — could
+  // leave `.install-provenance.lock.d` as a symlink to a directory outside the tree, and the
+  // reclaim below would then enumerate THAT directory and unlink every entry in it older than
+  // ten seconds. `qfai init` would delete an arbitrary set of the invoking user's files.
+  //
+  // Refused rather than repaired: removing a link somebody else put there is the same class of
+  // act this is guarding against. The run stops with a message naming the path.
+  await refuseLinkedLockPath(lockDir);
+
   await mkdir(staging, { recursive: true });
   try {
     const handle = await open(path.join(staging, marker), "wx");
@@ -536,6 +567,16 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
  * there fails on an existing destination whether or not it is empty).
  */
 async function clearAbandonedLock(lockDir: string): Promise<void> {
+  // Asked again HERE, and not only at acquisition. This is the function that unlinks, and a
+  // link can be dropped in between the two — `readdir` follows one, and every removal below is
+  // then aimed wherever it points. Review finding [47].
+  const inspected = await lstat(lockDir).catch(() => undefined);
+  if (inspected === undefined) {
+    return; // not there: the next `rename` creates it
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+    return; // not a lock this process may act on; acquisition refuses it by name
+  }
   const markers = await readdir(lockDir).catch(() => undefined);
   if (markers === undefined) {
     return; // not there, or not a directory: nothing this function can act on

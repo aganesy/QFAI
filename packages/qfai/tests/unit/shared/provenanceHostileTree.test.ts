@@ -599,6 +599,51 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
   //   intent rather than adding a second guard.
 });
 
+// ── [47] ────────────────────────────────────────────
+describe("a lock path this run did not create is refused, not followed", () => {
+  it("does not enumerate or delete through a symlinked lock directory", async () => {
+    // `ancestorsAreRealDirectories` checks the components ABOVE the record, and the lock is a leaf
+    // beside it. Anything that can write `.qfai/` could leave `.install-provenance.lock.d` as a link
+    // to a directory outside the tree — and the reclaim enumerates it and unlinks every entry older
+    // than ten seconds. `qfai init` would delete an arbitrary set of the invoking user's files.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-lock-outside-"));
+    dirs.push(outside);
+    const bystander = path.join(outside, "somebody-elses-file.txt");
+    await writeFile(bystander, "not this run's to delete\n", "utf-8");
+    const longAgo = new Date(Date.now() - 60_000);
+    await utimes(bystander, longAgo, longAgo);
+
+    try {
+      await symlink(outside, lockDir(root), "junction");
+    } catch {
+      return; // a platform that refuses the link; the guard is platform-independent
+    }
+
+    await expect(
+      updateInstallProvenance(root, (current) => current),
+      "a lock path that is a link must stop the run rather than be followed",
+    ).rejects.toThrow(/not a directory this run created/i);
+
+    expect(
+      await readFile(bystander, "utf-8"),
+      "the reclaim must not reach through the link to a file outside the tree",
+    ).toBe("not this run's to delete\n");
+  });
+
+  it("still takes a lock when the path is a real directory, so the check is not a refusal", async () => {
+    // The control. Without it the row above holds for a primitive that refuses every lock.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-ok.yml": entryTyped() },
+    }));
+    expect(Object.keys((await readInstallProvenance(root)).workflows)).toEqual(["qfai-ok.yml"]);
+  });
+});
 // ── [28] ───────────────────────────────────────────────────────────────────────────
 describe("the calendar check reads the offset the timestamp declares", () => {
   it("keeps an offset timestamp whose UTC instant falls on the previous day", async () => {

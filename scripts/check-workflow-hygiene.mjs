@@ -34,8 +34,8 @@
  * grammar, which is why the three-digit waiver alias rule does not reach it.
  */
 import { Buffer } from "node:buffer";
-import { mkdirSync, writeFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
+import { createHash, randomBytes } from "node:crypto";
 import {
   closeSync,
   constants as fsConstants,
@@ -1581,8 +1581,15 @@ export function runHygieneLane(root) {
  * not require one; inventing a justification here would be this lane answering a question the
  * reviewer is there to answer.
  */
-function writeReviewerArtifact(reportDir, findings) {
+function writeReviewerArtifact(root, reportDir, findings) {
+  // BEFORE the mkdir and again after it. `mkdirSync(..., { recursive: true })` follows an existing
+  // component and creates nothing there, so checking only afterwards means the missing directories
+  // have already been created on the far side of the link. Checking only beforehand leaves the
+  // window in which one appears. Both, then — the first walk skips components that do not exist
+  // yet, because the mkdir is what creates them and a directory it creates is not a link.
+  refuseLinkedDescent(root, reportDir);
   mkdirSync(reportDir, { recursive: true });
+  refuseLinkedDescent(root, reportDir);
   const payload = {
     findings: findings.map((f) => ({
       code: CODE,
@@ -1593,8 +1600,72 @@ function writeReviewerArtifact(reportDir, findings) {
     })),
   };
   const target = path.join(reportDir, WORKFLOW_HYGIENE_REPORT_FILE);
-  writeFileSync(target, `${JSON.stringify(payload, null, 2)}\n`, "utf-8");
+  writeExclusivelyThenRename(target, `${JSON.stringify(payload, null, 2)}\n`);
   return target;
+}
+
+/**
+ * Refuses a report directory reached through a link.
+ *
+ * Every component between `root` and `dir` must be a real directory. Review finding [48]:
+ * `.qfai/review/**` is gitignored but not unwritable, and a pull request can force-add a path
+ * under it — including a directory component that is a symlink, which `mkdirSync` follows
+ * without creating anything. This lane runs on an untrusted checkout, from `ci:lint` and from
+ * the `build` bridge, so a followed component puts the write wherever the pull request says.
+ */
+function refuseLinkedDescent(root, dir) {
+  // Inside the checkout, every component is checked: that is the surface a pull request can
+  // write. A report directory the OPERATOR named outside it is their own path, and only its final
+  // component is inspected — the exclusive create and rename below is what stops the artifact's
+  // own name from being a link either way.
+  const relative = path.relative(root, dir);
+  const inside = relative.length > 0 && !relative.startsWith("..") && !path.isAbsolute(relative);
+  const segments = inside ? relative.split(path.sep) : [path.basename(dir)];
+  let current = inside ? root : path.dirname(dir);
+  for (const segment of segments) {
+    current = path.join(current, segment);
+    let inspected;
+    try {
+      inspected = lstatSync(current);
+    } catch {
+      return; // not there yet: the mkdir creates it, and everything below it, as real directories
+    }
+    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+      throw new Error(
+        `check-workflow-hygiene: ${current} is not a real directory; refusing to write the ` +
+          "reviewer artifact through it",
+      );
+    }
+  }
+}
+
+/**
+ * Writes `text` to `target` without ever writing THROUGH `target`.
+ *
+ * `writeFileSync` follows a symlink and truncates whatever it points at, and this artifact's
+ * name sits in a gitignored — not unwritable — directory on an untrusted checkout. So the
+ * bytes go to an exclusive temp name beside it and a `rename` puts them in place: `rename`
+ * REPLACES the name, link and all, rather than writing through it. It is the same shape the
+ * provenance record writer uses, and for the same reason.
+ */
+function writeExclusivelyThenRename(target, text) {
+  const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
+  const handle = openSync(staging, "wx");
+  try {
+    writeFileSync(handle, text, "utf-8");
+  } finally {
+    closeSync(handle);
+  }
+  try {
+    renameSync(staging, target);
+  } catch (error) {
+    try {
+      unlinkSync(staging);
+    } catch {
+      // the rename is the failure worth reporting
+    }
+    throw error;
+  }
 }
 
 /** The artifact's filename, exported so the gate's tests can name it without a second literal. */
@@ -1618,7 +1689,7 @@ function main(argv) {
   // reviewer — is the run that produces the artifact rather than the one that returns early.
   if (reportDir !== undefined) {
     try {
-      const target = writeReviewerArtifact(reportDir, findings);
+      const target = writeReviewerArtifact(root, reportDir, findings);
       stdout.write(`workflow hygiene: wrote ${findings.length} finding(s) to ${target}\n`);
     } catch (error) {
       // A failed write must not turn a clean tree red, and must not let a dirty one look clean:

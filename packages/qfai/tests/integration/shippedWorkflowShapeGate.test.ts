@@ -546,7 +546,10 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
     // the lane ran and found nothing, and a missing file then means it did not run — two different
     // facts that have to stay distinguishable. It also overwrites a stale artifact rather than
     // leaving one to be read as current.
-    await writeShapeFindingsForReviewerGate(shapeReviewDir(), shipped);
+    // `repoRoot` as the boundary, so every component from the checkout down is checked as a real
+    // directory rather than only the leaf. `.qfai/review/**` is gitignored but not unwritable, and
+    // this producer runs on an untrusted checkout in the `build` bridge.
+    await writeShapeFindingsForReviewerGate(shapeReviewDir(), shipped, repoRoot);
 
     assertShapeGateAccepts(shipped);
 
