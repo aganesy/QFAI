@@ -71,17 +71,18 @@
         "cannot fail the job, so it is not a verification however it is named."
       ],
       "verificationBodies": {
-        "Derive the verdict from the serialized needs map": "a15efccb72563dd0",
-        "Run build & pack verification": "87de7c233056c5a3",
-        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "4882147221bae766",
-        "QFAI self-validate this repo (dogfooding — TDD gates)": "8b2653d728aa14f5",
-        "QFAI self-validate this repo (dogfooding — SDD gates)": "a777c7d2cc06eec1",
-        "QFAI self-validate this repo (dogfooding — full profile)": "069483c31ce276d2",
-        "Run qfai validate gate (fail on error)": "700dc137f51489c2"
+        "Derive the verdict from the serialized needs map": "aa561732d2c46923",
+        "Run build & pack verification": "825e27ef8e9e3c0e",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "da88ff96bc74267f",
+        "QFAI self-validate this repo (dogfooding — TDD gates)": "0a974493b6af80f8",
+        "QFAI self-validate this repo (dogfooding — SDD gates)": "40b1a3e874db39de",
+        "QFAI self-validate this repo (dogfooding — full profile)": "01092c148c823b66",
+        "Run qfai validate gate (fail on error)": "17bff3325ca1a4e3"
       },
       "verificationBodiesNote": [
-        "A digest of each verification step's `run` / `uses` / `with` — what the step DOES, with its",
-        "name deliberately excluded so the pin cannot agree with itself.",
+        "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",
+        "scripts that `run` invokes — what the step DOES, with its name deliberately excluded so",
+        "the pin cannot agree with itself.",
         "",
         "Membership in `verificationSet` is decided by the step's NAME, and review finding [03] on",
         "PR #794 measured what that alone is worth: renaming nothing and replacing",
@@ -89,9 +90,17 @@
         "context verified nothing at all. The name says which obligation a step claims; this says it",
         "still discharges it.",
         "",
-        "Editing one of those step bodies is expected to fail this lane. Recompute with",
-        "`node tmp/pin-bodies.mjs` and land the new digest in the same change — that is the point:",
-        "a change to a required verification is a change a reviewer reads."
+        "The INVOKED SCRIPTS are in the digest because `run: pnpm ci:build-verify` is a reference, and",
+        "pinning a reference pins the pointer rather than the work. Review finding [36]: deleting",
+        "`node ./scripts/check-publish-dry-run.mjs` from that script in the root manifest left the",
+        "step's digest and this declaration in perfect agreement while the pack verification stopped",
+        "happening. Resolution is transitive, so a script that calls another script does not move the",
+        "problem one hop.",
+        "",
+        "Editing one of those step bodies — or a script one of them runs — is expected to fail this",
+        "lane. Recompute with `node scripts/pin-verification-bodies.mjs` and land the new digest in",
+        "the same change: that is the point, a change to a required verification is a change a",
+        "reviewer reads."
       ]
     }
   ]

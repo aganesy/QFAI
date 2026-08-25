@@ -53,6 +53,7 @@ import { spawnSync } from "node:child_process";
 import {
   cpSync,
   existsSync,
+  mkdirSync,
   mkdtempSync,
   readFileSync,
   readdirSync,
@@ -446,6 +447,17 @@ const SHIPPED_WORKFLOWS_REL = path.join(
   "workflows",
 );
 
+/**
+ * The manifests the body digest resolves package scripts against, repo-relative.
+ *
+ * The root one holds `ci:build-verify` and the rest of the `ci:` family; the package one is
+ * where a `pnpm -C packages/qfai <script>` invocation lands.
+ */
+const DIGESTED_MANIFESTS_REL: readonly string[] = [
+  "package.json",
+  path.join("packages", "qfai", "package.json"),
+];
+
 /** A throwaway copy of the own `.github` tree, for planting violations into. */
 function plantedTree(mutate: (dir: string) => void): string {
   const dir = mkdtempSync(path.join(tmpdir(), "qfai-hygiene-"));
@@ -456,6 +468,15 @@ function plantedTree(mutate: (dir: string) => void): string {
   cpSync(path.join(REPO_ROOT, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
     recursive: true,
   });
+  // And the manifests, because the lane's body digest resolves the package scripts a
+  // verification step invokes — `run: pnpm ci:build-verify` is a reference, and review finding
+  // [36] measured that pinning the reference pins the pointer rather than the work. A planted
+  // tree with no manifest is a tree where every declared body resolves to nothing, so every
+  // required-context row would report a digest mismatch it was not planted to produce.
+  for (const manifest of DIGESTED_MANIFESTS_REL) {
+    mkdirSync(path.dirname(path.join(dir, manifest)), { recursive: true });
+    cpSync(path.join(REPO_ROOT, manifest), path.join(dir, manifest));
+  }
   mutate(dir);
   return dir;
 }
@@ -1175,6 +1196,152 @@ describe("TC-0017-0059 (TDD-0059): skippable-through-a-dependency and a shrunk s
       expect
         .soft(run.output, "the finding must say a second step does not substitute")
         .toMatch(/does not stand in/i);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a dependency job made skippable, even though the declared job is always()", () => {
+    // Review finding [37]. `always()` on the declared job stands property 2 down for the whole
+    // `needs` closure — correctly, because a skipped dependency is the state `always()` exists
+    // to classify — and property 3 then went on counting a skipped dependency's steps as
+    // performed. Measured against the lane: `if: false` on `build` left all six build-side
+    // verification items reading as performed, and since the aggregate verdict accepts
+    // `skipped`, the required context went green with the pack verification and all three
+    // self-validates never run.
+    //
+    // `if: false` rather than a plausible condition: the lane evaluates no GitHub expressions,
+    // so the plant has to be a condition and not a FALSE one — this one just makes the
+    // consequence unambiguous to a reader.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      editWorkflow(d, declared.workflow, (text) => {
+        const at = text.indexOf("\n  build:\n");
+        if (at === -1) throw new Error("the build-job anchor is stale");
+        const lineEnd = text.indexOf("\n", at + 1);
+        return `${text.slice(0, lineEnd + 1)}    if: false\n${text.slice(lineEnd + 1)}`;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `a conditional dependency carrying declared verifications must exit 1:\n${run.output}`,
+        )
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the job whose condition put the work out of reach")
+        .toMatch(/job build if: false/);
+      // …and the item, so the finding says WHICH verification stopped being reachable rather
+      // than only that something did.
+      expect
+        .soft(run.output, "the finding must name a declared item the guarded job carried")
+        .toContain("Run build & pack verification");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a step whose invoked package script was hollowed, with the workflow untouched", () => {
+    // Review finding [36]. `run: pnpm ci:build-verify` is a REFERENCE, and a digest over the
+    // `run:` text pins the pointer rather than the work: deleting
+    // `node ./scripts/check-publish-dry-run.mjs` from that script in the root manifest left the
+    // step's digest and its declaration in perfect agreement while the pack verification stopped
+    // happening, and the required context still went green.
+    //
+    // The workflow file is NOT edited here. That is the whole point of the row: every other
+    // required-context plant reaches the lane through `.github/**`, and this one proves the
+    // digest's subject reaches past it.
+    const dir = plantedTree((d) => {
+      const manifestPath = path.join(d, "package.json");
+      const manifest: { scripts: Record<string, string> } = JSON.parse(
+        readFileSync(manifestPath, "utf-8"),
+      ) as { scripts: Record<string, string> };
+      const before = manifest.scripts["ci:build-verify"];
+      if (before === undefined || !before.includes("check-publish-dry-run")) {
+        throw new Error("the ci:build-verify needle is stale");
+      }
+      manifest.scripts["ci:build-verify"] = before
+        .split("&&")
+        .filter((part) => !part.includes("check-publish-dry-run"))
+        .join("&&")
+        .trim();
+      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `hollowing the script a verification step invokes must exit 1:\n${run.output}`,
+        )
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the item whose work moved")
+        .toContain("Run build & pack verification");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a hollowed script the step reaches through ANOTHER script", () => {
+    // The transitive hop. `ci:build-verify` runs `pnpm verify:pack`, so a resolution that
+    // stopped at the first reference would pin `run: pnpm ci:build-verify` and the text of
+    // `ci:build-verify` — and `verify:pack` could then be emptied with both of them untouched.
+    // Measured: with the recursion removed, the row above still reddens and this one does not,
+    // which is how a one-hop resolution would have looked like a working one.
+    const dir = plantedTree((d) => {
+      const manifestPath = path.join(d, "package.json");
+      const manifest = JSON.parse(readFileSync(manifestPath, "utf-8")) as {
+        scripts: Record<string, string>;
+      };
+      const first = manifest.scripts["ci:build-verify"];
+      if (first === undefined || !first.includes("pnpm verify:pack")) {
+        throw new Error("ci:build-verify no longer reaches verify:pack — the needle is stale");
+      }
+      if (manifest.scripts["verify:pack"] === undefined) {
+        throw new Error("verify:pack is gone — the needle is stale");
+      }
+      manifest.scripts["verify:pack"] = "true";
+      writeFileSync(
+        manifestPath,
+        `${JSON.stringify(manifest, null, 2)}
+`,
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `hollowing a transitively invoked script must exit 1:
+${run.output}`,
+        )
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the item that reaches it")
+        .toContain("Run build & pack verification");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("passes the same tree with the script restored, so the row above is about the script", () => {
+    // The control. Without it the row above holds for a lane that rejects any tree whose
+    // manifest it happened to touch — and a `plantedTree` that copies the manifests is new, so
+    // that is a live possibility rather than a formality.
+    const dir = plantedTree((d) => {
+      const manifestPath = path.join(d, "package.json");
+      const manifest: unknown = JSON.parse(readFileSync(manifestPath, "utf-8"));
+      writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a rewritten but unchanged manifest must stay green:\n${run.output}`)
+        .toBe(0);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

@@ -282,7 +282,8 @@ function permissionValueFindings(entry, reportedWorkflows) {
 }
 
 /**
- * A digest of what one step DOES: its `run`, its `uses` and its `with`.
+ * A digest of what one step DOES: its `run`, its `uses`, its `with`, its `env` — and the package
+ * scripts its `run` invokes, resolved transitively out of the manifests on disk.
  *
  * `name` is deliberately absent — the name is the key this is looked up by, and including it would
  * make the digest agree with itself by construction. `if` is absent too: a condition is rejected
@@ -290,8 +291,25 @@ function permissionValueFindings(entry, reportedWorkflows) {
  *
  * Line endings and trailing whitespace are normalized, so a checkout that rewrites newlines does
  * not read as an edited verification.
+ *
+ * `env` is IN the digest. Review finding [24], second escape: the verdict step's whole input is
+ * `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression with a hardcoded all-success
+ * map neuters the aggregate verdict while `run` is untouched and every pin still matches.
+ * Measured: the lane exited 0. A step's environment is what it runs on, not decoration.
+ *
+ * The INVOKED SCRIPTS are in it for the same reason, one level further out. Review finding [36]:
+ * `run: pnpm ci:build-verify` is a reference, and pinning a reference pins the pointer rather
+ * than the work — deleting `node ./scripts/check-publish-dry-run.mjs` from that script in the
+ * root manifest left this step's digest and its declaration in perfect agreement while the pack
+ * verification it names stopped happening, and the required context still went green. Resolving
+ * the reference is what makes the declaration a pin on the work.
+ *
+ * Transitive, because a script that calls another script moves the same problem one hop. Every
+ * name reached is recorded with the manifest directory it was resolved against, and a name the
+ * manifest does not define is recorded as `null` — an absence is a fact about the tree too, and
+ * a digest that silently ignored it would agree across the edit that introduced it.
  */
-function verificationBodyDigest(step) {
+export function verificationBodyDigest(step, root) {
   const normalize = (value) =>
     typeof value === "string"
       ? value
@@ -299,17 +317,104 @@ function verificationBodyDigest(step) {
           .replace(/[ \t]+$/gm, "")
           .trimEnd()
       : value;
-  // `env` is IN the digest. Review finding [24], second escape: the verdict step's whole input is
-  // `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression with a hardcoded all-success
-  // map neuters the aggregate verdict while `run` is untouched and every pin still matches.
-  // Measured: the lane exited 0. A step's environment is what it runs on, not decoration.
   const shape = {
     run: normalize(step.run),
     uses: normalize(step.uses),
     with: step["with"],
     env: step["env"],
+    scripts: invokedScriptBodies(step.run, root),
   };
   return createHash("sha256").update(JSON.stringify(shape)).digest("hex").slice(0, 16);
+}
+
+/** A script name as a manifest may hold it: no leading dash, no shell metacharacters. */
+const SCRIPT_NAME_RE = /^[A-Za-z0-9_][\w:.-]*$/;
+
+/** Flags that name the directory whose manifest a package-manager invocation resolves against. */
+const MANIFEST_DIR_FLAGS = new Set(["-C", "--dir", "--prefix"]);
+
+/**
+ * The `pnpm` / `npm` script invocations in one shell body, as `{ dir, name }` pairs.
+ *
+ * A deliberately small shell reading: fragments split on the separators a CI `run:` actually
+ * uses, and only a fragment whose first word is the package manager is considered. `pnpm x` and
+ * `pnpm run x` are the same invocation to pnpm and are treated as one here; `-C` / `--dir` /
+ * `--prefix` move the manifest. Anything this does not recognise resolves to nothing, which
+ * costs coverage and never costs correctness — the digest still pins the `run:` text itself.
+ */
+function collectScriptInvocations(text, defaultDir, out) {
+  if (typeof text !== "string") return;
+  for (const fragment of text.split(/&&|\|\||[;\n|]/)) {
+    const tokens = fragment
+      .trim()
+      .split(/\s+/)
+      .filter((token) => token.length > 0);
+    if (tokens[0] !== "pnpm" && tokens[0] !== "npm") continue;
+    let dir = defaultDir;
+    let index = 1;
+    for (; index < tokens.length; index += 1) {
+      const token = tokens[index];
+      if (MANIFEST_DIR_FLAGS.has(token)) {
+        dir = tokens[index + 1] ?? dir;
+        index += 1;
+        continue;
+      }
+      if (token === "run" || token === "run-script") continue;
+      if (token.startsWith("-")) continue;
+      break;
+    }
+    const name = tokens[index];
+    if (name === undefined || !SCRIPT_NAME_RE.test(name)) continue;
+    out.push({ dir, name });
+  }
+}
+
+/**
+ * `scripts` of the manifest at `<root>/<dir>`, or `undefined` when there is no readable one.
+ *
+ * Through the bounded reader: this lane runs on a pull request, and every path it opens is one
+ * the pull request can turn into a symlink, a FIFO or a very large file. The ceiling is named
+ * for workflows because that is where it came from; a manifest is the same order of size.
+ */
+function manifestScripts(root, dir, cache) {
+  const key = path.posix.normalize(dir.split(path.sep).join(path.posix.sep));
+  if (cache.has(key)) return cache.get(key);
+  const text = readBoundedWorkflowText(path.resolve(root, dir, "package.json"));
+  let scripts;
+  try {
+    const parsed = text === undefined ? undefined : JSON.parse(text);
+    scripts = isRecord(parsed) && isRecord(parsed.scripts) ? parsed.scripts : undefined;
+  } catch {
+    scripts = undefined;
+  }
+  cache.set(key, scripts);
+  return scripts;
+}
+
+/**
+ * Every package script a `run:` body reaches, transitively, as a sorted `[key, body]` list.
+ *
+ * Sorted and array-shaped so the digest does not depend on the order the walk happened to find
+ * them in — an object's key order is a property of the traversal, and a pin whose value moved
+ * because a script was reached by a different route is a pin that fails for no reason.
+ */
+function invokedScriptBodies(runText, root) {
+  const pending = [];
+  collectScriptInvocations(runText, ".", pending);
+  const cache = new Map();
+  const seen = new Set();
+  const resolved = [];
+  while (pending.length > 0) {
+    const { dir, name } = pending.shift();
+    const scripts = manifestScripts(root, dir, cache);
+    const body = scripts !== undefined && typeof scripts[name] === "string" ? scripts[name] : null;
+    const key = `${path.posix.normalize(dir.split(path.sep).join(path.posix.sep))}#${name}`;
+    if (seen.has(key)) continue;
+    seen.add(key);
+    resolved.push([key, body === null ? null : body.replace(/\r\n/g, "\n").trim()]);
+    if (body !== null) collectScriptInvocations(body, dir, pending);
+  }
+  return resolved.sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
 }
 /**
  * Read ceiling for one workflow or composite action. A real one is a few kilobytes; anything
@@ -978,6 +1083,23 @@ function checkRequiredContexts(root, jobs) {
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
+      // A DEPENDENCY that can be skipped performs nothing, whatever its steps say. Review
+      // finding [37]: `always()` on the declared job stands down property 2 for the whole
+      // closure — correctly, since a skipped dependency is the state `always()` is for — and
+      // property 3 then went on counting that dependency's steps as unconditionally
+      // performed. Measured: `if: false` on `build` left the six build-side verification
+      // items reading as performed, the aggregate verdict accepts `skipped`, and the required
+      // context went green with the pack verification and all three self-validates never run.
+      //
+      // So the `always()` exception stays where it belongs — on the aggregate job itself, so
+      // that it can classify what its dependencies did — and a condition on a dependency
+      // disqualifies the items that dependency carries. Relocating a verification into a
+      // conditional job is relocating it out of reach, which is the same fault as putting it
+      // behind a step condition and is reported the same way.
+      const jobGuard =
+        key !== declaredJob && job !== undefined && job.if !== undefined
+          ? `job ${key} if: ${String(job.if)}`
+          : undefined;
       for (const step of steps) {
         if (!isRecord(step) || typeof step.name !== "string") continue;
         // ANY `if` disqualifies, and the lane does not sort conditions into harmless and
@@ -1007,6 +1129,8 @@ function checkRequiredContexts(root, jobs) {
           if (!performed.has(step.name)) {
             conditional.set(step.name, `continue-on-error: ${String(continueOnError)}`);
           }
+        } else if (jobGuard !== undefined) {
+          if (!performed.has(step.name)) conditional.set(step.name, jobGuard);
         } else if (step.if === undefined) {
           performed.add(step.name);
           // EVERY digest seen under this name, not the last one. Review finding [24], first escape:
@@ -1017,7 +1141,7 @@ function checkRequiredContexts(root, jobs) {
           // A name is not a step. Collecting the set and requiring every member to match is what
           // makes a second step wearing the name a finding rather than a substitute for the first.
           const seen = bodies.get(step.name) ?? new Set();
-          seen.add(verificationBodyDigest(step));
+          seen.add(verificationBodyDigest(step, root));
           bodies.set(step.name, seen);
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
