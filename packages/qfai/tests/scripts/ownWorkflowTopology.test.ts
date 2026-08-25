@@ -1455,85 +1455,112 @@ describe("TC-0017-0041 (TDD-0041): layer separation adds no workflow file and no
   });
 });
 
-describe("the hygiene lane's findings reach the job that runs the Reviewer Gate", () => {
-  it("writes the artifact in the same job as the dogfooding validate, and before it", () => {
-    // Review finding [26]. The lane writes `{ findings: [...] }` under `.qfai/review/**` and the
-    // gate ingests it — but the lane runs in `lint`, on that job's checkout, and the dogfooding
-    // validate runs in `build` on a fresh one. With nothing transferring the file, a hygiene
-    // violation reddened `lint` and reached no reviewer, which is the whole promise the
-    // shipped-workflows contract makes for that code.
-    //
-    // Asserted as ONE JOB and an ORDER, because either alone is the defect: an artifact written
-    // after the gate has read the directory is an artifact the gate did not see, and one written
-    // in another job is one this job's `.qfai/review/**` never contains.
+/**
+ * The lanes whose findings the Reviewer Gate is required to ingest, and how each one appears in
+ * a `run:` body.
+ *
+ * BOTH, because the gate's deferred-registration exemption names two codes and is required to
+ * ingest both. Review finding [38]: these rows were written for the hygiene lane alone, so when
+ * the shape gate grew a producer of its own the rows kept passing while that producer wrote its
+ * artifact only into the `lint` job's checkout — and the self-validates below run here, on a
+ * fresh one. Half the exemption reached no reviewer, and nothing said so.
+ */
+const REVIEWER_GATE_PRODUCERS: readonly { what: string; needles: readonly string[] }[] = [
+  {
+    what: "the workflow hygiene lane",
+    needles: ["check-workflow-hygiene.mjs", "--report-dir"],
+  },
+  {
+    what: "the shipped-shape gate",
+    needles: ["lint:workflow-shape", ".qfai/review/shipped-workflow-shape"],
+  },
+];
+
+describe("both producers' findings reach the job that runs the Reviewer Gate", () => {
+  const buildSteps = (): Record<string, unknown>[] => {
     const jobs = ciJobs();
-    const steps = Array.isArray(jobs["build"]?.["steps"])
-      ? jobs["build"]["steps"].filter(isRecord)
-      : [];
-    expect(steps.length, "the build job must declare steps").toBeGreaterThan(0);
+    return Array.isArray(jobs["build"]?.["steps"]) ? jobs["build"]["steps"].filter(isRecord) : [];
+  };
 
-    const writesArtifact = steps.findIndex(
-      (step) =>
-        typeof step["run"] === "string" &&
-        step["run"].includes("check-workflow-hygiene.mjs") &&
-        step["run"].includes("--report-dir"),
-    );
-    expect(
-      writesArtifact,
-      "the build job must produce the hygiene findings where its own Reviewer Gate looks",
-    ).toBeGreaterThan(-1);
+  /** The index of the step whose `run` carries every needle, or `-1`. */
+  const stepIndex = (needles: readonly string[]): number =>
+    buildSteps().findIndex((step) => {
+      const run = step["run"];
+      return typeof run === "string" && needles.every((needle) => run.includes(needle));
+    });
 
-    const readsThem = steps.findIndex(
-      (step) =>
-        typeof step["run"] === "string" &&
-        step["run"].includes("validate") &&
-        step["run"].includes("--root ."),
-    );
-    expect(
-      readsThem,
-      "the dogfooding validate — the step that ingests them — must be in this job too",
-    ).toBeGreaterThan(-1);
+  for (const producer of REVIEWER_GATE_PRODUCERS) {
+    it(`writes ${producer.what}'s artifact in the same job as the dogfooding validate, and before it`, () => {
+      // Review finding [26], then [38]. A lane writes `{ findings: [...] }` under
+      // `.qfai/review/**` and the gate ingests it — but the lanes run in `lint`, on that job's
+      // checkout, and the dogfooding validate runs in `build` on a fresh one. With nothing
+      // transferring the file, a violation reddened `lint` and reached no reviewer, which is the
+      // whole promise the shipped-workflows contract makes for those codes.
+      //
+      // Asserted as ONE JOB and an ORDER, because either alone is the defect: an artifact written
+      // after the gate has read the directory is an artifact the gate did not see, and one
+      // written in another job is one this job's `.qfai/review/**` never contains.
+      const steps = buildSteps();
+      expect(steps.length, "the build job must declare steps").toBeGreaterThan(0);
 
-    expect(
-      writesArtifact < readsThem,
-      "the findings must be written BEFORE the gate reads the directory; after it, the gate " +
-        "ingested nothing and the run is green over a violation",
-    ).toBe(true);
-  });
+      const writesArtifact = stepIndex(producer.needles);
+      expect(
+        writesArtifact,
+        `the build job must produce ${producer.what}'s findings where its own Reviewer Gate looks`,
+      ).toBeGreaterThan(-1);
 
-  it("survives the lane exiting non-zero, and fails when no artifact appears", () => {
-    // The step's whole design is that a hygiene VIOLATION still reaches the gate — so the lane's
-    // non-zero exit must not abort the step before the validate steps below it. GitHub runs
-    // `shell: bash` as `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the
-    // INVOCATION and a `set -uo pipefail` inside the body does not remove it. Measured: the first
-    // version of this step aborted on the lane's non-zero exit and never reached the line that
-    // captured it — the exact abort its own comment said must not happen.
-    //
-    // And the other direction, which is not symmetric: a MISSING artifact is fatal. The lane
-    // failing means a violation the gate should see; no artifact at all means the bridge did not
-    // run, and a silent bridge is what this step exists to remove.
-    const jobs = ciJobs();
-    const steps = Array.isArray(jobs["build"]?.["steps"])
-      ? jobs["build"]["steps"].filter(isRecord)
-      : [];
-    const body = steps
-      .map((step) => (typeof step["run"] === "string" ? step["run"] : ""))
-      .find((run) => run.includes("check-workflow-hygiene.mjs") && run.includes("--report-dir"));
-    expect(body, "the build job must carry the artifact step").toBeDefined();
+      const readsThem = steps.findIndex((step) => {
+        const run = step["run"];
+        return typeof run === "string" && run.includes("validate") && run.includes("--root .");
+      });
+      expect(
+        readsThem,
+        "the dogfooding validate — the step that ingests them — must be in this job too",
+      ).toBeGreaterThan(-1);
 
-    expect(
-      /check-workflow-hygiene\.mjs[^\n]*\|\|/.test(body ?? ""),
-      "the lane call must sit in an `||` list (or otherwise suspend `-e`), or a violation aborts " +
-        "the step before the Reviewer Gate below ever runs",
-    ).toBe(true);
+      expect(
+        writesArtifact < readsThem,
+        "the findings must be written BEFORE the gate reads the directory; after it, the gate " +
+          "ingested nothing and the run is green over a violation",
+      ).toBe(true);
+    });
 
-    expect(
-      body ?? "",
-      "and a missing artifact must be reported as an error rather than passed over",
-    ).toContain("::error::");
-  });
+    it(`survives ${producer.what} exiting non-zero, and fails when no artifact appears`, () => {
+      // The step's whole design is that a VIOLATION still reaches the gate — so the lane's
+      // non-zero exit must not abort the step before the validate steps below it. GitHub runs
+      // `shell: bash` as `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the
+      // INVOCATION and a `set -uo pipefail` inside the body does not remove it. Measured: the
+      // first version of the hygiene step aborted on the lane's non-zero exit and never reached
+      // the line that captured it — the exact abort its own comment said must not happen.
+      //
+      // And the other direction, which is not symmetric: a MISSING artifact is fatal. The lane
+      // failing means a violation the gate should see; no artifact at all means the bridge did
+      // not run, and a silent bridge is what these steps exist to remove.
+      const index = stepIndex(producer.needles);
+      expect(index, `the build job must carry ${producer.what}'s artifact step`).toBeGreaterThan(
+        -1,
+      );
+      const body = String(buildSteps()[index]?.["run"] ?? "");
+
+      // The lane's own invocation, and it has to be the one inside the `||` list — a body that
+      // suspends `-e` for some OTHER command would satisfy a bare `includes` check.
+      const laneCall = producer.needles[0] ?? "";
+      const suspended = body
+        .split(/\r?\n/)
+        .some((line) => line.includes(laneCall) && line.includes("||"));
+      expect(
+        suspended,
+        "the lane call must sit in an `||` list (or otherwise suspend `-e`), or a violation " +
+          "aborts the step before the Reviewer Gate below ever runs",
+      ).toBe(true);
+
+      expect(
+        body,
+        "and a missing artifact must be reported as an error rather than passed over",
+      ).toContain("::error::");
+    });
+  }
 });
-
 describe("one lane runs on the floor `engines.node` declares", () => {
   it("asks the shared definition for the floor, and checks it got it", () => {
     // Review finding [13]. Every other toolchain job resolves the range, so `setup-node` gives

@@ -17,7 +17,7 @@
  * This file grows row by row; each describe block is one ledger row.
  */
 import { spawnSync } from "node:child_process";
-import { cp, readdir, readFile, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -26,6 +26,7 @@ import { describe, expect, it } from "vitest";
 import { parse } from "yaml";
 
 import {
+  DIGESTED_MANIFESTS_REL,
   isRecord,
   loadShippedWorkflows,
   shippedGithubDir,
@@ -434,6 +435,13 @@ describe("TC-0003-0032 (TDD-0032): the shipped third-party allow-list rejects an
     await cp(path.join(repoRoot, SHIPPED_WORKFLOWS_REL), path.join(dir, SHIPPED_WORKFLOWS_REL), {
       recursive: true,
     });
+    // And the manifests the lane's verification-body digest resolves package scripts against;
+    // without them every declared body resolves to nothing and the untouched-set row below
+    // reports a digest mismatch it was not staged to produce.
+    for (const manifest of DIGESTED_MANIFESTS_REL) {
+      await mkdir(path.dirname(path.join(dir, manifest)), { recursive: true });
+      await cp(path.join(repoRoot, manifest), path.join(dir, manifest));
+    }
     return dir;
   }
 

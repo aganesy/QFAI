@@ -18,6 +18,25 @@ export const shippedGithubDir = (): string => path.join(getInitAssetsDir(), "roo
 /** The real shipped workflows directory inside the packaged init assets. */
 export const shippedWorkflowsDir = (): string => path.join(shippedGithubDir(), "workflows");
 
+/**
+ * The manifests the hygiene lane's verification-body digest resolves package scripts against,
+ * repo-relative and POSIX-separated.
+ *
+ * Every fixture that stages a tree for that lane has to copy them. `run: pnpm ci:build-verify`
+ * is a REFERENCE, and review finding [36] measured that pinning the reference pins the pointer
+ * rather than the work — so the digest resolves the script out of the manifest, and a staged
+ * tree with no manifest is one where every declared body resolves to nothing. Three fixtures
+ * staged that tree independently and two of them reddened the moment the digest grew; the list
+ * lives here so the third could not have been missed.
+ *
+ * The root manifest holds the `ci:` family; the package one is where a
+ * `pnpm -C packages/qfai <script>` invocation lands.
+ */
+export const DIGESTED_MANIFESTS_REL: readonly string[] = [
+  "package.json",
+  "packages/qfai/package.json",
+];
+
 /** Absolute path of one packaged shipped workflow file. */
 export const shippedWorkflowPath = (name: string): string => path.join(shippedWorkflowsDir(), name);
 

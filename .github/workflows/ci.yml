@@ -561,6 +561,35 @@ jobs:
           fi
           echo "hygiene findings at ${artifact}; lane exit ${status} (the lint job is what fails on a violation)"
 
+      # ── The shape gate's findings, for the same reason and in the same place ───────
+      # `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in the gate's deferred-registration set beside
+      # `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. Review finding [38]:
+      # the shape lane grew a producer, but it runs inside `lint:workflow-shape` — the `lint`
+      # job's checkout — and the bridge above re-runs only the hygiene lane. So shape drift wrote
+      # its artifact where nothing reads it, and the three self-validates below found no shape
+      # findings on this job's fresh checkout. Half the exemption still reached no reviewer.
+      #
+      # Re-run rather than transferred between jobs, for the same reasons as the hygiene bridge:
+      # an artifact round trip would make `build` wait on `lint`, serialising two lanes that run
+      # in parallel today, and producing the evidence beside the consumer removes the transfer as
+      # a thing that can silently stop working.
+      #
+      # The gate writes its artifact BEFORE it asserts, so a drifted tree produces findings here
+      # and then a non-zero exit — which is suspended by the `||` for the same reason as above,
+      # and for the same reason a missing artifact is fatal instead.
+      - name: Write the shape gate's findings for the Reviewer Gate
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact=".qfai/review/shipped-workflow-shape/shipped-workflow-shape.json"
+          status=0
+          pnpm -C packages/qfai lint:workflow-shape || status=$?
+          if [ ! -s "$artifact" ]; then
+            echo "::error::the shape gate wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than an accepted shape"
+            exit 1
+          fi
+          echo "shape findings at ${artifact}; lane exit ${status} (the lint job is what fails on drift)"
+
       - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
         run: |

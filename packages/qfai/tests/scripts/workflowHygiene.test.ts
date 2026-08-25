@@ -67,6 +67,8 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import { describe, expect, it } from "vitest";
 import { parse as parseYaml } from "yaml";
 
+import { DIGESTED_MANIFESTS_REL } from "../helpers/shippedWorkflowFixtures.js";
+
 const REPO_ROOT = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
@@ -446,17 +448,6 @@ const SHIPPED_WORKFLOWS_REL = path.join(
   ".github",
   "workflows",
 );
-
-/**
- * The manifests the body digest resolves package scripts against, repo-relative.
- *
- * The root one holds `ci:build-verify` and the rest of the `ci:` family; the package one is
- * where a `pnpm -C packages/qfai <script>` invocation lands.
- */
-const DIGESTED_MANIFESTS_REL: readonly string[] = [
-  "package.json",
-  path.join("packages", "qfai", "package.json"),
-];
 
 /** A throwaway copy of the own `.github` tree, for planting violations into. */
 function plantedTree(mutate: (dir: string) => void): string {
