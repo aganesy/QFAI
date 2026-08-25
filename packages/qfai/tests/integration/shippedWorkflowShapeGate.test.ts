@@ -26,7 +26,7 @@
  *
  * This file grows row by row; each describe block is one ledger row.
  */
-import { cp, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { cp, mkdir, readdir, readFile, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -89,6 +89,53 @@ const PLANTED_THRESHOLD = "warning";
 const PLANTED_ACTION = "acme-probe/not-sanctioned";
 
 const newTempDir = useTempDirPool("qfai-wfshape-");
+
+/**
+ * The directory the Reviewer Gate scans for findings.
+ *
+ * `.qfai/review/**` is where `validateReviewerJustification` looks, and `shipped-workflow-shape`
+ * is a sibling of the hygiene lane's `workflow-hygiene` directory rather than a review PACK — the
+ * gate reads any `*.json` under the tree, so the name says which lane produced it.
+ */
+const shapeReviewDir = (): string =>
+  path.join(repoRoot, ".qfai", "review", "shipped-workflow-shape");
+
+/**
+ * Write the shape findings in the shape the Reviewer Gate ingests.
+ *
+ * `file` / `job` / `rule` are the three fields the gate passes through verbatim, so a shape
+ * finding arrives carrying the same site information a hygiene finding does. `site` is
+ * `<file>` or `<file>:<job>`, which is split back apart here rather than shipped as one string:
+ * a reviewer reading `job=` should see a job, and the gate has a slot for it.
+ *
+ * A write failure is swallowed deliberately. This is a lint lane's reporting side effect, and
+ * failing the gate assertion for an unwritable `.qfai/review` would turn a reporting problem into
+ * a shape verdict — which is the confusion the artifact exists to remove.
+ */
+async function writeShapeFindingsForReviewerGate(findings: readonly ShapeFinding[]): Promise<void> {
+  const payload = {
+    findings: findings.map((finding) => {
+      const [file, job] = finding.site.split(":");
+      return {
+        code: finding.code,
+        rule: `dimension ${String(finding.dimension)}`,
+        file,
+        ...(job === undefined ? {} : { job }),
+        detail: `expected ${finding.expected}, found ${finding.actual}`,
+      };
+    }),
+  };
+  try {
+    await mkdir(shapeReviewDir(), { recursive: true });
+    await writeFile(
+      path.join(shapeReviewDir(), "shipped-workflow-shape.json"),
+      `${JSON.stringify(payload, null, 2)}\n`,
+      "utf-8",
+    );
+  } catch {
+    // Reporting, not verdict. See above.
+  }
+}
 
 /** The packaged root whose `.github/workflows` is the real shipped set. */
 const shippedRootDir = (): string => path.dirname(shippedGithubDir());
@@ -519,7 +566,25 @@ describe("TC-0003-0049 (TDD-0049): planted profile and threshold divergence make
 
   it("the clean shipped tree and a clean copy of it are both accepted (exit 0), and an emptied tree is not", async () => {
     // The packaged tree is the shipped set the TC's clean half speaks about.
-    assertShapeGateAccepts(await diffShippedWorkflowShape(shippedRootDir()));
+    const shipped = await diffShippedWorkflowShape(shippedRootDir());
+
+    // …and the findings go where the Reviewer Gate reads them, BEFORE the assertion below can end
+    // the test.
+    //
+    // `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in `DEFERRED_CATALOG_REGISTRATION_CODES` beside
+    // `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. The hygiene lane grew a
+    // producer; this code had none anywhere in the repository — it appeared only in the catalog and
+    // in tests — so shape drift reddened `lint:workflow-shape` and reached no reviewer. This gate is
+    // that lane (`packages/qfai/package.json#lint:workflow-shape` runs exactly this file), so it is
+    // the producer.
+    //
+    // Written on every run, including a clean one: an empty `findings` array is the statement that
+    // the lane ran and found nothing, and a missing file then means it did not run — two different
+    // facts that have to stay distinguishable. It also overwrites a stale artifact rather than
+    // leaving one to be read as current.
+    await writeShapeFindingsForReviewerGate(shipped);
+
+    assertShapeGateAccepts(shipped);
 
     const cleanCopy = await copyShippedRootToTemp();
     assertShapeGateAccepts(await diffShippedWorkflowShape(cleanCopy));

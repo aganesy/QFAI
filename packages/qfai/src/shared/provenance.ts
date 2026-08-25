@@ -310,15 +310,6 @@ const LOCK_POLL_MS = 25;
 const LOCK_ATTEMPTS = 200;
 
 /**
- * The reclaim lock's own staleness ceiling.
- *
- * Far shorter than the record lock's, because it covers an `unlink` and an `open` rather than a whole
- * read-modify-write. The two ceilings are different numbers because they bound different amounts of
- * work, not because one was tuned.
- */
-const RECLAIM_STALE_MS = 500;
-
-/**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
  *
  * Read-modify-write against a snapshot taken earlier in the run is a lost update, and this record
@@ -447,78 +438,81 @@ async function acquireRecordLock(lockPath: string): Promise<() => Promise<void>>
   };
 
   for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
-    try {
-      const handle = await open(lockPath, "wx");
-      try {
-        await handle.writeFile(token, "utf-8");
-      } finally {
-        await handle.close();
-      }
+    if (await takeLockFile(lockPath, token)) {
       return release;
-    } catch {
-      // Held, or unopenable. Age decides which.
     }
-
-    const heldSince = await stat(lockPath).then(
-      (stats) => stats.mtimeMs,
-      () => undefined,
-    );
-    if (heldSince === undefined) {
-      continue; // gone between the open and the stat: try to create it again immediately
-    }
-    if (Date.now() - heldSince <= LOCK_STALE_MS) {
-      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
-      continue;
-    }
-
-    // Abandoned. Exactly one writer may reclaim it, so the reclaim happens under its own `wx` lock.
-    const reclaimPath = `${lockPath}.reclaim`;
-    let reclaiming;
-    try {
-      reclaiming = await open(reclaimPath, "wx");
-    } catch {
-      // Someone else is reclaiming, or a previous reclaimer died holding this. Age decides, and the
-      // ceiling is short: this lock covers two syscalls, not a read-modify-write.
-      const since = await stat(reclaimPath).then(
-        (stats) => stats.mtimeMs,
-        () => undefined,
-      );
-      if (since !== undefined && Date.now() - since > RECLAIM_STALE_MS) {
-        await unlink(reclaimPath).catch(() => undefined);
-      }
-      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
-      continue;
-    }
-    try {
-      // Re-checked while holding the reclaim lock: the winner of a previous reclaim may already have
-      // installed a fresh lock, and taking that one away is the defect this whole shape exists to
-      // stop. Only a lock that is STILL abandoned is removed.
-      const stillStale = await stat(lockPath).then(
-        (stats) => Date.now() - stats.mtimeMs > LOCK_STALE_MS,
-        () => true, // gone: the create below is the reclaim
-      );
-      if (!stillStale) {
-        await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
-        continue;
-      }
-      await unlink(lockPath).catch(() => undefined);
-      const handle = await open(lockPath, "wx");
-      try {
-        await handle.writeFile(token, "utf-8");
-      } finally {
-        await handle.close();
-      }
-      return release;
-    } catch {
-      await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
-    } finally {
-      await reclaiming.close();
-      await unlink(reclaimPath).catch(() => undefined);
-    }
+    await new Promise((resolve) => setTimeout(resolve, LOCK_POLL_MS));
   }
   throw new Error(
     `could not take the install-provenance lock at ${lockPath} after ${String(LOCK_ATTEMPTS)} attempts; another process is writing the record`,
   );
+}
+
+/**
+ * One attempt at the lock: create it, or clear an abandoned one so the NEXT attempt can.
+ *
+ * `open(..., "wx")` is the only step that decides who holds it. Everything else here is about
+ * removing a lock whose owner is gone, and the whole difficulty is doing that without removing one
+ * that is alive.
+ *
+ * The lock is observed ONCE and then re-observed immediately before the `unlink`, and the removal
+ * only happens when the two observations name the same object — same device, same inode, same
+ * mtime. A holder that renewed, or a fresh lock installed by another reclaimer in between, differs
+ * in at least one of the three and is left alone.
+ *
+ * This replaced a SECOND `wx` lock guarding the reclaim, and removing that level is the repair
+ * rather than a simplification: the second lock had the very defect it was added to fix, one level
+ * down. Its own abandoned-holder path unlinked by name on an mtime observation alone, so a
+ * reclaimer that stalled past the ceiling could have its lock taken, and two processes could then
+ * agree the main lock was stale and race to replace it. Adding a third lock would have moved the
+ * defect again.
+ *
+ * **What remains, stated rather than implied.** Between deciding to remove and the `unlink` itself
+ * there is one syscall in which another reclaimer can remove and re-create the lock, and this
+ * process then removes THEIR fresh one. Node exposes no `flock` and no compare-and-swap on a file,
+ * so the window cannot be closed portably — it is now one syscall wide instead of the reclaim
+ * lock's staleness ceiling. The residual matters because a lost provenance entry is not
+ * self-healing: the file stays on disk with no entry, reads as `adopter-owned`, and is never
+ * recorded again. Closing it properly means one file per workflow name — writers would then never
+ * touch the same path — which is an on-disk format change and a compatibility event for adopters
+ * who already carry `install-provenance.json`, so it is deliberately not bundled here.
+ */
+async function takeLockFile(lockPath: string, token: string): Promise<boolean> {
+  try {
+    const handle = await open(lockPath, "wx");
+    try {
+      await handle.writeFile(token, "utf-8");
+    } finally {
+      await handle.close();
+    }
+    return true;
+  } catch {
+    // Held, or unopenable. Age decides which, and identity decides whether we may act on it.
+  }
+
+  const observed = await stat(lockPath).catch(() => undefined);
+  if (observed === undefined) {
+    return false; // gone between the open and the stat: the next attempt creates it
+  }
+  if (Date.now() - observed.mtimeMs <= LOCK_STALE_MS) {
+    return false; // a live holder
+  }
+
+  const before = await stat(lockPath).catch(() => undefined);
+  if (
+    before === undefined ||
+    before.dev !== observed.dev ||
+    before.ino !== observed.ino ||
+    before.mtimeMs !== observed.mtimeMs
+  ) {
+    return false; // not the object we judged abandoned
+  }
+  await unlink(lockPath).catch(() => undefined);
+
+  // Deliberately NOT creating it here. Returning false sends the caller back to the `wx` above,
+  // which is the step that can arbitrate — clearing the lock and claiming it in one breath would
+  // hand it to whichever reclaimer got there first rather than to whichever `wx` succeeded.
+  return false;
 }
 /**
  * Builds the record entry for one freshly written workflow file. The

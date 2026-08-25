@@ -23,7 +23,7 @@
 // QFAI:SPEC-0015:TC-0015-0035
 // QFAI:SPEC-0015:TC-0015-0036
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -36,6 +36,9 @@ import {
 } from "../../../src/core/validators/justificationCatalog.js";
 import { validateReviewerJustification } from "../../../src/core/validators/reviewerJustification.js";
 import type { Issue } from "../../../src/core/types.js";
+
+/** The repository root — this row asserts against the real tree, not a fixture. */
+const REPO_ROOT = path.resolve(__dirname, "../../../../..");
 
 const HYGIENE = "R-WORKFLOW-HYGIENE-DRIFT";
 const SHIPPED_SHAPE = "R-SHIPPED-WORKFLOW-SHAPE-DRIFT";
@@ -117,6 +120,37 @@ describe("TC-0015-0035 (TDD-0036): hygiene drift is ingested with its site intac
       issues.filter((entry) => entry.rule === "reviewerJustification.empty"),
       "an ingested workflow-set code was rejected for its missing justification",
     ).toEqual([]);
+  });
+
+  it("has a production producer for BOTH exempt codes, not just the hygiene one", async () => {
+    // The exemption list names two codes and the gate is required to ingest both. Review finding
+    // [03]: only `R-WORKFLOW-HYGIENE-DRIFT` had a producer — the hygiene lane writes
+    // `.qfai/review/workflow-hygiene/workflow-hygiene.json` — while
+    // `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` appeared in the catalog and in tests and nowhere else, so
+    // shape drift reddened `lint:workflow-shape` and reached no reviewer at all.
+    //
+    // Asserted as the ARTIFACT each lane leaves in this repository, not as a fixture: a fixture
+    // would pass whatever the lanes actually do. Both files are gitignored and rewritten on every
+    // run, so their presence is the statement that the lane ran.
+    const reviewDir = path.join(REPO_ROOT, ".qfai", "review");
+    const producers: readonly (readonly [string, string])[] = [
+      ["workflow-hygiene", "workflow-hygiene.json"],
+      ["shipped-workflow-shape", "shipped-workflow-shape.json"],
+    ];
+    for (const [dir, file] of producers) {
+      const target = path.join(reviewDir, dir, file);
+      const raw = await readFile(target, "utf-8").catch(() => undefined);
+      expect(
+        raw,
+        `${dir} produced no artifact — run its lane; a code the gate must ingest with no producer ` +
+          `reaches no reviewer however good the gate is`,
+      ).toBeDefined();
+      const parsed: unknown = JSON.parse(raw ?? "null");
+      expect(
+        Array.isArray((parsed as { findings?: unknown })?.findings),
+        `${file} must carry a findings array, which is the only shape the gate reads`,
+      ).toBe(true);
+    }
   });
 
   it("takes the exemption from an enumerated list of exactly two, not from a property", async () => {
