@@ -217,7 +217,7 @@ The first version of this record said the lines were appended "by a script that 
 declared `US` is covered by a `describe`". **That script was not in the repository.**
 `git show --stat 1e806e50` lists five files and no script, and because the test and the ledger lines
 landed in one atomic commit, history could not settle the ordering either. Round 1's `qa-gatekeeper`
-found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 31 tests
+found both halves. The script now exists as `scripts/check-atdd-annotation-ledger.mjs` with 33 tests
 in `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts`, and it reports what
 this stage claims: `9 claim(s) backed by a test annotation (spec-0017)`, exit 0.
 
@@ -301,7 +301,7 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   `QFAI:SPEC-0017:US-0017-NNNN` lines, of which `US-0017-0007`'s was removed in round 1
 - **new** `.qfai/evidence/coverage-depth-spec-0017.md` — the Coverage Depth Matrix, committed
 - **new** `scripts/check-atdd-annotation-ledger.mjs` — the guard this record had claimed existed
-- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 31 tests
+- **new** `packages/qfai/tests/integration/scripts/checkAtddAnnotationLedger.test.ts` — 33 tests
 - **new** `packages/qfai/tests/helpers/shippedLaneCommands.ts` — the shipped-lane allowlist, and the
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
@@ -384,7 +384,7 @@ node scripts/check-atdd-annotation-ledger.mjs        (repo-wide)
      own US-0017-0007 annotation moved it, and it moves whenever any spec adds one)
 
 pnpm -C packages/qfai exec vitest run tests/integration/scripts/checkAtddAnnotationLedger.test.ts
-  -> Tests 31 passed (31), exit 0
+  -> Tests 33 passed (33), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/coverageDepthMatrix.test.ts
   -> Tests 6 passed (6), exit 0
 pnpm -C packages/qfai exec vitest run tests/assets/stageEvidenceCounts.test.ts

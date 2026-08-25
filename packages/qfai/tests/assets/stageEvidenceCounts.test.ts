@@ -98,8 +98,14 @@ async function source(relative: string): Promise<string> {
  * Every test in this repository is written statement-initial, and a decoy is not: a docstring
  * continuation starts with `*`, a line comment with `//`, and a string occurrence has an assignment or
  * a call in front of it. So the position does the work no tokenizer needed to.
+ *
+ * A callsite ends in `(`, and requiring it closed the third direction. `[\s(]` accepted a line
+ * beginning `test !== null &&` — a statement-initial identifier that happens to be spelled `test`,
+ * inside a type guard — and counted it as a case. The file then read as one longer than vitest
+ * ran it, and the recorded command output beneath it became a number no run produces. Measured
+ * over every tracked file: exactly that one line moves, and it moves to the number vitest reports.
  */
-const CALLSITE = /^[ \t]*(?:it|test)(?:\.\w+)*[\s(]/;
+const CALLSITE = /^[ \t]*(?:it|test)(?:\.\w+)*\s*\(/;
 
 /** Count `it(` / `test(` callsites — the callsite, which is what vitest reports and prose means. */
 function countCases(text: string): number {
@@ -706,7 +712,7 @@ describe("the stage evidence's counts are derived, not typed", () => {
     expect(globs.length, "the e2e project must declare its includes").toBeGreaterThan(0);
     const roots = [...new Set(globs)].map((glob) => `packages/qfai/${glob}`).sort();
 
-    const CALLSITE_LINE = /^[ \t]*(?:it|test)(?:\.\w+)*[\s(]/;
+    const CALLSITE_LINE = /^[ \t]*(?:it|test)(?:\.\w+)*\s*\(/;
     let measured = 0;
     for (const dir of roots) {
       const walk = async (at: string): Promise<void> => {

@@ -8,7 +8,7 @@
  */
 
 import { createHash } from "node:crypto";
-import { readdirSync, rmSync, writeFileSync } from "node:fs";
+import { readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
 import {
   mkdir,
   mkdtemp,
@@ -440,30 +440,46 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     //    the exhaustion path is the only one that leaves one behind. Measured: with the cleanup
     //    removed, every other row here stayed green.
     //
-    // It takes `LOCK_ATTEMPTS * LOCK_POLL_MS` to give up, which is well inside the staleness
-    // ceiling — so the lock planted at age zero is still live when the writer gives up, and the
-    // refusal is about a live holder rather than about a clock.
+    // The marker is KEPT FRESH while the writer waits, and that is the whole fixture rather than
+    // a detail. Giving up takes `LOCK_ATTEMPTS * LOCK_POLL_MS`, which is nominally well inside the
+    // staleness ceiling — but 200 polls of 25ms is not five seconds on a machine running the whole
+    // suite, and measured there the wait outlived the ceiling, the lock read as abandoned, the
+    // writer took it and this row failed. A holder that is still going is precisely one whose
+    // marker keeps moving; without that the row is green only while the machine is idle, which is
+    // the opposite of when a lock matters.
     const root = await tempRoot();
     await writeInstallProvenance(root, { workflows: {} });
-    await plantLock(root, "a-writer-that-is-still-going", 0);
+    const marker = await plantLock(root, "a-writer-that-is-still-going", 0);
+    const stillGoing = setInterval(() => {
+      const now = new Date();
+      try {
+        utimesSync(marker, now, now);
+      } catch {
+        // the row is finishing and the tree is going away
+      }
+    }, 250);
 
-    await expect(
-      updateInstallProvenance(root, (current) => ({
-        ...current,
-        workflows: { ...current.workflows, "qfai-blocked.yml": entryTyped() },
-      })),
-      "a live lock must be waited out and then refused, never taken",
-    ).rejects.toThrow(/another process is writing the record/i);
+    try {
+      await expect(
+        updateInstallProvenance(root, (current) => ({
+          ...current,
+          workflows: { ...current.workflows, "qfai-blocked.yml": entryTyped() },
+        })),
+        "a live lock must be waited out and then refused, never taken",
+      ).rejects.toThrow(/another process is writing the record/i);
 
-    expect(
-      await lockHolders(root),
-      "and the live holder's lock must still be exactly as it was",
-    ).toEqual(["a-writer-that-is-still-going"]);
+      expect(
+        await lockHolders(root),
+        "and the live holder's lock must still be exactly as it was",
+      ).toEqual(["a-writer-that-is-still-going"]);
 
-    expect(
-      (await readdir(path.join(root, ".qfai"))).filter((name) => name.includes("staging")),
-      "the staging directory of a write that never published must not be left behind",
-    ).toEqual([]);
+      expect(
+        (await readdir(path.join(root, ".qfai"))).filter((name) => name.includes("staging")),
+        "the staging directory of a write that never published must not be left behind",
+      ).toEqual([]);
+    } finally {
+      clearInterval(stillGoing);
+    }
   }, 60_000);
 
   it("leaves no staging directory behind, on either path", async () => {
