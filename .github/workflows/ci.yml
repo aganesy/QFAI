@@ -408,6 +408,10 @@ jobs:
           # A literal would be a second answer to the same question, and raising
           # `engines` would leave this lane certifying a floor nobody supports.
           pin-engines-floor: "true"
+          # From the PACKAGE's manifest, which is where the promise to adopters lives — this
+          # lane runs the package's own suite. In this tree it agrees with the root's; the two
+          # are separate manifests and need not.
+          engines-manifest: "./packages/qfai/package.json"
       - name: Confirm the pinned floor is what is running
         shell: bash
         run: |
@@ -421,7 +425,7 @@ jobs:
           # derives it from. Writing `v20.19.0` here would be the second literal the
           # repository's one-Node-literal rule exists to prevent, and it would go stale
           # in the direction that passes.
-          range="$(node -p "require('./package.json').engines.node")"
+          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
           expected="v${range#>=}"
           actual="$(node --version)"
           echo "node-floor: engines floor ${expected}, running ${actual}"

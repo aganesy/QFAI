@@ -22,6 +22,23 @@ description: >-
 # an adopter's to inherit.
 
 inputs:
+  engines-manifest:
+    description: >-
+      The manifest whose `engines.node` the floor is read from, repository-relative.
+      Defaults to the repository root's.
+
+      Review finding [58]: the floor is a promise the PUBLISHED package makes, and that
+      promise lives in `packages/qfai/package.json`. In this tree the two agree, so reading
+      the root one was invisible — but `release.yml` checks out an arbitrary TAG, and at
+      v1.7.12 the root said `>=18.0.0` while the package said `>=20.0.0`. A floor lane on a
+      re-published tag would have installed Node 18 and never exercised the floor the
+      package it is about to publish declares.
+
+      Still not a version literal: this names a FILE, and the version is read from it.
+      `TC-0017` pins the count of Node literals in this repository at one, and this keeps it
+      at one.
+    required: false
+    default: "./package.json"
   pin-engines-floor:
     description: >-
       Set to "true" to install the exact FLOOR of `package.json#engines.node` instead of
@@ -93,7 +110,8 @@ runs:
         fi
         corepack enable
         if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
-          range="$(node -p "require('./package.json').engines.node")"
+          # The manifest the CALLER named, which defaults to the repository root's.
+          range="$(node -p "require('${ENGINES_MANIFEST}').engines.node")"
           floor="${range#>=}"
           case "$floor" in
             [0-9]*.[0-9]*.[0-9]*) ;;
@@ -128,6 +146,7 @@ runs:
       env:
         # Through the environment, so the input cannot be spliced into the script text.
         PIN_ENGINES_FLOOR: ${{ inputs.pin-engines-floor }}
+        ENGINES_MANIFEST: ${{ inputs.engines-manifest }}
       shell: bash
 
     # ── 2. Node, from a FILE ──────────────────────────────────────────────────

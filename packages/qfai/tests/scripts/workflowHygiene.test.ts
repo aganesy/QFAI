@@ -1582,6 +1582,34 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("rejects a preload variable that makes node exit before it runs anything", () => {
+    // Review finding [57]. `NODE_OPTIONS=--require=<file>` preloads that file before the entry
+    // point, so a preload calling `process.exit(0)` makes every `node` — and every `pnpm`, which
+    // is node — in the closure succeed without running. It is `BASH_ENV` one layer down.
+    //
+    // A REFUSAL rather than only a digest input, and that distinction is the finding's real point:
+    // the pin tool is committed, so a pull request that adds one of these can recompute the pin in
+    // the same commit and the lane would stay green on the digest alone.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  build:\n    runs-on: ubuntu-latest\n";
+        if (!text.includes(anchor)) throw new Error("the build-job anchor is stale");
+        return text.replace(
+          anchor,
+          "  build:\n    env:\n      NODE_OPTIONS: --require=./preload.cjs\n    runs-on: ubuntu-latest\n",
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an inherited NODE_OPTIONS must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the variable it refused")
+        .toContain("NODE_OPTIONS");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
 
   it("puts the inherited environment in the body digest, merged step over job over workflow", () => {
     // The digest half, isolated. The finding above is a named refusal for four variables; this is

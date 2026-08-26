@@ -397,15 +397,32 @@ function effectiveEnv(inherited, own) {
 }
 
 /**
- * Environment names that change what a shell RUNS rather than what it runs with.
+ * Environment names that make an interpreter or a loader RUN something before the thing it
+ * was asked to run — or stop it running at all.
  *
  * `BASH_ENV` is sourced by non-interactive bash before the script it was given, so a file it
- * names can exit before the step body starts and the step still reports success. `ENV` is its
- * POSIX-sh equivalent, and `SHELLOPTS` / `BASHOPTS` can turn the `-e` GitHub invokes bash with
- * back off. None of them has any business inside a required verification's closure, and the
- * digest alone is not enough: it makes the change visible, and this makes it a finding.
+ * names can exit before the step body starts while the step reports success. `ENV` is its
+ * POSIX-sh equivalent, and `SHELLOPTS` / `BASHOPTS` can turn off the `-e` GitHub invokes bash
+ * with. `NODE_OPTIONS` does the same one layer down: `--require=<file>` is preloaded before
+ * the entry point, so a preload calling `process.exit(0)` makes every `node` and every `pnpm`
+ * in the closure succeed without running — review finding [57] measured exactly that on Node
+ * 24. `LD_PRELOAD` and `DYLD_INSERT_LIBRARIES` are the native equivalents.
+ *
+ * A REFUSAL and not only a digest input, and the distinction is the point. A digest makes a
+ * change visible to a reviewer, and the pin tool is committed — so a pull request that adds
+ * one of these can recompute the pin in the same commit and the lane stays green. What stops
+ * that is a rule that says no, which is why this list exists beside the digest rather than
+ * instead of it.
  */
-const SHELL_HIJACK_ENV = new Set(["BASH_ENV", "ENV", "SHELLOPTS", "BASHOPTS"]);
+const PRELOAD_HIJACK_ENV = new Set([
+  "BASH_ENV",
+  "ENV",
+  "SHELLOPTS",
+  "BASHOPTS",
+  "NODE_OPTIONS",
+  "LD_PRELOAD",
+  "DYLD_INSERT_LIBRARIES",
+]);
 
 /**
  * The shells GitHub names, which run the step body and return ITS status.
@@ -1410,7 +1427,7 @@ function checkRequiredContexts(root, jobs) {
             templateShells.set(step.name, String(effectiveShell));
           }
           for (const [name] of effectiveEnv(runDefaults.env, step["env"])) {
-            if (SHELL_HIJACK_ENV.has(name)) hijackedEnv.set(step.name, name);
+            if (PRELOAD_HIJACK_ENV.has(name)) hijackedEnv.set(step.name, name);
           }
           bodies.set(step.name, seen);
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
@@ -1423,7 +1440,7 @@ function checkRequiredContexts(root, jobs) {
           rule: "required-context",
           file: rel,
           job: declaredJob,
-          detail: `performs the declared verification item "${item}" with ${hijackName} in its effective environment (its own, its job's or its workflow's) — that name changes what the shell RUNS rather than what it runs with, so the step body can be skipped entirely while the step reports success`,
+          detail: `performs the declared verification item "${item}" with ${hijackName} in its effective environment (its own, its job's or its workflow's) — that name makes an interpreter or a loader run something before the thing it was asked to run, so the step body can be skipped entirely while the step reports success`,
         });
       }
       const templateShell = templateShells.get(item);

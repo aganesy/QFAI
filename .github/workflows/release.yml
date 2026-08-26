@@ -247,6 +247,9 @@ jobs:
       - uses: ./.ci-actions/.github/actions/setup
         with:
           pin-engines-floor: "true"
+          # The PACKAGE's manifest, which is where the promise to adopters lives. In this tree it
+          # agrees with the root's; on a re-published tag it need not.
+          engines-manifest: "./packages/qfai/package.json"
       - name: Build qfai on the floor
         run: pnpm -C packages/qfai build
       - name: Run the package test suite on the floor
