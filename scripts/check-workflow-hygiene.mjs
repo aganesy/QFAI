@@ -42,7 +42,6 @@ import {
   fstatSync,
   lstatSync,
   openSync,
-  readFileSync,
   readSync,
   readdirSync,
 } from "node:fs";
@@ -122,6 +121,9 @@ const SCOPES = [
  * adopter told to look at `.github/workflows/qfai-tests.yml` is being sent to a file they do
  * not have. The rule requires the shipped path to be named AS the shipped path.
  */
+/** The composite-action tree, scanned for `steps:` and for `uses:` pins. */
+const ACTIONS_ROOT_REL = path.join(".github", "actions");
+
 const WORKFLOW_ROOTS = [
   { rel: path.join(".github", "workflows"), tree: "own" },
   {
@@ -707,6 +709,32 @@ function readBoundedWorkflowText(abs) {
 const MAX_WALKED_ENTRIES = 5_000;
 
 /**
+ * Whether a root is present but cannot be walked — a link, or something that is not a
+ * directory.
+ *
+ * `yamlFilesUnder` answers the empty list for BOTH "absent" and "refused", which is right for a
+ * walk and wrong for a report. Review finding [63]: `.github/actions` replaced by a link to a
+ * fake composite action inside the repository produced an empty list, no finding, and a green
+ * lane — while `ci.yml`'s toolchain jobs all run `./.github/actions/setup`, so that action could
+ * write `BASH_ENV` into `$GITHUB_ENV` and every verification after it would report success
+ * having run nothing. The empty-tree check that would have caught it is applied to the workflow
+ * roots only.
+ *
+ * So the two answers are separated: absent is `false` here and stays a matter for whoever cares
+ * whether the tree exists; refused is `true` and is a finding wherever a root is scanned.
+ */
+export function rootIsRefused(root, rel) {
+  const abs = path.join(root, rel);
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return false; // absent, not refused
+  }
+  return inspected.isSymbolicLink() || !inspected.isDirectory();
+}
+
+/**
  * Every `*.yml` / `*.yaml` under a directory, recursively, repo-relative.
  *
  * The ROOT is `lstat`ed and refused unless it is a real directory, and no directory ENTRY is
@@ -785,6 +813,19 @@ function parseFile(root, rel) {
 function collectJobs(root) {
   const jobs = [];
   const findings = [];
+  // The composite-action root, which is scanned by `collectStepSites` and by nothing that
+  // reports on the root itself. Review finding [63]: `ci.yml`'s toolchain jobs all run
+  // `./.github/actions/setup`, so a link there pointing at a fake composite action inside the
+  // repository is the whole toolchain — and the scan answered an empty list, silently.
+  if (rootIsRefused(root, ACTIONS_ROOT_REL)) {
+    findings.push({
+      rule: "job-guardrails",
+      file: ACTIONS_ROOT_REL.replace(/\\/g, "/"),
+      job: "(whole tree)",
+      detail:
+        "is present but is not a real directory this lane may walk (a symlink, or not a directory), so the composite actions every toolchain job runs are scanned by nothing",
+    });
+  }
   for (const { rel, tree } of WORKFLOW_ROOTS) {
     // A root that resolves to no YAML is reported, not skipped. `yamlFilesUnder` returns an
     // empty list for a directory that does not exist — deliberately, so the walk is not a
@@ -792,6 +833,14 @@ function collectJobs(root) {
     // findings, and a green run that still PRINTS every rule as one it evaluated. That is the
     // advertised-but-unevaluated shape `TC-0017-0047` catches for a rule; this catches it for
     // a whole tree.
+    if (rootIsRefused(root, rel)) {
+      findings.push({
+        rule: "job-guardrails",
+        file: rel.replace(/\\/g, "/"),
+        job: "(whole tree)",
+        detail: `is present but is not a real directory this lane may walk (a symlink, or not a directory), so every rule scoped to it would report PASS having evaluated nothing`,
+      });
+    }
     const files = yamlFilesUnder(root, rel);
     if (files.length === 0) {
       findings.push({
@@ -971,7 +1020,7 @@ function collectStepSites(root, jobs) {
     tree: entry.tree,
     steps: Array.isArray(entry.job.steps) ? entry.job.steps : [],
   }));
-  for (const file of yamlFilesUnder(root, path.join(".github", "actions"))) {
+  for (const file of yamlFilesUnder(root, ACTIONS_ROOT_REL)) {
     const doc = parseFile(root, file);
     if (doc === null || typeof doc.__parseError === "string") continue;
     const steps = isRecord(doc.runs) ? doc.runs.steps : undefined;
@@ -1048,10 +1097,20 @@ function checkActionPins(uses) {
  * check when the declaration went missing would be worse than one that never had it.
  */
 function readDeclaration(root) {
-  let text;
-  try {
-    text = readFileSync(path.join(root, DECLARATION_REL), "utf-8");
-  } catch (error) {
+  // Through the SAME bounded reader the workflows use, and for the same reason.
+  //
+  // Review finding [64]: this was a plain `readFileSync`, which follows a link. This lane runs
+  // on a pull request over paths the pull request itself adds, so replacing the declaration with
+  // a symlink to `/dev/zero` or to a FIFO made this read forever — measured on Node 24 — and the
+  // `ci:lint` lane held the runner until the job timed out without ever reaching the
+  // missing-or-malformed branch below. A required lane that can be made to hang blocks nothing.
+  //
+  // `readBoundedWorkflowText` refuses a link by name, opens once with `O_NOFOLLOW` where the
+  // platform has it, decides regular-file and size from the DESCRIPTOR, and compares its
+  // identity with what was inspected. Its refusal is `undefined`, which becomes the finding
+  // below rather than a hang.
+  const text = readBoundedWorkflowText(path.join(root, DECLARATION_REL));
+  if (text === undefined) {
     return {
       contexts: [],
       findings: [
@@ -1059,7 +1118,8 @@ function readDeclaration(root) {
           rule: "required-context",
           file: DECLARATION_REL,
           job: "(whole file)",
-          detail: `could not be read: ${error instanceof Error ? error.message : String(error)}`,
+          detail:
+            "is absent, or is not a readable regular file within the size ceiling (a symlink, device, FIFO or oversized file); the declaration is what says which job carries the required status context, so a run that cannot read it has checked nothing",
         },
       ],
     };
@@ -1380,6 +1440,27 @@ function checkRequiredContexts(root, jobs) {
           file: rel,
           job: declaredJob,
           detail: `is carried by the job ${key}, which declares continue-on-error: ${String(jobContinueOnError)} — that job's failure is discarded, so everything it verifies can fail while this context reports success`,
+        });
+      }
+      // A `container:` replaces the machine every `run:` in that job executes on. Review finding
+      // [65]: an image whose `/bin/sh` returns 0 having done nothing makes every step in the
+      // closure succeed — including the aggregate verdict — with `run`, `shell`, `env` and every
+      // pinned digest untouched, because the digest describes the step and this describes where
+      // it runs. It is the `PATH` and `BASH_ENV` question one level further out, and it takes the
+      // same answer: refused, not merely recorded, because the pin tool is committed and a
+      // digest a pull request can recompute is not a refusal.
+      //
+      // Refused outright rather than allow-listed by image digest. This repository's own CI runs
+      // no job in a container, so a closed list would have no members — and an empty allow-list
+      // is a rule nobody can read. A verification that genuinely needs one is a change to this
+      // file, which is the point.
+      const jobContainer = job?.["container"];
+      if (jobContainer !== undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `is carried by the job ${key}, which declares a container (${JSON.stringify(jobContainer)}) — that image replaces the machine every \`run:\` in the job executes on, so an image whose shell returns 0 having done nothing passes every verification this context enumerates`,
         });
       }
       for (const step of steps) {

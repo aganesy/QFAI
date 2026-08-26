@@ -2203,6 +2203,106 @@ describe("the reviewer artifact is written to its name, never through it", () =>
     }
   });
 });
+describe("a root this lane refuses to walk is reported, not silently empty", () => {
+  // Review finding [63]. `yamlFilesUnder` answers the empty list for BOTH "absent" and
+  // "refused", which is right for a walk and wrong for a report — and the empty-tree check that
+  // would have noticed was applied to the workflow roots only. `ci.yml`'s toolchain jobs all run
+  // `./.github/actions/setup`, so a link at `.github/actions` pointing at a fake composite action
+  // inside the repository IS the whole toolchain, and the scan said nothing at all.
+
+  function linkDir(target: string, at: string): boolean {
+    try {
+      symlinkSync(target, at, "junction");
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  for (const rel of [path.join(".github", "actions"), path.join(".github", "workflows")]) {
+    it(`reports ${rel.split(path.sep).join("/")} when it is present but not a real directory`, () => {
+      const dir = plantedTree(() => undefined);
+      const outside = mkdtempSync(path.join(tmpdir(), "qfai-refused-root-"));
+      try {
+        const target = path.join(dir, rel);
+        rmSync(target, { recursive: true, force: true });
+        if (!linkDir(outside, target)) return;
+
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `a refused root must exit 1:\n${run.output}`).toBe(1);
+        expect
+          .soft(run.output, "the finding must name the root it refused to walk")
+          .toContain(rel.split(path.sep).join("/"));
+        expect
+          .soft(run.output, "and must say the refusal is what happened, not that the tree is empty")
+          .toMatch(/not a real directory this lane may walk/);
+      } finally {
+        rmSync(outside, { recursive: true, force: true });
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+});
+
+describe("the required context may not choose the machine its verifications run on", () => {
+  it("rejects a container on a job in the declared closure", () => {
+    // Review finding [65]. A `container:` replaces the machine every `run:` in that job executes
+    // on, so an image whose shell returns 0 having done nothing makes every step succeed — with
+    // `run`, `shell`, `env` and every pinned digest untouched, because the digest describes the
+    // step and this describes where it runs.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  build:\n    runs-on: ubuntu-latest\n";
+        if (!text.includes(anchor)) throw new Error("the build-job anchor is stale");
+        return text.replace(
+          anchor,
+          "  build:\n    container: alpine:3\n    runs-on: ubuntu-latest\n",
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a job container must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "the finding must name the image it refused").toContain("alpine:3");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the declaration is read the way the workflows are", () => {
+  it("reports a declaration that is not a readable regular file rather than following it", () => {
+    // Review finding [64]. This was a plain `readFileSync`, which follows a link: the declaration
+    // replaced by a symlink to `/dev/zero` or a FIFO made the read never return, and this required
+    // lane held the runner until the job timed out without reaching the missing-or-malformed
+    // branch. A lane that can be made to hang blocks nothing.
+    //
+    // Planted as a link to a DIRECTORY rather than to `/dev/zero`, which does not exist on every
+    // platform this suite runs on. The reader refuses both by the same descriptor test, and the
+    // row asserts the refusal is reported — a hang would fail it by timing out either way.
+    const dir = plantedTree(() => undefined);
+    const elsewhere = mkdtempSync(path.join(tmpdir(), "qfai-decl-target-"));
+    try {
+      const target = path.join(dir, ".github", "required-status-contexts.json");
+      rmSync(target, { force: true });
+      try {
+        symlinkSync(elsewhere, target, "junction");
+      } catch {
+        return;
+      }
+
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unreadable declaration must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the refusal must be reported as a required-context finding")
+        .toMatch(/not a readable regular file within the size ceiling/);
+    } finally {
+      rmSync(elsewhere, { recursive: true, force: true });
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 30_000);
+});
+
 describe("the workflow walk refuses a root it did not open, and is bounded", () => {
   // Review finding [45]. This lane runs on a pull request, over paths the pull request itself
   // controls, and `readdirSync` follows a link — so replacing `.github/workflows` (or
