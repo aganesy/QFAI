@@ -1556,6 +1556,76 @@ ${run.output}`,
     expect(guard?.[1], "a guard inside the pinned roots must be hashed").toMatch(/^[0-9a-f]{16}$/);
   });
 
+  it("rejects an environment inherited from the job that replaces what the shell runs", () => {
+    // Review finding [51]. `BASH_ENV` is sourced by the non-interactive bash GitHub runs BEFORE the
+    // step body, so a file it names that ends in `exit 0` means the body never runs and the step
+    // reports success — with `run`, `shell`, `working-directory` and every pinned digest untouched.
+    // Declared at JOB level it is invisible from the step object, which is where the digest was
+    // looking, so two lines elsewhere in the file turned every declared verification into a no-op.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  build:\n    runs-on: ubuntu-latest\n";
+        if (!text.includes(anchor)) throw new Error("the build-job anchor is stale");
+        return text.replace(
+          anchor,
+          "  build:\n    env:\n      BASH_ENV: /tmp/noop.sh\n    runs-on: ubuntu-latest\n",
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an inherited BASH_ENV must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the variable it refused")
+        .toContain("BASH_ENV");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("puts the inherited environment in the body digest, merged step over job over workflow", () => {
+    // The digest half, isolated. The finding above is a named refusal for four variables; this is
+    // the general property, and it is what makes ANY inherited environment change visible.
+    const step = { name: "x", run: "true" };
+    const bare = verificationBodyDigest(step, REPO_ROOT);
+    expect(
+      verificationBodyDigest(step, REPO_ROOT, { env: { CI_KNOB: "1" } }),
+      "an environment the step inherits is part of what it does",
+    ).not.toBe(bare);
+
+    // …and the precedence is step over inherited, so declaring the same value at either level is
+    // the same step. Without this the merge could be a concatenation and nobody would notice.
+    expect(
+      verificationBodyDigest({ ...step, env: { CI_KNOB: "1" } }, REPO_ROOT),
+      "a value declared on the step and the same value inherited are the same environment",
+    ).toBe(verificationBodyDigest(step, REPO_ROOT, { env: { CI_KNOB: "1" } }));
+  });
+
+  it("rejects a job whose own failure is discarded, not only a step whose failure is", () => {
+    // Review finding [52]. A job-level `continue-on-error: true` discards that job's failure the
+    // way a step-level one discards a step's, and only steps were checked. On `ci-pass` — the one
+    // aggregate the required context sits on — the verdict can exit 1 and the context still passes,
+    // with every pinned digest and every other rule unchanged.
+    const dir = plantedTree((d) => {
+      const declared = firstContext(d);
+      editWorkflow(d, declared.workflow, (text) => {
+        const anchor = `\n  ${declared.job}:\n`;
+        if (!text.includes(anchor)) throw new Error("the declared-job anchor is stale");
+        return text.replace(anchor, `${anchor}    continue-on-error: true\n`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a job whose failure is discarded must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must say the job's failure is discarded")
+        .toMatch(/continue-on-error: true/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("rejects a verification step whose env changed, which is what it runs on", () => {
     // The third escape: the digest hashed `run` / `uses` / `with` and not `env`. The verdict
     // step's WHOLE input is `NEEDS_JSON: ${{ toJSON(needs) }}`, so replacing that expression

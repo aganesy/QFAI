@@ -83,7 +83,13 @@ runs:
       run: |
         set -euo pipefail
         if ! command -v corepack > /dev/null 2>&1; then
-          npm install --global corepack
+          # PINNED. Review finding [55]: an unpinned global install fetches whatever the registry
+          # calls latest at the moment the job runs, so the same commit installs a different
+          # corepack from one day to the next — and a broken or tampered release then runs here,
+          # inside a job whose every `uses:` is pinned to an immutable ref, and installs and
+          # verifies everything else. A fallback reached only on runners without corepack is still
+          # what bootstraps the toolchain when it is reached.
+          npm install --global corepack@0.35.0
         fi
         corepack enable
         if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
@@ -169,7 +175,8 @@ runs:
       # put a different Node ahead of it, so the same absence can recur here.
       run: |
         if ! command -v corepack > /dev/null 2>&1; then
-          npm install --global corepack
+          # Pinned for the reason the first fallback is; see above.
+          npm install --global corepack@0.35.0
         fi
         corepack prepare pnpm@9.12.3 --activate
       shell: bash

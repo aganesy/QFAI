@@ -282,7 +282,11 @@ jobs:
             # single dependency was installed. Installed when absent, which is what this
             # repository's own composite action does for the same reason.
             if ! command -v corepack > /dev/null 2>&1; then
-              npm install --global corepack
+              # Pinned rather than latest: an unpinned global install fetches whatever the
+              # registry calls latest at the moment the job runs, so the same commit installs a
+              # different corepack from one day to the next — and this is the step that
+              # bootstraps the toolchain everything after it depends on.
+              npm install --global corepack@0.35.0
             fi
             corepack enable
             # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses

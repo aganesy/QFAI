@@ -31,6 +31,14 @@ const KNOWN_NOISE = [/requires you to be logged in/, /No \.npmignore file found/
  * `build` carries this repository's required status context, so the effect was that the required
  * context could not pass on any branch while the current version is published.
  */
+/**
+ * The registry a published-version claim is settled against.
+ *
+ * Named rather than inherited: `.npmrc` is a file a pull request can add, and the point of the
+ * registry conjunct is that it is the one input the pull request does not control.
+ */
+const PUBLIC_REGISTRY = "https://registry.npmjs.org/";
+
 const ALREADY_PUBLISHED = /cannot publish over the previously published versions/i;
 
 /**
@@ -70,16 +78,32 @@ export function verifyAlreadyPublished(pkgDir) {
     return { ok: false, reason: "package.json declares no name/version to ask the registry about" };
   }
 
-  const viewed = spawnSync("npm", ["view", `${name}@${version}`, "version", "--json"], {
-    cwd: pkgDir,
-    encoding: "utf-8",
-  });
+  // The registry is NAMED here, and the query does not run inside the package.
+  //
+  // Review finding [49]: `npm view` reads `.npmrc` from its cwd, and a pull request can add
+  // `packages/qfai/.npmrc` with `registry=<anything>`. A registry the pull request controls then
+  // answers this question — and the whole point of this function is that it is the ONE thing the
+  // pull request cannot write. With a fake registry returning the manifest's own name and
+  // version, the dry-run reported the already-published failure and this confirmed it, so the
+  // required `build` context went green over a version nobody had published.
+  //
+  // `--registry` on the command line outranks every config file, and running from a directory
+  // outside the repository means no project `.npmrc` is read at all. Both, because either alone
+  // is one config precedence rule away from being wrong.
+  const viewed = spawnSync(
+    "npm",
+    ["view", `${name}@${version}`, "version", "--json", `--registry=${PUBLIC_REGISTRY}`],
+    {
+      cwd: tmpdir(),
+      encoding: "utf-8",
+    },
+  );
   if (viewed.status !== 0) {
     // `npm view` exits non-zero for an unpublished version (E404) and for a network failure alike.
     // Both mean the same thing here: the registry did not confirm it.
     return {
       ok: false,
-      reason: `the registry did not confirm ${name}@${version} is published (\`npm view\` exited ${String(viewed.status)})`,
+      reason: `${PUBLIC_REGISTRY} did not confirm ${name}@${version} is published (\`npm view\` exited ${String(viewed.status)})`,
     };
   }
   let reported;
@@ -96,7 +120,7 @@ export function verifyAlreadyPublished(pkgDir) {
       reason: `the registry reported ${JSON.stringify(versions)} rather than ${version}`,
     };
   }
-  return { ok: true, reason: `the registry confirms ${name}@${version} is published` };
+  return { ok: true, reason: `${PUBLIC_REGISTRY} confirms ${name}@${version} is published` };
 }
 
 /**
@@ -137,10 +161,28 @@ export function verifyTarballIndependently(pkgDir) {
     return { ok: false, reason: `could not create a directory to pack into: ${String(error)}` };
   }
   try {
-    const packed = spawnSync("npm", ["pack", "--json", "--pack-destination", outDir], {
-      cwd: pkgDir,
-      encoding: "utf-8",
-    });
+    // `--ignore-scripts`, and it is the whole repair for review finding [50].
+    //
+    // npm writes its accounting as JSON to stdout, and every lifecycle script it runs writes to
+    // the SAME stdout. The parse below used to walk back from the last `]` for a slice that
+    // parsed — which a `postpack`, or a background child it starts that outlives the pack, can
+    // satisfy by appending an array of its own describing a tarball it has since swapped in. The
+    // size and both digests then come from the attacker's array and match the attacker's file,
+    // and every check below agrees.
+    //
+    // With scripts off there is no other writer on that stdout, so the whole of it is npm's and
+    // the parse can demand exactly that. This is the INDEPENDENT proof — `npm publish --dry-run`
+    // above still runs the lifecycle in full, and it is what would catch a `prepack` that fails.
+    // What this establishes is narrower and is the thing that was forgeable: that npm itself
+    // packed an archive, and that the bytes on disk are the ones it accounted for.
+    const packed = spawnSync(
+      "npm",
+      ["pack", "--json", "--ignore-scripts", "--pack-destination", outDir],
+      {
+        cwd: pkgDir,
+        encoding: "utf-8",
+      },
+    );
     if (packed.status !== 0) {
       return {
         ok: false,
@@ -148,37 +190,32 @@ export function verifyTarballIndependently(pkgDir) {
       };
     }
 
-    // npm prints its accounting as JSON at the END of stdout, and `prepack` has already written
-    // whatever it likes before it — this package's `prepack` runs tsup, whose ANSI colour codes
-    // contain `[`. Taking the first `[` therefore sliced from the middle of a build log and failed
-    // to parse, which is measured: the proof answered "did not parse" for a pack that succeeded.
+    // The WHOLE of stdout, parsed as one value. With `--ignore-scripts` npm is the only writer on
+    // it, so anything else there is a reason to refuse rather than something to search past.
     //
-    // So the candidates are tried from the LAST `[` backwards, and the first slice that parses to
-    // an array wins. Only the top-level opening bracket can parse against the final `]`; anything
-    // nested or textual leaves the slice unbalanced.
-    const stdout = packed.stdout ?? "";
-    const end = stdout.lastIndexOf("]");
+    // The previous version searched: it walked back from the last `]` for a slice that parsed,
+    // because `prepack` (tsup, ANSI colour codes containing `[`) wrote a build log in front of
+    // npm's array. Searching is what made a second array indistinguishable from the first —
+    // review finding [50].
     let report;
-    for (
-      let start = stdout.lastIndexOf("[", end);
-      start !== -1;
-      start = stdout.lastIndexOf("[", start - 1)
-    ) {
-      try {
-        const candidate = JSON.parse(stdout.slice(start, end + 1));
-        if (Array.isArray(candidate)) {
-          report = candidate;
-          break;
-        }
-      } catch {
-        // not the top-level array; keep walking back
-      }
-      if (start === 0) break;
-    }
-    if (report === undefined) {
+    try {
+      report = JSON.parse((packed.stdout ?? "").trim());
+    } catch {
       return {
         ok: false,
-        reason: "`npm pack --json` printed no parseable JSON array to account for the pack",
+        reason: "`npm pack --json` printed something other than one JSON document on stdout",
+      };
+    }
+    if (!Array.isArray(report)) {
+      return {
+        ok: false,
+        reason: "`npm pack --json` printed no JSON array to account for the pack",
+      };
+    }
+    if (report.length !== 1) {
+      return {
+        ok: false,
+        reason: `\`npm pack --json\` accounted for ${String(report.length)} tarballs; exactly one is the only shape this proof reads`,
       };
     }
     const entry = Array.isArray(report) ? report[0] : undefined;

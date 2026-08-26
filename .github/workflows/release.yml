@@ -211,10 +211,51 @@ jobs:
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
         shell: bash
 
+  # ── 2b. The same tree, on the floor `engines.node` promises ──────
+  # Review finding [56]. The gate above resolves the RANGE — the newest Node satisfying
+  # `engines.node` — and the comment there argued the floor was already covered: `verify` refuses a
+  # tag that is not an ancestor of `origin/main`, so the tagged tree has passed `ci.yml`, whose
+  # `node-floor` lane runs the package suite on the floor.
+  #
+  # That holds only for tags cut after `node-floor` existed. This workflow opens with a
+  # `workflow_dispatch` re-publish path whose whole purpose is older tags: such a tag is an ancestor
+  # of `main` and has never seen that lane. So the floor is exercised here, on the tagged tree,
+  # derived from THAT tree's `engines.node` — the version the package about to be published promises
+  # to run on.
+  #
+  # Beside the gate rather than instead of it: the two failures are mirror images, and the finding
+  # that created `node-floor` asked for a floor lane separately from validating the newest Node.
+  gate-floor:
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ needs.verify.outputs.sha }}
+      # The composite action from THIS workflow's revision, for the reason the gate documents: a tag
+      # cut before the action existed has no `./.github/actions/setup` in its tree.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          ref: ${{ github.sha }}
+          path: .ci-actions
+          clean: false
+          sparse-checkout: .github/actions
+          sparse-checkout-cone-mode: false
+      - uses: ./.ci-actions/.github/actions/setup
+        with:
+          pin-engines-floor: "true"
+      - name: Build qfai on the floor
+        run: pnpm -C packages/qfai build
+      - name: Run the package test suite on the floor
+        run: pnpm -C packages/qfai test
+
   # ── 3. GitHub Release, on the tag push ───────────────────────────
   github-release:
     if: github.event_name == 'push'
-    needs: [verify, gate]
+    needs: [verify, gate, gate-floor]
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:
@@ -258,7 +299,7 @@ jobs:
   #   - the `release` environment carries a required reviewer, which is what
   #     keeps tagging and publishing separate decisions.
   publish:
-    needs: [verify, gate]
+    needs: [verify, gate, gate-floor]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     environment: release

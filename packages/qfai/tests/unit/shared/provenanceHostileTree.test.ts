@@ -555,6 +555,74 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     expect(await lockHolders(root)).toBeUndefined();
   });
 
+  it("reclaims a lock left by a run that died moments ago, within one run", async () => {
+    // The waiter's whole patience must exceed the staleness ceiling, or the reclaim path is
+    // unreachable from inside a single run: 200 polls of 25ms is five seconds against a ten-second
+    // ceiling, so a lock left by a run killed less than five seconds earlier could never be judged
+    // abandoned before the waiter gave up. `qfai init` then threw, and its rollback DELETED the
+    // workflows it had just copied — over a holder that no longer existed.
+    //
+    // Planted at age zero with NOTHING refreshing it, which is exactly what a killed process
+    // leaves: no heartbeat, because there is no process. The sibling row above plants the same age
+    // and DOES refresh it, and must still be refused; the two together are the difference between
+    // a holder that is gone and one that is working.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await plantLock(root, "a-run-that-was-killed", 0);
+
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-after.yml": entryTyped() },
+    }));
+
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows),
+      "a run must outlast the ceiling it waits for, or it can never reclaim inside one run",
+    ).toEqual(["qfai-after.yml"]);
+  }, 120_000);
+
+  it("stamps the marker when the lock is published, not when the attempt began", async () => {
+    // The marker is created once, in the private staging directory, before the wait — and renaming
+    // a directory does not touch the mtime of a file inside it. Without a stamp at publication the
+    // lock enters the world carrying the age of the WAIT: a writer that waited past the ceiling
+    // published a lock that was already reclaimable, and the heartbeat could not have helped,
+    // because until the rename there is no `lockDir/<marker>` for it to touch.
+    //
+    // Asserted on the source for the reason the heartbeat row gives: the only seam inside the lock
+    // is `mutate`, which is synchronous, so no in-process interleaving observes the marker between
+    // the rename and the release.
+    const source = await readFile(
+      path.resolve(__dirname, "../../../src/shared/provenance.ts"),
+      "utf-8",
+    );
+    const acquire = source.slice(source.indexOf("async function acquireRecordLock("));
+    const body = acquire.slice(0, acquire.indexOf("\n}\n") + 3);
+    // Comment lines stripped first, so the distance this measures is CODE. Without that the
+    // assertion fails the moment the paragraph explaining the stamp grows — which it did.
+    const code = body
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    expect(
+      code,
+      "the successful rename must be followed by a stamp on the marker it just published",
+    ).toMatch(/await rename\(staging, lockDir\);[\s\S]{0,200}?await utimes\(/);
+
+    // And the patience, read from the constants rather than restated.
+    const value = (name: string): number =>
+      Number(new RegExp(`const ${name} = ([0-9_]+);`).exec(source)?.[1]?.replace(/_/g, ""));
+    const attempts = value("LOCK_ATTEMPTS");
+    const poll = value("LOCK_POLL_MS");
+    const stale = value("LOCK_STALE_MS");
+    expect(
+      Number.isFinite(attempts) && Number.isFinite(poll) && Number.isFinite(stale),
+      "all three constants must be readable",
+    ).toBe(true);
+    expect(
+      attempts * poll,
+      "a waiter that gives up before the ceiling can never reach the reclaim it is waiting for",
+    ).toBeGreaterThan(stale);
+  });
   it("leaves no staging directory behind, on either path", async () => {
     // The publish is a private directory renamed onto the lock name, and a rename that SUCCEEDS
     // consumes it while one that fails does not. A leftover staging directory would be litter in

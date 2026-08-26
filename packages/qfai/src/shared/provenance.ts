@@ -33,7 +33,6 @@ import {
   rename,
   rm,
   rmdir,
-  stat,
   unlink,
   utimes,
   writeFile,
@@ -340,7 +339,18 @@ const LOCK_STALE_MS = 10_000;
 /** How often a holder renews its marker. Well under the ceiling, so one renewal may be lost. */
 const LOCK_HEARTBEAT_MS = 2_000;
 const LOCK_POLL_MS = 25;
-const LOCK_ATTEMPTS = 200;
+/**
+ * How many times a waiter polls before giving up. `LOCK_ATTEMPTS * LOCK_POLL_MS` must exceed
+ * `LOCK_STALE_MS`, or the reclaim path is unreachable from inside a single run.
+ *
+ * It did not: 200 polls of 25ms is five seconds against a ten-second ceiling, so a lock left by
+ * a run that was killed less than five seconds earlier could never be judged abandoned before
+ * the waiter gave up. `qfai init` then threw `another process is writing the record` and its
+ * rollback DELETED the workflows it had just copied — over a holder that no longer existed.
+ * The constant's own promise, that a crashed run cannot wedge the command permanently, was
+ * true only across runs and not within one.
+ */
+const LOCK_ATTEMPTS = 600;
 
 /**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
@@ -531,6 +541,19 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
       try {
         await rename(staging, lockDir);
+        // Stamped HERE, at the moment the lock becomes visible.
+        //
+        // The marker is created once, in `staging`, before the wait below — and renaming a
+        // directory does not touch the mtime of a file inside it, so without this the lock
+        // enters the world carrying the age of the WAIT rather than of the HOLD. A writer that
+        // waited past `LOCK_STALE_MS` published a lock that was already reclaimable, and the
+        // heartbeat could not have helped: until this rename there is no `lockDir/<marker>` for
+        // it to touch, so every tick during the wait was a swallowed ENOENT. The next writer
+        // polls every `LOCK_POLL_MS` and the first renewal is up to `LOCK_HEARTBEAT_MS` away,
+        // so it wins that race by two orders of magnitude and evicts a holder that is inside
+        // the section.
+        const published = new Date();
+        await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
         return release;
       } catch {
         // Held, or the destination is not publishable. Age decides which.
@@ -581,19 +604,48 @@ async function clearAbandonedLock(lockDir: string): Promise<void> {
   if (markers === undefined) {
     return; // not there, or not a directory: nothing this function can act on
   }
+
+  // The directory that was ENUMERATED must be the directory that was inspected.
+  //
+  // Review finding [53]: the `lstat` above and the `readdir` here are two operations on a name,
+  // and a process that swaps the real directory for a link between them has `readdir` enumerate
+  // its target — after which every removal below is aimed there. Comparing the two observations
+  // makes a swap during the enumeration a refusal instead.
+  const enumerated = await lstat(lockDir).catch(() => undefined);
+  if (
+    enumerated === undefined ||
+    enumerated.isSymbolicLink() ||
+    !enumerated.isDirectory() ||
+    enumerated.dev !== inspected.dev ||
+    enumerated.ino !== inspected.ino
+  ) {
+    return; // not the object this call judged; the next attempt reads it afresh
+  }
+
   if (markers.length === 0) {
     await rmdir(lockDir).catch(() => undefined);
     return;
   }
+
+  // `lstat`, not `stat`: a marker that is itself a link would otherwise be aged by its TARGET's
+  // mtime, and unlinked on the strength of it. A marker is a file this primitive created, so
+  // anything that is not a regular file on the same device as the directory holding it is not
+  // one — and the `dev` comparison is what a swapped-in link out of the tree fails.
   for (const held of markers) {
-    const observed = await stat(path.join(lockDir, held)).catch(() => undefined);
-    if (observed === undefined) {
-      return; // it changed under us; the next attempt reads it afresh
+    const observed = await lstat(path.join(lockDir, held)).catch(() => undefined);
+    if (observed === undefined || !observed.isFile() || observed.dev !== enumerated.dev) {
+      return; // not a marker this primitive wrote; nothing here is ours to remove
     }
     if (Date.now() - observed.mtimeMs <= LOCK_STALE_MS) {
       return; // a live holder
     }
   }
+
+  // What remains, stated rather than implied: between the last check and each `unlink` there is
+  // one syscall in which the directory could still be swapped. Node exposes no `unlinkat`, so
+  // the removal cannot be made relative to a descriptor this process holds, and no portable
+  // primitive closes it. What the checks above buy is that the window is one syscall rather than
+  // the whole enumeration, and that a marker reached through a link is refused outright.
   for (const held of markers) {
     await unlink(path.join(lockDir, held)).catch(() => undefined);
   }

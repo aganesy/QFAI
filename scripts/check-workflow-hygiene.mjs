@@ -344,7 +344,15 @@ export function verificationBodyDigest(step, root, runDefaults = {}) {
     run: normalize(step.run),
     uses: normalize(step.uses),
     with: step["with"],
-    env: step["env"],
+    // The EFFECTIVE env, merged workflow < job < step.
+    //
+    // Review finding [51]: only the step's own `env` was in the digest, and a step inherits its
+    // job's and its workflow's. `BASH_ENV: ${{ github.workspace }}/scripts/noop.sh` declared at
+    // job level is sourced by the non-interactive bash GitHub runs BEFORE the step body — with
+    // `exit 0` in that file the body never runs and the step reports success, while `run`,
+    // `shell`, `working-directory` and every pinned digest are untouched. Two lines somewhere
+    // else in the file turned every declared verification into a no-op.
+    env: effectiveEnv(runDefaults.env, step["env"]),
     shell: normalize(shell),
     workingDirectory: normalize(workingDirectory),
     scripts: invokedScriptBodies(step.run, root, baseDir),
@@ -364,13 +372,40 @@ function effectiveRunDefaults(workflow, job) {
     const defaults = isRecord(owner) ? owner.defaults : undefined;
     return isRecord(defaults) && isRecord(defaults.run) ? defaults.run : {};
   };
+  const envBlock = (owner) => (isRecord(owner) && isRecord(owner.env) ? owner.env : {});
   const fromWorkflow = runBlock(workflow);
   const fromJob = runBlock(job);
   return {
     shell: fromJob.shell ?? fromWorkflow.shell,
     workingDirectory: fromJob["working-directory"] ?? fromWorkflow["working-directory"],
+    env: { ...envBlock(workflow), ...envBlock(job) },
   };
 }
+
+/**
+ * The environment a step runs under: workflow, then job, then the step's own.
+ *
+ * Returned as a SORTED array of pairs, so the digest does not depend on which level happened to
+ * declare a name first — an object's key order is a property of the merge, and a pin that moved
+ * because a variable was hoisted to the job level is a pin that fails for no reason.
+ */
+function effectiveEnv(inherited, own) {
+  const merged = { ...(isRecord(inherited) ? inherited : {}), ...(isRecord(own) ? own : {}) };
+  return Object.keys(merged)
+    .sort()
+    .map((name) => [name, merged[name]]);
+}
+
+/**
+ * Environment names that change what a shell RUNS rather than what it runs with.
+ *
+ * `BASH_ENV` is sourced by non-interactive bash before the script it was given, so a file it
+ * names can exit before the step body starts and the step still reports success. `ENV` is its
+ * POSIX-sh equivalent, and `SHELLOPTS` / `BASHOPTS` can turn the `-e` GitHub invokes bash with
+ * back off. None of them has any business inside a required verification's closure, and the
+ * digest alone is not enough: it makes the change visible, and this makes it a finding.
+ */
+const SHELL_HIJACK_ENV = new Set(["BASH_ENV", "ENV", "SHELLOPTS", "BASHOPTS"]);
 
 /**
  * The shells GitHub names, which run the step body and return ITS status.
@@ -1284,6 +1319,8 @@ function checkRequiredContexts(root, jobs) {
     const conditional = new Map();
     /** Declared items whose effective shell is a command template rather than a named shell. */
     const templateShells = new Map();
+    /** Declared items whose effective environment can replace what the shell runs. */
+    const hijackedEnv = new Map();
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
@@ -1307,6 +1344,22 @@ function checkRequiredContexts(root, jobs) {
         key !== declaredJob && job !== undefined && job.if !== undefined
           ? `job ${key} if: ${String(job.if)}`
           : undefined;
+      // A JOB-level `continue-on-error` discards that job's failure the way a step-level one
+      // discards a step's, and it was checked only on steps. Review finding [52]: putting it on
+      // `ci-pass` itself — the one aggregate the required context sits on — means the verdict can
+      // exit 1 and the context still passes, with every pinned digest and every rule below
+      // unchanged. Only absent or the literal `false` is accepted, for the same reason as the
+      // step-level rule: an expression reaches the parser as a string, and this lane evaluates
+      // none.
+      const jobContinueOnError = job?.["continue-on-error"];
+      if (jobContinueOnError !== undefined && jobContinueOnError !== false) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `is carried by the job ${key}, which declares continue-on-error: ${String(jobContinueOnError)} — that job's failure is discarded, so everything it verifies can fail while this context reports success`,
+        });
+      }
       for (const step of steps) {
         if (!isRecord(step) || typeof step.name !== "string") continue;
         // ANY `if` disqualifies, and the lane does not sort conditions into harmless and
@@ -1356,11 +1409,23 @@ function checkRequiredContexts(root, jobs) {
           if (effectiveShell !== undefined && !NAMED_SHELLS.has(String(effectiveShell))) {
             templateShells.set(step.name, String(effectiveShell));
           }
+          for (const [name] of effectiveEnv(runDefaults.env, step["env"])) {
+            if (SHELL_HIJACK_ENV.has(name)) hijackedEnv.set(step.name, name);
+          }
           bodies.set(step.name, seen);
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
     for (const item of wanted) {
+      const hijackName = hijackedEnv.get(item);
+      if (hijackName !== undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `performs the declared verification item "${item}" with ${hijackName} in its effective environment (its own, its job's or its workflow's) — that name changes what the shell RUNS rather than what it runs with, so the step body can be skipped entirely while the step reports success`,
+        });
+      }
       const templateShell = templateShells.get(item);
       if (templateShell !== undefined) {
         findings.push({
@@ -1649,13 +1714,37 @@ function refuseLinkedDescent(root, dir) {
  * provenance record writer uses, and for the same reason.
  */
 function writeExclusivelyThenRename(target, text) {
+  // The directory as it is at the moment of the open, and the opened file compared against it.
+  //
+  // Review finding [54]: the descent check and this `open` are separate operations on a name, so
+  // a concurrent process can swap the report directory for a link between them and the staging
+  // file is created on the far side — after which the rename replaces the artifact there. There
+  // is no portable `openat`, so the identity is checked instead: a file created inside the
+  // verified directory is on that directory's device, and a directory swapped for a link out of
+  // the tree fails that. The residual is one syscall wide and is the same limit the record
+  // writer documents.
+  const parent = lstatSync(path.dirname(target));
   const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
   const handle = openSync(staging, "wx");
   try {
+    const opened = fstatSync(handle);
+    if (opened.dev !== parent.dev) {
+      throw new Error(
+        `check-workflow-hygiene: ${staging} was created outside the directory that was verified; ` +
+          "refusing to write the reviewer artifact",
+      );
+    }
     writeFileSync(handle, text, "utf-8");
-  } finally {
+  } catch (error) {
     closeSync(handle);
+    try {
+      unlinkSync(staging);
+    } catch {
+      // the original failure is the one worth reporting
+    }
+    throw error;
   }
+  closeSync(handle);
   try {
     renameSync(staging, target);
   } catch (error) {
