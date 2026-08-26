@@ -1582,6 +1582,32 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("rejects a PATH that decides which shell receives the step body", () => {
+    // Review finding [60]. `PATH` is not a preload, but it decides WHICH program receives the
+    // body: a workspace directory holding an executable named `bash`, put first, hands every `run:`
+    // in the closure to a shell the pull request wrote, which can return 0 having run nothing.
+    //
+    // In the refused set rather than only in the digest, for the reason the finding gives: the pin
+    // tool is committed, so a pull request that adds the variable can land the new digest in the
+    // same commit.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  build:\n    runs-on: ubuntu-latest\n";
+        if (!text.includes(anchor)) throw new Error("the build-job anchor is stale");
+        return text.replace(
+          anchor,
+          "  build:\n    env:\n      PATH: /tmp/fake-bin:/usr/bin:/bin\n    runs-on: ubuntu-latest\n",
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an inherited PATH must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output, "the finding must name the variable it refused").toContain("PATH");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("rejects a preload variable that makes node exit before it runs anything", () => {
     // Review finding [57]. `NODE_OPTIONS=--require=<file>` preloads that file before the entry
     // point, so a preload calling `process.exit(0)` makes every `node` — and every `pnpm`, which

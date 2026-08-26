@@ -576,80 +576,132 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
 /**
  * Removes an abandoned lock, and only an abandoned one.
  *
- * Staleness is read from the MARKERS, which are written once at acquisition and never touched
- * again — so their mtime is the age of the holder rather than of the directory. A lock with any
- * marker inside the ceiling is left alone.
+ * Everything destructive here acts on an object this call MOVED, never through the lock's name.
  *
- * The removals name the markers this call observed. If another writer reclaimed and republished
- * in between, those names are gone (`ENOENT`) and the `rmdir` meets that writer's own marker
- * (`ENOTEMPTY`): the overtaken reclaimer does nothing rather than deleting a live lock.
+ * Review finding [62] is the fourth on this function and the first that could not be answered by
+ * checking harder: `lstat` the directory, compare its `dev`/`ino`, `lstat` each marker — and the
+ * `unlink` still resolved `lockDir/<marker>` through a parent component a concurrent process could
+ * replace one syscall earlier, at which point the removal lands on an external file of the same
+ * name. Every version of that repair was an identity check followed by a pathname operation.
  *
- * An EMPTY lock directory is removed outright. It holds nobody, and it can only be the residue
- * of a holder that died between its `unlink` and its `rmdir` — left in place it would block every
- * later `rename` permanently, which on Windows is every later acquisition (a directory rename
- * there fails on an existing destination whether or not it is empty).
+ * So the lock is RENAMED to a name nothing else holds, and then examined. `rename` does not follow
+ * the final component, so a lock name that has become a symlink arrives as the link itself: it is
+ * `lstat`ed, found not to be a directory, and unlinked as a link — its target is never opened,
+ * enumerated or removed. A real directory arrives as itself, unreachable by the lock name from
+ * that moment on, and every marker path below resolves through a parent no one else can swap.
+ *
+ * Staleness is judged BEFORE the move and again AFTER it, from the MARKERS — written once at
+ * acquisition, refreshed by the holder's heartbeat, so their mtime is the age of the hold. A lock
+ * whose holder renewed during the move is put back with `link` + `unlink`, which fails rather than
+ * replacing if another writer has published in the meantime.
+ *
+ * What remains, stated rather than implied: if the restore cannot take the name back, a holder
+ * that is still running has lost its lock. That costs a lost update, which
+ * `updateInstallProvenance` re-applies around; it does not cost a file outside the tree, which is
+ * what every earlier version of this function risked. The two are not the same order of failure,
+ * and this is the trade the move makes deliberately.
+ *
+ * An EMPTY lock directory is removed outright. It holds nobody, and it can only be the residue of
+ * a holder that died between its `unlink` and its `rmdir` — left in place it would block every
+ * later `rename` permanently, which on Windows is every later acquisition.
  */
 async function clearAbandonedLock(lockDir: string): Promise<void> {
-  // Asked again HERE, and not only at acquisition. This is the function that unlinks, and a
-  // link can be dropped in between the two — `readdir` follows one, and every removal below is
-  // then aimed wherever it points. Review finding [47].
   const inspected = await lstat(lockDir).catch(() => undefined);
   if (inspected === undefined) {
     return; // not there: the next `rename` creates it
   }
-  if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
-    return; // not a lock this process may act on; acquisition refuses it by name
-  }
-  const markers = await readdir(lockDir).catch(() => undefined);
-  if (markers === undefined) {
-    return; // not there, or not a directory: nothing this function can act on
+
+  // A live holder is judged before anything is moved, so the ordinary contended case never
+  // disturbs the lock at all.
+  if (inspected.isDirectory() && !inspected.isSymbolicLink()) {
+    const before = await markerAges(lockDir);
+    if (before === undefined || before.some((age) => age <= LOCK_STALE_MS)) {
+      return;
+    }
   }
 
-  // The directory that was ENUMERATED must be the directory that was inspected.
-  //
-  // Review finding [53]: the `lstat` above and the `readdir` here are two operations on a name,
-  // and a process that swaps the real directory for a link between them has `readdir` enumerate
-  // its target — after which every removal below is aimed there. Comparing the two observations
-  // makes a swap during the enumeration a refusal instead.
-  const enumerated = await lstat(lockDir).catch(() => undefined);
-  if (
-    enumerated === undefined ||
-    enumerated.isSymbolicLink() ||
-    !enumerated.isDirectory() ||
-    enumerated.dev !== inspected.dev ||
-    enumerated.ino !== inspected.ino
-  ) {
-    return; // not the object this call judged; the next attempt reads it afresh
+  const quarantine = path.join(
+    path.dirname(lockDir),
+    `${path.basename(lockDir)}.reclaimed-${randomUUID()}`,
+  );
+  try {
+    await rename(lockDir, quarantine);
+  } catch {
+    return; // somebody else took it, or it went away; the next attempt reads it afresh
   }
 
-  if (markers.length === 0) {
-    await rmdir(lockDir).catch(() => undefined);
+  // From here on the lock name is somebody else's business and this object is ours alone.
+  const moved = await lstat(quarantine).catch(() => undefined);
+  if (moved === undefined) {
+    return;
+  }
+  if (moved.isSymbolicLink() || !moved.isDirectory()) {
+    // The LINK, not its target: `unlink` on a symlink removes the link.
+    await unlink(quarantine).catch(() => undefined);
     return;
   }
 
-  // `lstat`, not `stat`: a marker that is itself a link would otherwise be aged by its TARGET's
-  // mtime, and unlinked on the strength of it. A marker is a file this primitive created, so
-  // anything that is not a regular file on the same device as the directory holding it is not
-  // one — and the `dev` comparison is what a swapped-in link out of the tree fails.
-  for (const held of markers) {
-    const observed = await lstat(path.join(lockDir, held)).catch(() => undefined);
-    if (observed === undefined || !observed.isFile() || observed.dev !== enumerated.dev) {
-      return; // not a marker this primitive wrote; nothing here is ours to remove
-    }
-    if (Date.now() - observed.mtimeMs <= LOCK_STALE_MS) {
-      return; // a live holder
-    }
+  const ages = await markerAges(quarantine);
+  if (ages === undefined) {
+    await rmdir(quarantine).catch(() => undefined);
+    return;
+  }
+  if (ages.length === 0) {
+    await rmdir(quarantine).catch(() => undefined);
+    return;
+  }
+  if (ages.some((age) => age <= LOCK_STALE_MS)) {
+    // Alive after all — it renewed while we were moving it. Put it back without overwriting a
+    // lock somebody has since published.
+    await restoreLockDirectory(quarantine, lockDir);
+    return;
   }
 
-  // What remains, stated rather than implied: between the last check and each `unlink` there is
-  // one syscall in which the directory could still be swapped. Node exposes no `unlinkat`, so
-  // the removal cannot be made relative to a descriptor this process holds, and no portable
-  // primitive closes it. What the checks above buy is that the window is one syscall rather than
-  // the whole enumeration, and that a marker reached through a link is refused outright.
-  for (const held of markers) {
-    await unlink(path.join(lockDir, held)).catch(() => undefined);
+  await rm(quarantine, { recursive: true, force: true }).catch(() => undefined);
+}
+
+/**
+ * The age in milliseconds of every marker in a lock directory, or `undefined` when it cannot be
+ * read as one.
+ *
+ * `lstat`, not `stat`: a marker that is itself a link would otherwise be aged by its target's
+ * mtime. Anything that is not a regular file is not a marker this primitive wrote, and answering
+ * `undefined` for it keeps the caller from treating the directory as abandoned.
+ */
+async function markerAges(dir: string): Promise<number[] | undefined> {
+  const markers = await readdir(dir).catch(() => undefined);
+  if (markers === undefined) {
+    return undefined;
   }
-  await rmdir(lockDir).catch(() => undefined);
+  const ages: number[] = [];
+  for (const held of markers) {
+    const observed = await lstat(path.join(dir, held)).catch(() => undefined);
+    if (observed === undefined || !observed.isFile()) {
+      return undefined;
+    }
+    ages.push(Date.now() - observed.mtimeMs);
+  }
+  return ages;
+}
+
+/**
+ * Puts a quarantined lock directory back under its own name, or leaves it where it is.
+ *
+ * `link` cannot be used on a directory, so this is a `rename` guarded by an existence check — and
+ * the check is why the guard is honest about its limit rather than silent: if another writer has
+ * published a lock in the interval, the name is theirs and the holder we moved has lost its lock.
+ * That is a lost update, which the caller's verify-and-re-apply loop recovers from.
+ */
+async function restoreLockDirectory(quarantine: string, lockDir: string): Promise<void> {
+  if (
+    await lstat(lockDir).then(
+      () => true,
+      () => false,
+    )
+  ) {
+    return;
+  }
+  await rename(quarantine, lockDir).catch(() => undefined);
 }
 /**
  * Builds the record entry for one freshly written workflow file. The

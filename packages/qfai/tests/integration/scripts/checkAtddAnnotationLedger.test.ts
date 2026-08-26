@@ -14,7 +14,7 @@
  * in one atomic commit. The script is now here, and these are its tests.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, writeFile, mkdir } from "node:fs/promises";
+import { mkdtemp, readFile, writeFile, mkdir } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -231,6 +231,111 @@ describe("the corpus is the extension the runner runs, not every extension", () 
 });
 
 // ── [09] ─────────────────────────────────────────
+describe("the corpus walk stays inside the root it was given", () => {
+  // Review finding [61]. Following a linked directory is deliberate and was itself a repair — this
+  // repository tracks 83 symlinks, and a walk that skipped one read a claim backed only inside it
+  // as unbacked. What was missing is where the link may point: `seen` is keyed by `realpath`, which
+  // stops a CYCLE and nothing else, so a directory symlink to `/proc` or to any large tree outside
+  // the corpus was enumerated without bound and the required `ci:lint` exhausted memory or timed
+  // out before reporting a single ledger finding. A guard that can be made to hang refuses nothing.
+
+  it("does not follow a directory link that resolves outside the root", async () => {
+    const dir = await temp();
+    const outside = await temp();
+    await mkdir(path.join(outside, "deep"), { recursive: true });
+    await writeFile(
+      path.join(outside, "deep", "escaped.test.ts"),
+      `// ${tag("0017", "0017-0001")}\n`,
+      "utf8",
+    );
+
+    const root = path.join(dir, "corpus");
+    await mkdir(root, { recursive: true });
+    await writeFile(path.join(root, "inside.test.ts"), `// ${tag("0017", "0017-0002")}\n`, "utf8");
+
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(outside, path.join(root, "away"), "junction");
+    } catch {
+      return; // a platform that refuses the link; the guard is platform-independent
+    }
+
+    // The boundary is passed explicitly: production passes the repository root, and this row is
+    // about a link that escapes whatever boundary it was given.
+    const sources = await collectTestSources(root, root);
+    const names = [...sources.keys()].map((file) => path.basename(file)).sort();
+    expect(
+      names,
+      "a link out of the corpus is not part of the corpus, whatever its name suggests",
+    ).toEqual(["inside.test.ts"]);
+  });
+
+  it("still follows a directory link that resolves inside the root", async () => {
+    // The control, and it is the half a blanket refusal would break: the tracked symlinks this
+    // repository walks all resolve within the tree, and the earlier repair exists because skipping
+    // them read a real test as absent.
+    const dir = await temp();
+    const root = path.join(dir, "corpus");
+    await mkdir(path.join(root, "real"), { recursive: true });
+    await writeFile(
+      path.join(root, "real", "linked.test.ts"),
+      `// ${tag("0017", "0017-0003")}\n`,
+      "utf8",
+    );
+    await mkdir(path.join(root, "scanned"), { recursive: true });
+
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(path.join(root, "real"), path.join(root, "scanned", "link"), "junction");
+    } catch {
+      return;
+    }
+
+    const sources = await collectTestSources(root, root);
+    expect(
+      [...sources.keys()].map((file) => path.basename(file)).sort(),
+      "a linked subtree inside the boundary still holds real tests, and they still back claims",
+      // Once, not twice: `seen` is keyed by real path, so the directory and the link to it are
+      // one subtree and the file is collected under whichever route reached it first.
+    ).toEqual(["linked.test.ts"]);
+  });
+});
+
+describe("the guard supplies a boundary, not only accepts one", () => {
+  it("passes the repository root to every corpus walk it starts", async () => {
+    // A parameter the production path does not pass is a parameter that protects nothing. Measured:
+    // a plant reverting `collectTestSources(dir, root)` to `collectTestSources(dir)` in `main()`
+    // left every behavioural row in this file green — they call the helper directly and pass the
+    // boundary themselves. This is the wiring, and it is the only thing that can see it.
+    //
+    // The default is deliberately uncontained, because the boundary is the REPOSITORY and the
+    // helper cannot know it: a link from `tests/e2e` into `tests/helpers` resolves outside the
+    // corpus root and is perfectly ordinary. So the caller has to name it, and this says it does.
+    const source = await readFile(
+      path.resolve(__dirname, "../../../../../scripts/check-atdd-annotation-ledger.mjs"),
+      "utf-8",
+    );
+    const start = source.indexOf("async function main(");
+    expect(start, "the guard must have an entry point to check").toBeGreaterThan(-1);
+    const body = source.slice(start);
+
+    const calls = [...body.matchAll(/collectTestSources\(([^)]*)\)/g)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(
+      calls.length,
+      "the entry point must walk a corpus, or the guard reads no tests at all",
+    ).toBeGreaterThan(0);
+    for (const args of calls) {
+      expect(
+        args.split(",").length,
+        `collectTestSources(${args}) starts an uncontained walk; a link out of the repository is ` +
+          "then followed without bound and this required lane hangs instead of reporting",
+      ).toBeGreaterThan(1);
+    }
+  });
+});
+
 describe("runnerCorpusRoots", () => {
   it("returns exactly the directories the e2e project includes, all inside the package", async () => {
     const roots = await runnerCorpusRoots(path.resolve(__dirname, "../../../../.."));

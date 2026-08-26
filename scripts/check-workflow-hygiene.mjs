@@ -406,7 +406,11 @@ function effectiveEnv(inherited, own) {
  * with. `NODE_OPTIONS` does the same one layer down: `--require=<file>` is preloaded before
  * the entry point, so a preload calling `process.exit(0)` makes every `node` and every `pnpm`
  * in the closure succeed without running — review finding [57] measured exactly that on Node
- * 24. `LD_PRELOAD` and `DYLD_INSERT_LIBRARIES` are the native equivalents.
+ * 24. `LD_PRELOAD` and `DYLD_INSERT_LIBRARIES` are the native equivalents. `PATH` is the
+ * same capability by another route — review finding [60]: a workspace directory holding an
+ * executable named `bash`, put first, means every `run:` body in the closure is handed to a
+ * shell the pull request wrote, which can return 0 having run nothing. It is not a preload,
+ * but it decides WHICH program receives the body, which is the same question.
  *
  * A REFUSAL and not only a digest input, and the distinction is the point. A digest makes a
  * change visible to a reviewer, and the pin tool is committed — so a pull request that adds
@@ -422,6 +426,7 @@ const PRELOAD_HIJACK_ENV = new Set([
   "NODE_OPTIONS",
   "LD_PRELOAD",
   "DYLD_INSERT_LIBRARIES",
+  "PATH",
 ]);
 
 /**

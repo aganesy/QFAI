@@ -535,6 +535,49 @@ describe("an abandoned lock is reclaimed without deleting a live one", () => {
     ).toBeLessThan(stale);
   });
 
+  it("removes only what it moved aside, never a path under the lock name", async () => {
+    // Review finding [62], the fourth on this function and the first that could not be answered by
+    // checking harder: `lstat` the directory, compare `dev`/`ino`, `lstat` each marker — and the
+    // `unlink` still resolved `lockDir/<marker>` through a parent a concurrent process could replace
+    // one syscall earlier, landing the removal on an external file of the same name. Every version
+    // of that repair was an identity check followed by a pathname operation.
+    //
+    // The repair is structural: the lock is RENAMED to a name nothing else holds and only the moved
+    // object is examined and removed. Asserted on the SOURCE because the interleaving it closes is
+    // between two processes — the acquisition path refuses a linked lock name outright (the row
+    // above), so no in-process caller can reach this function with a link in place, and that is the
+    // defence-in-depth ordering rather than a gap.
+    const source = await readFile(
+      path.resolve(__dirname, "../../../src/shared/provenance.ts"),
+      "utf-8",
+    );
+    const start = source.indexOf("async function clearAbandonedLock(");
+    expect(start, "the reclaim must exist to be checked").toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf("\n}\n", start) + 3);
+
+    // It moves first.
+    expect(body, "the reclaim must take the lock aside before it examines it").toMatch(
+      /await rename\(lockDir, quarantine\)/,
+    );
+
+    // …and every destructive call names the moved object. A `rm`, `rmdir` or `unlink` reaching for
+    // `lockDir` is the pathname operation the move exists to remove.
+    const code = body
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+    const destructive = [...code.matchAll(/\b(?:rm|rmdir|unlink)\(([^)]*)\)/g)].map(
+      (match) => match[1] ?? "",
+    );
+    expect(
+      destructive.length,
+      "the reclaim must still remove something, or this row passes over a no-op",
+    ).toBeGreaterThan(0);
+    expect(
+      destructive.filter((args) => args.includes("lockDir")),
+      "a removal aimed at the lock NAME is the operation the move removes",
+    ).toEqual([]);
+  });
   it("still reclaims a lock whose holder is gone, so the heartbeat is not a way to wedge one", async () => {
     // The other direction, and the one that stops the repair from being a regression: a heartbeat
     // lives in the holder's process, so a crashed holder renews nothing and its lock is reclaimed

@@ -231,8 +231,39 @@ async function readDirectoryInto(current, sources) {
   return found;
 }
 
-export async function collectTestSources(dir) {
+/** How many directories one corpus root may hold before the walk refuses to go further. */
+const MAX_WALKED_DIRECTORIES = 5_000;
+
+/**
+ * Every test source under `dir`, following a linked subtree that stays INSIDE it.
+ *
+ * Following links is deliberate and was itself a repair: this repository tracks 83 symlinks,
+ * and a walk that skipped a linked directory read a claim backed only inside one as unbacked.
+ * What was missing is where the link may point. Review finding [61]: `seen` is keyed by
+ * `realpath`, which stops a CYCLE and nothing else — so a directory symlink to `/proc`, or to
+ * any large tree outside the corpus, was enumerated without bound, and the required `ci:lint`
+ * exhausted memory or timed out before it could report a single ledger finding. A guard that
+ * can be made to hang refuses nothing.
+ *
+ * So a directory is descended only when its REAL path is inside `containment`, and the number
+ * of directories is capped. Hitting the cap is a hard failure rather than a short walk: a
+ * corpus this guard only partly read would report claims as unbacked that are backed, and a
+ * wrong answer is worse than a refusal.
+ *
+ * The boundary is the REPOSITORY and not the scanned directory, which is a distinction the
+ * first version got wrong: a link from `tests/e2e` into `tests/helpers` resolves outside the
+ * corpus root and is perfectly ordinary, and containing to the root refused it — undoing the
+ * repair that made linked subtrees count in the first place. `main` supplies the repository
+ * root; a caller that supplies nothing gets no containment and keeps the ceiling, which is the
+ * behaviour every existing direct caller was written against.
+ *
+ * @param {string} dir a corpus root
+ * @param {string} [containment] a directory every followed link must resolve inside
+ * @returns {Promise<Map<string, string>>} test file path to contents
+ */
+export async function collectTestSources(dir, containment) {
   const sources = new Map();
+  const boundary = containment === undefined ? undefined : await realpathOrSelf(containment);
   /** @type {string[]} */
   const queue = [dir];
   const seen = new Set();
@@ -240,9 +271,51 @@ export async function collectTestSources(dir) {
     const key = await identityOf(current);
     if (seen.has(key)) continue;
     seen.add(key);
-    queue.push(...(await readDirectoryInto(current, sources)));
+    if (seen.size > MAX_WALKED_DIRECTORIES) {
+      throw new Error(
+        `check-atdd-annotation-ledger: ${dir} holds more than ` +
+          `${String(MAX_WALKED_DIRECTORIES)} directories; refusing to keep walking rather than ` +
+          "reporting a corpus it only partly read",
+      );
+    }
+    for (const child of await readDirectoryInto(current, sources)) {
+      // Inside the BOUNDARY, by real path. A link that resolves out of the repository is not
+      // part of what this guard measures, whatever its name suggests.
+      if (boundary !== undefined && !(await resolvesInside(child, boundary))) continue;
+      queue.push(child);
+    }
   }
   return sources;
+}
+
+/**
+ * `realpath` of a path, or the path itself when it cannot be resolved.
+ *
+ * @param {string} target
+ * @returns {Promise<string>}
+ */
+async function realpathOrSelf(target) {
+  try {
+    return await realpath(target);
+  } catch {
+    return path.resolve(target);
+  }
+}
+
+/**
+ * Whether `candidate` resolves to `boundary` or somewhere beneath it.
+ *
+ * Compared on RESOLVED paths with a separator appended, so `…/tests-extra` is not read as a
+ * child of `…/tests`.
+ *
+ * @param {string} candidate
+ * @param {string} boundary
+ * @returns {Promise<boolean>}
+ */
+async function resolvesInside(candidate, boundary) {
+  const resolved = await realpathOrSelf(candidate);
+  if (resolved === boundary) return true;
+  return resolved.startsWith(boundary.endsWith(path.sep) ? boundary : boundary + path.sep);
 }
 
 /**
@@ -580,7 +653,10 @@ async function main() {
 
   const sources = new Map();
   for (const dir of await runnerCorpusRoots(root)) {
-    for (const [file, text] of await collectTestSources(dir)) sources.set(file, text);
+    // The repository is the boundary every followed link must resolve inside. Review finding
+    // [61]: without one, a directory symlink to `/proc` or to any large external tree was walked
+    // without bound and this required lane hung instead of reporting.
+    for (const [file, text] of await collectTestSources(dir, root)) sources.set(file, text);
   }
 
   const result = checkLedger(ledgerText, sources, spec === undefined ? {} : { spec });
