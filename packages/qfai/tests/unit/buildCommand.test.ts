@@ -1992,6 +1992,12 @@ describe("the real workflow trees", () => {
         // the own tree has a THIRD lane that builds. `check-types` runs `tsc -b`, which emits into
         // `dist`, so the type-check lane and the build lane compile the same package twice.
         "build::ci.yml::pnpm check-types",
+        // `release.yml`'s floor gate builds for the reason `node-floor` does: it runs the whole
+        // package suite on the floor `packages/qfai/package.json#engines.node` promises, and
+        // `dist/` is not committed. Review finding [56] added that lane — a tag re-published
+        // through `workflow_dispatch` may predate `node-floor` entirely, so the floor is exercised
+        // on the tagged tree at release time rather than assumed from its ancestry.
+        "build::release.yml::pnpm -C packages/qfai build",
         'build::release.yml::pnpm -C packages/qfai pack --pack-destination "$PWD/tmp"',
         // `ci:gate` runs `check-types`, whose `tsc -b` emits into `dist`. It was `heuristic` here for
         // three rounds because the chain was read as far as a script NAME and no further.

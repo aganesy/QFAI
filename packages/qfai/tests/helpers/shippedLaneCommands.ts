@@ -985,8 +985,8 @@ export function invocationsOf(body: string): string[] {
  *
  * - `command -v corepack` resolves a name and runs nothing, but `command <anything>` RUNS it, so
  *   the program cannot be allowed by name.
- * - `npm install --global corepack` carries a package name and a flag that `npm install` is
- *   deliberately denied — `TAKES_NO_PACKAGE` exists so that `npm install left-pad` cannot ship.
+ * - `npm install --global corepack@0.35.0` carries a package name and a flag that `npm install`
+ *   is deliberately denied — `TAKES_NO_PACKAGE` exists so `npm install left-pad` cannot ship.
  *   Widening either would admit every global install, which is the capability the rule refuses.
  *
  * Both are here because Node stopped bundling Corepack at 25 and the Node a shipped lane runs is
@@ -998,7 +998,11 @@ export function invocationsOf(body: string): string[] {
  */
 export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   "command -v corepack",
-  "npm install --global corepack",
+  // The VERSION is part of the exact string, and that is the enumeration working as intended:
+  // review finding [55] pinned this install because an unpinned one fetches whatever the
+  // registry calls latest at the moment the job runs, and bumping the pin has to be a change a
+  // reviewer reads here too.
+  "npm install --global corepack@0.35.0",
 ]);
 
 /**
@@ -1182,7 +1186,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
-  ["qfai-validate.yml", "2b1fd52a4048cba1e4da46367b2454ce80c05627245f358450098973e91152f0"],
+  ["qfai-validate.yml", "58d827adc7d402427b0904483b7d542f93877ece01a401138340bf34bfe10aec"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1599,7 +1603,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body 6a31b2450c427ea42894c9f4b034db1493ba4318fa0458ef3c55e219bae24bef>"}',
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body 69bf51ea5212882f535f5a571064c7daf9c4d98cfb8473f838ab0b2a0ea1ee8b>"}',
   ],
   [
     "qfai-validate.yml#validate",
