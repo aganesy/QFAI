@@ -672,8 +672,13 @@ async function main() {
     let presentByName = true;
     try {
       lstatSync(ledgerPath);
-    } catch {
-      presentByName = false;
+    } catch (error) {
+      // ONLY absent is absent. `isMissing` is ENOENT and ENOTDIR; anything else — EACCES, ELOOP,
+      // ENAMETOOLONG — is a path this guard could not resolve, and reading that as `nothing to
+      // check` would be the same fail-open one branch down, reached by a different route. Before
+      // this the plain `readFile` rethrew such an error, which at least crashed loudly; collapsing
+      // every refusal into `undefined` is what made the distinction this guard's to make.
+      presentByName = !isMissing(error);
     }
     if (presentByName) {
       const rel = path.relative(root, ledgerPath).replace(/\\/g, "/");

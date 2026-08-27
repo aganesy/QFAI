@@ -910,6 +910,21 @@ describe("the CLI entry point", () => {
       output,
       "and must not be reported as the absent-ledger case, which is the other answer",
     ).not.toMatch(/nothing to check/);
+
+    // And the one branch no portable fixture reaches: which errors mean ABSENT. The reader
+    // answers `undefined` for every refusal, so presence is decided by a second `lstat` — and if
+    // that treated any failure as absence, an EACCES or an ELOOP on the ledger would print
+    // `nothing to check` and exit 0, which is the fail-open the branch above exists to close,
+    // reached by a different route. Planting EACCES portably is not possible here; asserting which
+    // predicate decides is.
+    const guard = await readFile(
+      path.resolve(__dirname, "../../../../../scripts/check-atdd-annotation-ledger.mjs"),
+      "utf8",
+    );
+    expect(
+      guard,
+      "only a missing path may be read as absent — every other failure is present-and-unreadable",
+    ).toMatch(/presentByName = !isMissing\(error\);/);
   }, 30_000);
 
   it("refuses a ledger past its size ceiling instead of reading it into memory", async () => {

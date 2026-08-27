@@ -774,9 +774,17 @@ function collectJobs(root) {
   // reports on the root itself. Review finding [63]: `ci.yml`'s toolchain jobs all run
   // `./.github/actions/setup`, so a link there pointing at a fake composite action inside the
   // repository is the whole toolchain — and the scan answered an empty list, silently.
-  // The composite-action root's ceiling, checked where the other whole-tree checks live.
-  // `collectStepSites` walks it for its steps and returns no findings, so this is the one place
-  // that can report a partial scan of it.
+  if (rootIsRefused(root, ACTIONS_ROOT_REL)) {
+    findings.push({
+      rule: "job-guardrails",
+      file: ACTIONS_ROOT_REL.replace(/\\/g, "/"),
+      job: "(whole tree)",
+      detail:
+        "is present but is not a real directory this lane may walk (a symlink, or not a directory), so the composite actions every toolchain job runs are scanned by nothing",
+    });
+  }
+  // And the same root's CEILING, reported here because `collectStepSites` walks it for its
+  // steps and returns sites only — this is the one place that can report a partial scan of it.
   const actionsTruncated = [];
   yamlFilesUnder(root, ACTIONS_ROOT_REL, MAX_WALKED_ENTRIES, actionsTruncated);
   if (actionsTruncated.length > 0) {
@@ -785,15 +793,6 @@ function collectJobs(root) {
       file: ACTIONS_ROOT_REL.replace(/\\/g, "/"),
       job: "(whole tree)",
       detail: `holds more than ${String(MAX_WALKED_ENTRIES)} entries, so this lane stopped walking it — a composite action past the ceiling is never parsed, and every toolchain job runs one`,
-    });
-  }
-  if (rootIsRefused(root, ACTIONS_ROOT_REL)) {
-    findings.push({
-      rule: "job-guardrails",
-      file: ACTIONS_ROOT_REL.replace(/\\/g, "/"),
-      job: "(whole tree)",
-      detail:
-        "is present but is not a real directory this lane may walk (a symlink, or not a directory), so the composite actions every toolchain job runs are scanned by nothing",
     });
   }
   for (const { rel, tree } of WORKFLOW_ROOTS) {
