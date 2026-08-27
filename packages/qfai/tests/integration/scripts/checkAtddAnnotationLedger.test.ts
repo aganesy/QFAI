@@ -494,6 +494,54 @@ describe("runnerCorpusRoots", () => {
     await expect(runnerCorpusRoots(dir)).rejects.toThrow(/cannot tell which one/i);
   });
 
+  it("refuses a default export wrapped in a call it cannot identify", async () => {
+    // Review finding [70]: any call expression had its first argument taken as the workspace,
+    // so `export default choose(decoy, real)` — a helper returning its SECOND argument — had
+    // this guard read the decoy while Vitest ran the real one. The whole point of parsing was
+    // that the corpus comes from what the runner uses, and taking argument zero of an
+    // unidentified function is a guess about that again.
+    //
+    // `defineWorkspace` is Vitest's own identity function over the array, which is why
+    // unwrapping THAT is reading rather than evaluating. Anything else is refused.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      // The decoy is an ARRAY LITERAL in argument position, which is what makes this row able to
+      // tell the plant apart. Measured: with the decoy behind an identifier, an implementation that
+      // unwraps any call still reached a non-array and threw the same refusal — the row passed
+      // either way and proved nothing about the callee check.
+      [
+        'const real = [{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];',
+        "export default choose(",
+        '  [{ test: { name: "e2e", include: ["tests/fake/**/*.test.ts"] } }],',
+        "  real,",
+        ");",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(
+      runnerCorpusRoots(dir),
+      "a call this guard cannot identify is not an unwrapping it may perform",
+    ).rejects.toThrow(/does not export an array of projects/i);
+  });
+
+  it("still unwraps defineWorkspace, so the check is an identification and not a ban", async () => {
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `export default defineWorkspace([{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }]);\n`,
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).resolves.toEqual([
+      path.join(dir, "packages", "qfai", "tests", "journeys"),
+    ]);
+  });
+
   it("refuses an include this guard would have to evaluate rather than read", async () => {
     // The boundary of "reads a declaration": an interpolated template, an identifier, anything
     // whose value is not fixed in the source. Guessing at one is how a guard starts reporting a

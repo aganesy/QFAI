@@ -33,6 +33,7 @@
  * reproduce the very duplication this gate exists to remove.
  */
 import { randomBytes } from "node:crypto";
+import type { Stats } from "node:fs";
 import { lstat, mkdir, open, readdir, readFile, rename, rm } from "node:fs/promises";
 import path from "node:path";
 
@@ -969,15 +970,33 @@ export async function writeShapeFindingsForReviewerGate(
   await mkdir(reviewDir, { recursive: true });
   await walk();
 
+  // The parent's IDENTITY — device and inode — pinned across the write, the same way the
+  // hygiene lane's writer does it. Review finding [71] named this producer as the one with no
+  // identity comparison at all: the descent walk above and the `open` below are separate
+  // operations on a name, and a directory swapped for a link in between puts both the staging
+  // file and the rename on the far side.
+  //
+  // Node has no `openat` or `renameat`, so the identity is compared rather than the operation
+  // being made relative to a held descriptor. A swap becomes a refusal instead of a silent
+  // write.
   const target = path.join(reviewDir, SHAPE_REVIEW_ARTIFACT);
+  const sameDirectory = (a: Stats, b: Stats): boolean => a.dev === b.dev && a.ino === b.ino;
+  const parent = await lstat(reviewDir);
   const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
   const handle = await open(staging, "wx");
   try {
+    const opened = await handle.stat();
+    if (opened.dev !== parent.dev || !sameDirectory(await lstat(reviewDir), parent)) {
+      throw new Error(`${reviewDir} is not the directory that was verified; refusing to write`);
+    }
     await handle.writeFile(`${JSON.stringify(payload, null, 2)}\n`, "utf-8");
   } finally {
     await handle.close();
   }
   try {
+    if (!sameDirectory(await lstat(reviewDir), parent)) {
+      throw new Error(`${reviewDir} changed while the artifact was being written`);
+    }
     await rename(staging, target);
   } catch (error) {
     await rm(staging, { force: true }).catch(() => undefined);

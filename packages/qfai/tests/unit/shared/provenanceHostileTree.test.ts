@@ -194,6 +194,98 @@ describe("a timestamp naming a date that does not exist is not a timestamp", () 
   });
 });
 
+// ── [66] ─────────────────────────────────────────────────────
+describe("a workflows map has no prototype for a record to replace", () => {
+  it("keeps a __proto__ entry as data instead of assigning it to the prototype", async () => {
+    // Review finding [66] filed a chain one step longer than what reproduces, and the difference
+    // is worth writing down: it said a `__proto__` value carrying an extra `qfai-tests.yml` key
+    // would make that shipped name resolve through the prototype, classifying a first `init` as
+    // `declined` forever. Measured — `toWorkflowEntry` returns a FRESH three-field object, so what
+    // would become the prototype carries no extra key and `workflows["qfai-tests.yml"]` stays
+    // undefined. That half does not happen.
+    //
+    // What DOES happen is the mechanism the finding names: `workflows["__proto__"] = entry`
+    // creates no own property at all. The entry is silently dropped from the record — a namespace
+    // that does not survive a round trip, which this file already requires of every other one —
+    // and `workflows.sha256` then answers a string for a name no record holds. Both are worth
+    // closing, and `Object.create(null)` plus `defineProperty` closes them together.
+    const root = await tempRoot();
+    // TEXT, not an object literal: `__proto__:` in a literal sets the prototype rather than
+    // creating a key, so a literal would plant something other than what a record carries.
+    // `JSON.parse` makes it an own property, which is what reaches the reader.
+    const value = JSON.stringify(entry());
+    await writeFile(recordPath(root), `{"workflows":{"__proto__":${value}}}\n`, "utf-8");
+
+    const record = await readInstallProvenance(root);
+    expect(
+      Object.keys(record.workflows),
+      "an entry named __proto__ is data like any other; assigned, it vanishes from the record",
+    ).toEqual(["__proto__"]);
+    expect(
+      record.workflows["sha256"],
+      "and no field of it may answer for a name the record does not hold",
+    ).toBeUndefined();
+  });
+
+  it("keeps an ordinary entry, so the map is a map and not a refusal", async () => {
+    const root = await tempRoot();
+    await writeRaw(root, { workflows: { "qfai-tests.yml": entry() } });
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows),
+      "an ordinary record must still read",
+    ).toEqual(["qfai-tests.yml"]);
+  });
+});
+
+// ── [67] ─────────────────────────────────────────────────────
+describe("a marker dated in the future is not the freshest possible holder", () => {
+  it("reclaims a lock whose marker is far ahead of this process's clock", async () => {
+    // A clock rolled back, restored filesystem metadata, or a hostile tree gives the marker an
+    // mtime in the future, and `Date.now() - mtimeMs` is then NEGATIVE — which satisfies
+    // `age <= LOCK_STALE_MS` until the wall clock catches up. A lock with no process behind it was
+    // never reclaimed, and every `qfai init` waited out its whole patience and failed with
+    // `another process is writing`.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await plantLock(root, "a-marker-from-the-future", -3_600_000);
+
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-after.yml": entryTyped() },
+    }));
+
+    expect(
+      Object.keys((await readInstallProvenance(root)).workflows),
+      "a marker no live holder could have written must not hold the lock until the clock agrees",
+    ).toEqual(["qfai-after.yml"]);
+  }, 120_000);
+
+  it("still waits out a marker only marginally ahead, which is ordinary clock skew", async () => {
+    // The other direction, and the reason the tolerance exists: a filesystem a second or two ahead
+    // of this process is normal, and treating that as corrupt would evict live holders.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    const marker = await plantLock(root, "a-holder-just-ahead", -1_000);
+    const stillGoing = setInterval(() => {
+      const ahead = new Date(Date.now() + 1_000);
+      try {
+        utimesSync(marker, ahead, ahead);
+      } catch {
+        // the row is finishing and the tree is going away
+      }
+    }, 250);
+
+    try {
+      await expect(
+        updateInstallProvenance(root, (current) => current),
+        "a holder whose clock is marginally ahead is still a holder",
+      ).rejects.toThrow(/another process is writing the record/i);
+    } finally {
+      clearInterval(stillGoing);
+    }
+  }, 120_000);
+});
+
 // ── [31] ─────────────────────────────────────────────────────
 describe("a version made of spaces is not a version", () => {
   it("drops an entry whose installedByVersion is whitespace only", async () => {

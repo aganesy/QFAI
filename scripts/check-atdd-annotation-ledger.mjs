@@ -482,7 +482,23 @@ async function e2eIncludeGlobs(text, configPath) {
       exported = statement.expression;
     }
   }
-  if (exported !== undefined && ts.isCallExpression(exported)) {
+  // Only a call to `defineWorkspace` is unwrapped, and the CALLEE is what says so.
+  //
+  // Review finding [70]: any call expression had its first argument taken as the workspace, so
+  // `export default choose(decoy, real)` — a helper returning its SECOND argument — had this
+  // guard read the decoy while Vitest ran the real one. The whole point of parsing was that
+  // the corpus comes from what the runner uses, and taking argument zero of an unidentified
+  // function is a guess about that again.
+  //
+  // `defineWorkspace` is Vitest's own identity function over the array, which is why
+  // unwrapping it is reading rather than evaluating. Anything else is refused below, where
+  // the array check reports what it found.
+  if (
+    exported !== undefined &&
+    ts.isCallExpression(exported) &&
+    ts.isIdentifier(exported.expression) &&
+    exported.expression.text === "defineWorkspace"
+  ) {
     exported = exported.arguments[0];
   }
   if (exported === undefined || !ts.isArrayLiteralExpression(exported)) {

@@ -230,11 +230,18 @@ export async function runInit(options: InitOptions): Promise<void> {
   // adopter who authored a file under a name QFAI later retires has no
   // provenance entry, and the acceptance criteria require provenance to be
   // consulted before every overwrite and every prune.
+  // The SAME boundary the copy is held to, and for a worse reason. Review finding [68]:
+  // `workflowsDirIsOwn` excluded the copy and nothing else, so a `.github/workflows` that is a
+  // link to a shared directory or another repository was still ENUMERATED here — and a
+  // retired workflow on the far side whose bytes match a recorded digest was quarantined and
+  // deleted. The run that refused to write through the link would delete through it.
+  //
+  // Empty rather than skipped-with-a-message: the message is already emitted where the copy
+  // is excluded, and one refusal reported once is what an operator needs.
   const removedRetiredWorkflows: string[] = [];
-  const prunableRetiredNames = await resolvePrunableRetiredWorkflows(
-    destRoot,
-    workflowPreInit.record,
-  );
+  const prunableRetiredNames = workflowsDirIsOwn
+    ? await resolvePrunableRetiredWorkflows(destRoot, workflowPreInit.record)
+    : new Map<string, string>();
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "workflows"),
     (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),

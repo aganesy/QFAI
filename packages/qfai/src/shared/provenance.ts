@@ -336,9 +336,27 @@ async function renameWithRetry(from: string, to: string): Promise<void> {
  * patience.
  */
 const LOCK_STALE_MS = 10_000;
+/**
+ * How far ahead of this process a marker's clock may be before the marker is disbelieved.
+ *
+ * A filesystem marginally ahead is ordinary; a marker minutes into the future is not one a
+ * live holder wrote, and reading it as the freshest possible holder wedges the lock until the
+ * wall clock catches up.
+ */
+const LOCK_CLOCK_SKEW_MS = 5_000;
+
 /** How often a holder renews its marker. Well under the ceiling, so one renewal may be lost. */
 const LOCK_HEARTBEAT_MS = 2_000;
-const LOCK_POLL_MS = 25;
+/**
+ * How long a waiter sleeps between attempts.
+ *
+ * Raised from 25ms with `LOCK_ATTEMPTS` lowered back to 200, keeping the 15s total patience while
+ * doing a THIRD of the work to spend it. Measured: at 600 attempts of 25ms, twenty concurrent
+ * writers turned the contended path into tens of thousands of failed renames and marker `lstat`s,
+ * and the suite's own concurrency row went from about a second to sixteen minutes. Patience is a
+ * duration, not an iteration count, and it is cheaper bought in longer sleeps.
+ */
+const LOCK_POLL_MS = 75;
 /**
  * How many times a waiter polls before giving up. `LOCK_ATTEMPTS * LOCK_POLL_MS` must exceed
  * `LOCK_STALE_MS`, or the reclaim path is unreachable from inside a single run.
@@ -350,7 +368,7 @@ const LOCK_POLL_MS = 25;
  * The constant's own promise, that a crashed run cannot wedge the command permanently, was
  * true only across runs and not within one.
  */
-const LOCK_ATTEMPTS = 600;
+const LOCK_ATTEMPTS = 200;
 
 /**
  * Applies `mutate` to the record CURRENTLY on disk and writes the result, under an exclusive lock.
@@ -679,7 +697,18 @@ async function markerAges(dir: string): Promise<number[] | undefined> {
     if (observed === undefined || !observed.isFile()) {
       return undefined;
     }
-    ages.push(Date.now() - observed.mtimeMs);
+    // A NEGATIVE age is a marker dated in the future, and it was read as the freshest
+    // possible holder. Review finding [67]: a clock rolled back, restored filesystem
+    // metadata, or a hostile tree makes `age <= LOCK_STALE_MS` true until the wall clock
+    // catches up — so a lock with no process behind it is never reclaimed, and every
+    // `qfai init` waits out its whole patience and fails with `another process is writing`.
+    //
+    // A small tolerance, because a marker written moments ago on a filesystem whose clock is
+    // marginally ahead of this process's is ordinary. Past that, the marker says something
+    // no live holder could have written, and a marker that cannot be believed is treated as
+    // the abandoned one it probably is: reported as older than the ceiling.
+    const age = Date.now() - observed.mtimeMs;
+    ages.push(age < -LOCK_CLOCK_SKEW_MS ? LOCK_STALE_MS + 1 : age);
   }
   return ages;
 }
@@ -758,11 +787,27 @@ function extractWorkflows(parsed: unknown): Record<string, WorkflowProvenanceEnt
   if (!isRecordObject(workflowsValue)) {
     return {};
   }
-  const workflows: Record<string, WorkflowProvenanceEntry> = {};
+  // A NULL-prototype map, filled with `defineProperty` — the same shape
+  // `extractOtherNamespaces` below already uses, and for the same reason one step further
+  // in. Review finding [66]: `workflows["__proto__"] = entry` creates no own property. It
+  // REPLACES the prototype of the map, so a record carrying a `__proto__` object with a
+  // valid digest, version and timestamp plus a key of its own makes
+  // `record.workflows["qfai-tests.yml"]` answer an INHERITED entry — and a first `init` with
+  // no file on disk then reads that name as `declined` and never creates it, permanently.
+  // `Object.keys` and the serializer never show it, so doctor cannot see the cause either.
+  const workflows: Record<string, WorkflowProvenanceEntry> = Object.create(null) as Record<
+    string,
+    WorkflowProvenanceEntry
+  >;
   for (const [name, value] of Object.entries(workflowsValue)) {
     const entry = toWorkflowEntry(value);
     if (entry !== undefined) {
-      workflows[name] = entry;
+      Object.defineProperty(workflows, name, {
+        value: entry,
+        writable: true,
+        enumerable: true,
+        configurable: true,
+      });
     }
   }
   return workflows;

@@ -420,6 +420,22 @@ function effectiveEnv(inherited, own) {
  * that is a rule that says no, which is why this list exists beside the digest rather than
  * instead of it.
  */
+/**
+ * The command files a step writes to set the environment of LATER steps.
+ *
+ * Review finding [69]: the env checks read what the YAML DECLARES — workflow, job and step —
+ * and a step can set a variable for every step after it by appending to `$GITHUB_ENV`, or
+ * prepend to `PATH` through `$GITHUB_PATH`. `echo "BASH_ENV=…/noop.sh" >> "$GITHUB_ENV"`
+ * before the verdict step neuters it with no declared env anywhere and no pinned digest
+ * moved. It is the same capability arriving through a file instead of a key.
+ *
+ * Inside the required closure this repository writes to neither, so a write there is a
+ * finding whatever it sets — reading the assignment out of a shell body would be a second,
+ * worse parser, and "no step in this closure sets the environment of the next one" is a rule
+ * that can be stated and checked. A step that genuinely needs to is a change to this file.
+ */
+const STEP_ENVIRONMENT_COMMAND_FILES = ["GITHUB_ENV", "GITHUB_PATH"];
+
 const PRELOAD_HIJACK_ENV = new Set([
   "BASH_ENV",
   "ENV",
@@ -1403,6 +1419,8 @@ function checkRequiredContexts(root, jobs) {
     const templateShells = new Map();
     /** Declared items whose effective environment can replace what the shell runs. */
     const hijackedEnv = new Map();
+    /** Steps anywhere in the closure that set the environment of the steps after them. */
+    const environmentWriters = new Map();
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
@@ -1487,6 +1505,16 @@ function checkRequiredContexts(root, jobs) {
         // runtime while this lane records it as performed. This lane evaluates no GitHub
         // expressions, and it does not need to: an expression here is exactly the invisible
         // conditionality property 2 rejects, whatever it evaluates to.
+        // A step that writes one of the workflow command files sets the environment of every
+        // step AFTER it, which no declared-env check can see. Review finding [69]. Recorded
+        // against the JOB rather than against a declared item: the writer need not be a
+        // declared verification itself — it only has to run before one.
+        const body = typeof step.run === "string" ? step.run : "";
+        for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
+          if (body.includes(`$${file}`) || body.includes(`\${{ env.${file} }}`)) {
+            environmentWriters.set(step.name, file);
+          }
+        }
         const continueOnError = step["continue-on-error"];
         if (continueOnError !== undefined && continueOnError !== false) {
           if (!performed.has(step.name)) {
@@ -1519,6 +1547,15 @@ function checkRequiredContexts(root, jobs) {
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
+    for (const [stepName, file] of environmentWriters) {
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail: `depends on a step named ${JSON.stringify(stepName)} that writes $${file}, which sets the environment of every step after it — a value no declared \`env:\` carries and no pinned body digest moves, and one that can stop the later steps running at all`,
+      });
+    }
+
     for (const item of wanted) {
       const hijackName = hijackedEnv.get(item);
       if (hijackName !== undefined) {
@@ -1817,24 +1854,29 @@ function refuseLinkedDescent(root, dir) {
  * provenance record writer uses, and for the same reason.
  */
 function writeExclusivelyThenRename(target, text) {
-  // The directory as it is at the moment of the open, and the opened file compared against it.
+  // The parent's IDENTITY — device and inode — pinned across the whole write.
   //
-  // Review finding [54]: the descent check and this `open` are separate operations on a name, so
-  // a concurrent process can swap the report directory for a link between them and the staging
-  // file is created on the far side — after which the rename replaces the artifact there. There
-  // is no portable `openat`, so the identity is checked instead: a file created inside the
-  // verified directory is on that directory's device, and a directory swapped for a link out of
-  // the tree fails that. The residual is one syscall wide and is the same limit the record
-  // writer documents.
-  const parent = lstatSync(path.dirname(target));
+  // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
+  // are on one filesystem, which a checkout and any other directory on the same volume already
+  // are. So swapping `reportDir` for a link to a sibling directory after the descent check
+  // passed this test, and the rename then replaced an artifact over there.
+  //
+  // The inode is what says it is the SAME directory. It is read before the open and again after
+  // it, and once more before the rename — Node has no `openat` or `renameat`, so the identity is
+  // compared rather than the operation being made relative to a held descriptor. What that buys
+  // is that a swap is a refusal instead of a silent write, and that the window is one syscall
+  // rather than the span between the descent check and the rename.
+  const parentPath = path.dirname(target);
+  const sameDirectory = (a, b) => a.dev === b.dev && a.ino === b.ino;
+  const parent = lstatSync(parentPath);
   const staging = `${target}.${randomBytes(12).toString("hex")}.tmp`;
   const handle = openSync(staging, "wx");
   try {
     const opened = fstatSync(handle);
-    if (opened.dev !== parent.dev) {
+    if (opened.dev !== parent.dev || !sameDirectory(lstatSync(parentPath), parent)) {
       throw new Error(
-        `check-workflow-hygiene: ${staging} was created outside the directory that was verified; ` +
-          "refusing to write the reviewer artifact",
+        `check-workflow-hygiene: ${parentPath} is not the directory that was verified; refusing ` +
+          "to write the reviewer artifact",
       );
     }
     writeFileSync(handle, text, "utf-8");
@@ -1848,6 +1890,17 @@ function writeExclusivelyThenRename(target, text) {
     throw error;
   }
   closeSync(handle);
+  if (!sameDirectory(lstatSync(parentPath), parent)) {
+    try {
+      unlinkSync(staging);
+    } catch {
+      // going away with the run
+    }
+    throw new Error(
+      `check-workflow-hygiene: ${parentPath} changed while the reviewer artifact was being ` +
+        "written; refusing to rename into it",
+    );
+  }
   try {
     renameSync(staging, target);
   } catch (error) {

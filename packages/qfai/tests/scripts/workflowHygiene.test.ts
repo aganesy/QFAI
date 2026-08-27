@@ -1608,6 +1608,81 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("rejects a step that sets the environment of the steps after it", () => {
+    // Review finding [69]. The env checks read what the YAML DECLARES — workflow, job and step —
+    // and a step can set a variable for every step after it by appending to `$GITHUB_ENV`.
+    // `echo "BASH_ENV=…/noop.sh" >> "$GITHUB_ENV"` before the verdict step neuters it with no
+    // declared env anywhere and no pinned digest moved: the same capability arriving through a
+    // file instead of a key.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          '      - name: Prepare the environment\n        run: echo "BASH_ENV=$GITHUB_WORKSPACE/noop.sh" >> "$GITHUB_ENV"\n' +
+            anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a step writing $GITHUB_ENV must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the command file it refused")
+        .toContain("GITHUB_ENV");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("pins the artifact directory's inode across the whole write, in both producers", async () => {
+    // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
+    // are on ONE FILESYSTEM, which a checkout and any sibling directory on the same volume already
+    // are — so swapping the report directory for a link to a sibling passed the test and the
+    // rename replaced an artifact over there. The inode is what says it is the same directory.
+    //
+    // Asserted on the SOURCE of both writers. The interleaving it closes is between two processes,
+    // and Node has no `openat` or `renameat`, so what the code can do is compare identities around
+    // each step — which is a shape a reader can check and an in-process test cannot produce.
+    const { readFile } = await import("node:fs/promises");
+    for (const [label, file, marker] of [
+      [
+        "the hygiene lane",
+        path.join(REPO_ROOT, "scripts", "check-workflow-hygiene.mjs"),
+        "function writeExclusivelyThenRename(",
+      ],
+      [
+        "the shape gate",
+        path.join(REPO_ROOT, "packages", "qfai", "tests", "integration", "shippedWorkflowShape.ts"),
+        "export async function writeShapeFindingsForReviewerGate(",
+      ],
+    ] as const) {
+      const source = await readFile(file, "utf-8");
+      const start = source.indexOf(marker);
+      expect(start, `${label} must define its writer`).toBeGreaterThan(-1);
+      const body = source.slice(start, source.indexOf("\n}\n", start) + 3);
+      // The helper's DEFINITION is not the check. Measured: a plant that removed both call
+      // sites and left `const sameDirectory = (a, b) => a.dev === b.dev && a.ino === b.ino`
+      // standing satisfied a pattern looking for `.ino === …ino`, and the row stayed green over
+      // a writer that compared only the device. So the definition is stripped and what is left
+      // has to carry the uses.
+      const withoutDefinition = body
+        .split(/\r?\n/)
+        .filter((line) => !line.includes("const sameDirectory"))
+        .join("\n");
+      expect(
+        body,
+        `${label} must compare the directory's INODE, not only its device — a device comparison ` +
+          "is satisfied by any sibling directory on the same volume",
+      ).toMatch(/\.ino\b/);
+      expect(
+        withoutDefinition.split("sameDirectory(").length - 1,
+        `${label} must compare the parent around the open AND again before the rename; one ` +
+          "comparison leaves the other operation resolving a name nobody re-checked",
+      ).toBeGreaterThanOrEqual(2);
+    }
+  });
   it("rejects a preload variable that makes node exit before it runs anything", () => {
     // Review finding [57]. `NODE_OPTIONS=--require=<file>` preloads that file before the entry
     // point, so a preload calling `process.exit(0)` makes every `node` — and every `pnpm`, which

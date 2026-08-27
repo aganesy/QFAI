@@ -240,6 +240,28 @@ describe("TC-0003-0052 (TDD-0052): pruneMatchingEntries is exported and receives
     expect(body).toContain("record.workflows[name]");
   });
 
+  it("does not prune through a workflows directory it refused to write through", async () => {
+    // Review finding [68]. `workflowsDirIsOwn` excluded the COPY and nothing else, so a
+    // `.github/workflows` that is a link to a shared directory or another repository was still
+    // enumerated by the retired prune — and a retired workflow on the far side whose bytes
+    // match a recorded digest was quarantined and deleted. The run that refused to write
+    // through the link would delete through it.
+    //
+    // Source-level, because `RETIRED_WORKFLOW_NAMES` is empty: there is no retired name for a
+    // fixture to plant, and the set being empty is itself the contract (a name enters it in
+    // the same change that stops shipping it). What can be checked is that the prune's
+    // selector is gated on the same answer the copy is.
+    const source = await readInitSource();
+    const start = source.indexOf("const removedRetiredWorkflows");
+    expect(start, "runInit must resolve a retired-name set").toBeGreaterThan(-1);
+    const segment = source.slice(start, source.indexOf("const removed = [", start));
+
+    expect(
+      segment,
+      "the retired-name set must be gated on the same real-directory answer the copy is; a run that refused to write through a link must not delete through it",
+    ).toContain("workflowsDirIsOwn");
+  });
+
   it("the retired prune removes the file and its provenance entry in one success unit", async () => {
     const source = await readInitSource();
     const callSites = extractPruneCallSites(source);
