@@ -1561,8 +1561,22 @@ function checkRequiredContexts(root, jobs) {
           typeof step.name === "string"
             ? `named ${JSON.stringify(step.name)}`
             : `#${String(index + 1)} (unnamed)`;
+        // The `run:` text is not the only place a step can name one. Review finding [79]: a
+        // `with:` value reaches a composite action's own `run:` through `${{ inputs.… }}`, and an
+        // `env:` value can carry the path for a body to append to under a different name —
+        // `env: { OUT: $GITHUB_ENV }` and then `echo … >> "$OUT"`. Neither appears in the text
+        // this used to search, and both write the same file. The whole surface the step supplies
+        // is searched instead: its body, its inputs, and its effective environment's VALUES.
+        //
+        // (The environment's NAMES are a different rule — `PRELOAD_HIJACK_ENV`, below — because
+        // those replace what the step runs rather than what the next one inherits.)
+        const surface = [
+          body,
+          JSON.stringify(step["with"] ?? null),
+          ...[...effectiveEnv(runDefaults.env, step["env"])].map(([, value]) => String(value)),
+        ].join("\n");
         for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
-          if (body.includes(file)) environmentWriters.set(site, file);
+          if (surface.includes(file)) environmentWriters.set(site, file);
         }
         // …and the same refusal for a LOCAL composite action the step invokes, whose steps no
         // pinned digest covers. See `localActionCommandFileWrites`.

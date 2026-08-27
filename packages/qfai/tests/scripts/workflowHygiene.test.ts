@@ -1664,6 +1664,39 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  for (const [label, planted] of [
+    [
+      "a with: input carrying the path",
+      '      - uses: ./.github/actions/setup\n        with:\n          extra: ">> $GITHUB_ENV"\n',
+    ],
+    [
+      "an env: VALUE carrying the path",
+      '      - run: echo BASH_ENV=noop.sh >> "$OUT"\n        env:\n          OUT: $GITHUB_ENV\n',
+    ],
+  ] as const) {
+    it(`refuses ${label}, which never appears in the run: text`, () => {
+      // Review finding [79]. A `with:` value reaches a composite action's own `run:` through
+      // `${{ inputs.… }}`, and an `env:` value can hand the path to a body that appends to it
+      // under another name. Neither is in the `run:` text the check used to search, and both
+      // write the same file — so the search covers the whole surface the step supplies.
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(anchor, planted + anchor);
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} is the same capability:\n${run.output}`).toBe(1);
+        expect
+          .soft(run.output, "the finding must name the command file it refused")
+          .toContain("GITHUB_ENV");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
   it("refuses a command-file write from a step with no name at all", () => {
     // Review finding [78]. Everything in property 3 keys on `step.name`, because a declaration
     // names the item it declares — so the loop skipped unnamed steps before any check ran, and
