@@ -428,6 +428,88 @@ function effectiveEnv(inherited, own) {
  */
 const STEP_ENVIRONMENT_COMMAND_FILES = ["GITHUB_ENV", "GITHUB_PATH"];
 
+/** How deep a chain of local composite actions this lane will follow. */
+const MAX_LOCAL_ACTION_DEPTH = 4;
+
+/**
+ * Command files written by a LOCAL composite action, and by any local action it invokes.
+ *
+ * Review finding [77]. `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
+ * composite action's bytes are in no pinned digest — the `uses:` string is the whole of what a
+ * verification body records about it — and its own steps were scanned by nothing. Every
+ * toolchain job in `ci.yml` opens with `uses: ./.github/actions/setup`, so one
+ * `echo "BASH_ENV=…" >> $GITHUB_ENV` in there sets the environment of every step after it in
+ * every job, with no declared `env:` anywhere and no digest moved. That is finding [69]'s
+ * capability arriving through the one door the step scan does not open.
+ *
+ * An unreadable or unparseable local action is reported too, for the reason the root-refusal
+ * checks exist: a reference this lane cannot follow is a reference whose steps are checked by
+ * nothing, and reporting `no writes found` for it would be the fail-open rather than the
+ * finding.
+ *
+ * @param {string} root repository root
+ * @param {string} reference a `uses:` value beginning `./`
+ * @param {Set<string>} seen action files already examined, so a cycle terminates
+ * @param {number} depth how many local actions deep this call is
+ * @returns {{ file: string, step: string, commandFile: string }[]} one entry per write
+ */
+function localActionCommandFileWrites(root, reference, seen = new Set(), depth = 0) {
+  /** @type {{ file: string, step: string, commandFile: string }[]} */
+  const out = [];
+  const rel = reference.replace(/^\.\//, "").replace(/[/\\]+$/, "");
+  if (rel === "" || rel.split(/[/\\]/).includes("..")) {
+    out.push({ file: reference, step: "(whole action)", commandFile: "unresolvable" });
+    return out;
+  }
+  if (depth > MAX_LOCAL_ACTION_DEPTH) {
+    out.push({ file: rel, step: "(whole action)", commandFile: "too deeply nested to follow" });
+    return out;
+  }
+
+  let read = false;
+  for (const name of ["action.yml", "action.yaml"]) {
+    const relFile = path.posix.join(rel.split(path.sep).join(path.posix.sep), name);
+    if (seen.has(relFile)) {
+      read = true;
+      continue;
+    }
+    const text = readBoundedText(path.join(root, relFile), MAX_WORKFLOW_BYTES);
+    if (text === undefined) continue;
+    seen.add(relFile);
+    read = true;
+    let doc;
+    try {
+      doc = parseYaml(text);
+    } catch {
+      out.push({ file: relFile, step: "(whole action)", commandFile: "unparseable" });
+      continue;
+    }
+    const steps = isRecord(doc) && isRecord(doc.runs) ? doc.runs.steps : undefined;
+    if (!Array.isArray(steps)) continue;
+    for (const step of steps) {
+      if (!isRecord(step)) continue;
+      const body = typeof step.run === "string" ? step.run : "";
+      for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
+        if (body.includes(file)) {
+          out.push({
+            file: relFile,
+            step: String(step.name ?? body.split(/\r?\n/)[0] ?? "(unnamed)").slice(0, 80),
+            commandFile: file,
+          });
+        }
+      }
+      const nested = typeof step.uses === "string" ? step.uses : "";
+      if (nested.startsWith("./")) {
+        out.push(...localActionCommandFileWrites(root, nested, seen, depth + 1));
+      }
+    }
+  }
+  if (!read) {
+    out.push({ file: rel, step: "(whole action)", commandFile: "unreadable" });
+  }
+  return out;
+}
+
 const PRELOAD_HIJACK_ENV = new Set([
   "BASH_ENV",
   "ENV",
@@ -1383,6 +1465,8 @@ function checkRequiredContexts(root, jobs) {
     const hijackedEnv = new Map();
     /** Steps anywhere in the closure that set the environment of the steps after them. */
     const environmentWriters = new Map();
+    /** The same, inside a local composite action the closure invokes. */
+    const actionWriters = new Map();
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
@@ -1443,8 +1527,57 @@ function checkRequiredContexts(root, jobs) {
           detail: `is carried by the job ${key}, which declares a container (${JSON.stringify(jobContainer)}) — that image replaces the machine every \`run:\` in the job executes on, so an image whose shell returns 0 having done nothing passes every verification this context enumerates`,
         });
       }
-      for (const step of steps) {
-        if (!isRecord(step) || typeof step.name !== "string") continue;
+      for (const [index, step] of steps.entries()) {
+        if (!isRecord(step)) continue;
+
+        // ── Two checks that do not care whether the step has a NAME ──────────────────────
+        //
+        // Review finding [78]: everything below keys on `step.name`, because property 3 is about
+        // DECLARED items and a declaration names one — so the guard skipping unnamed steps was
+        // right for that and wrong for these. A step needs no name to write `$GITHUB_ENV`, and
+        // `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` went past the writer check
+        // untouched. Measured while testing the composite-action scan below: `ci.yml`'s seven
+        // `- uses: ./.github/actions/setup` steps are all unnamed, so the scan was unreachable.
+        //
+        // A step that writes one of the workflow command files sets the environment of every step
+        // AFTER it, which no declared-env check can see. Review finding [69]. Recorded against
+        // the JOB rather than against a declared item: the writer need not be a declared
+        // verification itself — it only has to run before one.
+        //
+        // The NAME of the file, anywhere in the body — not an enumeration of the ways a shell can
+        // spell a reference to it. Review finding [72]: the first version matched `$GITHUB_ENV`
+        // and `${{ env.GITHUB_ENV }}`, and `>> "${GITHUB_ENV}"` — the ordinary brace form — went
+        // straight through. There is no end to that list: a variable holding the path,
+        // `printenv`, a here-doc. Reaching the file at all is the thing to refuse.
+        //
+        // Conservative on purpose: a step that merely MENTIONS the name in a comment is flagged
+        // too. Inside a required verification's closure that is the right direction, and this
+        // repository's closure mentions neither.
+        //
+        // Outside the conditional chain below, too: a writer that carries an `if:` still writes on
+        // the runs where its condition holds.
+        const body = typeof step.run === "string" ? step.run : "";
+        const site =
+          typeof step.name === "string"
+            ? `named ${JSON.stringify(step.name)}`
+            : `#${String(index + 1)} (unnamed)`;
+        for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
+          if (body.includes(file)) environmentWriters.set(site, file);
+        }
+        // …and the same refusal for a LOCAL composite action the step invokes, whose steps no
+        // pinned digest covers. See `localActionCommandFileWrites`.
+        const invoked = typeof step.uses === "string" ? step.uses : "";
+        if (invoked.startsWith("./")) {
+          for (const write of localActionCommandFileWrites(root, invoked)) {
+            actionWriters.set(
+              `${write.file} step ${JSON.stringify(write.step)}`,
+              write.commandFile,
+            );
+          }
+        }
+
+        // ── and from here on, the declared-item properties, which need one ────────────────
+        if (typeof step.name !== "string") continue;
         // ANY `if` disqualifies, and the lane does not sort conditions into harmless and
         // harmful. It evaluates no GitHub expressions — at parse time `always()` and
         // `${{ inputs.deep }}` are the same shape — and property 2 one level up already
@@ -1467,25 +1600,7 @@ function checkRequiredContexts(root, jobs) {
         // runtime while this lane records it as performed. This lane evaluates no GitHub
         // expressions, and it does not need to: an expression here is exactly the invisible
         // conditionality property 2 rejects, whatever it evaluates to.
-        // A step that writes one of the workflow command files sets the environment of every
-        // step AFTER it, which no declared-env check can see. Review finding [69]. Recorded
-        // against the JOB rather than against a declared item: the writer need not be a
-        // declared verification itself — it only has to run before one.
-        // The NAME, anywhere in the body — not an enumeration of the ways a shell can spell
-        // a reference to it. Review finding [72]: the first version matched `$GITHUB_ENV` and
-        // `${{ env.GITHUB_ENV }}`, and `>> "${GITHUB_ENV}"` — the ordinary brace form — went
-        // straight through. There is no end to that list: `${GITHUB_ENV}`, a variable holding
-        // the path, `printenv`, a here-doc. Reaching the file at all is the thing to refuse.
-        //
-        // Conservative on purpose: a step that merely MENTIONS the name in a comment is
-        // flagged too. Inside a required verification's closure that is the right direction,
-        // and this repository's closure mentions neither.
-        const body = typeof step.run === "string" ? step.run : "";
-        for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
-          if (body.includes(file)) {
-            environmentWriters.set(step.name, file);
-          }
-        }
+
         const continueOnError = step["continue-on-error"];
         if (continueOnError !== undefined && continueOnError !== false) {
           if (!performed.has(step.name)) {
@@ -1518,12 +1633,20 @@ function checkRequiredContexts(root, jobs) {
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
-    for (const [stepName, file] of environmentWriters) {
+    for (const [site, file] of actionWriters) {
       findings.push({
         rule: "required-context",
         file: rel,
         job: declaredJob,
-        detail: `depends on a step named ${JSON.stringify(stepName)} that writes $${file}, which sets the environment of every step after it — a value no declared \`env:\` carries and no pinned body digest moves, and one that can stop the later steps running at all`,
+        detail: `invokes a local composite action whose ${site} reaches ${file} — a composite action's bytes are in no pinned verification digest, so that write sets the environment of every step after it in every job that runs the action, invisibly`,
+      });
+    }
+    for (const [site, file] of environmentWriters) {
+      findings.push({
+        rule: "required-context",
+        file: rel,
+        job: declaredJob,
+        detail: `depends on a step ${site} that reaches $${file}, which sets the environment of every step after it — a value no declared \`env:\` carries and no pinned body digest moves, and one that can stop the later steps running at all`,
       });
     }
 

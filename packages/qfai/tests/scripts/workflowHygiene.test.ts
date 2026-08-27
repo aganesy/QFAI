@@ -1664,6 +1664,143 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("refuses a command-file write from a step with no name at all", () => {
+    // Review finding [78]. Everything in property 3 keys on `step.name`, because a declaration
+    // names the item it declares — so the loop skipped unnamed steps before any check ran, and
+    // `- run: echo "BASH_ENV=…" >> "$GITHUB_ENV"` with no `name:` went past the writer check
+    // untouched. A step needs no name to set the environment of every step after it.
+    //
+    // Found while testing the composite-action scan: `ci.yml`'s seven
+    // `- uses: ./.github/actions/setup` steps are all unnamed, so that scan was unreachable too.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          '      - run: echo "BASH_ENV=$GITHUB_WORKSPACE/noop.sh" >> "$GITHUB_ENV"\n' + anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unnamed writer is still a writer:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the command file it refused")
+        .toContain("GITHUB_ENV");
+      expect
+        .soft(run.output, "and locate the step, which has no name to give")
+        .toMatch(/\(unnamed\)/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("refuses a command-file write inside a local composite action the closure invokes", () => {
+    // Review finding [77]. `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
+    // composite action's bytes are in no pinned verification digest — the `uses:` string is all
+    // the digest records — and its steps were scanned by nothing. Every toolchain job in `ci.yml`
+    // opens with `uses: ./.github/actions/setup`, so one write in there sets the environment of
+    // every step after it in every job. Same capability as the step-level row above, through the
+    // one door the step scan does not open.
+    const dir = plantedTree((d) => {
+      const action = path.join(d, ".github", "actions", "setup", "action.yml");
+      const before = readFileSync(action, "utf-8");
+      const anchor = "  steps:" + "\n";
+      if (!before.includes(anchor)) throw new Error("the composite steps anchor is stale");
+      writeFileSync(
+        action,
+        before.replace(
+          anchor,
+          anchor +
+            "    - name: Prepare the environment\n" +
+            "      shell: bash\n" +
+            '      run: echo "BASH_ENV=$GITHUB_WORKSPACE/noop.sh" >> "$GITHUB_ENV"\n',
+        ),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a composite action writing a command file must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the action file, not only the workflow")
+        .toContain("action.yml");
+      expect.soft(run.output, "and the command file it reached").toContain("GITHUB_ENV");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("follows one local composite action into another rather than stopping at the first", () => {
+    // The nested arm, which the row above does not reach: the write is one action deeper, so a
+    // scan that read only the directly-invoked action would report nothing. `uses: ./…` is legal
+    // inside a composite action, and this is the shape that hides a write behind an indirection
+    // no digest covers.
+    const dir = plantedTree((d) => {
+      const inner = path.join(d, ".github", "actions", "inner");
+      mkdirSync(inner, { recursive: true });
+      writeFileSync(
+        path.join(inner, "action.yml"),
+        [
+          "name: inner",
+          "description: planted",
+          "runs:",
+          "  using: composite",
+          "  steps:",
+          "    - shell: bash",
+          '      run: echo "BASH_ENV=$GITHUB_WORKSPACE/noop.sh" >> "$GITHUB_ENV"',
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const outer = path.join(d, ".github", "actions", "setup", "action.yml");
+      const before = readFileSync(outer, "utf-8");
+      const anchor = "  steps:" + "\n";
+      if (!before.includes(anchor)) throw new Error("the composite steps anchor is stale");
+      writeFileSync(
+        outer,
+        before.replace(anchor, anchor + "    - uses: ./.github/actions/inner\n"),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a write one action deeper is the same write:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the INNER action, where the write is")
+        .toContain("inner");
+      expect.soft(run.output).toContain("GITHUB_ENV");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+  it("reports a local composite action it cannot read rather than finding no writes in it", () => {
+    // The fail-open half. A reference this lane cannot follow is a reference whose steps are
+    // checked by nothing, and answering `no writes found` for it would be the same silent pass
+    // the root-refusal and walk-ceiling checks exist to refuse.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        if (!text.includes("uses: ./.github/actions/setup")) {
+          throw new Error("the local action reference is stale");
+        }
+        return text.replaceAll("uses: ./.github/actions/setup", "uses: ./.github/actions/absent");
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unfollowable local action must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must say the action could not be read")
+        .toMatch(/unreadable|unresolvable/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("pins the artifact directory's inode across the whole write, in both producers", async () => {
     // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
     // are on ONE FILESYSTEM, which a checkout and any sibling directory on the same volume already
