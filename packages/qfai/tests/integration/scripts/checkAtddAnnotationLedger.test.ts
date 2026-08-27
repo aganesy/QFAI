@@ -650,10 +650,18 @@ describe("the CLI entry point", () => {
    * that refuses it leaves the parser unresolvable and the row's own assertion is what fails.
    */
   async function stageGuard(dir: string, basename: string): Promise<string> {
-    await mkdir(path.join(dir, "scripts"), { recursive: true });
+    await mkdir(path.join(dir, "scripts", "lib"), { recursive: true });
     const copied = path.join(dir, "scripts", basename);
     const { copyFile, symlink } = await import("node:fs/promises");
     await copyFile(SCRIPT, copied);
+    // And the shared bounded reader it imports. Review finding [76] moved the posture out of both
+    // root guards into one module, and these rows measured it immediately: a copy of the script
+    // alone died on ERR_MODULE_NOT_FOUND, and six pre-existing rows failed with a resolver trace
+    // instead of the exit code they assert.
+    await copyFile(
+      path.resolve(__dirname, "../../../../../scripts/lib/bounded-read.mjs"),
+      path.join(dir, "scripts", "lib", "bounded-read.mjs"),
+    );
     await mkdir(path.join(dir, "node_modules"), { recursive: true });
     await symlink(TYPESCRIPT, path.join(dir, "node_modules", "typescript"), "junction").catch(
       () => undefined,
@@ -867,6 +875,62 @@ describe("the CLI entry point", () => {
     expect(child.status).toBe(0);
     expect(child.stdout ?? "").toMatch(/no ledger at tests\/e2e — nothing to check/);
   });
+  it("refuses a ledger that exists but is not a readable regular file", async () => {
+    // Review finding [76]. The markdown was read with a plain `readFile`, which follows a symlink:
+    // `tests/e2e/qfai-traceability.md` pointed at `/dev/zero`, or at a FIFO nothing ever writes to,
+    // and this required `ci:lint` member hung until the job timed out. A lane that can be made to
+    // hang blocks nothing — and this one exists precisely because the gate beside it fails open.
+    //
+    // Planted as a junction to a DIRECTORY rather than to `/dev/zero`, which does not exist on every
+    // platform this suite runs on; the reader refuses both by the same descriptor test. A hang would
+    // fail this row by timing out either way.
+    const dir = await temp();
+    await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+    await mkdir(path.join(dir, "elsewhere"), { recursive: true });
+    const copied = await stageGuard(dir, "check-atdd-annotation-ledger.mjs");
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(
+        path.join(dir, "elsewhere"),
+        path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+        "junction",
+      );
+    } catch {
+      return;
+    }
+
+    const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
+    if (child.error !== undefined) throw child.error;
+    const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+    expect(child.status, `a ledger this guard refuses to read is not a pass:\n${output}`).toBe(1);
+    expect(output, "the refusal must say what it refused").toMatch(
+      /exists but is not a readable regular file/,
+    );
+    expect(
+      output,
+      "and must not be reported as the absent-ledger case, which is the other answer",
+    ).not.toMatch(/nothing to check/);
+  }, 30_000);
+
+  it("refuses a ledger past its size ceiling instead of reading it into memory", async () => {
+    // The unconditional half of the same refusal: no link, no device, nothing platform-specific — a
+    // file whose size alone says it is not a ledger. A pull request that can put a gigabyte in a
+    // required lane's path exhausts the runner instead of being reported.
+    const dir = await temp();
+    await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+    const copied = await stageGuard(dir, "check-atdd-annotation-ledger.mjs");
+    await writeFile(
+      path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+      `# ledger\n${"x".repeat(5 * 1024 * 1024)}\n`,
+      "utf8",
+    );
+
+    const child = spawnSync(process.execPath, [copied], { cwd: dir, encoding: "utf-8" });
+    if (child.error !== undefined) throw child.error;
+    const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+    expect(child.status, `an oversized ledger must be refused:\n${output}`).toBe(1);
+    expect(output).toMatch(/exists but is not a readable regular file/);
+  }, 30_000);
 });
 
 describe("the guard against this repository's own ledger", () => {

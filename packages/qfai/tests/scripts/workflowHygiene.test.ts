@@ -1636,6 +1636,34 @@ ${run.output}`,
     }
   });
 
+  it("refuses the ordinary brace spelling of the same command file", () => {
+    // Review finding [72]: the detection enumerated two spellings — `$GITHUB_ENV` and
+    // `${{ env.GITHUB_ENV }}` — and `>> "${GITHUB_ENV}"`, the form a shell author writes without
+    // thinking about it, went straight through. There is no end to that list: a variable holding the
+    // path, `printenv`, a here-doc. So the NAME anywhere in the body is what the lane refuses now,
+    // and this row is the spelling the enumeration missed.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - name: Prepare the environment\n" +
+            '        run: echo "BASH_ENV=$GITHUB_WORKSPACE/noop.sh" >> "${GITHUB_ENV}"\n' +
+            anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the brace form is the same capability:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the command file it refused")
+        .toContain("GITHUB_ENV");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("pins the artifact directory's inode across the whole write, in both producers", async () => {
     // Review finding [71]: comparing only `dev` proves the staging file and the verified directory
     // are on ONE FILESYSTEM, which a checkout and any sibling directory on the same volume already
@@ -2464,6 +2492,76 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("tells the caller it stopped early, so a short walk is not read as a finished one", () => {
+    // Review finding [74]. The ceiling used to end the recursion and say nothing: five thousand
+    // irrelevant entries followed by an unpinned action, and every rule reported PASS over the part
+    // that was read. A partial scan has to be distinguishable from a whole one, and the out-param is
+    // how the caller learns which of the two it was handed.
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-walk-truncation-"));
+    try {
+      mkdirSync(path.join(dir, "root"), { recursive: true });
+      for (const name of ["a", "b", "c"]) {
+        writeFileSync(path.join(dir, "root", `${name}.yml`), `name: ${name}\n`, "utf-8");
+      }
+
+      const whole: string[] = [];
+      expect(
+        yamlFilesUnder(dir, "root", 10, whole).length,
+        "the control: a walk that finished must find all three",
+      ).toBe(3);
+      expect(whole, "and must report no truncation, or the signal means nothing").toEqual([]);
+
+      const short: string[] = [];
+      yamlFilesUnder(dir, "root", 2, short);
+      expect(
+        short,
+        "a walk that stopped at its ceiling must name the root it stopped in",
+      ).toContain("root");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  for (const [label, rel] of [
+    ["the own workflow root", path.join(".github", "workflows")],
+    ["the composite-action root", path.join(".github", "actions")],
+  ] as const) {
+    it(`reports a truncated walk of ${label} as a finding rather than passing on it`, () => {
+      // The lane half of the same finding, and it is the half that mattered: a tree a pull request
+      // padded past the ceiling had the files past it never parsed, while every rule scoped to that
+      // tree reported PASS over the part that was read. An unpinned action, or a YAML weakening the
+      // required context, hides behind the padding.
+      //
+      // The padding is named `zz-…` so it sorts AFTER every real file: the whole legitimate tree is
+      // still walked and every other rule still sees it, which makes the truncation finding the only
+      // one this row can be reddened by. The files are empty and not YAML, because the walk counts
+      // ENTRIES and reads only the `.yml` ones.
+      const dir = plantedTree((d) => {
+        const pad = path.join(d, rel);
+        mkdirSync(pad, { recursive: true });
+        for (let i = 0; i < 5_001; i += 1) {
+          writeFileSync(path.join(pad, `zz-pad-${String(i).padStart(5, "0")}.txt`), "");
+        }
+      });
+      try {
+        const run = runLane(dir);
+        expect
+          .soft(run.exitCode, `a partial scan is not a pass:\n${run.output.slice(0, 4000)}`)
+          .toBe(1);
+        expect
+          .soft(
+            run.output,
+            "the finding must say the walk stopped, not merely that something is wrong",
+          )
+          .toMatch(/stopped walking/);
+        expect
+          .soft(run.output, "and name the tree it stopped in")
+          .toContain(rel.replace(/\\/g, "/"));
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }, 240_000);
+  }
 });
 describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {

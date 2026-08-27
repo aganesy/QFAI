@@ -908,3 +908,51 @@ describe("a symlinked record is refused on every platform", () => {
     ).toEqual([]);
   });
 });
+
+describe("the record writer pins the directory it verified", () => {
+  it("compares the record directory across the staging write, before the rename", async () => {
+    // Review finding [73]. `ancestorsAreRealDirectories` runs before the `mkdir` and again after it,
+    // and then the write happens — three pathname operations with the same gap between them the
+    // reviewer-artifact writers already close. A concurrent process that moves `.qfai` aside and
+    // leaves a link in its place has the staging file created on the far side, and the rename
+    // replaces an `install-provenance.json` outside the repository.
+    //
+    // Asserted on the SOURCE, for the reason the heartbeat row gives. Node has no `openat` or
+    // `renameat`, so the repair is an identity comparison that narrows the window to one syscall,
+    // and there is no in-process seam between the `writeFile` and the `rename` where a fixture could
+    // swap the directory. What a test can pin is that the comparison exists, that it sits BETWEEN
+    // those two calls, and that it refuses rather than warns.
+    const source = await readFile(
+      path.resolve(__dirname, "../../../src/shared/provenance.ts"),
+      "utf-8",
+    );
+    const start = source.indexOf("export async function writeInstallProvenance(");
+    expect(start, "the writer must exist to be checked").toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf("\n}\n", start) + 3);
+    // Comment lines stripped first: what this measures is the ORDER of the calls, and a paragraph
+    // that grows must not be able to change the answer.
+    const code = body
+      .split(/\r?\n/)
+      .filter((line) => !line.trim().startsWith("//"))
+      .join("\n");
+
+    const observed = code.indexOf("await lstat(recordDir)");
+    const staged = code.indexOf('flag: "wx"');
+    const compared = code.indexOf("sameDirectory(await lstat(recordDir), observed)");
+    const renamed = code.indexOf("renameWithRetry(");
+    expect(
+      observed,
+      "the directory's identity must be read before anything is written into it",
+    ).toBeGreaterThan(-1);
+    expect(staged, "the staging write must still be exclusive").toBeGreaterThan(observed);
+    expect(
+      compared,
+      "and the identity re-read and compared with it after the write",
+    ).toBeGreaterThan(staged);
+    expect(renamed, "before the rename publishes the record").toBeGreaterThan(compared);
+
+    expect(code, "a directory that changed under the write is a refusal, not a warning").toMatch(
+      /sameDirectory\(await lstat\(recordDir\), observed\)\)[\s\S]{0,80}?throw/,
+    );
+  });
+});

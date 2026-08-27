@@ -37,6 +37,7 @@ import {
   utimes,
   writeFile,
 } from "node:fs/promises";
+import type { Stats } from "node:fs";
 import path from "node:path";
 
 import { readBoundedRegularFile } from "./boundedRead.js";
@@ -282,8 +283,25 @@ export async function writeInstallProvenance(
   // Same directory as the target, or the rename would cross a filesystem
   // boundary and stop being atomic. `wx` refuses to reuse an existing name.
   const tempPath = path.join(recordDir, `.install-provenance.${randomUUID()}.tmp`);
+  // The directory's IDENTITY, pinned across the write.
+  //
+  // Review finding [73]: `ancestorsAreRealDirectories` runs before the `mkdir` and again
+  // after it, and then this writes — three pathname operations with the same gap between
+  // them the reviewer-artifact writers already close. A concurrent process that moves
+  // `.qfai` aside and leaves a link in its place has the staging file created on the far
+  // side and the rename replace an external `install-provenance.json`.
+  //
+  // Node has no `openat` or `renameat`, so the identity is compared: device and inode read
+  // before the write, again after the staging file exists, and once more before the rename.
+  // A swap becomes a refusal rather than a write into somebody else's tree, and the residual
+  // is one syscall wide — the same limit the artifact writers document.
+  const observed = await lstat(recordDir);
+  const sameDirectory = (a: Stats, b: Stats): boolean => a.dev === b.dev && a.ino === b.ino;
   try {
     await writeFile(tempPath, serialized, { encoding: "utf-8", flag: "wx" });
+    if (!sameDirectory(await lstat(recordDir), observed)) {
+      throw symlinkedAncestorError(rootDir);
+    }
     await renameWithRetry(tempPath, recordPath);
   } catch (error) {
     await unlink(tempPath).catch(() => undefined);

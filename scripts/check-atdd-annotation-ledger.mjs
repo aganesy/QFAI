@@ -52,7 +52,9 @@
  *     two different answers, and reading them off one list is what let a claim be backed by a file
  *     Vitest never opens. `runnerCorpusRoots` derives the corpus from the runner's own include list.
  */
-import { readFile, readdir, realpath, stat } from "node:fs/promises";
+import { readdir, realpath, stat } from "node:fs/promises";
+import { lstatSync } from "node:fs";
+import { readBoundedText } from "./lib/bounded-read.mjs";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
@@ -221,15 +223,30 @@ async function readDirectoryInto(current, sources) {
     if (entry.isSymbolicLink()) continue;
     if (!TEST_SUFFIXES.some((suffix) => entry.name.endsWith(suffix))) continue;
     if (!TEST_FILE_PATTERN.test(entry.name)) continue;
-    try {
-      sources.set(full, await readFile(full, "utf8"));
-    } catch (error) {
-      if (isMissing(error)) continue;
-      throw error;
-    }
+    // A file this reader refuses never backs a claim. The name test above rejects a link, and
+    // this rejects what a name cannot see: a FIFO or a character device placed directly, and
+    // anything past the ceiling. Skipping is the conservative direction — one fewer backing
+    // file makes a claim fail, never pass.
+    const text = readBoundedText(full, MAX_SOURCE_BYTES);
+    if (text === undefined) continue;
+    sources.set(full, text);
   }
   return found;
 }
+
+/**
+ * Read ceilings. Every file this guard opens is one a pull request can add, and `ci:lint` is a
+ * required lane — so the size is bounded and the reader is `scripts/lib/bounded-read.mjs`,
+ * which refuses a link by name and decides type and size on the descriptor.
+ *
+ * Review finding [76]: the ledger markdown, the runner's workspace config and every test
+ * source were read with a plain `readFile`, which follows a symlink. `tests/e2e/
+ * qfai-traceability.md` pointed at `/dev/zero` — or at a FIFO nothing ever writes to — and the
+ * required lane hung until the job timed out. A lane that can be made to hang blocks nothing,
+ * which is the fail-open this guard exists to close, arriving through its own reader.
+ */
+const MAX_LEDGER_BYTES = 4_194_304;
+const MAX_SOURCE_BYTES = 1_048_576;
 
 /** How many directories one corpus root may hold before the walk refuses to go further. */
 const MAX_WALKED_DIRECTORIES = 5_000;
@@ -581,7 +598,16 @@ async function e2eIncludeGlobs(text, configPath) {
  */
 export async function runnerCorpusRoots(root) {
   const configPath = path.join(root, "packages", "qfai", "vitest.workspace.ts");
-  const globs = await e2eIncludeGlobs(await readFile(configPath, "utf8"), configPath);
+  // Fatal, not skipped: without the runner's own include list this guard cannot say which tree
+  // is the backing corpus, and scanning a guessed one is the defect the parse replaced.
+  const configText = readBoundedText(configPath, MAX_SOURCE_BYTES);
+  if (configText === undefined) {
+    throw new Error(
+      `check-atdd-annotation-ledger: ${configPath} is not a readable regular file within ` +
+        `${String(MAX_SOURCE_BYTES)} bytes, so the runner's e2e include list cannot be read`,
+    );
+  }
+  const globs = await e2eIncludeGlobs(configText, configPath);
   if (globs.length === 0) {
     throw new Error(
       `check-atdd-annotation-ledger: the e2e project's include list in ${configPath} parsed to nothing`,
@@ -637,11 +663,29 @@ async function main() {
   // to compensate for, and it could not tell that case apart from a repository with no ledger.
   const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
   const ledgerPath = path.join(root, "tests", "e2e", "qfai-traceability.md");
-  let ledgerText;
-  try {
-    ledgerText = await readFile(ledgerPath, "utf8");
-  } catch (error) {
-    if (isMissing(error)) {
+  // Present-but-unreadable and absent are different answers, and the reader collapses both to
+  // `undefined`, so PRESENCE BY NAME decides which. A ledger that exists and is a link to a device
+  // is not `nothing to check` — it is a ledger this guard refuses to read, and reporting that is
+  // the point of refusing.
+  const ledgerText = readBoundedText(ledgerPath, MAX_LEDGER_BYTES);
+  if (ledgerText === undefined) {
+    let presentByName = true;
+    try {
+      lstatSync(ledgerPath);
+    } catch {
+      presentByName = false;
+    }
+    if (presentByName) {
+      const rel = path.relative(root, ledgerPath).replace(/\\/g, "/");
+      process.stderr.write(
+        `check-atdd-annotation-ledger: ${rel} exists but is not a readable regular file within ` +
+          `${String(MAX_LEDGER_BYTES)} bytes — a symlink, a device, a directory, or oversized. ` +
+          "Refusing to read it.\n",
+      );
+      process.exitCode = 1;
+      return;
+    }
+    {
       // Review finding [27]. A SCOPED run must not pass on a missing ledger. `ci:lint` invokes
       // this with `--spec 0017`, and returning 0 here skipped the scoped-selected-nothing check
       // below — so deleting or renaming `tests/e2e/qfai-traceability.md` left the guard green
@@ -664,7 +708,6 @@ async function main() {
       );
       return;
     }
-    throw error;
   }
 
   const sources = new Map();

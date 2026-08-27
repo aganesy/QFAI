@@ -33,22 +33,14 @@
  * follows the existing bare-`R-` lint namespace rather than the `QFAI-XXX-NNN`
  * grammar, which is why the three-digit waiver alias rule does not reach it.
  */
-import { Buffer } from "node:buffer";
 import { mkdirSync, renameSync, unlinkSync, writeFileSync } from "node:fs";
 import { createHash, randomBytes } from "node:crypto";
-import {
-  closeSync,
-  constants as fsConstants,
-  fstatSync,
-  lstatSync,
-  openSync,
-  readSync,
-  readdirSync,
-} from "node:fs";
+import { closeSync, fstatSync, lstatSync, openSync, readdirSync } from "node:fs";
 import { createRequire } from "node:module";
 import path from "node:path";
 import { argv, exit, stderr, stdout } from "node:process";
 import { fileURLToPath, pathToFileURL } from "node:url";
+import { readBoundedText } from "./lib/bounded-read.mjs";
 
 // pnpm hoists `yaml` under the qfai workspace; resolve from there so this
 // root-level script works without adding yaml to the root package.json. Same
@@ -552,7 +544,7 @@ export function invokedFileDigests(runText, root, baseDir) {
       resolved.push([relative, "outside"]);
       continue;
     }
-    const text = readBoundedWorkflowText(path.resolve(root, relative));
+    const text = readBoundedText(path.resolve(root, relative), MAX_WORKFLOW_BYTES);
     if (text === undefined) {
       resolved.push([relative, "absent"]);
       continue;
@@ -617,7 +609,7 @@ function collectScriptInvocations(text, defaultDir, out) {
 function manifestScripts(root, dir, cache) {
   const key = path.posix.normalize(dir.split(path.sep).join(path.posix.sep));
   if (cache.has(key)) return cache.get(key);
-  const text = readBoundedWorkflowText(path.resolve(root, dir, "package.json"));
+  const text = readBoundedText(path.resolve(root, dir, "package.json"), MAX_WORKFLOW_BYTES);
   let scripts;
   try {
     const parsed = text === undefined ? undefined : JSON.parse(text);
@@ -659,67 +651,6 @@ export function invokedScriptBodies(runText, root, baseDir = ".") {
  * past this is not one, and reading it is the exhaustion this lane must not be vulnerable to.
  */
 const MAX_WORKFLOW_BYTES = 1_048_576;
-
-/**
- * The text of a regular file at `abs`, or `undefined` for anything else.
- *
- * This lane runs on a pull request, over paths the pull request itself can add. Review finding
- * [05]: a `.github/workflows/blocked.yml` added as a symlink to a FIFO or to `/dev/zero` was
- * collected by the extension test and then read by an unbounded `readFileSync` that followed the
- * link — the lane produced no finding and hung until the job timed out, or exhausted its memory.
- * A lane that can be made to hang blocks nothing.
- *
- * One descriptor for every decision: `lstat` refuses a link by name, `O_NOFOLLOW` and
- * `O_NONBLOCK` are added where the platform has them (neither exists on Windows — measured),
- * `fstat` on the DESCRIPTOR decides regular-file and size, and the descriptor's identity is
- * compared with what `lstat` inspected so a path swapped between the two is refused rather than
- * read.
- */
-function readBoundedWorkflowText(abs) {
-  let inspected;
-  try {
-    inspected = lstatSync(abs);
-  } catch {
-    return undefined;
-  }
-  if (inspected.isSymbolicLink() || !inspected.isFile()) return undefined;
-
-  let flags = fsConstants.O_RDONLY;
-  if (typeof fsConstants.O_NOFOLLOW === "number") flags |= fsConstants.O_NOFOLLOW;
-  if (typeof fsConstants.O_NONBLOCK === "number") flags |= fsConstants.O_NONBLOCK;
-
-  let fd;
-  try {
-    fd = openSync(abs, flags);
-  } catch {
-    return undefined;
-  }
-  try {
-    const stats = fstatSync(fd);
-    if (!stats.isFile() || stats.size > MAX_WORKFLOW_BYTES) return undefined;
-    if (stats.dev !== inspected.dev || stats.ino !== inspected.ino) return undefined;
-    // One byte past the measured size: a file that GREW is no longer the file `fstat` described,
-    // and the extra byte is how that is noticed rather than silently truncated.
-    const buffer = Buffer.alloc(stats.size + 1);
-    let filled = 0;
-    for (;;) {
-      const read = readSync(fd, buffer, filled, buffer.length - filled, null);
-      if (read === 0) break;
-      filled += read;
-      if (filled >= buffer.length) break;
-    }
-    if (filled > stats.size) return undefined;
-    return buffer.subarray(0, filled).toString("utf-8");
-  } catch {
-    return undefined;
-  } finally {
-    try {
-      closeSync(fd);
-    } catch {
-      // The descriptor is going away with the process; a close failure is not a finding.
-    }
-  }
-}
 
 /** How many directory entries one workflow tree may hold before the walk stops. */
 const MAX_WALKED_ENTRIES = 5_000;
@@ -771,10 +702,17 @@ export function rootIsRefused(root, rel) {
  * The ceiling is a PARAMETER with the production value as its default, so a row can reach it
  * without laying down five thousand files to do it.
  *
- * Hitting it stops the walk rather than throwing — the files already collected are still checked,
- * and the lane reports on them.
+ * Hitting it is a PARTIAL SCAN, and `truncated` is how the caller learns so. Review finding
+ * [74]: the ceiling used to stop the recursion and say nothing, so a tree carrying five thousand
+ * irrelevant entries followed by an unpinned action — or a YAML that weakens the required
+ * context — had that YAML never parsed while every rule reported PASS. A short walk is not a
+ * finished one, and the lane must not pass on one.
+ *
+ * Reported rather than thrown, because a throw is the crash the ceiling exists to avoid: the
+ * caller pushes the root's name into `truncated` and turns it into a fatal finding beside its
+ * other whole-tree checks.
  */
-export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES) {
+export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
   const abs = path.join(root, rel);
   let inspected;
   try {
@@ -788,7 +726,10 @@ export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES) {
   let seen = 0;
   const walk = (dir) => {
     for (const e of readdirSync(dir, { withFileTypes: true })) {
-      if (seen >= limit) return;
+      if (seen >= limit) {
+        if (truncated !== undefined) truncated.push(rel);
+        return;
+      }
       seen += 1;
       const p = path.join(dir, e.name);
       if (e.isSymbolicLink()) continue;
@@ -803,7 +744,7 @@ export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES) {
 }
 
 function parseFile(root, rel) {
-  const text = readBoundedWorkflowText(path.join(root, rel));
+  const text = readBoundedText(path.join(root, rel), MAX_WORKFLOW_BYTES);
   if (text === undefined) {
     // Present in the walk and not readable as a regular file within the ceiling: a symlink, a
     // FIFO, a device, or something too large to be a workflow. Reported with the same shape a
@@ -833,6 +774,19 @@ function collectJobs(root) {
   // reports on the root itself. Review finding [63]: `ci.yml`'s toolchain jobs all run
   // `./.github/actions/setup`, so a link there pointing at a fake composite action inside the
   // repository is the whole toolchain — and the scan answered an empty list, silently.
+  // The composite-action root's ceiling, checked where the other whole-tree checks live.
+  // `collectStepSites` walks it for its steps and returns no findings, so this is the one place
+  // that can report a partial scan of it.
+  const actionsTruncated = [];
+  yamlFilesUnder(root, ACTIONS_ROOT_REL, MAX_WALKED_ENTRIES, actionsTruncated);
+  if (actionsTruncated.length > 0) {
+    findings.push({
+      rule: "job-guardrails",
+      file: ACTIONS_ROOT_REL.replace(/\\/g, "/"),
+      job: "(whole tree)",
+      detail: `holds more than ${String(MAX_WALKED_ENTRIES)} entries, so this lane stopped walking it — a composite action past the ceiling is never parsed, and every toolchain job runs one`,
+    });
+  }
   if (rootIsRefused(root, ACTIONS_ROOT_REL)) {
     findings.push({
       rule: "job-guardrails",
@@ -857,7 +811,16 @@ function collectJobs(root) {
         detail: `is present but is not a real directory this lane may walk (a symlink, or not a directory), so every rule scoped to it would report PASS having evaluated nothing`,
       });
     }
-    const files = yamlFilesUnder(root, rel);
+    const truncated = [];
+    const files = yamlFilesUnder(root, rel, MAX_WALKED_ENTRIES, truncated);
+    if (truncated.length > 0) {
+      findings.push({
+        rule: "job-guardrails",
+        file: rel.replace(/\\/g, "/"),
+        job: "(whole tree)",
+        detail: `holds more than ${String(MAX_WALKED_ENTRIES)} entries, so this lane stopped walking it — every rule scoped to it then reports on the part that was read, and a file past the ceiling is never parsed at all`,
+      });
+    }
     if (files.length === 0) {
       findings.push({
         rule: "job-guardrails",
@@ -1121,11 +1084,11 @@ function readDeclaration(root) {
   // `ci:lint` lane held the runner until the job timed out without ever reaching the
   // missing-or-malformed branch below. A required lane that can be made to hang blocks nothing.
   //
-  // `readBoundedWorkflowText` refuses a link by name, opens once with `O_NOFOLLOW` where the
+  // `readBoundedText` refuses a link by name, opens once with `O_NOFOLLOW` where the
   // platform has it, decides regular-file and size from the DESCRIPTOR, and compares its
   // identity with what was inspected. Its refusal is `undefined`, which becomes the finding
   // below rather than a hang.
-  const text = readBoundedWorkflowText(path.join(root, DECLARATION_REL));
+  const text = readBoundedText(path.join(root, DECLARATION_REL), MAX_WORKFLOW_BYTES);
   if (text === undefined) {
     return {
       contexts: [],
@@ -1509,9 +1472,18 @@ function checkRequiredContexts(root, jobs) {
         // step AFTER it, which no declared-env check can see. Review finding [69]. Recorded
         // against the JOB rather than against a declared item: the writer need not be a
         // declared verification itself — it only has to run before one.
+        // The NAME, anywhere in the body — not an enumeration of the ways a shell can spell
+        // a reference to it. Review finding [72]: the first version matched `$GITHUB_ENV` and
+        // `${{ env.GITHUB_ENV }}`, and `>> "${GITHUB_ENV}"` — the ordinary brace form — went
+        // straight through. There is no end to that list: `${GITHUB_ENV}`, a variable holding
+        // the path, `printenv`, a here-doc. Reaching the file at all is the thing to refuse.
+        //
+        // Conservative on purpose: a step that merely MENTIONS the name in a comment is
+        // flagged too. Inside a required verification's closure that is the right direction,
+        // and this repository's closure mentions neither.
         const body = typeof step.run === "string" ? step.run : "";
         for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
-          if (body.includes(`$${file}`) || body.includes(`\${{ env.${file} }}`)) {
+          if (body.includes(file)) {
             environmentWriters.set(step.name, file);
           }
         }
@@ -1654,7 +1626,7 @@ function checkShippedVersionMarkers(root) {
   for (const { rel, tree } of WORKFLOW_ROOTS) {
     if (tree !== "shipped") continue;
     for (const file of yamlFilesUnder(root, rel)) {
-      const text = readBoundedWorkflowText(path.join(root, file));
+      const text = readBoundedText(path.join(root, file), MAX_WORKFLOW_BYTES);
       if (text === undefined) continue; // `parseFile` already reports an unreadable path
       text.split(/\r?\n/).forEach((line, index) => {
         const marker = SHIPPED_VERSION_MARKER.exec(line);
