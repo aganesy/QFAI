@@ -47,6 +47,10 @@ import {
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
 import { resolveToolVersion } from "../../core/version.js";
+import {
+  RETIRED_WORKFLOW_NAMES,
+  SHIPPED_WORKFLOW_NAMES,
+} from "../../shared/shippedWorkflowNames.js";
 import { readBoundedRegularFile } from "../../shared/boundedRead.js";
 import {
   createWorkflowProvenanceEntry,
@@ -2073,26 +2077,14 @@ async function pruneStaleQfaiWrappers(
 }
 
 /**
- * Names the current package version ships into the adopter's
- * `.github/workflows/` directory (the shipped-workflows contract's write
- * set). This is the in-binary name list: it is never computed by globbing
- * the asset tree at runtime or the adopter's disk, and the shipped-asset
- * shape gate keeps it equal to the packaged workflow assets.
+ * The shipped and retired workflow name sets, re-exported.
+ *
+ * They moved to `shared/shippedWorkflowNames.ts` because `core/`'s doctor reader needs the same
+ * answer and may not import from `cli/`: review finding [86] found the packaged-tree
+ * precondition calling a gutted directory healthy, and the fix is for that reader to know what
+ * this package ships. The re-export keeps this module's public surface exactly as it was.
  */
-export const SHIPPED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>([
-  "qfai-validate.yml",
-  "qfai-tests.yml",
-]);
-
-/**
- * Names a previous package version shipped into the adopter's
- * `.github/workflows/` directory that the current version no longer ships
- * (the shipped-workflows contract's prune set). A name moves here in the
- * same change that stops shipping it; a name in neither the shipped nor
- * the retired list is not QFAI's. Never computed by globbing the
- * adopter's disk. Currently empty: no shipped workflow has been retired.
- */
-export const RETIRED_WORKFLOW_NAMES: ReadonlySet<string> = new Set<string>();
+export { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES };
 
 /**
  * Pure copy-set construction for the shipped workflow names: a name is in

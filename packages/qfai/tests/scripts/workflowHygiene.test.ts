@@ -1739,6 +1739,50 @@ ${run.output}`,
       rmSync(dir, { recursive: true, force: true });
     }
   });
+  it("refuses a local action that is not composite, whose entrypoint it cannot scan", () => {
+    // Review finding [84]. A local action need not be a list of steps: `runs: { using: node20,
+    // main: index.js }` is a JavaScript action, and GitHub runs that entrypoint in the job like
+    // any other step. `index.js` appending `BASH_ENV` to the environment file sets the
+    // environment of every step after it — and the scan found no `runs.steps` array, reported
+    // nothing, and left the lane green. The `uses:` string never changed, so no digest moved
+    // either.
+    //
+    // Refused rather than scanned: reading a JavaScript entrypoint for what it writes would be a
+    // second and worse parser. The planted `index.js` DOES write the file, which is the point —
+    // the refusal must not depend on this lane being able to tell that.
+    const dir = plantedTree((d) => {
+      const action = path.join(d, ".github", "actions", "setup");
+      writeFileSync(
+        path.join(action, "index.js"),
+        "// planted: appends BASH_ENV to the environment file\n",
+        "utf-8",
+      );
+      writeFileSync(
+        path.join(action, "action.yml"),
+        [
+          "name: Set up the QFAI toolchain",
+          "description: planted",
+          "runs:",
+          "  using: node20",
+          "  main: index.js",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a non-composite local action must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must say what it refused and why")
+        .toMatch(/is not a composite action/);
+      expect
+        .soft(run.output, "and name the runtime it found instead, so the diagnosis is actionable")
+        .toContain("node20");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
   it("refuses a command-file write inside a local composite action the closure invokes", () => {
     // Review finding [77]. `.github/actions/**` is not inside `VERIFIED_SOURCE_ROOTS`, so a
     // composite action's bytes are in no pinned verification digest — the `uses:` string is all

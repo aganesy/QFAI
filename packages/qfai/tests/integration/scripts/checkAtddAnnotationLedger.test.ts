@@ -338,7 +338,7 @@ describe("the guard supplies a boundary, not only accepts one", () => {
 
 describe("runnerCorpusRoots", () => {
   it("returns exactly the directories the e2e project includes, all inside the package", async () => {
-    const roots = await runnerCorpusRoots(path.resolve(__dirname, "../../../../.."));
+    const { roots } = await runnerCorpusRoots(path.resolve(__dirname, "../../../../.."));
 
     // Derived rather than asserted against a copied list: a second literal here would be the same
     // hand-kept pair the production change removed, and it would agree with a wrong answer.
@@ -419,7 +419,7 @@ describe("runnerCorpusRoots", () => {
       "utf8",
     );
 
-    await expect(runnerCorpusRoots(dir)).resolves.toEqual([
+    await expect(runnerCorpusRoots(dir).then((r) => r.roots)).resolves.toEqual([
       path.join(dir, "packages", "qfai", "tests", "journeys"),
     ]);
   });
@@ -466,7 +466,7 @@ describe("runnerCorpusRoots", () => {
       );
 
       await expect(
-        runnerCorpusRoots(dir),
+        runnerCorpusRoots(dir).then((r) => r.roots),
         `a decoy of the form ${decoy.slice(0, 12)}… must not become the backing corpus`,
       ).resolves.toEqual([path.join(dir, "packages", "qfai", "tests", "journeys")]);
     }
@@ -537,11 +537,84 @@ describe("runnerCorpusRoots", () => {
       "utf8",
     );
 
-    await expect(runnerCorpusRoots(dir)).resolves.toEqual([
+    await expect(runnerCorpusRoots(dir).then((r) => r.roots)).resolves.toEqual([
       path.join(dir, "packages", "qfai", "tests", "journeys"),
     ]);
   });
 
+  it("subtracts an excluded file, which the runner does not open", async () => {
+    // Review finding [85]. Reading `include` alone let an `exclude` entry keep a file in the
+    // backing corpus that Vitest never runs — an annotation-only file discharging a required
+    // ledger claim, which is exactly the substitution this guard exists to refuse, arriving
+    // through the runner's own configuration rather than through a markdown suffix.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"], exclude: ["tests/e2e/backing.test.ts"] } }];\n`,
+      "utf8",
+    );
+
+    const { roots, excluded } = await runnerCorpusRoots(dir);
+    expect(roots, "the include still decides which tree is walked").toEqual([
+      path.join(dir, "packages", "qfai", "tests", "e2e"),
+    ]);
+    expect(
+      excluded(path.join(dir, "packages", "qfai", "tests", "e2e", "backing.test.ts")),
+      "a file the runner skips must not back a claim",
+    ).toBe(true);
+    expect(
+      excluded(path.join(dir, "packages", "qfai", "tests", "e2e", "real.test.ts")),
+      "and every other file in the tree must still count — the control",
+    ).toBe(false);
+  });
+
+  it("subtracts a whole excluded subtree, in the same shape the includes take", async () => {
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"], exclude: ["tests/e2e/fixtures/**/*.test.ts"] } }];\n`,
+      "utf8",
+    );
+
+    const { excluded } = await runnerCorpusRoots(dir);
+    expect(
+      excluded(path.join(dir, "packages", "qfai", "tests", "e2e", "fixtures", "a.test.ts")),
+      "a file under the excluded subtree is one the runner does not open",
+    ).toBe(true);
+    expect(
+      excluded(path.join(dir, "packages", "qfai", "tests", "e2e", "a.test.ts")),
+      "a sibling outside it still counts",
+    ).toBe(false);
+  });
+
+  it("refuses an exclusion it cannot subtract rather than ignoring it", async () => {
+    // The fail-closed half. An exclusion this guard cannot interpret names an unknown set of
+    // files the runner does not open, and approximating that set as empty is the original defect
+    // restated.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"], exclude: ["**/*fixture*"] } }];\n`,
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/cannot subtract from the corpus/i);
+  });
+
+  it("refuses an exclusion it would have to evaluate rather than read", async () => {
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"], exclude: [skip] } }];\n`,
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/not a literal this guard can resolve/i);
+  });
   it("refuses an include this guard would have to evaluate rather than read", async () => {
     // The boundary of "reads a declaration": an interpolated template, an identifier, anything
     // whose value is not fixed in the source. Guessing at one is how a guard starts reporting a
@@ -861,6 +934,66 @@ describe("the CLI entry point", () => {
       expect(result.err).toMatch(/unknown argument/);
     }
   });
+
+  it("does not count a claim backed only by a file the runner excludes", async () => {
+    // The WIRING, which the unit rows above cannot reach. Review finding [85] is only closed if
+    // `main` subtracts what `runnerCorpusRoots` reports — and a plant that dropped the
+    // subtraction there left every one of those rows green, because they call the reader
+    // directly. This one runs the guard.
+    //
+    // Both directions in one fixture: with the exclusion the claim is unbacked and the guard
+    // exits 1; without it the same file backs the same claim and the guard exits 0. Anything
+    // that changed both answers at once would be a fixture fault rather than a repair.
+    const claim = tag("0017", "0017-0001");
+
+    const build = async (exclude: boolean): Promise<{ dir: string; copied: string }> => {
+      const dir = await temp();
+      await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+      await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
+      await writeFile(
+        path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+        `- ${claim}\n`,
+        "utf8",
+      );
+      await writeFile(
+        path.join(dir, "packages", "qfai", "tests", "e2e", "backing.test.ts"),
+        `// ${claim}\n`,
+        "utf8",
+      );
+      await writeFile(
+        path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+        exclude
+          ? `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"], exclude: ["tests/e2e/backing.test.ts"] } }];\n`
+          : `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }];\n`,
+        "utf8",
+      );
+      return { dir, copied: await stageGuard(dir, "check-atdd-annotation-ledger.mjs") };
+    };
+
+    const included = await build(false);
+    const backing = spawnSync(process.execPath, [included.copied], {
+      cwd: included.dir,
+      encoding: "utf-8",
+    });
+    if (backing.error !== undefined) throw backing.error;
+    expect(
+      backing.status,
+      `the premise: with no exclusion the file backs the claim:\n${backing.stdout ?? ""}${backing.stderr ?? ""}`,
+    ).toBe(0);
+
+    const excluded = await build(true);
+    const child = spawnSync(process.execPath, [excluded.copied], {
+      cwd: excluded.dir,
+      encoding: "utf-8",
+    });
+    if (child.error !== undefined) throw child.error;
+    const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+    expect(
+      child.status,
+      `a file the runner never opens must not discharge a claim:\n${output}`,
+    ).toBe(1);
+    expect(output, "and the finding must name the claim left unbacked").toContain(claim);
+  }, 30_000);
 
   it("exits 0 with an explicit message when a tree genuinely has no ledger", async () => {
     // The one legitimate exit-0-without-checking path. Distinguishable from the wrong-cwd case

@@ -480,18 +480,22 @@ const MAX_LOCAL_ACTION_DEPTH = 4;
  * @param {string[]} commandFiles the declared command-file names
  * @param {Set<string>} seen action files already examined, so a cycle terminates
  * @param {number} depth how many local actions deep this call is
- * @returns {{ file: string, step: string, commandFile: string }[]} one entry per write
+ * @returns {{ file: string, step: string, note: string }[]} one entry per refusal
  */
 function localActionCommandFileWrites(root, reference, commandFiles, seen = new Set(), depth = 0) {
-  /** @type {{ file: string, step: string, commandFile: string }[]} */
+  /** @type {{ file: string, step: string, note: string }[]} */
   const out = [];
   const rel = reference.replace(/^\.\//, "").replace(/[/\\]+$/, "");
   if (rel === "" || rel.split(/[/\\]/).includes("..")) {
-    out.push({ file: reference, step: "(whole action)", commandFile: "unresolvable" });
+    out.push({ file: reference, step: "(whole action)", note: "is unresolvable" });
     return out;
   }
   if (depth > MAX_LOCAL_ACTION_DEPTH) {
-    out.push({ file: rel, step: "(whole action)", commandFile: "too deeply nested to follow" });
+    out.push({
+      file: rel,
+      step: "(whole action)",
+      note: "is nested deeper than this lane follows",
+    });
     return out;
   }
 
@@ -510,11 +514,40 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
     try {
       doc = parseYaml(text);
     } catch {
-      out.push({ file: relFile, step: "(whole action)", commandFile: "unparseable" });
+      out.push({ file: relFile, step: "(whole action)", note: "is unparseable" });
       continue;
     }
-    const steps = isRecord(doc) && isRecord(doc.runs) ? doc.runs.steps : undefined;
-    if (!Array.isArray(steps)) continue;
+    // COMPOSITE, or refused. Review finding [84]: a local action is not necessarily a list of
+    // steps — `runs: { using: node20, main: index.js }` is a JavaScript action, and GitHub runs
+    // that entrypoint in the job like any other step. `index.js` appending `BASH_ENV` to the
+    // environment file sets the environment of every step after it, and the scan below found no
+    // `runs.steps` array, reported nothing, and left the lane green. A program this lane cannot
+    // read is not a program it may pass over.
+    //
+    // Refused rather than scanned: reading a JavaScript entrypoint for what it writes would be a
+    // second and worse parser, while `the required closure invokes only composite local actions`
+    // is a rule that can be stated, checked, and satisfied.
+    const runs = isRecord(doc) ? doc.runs : undefined;
+    const using = isRecord(runs) ? runs.using : undefined;
+    if (String(using) !== "composite") {
+      out.push({
+        file: relFile,
+        step: "(whole action)",
+        note: `is not a composite action (runs.using: ${
+          using === undefined ? "absent" : JSON.stringify(String(using))
+        }), so what it runs is a program this lane cannot scan`,
+      });
+      continue;
+    }
+    const steps = isRecord(runs) ? runs.steps : undefined;
+    if (!Array.isArray(steps)) {
+      out.push({
+        file: relFile,
+        step: "(whole action)",
+        note: "declares `using: composite` and no `runs.steps` list, so what it runs is not readable here",
+      });
+      continue;
+    }
     for (const step of steps) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
@@ -523,7 +556,7 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
           out.push({
             file: relFile,
             step: String(step.name ?? body.split(/\r?\n/)[0] ?? "(unnamed)").slice(0, 80),
-            commandFile: file,
+            note: `reaches ${file}`,
           });
         }
       }
@@ -534,7 +567,7 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
     }
   }
   if (!read) {
-    out.push({ file: rel, step: "(whole action)", commandFile: "unreadable" });
+    out.push({ file: rel, step: "(whole action)", note: "is unreadable" });
   }
   return out;
 }
@@ -1852,10 +1885,7 @@ function checkRequiredContexts(root, jobs) {
         const invoked = typeof step.uses === "string" ? step.uses : "";
         if (invoked.startsWith("./")) {
           for (const write of localActionCommandFileWrites(root, invoked, commandFiles)) {
-            actionWriters.set(
-              `${write.file} step ${JSON.stringify(write.step)}`,
-              write.commandFile,
-            );
+            actionWriters.set(`${write.file} step ${JSON.stringify(write.step)}`, write.note);
           }
         }
 
@@ -1916,12 +1946,12 @@ function checkRequiredContexts(root, jobs) {
         } else if (!performed.has(step.name)) conditional.set(step.name, `if: ${String(step.if)}`);
       }
     }
-    for (const [site, file] of actionWriters) {
+    for (const [site, note] of actionWriters) {
       findings.push({
         rule: "required-context",
         file: rel,
         job: declaredJob,
-        detail: `invokes a local composite action whose ${site} reaches ${file} — a composite action's bytes are in no pinned verification digest, so that write sets the environment of every step after it in every job that runs the action, invisibly`,
+        detail: `invokes a local action, and ${site} ${note} — a local action's bytes are in no pinned verification digest, so what it does sets the environment of every step after it in every job that runs it, invisibly`,
       });
     }
     for (const [site, file] of environmentWriters) {

@@ -472,7 +472,7 @@ function propertyValue(ts, objectLiteral, name) {
  *
  * @param {string} text the configuration source
  * @param {string} configPath its path, for the messages
- * @returns {string[]} the include globs
+ * @returns {{ include: string[], exclude: string[] }} the include and exclude globs
  */
 async function e2eIncludeGlobs(text, configPath) {
   let ts;
@@ -548,6 +548,34 @@ async function e2eIncludeGlobs(text, configPath) {
     );
   }
 
+  // Both lists, because the corpus is what the runner RUNS. Review finding [85]: reading
+  // `include` alone let `exclude: ["tests/e2e/backing.test.ts"]` keep a file in the backing
+  // corpus that Vitest never opens — an annotation-only file discharging a required ledger
+  // claim, which is the substitution this guard exists to refuse, arriving through the runner's
+  // own configuration.
+  const literals = (node, which) => {
+    const out = [];
+    if (node === undefined) return out;
+    if (!ts.isArrayLiteralExpression(node)) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the e2e project in ${configPath} declares a ${which} this ` +
+          "guard cannot read as an array literal; it reads a declaration rather than evaluating one",
+      );
+    }
+    for (const entry of node.elements) {
+      const value = literalText(ts, entry);
+      if (value === undefined) {
+        throw new Error(
+          `check-atdd-annotation-ledger: the e2e project in ${configPath} ${which}s ` +
+            `${entry.getText(source)}, which is not a literal this guard can resolve; it reads a ` +
+            "declaration rather than evaluating one",
+        );
+      }
+      out.push(value);
+    }
+    return out;
+  };
+
   const includeNode = propertyValue(ts, found[0], "include");
   if (includeNode === undefined || !ts.isArrayLiteralExpression(includeNode)) {
     throw new Error(
@@ -555,19 +583,10 @@ async function e2eIncludeGlobs(text, configPath) {
         "guard can read",
     );
   }
-  const globs = [];
-  for (const entry of includeNode.elements) {
-    const value = literalText(ts, entry);
-    if (value === undefined) {
-      throw new Error(
-        `check-atdd-annotation-ledger: the e2e project in ${configPath} includes ` +
-          `${entry.getText(source)}, which is not a literal this guard can resolve; it reads a ` +
-          "declaration rather than evaluating one",
-      );
-    }
-    globs.push(value);
-  }
-  return globs;
+  return {
+    include: literals(includeNode, "include"),
+    exclude: literals(propertyValue(ts, found[0], "exclude"), "exclude"),
+  };
 }
 
 /**
@@ -594,7 +613,8 @@ async function e2eIncludeGlobs(text, configPath) {
  * the runner uses, and guessing is how the defect worked.
  *
  * @param {string} root repository root
- * @returns {Promise<string[]>} absolute directories to scan
+ * @returns {Promise<{ roots: string[], excluded: (file: string) => boolean }>} the directories
+ *   to scan and a predicate naming the files inside them the runner does not open
  */
 export async function runnerCorpusRoots(root) {
   const configPath = path.join(root, "packages", "qfai", "vitest.workspace.ts");
@@ -607,7 +627,7 @@ export async function runnerCorpusRoots(root) {
         `${String(MAX_SOURCE_BYTES)} bytes, so the runner's e2e include list cannot be read`,
     );
   }
-  const globs = await e2eIncludeGlobs(configText, configPath);
+  const { include: globs, exclude } = await e2eIncludeGlobs(configText, configPath);
   if (globs.length === 0) {
     throw new Error(
       `check-atdd-annotation-ledger: the e2e project's include list in ${configPath} parsed to nothing`,
@@ -642,7 +662,43 @@ export async function runnerCorpusRoots(root) {
     }
     roots.push(path.join(root, "packages", "qfai", ...(shape[1] ?? "").split("/")));
   }
-  return roots;
+
+  // What the runner SKIPS, in the two shapes this guard can subtract: an exact relative path,
+  // and the same `<dir>/**/*<extension>` form the includes take. Anything else is a change to
+  // the configuration this guard cannot follow, and a corpus that quietly kept a file Vitest
+  // never opens is the whole finding — so it throws rather than approximating.
+  const packageRoot = path.join(root, "packages", "qfai");
+  const skips = [];
+  for (const glob of exclude) {
+    if (!glob.includes("*")) {
+      skips.push({ file: path.resolve(packageRoot, ...glob.split("/")) });
+      continue;
+    }
+    const shape = /^(.+?)\/\*\*\/\*(\.[A-Za-z0-9][A-Za-z0-9.]*)$/.exec(glob);
+    if (shape === null) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the e2e project excludes ${JSON.stringify(glob)}, which ` +
+          "this guard cannot subtract from the corpus; a file the runner does not open must not " +
+          "back a ledger claim, so update `runnerCorpusRoots` in the same change",
+      );
+    }
+    skips.push({
+      dir: path.resolve(packageRoot, ...(shape[1] ?? "").split("/")),
+      extension: shape[2] ?? "",
+    });
+  }
+
+  const excluded = (file) => {
+    const resolved = path.resolve(file);
+    return skips.some((skip) => {
+      if (skip.file !== undefined) return path.resolve(skip.file) === resolved;
+      if (skip.dir === undefined) return false;
+      const inside = path.relative(skip.dir, resolved);
+      if (inside === "" || inside.startsWith("..") || path.isAbsolute(inside)) return false;
+      return resolved.endsWith(skip.extension);
+    });
+  };
+  return { roots, excluded };
 }
 
 async function main() {
@@ -716,11 +772,16 @@ async function main() {
   }
 
   const sources = new Map();
-  for (const dir of await runnerCorpusRoots(root)) {
+  const { roots: corpusRoots, excluded } = await runnerCorpusRoots(root);
+  for (const dir of corpusRoots) {
     // The repository is the boundary every followed link must resolve inside. Review finding
     // [61]: without one, a directory symlink to `/proc` or to any large external tree was walked
     // without bound and this required lane hung instead of reporting.
-    for (const [file, text] of await collectTestSources(dir, root)) sources.set(file, text);
+    for (const [file, text] of await collectTestSources(dir, root)) {
+      // …and a file the RUNNER does not open never backs a claim. Review finding [85].
+      if (excluded(file)) continue;
+      sources.set(file, text);
+    }
   }
 
   const result = checkLedger(ledgerText, sources, spec === undefined ? {} : { spec });

@@ -286,7 +286,23 @@ jobs:
               # registry calls latest at the moment the job runs, so the same commit installs a
               # different corepack from one day to the next — and this is the step that
               # bootstraps the toolchain everything after it depends on.
-              npm install --global corepack@0.35.0
+              # The version, the REGISTRY, and the bytes. `npm` resolves its registry from
+              # `NPM_CONFIG_REGISTRY` or a project `.npmrc`, so a pinned version alone is a name
+              # an attacker-controlled registry can answer with different content — and this
+              # package's bin runs on the very next line. The tarball is fetched from the named
+              # registry, hashed, compared with the pinned integrity, and installed from the local
+              # file with no install scripts.
+              registry="https://registry.npmjs.org/"
+              want="sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw=="
+              tgz="${RUNNER_TEMP:-/tmp}/corepack-0.35.0.tgz"
+              curl -fsSL --proto '=https' --tlsv1.2 \
+                "${registry}corepack/-/corepack-0.35.0.tgz" -o "${tgz}"
+              got="sha512-$(openssl dgst -sha512 -binary "${tgz}" | openssl base64 -A)"
+              if [ "${got}" != "${want}" ]; then
+                echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
+                exit 1
+              fi
+              npm install --global --ignore-scripts --registry "${registry}" "${tgz}"
             fi
             corepack enable
             # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses

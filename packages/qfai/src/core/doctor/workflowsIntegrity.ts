@@ -98,6 +98,7 @@ import {
   resolveWorkflowFileState,
   type WorkflowProvenanceEntry,
 } from "../../shared/provenance.js";
+import { SHIPPED_WORKFLOW_NAMES } from "../../shared/shippedWorkflowNames.js";
 import { normalizeNewlines } from "../../shared/text.js";
 
 /** Adopter-tree location of the installed workflows, as POSIX segments. */
@@ -478,6 +479,37 @@ export async function diffInstalledShippedWorkflows(
     };
   }
 
+  // …and it has to HOLD what this package ships. Review finding [86]: the directory test
+  // above is satisfied by an empty directory, which a partial extraction or a half-finished
+  // install leaves behind — and then every packaged file reads as absent, the per-file rule
+  // treats each one as a name the package no longer ships, `comparedCount` lands on zero, and
+  // the status is `ok`. `doctor` registers neither drift nor a skip. That is the same
+  // fail-open the whole-tree case was written to close, reached one level in.
+  //
+  // Which names must be present depends on WHOSE tree this is. Against the running package,
+  // all of them: this list is the package's own claim about what it ships, and a missing one
+  // is damage. Against a caller-supplied tree, at least one: an override exists to compare
+  // with a controlled directory, which is under no obligation to hold the whole write set,
+  // and demanding it would turn every partial fixture into an unresolved run.
+  const missingShipped: string[] = [];
+  for (const name of SHIPPED_WORKFLOW_NAMES) {
+    if (!(await isReadableFile(path.join(packagedDir, name)))) missingShipped.push(name);
+  }
+  const gutted =
+    packagedWorkflowsDirOverride === undefined
+      ? missingShipped.length > 0
+      : missingShipped.length === SHIPPED_WORKFLOW_NAMES.size;
+  if (gutted) {
+    return {
+      status: "skipped_unresolved",
+      workflowsDir: WORKFLOWS_DIR_RELATIVE,
+      packagedDir: undefined,
+      modified: [],
+      declined: [],
+      comparedCount: 0,
+    };
+  }
+
   const installedDir = path.join(root, ...WORKFLOWS_DIR_SEGMENTS);
   const modified: string[] = [];
   const declined: string[] = [];
@@ -554,6 +586,21 @@ export async function diffInstalledShippedWorkflows(
     declined,
     comparedCount: examinedCount,
   };
+}
+
+/**
+ * Whether `file` exists and is a regular file.
+ *
+ * `lstat`, so a name that is a symlink is not a packaged workflow this reader will count on:
+ * the packaged tree is this package's own, and a link inside it is damage of the same kind a
+ * missing file is.
+ */
+async function isReadableFile(file: string): Promise<boolean> {
+  try {
+    return (await lstat(file)).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /** Whether `dir` exists and is a directory (following the packaged path is fine: it is ours). */
