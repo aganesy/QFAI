@@ -1174,17 +1174,34 @@ function checkGlobalInstallPins(root, jobs) {
       for (const line of shellCommandLines(body)) {
         if (!GLOBAL_INSTALL.test(line)) continue;
         const missing = [];
-        // The VALUE, not the presence. `--registry=https://attacker.example` carries the flag
-        // and answers a different registry, which is the whole of what the flag was added to
-        // stop. Both spellings, because `--registry x` and `--registry=x` are one flag.
-        const registry = /--registry[=\s]+(\S+)/.exec(line)?.[1]?.replace(/^["']|["']$/g, "") ?? "";
-        const resolved = registry.replace(/\/+$/, "");
-        if (!TRUSTED_REGISTRIES.includes(resolved)) {
+        // The VALUE, not the presence. `--registry=https://attacker.example` carries the flag and
+        // answers a different registry, which is the whole of what the flag was added to stop.
+        // Both spellings, because `--registry x` and `--registry=x` are one flag.
+        //
+        // EVERY occurrence, because npm takes the LAST one. Review finding [99]: reading only the
+        // first accepted `--registry=<trusted> --registry=<attacker>`, which npm resolves to the
+        // attacker (verified against `npm config get registry` carrying both). A duplicate is
+        // refused outright rather than resolved: two answers to one question is not a pin,
+        // whichever end this lane were to read from.
+        const registries = [...line.matchAll(/--registry[=\s]+(\S+)/g)].map((m) =>
+          (m[1] ?? "").replace(/^["']|["']$/g, ""),
+        );
+        if (registries.length > 1) {
           missing.push(
-            registry === ""
-              ? "--registry"
-              : `--registry naming a trusted registry (found ${JSON.stringify(registry)})`,
+            `one --registry (found ${String(registries.length)}, and npm takes the last: ${registries
+              .map((r) => JSON.stringify(r))
+              .join(", ")})`,
           );
+        } else {
+          const registry = registries[0] ?? "";
+          const resolved = registry.replace(/\/+$/, "");
+          if (!TRUSTED_REGISTRIES.includes(resolved)) {
+            missing.push(
+              registry === ""
+                ? "--registry"
+                : `--registry naming a trusted registry (found ${JSON.stringify(registry)})`,
+            );
+          }
         }
         // …and `--ignore-scripts=false` is the flag present and turned off.
         const ignore = /--ignore-scripts(?:[=\s]+(\S+))?/.exec(line);
@@ -2037,6 +2054,59 @@ function checkRequiredContexts(root, jobs) {
             file: rel,
             job: String(jobKey),
             detail: `performs ${JSON.stringify(item)} with a body digest of ${digest} where ${DECLARATION_REL} pins ${pinned} — recompute with \`node scripts/pin-verification-bodies.mjs\` and land it in the same change`,
+          });
+        }
+      }
+    }
+
+    // PROPERTY 2f — and the values a gated lane expands over are the declared ones.
+    //
+    // Review finding [97]: a step named `Run tests (${{ matrix.slice }})` is digested with the
+    // EXPRESSION in it, so its digest says nothing about what the expression expands to. A value
+    // rewritten to `unit || true #` hands the shell a command that succeeds whatever the tests
+    // did; values removed from the list drop whole slices. Neither moves a pinned body, and
+    // `matrix-fail-fast` looks only at `fail-fast`.
+    const declaredMatrices = isRecord(context.dependencyMatrices)
+      ? context.dependencyMatrices
+      : undefined;
+    if (declaredMatrices === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `dependencyMatrices` mapping, so the values a gated lane expands over — which reach the shell and are invisible to a body digest — are pinned by nothing",
+      });
+    }
+    for (const [jobKey, axes] of Object.entries(declaredMatrices ?? {})) {
+      const job = jobsByKey.get(jobKey);
+      if (job === undefined || !isRecord(axes)) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `pins a matrix for ${jobKey}, which ${workflow} declares no such job or which this lane cannot read as a mapping of axes`,
+        });
+        continue;
+      }
+      const strategy = isRecord(job.strategy) ? job.strategy : undefined;
+      const matrix = strategy !== undefined && isRecord(strategy.matrix) ? strategy.matrix : {};
+      for (const axis of new Set([...Object.keys(axes), ...Object.keys(matrix)])) {
+        const want = axes[axis];
+        const got = matrix[axis];
+        const wantList = Array.isArray(want) ? want.map((v) => String(v)) : undefined;
+        const gotList = Array.isArray(got) ? got.map((v) => String(v)) : undefined;
+        if (
+          wantList === undefined ||
+          gotList === undefined ||
+          wantList.length !== gotList.length ||
+          wantList.some((value, index) => value !== gotList[index])
+        ) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: jobKey,
+            detail: `expands its matrix axis ${JSON.stringify(axis)} over ${gotList === undefined ? "something this lane cannot read as a list" : JSON.stringify(gotList)} where ${DECLARATION_REL} declares ${wantList === undefined ? "no such axis" : JSON.stringify(wantList)} — every value reaches the shell of a step whose digest holds the expression and not what it expands to`,
           });
         }
       }

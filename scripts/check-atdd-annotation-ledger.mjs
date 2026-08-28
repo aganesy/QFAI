@@ -510,12 +510,63 @@ async function e2eIncludeGlobs(text, configPath) {
   // `defineWorkspace` is Vitest's own identity function over the array, which is why
   // unwrapping it is reading rather than evaluating. Anything else is refused below, where
   // the array check reports what it found.
+  // The BINDING, not the spelling. Review finding [96]: this compared the callee TEXT, so a
+  // config declaring `const defineWorkspace = (decoy, real) => real` had Vitest run `real` while
+  // this guard took `decoy` as the backing corpus - annotation-only files in a fake tree
+  // certifying every claim. The same substitution the callee check was added to stop, one level
+  // down: it refused an unidentified callee and not a shadowed identified one.
+  //
+  // So the name has to be imported from Vitest and shadowed by nothing. Fail closed, because a
+  // call this guard cannot identify is a call whose result it cannot predict.
+  const importsDefineWorkspace = source.statements.some(
+    (statement) =>
+      ts.isImportDeclaration(statement) &&
+      ts.isStringLiteral(statement.moduleSpecifier) &&
+      /^vitest(\/|$)/.test(statement.moduleSpecifier.text) &&
+      statement.importClause?.namedBindings !== undefined &&
+      ts.isNamedImports(statement.importClause.namedBindings) &&
+      statement.importClause.namedBindings.elements.some(
+        (element) => element.name.text === "defineWorkspace",
+      ),
+  );
+  // A local declaration of the same name shadows the import wherever it sits - hoisting and
+  // block scope both put one in reach of the export below - so ANY of them is a refusal rather
+  // than a question this guard tries to answer.
+  let shadowed = false;
+  const walkForShadow = (node) => {
+    if (shadowed) return;
+    const declares =
+      ts.isVariableDeclaration(node) ||
+      ts.isFunctionDeclaration(node) ||
+      ts.isClassDeclaration(node);
+    if (
+      declares &&
+      node.name !== undefined &&
+      ts.isIdentifier(node.name) &&
+      node.name.text === "defineWorkspace"
+    ) {
+      shadowed = true;
+      return;
+    }
+    ts.forEachChild(node, walkForShadow);
+  };
+  ts.forEachChild(source, walkForShadow);
+
   if (
     exported !== undefined &&
     ts.isCallExpression(exported) &&
     ts.isIdentifier(exported.expression) &&
     exported.expression.text === "defineWorkspace"
   ) {
+    if (!importsDefineWorkspace || shadowed) {
+      throw new Error(
+        `check-atdd-annotation-ledger: ${configPath} calls a defineWorkspace this guard cannot ` +
+          (shadowed
+            ? "identify as Vitest own: a local declaration of that name shadows the import"
+            : "identify as Vitest own: the name is not imported from Vitest") +
+          ", so what the call returns is not something this guard may assume",
+      );
+    }
     exported = exported.arguments[0];
   }
   if (exported === undefined || !ts.isArrayLiteralExpression(exported)) {

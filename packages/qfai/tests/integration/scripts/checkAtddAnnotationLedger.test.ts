@@ -529,17 +529,66 @@ describe("runnerCorpusRoots", () => {
   });
 
   it("still unwraps defineWorkspace, so the check is an identification and not a ban", async () => {
+    // The fixture IMPORTS it, as the real configuration does. Review finding [96] made that
+    // load-bearing: the identifier alone is not an identification, so the import is what says
+    // this call is Vitest's own.
     const dir = await temp();
     await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
     await writeFile(
       path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
-      `export default defineWorkspace([{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }]);\n`,
+      [
+        'import { defineWorkspace } from "vitest/config";',
+        'export default defineWorkspace([{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }]);',
+        "",
+      ].join("\n"),
       "utf8",
     );
 
     await expect(runnerCorpusRoots(dir).then((r) => r.roots)).resolves.toEqual([
       path.join(dir, "packages", "qfai", "tests", "journeys"),
     ]);
+  });
+
+  it("refuses a defineWorkspace a local declaration shadows", async () => {
+    // Review finding [96], as filed: `const defineWorkspace = (decoy, real) => real` has Vitest
+    // run the SECOND argument while a guard reading argument zero takes the first — a fake tree
+    // whose annotation-only files certify every claim. The callee check refused an unidentified
+    // callee and not a shadowed identified one, which is the same substitution one level down.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { defineWorkspace } from "vitest/config";',
+        "const defineWorkspace = (decoy, real) => real;",
+        "export default defineWorkspace(",
+        '  [{ test: { name: "e2e", include: ["tests/decoy/**/*.test.ts"] } }],',
+        '  [{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }],',
+        ");",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/shadows the import/i);
+  });
+
+  it("refuses a defineWorkspace that is not imported from Vitest at all", async () => {
+    // The other half. A call this guard cannot identify is a call whose result it cannot predict,
+    // and predicting it wrongly is how the decoy is read as the corpus.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { defineWorkspace } from "./local-helper";',
+        'export default defineWorkspace([{ test: { name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }]);',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/not imported from Vitest/i);
   });
 
   it("subtracts an excluded file, which the runner does not open", async () => {

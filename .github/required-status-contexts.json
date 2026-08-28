@@ -95,6 +95,25 @@
         "on every pull request. The verdict's own `if: always()` is checked by property 2 and is not",
         "a dependency condition."
       ],
+      "dependencyMatrices": {
+        "test": {
+          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+        }
+      },
+      "dependencyMatricesNote": [
+        "The matrix values a gated lane expands over, pinned exactly.",
+        "",
+        "Review finding [97]: `Run tests (${{ matrix.slice }})` is digested with the EXPRESSION in it,",
+        "so the digest says nothing about what the expression expands to. Replacing a value with",
+        "`unit || true #` hands the shell `pnpm -C packages/qfai test:unit || true #`, which succeeds",
+        "whatever the tests did — and removing values from the list drops whole slices — while the",
+        "pinned body and every other property stay exactly as they were.",
+        "",
+        "Equality, in both directions and in order. A dropped value is a slice that stopped running; an",
+        "added one is a leg whose check name branch protection has never seen; and a REWRITTEN one is",
+        "shell the digest cannot see. This is the same obligation `verificationBodies` carries for a",
+        "step's text, applied to the other half of what the step actually runs."
+      ],
       "gateOutputs": {
         "detect": {
           "full": "${{ steps.classify.outputs.full }}",
@@ -254,7 +273,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "52b2633b24879f9d",
+        "Run lint gate": "64222ebcf0c48cf4",
         "Run type check": "752faf7a297fc773",
         "Run future TypeScript compatibility check": "5390e36a8b0b4148",
         "Run the package test suite on the floor": "402864498ce96b32",
