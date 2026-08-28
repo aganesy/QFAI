@@ -426,7 +426,35 @@ function effectiveEnv(inherited, own) {
  * worse parser, and "no step in this closure sets the environment of the next one" is a rule
  * that can be stated and checked. A step that genuinely needs to is a change to this file.
  */
-const STEP_ENVIRONMENT_COMMAND_FILES = ["GITHUB_ENV", "GITHUB_PATH"];
+/** Where the command-file names live, for both readers. */
+const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
+
+/**
+ * The workflow command files, read from the tree rather than written here.
+ *
+ * `scripts/check-toolchain-action.sh` needs the same list — it refuses a composite action that
+ * reaches one, before any action runs — and this repository's reviewers have flagged two copies
+ * of one rule often enough that the list is a file both read. It is also why the shell script can
+ * exist at all: this lane refuses a step whose surface NAMES a command file, and that script's
+ * step is inside the required closure, so spelling the names in its body would make the lane
+ * report its own pre-flight as a writer. Splicing them together to dodge that is precisely the
+ * evasion the by-name rule exists to refuse.
+ *
+ * `undefined` for absent or empty, which the caller turns into a finding: a check that knows
+ * nothing to look for must not report PASS.
+ *
+ * @param {string} root repository root
+ * @returns {string[] | undefined} the declared names, or `undefined` if the list is unusable
+ */
+function commandFileNames(root) {
+  const text = readBoundedText(path.join(root, COMMAND_FILES_REL), MAX_WORKFLOW_BYTES);
+  if (text === undefined) return undefined;
+  const names = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+  return names.length === 0 ? undefined : names;
+}
 
 /** How deep a chain of local composite actions this lane will follow. */
 const MAX_LOCAL_ACTION_DEPTH = 4;
@@ -449,11 +477,12 @@ const MAX_LOCAL_ACTION_DEPTH = 4;
  *
  * @param {string} root repository root
  * @param {string} reference a `uses:` value beginning `./`
+ * @param {string[]} commandFiles the declared command-file names
  * @param {Set<string>} seen action files already examined, so a cycle terminates
  * @param {number} depth how many local actions deep this call is
  * @returns {{ file: string, step: string, commandFile: string }[]} one entry per write
  */
-function localActionCommandFileWrites(root, reference, seen = new Set(), depth = 0) {
+function localActionCommandFileWrites(root, reference, commandFiles, seen = new Set(), depth = 0) {
   /** @type {{ file: string, step: string, commandFile: string }[]} */
   const out = [];
   const rel = reference.replace(/^\.\//, "").replace(/[/\\]+$/, "");
@@ -489,7 +518,7 @@ function localActionCommandFileWrites(root, reference, seen = new Set(), depth =
     for (const step of steps) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
-      for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
+      for (const file of commandFiles) {
         if (body.includes(file)) {
           out.push({
             file: relFile,
@@ -500,7 +529,7 @@ function localActionCommandFileWrites(root, reference, seen = new Set(), depth =
       }
       const nested = typeof step.uses === "string" ? step.uses : "";
       if (nested.startsWith("./")) {
-        out.push(...localActionCommandFileWrites(root, nested, seen, depth + 1));
+        out.push(...localActionCommandFileWrites(root, nested, commandFiles, seen, depth + 1));
       }
     }
   }
@@ -1240,6 +1269,23 @@ function readDeclaration(root) {
 }
 
 /** Every job reachable from `jobKey` through `needs`, including itself. */
+/**
+ * One job's declared dependencies, in declaration order.
+ *
+ * `needs: build` and `needs: [build]` are both legal, and a reader that handled only the array
+ * form would report the string form as no dependencies at all — which is the direction that
+ * fails open. Same normalisation `needsClosure` performs; kept in one place so the two cannot
+ * disagree about what a dependency list is.
+ *
+ * @param {unknown} job one job mapping
+ * @returns {string[]} its dependency job keys
+ */
+function declaredDependencyList(job) {
+  const needs = isRecord(job) ? job.needs : undefined;
+  const list = typeof needs === "string" ? [needs] : Array.isArray(needs) ? needs : [];
+  return list.filter((name) => typeof name === "string");
+}
+
 function needsClosure(jobsByKey, jobKey) {
   const seen = new Set();
   const walk = (key) => {
@@ -1437,6 +1483,181 @@ function checkRequiredContexts(root, jobs) {
       }
     }
 
+    // PROPERTY 2b — and the set of jobs it depends on is the declared one, exactly.
+    //
+    // Review finding [80]: `${{ toJSON(needs) }}` contains only the jobs still listed in
+    // `needs:`, so deleting a name removes a whole lane from the verdict while the lane keeps
+    // running and keeps failing. Property 3 does not notice, because the seven declared items
+    // stay reachable through `detect` and `build` — and the topology test that would notice
+    // runs inside the `test` job, which is one of the names an attacker deletes.
+    //
+    // Equality in both directions. A missing name is the attack; an extra one is a lane that
+    // now gates the merge and whose addition nobody declared.
+    const declaredDependencies = Array.isArray(context.dependencies)
+      ? context.dependencies.filter((name) => typeof name === "string" && name.length > 0)
+      : undefined;
+    if (declaredDependencies === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `dependencies` array, so the set of lanes whose results reach the required context is pinned by nothing",
+      });
+    } else {
+      const actual = declaredDependencyList(jobsByKey.get(declaredJob));
+      for (const name of declaredDependencies) {
+        if (!actual.includes(name)) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `no longer depends on ${name}, which ${DECLARATION_REL} declares it must — that lane still runs and can still fail, but its result never enters the serialized needs map the verdict reads`,
+          });
+        }
+      }
+      for (const name of actual) {
+        if (!declaredDependencies.includes(name)) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `depends on ${name}, which ${DECLARATION_REL} does not declare — a lane whose result gates the merge is a change to what this context means, so declare it there in the same change`,
+          });
+        }
+      }
+    }
+
+    // PROPERTY 2c — and each dependency may be skipped only on the declared condition.
+    //
+    // The verdict accepts `skipped`, because a documentation-only pull request legitimately
+    // runs none of the gated lanes. That makes the skip decision load-bearing: review finding
+    // [81] pointed at `if: false` on `test`, which skips the lane, is accepted by the verdict,
+    // and is noticed by nothing else in the tree. A job the declaration lists must carry its
+    // condition verbatim; a job it does not list must carry none.
+    const declaredConditions = isRecord(context.dependencyConditions)
+      ? context.dependencyConditions
+      : {};
+    for (const name of declaredDependencyList(jobsByKey.get(declaredJob))) {
+      const job = jobsByKey.get(name);
+      if (job === undefined) continue;
+      const declared = declaredConditions[name];
+      const carried = job.if === undefined ? undefined : String(job.if);
+      const expected = typeof declared === "string" ? declared : undefined;
+      if (carried !== expected) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `depends on ${name}, whose condition is ${carried === undefined ? "absent" : JSON.stringify(carried)} where ${DECLARATION_REL} declares ${expected === undefined ? "none" : JSON.stringify(expected)} — the verdict accepts a skip, so which lanes may skip and on what is part of what this context means`,
+        });
+      }
+    }
+
+    // PROPERTY 2d — and the outputs those conditions read are wired to steps that exist.
+    //
+    // Review finding [81]'s other half: rewiring `detect.outputs.full` to `${{ false }}`, or to
+    // a step output nobody produces, skips every gated lane without touching a condition or a
+    // line of the classifier. The classifier's own tests are inside one of the lanes that skips.
+    const declaredOutputs = isRecord(context.gateOutputs) ? context.gateOutputs : {};
+    for (const [name, mapping] of Object.entries(declaredOutputs)) {
+      if (!isRecord(mapping)) continue;
+      const job = jobsByKey.get(name);
+      if (job === undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `${DECLARATION_REL} pins the outputs of ${name}, which ${workflow} declares no such job`,
+        });
+        continue;
+      }
+      const carried = isRecord(job.outputs) ? job.outputs : {};
+      const stepIds = new Set(
+        (Array.isArray(job.steps) ? job.steps : [])
+          .filter((step) => isRecord(step) && typeof step.id === "string")
+          .map((step) => String(step.id)),
+      );
+      for (const key of new Set([...Object.keys(mapping), ...Object.keys(carried)])) {
+        const want = mapping[key];
+        const got = carried[key];
+        if (typeof want !== "string" || String(got) !== want) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `${name} wires its output ${JSON.stringify(key)} to ${got === undefined ? "nothing" : JSON.stringify(String(got))} where ${DECLARATION_REL} declares ${typeof want === "string" ? JSON.stringify(want) : "no such output"} — every lane gated on this value skips when it changes, and the verdict accepts a skip`,
+          });
+          continue;
+        }
+        // …and the step it reads has to be one this job declares. A mapping that reads an `id`
+        // nobody defines always answers empty, which is the same skip by a quieter route.
+        const reference = /^\$\{\{\s*steps\.([A-Za-z0-9_-]+)\.outputs\.[A-Za-z0-9_-]+\s*\}\}$/.exec(
+          want,
+        );
+        if (reference !== null && !stepIds.has(reference[1])) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: declaredJob,
+            detail: `${name} wires its output ${JSON.stringify(key)} to a step with id ${JSON.stringify(reference[1])}, which that job does not declare — the value is always empty, so every lane gated on it always skips`,
+          });
+        }
+      }
+    }
+
+    // PROPERTY 2e — and the declared pre-flight refusal runs before anything can disable it.
+    //
+    // Review finding [82]. The lane's own report of a poisoned composite action is unreachable
+    // when the poison is in the action the lane's job runs first: `BASH_ENV` makes every later
+    // `shell: bash` step exit 0 without running its body. So the refusal moved ahead of the
+    // action, and this keeps it there — the step exists, nothing that does work precedes it, and
+    // its body is pinned like every other required verification.
+    const preflight = isRecord(context.preflight) ? context.preflight : undefined;
+    if (preflight === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `preflight` step, so nothing requires a refusal of the local composite actions to run before the job that verifies them invokes one",
+      });
+    } else {
+      const preflightJob = typeof preflight.job === "string" ? preflight.job : "(unnamed)";
+      const preflightStep = typeof preflight.step === "string" ? preflight.step : "(unnamed)";
+      const host = jobsByKey.get(preflightJob);
+      const steps = isRecord(host) && Array.isArray(host.steps) ? host.steps : [];
+      const at = steps.findIndex((step) => isRecord(step) && String(step.name) === preflightStep);
+      if (at === -1) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: preflightJob,
+          detail: `declares no step named ${JSON.stringify(preflightStep)}, which ${DECLARATION_REL} requires it to run before any local composite action`,
+        });
+      } else {
+        for (const step of steps.slice(0, at)) {
+          if (!isRecord(step)) continue;
+          const uses = typeof step.uses === "string" ? step.uses : "";
+          const does = typeof step.run === "string" || uses.startsWith("./");
+          if (!does) continue;
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: preflightJob,
+            detail: `runs ${JSON.stringify(String(step.name ?? uses))} before ${JSON.stringify(preflightStep)}, which must come first — a step ahead of it can write a workflow command file, and every step after that one runs under an environment it chose`,
+          });
+        }
+      }
+      if (!wanted.includes(preflightStep)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `declares ${JSON.stringify(preflightStep)} as the pre-flight refusal but leaves it out of verificationSet, so its body is pinned by nothing and can be replaced with anything`,
+        });
+      }
+    }
     // PROPERTY 3 PRECONDITION — there is something to check. A context that names a real,
     // unskippable job and enumerates nothing passes properties 1 and 2 and then iterates an
     // empty list, so the rule reports PASS having verified the one property that carries the
@@ -1467,6 +1688,54 @@ function checkRequiredContexts(root, jobs) {
     const environmentWriters = new Map();
     /** The same, inside a local composite action the closure invokes. */
     const actionWriters = new Map();
+    // Read once per context, and a list this lane cannot read is a finding rather than an
+    // empty search: a by-name rule with no names reports PASS over every step there is.
+    const commandFiles = commandFileNames(root) ?? [];
+    if (commandFiles.length === 0) {
+      findings.push({
+        rule: "required-context",
+        file: COMMAND_FILES_REL,
+        job: declaredJob,
+        detail:
+          "is missing, empty, or not a readable regular file, so the rule that refuses a step reaching a workflow command file has no names to look for — and the pre-flight refusal in the lint job reads the same list",
+      });
+    }
+    // …and it holds what the declaration says it holds. This is the one input neither pin
+    // covers on its own: the pre-flight step's body digest hashes the SCRIPT, not the data file
+    // the script opens at runtime, so dropping one name from the file leaves both readers
+    // narrowed and every check reporting PASS. Equality, in both directions.
+    const pinnedCommandFiles = Array.isArray(context.commandFiles)
+      ? context.commandFiles.filter((name) => typeof name === "string" && name.length > 0)
+      : undefined;
+    if (pinnedCommandFiles === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail: `declares no \`commandFiles\` array, so the list in ${COMMAND_FILES_REL} that both the by-name rule and the pre-flight refusal read is pinned by nothing`,
+      });
+    } else {
+      for (const name of pinnedCommandFiles) {
+        if (!commandFiles.includes(name)) {
+          findings.push({
+            rule: "required-context",
+            file: COMMAND_FILES_REL,
+            job: declaredJob,
+            detail: `no longer names ${name}, which ${DECLARATION_REL} declares it must — both the by-name rule and the pre-flight refusal read this file, so a name removed here is a refusal removed from two places at once`,
+          });
+        }
+      }
+      for (const name of commandFiles) {
+        if (!pinnedCommandFiles.includes(name)) {
+          findings.push({
+            rule: "required-context",
+            file: COMMAND_FILES_REL,
+            job: declaredJob,
+            detail: `names ${name}, which ${DECLARATION_REL} does not declare — an added name widens what both readers refuse, which is a change to what this context means`,
+          });
+        }
+      }
+    }
     for (const key of needsClosure(jobsByKey, declaredJob)) {
       const job = jobsByKey.get(key);
       const steps = job !== undefined && Array.isArray(job.steps) ? job.steps : [];
@@ -1575,14 +1844,14 @@ function checkRequiredContexts(root, jobs) {
           JSON.stringify(step["with"] ?? null),
           ...[...effectiveEnv(runDefaults.env, step["env"])].map(([, value]) => String(value)),
         ].join("\n");
-        for (const file of STEP_ENVIRONMENT_COMMAND_FILES) {
+        for (const file of commandFiles) {
           if (surface.includes(file)) environmentWriters.set(site, file);
         }
         // …and the same refusal for a LOCAL composite action the step invokes, whose steps no
         // pinned digest covers. See `localActionCommandFileWrites`.
         const invoked = typeof step.uses === "string" ? step.uses : "";
         if (invoked.startsWith("./")) {
-          for (const write of localActionCommandFileWrites(root, invoked)) {
+          for (const write of localActionCommandFileWrites(root, invoked, commandFiles)) {
             actionWriters.set(
               `${write.file} step ${JSON.stringify(write.step)}`,
               write.commandFile,

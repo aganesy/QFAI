@@ -314,6 +314,20 @@ jobs:
           # origin/main...HEAD`. Default shallow checkout doesn't fetch
           # base ref refs, so fetch full history here.
           fetch-depth: 0
+      # FIRST, before anything else in this job does any work.
+      #
+      # Review finding [82]: this job runs `./.github/actions/setup` — an action a pull request
+      # can edit — before it runs any guard. A step at the top of that action appending
+      # `BASH_ENV=<a script that exits 0>` to the environment file makes every later
+      # `shell: bash` step source that script and exit 0 without running its body, guards
+      # included. The hygiene lane reports that write, and cannot report it here: the lane is one
+      # of the steps that never really runs. A check the attack disables is not a check.
+      #
+      # So this one runs with only `actions/checkout` ahead of it, which sets no environment
+      # file, and needs nothing the setup action provides — `bash` and `grep`, both on the image.
+      - name: Verify the toolchain action before running it
+        run: bash ./scripts/check-toolchain-action.sh
+        shell: bash
       - name: Ensure base ref is fetched (for pair-changed CI lane)
         run: |
           # PR runs already have origin/main as a remote-tracking ref

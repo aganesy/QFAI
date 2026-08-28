@@ -853,11 +853,17 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         forRequired === undefined ? undefined : forRequired["verificationSet"],
         "this row's literals and the declaration production reads must not drift apart",
       )
-      // The declaration names SEVEN items and this row restates six, and the difference is not
-      // drift: the seventh is the verdict step, which belongs to the declared job itself rather
-      // than to `build`. Composed here rather than added to `REQUIRED`, which is checked against
-      // `buildJobSteps()` above and would then be looking for a step that job does not have.
-      .toEqual(["Derive the verdict from the serialized needs map", ...REQUIRED]);
+      // The declaration names EIGHT items and this row restates six, and the difference is not
+      // drift: the other two belong to jobs other than `build` — the verdict step to the
+      // declared job itself, and the pre-flight refusal of the local composite actions to
+      // `lint`, where it has to run before that job invokes one (review finding [82]).
+      // Composed here rather than added to `REQUIRED`, which is checked against
+      // `buildJobSteps()` above and would then be looking for steps that job does not have.
+      .toEqual([
+        "Verify the toolchain action before running it",
+        "Derive the verdict from the serialized needs map",
+        ...REQUIRED,
+      ]);
   });
 });
 
@@ -1739,6 +1745,12 @@ const BUILD_JOB_NAME = "build";
  * list, and a shared constant would let one row's edit silently satisfy the other.
  */
 const VERIFICATION_SET = [
+  // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
+  // composite actions has to run before any job invokes one. Review finding [82] — a step at
+  // the top of `./.github/actions/setup` writing `BASH_ENV` makes every later `shell: bash`
+  // step exit 0 without running its body, the hygiene lane included, so the lane cannot be the
+  // thing that catches it.
+  "Verify the toolchain action before running it",
   "Derive the verdict from the serialized needs map",
   "Run build & pack verification",
   "Sanity grep — no internal spec IDs or version markers leak (post-build)",
