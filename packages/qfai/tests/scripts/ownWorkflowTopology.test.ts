@@ -853,16 +853,19 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
         forRequired === undefined ? undefined : forRequired["verificationSet"],
         "this row's literals and the declaration production reads must not drift apart",
       )
-      // The declaration names EIGHT items and this row restates six, and the difference is not
-      // drift: the other two belong to jobs other than `build` — the verdict step to the
-      // declared job itself, and the pre-flight refusal of the local composite actions to
-      // `lint`, where it has to run before that job invokes one (review finding [82]).
-      // Composed here rather than added to `REQUIRED`, which is checked against
+      // The declaration names NINE items and this row restates six, and the difference is not
+      // drift: the other three belong to jobs other than `build` — the verdict step to the
+      // declared job itself, and two to `lint`. The pre-flight refusal of the local composite
+      // actions has to run before that job invokes one (review finding [82]); `pnpm ci:lint`
+      // is the lint job's own work, pinned by body for the reason review finding [89] gives
+      // about a gated lane — being in the aggregate is not the same claim as still doing the
+      // work. Composed here rather than added to `REQUIRED`, which is checked against
       // `buildJobSteps()` above and would then be looking for steps that job does not have.
       .toEqual([
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         ...REQUIRED,
+        "Run lint gate",
       ]);
   });
 });
@@ -1758,6 +1761,10 @@ const VERIFICATION_SET = [
   "QFAI self-validate this repo (dogfooding — SDD gates)",
   "QFAI self-validate this repo (dogfooding — full profile)",
   "Run qfai validate gate (fail on error)",
+  // Last, and in `lint`: `pnpm ci:lint` is that job's own work. Review finding [89] measured
+  // what a declared dependency pins on its own — the name and the condition, and nothing about
+  // whether the step still does anything.
+  "Run lint gate",
 ] as const;
 
 /**

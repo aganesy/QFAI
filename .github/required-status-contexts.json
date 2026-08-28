@@ -131,6 +131,27 @@
         "check still reporting PASS. Equality against this list makes that a finding; changing both is a",
         "change a reviewer reads."
       ],
+      "nestedActions": ["actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"],
+      "nestedActionsNote": [
+        "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
+        "as `owner/repo@<40-hex sha>`, exactly.",
+        "",
+        "Review finding [88]: the scan that reads a local action's steps followed `./` references only,",
+        "so `uses: attacker/action@<sha>` inside `.github/actions/setup` was passed over without a",
+        "word. `action-pin` checks that such a reference is SHA-pinned and says nothing about what it",
+        "does; the pre-flight refusal reads the checkout, which is this repository's files and not the",
+        "action's. So the toolchain preamble every job runs first could invoke code nothing in this",
+        "repository looks at, and that code can write a workflow command file.",
+        "",
+        "An allow-list rather than a ban, because the preamble legitimately needs one: `setup-node` is",
+        "how the toolchain gets a Node. Pinned to the exact SHA, so a bump is a change a reviewer reads",
+        "here as well as in the action — which is the same discipline `action-pin` establishes one level",
+        "up, applied where the reference is otherwise invisible.",
+        "",
+        "Steps in the WORKFLOWS themselves are not governed here: those references sit in the diff a",
+        "reviewer already reads, and `action-pin` and the shipped third-party rule cover them. This",
+        "closes the level where the reference is inside a file the digest does not cover."
+      ],
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it"
@@ -157,7 +178,8 @@
         "QFAI self-validate this repo (dogfooding — TDD gates)",
         "QFAI self-validate this repo (dogfooding — SDD gates)",
         "QFAI self-validate this repo (dogfooding — full profile)",
-        "Run qfai validate gate (fail on error)"
+        "Run qfai validate gate (fail on error)",
+        "Run lint gate"
       ],
       "verificationSetNote": [
         "Step names, because a step name is what a reader of the workflow sees and what a",
@@ -173,6 +195,36 @@
         "The optional report upload is deliberately absent: it ends in a tolerated failure and",
         "cannot fail the job, so it is not a verification however it is named."
       ],
+      "gatedVerifications": {
+        "Run type check": "check-types",
+        "Run future TypeScript compatibility check": "check-types-future",
+        "Run the package test suite on the floor": "node-floor",
+        "Run tests (${{ matrix.slice }})": "test",
+        "Run scanner coverage gate": "scanner-coverage"
+      },
+      "gatedVerificationsNote": [
+        "The work of the lanes that are ALLOWED to skip, pinned by body without being required to run.",
+        "",
+        "Review finding [89]: `scanner-coverage` was a declared dependency by name and condition only,",
+        "so replacing its `run` with `true` left the hygiene lane silent, the job green and `ci-pass`",
+        "green — while nothing else in the repository runs `pnpm ci:coverage`, so the 90% floor and the",
+        "scanner coverage report stopped being checked at all. Being IN the aggregate is not the same",
+        "claim as still doing the work.",
+        "",
+        "Separate from `verificationSet` because the property is different, not because the obligation",
+        "is weaker. A `verificationSet` item must be performed UNCONDITIONALLY, and these five sit in",
+        "jobs that carry `needs.detect.outputs.full` — which is the arrangement rather than a hole: a",
+        "documentation-only pull request legitimately runs none of them, and the verdict accepts the",
+        "skip. What must not change without a reviewer reading it is WHAT THEY DO when they run.",
+        "",
+        "So the lane checks each one's body digest against `verificationBodies`, requires the step to",
+        "carry no condition and no `continue-on-error` of its own — the JOB's declared condition is the",
+        "only one allowed, and it is pinned in `dependencyConditions` — and requires every step sharing",
+        "the name to agree, for the reason `verificationBodiesNote` gives: a name is not a step.",
+        "",
+        "`Run lint gate` is NOT here. `lint` carries no condition, so `pnpm ci:lint` is an ordinary",
+        "unconditional verification and joins `verificationSet` with the rest."
+      ],
       "verificationBodies": {
         "Verify the toolchain action before running it": "4d84dd239021b14f",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
@@ -181,7 +233,13 @@
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
-        "Run qfai validate gate (fail on error)": "64fb079758255e4c"
+        "Run qfai validate gate (fail on error)": "64fb079758255e4c",
+        "Run lint gate": "4f8ebcdfb0c84f3e",
+        "Run type check": "752faf7a297fc773",
+        "Run future TypeScript compatibility check": "5390e36a8b0b4148",
+        "Run the package test suite on the floor": "402864498ce96b32",
+        "Run tests (${{ matrix.slice }})": "a60be18921dcaf09",
+        "Run scanner coverage gate": "ef16be91265eb726"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",

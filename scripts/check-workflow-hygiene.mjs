@@ -367,7 +367,7 @@ export function verificationBodyDigest(step, root, runDefaults = {}) {
  * GitHub resolves step > job > workflow, and only the two outer levels are invisible from the step
  * object — which is why they are resolved here rather than left to the caller.
  */
-function effectiveRunDefaults(workflow, job) {
+export function effectiveRunDefaults(workflow, job) {
   const runBlock = (owner) => {
     const defaults = isRecord(owner) ? owner.defaults : undefined;
     return isRecord(defaults) && isRecord(defaults.run) ? defaults.run : {};
@@ -461,6 +461,15 @@ function commandFileNames(root) {
     .filter((line) => line !== "" && !line.startsWith("#"));
   return names.length === 0 ? undefined : names;
 }
+
+/**
+ * The marker a nested EXTERNAL `uses:` is reported under.
+ *
+ * A string rather than a second return channel: the scan already answers a list of refusals,
+ * and the caller distinguishes this one by the marker because the answer is not `refused` but
+ * `check this against the declared set`.
+ */
+const EXTERNAL_ACTION_NOTE = "is an external action";
 
 /** How deep a chain of local composite actions this lane will follow. */
 const MAX_LOCAL_ACTION_DEPTH = 4;
@@ -569,6 +578,14 @@ function localActionCommandFileWrites(root, reference, commandFiles, seen = new 
       const nested = typeof step.uses === "string" ? step.uses : "";
       if (nested.startsWith("./")) {
         out.push(...localActionCommandFileWrites(root, nested, commandFiles, seen, depth + 1));
+      } else if (nested !== "") {
+        // An EXTERNAL action, reported so the caller can check it against the declared set.
+        // Review finding [88]: the recursion followed `./` and nothing else, so
+        // `uses: attacker/action@<sha>` inside a local action ran in the closure with nothing
+        // in this repository reading it — `action-pin` proves the reference is immutable and
+        // says nothing about what it does, and the pre-flight reads the checkout rather than
+        // the action.
+        out.push({ file: relFile, step: `uses ${nested}`, note: EXTERNAL_ACTION_NOTE });
       }
     }
   }
@@ -1748,6 +1765,91 @@ function checkRequiredContexts(root, jobs) {
         });
       }
     }
+
+    // PROPERTY 3b — and the work of the lanes that MAY skip is pinned too.
+    //
+    // Review finding [89]: a gated lane was a declared dependency by name and condition, and
+    // nothing else. Replacing `pnpm ci:coverage` with `true` left this lane silent, the job
+    // green and the aggregate green — while no other job in the repository runs that script, so
+    // the coverage floor stopped being checked at all. Being IN the aggregate is not the same
+    // claim as still doing the work.
+    //
+    // Not in `verificationSet`, because that set's property is UNCONDITIONAL performance and
+    // these steps sit in jobs that are allowed to skip. The obligation here is narrower and
+    // exact: whatever the step does when it runs is what the declaration says it does.
+    const gated = isRecord(context.gatedVerifications) ? context.gatedVerifications : {};
+    for (const [item, jobKey] of Object.entries(gated)) {
+      const host = typeof jobKey === "string" ? jobsByKey.get(jobKey) : undefined;
+      if (host === undefined) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: declaredJob,
+          detail: `declares the gated verification ${JSON.stringify(item)} in ${String(jobKey)}, which ${workflow} declares no such job`,
+        });
+        continue;
+      }
+      const steps = Array.isArray(host.steps) ? host.steps : [];
+      const runDefaults = effectiveRunDefaults(inFile[0]?.workflow, host);
+      const seen = [];
+      for (const step of steps) {
+        if (!isRecord(step) || String(step.name) !== item) continue;
+        seen.push(step);
+      }
+      if (seen.length === 0) {
+        findings.push({
+          rule: "required-context",
+          file: rel,
+          job: String(jobKey),
+          detail: `declares no step named ${JSON.stringify(item)}, which ${DECLARATION_REL} pins as this lane's work`,
+        });
+        continue;
+      }
+      // A condition or a discarded failure ON THE STEP is a second gate the declaration does not
+      // know about: the job's own condition is pinned in `dependencyConditions`, and a step that
+      // adds one can stop doing the work on runs where the lane did not skip.
+      for (const step of seen) {
+        if (step.if !== undefined) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: String(jobKey),
+            detail: `carries ${JSON.stringify(item)} behind its own condition (if: ${String(step.if)}) — the lane's skip is declared, a second gate inside it is not`,
+          });
+        }
+        if (step["continue-on-error"] !== undefined && step["continue-on-error"] !== false) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: String(jobKey),
+            detail: `runs ${JSON.stringify(item)} with continue-on-error: ${String(step["continue-on-error"])}, so the lane reports success whatever the work concluded`,
+          });
+        }
+      }
+      // EVERY body seen under the name, for the reason `verificationBodies` gives: a name is not
+      // a step, and a second step wearing it must not be able to stand in for the first.
+      const pinned = pinnedBodies[item];
+      if (typeof pinned !== "string") {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `pins ${JSON.stringify(item)} as a gated verification but records no body digest for it, so what it does is pinned by nothing`,
+        });
+        continue;
+      }
+      for (const step of seen) {
+        const digest = verificationBodyDigest(step, root, runDefaults);
+        if (digest !== pinned) {
+          findings.push({
+            rule: "required-context",
+            file: rel,
+            job: String(jobKey),
+            detail: `performs ${JSON.stringify(item)} with a body digest of ${digest} where ${DECLARATION_REL} pins ${pinned} — recompute with \`node scripts/pin-verification-bodies.mjs\` and land it in the same change`,
+          });
+        }
+      }
+    }
     // PROPERTY 3 PRECONDITION — there is something to check. A context that names a real,
     // unskippable job and enumerates nothing passes properties 1 and 2 and then iterates an
     // empty list, so the rule reports PASS having verified the one property that carries the
@@ -1780,6 +1882,9 @@ function checkRequiredContexts(root, jobs) {
     const actionWriters = new Map();
     // Read once per context, and a list this lane cannot read is a finding rather than an
     // empty search: a by-name rule with no names reports PASS over every step there is.
+    const nestedActionsAllowed = Array.isArray(context.nestedActions)
+      ? context.nestedActions.filter((name) => typeof name === "string")
+      : [];
     const commandFiles = commandFileNames(root) ?? [];
     if (commandFiles.length === 0) {
       findings.push({
@@ -1942,6 +2047,19 @@ function checkRequiredContexts(root, jobs) {
         const invoked = typeof step.uses === "string" ? step.uses : "";
         if (invoked.startsWith("./")) {
           for (const write of localActionCommandFileWrites(root, invoked, commandFiles)) {
+            if (write.note === EXTERNAL_ACTION_NOTE) {
+              // Against the declared set, exactly. The allow-list lives in the declaration
+              // because the preamble legitimately needs an external action to get a Node, and
+              // the SHA is part of the entry so a bump is read here too.
+              const reference = write.step.replace(/^uses /, "");
+              if (!nestedActionsAllowed.includes(reference)) {
+                actionWriters.set(
+                  `${write.file} step ${JSON.stringify(write.step)}`,
+                  `invokes an external action ${DECLARATION_REL} does not enumerate — its code runs in this closure and nothing in this repository reads it`,
+                );
+              }
+              continue;
+            }
             actionWriters.set(`${write.file} step ${JSON.stringify(write.step)}`, write.note);
           }
         }

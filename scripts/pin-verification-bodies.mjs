@@ -25,7 +25,7 @@ import path from "node:path";
 import { argv, cwd, exit, stderr, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
-import { verificationBodyDigest } from "./check-workflow-hygiene.mjs";
+import { effectiveRunDefaults, verificationBodyDigest } from "./check-workflow-hygiene.mjs";
 
 const require = createRequire(import.meta.url);
 /** The parser the lane itself uses, out of the workspace that depends on it. */
@@ -45,21 +45,35 @@ function main(root) {
     // FIRST occurrence wins, matching the lane's own collection order. A second step wearing the
     // name is a finding there and must not become the pinned value here — pinning it would be this
     // tool quietly resolving a violation instead of reporting it.
+    // The step AND the job that carries it. The lane digests a step under its job's effective
+    // `defaults.run` — the two outer levels a step inherits — and a tool that digested the same
+    // step without them would write a value the lane never computes, so every pin would be a
+    // mismatch the moment a job declared one.
     const byName = new Map();
     for (const job of Object.values(doc?.jobs ?? {})) {
       for (const step of job?.steps ?? []) {
-        if (typeof step?.name === "string" && !byName.has(step.name)) byName.set(step.name, step);
+        if (typeof step?.name === "string" && !byName.has(step.name)) {
+          byName.set(step.name, { step, job });
+        }
       }
     }
 
+    // Both sets. `gatedVerifications` names the work of the lanes that may skip, and its
+    // digests live in the same `verificationBodies` map — a tool that pinned only the
+    // unconditional set would leave every gated item unpinned, which is precisely the state
+    // review finding [89] reported.
     const bodies = {};
-    for (const item of context.verificationSet ?? []) {
-      const step = byName.get(item);
-      if (step === undefined) {
+    const items = [
+      ...(context.verificationSet ?? []),
+      ...Object.keys(context.gatedVerifications ?? {}),
+    ];
+    for (const item of items) {
+      const found = byName.get(item);
+      if (found === undefined) {
         stderr.write(`no step named ${JSON.stringify(item)} in ${String(context.workflow)}\n`);
         return 1;
       }
-      bodies[item] = verificationBodyDigest(step, root);
+      bodies[item] = verificationBodyDigest(found.step, root, effectiveRunDefaults(doc, found.job));
       stdout.write(`${bodies[item]}  ${item}\n`);
     }
     context.verificationBodies = bodies;

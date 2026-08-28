@@ -707,6 +707,8 @@ interface Declaration {
     gateOutputs?: Record<string, Record<string, string>>;
     commandFiles?: string[];
     preflight?: { job?: string; step?: string };
+    gatedVerifications?: Record<string, string>;
+    nestedActions?: string[];
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
@@ -3249,6 +3251,242 @@ describe("a global install names where the package comes from", () => {
         .soft(run.exitCode, `an unpinned install inside a local action must exit 1:\n${run.output}`)
         .toBe(1);
       expect.soft(run.output).toContain("global-install-pin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the work of a lane that may skip is pinned too", () => {
+  // Review finding [89]. A gated lane was a declared dependency by name and condition and
+  // nothing else, so replacing `pnpm ci:coverage` with `true` left this lane silent, the job
+  // green and the aggregate green — while no other job in the repository runs that script, so
+  // the coverage floor stopped being checked at all. Being IN the aggregate is not the same
+  // claim as still doing the work.
+
+  /** The first gated item and the job the declaration puts it in. */
+  function firstGated(dir: string): { item: string; job: string } {
+    const entries = Object.entries(firstContext(dir).gatedVerifications ?? {});
+    const [first] = entries;
+    if (first === undefined) throw new Error("the declaration pins no gated verification");
+    return { item: first[0], job: first[1] };
+  }
+
+  it("reports a gated lane whose body was replaced with something that does nothing", () => {
+    const dir = plantedTree((d) => {
+      const { item } = firstGated(d);
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = `      - name: ${item}`;
+        if (!text.includes(anchor)) throw new Error("the gated step anchor is stale");
+        // The name stays and the work goes, which is the whole shape of the finding.
+        const at = text.indexOf(anchor);
+        const nextStep = text.indexOf(`\n      - `, at + anchor.length);
+        const end = nextStep === -1 ? text.length : nextStep;
+        return `${text.slice(0, at)}${anchor}\n        run: true${text.slice(end)}`;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a hollowed-out gated lane must exit 1:\n${run.output}`).toBe(1);
+      expect
+        .soft(run.output, "the finding must name the item whose body moved")
+        .toContain(firstGated(REPO_ROOT).item);
+      expect
+        .soft(run.output, "and say what to do, because a digest mismatch is otherwise unactionable")
+        .toContain("pin-verification-bodies");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a second gate inside a lane whose skip is already declared", () => {
+    // The lane's condition is pinned in `dependencyConditions`. A condition ON THE STEP is a
+    // second one the declaration does not know about, and it can stop the work on runs where the
+    // lane did not skip.
+    const dir = plantedTree((d) => {
+      const { item } = firstGated(d);
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = `      - name: ${item}\n`;
+        if (!text.includes(anchor)) throw new Error("the gated step anchor is stale");
+        return text.replace(anchor, `${anchor}        if: \${{ false }}\n`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a second gate must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/behind its own condition/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a gated lane allowed to fail without failing its job", () => {
+    const dir = plantedTree((d) => {
+      const { item } = firstGated(d);
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = `      - name: ${item}\n`;
+        if (!text.includes(anchor)) throw new Error("the gated step anchor is stale");
+        return text.replace(anchor, `${anchor}        continue-on-error: true\n`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a discarded failure must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/continue-on-error/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a gated item the declaration pins no body for", () => {
+    // The precondition. A named item with no digest is pinned by nothing, and the name alone is
+    // what review finding [89] measured as worthless.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        const [item] = Object.keys(context.gatedVerifications ?? {});
+        if (item === undefined) throw new Error("the declaration pins no gated verification");
+        delete context.verificationBodies?.[item];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned gated body must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/records no body digest/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a gated item whose job no longer declares the step", () => {
+    const dir = plantedTree((d) => {
+      const { item } = firstGated(d);
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = `      - name: ${item}`;
+        if (!text.includes(anchor)) throw new Error("the gated step anchor is stale");
+        return text.replace(anchor, `      - name: ${item} (renamed)`);
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a renamed gated step must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/declares no step named/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("an external action inside a local one is code the closure runs", () => {
+  // Review finding [88]. The scan that reads a local action's steps followed `./` references
+  // only, so `uses: attacker/action@<sha>` inside the toolchain preamble every job runs first was
+  // passed over. `action-pin` proves such a reference is immutable and says nothing about what it
+  // does; the pre-flight refusal reads this repository's checkout, not the action's code.
+
+  it("reports an external action the declaration does not enumerate", () => {
+    const dir = plantedTree((d) => {
+      const action = path.join(d, ".github", "actions", "setup", "action.yml");
+      const before = readFileSync(action, "utf-8");
+      const anchor = "  steps:" + "\n";
+      if (!before.includes(anchor)) throw new Error("the composite steps anchor is stale");
+      writeFileSync(
+        action,
+        before.replace(
+          anchor,
+          anchor + "    - uses: planted/action@0000000000000000000000000000000000000000" + "\n",
+        ),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unenumerated external action must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must name the reference an operator has to look at")
+        .toContain("planted/action@");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("accepts the enumerated one, so the rule is a list and not a ban", () => {
+    // The control, and it is load-bearing: the preamble legitimately needs an external action to
+    // get a Node. A lane that refused every one of them would fail on the tree as it stands.
+    const dir = plantedTree(() => undefined);
+    try {
+      const declared = firstContext(dir).nestedActions ?? [];
+      expect(
+        declared.length,
+        "the control needs the declaration to enumerate at least one external action",
+      ).toBeGreaterThan(0);
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the tree as it stands must pass:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks the enumerated one against the list rather than against nothing", () => {
+    // The row above passes for a lane that never looks. Removing the entry from the declaration
+    // must make the SAME tree fail — which is what says the list is read.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        onlyContext(decl).nestedActions = [];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `an emptied list must refuse the action it used to allow:\n${run.output}`,
+        )
+        .toBe(1);
+      expect.soft(run.output).toMatch(/does not enumerate/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reaches an external action one local action deeper", () => {
+    // The nested arm. A scan that read only the directly-invoked action would report nothing,
+    // and `uses: ./…` inside a composite action is legal — which is the indirection.
+    const dir = plantedTree((d) => {
+      const inner = path.join(d, ".github", "actions", "inner");
+      mkdirSync(inner, { recursive: true });
+      writeFileSync(
+        path.join(inner, "action.yml"),
+        [
+          "name: inner",
+          "description: planted",
+          "runs:",
+          "  using: composite",
+          "  steps:",
+          "    - uses: planted/deep@0000000000000000000000000000000000000000",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      const outer = path.join(d, ".github", "actions", "setup", "action.yml");
+      const before = readFileSync(outer, "utf-8");
+      const anchor = "  steps:" + "\n";
+      if (!before.includes(anchor)) throw new Error("the composite steps anchor is stale");
+      writeFileSync(
+        outer,
+        before.replace(anchor, anchor + "    - uses: ./.github/actions/inner\n"),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an external action one level deeper must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toContain("planted/deep@");
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
