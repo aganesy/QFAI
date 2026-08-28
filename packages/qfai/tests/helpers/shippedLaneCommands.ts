@@ -998,11 +998,17 @@ export function invocationsOf(body: string): string[] {
  */
 export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   "command -v corepack",
-  // The VERSION is part of the exact string, and that is the enumeration working as intended:
-  // review finding [55] pinned this install because an unpinned one fetches whatever the
-  // registry calls latest at the moment the job runs, and bumping the pin has to be a change a
-  // reviewer reads here too.
-  "npm install --global corepack@0.35.0",
+  // The VERSION and the REGISTRY are both part of the exact string, and that is the enumeration
+  // working as intended: review finding [55] pinned the version because an unpinned install
+  // fetches whatever the registry calls latest at the moment the job runs, and review finding
+  // [83] pinned the source because a version names WHAT to fetch and not WHERE from — `npm`
+  // takes its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`. Bumping either has to
+  // be a change a reviewer reads here too.
+  //
+  // `--ignore-scripts` is in the string rather than in `ALLOWED_FLAGS` for the reason the whole
+  // tier exists: `npm install` is denied a bare package argument, so widening its flag set would
+  // admit every global install, which is the capability this refuses.
+  "npm install --global --ignore-scripts --registry https://registry.npmjs.org/ corepack@0.35.0",
 ]);
 
 /**
@@ -1186,7 +1192,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
-  ["qfai-validate.yml", "58d827adc7d402427b0904483b7d542f93877ece01a401138340bf34bfe10aec"],
+  ["qfai-validate.yml", "1bf29068e70a3179e3255a8e380d59df335c431a92fef48af0566ed13d861b36"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1603,7 +1609,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body 69bf51ea5212882f535f5a571064c7daf9c4d98cfb8473f838ab0b2a0ea1ee8b>"}',
+    '{"name":"Install dependencies (lockfile-aware)","shell":"bash","run":"<body a01a22aea86949331e27fdf13eef7fcfddeada4edfeda0b10af48c1e674dfd02>"}',
   ],
   [
     "qfai-validate.yml#validate",

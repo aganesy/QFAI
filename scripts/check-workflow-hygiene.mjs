@@ -92,6 +92,11 @@ const RULES = [
     "every `runs-on` label in the shipped set is a public GitHub-hosted runner",
   ],
   [
+    "supply",
+    "global-install-pin",
+    "every global package install names the registry it comes from and runs no install scripts",
+  ],
+  [
     "declaration",
     "required-context",
     "the declared required-status-context job exists, its workflow starts on every pull request, it is unskippable through its whole `needs` closure, and it still performs its verification set",
@@ -102,6 +107,7 @@ const RULES = [
 const SCOPES = [
   ["structural", "Rules run over both workflow trees:"],
   ["shipped", "Rules run over the shipped workflow tree only:"],
+  ["supply", "Rules run over every step body in both trees:"],
   ["declaration", "Rules run over the required-status-context declaration:"],
 ];
 
@@ -1031,6 +1037,57 @@ function checkJobGuardrails(jobs) {
         job: entry.jobKey,
         detail:
           "declares no timeout-minutes; the runner has no workflow-level default, so an unbounded job can hold a runner for six hours",
+      });
+    }
+  }
+  return findings;
+}
+
+/**
+ * Every global package install names where the package comes from.
+ *
+ * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0017-0037` closes the set over
+ * `.github/workflows/**` at exactly five obligations and `TC-0017-0045` pins that count — this rule
+ * comes from a different criterion, the way the declaration rule does, so it is announced under its
+ * own heading and counted separately. A green run stays readable and the five stay five.
+ *
+ * Review finding [87], and the finding before it. A pinned VERSION is a name, not a source:
+ * `npm` resolves its registry from `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, both of
+ * which a pull request controls, so `npm install --global corepack@0.35.0` is a request an
+ * attacker's registry can answer with a different package — whose bin then runs in a job that
+ * bootstraps the toolchain everything else is verified with.
+ *
+ * Two conjuncts, because they close different halves: `--registry` on the command line outranks
+ * both configuration sources, and `--ignore-scripts` stops the package running during
+ * installation rather than when it is invoked. Neither implies the other.
+ *
+ * Textual on purpose. This lane parses YAML, not shell, and the question it answers is whether a
+ * reader of the diff can see where the package came from. A body that reaches a registry some
+ * other way — `curl | sh`, a vendored tarball — is outside what this rule can see and inside what
+ * the verification-body digest already pins.
+ */
+function checkGlobalInstallPins(root, jobs) {
+  const findings = [];
+  // The flag can sit anywhere after the subcommand, and `-g` is the same request as `--global`.
+  // The optional group ENDS in whitespace, so the flag is always matched at a token start.
+  // Measured: the first version anchored `-g` on `(?:^|\s)` after a `\s+` that had already
+  // eaten the separator, so `npm i -g corepack` matched nothing at all — the short form went
+  // straight through the rule written to refuse it.
+  const globalInstall = /npm\s+(?:install|i|add)\s+(?:[^\n]*\s)?(?:--global|-g)(?:\s|$)/;
+  for (const site of collectStepSites(root, jobs)) {
+    for (const step of site.steps) {
+      if (!isRecord(step)) continue;
+      const body = typeof step.run === "string" ? step.run : "";
+      if (!globalInstall.test(body)) continue;
+      const missing = [];
+      if (!body.includes("--registry")) missing.push("--registry");
+      if (!body.includes("--ignore-scripts")) missing.push("--ignore-scripts");
+      if (missing.length === 0) continue;
+      findings.push({
+        rule: "global-install-pin",
+        file: site.file,
+        job: site.job,
+        detail: `installs a package globally without ${missing.join(" and ")} — a pinned version names WHAT to fetch and not WHERE from, and \`npm\` takes its registry from \`NPM_CONFIG_REGISTRY\` or a project \`.npmrc\`, both of which a pull request controls`,
       });
     }
   }
@@ -2160,6 +2217,7 @@ export function runHygieneLane(root) {
     ...structural,
     ...checkJobGuardrails(jobs),
     ...checkMatrixFailFast(jobs),
+    ...checkGlobalInstallPins(root, jobs),
     ...checkSecretInheritance(jobs),
     ...checkCheckoutCredentials(root, jobs),
     ...checkActionPins(uses),

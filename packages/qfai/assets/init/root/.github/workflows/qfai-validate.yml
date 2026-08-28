@@ -286,23 +286,20 @@ jobs:
               # registry calls latest at the moment the job runs, so the same commit installs a
               # different corepack from one day to the next — and this is the step that
               # bootstraps the toolchain everything after it depends on.
-              # The version, the REGISTRY, and the bytes. `npm` resolves its registry from
-              # `NPM_CONFIG_REGISTRY` or a project `.npmrc`, so a pinned version alone is a name
-              # an attacker-controlled registry can answer with different content — and this
-              # package's bin runs on the very next line. The tarball is fetched from the named
-              # registry, hashed, compared with the pinned integrity, and installed from the local
-              # file with no install scripts.
-              registry="https://registry.npmjs.org/"
-              want="sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw=="
-              tgz="${RUNNER_TEMP:-/tmp}/corepack-0.35.0.tgz"
-              curl -fsSL --proto '=https' --tlsv1.2 \
-                "${registry}corepack/-/corepack-0.35.0.tgz" -o "${tgz}"
-              got="sha512-$(openssl dgst -sha512 -binary "${tgz}" | openssl base64 -A)"
-              if [ "${got}" != "${want}" ]; then
-                echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
-                exit 1
-              fi
-              npm install --global --ignore-scripts --registry "${registry}" "${tgz}"
+              # The version AND the registry it comes from. `npm` resolves its registry from
+              # `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, so a pinned version alone names
+              # WHAT to fetch and not WHERE from — and this package's bin runs on the very next
+              # line. `--registry` on the command line outranks both, and `--ignore-scripts` stops
+              # the package running during installation rather than when it is invoked.
+              #
+              # The own-CI copy of this fallback goes further: it downloads the tarball, compares
+              # its sha512 with a pinned integrity, and installs from the verified file. That is
+              # deliberately NOT done here. This lane runs in an ADOPTER's repository, where the
+              # enumerated set of programs a shipped lane may invoke is itself a reviewed
+              # contract — putting `curl` and `openssl` into it widens what every adopter's CI is
+              # allowed to run, to defend against a file that adopter owns and reviews. The flag
+              # closes the redirect; the download would import a capability instead.
+              npm install --global --ignore-scripts --registry https://registry.npmjs.org/ corepack@0.35.0
             fi
             corepack enable
             # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses

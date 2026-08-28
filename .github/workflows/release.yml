@@ -353,7 +353,16 @@ jobs:
         # says nothing about the version.
         run: |
           set -euo pipefail
-          npm install -g npm@latest
+          # The registry, named on the command line. Review finding [87]'s rule found this one:
+          # `npm` resolves its registry from `NPM_CONFIG_REGISTRY` or a project `.npmrc`, so an
+          # unqualified `npm@latest` is a name an attacker-controlled registry can answer — in the
+          # job that holds the publishing identity, and with the installed npm doing the publish.
+          # `--ignore-scripts` stops the package running at install time rather than when invoked.
+          #
+          # The VERSION stays `@latest` deliberately: this step exists because the bundled npm is
+          # too old for trusted publishing, and the floor check below is what decides whether what
+          # arrived is new enough. A pin here would be a second version to maintain.
+          npm install -g --ignore-scripts --registry https://registry.npmjs.org/ npm@latest
           have="$(npm --version)"
           need="11.5.1"
           lowest="$(printf '%s\n%s\n' "$have" "$need" | sort -V | head -1)"

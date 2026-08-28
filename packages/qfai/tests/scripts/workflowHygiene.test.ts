@@ -3130,6 +3130,130 @@ describe("the command-file names are one list, read by two refusals", () => {
     }
   });
 });
+
+describe("a global install names where the package comes from", () => {
+  // Review finding [87], after [83]. A pinned VERSION is a name, not a source: `npm` resolves
+  // its registry from `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, both of which a pull
+  // request controls, so `npm install --global corepack@0.35.0` is a request an attacker's
+  // registry can answer with a different package — whose bin then runs in the job that
+  // bootstraps the toolchain everything else is verified with.
+  //
+  // The pin itself was added by hand in that finding. This rule is what keeps it: nothing else in
+  // the tree would have noticed it being taken out again.
+
+  for (const [label, planted, missing] of [
+    ["no registry at all", "npm install --global corepack@0.35.0", "--registry"],
+    [
+      "a registry but no --ignore-scripts",
+      "npm install --global --registry https://registry.npmjs.org/ corepack@0.35.0",
+      "--ignore-scripts",
+    ],
+    ["the short form of the same install", "npm i -g corepack@0.35.0", "--registry"],
+  ] as const) {
+    it(`reports ${label}`, () => {
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(
+            anchor,
+            `      - name: Bootstrap something\n        run: ${planted}\n` + anchor,
+          );
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `an unpinned global install must exit 1:\n${run.output}`).toBe(1);
+        expect.soft(run.output, "the finding must name the rule").toContain("global-install-pin");
+        expect
+          .soft(run.output, "and say which pin is missing, so the diagnosis is actionable")
+          .toContain(missing);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it("accepts an install that names both, which is the half a blanket refusal would break", () => {
+    // The control. The repository's own fallbacks already carry both flags — a lane that refused
+    // every global install would fail on the tree as it stands, and this row is what says the
+    // rule is a pin rather than a ban.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - name: Bootstrap something\n" +
+            "        run: npm install --global --ignore-scripts --registry https://registry.npmjs.org/ corepack@0.35.0\n" +
+            anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a fully pinned global install must not be a finding:\n${run.output}`)
+        .toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves a local install alone, which reaches no global bin", () => {
+    // The other direction of the same boundary: `npm install` without `--global` installs into
+    // the project, which is what every lockfile-aware lane in both trees does. A rule that fired
+    // on those would be a rule this repository could not carry.
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - name: Bootstrap something\n        run: npm install --no-audit\n" + anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a project install is not a global one:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reaches a local composite action, where the install this rule was written for lives", () => {
+    // Not a corner: the fallback finding [83] pinned is inside `./.github/actions/setup`, not in
+    // any workflow file. A rule scanning workflow steps alone would have missed the one install
+    // it exists for.
+    const dir = plantedTree((d) => {
+      const action = path.join(d, ".github", "actions", "setup", "action.yml");
+      const before = readFileSync(action, "utf-8");
+      const anchor = "  steps:" + "\n";
+      if (!before.includes(anchor)) throw new Error("the composite steps anchor is stale");
+      writeFileSync(
+        action,
+        before.replace(
+          anchor,
+          anchor +
+            "    - name: Bootstrap something\n" +
+            "      shell: bash\n" +
+            "      run: npm install --global corepack@0.35.0\n",
+        ),
+        "utf-8",
+      );
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unpinned install inside a local action must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toContain("global-install-pin");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
 describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
     // Review finding [15]: the lane wrote prose to stderr, the gate ingests
