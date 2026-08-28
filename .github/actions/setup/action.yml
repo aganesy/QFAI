@@ -128,12 +128,36 @@ runs:
             echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
             exit 1
           fi
-          npm install --global --ignore-scripts --registry "${registry}" "${tgz}"
+          npm install --global --ignore-scripts \
+            --registry https://registry.npmjs.org/ "${tgz}"
         fi
         corepack enable
         if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
           # The manifest the CALLER named, which defaults to the repository root's.
-          range="$(node -p "require('${ENGINES_MANIFEST}').engines.node")"
+          # The path is DATA, and reaches node as an ARGUMENT. Review finding [90]: it used to be
+          # spliced into the JavaScript source, so an `engines-manifest` input of
+          # `./package.json'); …; //` ran whatever followed — inside the toolchain preamble, before
+          # every verification in the job. The payload the finding names writes `BASH_ENV` through
+          # a name assembled at runtime, which no string search for the command file can see.
+          #
+          # And the shape is checked first, because code-versus-data is one half: a manifest path
+          # is a relative path to a `.json` file inside the workspace, and anything else is a
+          # caller mistake this action should refuse rather than resolve.
+          case "${ENGINES_MANIFEST}" in
+            # An ALLOW-list of characters, not a list of the dangerous ones. A quote, a dollar or
+            # a backtick is what this refuses, and enumerating those inside a `case` pattern in a
+            # YAML block scalar is three levels of escaping to get wrong once.
+            *[!A-Za-z0-9./_-]*|*..*|/*|'')
+              echo "::error::engines-manifest must be a relative path inside the workspace; got ${ENGINES_MANIFEST}"
+              exit 1
+              ;;
+            *.json) ;;
+            *)
+              echo "::error::engines-manifest must name a .json file; got ${ENGINES_MANIFEST}"
+              exit 1
+              ;;
+          esac
+          range="$(node -e 'const m = require(require("node:path").resolve(process.argv[1])); process.stdout.write(String(m.engines.node))' "${ENGINES_MANIFEST}")"
           floor="${range#>=}"
           case "$floor" in
             [0-9]*.[0-9]*.[0-9]*) ;;
@@ -229,7 +253,8 @@ runs:
             echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
             exit 1
           fi
-          npm install --global --ignore-scripts --registry "${registry}" "${tgz}"
+          npm install --global --ignore-scripts \
+            --registry https://registry.npmjs.org/ "${tgz}"
         fi
         corepack prepare pnpm@9.12.3 --activate
       shell: bash

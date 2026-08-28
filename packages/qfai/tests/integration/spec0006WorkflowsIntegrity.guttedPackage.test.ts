@@ -137,6 +137,52 @@ describe("a packaged workflows directory holding none of the shipped files", () 
     expect(diff.status, "one packaged name is enough for a caller-supplied tree").toBe("ok");
   });
 
+  it("is unresolved when a packaged file is present but cannot be read", async () => {
+    // Review finding [93]. The precondition checked `lstat().isFile()` and was named for
+    // something it did not do: a regular file over the bounded reader's ceiling satisfies that
+    // test, and then the recorded workflow of the same name reads as `unreadable` further down,
+    // is classified `modified`, and `doctor` tells the operator to copy from a packaged file it
+    // cannot read. Damage reported as drift, with a repair instruction that cannot work.
+    const name = "qfai-tests.yml";
+    const dir = await adopterTree(name, "name: shipped\n");
+    const packaged = await temp();
+    // Past the reader's 1 MiB ceiling, and a perfectly ordinary regular file otherwise.
+    await writeFile(
+      path.join(packaged, name),
+      `name: shipped\n${"#".repeat(1024 * 1024 + 16)}\n`,
+      "utf-8",
+    );
+
+    const diff = await diffInstalledShippedWorkflows(dir, packaged);
+
+    expect(
+      diff.status,
+      "a packaged file this reader cannot read is not a comparison, and not drift",
+    ).toBe("skipped_unresolved");
+    expect(diff.modified, "and nothing may be reported as modified from it").toEqual([]);
+  });
+
+  it("is unresolved when a packaged name is a symlink rather than a file", async () => {
+    // The other half of the same precondition. The packaged tree is this package's own; a link
+    // inside it is damage of the same kind a missing file is.
+    const name = "qfai-tests.yml";
+    const body = "name: shipped\n";
+    const dir = await adopterTree(name, body);
+    const packaged = await temp();
+    const target = path.join(packaged, "real.yml");
+    await writeFile(target, body, "utf-8");
+    const { symlink } = await import("node:fs/promises");
+    try {
+      await symlink(target, path.join(packaged, name));
+    } catch {
+      // Windows without developer mode refuses symlink creation for an unprivileged process.
+      return;
+    }
+
+    const diff = await diffInstalledShippedWorkflows(dir, packaged);
+    expect(diff.status).toBe("skipped_unresolved");
+  });
+
   it("leaves the adopter tree untouched, whichever way the precondition goes", async () => {
     // A read is a read. The unresolved arm returns early, and an early return that had written
     // something on the way would be a repair nobody asked for.

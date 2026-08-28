@@ -1075,6 +1075,74 @@ function checkJobGuardrails(jobs) {
 }
 
 /**
+ * The registries a global install may name.
+ *
+ * A closed set, and short on purpose. `--registry` was added because a pinned version names WHAT
+ * to fetch and not WHERE from; a rule that accepted the flag whatever it pointed at would have
+ * accepted `--registry=https://attacker.example` and changed nothing at all. Review finding [91].
+ */
+const TRUSTED_REGISTRIES = ["https://registry.npmjs.org"];
+
+/**
+ * Every spelling of `npm install` that npm itself accepts, with a global flag.
+ *
+ * Review finding [92]: the first version enumerated `install`, `i` and `add`, and npm's own
+ * `install --help` lists `in`, `ins`, `inst`, `insta`, `instal`, `isnt`, `isnta`, `isntal` and
+ * `isntall` besides — `npm in -g corepack` is a global install this rule did not look at. A
+ * partial enumeration of an alias table is the same defect as a partial enumeration of the ways
+ * a shell can spell a variable, one file over.
+ *
+ * The flag can sit anywhere after the subcommand, and `-g` is the same request as `--global`.
+ * The optional group ENDS in whitespace, so the flag is always matched at a token start:
+ * measured, the first version anchored `-g` on `(?:^|\s)` after a `\s+` that had already eaten
+ * the separator, so `npm i -g corepack` matched nothing at all.
+ */
+const GLOBAL_INSTALL =
+  /(?:^|[;&|(]\s*)npm\s+(?:install|add|i|in|ins|inst|insta|instal|isnt|isnta|isntal|isntall)\s+(?:[^\n]*\s)?(?:--global|-g)(?:\s|$)/;
+
+/**
+ * A step body's command lines: comments dropped, continuations joined.
+ *
+ * Review finding [91], and it is the sharpest kind — the rule was defeated by its own
+ * documentation. The pin was checked by asking whether the BODY contained `--registry` and
+ * `--ignore-scripts` anywhere, and the body it was written for explains both flags in a comment
+ * directly above the command. So reverting the command itself to an unpinned install left every
+ * substring in place and the rule green.
+ *
+ * A flag belongs to an invocation, so the invocation is what is read: a line whose first
+ * non-space character is `#` is prose, and a line ending in `\\` is half of one command.
+ *
+ * Not a shell parser, and it does not need to be: what it must not do is accept a pin that is
+ * not on the command. A `#` inside a quoted string truncates that line early, which can only
+ * lose flags and produce a finding — the safe direction.
+ *
+ * @param {string} body a step's `run`
+ * @returns {string[]} the command lines, joined and stripped of comments
+ */
+function shellCommandLines(body) {
+  const out = [];
+  let pending = "";
+  for (const raw of body.split(/\r?\n/)) {
+    const withoutComment = raw.replace(/(^|\s)#.*$/, "$1");
+    const trimmed = withoutComment.trim();
+    if (trimmed === "") {
+      if (pending !== "") {
+        out.push(pending);
+        pending = "";
+      }
+      continue;
+    }
+    if (trimmed.endsWith("\\")) {
+      pending += `${trimmed.slice(0, -1)} `;
+      continue;
+    }
+    out.push(pending + trimmed);
+    pending = "";
+  }
+  if (pending !== "") out.push(pending);
+  return out;
+}
+/**
  * Every global package install names where the package comes from.
  *
  * A SIXTH scope, deliberately, and not a sixth structural rule. `BR-0017-0037` closes the set over
@@ -1099,27 +1167,39 @@ function checkJobGuardrails(jobs) {
  */
 function checkGlobalInstallPins(root, jobs) {
   const findings = [];
-  // The flag can sit anywhere after the subcommand, and `-g` is the same request as `--global`.
-  // The optional group ENDS in whitespace, so the flag is always matched at a token start.
-  // Measured: the first version anchored `-g` on `(?:^|\s)` after a `\s+` that had already
-  // eaten the separator, so `npm i -g corepack` matched nothing at all — the short form went
-  // straight through the rule written to refuse it.
-  const globalInstall = /npm\s+(?:install|i|add)\s+(?:[^\n]*\s)?(?:--global|-g)(?:\s|$)/;
   for (const site of collectStepSites(root, jobs)) {
     for (const step of site.steps) {
       if (!isRecord(step)) continue;
       const body = typeof step.run === "string" ? step.run : "";
-      if (!globalInstall.test(body)) continue;
-      const missing = [];
-      if (!body.includes("--registry")) missing.push("--registry");
-      if (!body.includes("--ignore-scripts")) missing.push("--ignore-scripts");
-      if (missing.length === 0) continue;
-      findings.push({
-        rule: "global-install-pin",
-        file: site.file,
-        job: site.job,
-        detail: `installs a package globally without ${missing.join(" and ")} — a pinned version names WHAT to fetch and not WHERE from, and \`npm\` takes its registry from \`NPM_CONFIG_REGISTRY\` or a project \`.npmrc\`, both of which a pull request controls`,
-      });
+      for (const line of shellCommandLines(body)) {
+        if (!GLOBAL_INSTALL.test(line)) continue;
+        const missing = [];
+        // The VALUE, not the presence. `--registry=https://attacker.example` carries the flag
+        // and answers a different registry, which is the whole of what the flag was added to
+        // stop. Both spellings, because `--registry x` and `--registry=x` are one flag.
+        const registry = /--registry[=\s]+(\S+)/.exec(line)?.[1]?.replace(/^["']|["']$/g, "") ?? "";
+        const resolved = registry.replace(/\/+$/, "");
+        if (!TRUSTED_REGISTRIES.includes(resolved)) {
+          missing.push(
+            registry === ""
+              ? "--registry"
+              : `--registry naming a trusted registry (found ${JSON.stringify(registry)})`,
+          );
+        }
+        // …and `--ignore-scripts=false` is the flag present and turned off.
+        const ignore = /--ignore-scripts(?:[=\s]+(\S+))?/.exec(line);
+        const ignoreValue = ignore?.[1];
+        const ignoresScripts =
+          ignore !== null && (ignoreValue === undefined || !/^(?:false|0|no)$/i.test(ignoreValue));
+        if (!ignoresScripts) missing.push("--ignore-scripts");
+        if (missing.length === 0) continue;
+        findings.push({
+          rule: "global-install-pin",
+          file: site.file,
+          job: site.job,
+          detail: `installs a package globally without ${missing.join(" and ")} — a pinned version names WHAT to fetch and not WHERE from, and \`npm\` takes its registry from \`NPM_CONFIG_REGISTRY\` or a project \`.npmrc\`, both of which a pull request controls`,
+        });
+      }
     }
   }
   return findings;
@@ -1757,10 +1837,21 @@ function checkRequiredContexts(root, jobs) {
           detail: `declares no step named ${JSON.stringify(preflightStep)}, which ${DECLARATION_REL} requires it to run before any local composite action`,
         });
       } else {
+        // What may run before it, and nothing else. Review finding [94]: this counted `run:` and
+        // local `uses:` as work and treated every other step as inert, so an EXTERNAL action could
+        // sit ahead of the refusal — `action-pin` proves such a reference is immutable and says
+        // nothing about what it does. One ahead of the pre-flight can write a command file, or
+        // replace the script the pre-flight is about to run, out of the checkout it just made.
+        //
+        // A closed list, in the declaration, because the pre-flight genuinely needs the checkout to
+        // have anything to read.
+        const mayPrecede = Array.isArray(preflight.mayPrecede)
+          ? preflight.mayPrecede.filter((name) => typeof name === "string")
+          : [];
         for (const step of steps.slice(0, at)) {
           if (!isRecord(step)) continue;
           const uses = typeof step.uses === "string" ? step.uses : "";
-          const does = typeof step.run === "string" || uses.startsWith("./");
+          const does = typeof step.run === "string" || (uses !== "" && !mayPrecede.includes(uses));
           if (!does) continue;
           findings.push({
             rule: "required-context",
@@ -1769,6 +1860,15 @@ function checkRequiredContexts(root, jobs) {
             detail: `runs ${JSON.stringify(String(step.name ?? uses))} before ${JSON.stringify(preflightStep)}, which must come first — a step ahead of it can write a workflow command file, and every step after that one runs under an environment it chose`,
           });
         }
+      }
+      if (!Array.isArray(preflight.mayPrecede)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail:
+            "declares a `preflight` with no `mayPrecede` list, so what is allowed to run before the refusal is decided by nothing",
+        });
       }
       if (!wanted.includes(preflightStep)) {
         findings.push({

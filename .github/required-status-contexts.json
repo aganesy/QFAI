@@ -154,7 +154,8 @@
       ],
       "preflight": {
         "job": "lint",
-        "step": "Verify the toolchain action before running it"
+        "step": "Verify the toolchain action before running it",
+        "mayPrecede": ["actions/checkout@11d5960a326750d5838078e36cf38b85af677262"]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -168,7 +169,17 @@
         "So the refusal is moved ahead of the action, and this entry is what keeps it there. The lane",
         "checks three things: the named job declares the named step; every step before it carries",
         "neither `run:` nor a local `uses:`, so nothing can have set an environment file first; and the",
-        "step is in `verificationSet`, so its body is pinned like every other required verification."
+        "step is in `verificationSet`, so its body is pinned like every other required verification.",
+        "",
+        "`mayPrecede` is the closed set of `uses:` references allowed AHEAD of it. Review finding [94]:",
+        "the order check treated `run:` and local `uses:` as work and everything else as inert, so",
+        "`uses: attacker/action@<sha>` could sit before the refusal — `action-pin` proves such a",
+        "reference is immutable and says nothing about what it does. An external action ahead of the",
+        "pre-flight can write a workflow command file, or replace the very script the pre-flight is",
+        "about to run, out of the checkout it produced.",
+        "",
+        "`actions/checkout` is on it because the pre-flight has to read this repository's files to",
+        "refuse anything, and pinned to the SHA for the same reason every other reference here is."
       ],
       "verificationSet": [
         "Verify the toolchain action before running it",
@@ -234,7 +245,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "51a4773524a9b140",
+        "Run lint gate": "f74656a72792e462",
         "Run type check": "752faf7a297fc773",
         "Run future TypeScript compatibility check": "5390e36a8b0b4148",
         "Run the package test suite on the floor": "402864498ce96b32",

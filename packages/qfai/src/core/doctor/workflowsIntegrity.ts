@@ -589,18 +589,22 @@ export async function diffInstalledShippedWorkflows(
 }
 
 /**
- * Whether `file` exists and is a regular file.
+ * Whether `file` can actually be READ, by the reader the comparison will use.
  *
- * `lstat`, so a name that is a symlink is not a packaged workflow this reader will count on:
- * the packaged tree is this package's own, and a link inside it is damage of the same kind a
- * missing file is.
+ * Review finding [93]: this checked `lstat().isFile()` and was named for something it did not
+ * do. A regular file over the bounded reader's ceiling, or one this process has no permission to
+ * open, satisfied that test — and then the recorded workflow of the same name read as
+ * `unreadable` further down, was classified `modified`, and `doctor` told the operator to copy
+ * from a packaged file it could not read. A partially damaged package reported as drift, with a
+ * repair instruction that cannot work.
+ *
+ * The SAME bounded reader, at the same ceiling, so the precondition and the comparison can never
+ * disagree about what is readable. It refuses a symlink by name too, which is the property the
+ * previous version was written for: the packaged tree is this package's own, and a link inside it
+ * is damage of the same kind a missing file is.
  */
 async function isReadableFile(file: string): Promise<boolean> {
-  try {
-    return (await lstat(file)).isFile();
-  } catch {
-    return false;
-  }
+  return (await readBoundedRegularFile(file, MAX_WORKFLOW_BYTES)) !== undefined;
 }
 
 /** Whether `dir` exists and is a directory (following the packaged path is fine: it is ours). */
