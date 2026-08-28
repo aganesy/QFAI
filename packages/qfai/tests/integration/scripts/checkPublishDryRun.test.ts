@@ -17,6 +17,7 @@
  * test that needs the network to decide a verdict is a test that fails for reasons unrelated to the
  * thing it checks. `classifyDryRun` is the whole decision.
  */
+import { readFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
@@ -222,5 +223,60 @@ describe("check-publish-dry-run tolerates an already-published version and nothi
     });
     expect.soft(verdict.ok, "both known-noise lines are filtered").toBe(true);
     expect.soft(verdict.warnings, "and neither is surfaced").toEqual([]);
+  });
+});
+
+describe("the npm it proves anything with is the toolchain's, not the one on PATH", () => {
+  // Review finding [98]. This guard runs through a `pnpm` script, so its PATH begins with
+  // `node_modules/.bin` — a directory a pull request fills by adding a dependency. A workspace
+  // package declaring an `npm` bin replaced every call here with a program that exits 0, and the
+  // independent tarball and registry proofs never ran. The reviewer measured it: a fake `npm`
+  // first on PATH made the whole script exit 0 with no output.
+
+  it("resolves npm beside the running Node and never through PATH", () => {
+    const source = readFileSync(
+      path.join(REPO_ROOT, "scripts", "check-publish-dry-run.mjs"),
+      "utf-8",
+    );
+
+    expect(source, "the CLI must be resolved from the running Node's own installation").toMatch(
+      /process\.execPath[\s\S]{0,400}?npm-cli\.js/,
+    );
+    expect(
+      source,
+      "and spawned as a script under that Node, so no PATH lookup happens at all",
+    ).toMatch(/spawnSync\(process\.execPath, \[npmCliPath\(\)/);
+    // The thing that was forgeable, asserted absent: a bare program name reaches PATH.
+    expect(source, "no call may name `npm` as a program for the shell to find").not.toMatch(
+      /spawnSync\(\s*["']npm["']/,
+    );
+  });
+
+  it("refuses rather than falling back when no npm sits beside that Node", () => {
+    // A fallback to PATH is the resolution that was forgeable, so there is none: an unexpected
+    // toolchain layout is a refusal with both candidate paths named.
+    const source = readFileSync(
+      path.join(REPO_ROOT, "scripts", "check-publish-dry-run.mjs"),
+      "utf-8",
+    );
+    const start = source.indexOf("function npmCliPath() {");
+    expect(start, "the resolver must exist to be checked").toBeGreaterThan(-1);
+    const body = source.slice(start, source.indexOf("\n}\n", start));
+    expect(body, "an unresolvable toolchain throws").toMatch(/throw new Error\(/);
+    // ONE return, and it is the resolved candidate. Measured: a plant that added `return "npm"`
+    // above the throw left both assertions below satisfied — the throw was still there, unreached,
+    // and the row passed over a resolver that had gone back to PATH.
+    const returns = body.match(/\breturn\b/g) ?? [];
+    expect(
+      returns,
+      "a second return is a fallback, and a fallback to PATH is the resolution that was forgeable",
+    ).toHaveLength(1);
+    expect(body, "and the one return is the resolved candidate").toMatch(
+      /return path\.resolve\(candidate\);/,
+    );
+    expect(
+      body,
+      "and the message names what it looked for, because a refusal nobody can act on is a crash",
+    ).toMatch(/candidates\.join/);
   });
 });

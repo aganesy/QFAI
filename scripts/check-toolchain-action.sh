@@ -39,6 +39,39 @@ fi
 # NAMES a command file. Spelling them in this body would make the lane report its own pre-flight as
 # a writer — and evading that by splicing the names together is exactly the trick the lane exists to
 # refuse. So they live in a data file, which the lane's body digest covers along with this script.
+# FIRST: the bytes of every local action, against the pinned list.
+#
+# Review finding [95]. Refusing a command-file name refuses one capability out of many: a step
+# added to this action can also `printf 'process.exit(0)' > scripts/check-workflow-hygiene.mjs`,
+# replacing the lane itself before it runs, or rewrite any verification source in every job that
+# uses the action. Enumerating what a step may DO is the losing side of that argument; what the
+# action IS can be pinned.
+#
+# `sha256sum -c` reads the list directly, so this needs no parser and no toolchain — and it runs
+# before anything the action could have changed.
+digests_file="${root}/.github/local-action-digests.txt"
+if [ ! -f "${digests_file}" ]; then
+  echo "::error::check-toolchain-action: ${digests_file} is missing, so the local actions are pinned by nothing."
+  exit 1
+fi
+if ! command -v sha256sum > /dev/null 2>&1; then
+  echo "::error::check-toolchain-action: sha256sum is not on this runner, so the pinned local-action bytes cannot be verified."
+  exit 1
+fi
+if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
+  echo "::error::A file under ${actions_dir} does not match the digest pinned in .github/local-action-digests.txt. A local action runs before every verification in this job; an edit to one is refused here rather than executed. If the change is intended, land the new digest in the same commit."
+  exit 1
+fi
+
+# The tree must hold exactly what the list pins, in both directions: a file added to the actions
+# tree and left out of the list is an action nothing pinned.
+listed="$(grep -cE "^[0-9a-f]{64}  " "${digests_file}" || true)"
+present="$(find "${actions_dir}" -type f | wc -l | tr -d " ")"
+if [ "${listed}" != "${present}" ]; then
+  echo "::error::check-toolchain-action: ${actions_dir} holds ${present} file(s) and .github/local-action-digests.txt pins ${listed}. A file the list does not name is a local action nothing pinned."
+  exit 1
+fi
+
 names_file="${root}/.github/command-files.txt"
 if [ ! -f "${names_file}" ]; then
   echo "::error::check-toolchain-action: ${names_file} is missing, so this check knows nothing to look for."

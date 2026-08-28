@@ -435,6 +435,9 @@ function effectiveEnv(inherited, own) {
 /** Where the command-file names live, for both readers. */
 const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
 
+/** Where the pinned local-action bytes live, for the pre-flight and for this lane. */
+const LOCAL_ACTION_DIGESTS_REL = path.posix.join(".github", "local-action-digests.txt");
+
 /**
  * The workflow command files, read from the tree rather than written here.
  *
@@ -893,6 +896,41 @@ export function rootIsRefused(root, rel) {
  * caller pushes the root's name into `truncated` and turns it into a fatal finding beside its
  * other whole-tree checks.
  */
+/**
+ * Every FILE under `rel`, repo-relative and POSIX-separated, links refused.
+ *
+ * `yamlFilesUnder` answers only `.yml` and `.yaml`, and the local-action pin covers whatever the
+ * tree holds — an `index.js`, a shell helper, anything a composite action reads. Same refusals as
+ * that walk: a linked root or a linked entry is a door out of the tree and is not taken.
+ *
+ * @param {string} root repository root
+ * @param {string} rel directory to walk, repo-relative
+ * @returns {string[]} repo-relative POSIX paths
+ */
+function filesUnder(root, rel) {
+  const abs = path.join(root, rel);
+  let inspected;
+  try {
+    inspected = lstatSync(abs);
+  } catch {
+    return [];
+  }
+  if (inspected.isSymbolicLink() || !inspected.isDirectory()) return [];
+  const out = [];
+  let seen = 0;
+  const walk = (dir) => {
+    for (const e of readdirSync(dir, { withFileTypes: true })) {
+      if (seen >= MAX_WALKED_ENTRIES) return;
+      seen += 1;
+      const p = path.join(dir, e.name);
+      if (e.isSymbolicLink()) continue;
+      if (e.isDirectory()) walk(p);
+      else if (e.isFile()) out.push(path.relative(root, p).replace(/\\/g, "/"));
+    }
+  };
+  walk(abs);
+  return out;
+}
 export function yamlFilesUnder(root, rel, limit = MAX_WALKED_ENTRIES, truncated) {
   const abs = path.join(root, rel);
   let inspected;
@@ -2107,6 +2145,109 @@ function checkRequiredContexts(root, jobs) {
             file: rel,
             job: jobKey,
             detail: `expands its matrix axis ${JSON.stringify(axis)} over ${gotList === undefined ? "something this lane cannot read as a list" : JSON.stringify(gotList)} where ${DECLARATION_REL} declares ${wantList === undefined ? "no such axis" : JSON.stringify(wantList)} — every value reaches the shell of a step whose digest holds the expression and not what it expands to`,
+          });
+        }
+      }
+    }
+
+    // PROPERTY 2g — and every local action hashes to what the pre-flight will check.
+    //
+    // Review finding [95]: the pre-flight refused a command-file NAME and nothing else, so a step
+    // added to the toolchain action could `printf 'process.exit(0)' > <the hygiene lane>` and
+    // replace this program before it ran — or rewrite any verification source, in every job that
+    // uses the action. Enumerating what a step may DO is the losing side of that argument; what
+    // the action IS can be pinned, and an edit then has to arrive with its digest.
+    //
+    // Three agreements, because two of them can drift apart on their own: the declaration and the
+    // data file the pre-flight reads, the data file and the bytes on disk, and the data file and
+    // the set of files present.
+    const pinnedActions = isRecord(context.localActionDigests)
+      ? context.localActionDigests
+      : undefined;
+    if (pinnedActions === undefined || Object.keys(pinnedActions).length === 0) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `localActionDigests` mapping, so the composite actions that run before every verification in every job are pinned by nothing",
+      });
+    } else {
+      const listed = new Map();
+      const listText = readBoundedText(
+        path.join(root, LOCAL_ACTION_DIGESTS_REL),
+        MAX_WORKFLOW_BYTES,
+      );
+      if (listText === undefined) {
+        findings.push({
+          rule: "required-context",
+          file: LOCAL_ACTION_DIGESTS_REL,
+          job: declaredJob,
+          detail:
+            "is missing or not a readable regular file, and the pre-flight refusal reads it before any action runs — without it that refusal has nothing to check",
+        });
+      } else {
+        for (const line of listText.split(/\r?\n/)) {
+          const match = /^([0-9a-f]{64})\s\s(.+)$/.exec(line.trim());
+          if (match !== null) listed.set(match[2], match[1]);
+        }
+      }
+
+      for (const [rel_, digest] of Object.entries(pinnedActions)) {
+        if (listed.get(rel_) !== digest) {
+          findings.push({
+            rule: "required-context",
+            file: LOCAL_ACTION_DIGESTS_REL,
+            job: declaredJob,
+            detail: `pins ${rel_} as ${String(listed.get(rel_))} where ${DECLARATION_REL} declares ${String(digest)} — the pre-flight reads the file and this reads the declaration, and a refusal that checks a different list from the one it was given is no refusal`,
+          });
+        }
+      }
+      for (const rel_ of listed.keys()) {
+        if (!Object.prototype.hasOwnProperty.call(pinnedActions, rel_)) {
+          findings.push({
+            rule: "required-context",
+            file: LOCAL_ACTION_DIGESTS_REL,
+            job: declaredJob,
+            detail: `pins ${rel_}, which ${DECLARATION_REL} does not declare`,
+          });
+        }
+      }
+
+      // …and the bytes on disk. The pre-flight checks this too, on the runner; this checks it
+      // where a reviewer reads, and catches a list that drifted from the tree in a pull request
+      // that never reached the runner.
+      const present = new Set();
+      for (const rel_ of filesUnder(root, ACTIONS_ROOT_REL)) present.add(rel_);
+      for (const [rel_, digest] of Object.entries(pinnedActions)) {
+        const bytes = readBoundedText(path.join(root, rel_), MAX_WORKFLOW_BYTES);
+        if (bytes === undefined) {
+          findings.push({
+            rule: "required-context",
+            file: rel_,
+            job: declaredJob,
+            detail:
+              "is pinned as a local action but is not a readable regular file, so what runs before every verification cannot be checked against its digest",
+          });
+          continue;
+        }
+        const actual = createHash("sha256").update(bytes, "utf-8").digest("hex");
+        if (actual !== digest) {
+          findings.push({
+            rule: "required-context",
+            file: rel_,
+            job: declaredJob,
+            detail: `hashes to ${actual} where ${DECLARATION_REL} pins ${String(digest)} — a local action runs before every verification in every job that uses it, so an edit arrives with its digest or not at all`,
+          });
+        }
+      }
+      for (const rel_ of present) {
+        if (!Object.prototype.hasOwnProperty.call(pinnedActions, rel_)) {
+          findings.push({
+            rule: "required-context",
+            file: rel_,
+            job: declaredJob,
+            detail: `sits in the composite-action tree and is pinned by nothing — a file the list does not name is a local action nobody reviewed the bytes of`,
           });
         }
       }

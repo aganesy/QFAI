@@ -710,6 +710,7 @@ interface Declaration {
     gatedVerifications?: Record<string, string>;
     nestedActions?: string[];
     dependencyMatrices?: Record<string, Record<string, string[]>>;
+    localActionDigests?: Record<string, string>;
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
@@ -3961,6 +3962,92 @@ describe("the values a gated lane expands over are pinned too", () => {
         )
         .toBe(1);
       expect.soft(run.output).toMatch(/expands its matrix axis/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("a local action arrives with its digest or not at all", () => {
+  // Review finding [95]. The pre-flight refused a command-file NAME and nothing else, so a step
+  // added to the toolchain action could `printf 'process.exit(0)' > <the hygiene lane>` and
+  // replace this program before it ran — or rewrite any verification source, in every job that
+  // uses the action. Enumerating what a step may DO is the losing side of that argument; what
+  // the action IS can be pinned.
+
+  it("reports a local action whose bytes moved", () => {
+    const dir = plantedTree((d) => {
+      const action = path.join(d, ".github", "actions", "setup", "action.yml");
+      writeFileSync(action, `${readFileSync(action, "utf-8")}# planted\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an edited local action must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/hashes to [0-9a-f]{64} where/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a file added to the actions tree that nothing pins", () => {
+    // The other direction: no pinned file changed, a new one simply appeared. A composite action
+    // reads whatever sits beside it, so an unpinned file there is code nobody reviewed.
+    const dir = plantedTree((d) => {
+      const planted = path.join(d, ".github", "actions", "planted");
+      mkdirSync(planted, { recursive: true });
+      writeFileSync(path.join(planted, "action.yml"), "name: planted\n", "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned action file must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/pinned by nothing/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the pre-flight's list disagreeing with the declaration", () => {
+    // Two readers, one fact. The pre-flight reads the data file on the runner and this lane reads
+    // the declaration; a refusal that checks a different list from the one it was handed is no
+    // refusal at all.
+    const dir = plantedTree((d) => {
+      const list = path.join(d, ".github", "local-action-digests.txt");
+      const before = readFileSync(list, "utf-8");
+      writeFileSync(list, before.replace(/^[0-9a-f]{64}/m, "0".repeat(64)), "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a disagreeing list must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/where .* declares/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a declaration that pins no local action at all", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        delete onlyContext(decl).localActionDigests;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned action set must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/no .?localActionDigests.? mapping/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the list going missing, which the pre-flight reads before anything runs", () => {
+    const dir = plantedTree((d) => {
+      rmSync(path.join(d, ".github", "local-action-digests.txt"), { force: true });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a missing list must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/is missing or not a readable regular file/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }

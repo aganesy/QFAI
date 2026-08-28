@@ -90,13 +90,9 @@ export function verifyAlreadyPublished(pkgDir) {
   // `--registry` on the command line outranks every config file, and running from a directory
   // outside the repository means no project `.npmrc` is read at all. Both, because either alone
   // is one config precedence rule away from being wrong.
-  const viewed = spawnSync(
-    "npm",
+  const viewed = runNpm(
     ["view", `${name}@${version}`, "version", "--json", `--registry=${PUBLIC_REGISTRY}`],
-    {
-      cwd: tmpdir(),
-      encoding: "utf-8",
-    },
+    { cwd: tmpdir() },
   );
   if (viewed.status !== 0) {
     // `npm view` exits non-zero for an unpublished version (E404) and for a network failure alike.
@@ -175,14 +171,9 @@ export function verifyTarballIndependently(pkgDir) {
     // above still runs the lifecycle in full, and it is what would catch a `prepack` that fails.
     // What this establishes is narrower and is the thing that was forgeable: that npm itself
     // packed an archive, and that the bytes on disk are the ones it accounted for.
-    const packed = spawnSync(
-      "npm",
-      ["pack", "--json", "--ignore-scripts", "--pack-destination", outDir],
-      {
-        cwd: pkgDir,
-        encoding: "utf-8",
-      },
-    );
+    const packed = runNpm(["pack", "--json", "--ignore-scripts", "--pack-destination", outDir], {
+      cwd: pkgDir,
+    });
     if (packed.status !== 0) {
       return {
         ok: false,
@@ -408,14 +399,65 @@ export function classifyDryRun(result, tarballProof, publishedProof) {
   };
 }
 
+/**
+ * The npm CLI that ships with the Node running this script, as an absolute path.
+ *
+ * Review finding [98]: this script runs through a `pnpm` script, so its PATH begins with
+ * `node_modules/.bin` — a directory a pull request fills by adding a dependency. A workspace
+ * package declaring a `npm` bin replaces every `npm` call here with a program that exits 0, and
+ * the independent tarball and registry proofs below never run at all. Measured by the reviewer:
+ * a fake `npm` first on PATH made this whole script exit 0 with no output.
+ *
+ * The identity has to come from somewhere the pull request does not control. `process.execPath`
+ * is the Node the runner installed, and npm sits beside it in the same installation — two
+ * layouts, because Windows puts it next to the executable and POSIX puts it under `lib/`.
+ *
+ * Refused rather than fallen back on: if neither layout holds, the toolchain is not the one this
+ * check knows how to verify with, and reaching for PATH is exactly the resolution that was
+ * forgeable.
+ *
+ * @returns {string} absolute path to `npm-cli.js`
+ */
+function npmCliPath() {
+  const nodeDir = path.dirname(process.execPath);
+  const candidates = [
+    path.join(nodeDir, "node_modules", "npm", "bin", "npm-cli.js"),
+    path.join(nodeDir, "..", "lib", "node_modules", "npm", "bin", "npm-cli.js"),
+  ];
+  for (const candidate of candidates) {
+    try {
+      if (statSync(candidate).isFile()) return path.resolve(candidate);
+    } catch {
+      // try the next layout
+    }
+  }
+  throw new Error(
+    "check-publish-dry-run: no npm-cli.js beside the running Node (looked in " +
+      candidates.join(" and ") +
+      "). Resolving npm from PATH is not an option here: this script runs under a pnpm " +
+      "script, so PATH begins with node_modules/.bin, which a pull request fills by adding a " +
+      "dependency.",
+  );
+}
+
+/**
+ * Run npm through the toolchain's own CLI.
+ *
+ * @param {string[]} args npm arguments
+ * @param {{ cwd: string }} options where to run it
+ * @returns {ReturnType<typeof spawnSync>} the result
+ */
+function runNpm(args, options) {
+  return spawnSync(process.execPath, [npmCliPath(), ...args], {
+    cwd: options.cwd,
+    encoding: "utf-8",
+  });
+}
 function main() {
   const root = path.resolve(fileURLToPath(new URL(".", import.meta.url)), "..");
   const pkgDir = path.join(root, "packages", "qfai");
 
-  const result = spawnSync("npm", ["publish", "--dry-run"], {
-    cwd: pkgDir,
-    encoding: "utf-8",
-  });
+  const result = runNpm(["publish", "--dry-run"], { cwd: pkgDir });
 
   process.stdout.write(result.stdout ?? "");
   process.stderr.write(result.stderr ?? "");
