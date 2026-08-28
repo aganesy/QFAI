@@ -3656,6 +3656,193 @@ describe("an external action inside a local one is code the closure runs", () =>
     }
   });
 });
+describe("a declared input that goes missing is reported, not iterated as empty", () => {
+  // An adversarial audit of this file found four of these at once, and they share one shape: a
+  // property whose input is absent evaluates nothing and reports PASS. Every other declared
+  // input in this context already refused that; these did not, and they are the ones that pin
+  // what the skippable lanes do and what they are skipped on.
+
+  for (const [label, edit, pattern] of [
+    [
+      "gateOutputs deleted outright",
+      (decl: Declaration) => {
+        delete onlyContext(decl).gateOutputs;
+      },
+      /no .?gateOutputs.? mapping/,
+    ],
+    [
+      "gateOutputs emptied",
+      (decl: Declaration) => {
+        onlyContext(decl).gateOutputs = {};
+      },
+      /no .?gateOutputs.? mapping/,
+    ],
+    [
+      "gatedVerifications deleted outright",
+      (decl: Declaration) => {
+        delete onlyContext(decl).gatedVerifications;
+      },
+      /no .?gatedVerifications.? mapping/,
+    ],
+    [
+      "gatedVerifications emptied",
+      (decl: Declaration) => {
+        onlyContext(decl).gatedVerifications = {};
+      },
+      /no .?gatedVerifications.? mapping/,
+    ],
+  ] as const) {
+    it(`reports ${label}`, () => {
+      const dir = plantedTree((d) => {
+        editDeclaration(d, (decl) => {
+          edit(decl);
+          return decl;
+        });
+      });
+      try {
+        const run = runLane(dir);
+        expect.soft(run.exitCode, `${label} must exit 1:\n${run.output}`).toBe(1);
+        expect.soft(run.output).toMatch(pattern);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    });
+  }
+
+  it("reports a gated key deleted while its digest stays behind", () => {
+    // The precise attack the audit measured: drop one line from `gatedVerifications` and that
+    // lane's body is pinned by nothing, while the digest it left behind in `verificationBodies`
+    // makes the diff still look pinned. A digest nothing consults is worse than no digest.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        const [item] = Object.keys(context.gatedVerifications ?? {});
+        if (item === undefined) throw new Error("the declaration pins no gated verification");
+        delete context.gatedVerifications?.[item];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an orphaned digest must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/in neither verificationSet nor gatedVerifications/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a gate output pinned as something that is not a mapping", () => {
+    // `{"detect": null}` leaves the job NAMED in the file, so a reviewer grepping it still sees
+    // the entry — and the property silently skipped it.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        const [name] = Object.keys(context.gateOutputs ?? {});
+        if (name === undefined) throw new Error("the declaration pins no gate outputs");
+        // A shape the type cannot express, which is the point: the LANE must refuse it.
+        (context.gateOutputs as Record<string, unknown>)[name] = null;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unreadable gate-output mapping must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/cannot read as a mapping/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the pre-flight stands where the attack passes", () => {
+  // The audit found the order check was internally consistent and nothing more: the declaration
+  // could be repointed at any job whose first step satisfies the rule — the aggregate itself,
+  // say — while the real refusal moved behind the composite action it exists to precede.
+
+  it("reports a pre-flight stationed in a job the aggregate does not depend on", () => {
+    // The planted job EXISTS, declares the step, and invokes a local action — so every other
+    // property about the pre-flight is satisfied and only the dependency one can fail.
+    //
+    // Measured, because the first version did not do this: repointing at a job name that does not
+    // exist also produces `declares no step named`, and the row passed on that instead. A plant
+    // has to leave exactly one thing wrong.
+    const dir = plantedTree((d) => {
+      const step = firstContext(d).preflight?.step;
+      if (step === undefined) throw new Error("the declaration pins no pre-flight step");
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  lint:" + "\n";
+        if (!text.includes(anchor)) throw new Error("the lint job anchor is stale");
+        const planted = [
+          "  preflight-elsewhere:",
+          "    permissions: {}",
+          "    runs-on: ubuntu-latest",
+          "    timeout-minutes: 5",
+          "    steps:",
+          `      - name: ${step}`,
+          "        run: bash ./scripts/check-toolchain-action.sh",
+          "        shell: bash",
+          "      - uses: ./.github/actions/setup",
+          "",
+        ].join("\n");
+        return text.replace(anchor, planted + anchor);
+      });
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        if (context.preflight === undefined) throw new Error("no preflight to repoint");
+        context.preflight.job = "preflight-elsewhere";
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a refusal outside the aggregate must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect
+        .soft(run.output, "the finding must be the dependency one, not a missing step")
+        .toMatch(/does not depend on/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a pre-flight stationed in a job that invokes no local action", () => {
+    // A refusal has to stand in front of the thing it refuses. `ci-pass` depends on everything
+    // and invokes no composite action, so repointing there passes the order rule trivially — the
+    // step is first because nothing else in that job does any work.
+    const dir = plantedTree((d) => {
+      const step = firstContext(d).preflight?.step;
+      if (step === undefined) throw new Error("the declaration pins no pre-flight step");
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "  ci-pass:" + "\n";
+        if (!text.includes(anchor)) throw new Error("the aggregate anchor is stale");
+        return text.replace(
+          anchor,
+          anchor + "    # planted: the refusal, moved somewhere it refuses nothing\n",
+        );
+      });
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        if (context.preflight === undefined) throw new Error("no preflight to repoint");
+        context.preflight.job = "ci-pass";
+        context.preflight.step = "Derive the verdict from the serialized needs map";
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a refusal in front of nothing must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/invokes no local composite action/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
 describe("the lane writes the artifact the Reviewer Gate ingests", () => {
   it("emits gate-shaped JSON carrying every finding, on a dirty tree", () => {
     // Review finding [15]: the lane wrote prose to stderr, the gate ingests

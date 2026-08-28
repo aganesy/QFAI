@@ -862,6 +862,11 @@ describe("TC-0017-0073 (TDD-0073): the folded run joins the enumerated verificat
       // work. Composed here rather than added to `REQUIRED`, which is checked against
       // `buildJobSteps()` above and would then be looking for steps that job does not have.
       .toEqual([
+        // First, and in `detect`: an audit found the classifier's body pinned by nothing while
+        // this file's own note claimed otherwise. It decides whether five of the eight lanes
+        // run, so two literal edits inside its heredoc skipped them into an accepting `skipped`
+        // — including the lane whose tests execute that heredoc.
+        "Classify the change against the enumerated directory lists",
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         ...REQUIRED,
@@ -1748,6 +1753,10 @@ const BUILD_JOB_NAME = "build";
  * list, and a shared constant would let one row's edit silently satisfy the other.
  */
 const VERIFICATION_SET = [
+  // The change classifier, in `detect`. It decides whether the gated lanes run at all, and an
+  // audit found it pinned by nothing — the wiring was declared and the program behind it was
+  // not.
+  "Classify the change against the enumerated directory lists",
   // First, and in `lint` rather than in the declared job: the pre-flight refusal of the local
   // composite actions has to run before any job invokes one. Review finding [82] — a step at
   // the top of `./.github/actions/setup` writing `BASH_ENV` makes every later `shell: bash`

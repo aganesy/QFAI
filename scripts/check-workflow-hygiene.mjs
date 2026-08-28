@@ -1760,8 +1760,32 @@ function checkRequiredContexts(root, jobs) {
     // Review finding [81]'s other half: rewiring `detect.outputs.full` to `${{ false }}`, or to
     // a step output nobody produces, skips every gated lane without touching a condition or a
     // line of the classifier. The classifier's own tests are inside one of the lanes that skips.
-    const declaredOutputs = isRecord(context.gateOutputs) ? context.gateOutputs : {};
-    for (const [name, mapping] of Object.entries(declaredOutputs)) {
+    // ABSENT is a finding, and so is empty, and so is an entry that is not a mapping. An audit
+    // of this file found all three: `gateOutputs` deleted, `{}`, or `{"detect": null}` each
+    // made this property iterate nothing while a reviewer grepping the file still saw the job
+    // named. Every other declared input in this context reports when it goes missing; this one
+    // did not, and it is the one that pins the value five lanes are skipped on.
+    const declaredOutputs = isRecord(context.gateOutputs) ? context.gateOutputs : undefined;
+    if (declaredOutputs === undefined || Object.keys(declaredOutputs).length === 0) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `gateOutputs` mapping, so the outputs the skippable lanes are gated on are pinned by nothing — rewiring one to a constant skips them all, and the verdict accepts a skip",
+      });
+    }
+    for (const [name, mapping] of Object.entries(declaredOutputs ?? {})) {
+      if (!isRecord(mapping)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `pins the outputs of ${name} as something this lane cannot read as a mapping, so that job's wiring is checked against nothing`,
+        });
+      }
+    }
+    for (const [name, mapping] of Object.entries(declaredOutputs ?? {})) {
       if (!isRecord(mapping)) continue;
       const job = jobsByKey.get(name);
       if (job === undefined) {
@@ -1829,6 +1853,35 @@ function checkRequiredContexts(root, jobs) {
       const host = jobsByKey.get(preflightJob);
       const steps = isRecord(host) && Array.isArray(host.steps) ? host.steps : [];
       const at = steps.findIndex((step) => isRecord(step) && String(step.name) === preflightStep);
+
+      // The job has to be one the poison would REACH, and one whose result reaches the verdict.
+      // An audit of this file found the check was internally consistent and nothing more: the
+      // declaration could be repointed at any job whose first step happens to satisfy the order
+      // rule — `ci-pass` itself, say — while the real refusal moved behind the composite action
+      // it exists to precede. Every property still passed, and nothing refused a poisoned action.
+      //
+      // So: the named job must be a declared dependency (its failure has to reach the aggregate),
+      // and it must itself invoke a local composite action (otherwise the refusal is stationed
+      // where the attack does not pass).
+      if (!declaredDependencyList(jobsByKey.get(declaredJob)).includes(preflightJob)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `stations the pre-flight refusal in ${preflightJob}, which the aggregate does not depend on — a refusal whose failure never reaches the verdict refuses nothing`,
+        });
+      }
+      const invokesLocalAction = steps.some(
+        (step) => isRecord(step) && typeof step.uses === "string" && step.uses.startsWith("./"),
+      );
+      if (!invokesLocalAction) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `stations the pre-flight refusal in ${preflightJob}, which invokes no local composite action — the refusal has to stand in front of the thing it refuses, and there is nothing in front of it there`,
+        });
+      }
       if (at === -1) {
         findings.push({
           rule: "required-context",
@@ -1891,8 +1944,32 @@ function checkRequiredContexts(root, jobs) {
     // Not in `verificationSet`, because that set's property is UNCONDITIONAL performance and
     // these steps sit in jobs that are allowed to skip. The obligation here is narrower and
     // exact: whatever the step does when it runs is what the declaration says it does.
-    const gated = isRecord(context.gatedVerifications) ? context.gatedVerifications : {};
-    for (const [item, jobKey] of Object.entries(gated)) {
+    // Same, and with a reverse check the others do not need. An audit found that deleting one
+    // KEY unpinned that lane's whole body while leaving its digest behind in
+    // `verificationBodies` — so the diff still looked pinned, and `pnpm ci:coverage` could be
+    // replaced with `true` with every check green. A digest nothing consults is worse than no
+    // digest: it reads as a pin.
+    const gated = isRecord(context.gatedVerifications) ? context.gatedVerifications : undefined;
+    if (gated === undefined || Object.keys(gated).length === 0) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `gatedVerifications` mapping, so the work of every lane that may skip is pinned by nothing — being in the aggregate is not the same claim as still doing the work",
+      });
+    }
+    for (const item of Object.keys(pinnedBodies)) {
+      if (wanted.includes(item)) continue;
+      if (Object.prototype.hasOwnProperty.call(gated ?? {}, item)) continue;
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail: `pins a body digest for ${JSON.stringify(item)}, which is in neither verificationSet nor gatedVerifications — nothing consults it, and a digest nothing consults reads as a pin while pinning nothing`,
+      });
+    }
+    for (const [item, jobKey] of Object.entries(gated ?? {})) {
       const host = typeof jobKey === "string" ? jobsByKey.get(jobKey) : undefined;
       if (host === undefined) {
         findings.push({

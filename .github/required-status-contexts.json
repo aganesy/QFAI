@@ -114,7 +114,14 @@
         "which is the same skip by a quieter route.",
         "",
         "The classifier's BODY is pinned separately, by its membership in `verificationSet` and its",
-        "digest in `verificationBodies`: the wiring and the program are two edits and both are read."
+        "digest in `verificationBodies`: the wiring and the program are two edits and both are read.",
+        "",
+        "That claim was FALSE when it was written, and an audit of this file found it: the classifier",
+        "step was in neither list, so the wiring was pinned and the program behind it was not. Two",
+        "literal edits inside its heredoc — `emit(false, 'docs-only')` — skipped five of the eight lanes",
+        "into an accepting `skipped`, including the lane whose tests execute that very heredoc. It is a",
+        "member of `verificationSet` now, and `detect` carries no condition, so it belongs to the",
+        "unconditional set rather than to `gatedVerifications`."
       ],
       "commandFiles": ["GITHUB_ENV", "GITHUB_PATH"],
       "commandFilesNote": [
@@ -182,6 +189,7 @@
         "refuse anything, and pinned to the SHA for the same reason every other reference here is."
       ],
       "verificationSet": [
+        "Classify the change against the enumerated directory lists",
         "Verify the toolchain action before running it",
         "Derive the verdict from the serialized needs map",
         "Run build & pack verification",
@@ -237,6 +245,7 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
+        "Classify the change against the enumerated directory lists": "df7acdcc41dd193d",
         "Verify the toolchain action before running it": "4d84dd239021b14f",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "fefb380078a4d8d6",
@@ -245,7 +254,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "f74656a72792e462",
+        "Run lint gate": "52b2633b24879f9d",
         "Run type check": "752faf7a297fc773",
         "Run future TypeScript compatibility check": "5390e36a8b0b4148",
         "Run the package test suite on the floor": "402864498ce96b32",
