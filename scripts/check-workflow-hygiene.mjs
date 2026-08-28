@@ -819,8 +819,22 @@ export function invokedScriptBodies(runText, root, baseDir = ".") {
  */
 const MAX_WORKFLOW_BYTES = 1_048_576;
 
-/** How many directory entries one workflow tree may hold before the walk stops. */
-const MAX_WALKED_ENTRIES = 5_000;
+/**
+ * How many directory entries one workflow tree may hold before the walk stops.
+ *
+ * A thousand, not five. The bound exists so a tree a pull request controls cannot make this
+ * lane walk forever, and it is only useful if it is far above anything legitimate and far below
+ * anything hostile: this repository's own workflow tree holds about fifteen entries and the
+ * shipped one holds two, so a thousand is already two orders of magnitude of headroom.
+ *
+ * Lowered deliberately, and the reason is worth recording because it is not a security argument.
+ * The rows that prove the lane REPORTS a truncated walk have to build a tree past this number,
+ * and at five thousand each of them wrote and deleted ten thousand files — twenty seconds a row,
+ * the two heaviest in the suite. `node-floor` runs every test in one pool, and that job died on
+ * a worker RPC timeout with all 5,620 tests passing. A bound nothing legitimate approaches is
+ * not made stronger by being larger, and the cost of proving it works is real.
+ */
+const MAX_WALKED_ENTRIES = 1_000;
 
 /**
  * Whether a root is present but cannot be walked — a link, or something that is not a

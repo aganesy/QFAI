@@ -2763,6 +2763,9 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
       // tree reported PASS over the part that was read. An unpinned action, or a YAML weakening the
       // required context, hides behind the padding.
       //
+      // Past `MAX_WALKED_ENTRIES`, which is a thousand — chosen so this row costs a fifth of what
+      // it did at five thousand, and still two orders of magnitude above any legitimate tree.
+      //
       // The padding is named `zz-…` so it sorts AFTER every real file: the whole legitimate tree is
       // still walked and every other rule still sees it, which makes the truncation finding the only
       // one this row can be reddened by. The files are empty and not YAML, because the walk counts
@@ -2770,7 +2773,7 @@ describe("the workflow walk refuses a root it did not open, and is bounded", () 
       const dir = plantedTree((d) => {
         const pad = path.join(d, rel);
         mkdirSync(pad, { recursive: true });
-        for (let i = 0; i < 5_001; i += 1) {
+        for (let i = 0; i < 1_001; i += 1) {
           writeFileSync(path.join(pad, `zz-pad-${String(i).padStart(5, "0")}.txt`), "");
         }
       });
