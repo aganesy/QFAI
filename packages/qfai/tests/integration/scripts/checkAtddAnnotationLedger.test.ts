@@ -591,6 +591,81 @@ describe("runnerCorpusRoots", () => {
     await expect(runnerCorpusRoots(dir)).rejects.toThrow(/not imported from Vitest/i);
   });
 
+  it("refuses a trailing spread that decides the include list", async () => {
+    // Review finding [100]. `{ name: "e2e", include: [decoy], ...actual }` is evaluated by
+    // Vitest with `actual.include` winning, and a scan reading property assignments takes the
+    // decoy — an annotation-only tree certifying every claim. Third time the runner's own
+    // configuration has been the substitution channel, after the comment and the shadowed callee.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "knobs.ts"),
+      ['export const actual = { include: ["tests/journeys/**/*.test.ts"] };', ""].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { actual } from "./knobs";',
+        'export default [{ test: { name: "e2e", include: ["tests/decoy/**/*.test.ts"], ...actual } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/decides what the runner opens/i);
+  });
+
+  it("refuses a spread it cannot follow at all", async () => {
+    // Unreadable is not harmless. Resolving it would mean evaluating the module, which is the
+    // thing this guard parses in order not to do.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'export default [{ test: { ...whateverThisIs, name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    // The REFUSAL, not any error whose text happens to contain those words. Measured: a plant
+    // that removed the refusal left `keys` undefined, and the TypeError that followed —
+    // "Cannot read properties of undefined" — matched a looser pattern and the row passed.
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(
+      /assembled with a spread this guard cannot read/i,
+    );
+  });
+
+  it("reads a spread that decides neither list, which this repository's own config uses", async () => {
+    // The control, and it is load-bearing: every project in the real workspace spreads a knob
+    // object of timeouts and pool settings. A blanket refusal of spreads would refuse the
+    // configuration this guard exists to read — measured, when the first version did exactly that.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "knobs.ts"),
+      ['export const projectKnobs = { testTimeout: 120000, pool: "forks" } as const;', ""].join(
+        "\n",
+      ),
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { projectKnobs } from "./knobs";',
+        'export default [{ test: { ...projectKnobs, name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir).then((r) => r.roots)).resolves.toEqual([
+      path.join(dir, "packages", "qfai", "tests", "journeys"),
+    ]);
+  });
+
   it("subtracts an excluded file, which the runner does not open", async () => {
     // Review finding [85]. Reading `include` alone let an `exclude` entry keep a file in the
     // backing corpus that Vitest never runs — an annotation-only file discharging a required

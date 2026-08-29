@@ -50,6 +50,7 @@
 // QFAI:SPEC-0017:TC-0017-0023
 
 import { spawnSync } from "node:child_process";
+import { createHash } from "node:crypto";
 import {
   cpSync,
   existsSync,
@@ -4051,6 +4052,44 @@ describe("a local action arrives with its digest or not at all", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the pre-flight checks its own bytes before it checks anything else", () => {
+  // Review finding [101]. Everything this step runs comes out of the pull request's checkout,
+  // so a pull request could rewrite `check-toolchain-action.sh` to `exit 0` and then poison the
+  // composite action freely — the digest agreement between the action list and the declaration
+  // is verified by the hygiene lane, and that lane runs AFTER the action it was protecting.
+  //
+  // Nothing in a repository makes its own checkout trustworthy: on a `pull_request` event GitHub
+  // runs the workflow from the pull request's tree. What the self-check buys is that weakening
+  // the refusal takes SEPARATE, VISIBLE edits — the script, the digest in the workflow, and this
+  // step's pinned body — instead of one line in a shell script nobody re-reads.
+
+  it("carries the script's digest in the step, and the digest is the script's", () => {
+    const workflow = readFileSync(path.join(REPO_ROOT, ".github", "workflows", "ci.yml"), "utf-8");
+    const step = firstContext(REPO_ROOT).preflight?.step;
+    if (step === undefined) throw new Error("the declaration pins no pre-flight step");
+    const at = workflow.indexOf(`- name: ${step}`);
+    expect(at, "the pre-flight step must exist in the workflow").toBeGreaterThan(-1);
+    const body = workflow.slice(at, workflow.indexOf(`\n      - `, at + 1));
+
+    const pinned = /([0-9a-f]{64}) {2}scripts\/check-toolchain-action\.sh/.exec(body)?.[1];
+    expect(
+      pinned,
+      "the step must pin the refusal's own bytes, or the refusal can be replaced with `exit 0`",
+    ).toBeDefined();
+    expect(body, "and check them before running it, or the pin is a comment").toMatch(
+      /sha256sum -c --quiet[\s\S]*?bash \.\/scripts\/check-toolchain-action\.sh/,
+    );
+
+    const actual = createHash("sha256")
+      .update(readFileSync(path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh")))
+      .digest("hex");
+    expect(
+      pinned,
+      "the pinned digest must be the script that ships — a stale one refuses every run, and a wrong one refuses nothing",
+    ).toBe(actual);
   });
 });
 

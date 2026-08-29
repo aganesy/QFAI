@@ -430,6 +430,125 @@ function literalText(ts, node) {
 }
 
 /** The initializer of `name` on an object literal, by identifier or by quoted key. */
+/**
+ * The keys a spread inside an object literal could contribute, or `undefined` when unknowable.
+ *
+ * Review finding [100]: `{ name: "e2e", include: [decoy], ...actual }` is evaluated by Vitest
+ * with `actual.include` winning, and a scan that reads property assignments and ignores
+ * `SpreadAssignment` takes the decoy. A trailing spread OVERRIDES what this guard read as a
+ * literal, and a leading one can supply a key the literal never mentions — which is how an
+ * `exclude` nobody can see would make the corpus larger than what the runner runs.
+ *
+ * So a spread is READ when it can be: `...identifier` whose identifier is imported from a local
+ * module in this workspace, whose export is an object literal this parser can enumerate. That is
+ * the shape this repository's own configuration uses, and reading it is the same act as reading
+ * the project literal itself.
+ *
+ * `undefined` means unknowable, and the caller refuses. Evaluating the module to find out is the
+ * thing this guard exists not to do.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").SourceFile} source the configuration
+ * @param {string} configPath its path, for resolving relative imports
+ * @param {import("typescript").SpreadAssignment} spread the member
+ * @returns {string[] | undefined} the keys it contributes, or `undefined` if unreadable
+ */
+function spreadKeys(ts, source, configPath, spread) {
+  if (!ts.isIdentifier(spread.expression)) return undefined;
+  const wanted = spread.expression.text;
+
+  let specifier;
+  for (const statement of source.statements) {
+    if (!ts.isImportDeclaration(statement)) continue;
+    if (!ts.isStringLiteral(statement.moduleSpecifier)) continue;
+    const bindings = statement.importClause?.namedBindings;
+    if (bindings === undefined || !ts.isNamedImports(bindings)) continue;
+    if (bindings.elements.some((element) => element.name.text === wanted)) {
+      specifier = statement.moduleSpecifier.text;
+    }
+  }
+  if (specifier === undefined || !specifier.startsWith(".")) return undefined;
+
+  const dir = path.dirname(configPath);
+  for (const extension of [".ts", ".mts", ".js", ".mjs", ""]) {
+    const candidate = path.resolve(dir, `${specifier}${extension}`);
+    const text = readBoundedText(candidate, MAX_SOURCE_BYTES);
+    if (text === undefined) continue;
+    const module_ = ts.createSourceFile(
+      candidate,
+      text,
+      ts.ScriptTarget.Latest,
+      true,
+      ts.ScriptKind.TS,
+    );
+    for (const statement of module_.statements) {
+      if (!ts.isVariableStatement(statement)) continue;
+      const exported = statement.modifiers?.some(
+        (modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword,
+      );
+      if (exported !== true) continue;
+      for (const declaration of statement.declarationList.declarations) {
+        if (!ts.isIdentifier(declaration.name) || declaration.name.text !== wanted) continue;
+        let initializer = declaration.initializer;
+        // `as const` and other assertions wrap the literal without changing its keys.
+        while (
+          initializer !== undefined &&
+          (ts.isAsExpression(initializer) || ts.isTypeAssertionExpression(initializer))
+        ) {
+          initializer = initializer.expression;
+        }
+        if (initializer === undefined || !ts.isObjectLiteralExpression(initializer)) {
+          return undefined;
+        }
+        const keys = [];
+        for (const property of initializer.properties) {
+          if (!ts.isPropertyAssignment(property)) return undefined;
+          const key = property.name;
+          if (ts.isIdentifier(key) || ts.isStringLiteral(key)) keys.push(key.text);
+          else return undefined;
+        }
+        return keys;
+      }
+    }
+    return undefined;
+  }
+  return undefined;
+}
+
+/**
+ * Refuse an object literal whose spreads could decide `include` or `exclude`.
+ *
+ * A spread that contributes neither key cannot change the corpus, whatever its position. One
+ * that contributes either — or one this guard cannot read at all — is a member of the answer
+ * that was never read, and the corpus is derived from what can be read.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").SourceFile} source the configuration
+ * @param {string} configPath its path
+ * @param {import("typescript").ObjectLiteralExpression} objectLiteral the literal
+ * @param {string} what the literal's role, for the message
+ */
+function refuseDecidingSpreads(ts, source, configPath, objectLiteral, what) {
+  for (const property of objectLiteral.properties) {
+    if (!ts.isSpreadAssignment(property)) continue;
+    const keys = spreadKeys(ts, source, configPath, property);
+    if (keys === undefined) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the ${what} in ${configPath} is assembled with a spread ` +
+          "this guard cannot read, and resolving one means evaluating the module rather than " +
+          "reading it. The backing corpus is derived from what can be read",
+      );
+    }
+    const decides = keys.filter((key) => key === "include" || key === "exclude");
+    if (decides.length > 0) {
+      throw new Error(
+        `check-atdd-annotation-ledger: the ${what} in ${configPath} spreads ${JSON.stringify(
+          decides,
+        )}, which decides what the runner opens — a spread may not settle the backing corpus`,
+      );
+    }
+  }
+}
 function propertyValue(ts, objectLiteral, name) {
   for (const property of objectLiteral.properties) {
     if (!ts.isPropertyAssignment(property)) continue;
@@ -582,6 +701,15 @@ async function e2eIncludeGlobs(text, configPath) {
     const testNode = propertyValue(ts, element, "test");
     if (testNode === undefined || !ts.isObjectLiteralExpression(testNode)) continue;
     if (literalText(ts, propertyValue(ts, testNode, "name")) !== "e2e") continue;
+    // A spread in the project or in its `test` object can supply — or REPLACE — the include and
+    // exclude lists read below. Review finding [100]: a TRAILING `...actual` wins over an earlier
+    // literal in JavaScript and lost to it here, so the decoy became the corpus.
+    //
+    // Read where it can be read: this repository's own projects spread a knob object that
+    // contributes timeouts and pool settings and neither list, which is provably harmless. A
+    // spread that contributes either key, or one this guard cannot follow, is refused.
+    refuseDecidingSpreads(ts, source, configPath, element, "e2e project");
+    refuseDecidingSpreads(ts, source, configPath, testNode, "e2e project's `test` object");
     found.push(testNode);
   }
 

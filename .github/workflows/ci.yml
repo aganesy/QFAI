@@ -326,7 +326,22 @@ jobs:
       # So this one runs with only `actions/checkout` ahead of it, which sets no environment
       # file, and needs nothing the setup action provides — `bash` and `grep`, both on the image.
       - name: Verify the toolchain action before running it
-        run: bash ./scripts/check-toolchain-action.sh
+        run: |
+          set -euo pipefail
+          # The refusal's OWN bytes first, against a digest held HERE rather than in the file it
+          # checks. Review finding [101]: everything this step runs comes out of the pull
+          # request's checkout, so a pull request could rewrite `check-toolchain-action.sh` to
+          # `exit 0` and then poison the composite action freely — the digest agreement between
+          # the action list and the declaration is verified by the hygiene lane, and the lane runs
+          # after the action it was supposed to protect.
+          #
+          # This does not make the checkout trustworthy, and nothing in a repository can: on a
+          # `pull_request` event GitHub runs the workflow from the pull request's own tree. What
+          # it does is make each weakening a SEPARATE, VISIBLE edit — the script, this digest, and
+          # (through `verificationBodies`) this step's body — instead of one line in a shell
+          # script nobody re-reads. That is the property this whole declaration is built on.
+          echo "69e71a99495a5d18670e85ca47c6cc284bc0226f9dafe79967d1ff07fda054ce  scripts/check-toolchain-action.sh" | sha256sum -c --quiet
+          bash ./scripts/check-toolchain-action.sh
         shell: bash
       - name: Ensure base ref is fetched (for pair-changed CI lane)
         run: |
