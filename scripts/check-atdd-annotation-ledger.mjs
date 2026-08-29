@@ -507,6 +507,31 @@ function spreadKeys(ts, source, configPath, spread) {
           if (ts.isIdentifier(key) || ts.isStringLiteral(key)) keys.push(key.text);
           else return undefined;
         }
+
+        // …and nothing in that module may touch it afterwards. Review finding [103]: these are
+        // the keys the literal was WRITTEN with, and `Object.assign(projectKnobs, { exclude: […] })`
+        // three lines down adds one at runtime. Vitest would then skip a whole tree of E2E tests
+        // while this guard, reading the initializer alone, called the spread harmless and counted
+        // annotations in files the runner never opens — both the E2E lane and the ledger green
+        // over user stories nobody verified.
+        //
+        // Proving the post-evaluation state means evaluating the module, which is the thing this
+        // guard parses in order not to do. So the syntactic proof is the one available: the name
+        // occurs EXACTLY ONCE in the module, at its declaration. Any second occurrence — an
+        // `Object.assign`, a member assignment, the object handed to a function — is a mutation
+        // this guard cannot rule out, and an unreadable spread is refused by the caller.
+        //
+        // Conservative on purpose: `Object.freeze(projectKnobs)` is refused too, and it is
+        // provably safe. A rule that admits the safe cases it can name would have to name them
+        // all, and the last three findings on this reader were each a case an enumeration missed.
+        let occurrences = 0;
+        const countOccurrences = (node) => {
+          if (ts.isIdentifier(node) && node.text === wanted) occurrences += 1;
+          ts.forEachChild(node, countOccurrences);
+        };
+        ts.forEachChild(module_, countOccurrences);
+        if (occurrences !== 1) return undefined;
+
         return keys;
       }
     }

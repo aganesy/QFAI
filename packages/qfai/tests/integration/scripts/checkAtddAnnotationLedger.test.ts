@@ -666,6 +666,70 @@ describe("runnerCorpusRoots", () => {
     ]);
   });
 
+  it("refuses a spread source the module mutates after declaring it", async () => {
+    // Review finding [103]. The keys a literal is WRITTEN with are not the keys it HAS:
+    // `Object.assign(projectKnobs, { exclude: [...] })` three lines down adds one at runtime.
+    // Vitest would skip a whole tree of E2E tests while this guard, reading the initializer
+    // alone, called the spread harmless and counted annotations in files the runner never opens
+    // — the E2E lane and the ledger both green over user stories nobody verified.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "knobs.ts"),
+      [
+        "export const projectKnobs = { testTimeout: 120000 };",
+        'Object.assign(projectKnobs, { exclude: ["tests/journeys/**/*.test.ts"] });',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { projectKnobs } from "./knobs";',
+        'export default [{ test: { ...projectKnobs, name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(
+      /assembled with a spread this guard cannot read/i,
+    );
+  });
+
+  it("refuses a spread source handed to anything at all, mutation or not", async () => {
+    // Conservative on purpose, and the row says so: proving the post-evaluation state means
+    // evaluating the module, which is what this guard parses in order not to do. The syntactic
+    // proof available is that the name occurs once, at its declaration — so even a `freeze` is
+    // refused. A rule that admitted the safe cases it can name would have to name them all, and
+    // the last three findings on this reader were each a case an enumeration missed.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "knobs.ts"),
+      [
+        "export const projectKnobs = { testTimeout: 120000 };",
+        "Object.freeze(projectKnobs);",
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'import { projectKnobs } from "./knobs";',
+        'export default [{ test: { ...projectKnobs, name: "e2e", include: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(
+      /assembled with a spread this guard cannot read/i,
+    );
+  });
+
   it("subtracts an excluded file, which the runner does not open", async () => {
     // Review finding [85]. Reading `include` alone let an `exclude` entry keep a file in the
     // backing corpus that Vitest never runs — an annotation-only file discharging a required
