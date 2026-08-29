@@ -340,7 +340,27 @@ jobs:
           # it does is make each weakening a SEPARATE, VISIBLE edit — the script, this digest, and
           # (through `verificationBodies`) this step's body — instead of one line in a shell
           # script nobody re-reads. That is the property this whole declaration is built on.
-          echo "646380a24f6309789245165729b6b0d2a53bd6d8fc45b176ebbce127d7873959  scripts/check-toolchain-action.sh" | sha256sum -c --quiet
+          #
+          # Its INPUTS are pinned here too, and that is review findings [117] and [119]. The
+          # script's own bytes were pinned while the three files it reads its expectations out of
+          # were not, and all three ship in the same checkout: a pull request could add a hostile
+          # manifest's path to `lifecycle-manifests.txt`, or rewrite `setup/action.yml` and record
+          # the new digest in `pinned-bytes.txt`, and the pre-flight would verify the pull
+          # request's own expectations and pass. The composite action then runs — and it runs
+          # BEFORE the hygiene lane that would have caught the disagreement, so a `prepare` hook
+          # appending `BASH_ENV` to the environment file a step may write turns every later guard
+          # shell in this job into a no-op that exits 0. (Spelled the long way round on purpose:
+          # this job refuses any step whose body names that file, and the refusal does not read
+          # comments differently from code, which is what keeps it simple enough to trust.)
+          #
+          # So the root of trust for everything that runs before the hygiene lane is this step's
+          # body, which `verificationBodies` pins and a reviewer reads in the diff.
+          sha256sum -c --quiet <<'PINNED_INPUTS'
+          a0728e3df2e117300504efec998afbfa1195322ef4358ad5bac83d524db60077  scripts/check-toolchain-action.sh
+          995c856b9394b0d2d379cb7f3f1323fb316976a74808ce56f8c54c711f7451f2  .github/pinned-bytes.txt
+          7eeb1639c17b07bcd92062931af6fd6c536fb039e26e4eb78570882073ed2082  .github/lifecycle-manifests.txt
+          43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
+          PINNED_INPUTS
           bash ./scripts/check-toolchain-action.sh
         shell: bash
       - name: Ensure base ref is fetched (for pair-changed CI lane)

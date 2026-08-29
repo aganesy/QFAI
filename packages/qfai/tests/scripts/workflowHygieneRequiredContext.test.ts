@@ -11,11 +11,13 @@
  * properties that read them. What stays there: the structural rules over the two workflow trees,
  * the shipped-tree rules, and the reviewer-artifact bridge.
  */
+import { spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import { mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import path from "node:path";
 
 import { describe, expect, it } from "vitest";
+import { parse } from "yaml";
 
 import {
   type Declaration,
@@ -1599,9 +1601,14 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
       source,
       "every manifest in the tree must be searched, not only the ones already named",
     ).toMatch(/find \. -name package\.json/);
-    expect(source, "and every lifecycle hook pnpm honours must be in the pattern").toMatch(
-      /preinstall\|install\|postinstall\|prepare\|prepublishOnly/,
+    expect(source, "and every lifecycle hook pnpm honours must be named").toMatch(
+      /"preinstall", "install", "postinstall", "prepare", "prepublishOnly"/,
     );
+    expect(
+      source,
+      "read out of the parsed JSON. Review finding [118]: a pattern over line shape misses a " +
+        "valid one-line manifest, which the executing rows further down measure",
+    ).toMatch(/JSON\.parse\(readFileSync/);
   });
 
   it("reports the allow-list going missing, which the pre-flight reads before install", () => {
@@ -1633,5 +1640,204 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("the pre-flight is run against planted trees, not read", () => {
+  // Three findings on one script, all of the same shape: something the pre-flight trusted was
+  // shipped in the same pull request it was meant to constrain.
+  //
+  // These rows EXECUTE it. The script takes its root as an argument, so a planted copy of this
+  // repository is a complete subject — and the rows above this describe, which assert on the
+  // script's source, would each have passed against the versions that carried these defects.
+
+  const PREFLIGHT = path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh");
+  const PREFLIGHT_STEP_NAME = "Verify the toolchain action before running it";
+
+  /** The script alone, given the planted tree as its root. */
+  const runPreflight = (dir: string): { status: number; output: string } => {
+    const run = spawnSync("bash", [PREFLIGHT, dir], { encoding: "utf-8" });
+    if (run.error !== undefined) throw run.error;
+    return {
+      status: run.status ?? -1,
+      output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
+    };
+  };
+
+  /**
+   * The pre-flight STEP, as `ci.yml` runs it: the digest checks over the script and over the
+   * three files it reads its expectations out of, and then the script.
+   *
+   * Findings [117] and [119] are not defects in the script — the script verifies exactly what
+   * it was given. They are defects in what it was given, so the subject is the step.
+   */
+  const runPreflightStep = (dir: string): { status: number; output: string } => {
+    const workflow = parse(
+      readFileSync(path.join(dir, ".github", "workflows", "ci.yml"), "utf-8"),
+    ) as {
+      jobs: Record<string, { steps: Array<{ name?: string; run?: string }> }>;
+    };
+    const steps = Object.values(workflow.jobs).flatMap((job) => job.steps ?? []);
+    const step = steps.find((entry) => entry.name === PREFLIGHT_STEP_NAME);
+    expect(step?.run, `no step named "${PREFLIGHT_STEP_NAME}" in the planted ci.yml`).toBeTypeOf(
+      "string",
+    );
+    const script = path.join(dir, "preflight-step.sh");
+    writeFileSync(script, step?.run ?? "", "utf-8");
+    const run = spawnSync("bash", [script], { cwd: dir, encoding: "utf-8" });
+    if (run.error !== undefined) throw run.error;
+    return {
+      status: run.status ?? -1,
+      output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
+    };
+  };
+
+  const withTree = (mutate: (dir: string) => void, assert: (dir: string) => void): void => {
+    const dir = plantedTree(mutate);
+    try {
+      assert(dir);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  const manifest = (dir: string, body: string): void => {
+    const packageDir = path.join(dir, "packages", "planted");
+    mkdirSync(packageDir, { recursive: true });
+    writeFileSync(path.join(packageDir, "package.json"), body, "utf-8");
+  };
+
+  it("passes on the tree as this repository ships it", () => {
+    // The premise every row below rests on. Without it a red row proves only that the planted
+    // tree was broken.
+    withTree(
+      () => {},
+      (dir) => {
+        const script = runPreflight(dir);
+        expect(script.status, `the unplanted tree must pass the script:\n${script.output}`).toBe(0);
+        const step = runPreflightStep(dir);
+        expect(step.status, `and the whole step:\n${step.output}`).toBe(0);
+      },
+    );
+  });
+
+  it("reads a lifecycle hook out of the JSON, not off the start of a line", () => {
+    // Review finding [118]. The refusal matched a lifecycle key at the start of a line, and a
+    // valid one-line manifest matches no such pattern — measured: the old pattern does not match
+    // `{"scripts":{"prepare":"…"}}`. A pull request adding that manifest to the workspace passed
+    // here and had `prepare` run by the very next step's `pnpm install --frozen-lockfile`.
+    for (const [shape, body] of [
+      ["one line", '{"name":"planted","private":true,"scripts":{"prepare":"echo planted"}}'],
+      [
+        "several lines",
+        [
+          "{",
+          '  "name": "planted",',
+          '  "scripts": {',
+          '    "prepare": "echo planted"',
+          "  }",
+          "}",
+        ].join("\n"),
+      ],
+      ["a key with unusual spacing", '{"scripts":{ "postinstall" : "echo planted" }}'],
+    ] as Array<[string, string]>) {
+      withTree(
+        (dir) => manifest(dir, body),
+        (dir) => {
+          const run = runPreflight(dir);
+          expect
+            .soft(run.status, `a hook spelled across ${shape} must be refused:\n${run.output}`)
+            .toBe(1);
+          expect
+            .soft(run.output, `and the hook named (${shape})`)
+            .toMatch(/declares the package-manager lifecycle hook\(s\)/);
+        },
+      );
+    }
+  });
+
+  it("passes a manifest whose scripts hold no lifecycle hook", () => {
+    // The other direction. A refusal that fires on every `scripts` block would be refusing the
+    // repository itself, and both halves have to hold for the row above to mean anything.
+    withTree(
+      (dir) => manifest(dir, '{"name":"planted","scripts":{"build":"tsup","test":"vitest"}}'),
+      (dir) => {
+        const run = runPreflight(dir);
+        expect(run.status, `a hookless manifest must pass:\n${run.output}`).toBe(0);
+      },
+    );
+  });
+
+  it("reports a manifest it cannot parse rather than reading it as hookless", () => {
+    // A manifest pnpm will parse and this guard will not is the gap the guard exists to close, so
+    // an unreadable one is a finding and never a pass.
+    withTree(
+      (dir) => manifest(dir, "{ not json"),
+      (dir) => {
+        const run = runPreflight(dir);
+        expect.soft(run.status, `an unparseable manifest must be reported:\n${run.output}`).toBe(1);
+        expect.soft(run.output).toMatch(/not readable as JSON/);
+      },
+    );
+  });
+
+  it("refuses the allow-list the same pull request widened", () => {
+    // Review finding [117]. The allow-list decides which manifests may run code at install time,
+    // and it ships in the same checkout as the manifest — so adding the hostile manifest's path to
+    // it passed this refusal, and `pnpm install --frozen-lockfile` in the very next step ran the
+    // hook. The list's digest is now pinned in the pre-flight's own step in `ci.yml`, which is the
+    // one place the pull request cannot change without a reviewer seeing it beside the script.
+    //
+    // The subject is the STEP: the script verifies exactly the list it was handed, and pinning
+    // that list is what the step does.
+    withTree(
+      (dir) => {
+        manifest(dir, '{"name":"planted","scripts":{"prepare":"echo planted"}}');
+        const list = path.join(dir, ".github", "lifecycle-manifests.txt");
+        writeFileSync(
+          list,
+          `${readFileSync(list, "utf-8")}packages/planted/package.json\n`,
+          "utf-8",
+        );
+      },
+      (dir) => {
+        const run = runPreflightStep(dir);
+        expect
+          .soft(run.status, `a widened allow-list must not license the hook:\n${run.output}`)
+          .toBe(1);
+      },
+    );
+  });
+
+  it("refuses a composite action rewritten and re-listed in the same commit", () => {
+    // Review finding [119]. `sha256sum -c` verifies the tree against a list that ships WITH the
+    // tree, so rewriting `setup/action.yml` and recording its new digest passed — and that action
+    // runs before the hygiene lane that compares the list against the declaration, so nothing
+    // later would have caught it either.
+    withTree(
+      (dir) => {
+        const action = path.join(dir, ".github", "actions", "setup", "action.yml");
+        writeFileSync(action, `${readFileSync(action, "utf-8")}\n# planted\n`, "utf-8");
+        const list = path.join(dir, ".github", "pinned-bytes.txt");
+        const digest = createHash("sha256").update(readFileSync(action)).digest("hex");
+        writeFileSync(
+          list,
+          readFileSync(list, "utf-8").replace(
+            /^[0-9a-f]{64}( {2}\.github\/actions\/setup\/action\.yml)$/m,
+            `${digest}$1`,
+          ),
+          "utf-8",
+        );
+      },
+      (dir) => {
+        const run = runPreflightStep(dir);
+        expect
+          .soft(
+            run.status,
+            `a re-listed action must not verify against the list it rewrote:\n${run.output}`,
+          )
+          .toBe(1);
+      },
+    );
   });
 });

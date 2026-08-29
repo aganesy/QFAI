@@ -8,17 +8,19 @@
  *   `sha256sum -c` before anything else in the lint job runs;
  * - `pinnedBytes` in `.github/required-status-contexts.json`, which the hygiene lane compares
  *   against both that file and the bytes on disk;
- * - the pre-flight's own digest, held in its step in `.github/workflows/ci.yml` — the one place it
- *   cannot be held by the file it checks.
+ * - the pre-flight's own digest AND the digests of `.github/pinned-bytes.txt`,
+ *   `.github/lifecycle-manifests.txt` and `.github/command-files.txt`, held in its step in
+ *   `.github/workflows/ci.yml` — the one place they cannot be held by the files they check.
  *
  * Editing a guard is expected to fail the lane. That is the point: a change to a program that
  * decides whether a pull request merges is a change a reviewer reads. Run this in the same commit
  * as the edit, and the new digests land in the diff beside it.
  *
- * Ordering matters and is why this is one tool rather than three: the pre-flight script's own bytes
- * are pinned in the workflow, and the workflow step's body is pinned by `verificationBodies`. So the
- * self-digest is written first, then the list, then the declaration — and
- * `pin-verification-bodies.mjs` runs after this one.
+ * Ordering matters and is why this is one tool rather than three. The workflow pins the pre-flight
+ * script AND the three files it reads its expectations out of, so the list and the declaration are
+ * written first and the workflow last, over files that are already final. `ci.yml` is not itself
+ * pinned by bytes, so writing it invalidates nothing — and `pin-verification-bodies.mjs`, which
+ * pins that step's BODY, runs after this one.
  */
 import { createHash } from "node:crypto";
 import { readFileSync, readdirSync, writeFileSync } from "node:fs";
@@ -33,6 +35,24 @@ const LIST_REL = ".github/pinned-bytes.txt";
 const DECLARATION_REL = ".github/required-status-contexts.json";
 const WORKFLOW_REL = ".github/workflows/ci.yml";
 const PREFLIGHT_REL = "scripts/check-toolchain-action.sh";
+
+/**
+ * The files whose digests are pinned in the workflow rather than in a file.
+ *
+ * The pre-flight script, and every file it reads its expectations out of. Review findings [117]
+ * and [119]: the script's own bytes were pinned while `pinned-bytes.txt`,
+ * `lifecycle-manifests.txt` and `command-files.txt` were not, and all of them ship in the same
+ * checkout — so a pull request could rewrite a composite action and record its new digest in the
+ * list, or add a hostile manifest's path to the allow-list, and the pre-flight would verify the
+ * pull request's own expectations and pass. The composite action runs before the hygiene lane
+ * that compares list against declaration, so nothing later would catch it.
+ */
+const WORKFLOW_PINNED = [
+  PREFLIGHT_REL,
+  LIST_REL,
+  ".github/lifecycle-manifests.txt",
+  ".github/command-files.txt",
+];
 
 /** Every file under `rel`, repo-relative and POSIX-separated, in a stable order. */
 function filesUnder(root, rel) {
@@ -58,23 +78,9 @@ function digestOf(root, rel) {
 }
 
 function main(root) {
-  // FIRST: the pre-flight's own digest, in the workflow. Written before the list, because writing
-  // it changes no pinned file — the pre-flight script is unchanged by this step, and the workflow
-  // is not itself pinned by bytes.
-  const preflightDigest = digestOf(root, PREFLIGHT_REL);
-  const workflowPath = path.join(root, WORKFLOW_REL);
-  const workflow = readFileSync(workflowPath, "utf-8");
-  const selfPin = new RegExp(
-    `[0-9a-f]{64}( {2}${PREFLIGHT_REL.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")})`,
-  );
-  if (!selfPin.test(workflow)) {
-    stdout.write(`no self-digest for ${PREFLIGHT_REL} in ${WORKFLOW_REL}\n`);
-    return 1;
-  }
-  writeFileSync(workflowPath, workflow.replace(selfPin, `${preflightDigest}$1`), "utf-8");
-  stdout.write(`${preflightDigest}  ${PREFLIGHT_REL} (self-digest in ${WORKFLOW_REL})\n`);
-
-  // THEN the list, over the roots as they now stand.
+  // The list first, over the roots as they now stand: the workflow pins its digest, so the file
+  // has to be final before the workflow can be written. Nothing here is circular — `ci.yml` is
+  // not itself pinned by bytes, so writing it changes none of the digests just computed.
   const entries = [];
   for (const pinnedRoot of PINNED_ROOTS) {
     for (const rel of filesUnder(root, pinnedRoot)) {
@@ -103,6 +109,24 @@ function main(root) {
   }
   writeFileSync(declarationPath, `${JSON.stringify(declaration, null, 2)}\n`, "utf-8");
   stdout.write(`pinned into ${DECLARATION_REL}\n`);
+
+  // AND the workflow, last: the pre-flight and every file it reads its expectations out of.
+  const workflowPath = path.join(root, WORKFLOW_REL);
+  let workflow = readFileSync(workflowPath, "utf-8");
+  for (const rel of WORKFLOW_PINNED) {
+    const digest = digestOf(root, rel);
+    const pin = new RegExp(`[0-9a-f]{64}( {2}${rel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}$)`, "m");
+    const matches = workflow.match(new RegExp(pin, "gm"));
+    if (matches === null || matches.length !== 1) {
+      stdout.write(
+        `${WORKFLOW_REL} holds ${String(matches === null ? 0 : matches.length)} pin line(s) for ${rel}; it must hold exactly one\n`,
+      );
+      return 1;
+    }
+    workflow = workflow.replace(pin, `${digest}$1`);
+    stdout.write(`${digest}  ${rel} (pinned in ${WORKFLOW_REL})\n`);
+  }
+  writeFileSync(workflowPath, workflow, "utf-8");
   stdout.write("now run `node scripts/pin-verification-bodies.mjs`\n");
   return 0;
 }

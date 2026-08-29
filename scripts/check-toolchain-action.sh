@@ -97,28 +97,69 @@ done
 # Refused HERE because here is before `pnpm install`. The lane checks the same allow-list against
 # the declaration; this checks it against the tree, at the only moment that helps.
 #
-# `grep` rather than a JSON parser, for the reason this whole script uses none: it runs before
-# the toolchain exists. The pattern is a lifecycle key at the start of a line, which is how
-# `package.json` is written everywhere in this repository and how any formatter would write it.
+# The question is asked of the JSON, not of the line layout.
+#
+# Review finding [118]: the first version matched a lifecycle key at the start of a line, and a
+# perfectly valid one-line manifest — `{"scripts":{"prepare":"…"}}` — matches no such pattern.
+# A pull request adding that manifest to the workspace passed this refusal and had `prepare` run
+# by the very next step's `pnpm install --frozen-lockfile`; a `prepare` that writes `BASH_ENV`
+# into `$GITHUB_ENV` turns every guard shell after it in this job into a no-op that exits 0.
+#
+# `node`, then, and not the package manager. This step runs before the TOOLCHAIN is set up —
+# before corepack, pnpm, or any dependency — but the runner has a Node it uses to execute every
+# JavaScript action, `actions/checkout` in the step above included. If it somehow does not, that
+# is reported rather than skipped: a check whose input is absent must report, never pass.
 manifest_allow="${root}/.github/lifecycle-manifests.txt"
 if [ ! -f "${manifest_allow}" ]; then
   echo "::error::check-toolchain-action: ${manifest_allow} is missing, so which manifests may run code at install time is decided by nothing."
   exit 1
 fi
-lifecycle_re="^[[:space:]]*\"(preinstall|install|postinstall|prepare|prepublishOnly)\"[[:space:]]*:"
+if ! command -v node >/dev/null 2>&1; then
+  echo "::error::check-toolchain-action: no node on PATH, so which manifests run code at install time cannot be read. Every JavaScript action in this job needs one, so a runner without it cannot run this workflow anyway — this refuses rather than skipping, because a check that cannot read its input must not report a pass."
+  exit 1
+fi
+
+# Exit 0: the manifest declares one or more hooks, and they are on stdout. Exit 1: it declares
+# none. Anything else: it could not be read, which is a finding rather than a pass.
+lifecycle_probe='
+  const { readFileSync } = require("node:fs");
+  const HOOKS = ["preinstall", "install", "postinstall", "prepare", "prepublishOnly"];
+  let parsed;
+  try {
+    parsed = JSON.parse(readFileSync(process.argv[1], "utf8"));
+  } catch {
+    process.exit(2);
+  }
+  if (parsed === null || typeof parsed !== "object") process.exit(1);
+  const scripts = parsed.scripts;
+  if (scripts === null || typeof scripts !== "object") process.exit(1);
+  const found = HOOKS.filter((hook) =>
+    Object.prototype.hasOwnProperty.call(scripts, hook),
+  );
+  if (found.length === 0) process.exit(1);
+  process.stdout.write(found.join(", "));
+'
+
 while IFS= read -r manifest; do
   rel="${manifest#./}"
   # `node_modules` is not ours; `tmp/` is this repository's sanctioned scratch area and is
   # gitignored, so nothing there is installed or reviewed. Both are skipped by NAME rather than by
   # asking git, because this runs before any toolchain exists.
   case "${rel}" in *node_modules* | ./tmp/* | tmp/*) continue ;; esac
-  if ! grep -qE "${lifecycle_re}" "${root}/${rel}" 2>/dev/null; then
-    continue
+  if hooks="$(node -e "${lifecycle_probe}" "${root}/${rel}")"; then
+    :
+  else
+    probe_status=$?
+    if [ "${probe_status}" -eq 1 ]; then
+      continue
+    fi
+    echo "::error::check-toolchain-action: ${rel} is not readable as JSON, so whether it runs code at install time cannot be decided. A manifest pnpm will parse and this guard will not is the gap the guard exists to close."
+    exit 1
   fi
   if grep -qxF "${rel}" "${manifest_allow}"; then
     continue
   fi
-  echo "::error::check-toolchain-action: ${rel} declares a package-manager lifecycle hook and is not listed in .github/lifecycle-manifests.txt. pnpm runs those hooks in every job before every verification; a manifest that runs code at install time is one a reviewer reads."
+  echo "::error::check-toolchain-action: ${rel} declares the package-manager lifecycle hook(s) ${hooks} and is not listed in .github/lifecycle-manifests.txt. pnpm runs those hooks in every job before every verification; a manifest that runs code at install time is one a reviewer reads."
   exit 1
 done <<EOF
 $(cd "${root}" && find . -name package.json -not -path "*/node_modules/*")
