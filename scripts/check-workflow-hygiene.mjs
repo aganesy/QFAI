@@ -441,14 +441,32 @@ const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
  * A closed list, and short: these are the hooks `pnpm install` honours, and each of them runs in
  * every job before every verification in that job. Review finding [105].
  */
+/** Where the manifests allowed to run code at install time are listed, for both readers. */
+const LIFECYCLE_MANIFESTS_REL = path.posix.join(".github", "lifecycle-manifests.txt");
+
 /**
- * The manifests `pnpm install` runs lifecycle hooks for in this workspace.
+ * The manifests allowed to declare a package-manager lifecycle hook.
  *
- * The root and every workspace package. Enumerated rather than globbed from
- * `pnpm-workspace.yaml`, because the point is that this list and the declaration's must be
- * compared: a set derived from the same file the attack edits proves nothing.
+ * Read from the tree, and read by `scripts/check-toolchain-action.sh` too — which enforces it
+ * BEFORE `pnpm install`, the only moment that helps. Review finding [110]: this was a literal
+ * array here, and `pnpm-workspace.yaml` is not that array, so a pull request adding a package
+ * with a `prepare` hook had it run before every verification in a manifest nothing examined.
+ *
+ * `undefined` for absent or empty, which the caller turns into a finding: a list of what may run
+ * code at install time that names nothing is not a permission, it is a gap.
+ *
+ * @param {string} root repository root
+ * @returns {string[] | undefined} the declared manifests
  */
-const WORKSPACE_MANIFESTS = ["package.json", "packages/qfai/package.json"];
+function lifecycleManifests(root) {
+  const text = readBoundedText(path.join(root, LIFECYCLE_MANIFESTS_REL), MAX_WORKFLOW_BYTES);
+  if (text === undefined) return undefined;
+  const names = text
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter((line) => line !== "" && !line.startsWith("#"));
+  return names.length === 0 ? undefined : names;
+}
 
 const INSTALL_LIFECYCLE = ["preinstall", "install", "postinstall", "prepare", "prepublishOnly"];
 /** Where the pinned local-action bytes live, for the pre-flight and for this lane. */
@@ -2298,7 +2316,17 @@ function checkRequiredContexts(root, jobs) {
     // declaration names, so deleting a key here and adding a `prepare` to that manifest
     // reported nothing — and `pnpm install --frozen-lockfile` runs a workspace package's
     // lifecycle exactly as it runs the root's.
-    for (const manifestRel of WORKSPACE_MANIFESTS) {
+    const workspaceManifests = lifecycleManifests(root);
+    if (workspaceManifests === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: LIFECYCLE_MANIFESTS_REL,
+        job: declaredJob,
+        detail:
+          "is missing or empty, and the pre-flight reads it before `pnpm install` to decide which manifests may run code at install time — without it that refusal permits everything",
+      });
+    }
+    for (const manifestRel of workspaceManifests ?? []) {
       if (!Object.prototype.hasOwnProperty.call(declaredLifecycle ?? {}, manifestRel)) {
         findings.push({
           rule: "required-context",

@@ -1,0 +1,18 @@
+# The manifests allowed to declare a package-manager lifecycle hook.
+#
+# `pnpm install --frozen-lockfile` runs `preinstall`, `install`, `postinstall`, `prepare` and
+# `prepublishOnly` from every manifest in the workspace — in every job, inside the composite
+# action, before every verification in that job.
+#
+# Review finding [110]: the lane compared the declaration against a FIXED list of manifests, and
+# `pnpm-workspace.yaml` is not that list. A pull request adding a package to the workspace with a
+# `prepare` hook installed and ran it before any verification, and the lane never looked at that
+# manifest because the declaration did not name it.
+#
+# So the refusal is here, in the pre-flight, BEFORE `pnpm install` runs: any `package.json` in
+# the tree that declares one of those hooks must be on this list. Adding a package that needs
+# one is a change to this file, in the diff, beside the package.
+#
+# One path per line, relative to the repository root.
+package.json
+packages/qfai/package.json

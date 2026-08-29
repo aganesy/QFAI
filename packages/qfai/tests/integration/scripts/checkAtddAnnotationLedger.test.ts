@@ -730,6 +730,44 @@ describe("runnerCorpusRoots", () => {
     );
   });
 
+  it("refuses a computed key it would have to evaluate", async () => {
+    // Review finding [111]. `["in" + "clude"]: [...]` evaluates to `include` and overrides an
+    // earlier literal one; the key extraction skipped it, because a computed name is neither an
+    // identifier nor a string literal. The decoy was read while Vitest ran the real corpus — the
+    // same override the trailing spread achieved, spelled differently.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'export default [{ test: { name: "e2e", include: ["tests/decoy/**/*.test.ts"], ["in" + "clude"]: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir)).rejects.toThrow(/carries a key this guard cannot read/i);
+  });
+
+  it("reads a computed key that is already a literal, and lets the last one win", async () => {
+    // The readable half, and the ordering. `["include"]` needs no evaluation, and JavaScript
+    // gives the LAST key of a name to the object — so a decoy written first must lose.
+    const dir = await temp();
+    await mkdir(path.join(dir, "packages", "qfai"), { recursive: true });
+    await writeFile(
+      path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+      [
+        'export default [{ test: { name: "e2e", include: ["tests/decoy/**/*.test.ts"], ["include"]: ["tests/journeys/**/*.test.ts"] } }];',
+        "",
+      ].join("\n"),
+      "utf8",
+    );
+
+    await expect(runnerCorpusRoots(dir).then((r) => r.roots)).resolves.toEqual([
+      path.join(dir, "packages", "qfai", "tests", "journeys"),
+    ]);
+  });
+
   it("subtracts an excluded file, which the runner does not open", async () => {
     // Review finding [85]. Reading `include` alone let an `exclude` entry keep a file in the
     // backing corpus that Vitest never runs — an annotation-only file discharging a required

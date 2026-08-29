@@ -340,7 +340,7 @@ jobs:
           # it does is make each weakening a SEPARATE, VISIBLE edit — the script, this digest, and
           # (through `verificationBodies`) this step's body — instead of one line in a shell
           # script nobody re-reads. That is the property this whole declaration is built on.
-          echo "7fc0937aa60aa7a0d0ee48605ecfb9594ff2acf38f48546ce29811832a51f969  scripts/check-toolchain-action.sh" | sha256sum -c --quiet
+          echo "646380a24f6309789245165729b6b0d2a53bd6d8fc45b176ebbce127d7873959  scripts/check-toolchain-action.sh" | sha256sum -c --quiet
           bash ./scripts/check-toolchain-action.sh
         shell: bash
       - name: Ensure base ref is fetched (for pair-changed CI lane)

@@ -574,7 +574,42 @@ function refuseDecidingSpreads(ts, source, configPath, objectLiteral, what) {
     }
   }
 }
+/**
+ * Whether an object literal carries a key this guard cannot read.
+ *
+ * Review finding [111]: `["in" + "clude"]: [...]` is a computed property. JavaScript evaluates
+ * it to `include` and lets it override an earlier literal one; `propertyValue` skipped it,
+ * because a computed name is not an identifier or a string literal. So the decoy `include` was
+ * read while Vitest ran the real one — the same override the trailing spread achieved, spelled
+ * differently.
+ *
+ * Evaluating the expression is what this guard parses in order not to do, so an unresolvable key
+ * is a refusal. A computed key whose expression IS a string literal (`["include"]`) is readable
+ * and is read; anything else is not.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").ObjectLiteralExpression} objectLiteral the literal
+ * @returns {boolean} whether any key is one this guard cannot resolve
+ */
+function hasUnreadableKey(ts, objectLiteral) {
+  return objectLiteral.properties.some((property) => {
+    if (ts.isSpreadAssignment(property)) return false; // its own refusal, above
+    const key = property.name;
+    if (key === undefined) return true;
+    if (ts.isIdentifier(key) || ts.isStringLiteral(key)) return false;
+    if (ts.isNoSubstitutionTemplateLiteral(key)) return false;
+    if (ts.isComputedPropertyName(key)) {
+      // A computed name is readable only when the expression is already a literal.
+      return !(
+        ts.isStringLiteral(key.expression) || ts.isNoSubstitutionTemplateLiteral(key.expression)
+      );
+    }
+    return true;
+  });
+}
+
 function propertyValue(ts, objectLiteral, name) {
+  let found;
   for (const property of objectLiteral.properties) {
     if (!ts.isPropertyAssignment(property)) continue;
     const key = property.name;
@@ -582,10 +617,16 @@ function propertyValue(ts, objectLiteral, name) {
       ? key.text
       : ts.isStringLiteral(key) || ts.isNoSubstitutionTemplateLiteral(key)
         ? key.text
-        : undefined;
-    if (keyText === name) return property.initializer;
+        : ts.isComputedPropertyName(key) &&
+            (ts.isStringLiteral(key.expression) ||
+              ts.isNoSubstitutionTemplateLiteral(key.expression))
+          ? key.expression.text
+          : undefined;
+    // The LAST one wins, as JavaScript does. Reading the first was the other half of review
+    // finding [111]: a decoy written before the real key was the one this guard took.
+    if (keyText === name) found = property.initializer;
   }
-  return undefined;
+  return found;
 }
 
 /**
@@ -735,6 +776,20 @@ async function e2eIncludeGlobs(text, configPath) {
     // spread that contributes either key, or one this guard cannot follow, is refused.
     refuseDecidingSpreads(ts, source, configPath, element, "e2e project");
     refuseDecidingSpreads(ts, source, configPath, testNode, "e2e project's `test` object");
+    // …and a key this guard cannot read at all. Review finding [111].
+    for (const [literal, what] of [
+      [element, "e2e project"],
+      [testNode, "e2e project's `test` object"],
+    ]) {
+      if (hasUnreadableKey(ts, literal)) {
+        throw new Error(
+          `check-atdd-annotation-ledger: the ${what} in ${configPath} carries a key this guard ` +
+            "cannot read — a computed name it would have to evaluate. The backing corpus is " +
+            "derived from what can be read, and a key that names `include` by computation names " +
+            "it just as well as one that spells it",
+        );
+      }
+    }
     found.push(testNode);
   }
 

@@ -1553,3 +1553,85 @@ describe("the guard programs are pinned like the actions", () => {
     ).toMatch(/check-workflow-hygiene\.mjs/);
   });
 });
+
+describe("the pre-flight compares sets, and refuses code that runs at install time", () => {
+  // Two findings on the same script, both about a check that measured the wrong thing.
+  //
+  // Asserted on the SOURCE of `scripts/check-toolchain-action.sh`. It runs on the GitHub runner
+  // before the toolchain exists, and its refusals were exercised directly against the real tree
+  // while they were written — both are recorded in the commit. What a row here can pin is that
+  // the script still measures a SET and still reads the allow-list, because both were once a
+  // count and a literal.
+
+  it("compares the pinned paths as a set, not by counting lines", () => {
+    // Review finding [112]: comparing counts let a deletion and a duplicate cancel out — drop
+    // `setup/action.yml` from the list, put a benign action's line in twice, and `sha256sum -c`
+    // verifies the duplicate happily while both counts read 2. The unpinned setup action then
+    // runs, before every verification in the job.
+    const source = readFileSync(
+      path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh"),
+      "utf-8",
+    );
+    expect(source, "the pinned paths must be compared as sorted sets").toMatch(
+      /listed=.*sort[\s\S]{0,400}?present=.*sort/,
+    );
+    expect(
+      source,
+      "and a path pinned twice refused on its own, because that is a count being made to balance",
+    ).toMatch(/uniq -d/);
+    expect(source, "counting files is not a comparison of which files").not.toMatch(/wc -l/);
+  });
+
+  it("refuses a manifest that runs code at install time and is not on the allow-list", () => {
+    // Review finding [110]: `pnpm install --frozen-lockfile` runs the lifecycle hooks of every
+    // manifest in the workspace, and the lane compared the declaration against a FIXED array —
+    // `pnpm-workspace.yaml` is not that array. A pull request adding a package with a `prepare`
+    // hook had it run before every verification, in a manifest nothing examined.
+    //
+    // Refused in the pre-flight because that is before `pnpm install`, the only moment that
+    // helps.
+    const source = readFileSync(
+      path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh"),
+      "utf-8",
+    );
+    expect(source, "the allow-list must be read").toMatch(/lifecycle-manifests\.txt/);
+    expect(
+      source,
+      "every manifest in the tree must be searched, not only the ones already named",
+    ).toMatch(/find \. -name package\.json/);
+    expect(source, "and every lifecycle hook pnpm honours must be in the pattern").toMatch(
+      /preinstall\|install\|postinstall\|prepare\|prepublishOnly/,
+    );
+  });
+
+  it("reports the allow-list going missing, which the pre-flight reads before install", () => {
+    const dir = plantedTree((d) => {
+      rmSync(path.join(d, ".github", "lifecycle-manifests.txt"), { force: true });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a missing allow-list must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/is missing or empty/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the manifests to check from that list rather than from a literal", () => {
+    // Adding a name to the list must make the lane demand a pin for it. Without this the row
+    // above is satisfied by a lane that reads the file and ignores it.
+    const dir = plantedTree((d) => {
+      const list = path.join(d, ".github", "lifecycle-manifests.txt");
+      writeFileSync(list, `${readFileSync(list, "utf-8")}packages/planted/package.json\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a manifest on the list with no pin must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/pins no install lifecycle for/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

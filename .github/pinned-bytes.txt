@@ -15,7 +15,7 @@
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
 7ab9263cfe42a3b50469ea79afbc41fdbd4f53e3a1dccd72ad743f339396d0f6  .github/actions/setup/action.yml
-3f7e906050097d3c776d98da876655d28bfc3109d4119225e8abf65320c8b134  scripts/check-atdd-annotation-ledger.mjs
+9e42d8133cd6d42d8f7f0da0bc681ce5b9c18108e7171a9c2e04447bb7b90f81  scripts/check-atdd-annotation-ledger.mjs
 4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965  scripts/check-bidi.mjs
 f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077  scripts/check-build-warnings.mjs
 edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4  scripts/check-instructions-size.mjs
@@ -24,9 +24,9 @@ ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e  scripts/check-
 7c6454a71ce2aacf3a0918b27744c6d85f72e2e0d480f1eecc927e44ba094486  scripts/check-publish-dry-run.mjs
 2376a2cb3b2e3b990c4d97b36af0fd8b1e4f67513e34f873bd4cd68ae1c14c40  scripts/check-review-profile-consistency.mjs
 0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8  scripts/check-scanner-coverage.mjs
-7fc0937aa60aa7a0d0ee48605ecfb9594ff2acf38f48546ce29811832a51f969  scripts/check-toolchain-action.sh
+646380a24f6309789245165729b6b0d2a53bd6d8fc45b176ebbce127d7873959  scripts/check-toolchain-action.sh
 c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203  scripts/check-types-future.mjs
-b2a2360fd27e0f8f831014ca1c05d6cfc0aee113921901dc0916cec5e1de7ad2  scripts/check-workflow-hygiene.mjs
+a097ce96adad3f9b41511e2fb76dd9f175aef222fb4f5a32b9d776bd2487a5e5  scripts/check-workflow-hygiene.mjs
 1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444  scripts/lib/bounded-read.mjs
 e421e7aefaeb3b372e577fe09a35254a2e89534149386ae476f582d9d3200f1d  scripts/pin-guard-bytes.mjs
 7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d  scripts/pin-verification-bodies.mjs

@@ -63,17 +63,66 @@ if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
   exit 1
 fi
 
-# The tree must hold exactly what the list pins, in both directions and per ROOT: a file added
-# to either tree and left out of the list is code nothing pinned. Counted per root rather than
-# in total, so an addition to one and a deletion from the other cannot cancel out.
+# The tree must hold exactly what the list pins, in both directions and per ROOT.
+#
+# The SET of paths, not how many lines there are. Review finding [112]: comparing counts let a
+# deletion and a duplicate cancel out — drop `setup/action.yml` from the list, put a benign
+# action's line in twice, and `sha256sum -c` verifies the duplicate happily while both counts
+# read 2. The unpinned setup action then runs, and it runs before every verification in the job.
+#
+# Duplicates are refused on their own too, ahead of the comparison: a list that names a path
+# twice is a list somebody is doing arithmetic with, and the message should say that rather than
+# leaving a set difference to be puzzled over.
 for pinned_root in ".github/actions" "scripts"; do
-  listed="$(grep -cE "^[0-9a-f]{64}  ${pinned_root}/" "${digests_file}" || true)"
-  present="$(find "${root}/${pinned_root}" -type f | wc -l | tr -d " ")"
+  listed="$(grep -E "^[0-9a-f]{64}  ${pinned_root}/" "${digests_file}" | sed "s/^[0-9a-f]\{64\}  //" | sort)"
+  duplicated="$(printf "%s\n" "${listed}" | uniq -d)"
+  if [ -n "${duplicated}" ]; then
+    echo "::error::check-toolchain-action: .github/pinned-bytes.txt names these paths more than once under ${pinned_root}: ${duplicated}. A path pinned twice is a line count being made to balance, not a file being verified."
+    exit 1
+  fi
+  present="$(cd "${root}" && find "${pinned_root}" -type f | sed "s|^\./||" | sort)"
   if [ "${listed}" != "${present}" ]; then
-    echo "::error::check-toolchain-action: ${pinned_root} holds ${present} file(s) and .github/pinned-bytes.txt pins ${listed}. A file the list does not name is code nobody reviewed the bytes of."
+    echo "::error::check-toolchain-action: the files under ${pinned_root} are not the files .github/pinned-bytes.txt pins. Pinned: ${listed}. Present: ${present}. A file the list does not name is code nobody reviewed the bytes of; a name the tree does not hold is a pin protecting nothing."
     exit 1
   fi
 done
+
+# Any manifest that runs code at install time must be one the declaration pins.
+#
+# Review finding [110]. `pnpm install --frozen-lockfile` runs the lifecycle hooks of every
+# manifest in the workspace, and the hygiene lane compared the declaration against a FIXED list
+# of manifests — so a pull request adding a package to `pnpm-workspace.yaml` with a `prepare`
+# hook had it installed and run before any verification, in a manifest the lane never looked at.
+#
+# Refused HERE because here is before `pnpm install`. The lane checks the same allow-list against
+# the declaration; this checks it against the tree, at the only moment that helps.
+#
+# `grep` rather than a JSON parser, for the reason this whole script uses none: it runs before
+# the toolchain exists. The pattern is a lifecycle key at the start of a line, which is how
+# `package.json` is written everywhere in this repository and how any formatter would write it.
+manifest_allow="${root}/.github/lifecycle-manifests.txt"
+if [ ! -f "${manifest_allow}" ]; then
+  echo "::error::check-toolchain-action: ${manifest_allow} is missing, so which manifests may run code at install time is decided by nothing."
+  exit 1
+fi
+lifecycle_re="^[[:space:]]*\"(preinstall|install|postinstall|prepare|prepublishOnly)\"[[:space:]]*:"
+while IFS= read -r manifest; do
+  rel="${manifest#./}"
+  # `node_modules` is not ours; `tmp/` is this repository's sanctioned scratch area and is
+  # gitignored, so nothing there is installed or reviewed. Both are skipped by NAME rather than by
+  # asking git, because this runs before any toolchain exists.
+  case "${rel}" in *node_modules* | ./tmp/* | tmp/*) continue ;; esac
+  if ! grep -qE "${lifecycle_re}" "${root}/${rel}" 2>/dev/null; then
+    continue
+  fi
+  if grep -qxF "${rel}" "${manifest_allow}"; then
+    continue
+  fi
+  echo "::error::check-toolchain-action: ${rel} declares a package-manager lifecycle hook and is not listed in .github/lifecycle-manifests.txt. pnpm runs those hooks in every job before every verification; a manifest that runs code at install time is one a reviewer reads."
+  exit 1
+done <<EOF
+$(cd "${root}" && find . -name package.json -not -path "*/node_modules/*")
+EOF
 
 names_file="${root}/.github/command-files.txt"
 if [ ! -f "${names_file}" ]; then
