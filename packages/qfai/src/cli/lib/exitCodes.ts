@@ -23,6 +23,10 @@ export const EXIT_CODES = {
    * validate / doctor / preflight: --fail-on 閾値に到達。
    * guardrails check: 検査エラーを検出。
    * 使用法エラーおよび実行時エラーの既定値でもある (guardrails を除く)。
+   * ここでいう実行時エラーはトップレベルの catch が拾う送出全般で、
+   * prototyping certify の証明書書き込み失敗もこの値になる。
+   * パーサが値を拒否する値フラグ (--cycle に非負整数以外) も、
+   * peek / 本処理へ進まずこの使用法エラーで停止する。
    */
   findings: 1,
   /**
@@ -96,14 +100,18 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
     label: "prototyping iterate --check-convergence",
     lines: [
       `${EXIT_CODES.ok} = 収束済み,`,
+      `${EXIT_CODES.findings} = --cycle が非負整数でない (-1 / 1.5 / abc — パーサが値を拒否し,`,
+      `      peek に到達せず使用法エラーとして停止),`,
       `${EXIT_CODES.inputError} = 未収束 (prototyping.json の欠落 / 破損を含む),`,
-      `      または --cycle 範囲エラー (0..9 以外は peek せず入力エラーとして停止)`,
+      `      または --cycle 範囲エラー (10 以上の非負整数は peek せず入力エラーとして停止)`,
     ],
   },
   {
     label: "prototyping certify",
     lines: [
       `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.findings} = 実行時エラー (certificate の書き込み失敗など、`,
+      `      証明書 I/O の例外),`,
       `${EXIT_CODES.inputError} = 入力エラー / 品質ゲート拒否 (validate エラー, verify 不合格,`,
       `      DESIGN.md 違反) / --check の証明書 digest・gate mismatch,`,
       `${EXIT_CODES.prototypingConverged} = カバレッジ不足 (review.json 欠落 /`,
@@ -130,7 +138,12 @@ const USAGE_ERROR_NOTE = [
   // 挙動を変えると positional / 将来フラグの互換に波及するため、当面は
   // 「終了コードでは検出できない」ことを明示する側で穴を塞ぐ。
   `  ※ 未知のオプション (例: --typo) は無視されるため、コマンド本体が成功すれば ${EXIT_CODES.ok} を返す。`,
-  "     オプション名の誤記は終了コードでは検出できない (未知の *コマンド* 名は使用法エラー扱い)。",
+  "     オプション名の誤記は終了コードでは検出できない (未知の *コマンド* 名は --help を伴う場合も",
+  `     使用法エラーとして ${EXIT_CODES.findings})。`,
+  // 値フラグの不正値の扱いはフラグごとに違う。--cycle はパーサが拒否して
+  // 使用法エラーになるが、--fail-on は値を読み捨てて既定の閾値で走る。
+  `  ※ --fail-on の不正値 (例: --fail-on typo) は無視され、既定の閾値のまま実行されるため、`,
+  `     検出事項が閾値未満なら ${EXIT_CODES.ok} を返す (パーサが値を拒否する --cycle とは異なる)。`,
 ].join("\n");
 
 /** CJK punctuation / kana / ideographs / fullwidth forms. */

@@ -201,6 +201,106 @@ describe("qfai --help exit-code section", () => {
     expect(section).toMatch(new RegExp(`未知のオプション[\\s\\S]*?${EXIT_CODES.ok} を返す`));
   });
 
+  it("names the certify runtime error that the 0 / 2 / 64 row omitted", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const certifyRow = section.slice(section.indexOf("prototyping certify"));
+
+    // writeCompletionCertificate() throws on a read-only destination and
+    // cli/index.ts maps any throw to 1 — the row has to carry it.
+    expect(certifyRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 実行時エラー`));
+    expect(certifyRow).toContain("証明書 I/O の例外");
+  });
+
+  it("splits the parser-rejected --check-convergence cycle from the runner's range error", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const peekRow = section.slice(section.indexOf("prototyping iterate --check-convergence"));
+
+    // `-1` never reaches the runner: parseNonNegativeInteger rejects it, so
+    // the row must not fold it into the 未収束 / range-error 2.
+    expect(peekRow).toMatch(new RegExp(`${EXIT_CODES.findings} = --cycle が非負整数でない`));
+    expect(peekRow).toContain("10 以上の非負整数");
+  });
+
+  it("returns the usage-error code for a negative --check-convergence cycle", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-peek-negative-"));
+    tempDirs.push(dir);
+    const parsed = parseArgs(
+      ["prototyping", "iterate", "--check-convergence", "--cycle", "-1"],
+      process.cwd(),
+    );
+    expect(parsed.invalid).toBe(true);
+
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      await run(
+        ["prototyping", "iterate", "--check-convergence", "--cycle", "-1", "--root", dir],
+        dir,
+      );
+      expect(process.exitCode).toBe(EXIT_CODES.findings);
+    } finally {
+      spy.mockRestore();
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it("documents that an invalid --fail-on value falls back to the default threshold", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+
+    // args.ts consumes the value without markInvalid(), unlike --cycle.
+    const parsed = parseArgs(["validate", "--fail-on", "typo"], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.failOn).toBeUndefined();
+
+    expect(section).toContain("--fail-on の不正値");
+    expect(section).toMatch(new RegExp(`--fail-on の不正値[\\s\\S]*?${EXIT_CODES.ok} を返す`));
+  });
+
+  it("treats a mistyped command as a usage error even with --help", async () => {
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      // The help branch used to return before the unknown-command branch,
+      // so `qfai vlaidate --help` exited 0 and hid the typo from CI.
+      await run(["vlaidate", "--help"], process.cwd());
+      expect(process.exitCode).toBe(EXIT_CODES.findings);
+
+      process.exitCode = undefined;
+      await run(["vlaidate"], process.cwd());
+      expect(process.exitCode).toBe(EXIT_CODES.findings);
+
+      // A real command with --help still exits 0.
+      process.exitCode = undefined;
+      await run(["validate", "--help"], process.cwd());
+      expect(process.exitCode).toBeUndefined();
+    } finally {
+      spy.mockRestore();
+      process.exitCode = previousExitCode;
+    }
+  });
+
+  it("keeps KNOWN_COMMANDS in sync with the dispatch switch", async () => {
+    const source = await readFile(path.join(commandsDir, "..", "main.ts"), "utf-8");
+    const switchCases = [...source.matchAll(/^ {4}case "([a-z-]+)":$/gmu)].map((m) => m[1] ?? "");
+    const declared = [
+      ...(
+        source.match(
+          /const KNOWN_COMMANDS: ReadonlySet<string> = new Set\(\[([\s\S]*?)\]\)/u,
+        )?.[1] ?? ""
+      ).matchAll(/"([a-z-]+)"/gu),
+    ].map((m) => m[1] ?? "");
+
+    expect(switchCases.length).toBeGreaterThan(0);
+    // A command added to the switch but not here would exit 0 on a typo'd
+    // sibling name; one removed here would be rejected before dispatch.
+    expect([...declared].sort()).toEqual([...switchCases].sort());
+  });
+
   it("keeps the rendered section in sync with the EXIT_CODES constants", () => {
     const section = formatExitCodesSection();
 

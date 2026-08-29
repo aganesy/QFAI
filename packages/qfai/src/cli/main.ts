@@ -14,8 +14,36 @@ import { formatExitCodesSection } from "./lib/exitCodes.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
+/**
+ * The top-level commands the switch below dispatches. Kept as data so the
+ * unknown-command check can run *before* the `--help` branch: `qfai
+ * vlaidate --help` would otherwise print usage and exit 0, contradicting
+ * the `Exit codes:` note that a mistyped command name is a usage error.
+ */
+const KNOWN_COMMANDS: ReadonlySet<string> = new Set([
+  "init",
+  "validate",
+  "report",
+  "doctor",
+  "guardrails",
+  "audit",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+]);
+
 export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
+
+  // Before the help branch: `--help` must not turn a mistyped command
+  // name into a successful run.
+  if (command !== null && !KNOWN_COMMANDS.has(command)) {
+    error(`Unknown command: ${command}`);
+    info(usage());
+    process.exitCode = options.invalidExitCode;
+    return;
+  }
 
   if (!command || options.help) {
     info(usage());
@@ -269,11 +297,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
 
     default:
+      // 通常は到達しない: 未知のコマンド名は help 分岐より前で弾いている。
+      // KNOWN_COMMANDS がこの switch から drift した場合の backstop として
+      // 残す — exit 0 で素通りさせるより、使用法エラーで落とす方が安全。
       error(`Unknown command: ${command}`);
       info(usage());
-      // 未知のトップレベルコマンドも使用法エラー。`--help` の Exit codes
-      // ブロックが「使用法エラー = 1」と案内する以上、ここで exit 0 のまま
-      // 返すとコマンド名の誤記が CI で成功として通ってしまう。
       process.exitCode = options.invalidExitCode;
       return;
   }
