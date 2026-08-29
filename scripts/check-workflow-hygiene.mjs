@@ -435,6 +435,13 @@ function effectiveEnv(inherited, own) {
 /** Where the command-file names live, for both readers. */
 const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
 
+/**
+ * The script names a package manager runs at install time.
+ *
+ * A closed list, and short: these are the hooks `pnpm install` honours, and each of them runs in
+ * every job before every verification in that job. Review finding [105].
+ */
+const INSTALL_LIFECYCLE = ["preinstall", "install", "postinstall", "prepare", "prepublishOnly"];
 /** Where the pinned local-action bytes live, for the pre-flight and for this lane. */
 const LOCAL_ACTION_DIGESTS_REL = path.posix.join(".github", "local-action-digests.txt");
 
@@ -808,6 +815,14 @@ export function invokedScriptBodies(runText, root, baseDir = ".") {
     const { dir, name } = pending.shift();
     const scripts = manifestScripts(root, dir, cache);
     const body = scripts !== undefined && typeof scripts[name] === "string" ? scripts[name] : null;
+    // The LIFECYCLE SIBLINGS run with it. `pnpm run x` runs `prex` before and `postx` after,
+    // and neither was resolved — so a `preci:lint` added beside the script a verification
+    // invokes ran in the required lane while every pinned digest stayed equal. Queued rather
+    // than read inline, so their own invocations are followed too, and recorded as `null` when
+    // absent for the reason every other name is: an ADDED one has to move the digest.
+    if (!name.startsWith("pre") && !name.startsWith("post")) {
+      pending.push({ dir, name: `pre${name}` }, { dir, name: `post${name}` });
+    }
     const key = `${path.posix.normalize(dir.split(path.sep).join(path.posix.sep))}#${name}`;
     if (seen.has(key)) continue;
     seen.add(key);
@@ -2248,6 +2263,75 @@ function checkRequiredContexts(root, jobs) {
             file: rel_,
             job: declaredJob,
             detail: `sits in the composite-action tree and is pinned by nothing — a file the list does not name is a local action nobody reviewed the bytes of`,
+          });
+        }
+      }
+    }
+
+    // PROPERTY 2h — and the install lifecycle every job runs is the declared one.
+    //
+    // Review finding [105]: `pnpm install --frozen-lockfile` runs `preinstall`, `install`,
+    // `postinstall` and `prepare` from the manifests — in EVERY job, inside the composite action,
+    // before every verification in that job. They are invoked by the package manager rather than
+    // by a step body, so the resolution that follows `pnpm ci:lint` into its script never reaches
+    // them, and no verification digest covers them. This repository already declares a
+    // `preinstall`, so the hole was occupied rather than theoretical.
+    const declaredLifecycle = isRecord(context.installLifecycle)
+      ? context.installLifecycle
+      : undefined;
+    if (declaredLifecycle === undefined) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `installLifecycle` mapping, so the scripts the package manager runs in every job before every verification are pinned by nothing",
+      });
+    }
+    for (const [manifestRel, declaredScripts] of Object.entries(declaredLifecycle ?? {})) {
+      if (!isRecord(declaredScripts)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `pins the install lifecycle of ${manifestRel} as something this lane cannot read as a mapping`,
+        });
+        continue;
+      }
+      const text = readBoundedText(path.join(root, manifestRel), MAX_WORKFLOW_BYTES);
+      if (text === undefined) {
+        findings.push({
+          rule: "required-context",
+          file: manifestRel,
+          job: declaredJob,
+          detail:
+            "is pinned for its install lifecycle but is not a readable regular file, so what the package manager runs before every verification cannot be checked",
+        });
+        continue;
+      }
+      let manifest;
+      try {
+        manifest = JSON.parse(text);
+      } catch {
+        findings.push({
+          rule: "required-context",
+          file: manifestRel,
+          job: declaredJob,
+          detail: "does not parse as JSON, so its install lifecycle cannot be read",
+        });
+        continue;
+      }
+      const scripts = isRecord(manifest) && isRecord(manifest.scripts) ? manifest.scripts : {};
+      for (const name of INSTALL_LIFECYCLE) {
+        const want = declaredScripts[name];
+        const got = scripts[name];
+        if (want === undefined && got === undefined) continue;
+        if (String(want) !== String(got)) {
+          findings.push({
+            rule: "required-context",
+            file: manifestRel,
+            job: declaredJob,
+            detail: `declares ${name} as ${got === undefined ? "absent" : JSON.stringify(String(got))} where ${DECLARATION_REL} pins ${want === undefined ? "absent" : JSON.stringify(String(want))} — the package manager runs it in every job before every verification, and no body digest reaches it`,
           });
         }
       }

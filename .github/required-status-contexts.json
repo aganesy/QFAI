@@ -157,6 +157,25 @@
         "check still reporting PASS. Equality against this list makes that a finding; changing both is a",
         "change a reviewer reads."
       ],
+      "installLifecycle": {
+        "package.json": {
+          "preinstall": "node ./scripts/check-not-a-dependency.mjs"
+        },
+        "packages/qfai/package.json": {}
+      },
+      "installLifecycleNote": [
+        "The install lifecycle scripts of every manifest the toolchain installs from, verbatim.",
+        "",
+        "Review finding [105]: `pnpm install --frozen-lockfile` runs `preinstall`, `install`,",
+        "`postinstall` and `prepare` from the root manifest — in EVERY job, inside the composite action,",
+        "before every verification in that job — and no verification digest reaches them. They are",
+        "invoked by the package manager rather than by a step body, so the resolution that follows",
+        "`pnpm ci:lint` into its script never sees them.",
+        "",
+        "Pinned verbatim rather than by digest, because these are short and a reviewer should read the",
+        "command itself in this file. An empty object for a manifest that declares none is the claim",
+        "that it declares none, and adding one is a change to this file."
+      ],
       "localActionDigests": {
         ".github/actions/setup/action.yml": "7ab9263cfe42a3b50469ea79afbc41fdbd4f53e3a1dccd72ad743f339396d0f6"
       },
@@ -287,18 +306,18 @@
         "Classify the change against the enumerated directory lists": "df7acdcc41dd193d",
         "Verify the toolchain action before running it": "003378828f88a5e5",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
-        "Run build & pack verification": "58b2f38bb3b55b9e",
+        "Run build & pack verification": "9a546eaa55780192",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "45f5cf9890903b57",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "d0730a44d8f0e4fe",
-        "Run type check": "752faf7a297fc773",
-        "Run future TypeScript compatibility check": "5390e36a8b0b4148",
-        "Run the package test suite on the floor": "402864498ce96b32",
+        "Run lint gate": "e1cc9bb928758c7a",
+        "Run type check": "fe6bc2c8db80159c",
+        "Run future TypeScript compatibility check": "c58cfcd12f363478",
+        "Run the package test suite on the floor": "b1949f2492ab0fbc",
         "Run tests (${{ matrix.slice }})": "a60be18921dcaf09",
-        "Run scanner coverage gate": "ef16be91265eb726"
+        "Run scanner coverage gate": "dbb04c7e4d66e944"
       },
       "verificationBodiesNote": [
         "A digest of each verification step's `run` / `uses` / `with` / `env`, and of the package",

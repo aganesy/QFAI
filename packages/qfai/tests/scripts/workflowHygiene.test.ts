@@ -712,6 +712,7 @@ interface Declaration {
     nestedActions?: string[];
     dependencyMatrices?: Record<string, Record<string, string[]>>;
     localActionDigests?: Record<string, string>;
+    installLifecycle?: Record<string, Record<string, string>>;
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;
@@ -1465,11 +1466,24 @@ ${run.output}`,
       expect(
         invokedScriptBodies(step.run, dir, "pkg"),
         "the script must be resolved against the manifest in the working directory",
-      ).toEqual([["pkg#ci:build-verify", "node a.mjs"]]);
+      ).toEqual([
+        ["pkg#ci:build-verify", "node a.mjs"],
+        // The LIFECYCLE SIBLINGS, recorded as absent. Review finding [104]: `pnpm run x` runs
+        // `prex` before it and `postx` after, and neither was resolved — so a `preci:lint` added
+        // beside the script a verification invokes ran in the required lane while every pinned
+        // digest stayed equal. Absent is recorded rather than skipped for the reason every other
+        // name is: an ADDED one has to move the digest.
+        ["pkg#postci:build-verify", null],
+        ["pkg#preci:build-verify", null],
+      ]);
       expect(
         invokedScriptBodies(step.run, dir, "."),
         "and against the root manifest when there is no working directory",
-      ).toEqual([[".#ci:build-verify", "node a.mjs && node b.mjs"]]);
+      ).toEqual([
+        [".#ci:build-verify", "node a.mjs && node b.mjs"],
+        [".#postci:build-verify", null],
+        [".#preci:build-verify", null],
+      ]);
 
       // And the working-directory STRING is in the shape in its own right, for a step that
       // invokes no script and names no file — where the directory is still what it runs in.
@@ -4090,6 +4104,96 @@ describe("the pre-flight checks its own bytes before it checks anything else", (
       pinned,
       "the pinned digest must be the script that ships — a stale one refuses every run, and a wrong one refuses nothing",
     ).toBe(actual);
+  });
+});
+
+describe("what runs beside and before a verification is pinned too", () => {
+  // Two ways to run code in a required lane without touching a pinned body. `pnpm run x` runs
+  // `prex` and `postx` around it, and `pnpm install` runs the manifest's install lifecycle in
+  // EVERY job before every verification in that job. Neither was reachable from the resolution
+  // that follows a step's `run:` into its package script.
+
+  it("reports a pre-script added beside a script a verification invokes", () => {
+    // Review finding [104]. `preci:lint` runs before `ci:lint` and the digest never saw it.
+    const dir = plantedTree((d) => {
+      const manifest = path.join(d, "package.json");
+      const parsed: unknown = JSON.parse(readFileSync(manifest, "utf-8"));
+      if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
+        throw new Error("the planted manifest carries no scripts map");
+      }
+      parsed["scripts"]["preci:lint"] = 'node -e "process.exit(0)"';
+      writeFileSync(manifest, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a new pre-script must move a pinned digest:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/body digest/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports an install lifecycle script the declaration does not pin", () => {
+    // Review finding [105]. `pnpm install` runs it inside the composite action, in every job,
+    // before every verification — and no body digest reaches it, because the package manager
+    // invokes it rather than a step.
+    const dir = plantedTree((d) => {
+      const manifest = path.join(d, "package.json");
+      const parsed: unknown = JSON.parse(readFileSync(manifest, "utf-8"));
+      if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
+        throw new Error("the planted manifest carries no scripts map");
+      }
+      parsed["scripts"]["postinstall"] = 'node -e "process.exit(0)"';
+      writeFileSync(manifest, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned install hook must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/declares postinstall as/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports the declared preinstall being changed under it", () => {
+    // The other direction: the hook stays, its command changes. This repository declares a
+    // `preinstall`, so the hole was occupied rather than theoretical.
+    const dir = plantedTree((d) => {
+      const manifest = path.join(d, "package.json");
+      const parsed: unknown = JSON.parse(readFileSync(manifest, "utf-8"));
+      if (!isRecord(parsed) || !isRecord(parsed["scripts"])) {
+        throw new Error("the planted manifest carries no scripts map");
+      }
+      parsed["scripts"]["preinstall"] = 'node -e "process.exit(0)"';
+      writeFileSync(manifest, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `a rewritten install hook must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/declares preinstall as/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a declaration that pins no install lifecycle at all", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        delete onlyContext(decl).installLifecycle;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unpinned install lifecycle must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/no .?installLifecycle.? mapping/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
   });
 });
 
