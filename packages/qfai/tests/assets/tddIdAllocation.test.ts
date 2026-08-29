@@ -52,7 +52,42 @@ describe("TDD-ID allocation", () => {
       expect(rules).toContain("the first row a freshly seeded ledger takes is `TDD-0001`");
       // `TDD_ID_FORMAT` is /^TDD-\d{4}$/, so `max + 1` has a ceiling.
       expect(rules).toContain("**`TDD-9999` is the last legal id**");
-      expect(rules).toContain("the spec is split");
+      // A single-id bullet is a legal high-water carrier, not only a block.
+      expect(rules).toContain("A bullet that names a single id has that id as its upper bound");
+    });
+
+    it(`${tree}: the ceiling has a legal exit for a single-capability spec`, async () => {
+      const rules = flat(await read(tree, RULES));
+
+      // "split the spec" is not reachable for the common shape:
+      // validateSpecSplitByCapability rejects a count-driven SPLIT of a
+      // single-capability spec, so the ceiling would deadlock.
+      expect(rules).toContain("**the spec owns exactly one capability → SUPERSEDE, not SPLIT.**");
+      expect(rules).toContain("`QFAI-SPLIT-102` / `QFAI-SPLIT-104` at `error`");
+      expect(rules).toContain("`Superseded-by: spec-NNNN`");
+      expect(rules).toContain("the successor's ledger allocates from the empty base case");
+      // SPLIT is still correct when the spec really owns several capabilities.
+      expect(rules).toContain("more than one `CAP-NNNN` → **SPLIT**");
+      // Widening TDD_ID_FORMAT is still off the table.
+      expect(rules).toContain("never by widening the format on your own");
+    });
+
+    it(`${tree}: a deleted row keeps its id as a high-water tombstone`, async () => {
+      const rules = flat(await read(tree, RULES));
+
+      // The Drift Protocol deletes such a row, so the id leaves the table and
+      // `max + 1` walks back onto it.
+      expect(rules).toContain("**A deleted row leaves its id behind the same way.**");
+      expect(rules).toContain(
+        "- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <CR-ID>",
+      );
+      expect(rules).toContain("a serially allocated row never had a bullet to close");
+
+      // The write point has to carry the obligation, or nothing writes it.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain("A row whose obligation was deleted outright is removed, not reset");
+      expect(drift).toContain("record that id as a tombstone bullet");
+      expect(drift).toContain("or the next allocation reissues it");
     });
 
     it(`${tree}: the rule names the race it closes`, async () => {
@@ -125,6 +160,11 @@ describe("TDD-ID allocation", () => {
       expect(ledger).toContain("Never renumber an id that has already been written outside");
       expect(ledger).toContain(
         "The maximum ranges over the upper bound of every reservation bullet as well, and those bullets are never deleted",
+      );
+      // The implement-side mirror carries both corrections too.
+      expect(ledger).toContain("A deleted row is tombstoned in that same section");
+      expect(ledger).toContain(
+        "SPLIT when it owns more than one `CAP-NNNN` and SUPERSEDE when it owns exactly one",
       );
     });
 
