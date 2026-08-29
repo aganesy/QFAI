@@ -196,16 +196,16 @@ export async function runInit(options: InitOptions): Promise<void> {
   // So the operator is told, precisely, and nothing records the write. Leaving the entries out
   // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
   // rather than as ours to overwrite.
-  if (
+  const workflowsSwapped =
     workflowAncestorsBefore !== undefined &&
     !options.dryRun &&
-    !(await workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore))
-  ) {
+    !(await workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore));
+  if (workflowsSwapped) {
     error(
       ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
     );
     rootResult.copied = rootResult.copied.filter(
-      (rel) => !rel.split(/[\\/]/).slice(0, 2).join("/").startsWith(".github/workflows"),
+      (destination) => !isWorkflowDestination(destination, destRoot),
     );
   }
 
@@ -272,9 +272,16 @@ export async function runInit(options: InitOptions): Promise<void> {
   // Empty rather than skipped-with-a-message: the message is already emitted where the copy
   // is excluded, and one refusal reported once is what an operator needs.
   const removedRetiredWorkflows: string[] = [];
-  const prunableRetiredNames = workflowsDirIsOwn
-    ? await resolvePrunableRetiredWorkflows(destRoot, workflowPreInit.record)
-    : new Map<string, string>();
+  // A detected swap stops the prune as well as the record. Review finding [113]:
+  // `workflowsDirIsOwn` was computed BEFORE the copy and stayed `true`, so the retired-name
+  // prune went on to enumerate the swapped directory — and a retired workflow over there whose
+  // bytes match a recorded digest was quarantined and deleted. That is the exact operation the
+  // reporting-instead-of-deleting decision above exists to avoid, reached by another route: a
+  // run that declines to write through a swapped parent must not delete through it either.
+  const prunableRetiredNames =
+    workflowsDirIsOwn && !workflowsSwapped
+      ? await resolvePrunableRetiredWorkflows(destRoot, workflowPreInit.record)
+      : new Map<string, string>();
   await pruneMatchingEntries(
     path.join(destRoot, ".github", "workflows"),
     (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),
@@ -2173,6 +2180,29 @@ async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<bo
   return (await workflowAncestorIdentity(destRoot)) !== undefined;
 }
 
+/**
+ * Is this copy destination a file written into the shipped workflows directory?
+ *
+ * `copyTemplateTree` reports ABSOLUTE destinations, so the question is asked of paths rather
+ * than of leading path segments. Review finding [114] measured the first version doing the
+ * latter: it split `/tmp/repo/.github/workflows/qfai-tests.yml` and took the first two segments
+ * — `/tmp` — so the filter that was supposed to drop every written workflow after a detected
+ * directory swap dropped none of them, and `recordInstalledWorkflows` recorded provenance for a
+ * file that is not where the record says it is. The next run reads that name as `declined` and
+ * never writes it again, so the swap costs the adopter the workflow permanently.
+ *
+ * A predicate rather than an inline lambda so a test can hand it absolute paths, which is what
+ * the defect was made of; a source-level reading of the lambda would have accepted the broken
+ * one just as readily.
+ *
+ * @param destination absolute path a copy wrote
+ * @param destRoot the project root the copy targeted
+ * @returns whether the destination is directly inside `<destRoot>/.github/workflows`
+ */
+export function isWorkflowDestination(destination: string, destRoot: string): boolean {
+  const workflowsDir = path.resolve(path.join(destRoot, ".github", "workflows"));
+  return path.resolve(path.dirname(destination)) === workflowsDir;
+}
 /**
  * The identity of each ancestor of the shipped workflows directory, or `undefined` if any of
  * them is not a real directory this command may write through.

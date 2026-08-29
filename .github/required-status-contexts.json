@@ -183,7 +183,7 @@
       ],
       "pinnedBytes": {
         ".github/actions/setup/action.yml": "7ab9263cfe42a3b50469ea79afbc41fdbd4f53e3a1dccd72ad743f339396d0f6",
-        "scripts/check-atdd-annotation-ledger.mjs": "9e42d8133cd6d42d8f7f0da0bc681ce5b9c18108e7171a9c2e04447bb7b90f81",
+        "scripts/check-atdd-annotation-ledger.mjs": "f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be",
         "scripts/check-bidi.mjs": "4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
@@ -356,7 +356,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "2aab6beb898cef37",
+        "Run lint gate": "5164c86e1d1d9d45",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",

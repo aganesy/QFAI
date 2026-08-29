@@ -110,6 +110,211 @@ const TEST_SUFFIXES = [".ts", ".tsx", ".mts", ".cts", ".js", ".mjs", ".cjs"];
 const TEST_FILE_PATTERN = /\.test\.ts$/;
 
 /**
+ * The annotation pattern without `g`, for asking whether one is present.
+ *
+ * `ANNOTATION` carries `g`, so `.test()` on it advances `lastIndex` and the NEXT question about
+ * a different string gets a different answer. Every place here asks a yes/no question.
+ */
+const ANNOTATION_ANYWHERE = new RegExp(ANNOTATION.source);
+
+/**
+ * The names a Vitest test construct is spelled with.
+ *
+ * `xit` / `xdescribe` / `xtest` are in the set because they ARE the disabled spelling — the root
+ * name is what disables them, with no modifier to read.
+ */
+const TEST_ROOTS = new Set(["describe", "it", "test", "suite", "xdescribe", "xit", "xtest"]);
+
+/**
+ * The modifiers that mean the runner may not execute the construct.
+ *
+ * `skip` and `todo` never run. `skipIf` and `runIf` run on a condition, which is the same thing
+ * for this guard's purpose: a claim backed by a test that runs on somebody else's platform is not
+ * backed on this run, and the ledger does not record a condition.
+ */
+const DISABLING_MODIFIERS = new Set(["skip", "todo", "skipIf", "runIf"]);
+
+/**
+ * Read a call expression as a test construct.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").CallExpression} node the call
+ * @returns {{ isTest: boolean, disabled: boolean }} what the call is, and whether it runs
+ */
+function testCallDisposition(ts, node) {
+  const modifiers = [];
+  let cursor = node.expression;
+  while (ts.isPropertyAccessExpression(cursor)) {
+    modifiers.unshift(cursor.name.text);
+    cursor = cursor.expression;
+  }
+  if (!ts.isIdentifier(cursor) || !TEST_ROOTS.has(cursor.text)) {
+    return { isTest: false, disabled: false };
+  }
+  return {
+    isTest: true,
+    disabled:
+      cursor.text.startsWith("x") || modifiers.some((name) => DISABLING_MODIFIERS.has(name)),
+  };
+}
+
+/**
+ * Does this test body skip itself on every run?
+ *
+ * `it("…", (ctx) => { ctx.skip(); … })` is the third spelling in review finding [115], and the
+ * only one with no modifier to read. Only a TOP-LEVEL statement of the body counts: a `ctx.skip()`
+ * inside an `if` is a test that runs somewhere, which is a different question from a test that
+ * never runs anywhere, and this guard answers the second one.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").CallExpression} node the test call
+ * @returns {boolean} whether the body unconditionally skips
+ */
+function bodyAlwaysSkips(ts, node) {
+  const last = node.arguments[node.arguments.length - 1];
+  if (last === undefined) return false;
+  if (!ts.isArrowFunction(last) && !ts.isFunctionExpression(last)) return false;
+  const body = last.body;
+  if (body === undefined || !ts.isBlock(body)) return false;
+  return body.statements.some((statement) => {
+    if (!ts.isExpressionStatement(statement)) return false;
+    let expression = statement.expression;
+    if (ts.isAwaitExpression(expression)) expression = expression.expression;
+    if (!ts.isCallExpression(expression) || expression.arguments.length !== 0) return false;
+    const callee = expression.expression;
+    if (ts.isPropertyAccessExpression(callee)) return callee.name.text === "skip";
+    return ts.isIdentifier(callee) && callee.text === "skip";
+  });
+}
+
+/**
+ * The byte ranges of the test constructs the runner will not execute.
+ *
+ * Each range starts at the first ANNOTATION-bearing comment in the construct's leading trivia,
+ * not at the construct itself. That is where this repository writes them — `// QFAI:SPEC-0017:…`
+ * on the line above `describe(` — so a range that began at the `describe` would leave the
+ * annotation of a skipped suite standing, which is the whole finding.
+ *
+ * @param {typeof import("typescript")} ts the parser
+ * @param {import("typescript").SourceFile} source the parsed file
+ * @param {string} text its contents
+ * @returns {{ ranges: Array<[number, number]> }} the ranges to blank
+ */
+function disabledTestRanges(ts, source, text) {
+  const ranges = [];
+
+  /** Blank the whole statement a construct forms, annotation comments included. */
+  const record = (node) => {
+    let unit = node;
+    while (unit.parent !== undefined && !ts.isSourceFile(unit.parent)) {
+      if (ts.isExpressionStatement(unit.parent)) {
+        unit = unit.parent;
+        break;
+      }
+      unit = unit.parent;
+    }
+    let start = unit.getStart(source);
+    for (const comment of ts.getLeadingCommentRanges(text, unit.getFullStart()) ?? []) {
+      if (!ANNOTATION_ANYWHERE.test(text.slice(comment.pos, comment.end))) continue;
+      start = Math.min(start, comment.pos);
+    }
+    ranges.push([start, unit.getEnd()]);
+  };
+
+  /**
+   * Count the tests in a subtree, and how many of them the runner will execute.
+   *
+   * A suite is disabled by its own modifier, and ALSO by its contents: `describe(…)` whose every
+   * `it` is `.skip` runs nothing, and this repository writes the annotation above the `describe`,
+   * so reading only the `describe`'s own modifier left that annotation standing over a suite with
+   * no executed test in it. Measured with a plant while this was being written.
+   */
+  const collect = (node) => {
+    if (ts.isCallExpression(node)) {
+      const { isTest, disabled } = testCallDisposition(ts, node);
+      if (isTest) {
+        if (disabled || bodyAlwaysSkips(ts, node)) {
+          record(node);
+          // Whatever is nested inside is disabled with it, and the range already covers it.
+          return { tests: 1, running: 0 };
+        }
+        const inner = children(node);
+        if (inner.tests === 0) return { tests: 1, running: 1 }; // a leaf test, and it runs
+        if (inner.running === 0) record(node); // a suite with nothing left to run
+        return inner;
+      }
+    }
+    return children(node);
+  };
+
+  const children = (node) => {
+    let tests = 0;
+    let running = 0;
+    ts.forEachChild(node, (child) => {
+      const result = collect(child);
+      tests += result.tests;
+      running += result.running;
+    });
+    return { tests, running };
+  };
+
+  children(source);
+  return { ranges };
+}
+
+/**
+ * Blank out the annotations of tests the runner will not execute.
+ *
+ * Review finding [115]: the backing corpus was the TEXT of every file the runner's include picks
+ * up, so `describe.skip`, `it.todo` and a body that always calls `ctx.skip()` backed a claim just
+ * as well as a test that ran. Vitest reports those as skipped, not passed, and the lane stays
+ * green on the other tests in the project — so the required ledger guard certified a user story
+ * that no executed acceptance test covered.
+ *
+ * Blanked rather than removed, so every remaining annotation keeps its offset and its line.
+ *
+ * Known limitation: the disabling has to be visible AT the call — `describe.skip(…)`, `it.todo(…)`,
+ * an `x`-prefixed name, or a body whose top level calls `ctx.skip()`. An alias (`const t = it.skip`)
+ * or a wrapper defined in another module is not seen. Refusing every annotated file the parser
+ * finds no test construct in was tried and reverted: it fires on legitimate minimal files, and a
+ * guard that fails on correct input is worse than one with a gap an author has to reach for.
+ *
+ * @param {string} text the file contents
+ * @param {string} filePath its path, for the messages
+ * @returns {Promise<string>} the contents with disabled constructs blanked
+ */
+export async function redactDisabledTests(text, filePath) {
+  if (!ANNOTATION_ANYWHERE.test(text)) {
+    return text; // nothing here can back anything, so nothing needs reading
+  }
+  let ts;
+  try {
+    ts = (await import("typescript")).default;
+  } catch {
+    throw new Error(
+      `check-atdd-annotation-ledger: cannot load the TypeScript parser needed to read ` +
+        `${filePath}; whether a test is skipped decides whether it backs a ledger claim, and ` +
+        "a text-level reading of that is exactly what review finding [115] exploited",
+    );
+  }
+  const source = ts.createSourceFile(
+    filePath,
+    text,
+    ts.ScriptTarget.Latest,
+    true,
+    ts.ScriptKind.TS,
+  );
+  const { ranges } = disabledTestRanges(ts, source, text);
+  if (ranges.length === 0) return text;
+  const characters = [...text];
+  for (const [start, end] of ranges) {
+    for (let index = start; index < end && index < characters.length; index += 1) {
+      if (characters[index] !== "\n" && characters[index] !== "\r") characters[index] = " ";
+    }
+  }
+  return characters.join("");
+}
+/**
  * Compare the claims a ledger makes against the annotations tests carry.
  *
  * Pure: both inputs are already-read text, so the decision is testable without a filesystem.
@@ -1039,7 +1244,8 @@ async function main() {
     for (const [file, text] of await collectTestSources(dir, root)) {
       // …and a file the RUNNER does not open never backs a claim. Review finding [85].
       if (excluded(file)) continue;
-      sources.set(file, text);
+      // …nor does a test inside it that the runner will not execute. Review finding [115].
+      sources.set(file, await redactDisabledTests(text, file));
     }
   }
 

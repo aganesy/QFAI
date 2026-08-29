@@ -1192,7 +1192,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
-  ["qfai-validate.yml", "1bf29068e70a3179e3255a8e380d59df335c431a92fef48af0566ed13d861b36"],
+  ["qfai-validate.yml", "4304bda335fbbca63e6a2f4b2c5c27989883c3b0d2945889de2a55f31c2c687a"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1593,7 +1593,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body 54b5a9a00939c3e80f9ce0bd3c6bf5b4ca2a7b6e1a0880cbaa11bb950468cc3d>"}',
+    '{"name":"Resolve the package manager (pnpm route fails closed)","id":"package-manager","shell":"bash","run":"<body e51483d554b98c09c88700bd99f0cbc5e3b066681e23319421f9e73bb97520d6>"}',
   ],
   [
     "qfai-validate.yml#validate",
@@ -1687,14 +1687,20 @@ export const ALLOWED_ACTION_INPUTS: ReadonlyMap<string, ReadonlySet<string>> = n
  * direction this instrument was rebuilt to escape. It is to enumerate the payloads, which needs no corpus
  * and refuses every payload nobody wrote down, including the ones nobody has thought of.
  *
- * Both shipped workflows carry the same payload: the one that reads `packageManager` out of
- * `package.json`. A second one is a change someone should read.
+ * A payload added to a shipped lane lands here as a diff, which is the whole point of the list.
+ * The validate lane's third entry arrived exactly that way: asking the runner's `crypto.getHashes()`
+ * whether a declared corepack integrity algorithm exists is a second `node -e` in that step, and
+ * this list refused it until it was written down.
  */
 export const ALLOWED_NODE_PAYLOADS: ReadonlySet<string> = new Set([
   // `qfai-tests.yml#detection` — reads `scripts` out of `package.json`. 630 characters.
   "7f72970abbe4e9a0fe876e3e0bd57468fc86bab5e3a3cd5076f09fb3653292cc",
   // `qfai-validate.yml#validate` — reads `packageManager` out of `package.json`. 1039 characters.
   "9cc40c1d1704f836361c2a47e780e0fa393307a55f01c129f2da50fc97f57230",
+  // `qfai-validate.yml#validate` — asks `crypto.getHashes()` whether the integrity algorithm the
+  // adopter declared is one this runner can hash with. Reads no file, writes nothing, and its whole
+  // output is an exit code.
+  "91abbc929ce0cf578b47794d59ca072e1841a848d9480d904d68ebf30dc5a384",
 ]);
 
 /**

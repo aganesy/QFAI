@@ -23,6 +23,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import {
   checkLedger,
   collectTestSources,
+  redactDisabledTests,
   runnerCorpusRoots,
 } from "../../../../../scripts/check-atdd-annotation-ledger.mjs";
 import { removeTempTree } from "../../helpers/tempTree.js";
@@ -1220,6 +1221,70 @@ describe("the CLI entry point", () => {
     ).toBe(1);
     expect(output, "and the finding must name the claim left unbacked").toContain(claim);
   }, 30_000);
+  it("does not count a claim backed only by a test the runner will not execute", async () => {
+    // The WIRING for review finding [115], which the rows calling `redactDisabledTests` directly
+    // cannot reach: a plant that removed the redaction from `main` left every one of them green.
+    // This one runs the guard.
+    //
+    // Both directions from one fixture, differing only in `describe` versus `describe.skip`.
+    const claim = tag("0017", "0017-0001");
+
+    const build = async (skipped: boolean): Promise<{ dir: string; copied: string }> => {
+      const dir = await temp();
+      await mkdir(path.join(dir, "tests", "e2e"), { recursive: true });
+      await mkdir(path.join(dir, "packages", "qfai", "tests", "e2e"), { recursive: true });
+      await writeFile(
+        path.join(dir, "tests", "e2e", "qfai-traceability.md"),
+        `- ${claim}\n`,
+        "utf8",
+      );
+      await writeFile(
+        path.join(dir, "packages", "qfai", "tests", "e2e", "backing.test.ts"),
+        [
+          'import { describe, it, expect } from "vitest";',
+          "",
+          `// ${claim}`,
+          `describe${skipped ? ".skip" : ""}("covers the story", () => {`,
+          '  it("asserts something", () => {',
+          "    expect(1).toBe(1);",
+          "  });",
+          "});",
+          "",
+        ].join("\n"),
+        "utf8",
+      );
+      await writeFile(
+        path.join(dir, "packages", "qfai", "vitest.workspace.ts"),
+        `export default [{ test: { name: "e2e", include: ["tests/e2e/**/*.test.ts"] } }];\n`,
+        "utf8",
+      );
+      return { dir, copied: await stageGuard(dir, "check-atdd-annotation-ledger.mjs") };
+    };
+
+    const running = await build(false);
+    const backing = spawnSync(process.execPath, [running.copied], {
+      cwd: running.dir,
+      encoding: "utf-8",
+    });
+    if (backing.error !== undefined) throw backing.error;
+    expect(
+      backing.status,
+      `the premise: a suite that runs backs the claim:\n${backing.stdout ?? ""}${backing.stderr ?? ""}`,
+    ).toBe(0);
+
+    const skipped = await build(true);
+    const child = spawnSync(process.execPath, [skipped.copied], {
+      cwd: skipped.dir,
+      encoding: "utf-8",
+    });
+    if (child.error !== undefined) throw child.error;
+    const output = `${child.stdout ?? ""}${child.stderr ?? ""}`;
+    expect(
+      child.status,
+      `a suite Vitest reports as skipped must not discharge a claim:\n${output}`,
+    ).toBe(1);
+    expect(output, "and the finding must name the claim left unbacked").toContain(claim);
+  }, 30_000);
 
   it("exits 0 with an explicit message when a tree genuinely has no ledger", async () => {
     // The one legitimate exit-0-without-checking path. Distinguishable from the wrong-cwd case
@@ -1368,5 +1433,150 @@ describe("the guard against this repository's own ledger", () => {
       wide.unbacked.some((entry) => entry.spec === "0017"),
       "spec-0017 must not be among the unbacked claims",
     ).toBe(false);
+  });
+});
+
+describe("a test the runner will not execute backs nothing", () => {
+  // Review finding [115]. The backing corpus was the TEXT of every file the runner's include
+  // picks up, so an annotation inside `describe.skip`, `it.skip`, `it.todo` or a body that always
+  // calls `ctx.skip()` counted exactly as much as one inside a test that ran. Vitest reports those
+  // as skipped rather than passed and the project still exits 0 on its other tests, so the
+  // required ledger guard certified a user story no executed acceptance test covered.
+  //
+  // `redactDisabledTests` blanks those constructs before the corpus is compared. Every row below
+  // asks it for a count, because a row asserting on the SOURCE of the guard would have passed
+  // against the version that had this defect.
+
+  const annotations = (text: string): number =>
+    (text.match(/QFAI:SPEC-\d{4}:US-\d{4}-\d{4}/g) ?? []).length;
+
+  const file = (body: string): string =>
+    ['import { describe, it, expect } from "vitest";', "", body, ""].join("\n");
+
+  it("keeps the annotation of a suite that runs", async () => {
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe("runs", () => {',
+        '  it("asserts something", () => {',
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    expect(annotations(await redactDisabledTests(source, "runs.test.ts"))).toBe(1);
+  });
+
+  it("drops the annotation of a skipped suite, comment and all", async () => {
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe.skip("does not run", () => {',
+        '  it("asserts something", () => {',
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    const redacted = await redactDisabledTests(source, "skipped.test.ts");
+    expect(
+      annotations(redacted),
+      "the annotation sits ABOVE the describe and must go with it",
+    ).toBe(0);
+    expect(redacted.length, "blanked in place, so every other offset is unchanged").toBe(
+      source.length,
+    );
+  });
+
+  it("drops it for todo and for the x-prefixed spellings too", async () => {
+    for (const opening of [
+      'describe.todo("t", () => {',
+      'xdescribe("x", () => {',
+      'describe.skipIf(true)("c", () => {',
+    ]) {
+      const source = file(
+        [
+          "// QFAI:SPEC-0017:US-0017-0001",
+          opening,
+          '  it("asserts something", () => {',
+          "    expect(1).toBe(1);",
+          "  });",
+          "});",
+        ].join("\n"),
+      );
+      expect(
+        annotations(await redactDisabledTests(source, "disabled.test.ts")),
+        `${opening} must not back a claim`,
+      ).toBe(0);
+    }
+  });
+
+  it("drops it when the suite runs but every test inside it is skipped", async () => {
+    // The spelling the first version of this repair missed. This repository writes the annotation
+    // above the `describe`, so reading only the `describe`'s own modifier left it standing over a
+    // suite with nothing in it to execute. Measured with a plant against the real corpus.
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe("the suite itself runs", () => {',
+        '  it.skip("but this does not", () => {',
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    expect(annotations(await redactDisabledTests(source, "hollow.test.ts"))).toBe(0);
+  });
+
+  it("keeps it when one test in the suite still runs", async () => {
+    // The other direction, and the reason the rule is `every test`, not `any test`: a suite with
+    // one skipped case and one executed case does cover its story.
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe("mixed", () => {',
+        '  it.skip("parked", () => {',
+        "    expect(1).toBe(1);",
+        "  });",
+        '  it("runs", () => {',
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    expect(annotations(await redactDisabledTests(source, "mixed.test.ts"))).toBe(1);
+  });
+
+  it("drops it for a body that always skips itself", async () => {
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe("runs", () => {',
+        '  it("skips itself", (ctx) => {',
+        "    ctx.skip();",
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    expect(annotations(await redactDisabledTests(source, "ctxskip.test.ts"))).toBe(0);
+  });
+
+  it("keeps it when the skip is conditional, which is a test that runs somewhere", async () => {
+    // The boundary. `ctx.skip()` under an `if` is a test that executes on some platform; the
+    // guard answers whether a test runs at all, and a blanket reading of `.skip(` would have
+    // deleted the annotations of every platform-conditional acceptance test in the corpus.
+    const source = file(
+      [
+        "// QFAI:SPEC-0017:US-0017-0001",
+        'describe("runs", () => {',
+        '  it("skips on one platform", (ctx) => {',
+        '    if (process.platform === "win32") ctx.skip();',
+        "    expect(1).toBe(1);",
+        "  });",
+        "});",
+      ].join("\n"),
+    );
+    expect(annotations(await redactDisabledTests(source, "conditional.test.ts"))).toBe(1);
   });
 });

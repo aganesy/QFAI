@@ -598,6 +598,84 @@ describe(
       }
       expect(violations).toEqual([]);
     });
+    it("accepts only an integrity algorithm this runner can actually hash with", async () => {
+      // Review finding [116]. The algorithm half of `+<algorithm>.<digest>` was checked as a run
+      // of alphanumerics and hyphens and nothing more, so `pnpm@9.12.3+garbage.deadbeef` was
+      // pronounced resolvable — and corepack, which hands that name to `crypto.createHash`, then
+      // failed with the opaque resolution error this precondition exists to replace. The
+      // precondition reached the failure it was written to prevent.
+      //
+      // Asked of `crypto.getHashes()` rather than of a fixed list, so `sha3-256` still passes:
+      // that case is why the original comment refused a closed list, and it is a case this row
+      // holds on to. Executed, not read — the defect was in what the shell accepted, and reading
+      // the shape of the `case` statement is what let it through in the first place.
+      const cases: Array<{ value: string; resolvable: boolean; why: string }> = [
+        {
+          value: "pnpm@9.12.3+sha512.deadbeef",
+          resolvable: true,
+          why: "the ordinary spelling corepack itself writes",
+        },
+        {
+          value: "pnpm@9.12.3+sha3-256.deadbeef",
+          resolvable: true,
+          why: "supported by Node and refused by every closed list — the reason there is none",
+        },
+        {
+          value: "pnpm@9.12.3+SHA512.deadbeef",
+          resolvable: true,
+          why: "`crypto.createHash` is case-insensitive about the name, so this guard is too",
+        },
+        {
+          value: "pnpm@9.12.3+garbage.deadbeef",
+          resolvable: false,
+          why: "the reviewer's value: alphanumeric, and not an algorithm that exists",
+        },
+        {
+          value: "pnpm@9.12.3+sha999.deadbeef",
+          resolvable: false,
+          why: "shaped like a real one, which is exactly what a shape check cannot separate",
+        },
+      ];
+
+      const jobs = await installJobs();
+      expect(
+        jobs.length,
+        "no shipped job installs dependencies — this row would have no subject",
+      ).toBeGreaterThanOrEqual(1);
+
+      for (const job of jobs) {
+        const body = guardBody(job);
+        for (const { value, resolvable, why } of cases) {
+          const dir = await newTempDir();
+          await writeFile(path.join(dir, "pnpm-lock.yaml"), "lockfileVersion: '9.0'\n", "utf-8");
+          await writeFile(
+            path.join(dir, "package.json"),
+            `${JSON.stringify(
+              {
+                name: "adopter-with-declared-integrity",
+                private: true,
+                packageManager: value,
+              },
+              null,
+              2,
+            )}\n`,
+            "utf-8",
+          );
+          const run = await runShell(body, dir);
+          if (resolvable) {
+            expect(
+              run.status,
+              `${job.file}: ${value} (${why}) must be accepted, not stopped:\n${run.stdout}${run.stderr}`,
+            ).toBe(0);
+          } else {
+            expect(
+              run.status,
+              `${job.file}: ${value} (${why}) cannot resolve and must be stopped here rather than by corepack:\n${run.stdout}${run.stderr}`,
+            ).toBeGreaterThan(0);
+          }
+        }
+      }
+    });
   },
 );
 

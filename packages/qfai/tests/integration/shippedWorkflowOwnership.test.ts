@@ -1390,4 +1390,61 @@ describe("the workflows parent is pinned across the copy, not only before it", (
       "and nothing may be removed through the parent that was just refused",
     ).not.toMatch(/\b(rm|unlink|rmdir)\(/);
   });
+  it("excludes the written workflows by comparing paths, not leading path segments", () => {
+    // Review finding [114], measured rather than read. `copyTemplateTree` reports ABSOLUTE
+    // destinations, and the first version of this filter split one and took its first two
+    // segments — `/tmp` for `/tmp/repo/.github/workflows/qfai-tests.yml` — so it excluded
+    // nothing. The identity mismatch was detected, reported, and then `recordInstalledWorkflows`
+    // wrote provenance for every workflow anyway. The next run reads those names as `declined`
+    // and never writes them again, so the swap costs the adopter the workflows permanently.
+    //
+    // A predicate, so the row can hand it the absolute paths the defect was made of. Asserting
+    // the lambda's shape on the source would have passed against the broken one.
+    const root = path.join(path.sep === "/" ? "/tmp" : "C:\\tmp", "repo");
+
+    expect(
+      initModule.isWorkflowDestination(
+        path.join(root, ".github", "workflows", "qfai-tests.yml"),
+        root,
+      ),
+      "a shipped workflow under the workflows directory must be excluded",
+    ).toBe(true);
+    expect(
+      initModule.isWorkflowDestination(path.join(root, ".github", "dependabot.yml"), root),
+      "a sibling under .github is not a workflow and must be recorded",
+    ).toBe(false);
+    expect(
+      initModule.isWorkflowDestination(path.join(root, "DESIGN.md"), root),
+      "and neither is a root file",
+    ).toBe(false);
+    expect(
+      initModule.isWorkflowDestination(
+        path.join(root, ".github", "workflows", "nested", "deep.yml"),
+        root,
+      ),
+      "a file one level deeper is not IN the workflows directory",
+    ).toBe(false);
+  });
+
+  it("stops the retired prune too, not only the provenance record", async () => {
+    // Review finding [113]. `workflowsDirIsOwn` was computed BEFORE the copy and stayed `true`
+    // after a swap was detected, so `resolvePrunableRetiredWorkflows` went on to enumerate the
+    // swapped directory — and a retired workflow over there whose bytes match a recorded digest
+    // was quarantined and deleted. That is the removal-through-a-refused-parent this file already
+    // ruled out for the copy, reached by the other route in the same run.
+    //
+    // Asserted on the SOURCE for the reason the rows above give: the swap is between two
+    // processes and there is no in-process seam to drive it from a fixture.
+    const source = await readInitSource();
+
+    const detected = source.indexOf("const workflowsSwapped =");
+    expect(detected, "the detection must be a value the run can read").toBeGreaterThan(-1);
+
+    const pruneAt = source.indexOf("const prunableRetiredNames");
+    expect(pruneAt, "the prune must exist to be gated").toBeGreaterThan(detected);
+    const gate = source.slice(pruneAt, source.indexOf("resolvePrunableRetiredWorkflows", pruneAt));
+    expect(gate, "the prune must be gated on the swap as well as on owning the directory").toMatch(
+      /workflowsDirIsOwn\s*&&\s*!workflowsSwapped/,
+    );
+  });
 });

@@ -139,20 +139,45 @@ jobs:
                 # `<algorithm>.<digest>`: an algorithm name, a dot, a hex digest.
                 # A bare `+`, a missing digest and a second `+` all fail — `+` is
                 # not a hex character, so the digest test rejects it too.
-                #
-                # The algorithm is checked for SHAPE, not against a list. A closed
-                # list of `sha1|sha224|sha256|sha384|sha512` refuses anything
-                # corepack accepts through `crypto.createHash` that is not on it —
-                # `sha3-256` is the obvious one — and refuses it with THIS guard's
-                # message, which would send an adopter to fix a value that was
-                # already correct. This guard exists to catch a value that cannot
-                # resolve, and guessing which hashes corepack supports is not that.
                 case "$integrity" in
                   *.*) ;;
                   *) shape_ok=no ;;
                 esac
-                case "${integrity%%.*}" in
+                # The algorithm is not guessed at from a fixed list, and it
+                # is not taken on shape alone either.
+                #
+                # A closed list of `sha1|sha224|sha256|sha384|sha512`
+                # refuses anything corepack accepts through
+                # `crypto.createHash` that is not on it - `sha3-256` is the
+                # obvious one - and refuses it with THIS guard's message,
+                # sending an adopter to fix a value that was already
+                # correct. But shape alone accepted
+                # `pnpm@9.12.3+garbage.deadbeef`: `garbage` is a run of
+                # letters, so this guard said the value was resolvable, and
+                # corepack then failed to hash with it - the opaque failure
+                # this precondition exists to replace, reached through the
+                # precondition.
+                #
+                # So the runner is asked. `crypto.getHashes()` is the set
+                # `crypto.createHash` accepts on THIS runner, which is the
+                # question that matters and the one a list in this file
+                # cannot answer.
+                algorithm="${integrity%%.*}"
+                case "$algorithm" in
                   ""|*[!0-9A-Za-z-]*) shape_ok=no ;;
+                  *)
+                    if ! node -e '
+                      const { getHashes } = require("node:crypto");
+                      const wanted = String(process.argv[1]).toLowerCase();
+                      process.exit(
+                        getHashes().some((name) => name.toLowerCase() === wanted)
+                          ? 0
+                          : 1,
+                      );
+                    ' "$algorithm" 2>/dev/null; then
+                      shape_ok=no
+                    fi
+                    ;;
                 esac
                 case "${integrity#*.}" in
                   ""|*[!0-9a-fA-F]*) shape_ok=no ;;

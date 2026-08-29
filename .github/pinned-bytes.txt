@@ -15,7 +15,7 @@
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
 7ab9263cfe42a3b50469ea79afbc41fdbd4f53e3a1dccd72ad743f339396d0f6  .github/actions/setup/action.yml
-9e42d8133cd6d42d8f7f0da0bc681ce5b9c18108e7171a9c2e04447bb7b90f81  scripts/check-atdd-annotation-ledger.mjs
+f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be  scripts/check-atdd-annotation-ledger.mjs
 4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965  scripts/check-bidi.mjs
 f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077  scripts/check-build-warnings.mjs
 edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4  scripts/check-instructions-size.mjs
