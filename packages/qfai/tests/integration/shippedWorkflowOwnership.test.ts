@@ -1340,3 +1340,54 @@ describe(
     });
   },
 );
+
+describe("the workflows parent is pinned across the copy, not only before it", () => {
+  // Review finding [109]. `workflowAncestorsAreRealDirectories` ran ONCE, before a copy that
+  // performs many asynchronous filesystem operations, and nothing held the answer still
+  // afterwards. A concurrent process swapping `.github` or `.github/workflows` for a link
+  // between the check and a write has the shipped workflow created outside the repository —
+  // `COPYFILE_EXCL` refuses an existing destination and follows a linked PARENT without
+  // complaint — and the later re-check stopped the provenance record without unwriting anything.
+  //
+  // Asserted on the SOURCE. The interleaving is between two processes and Node has no `openat`,
+  // so the repair is an identity comparison around the copy; there is no in-process seam where
+  // a fixture could swap the directory mid-`copyTemplateTree`. What a test can pin is that the
+  // identity is CAPTURED before the copy and COMPARED after it, and that the answer is reported
+  // rather than acted on through the parent that was just found untrustworthy.
+
+  it("captures the ancestors' identity before the copy and compares it after", async () => {
+    const source = await readInitSource();
+
+    const captured = source.indexOf(
+      "const workflowAncestorsBefore = await workflowAncestorIdentity(destRoot)",
+    );
+    const copied = source.indexOf("const rootResult = await copyTemplateTree(");
+    const compared = source.indexOf(
+      "workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore)",
+    );
+
+    expect(captured, "the identity must be captured").toBeGreaterThan(-1);
+    expect(copied, "before the copy that writes the workflows").toBeGreaterThan(captured);
+    expect(compared, "and compared after it").toBeGreaterThan(copied);
+  });
+
+  it("reports a swap and records nothing, rather than deleting through the new parent", async () => {
+    // The direction matters. A rollback would have to remove those files THROUGH the parent just
+    // found untrustworthy — following the link this command refused to follow, into a directory
+    // whose other contents are not ours. This repository already ruled on that when the
+    // retired-name prune was found enumerating a linked workflows directory.
+    const source = await readInitSource();
+    const start = source.indexOf("workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore)");
+    expect(start, "the comparison must exist to be checked").toBeGreaterThan(-1);
+    const block = source.slice(start, source.indexOf("recordInstalledWorkflows(", start));
+
+    expect(block, "a detected swap must be reported to the operator").toMatch(/error\(/);
+    expect(block, "and the written workflows dropped before anything records them").toMatch(
+      /rootResult\.copied = rootResult\.copied\.filter/,
+    );
+    expect(
+      block,
+      "and nothing may be removed through the parent that was just refused",
+    ).not.toMatch(/\b(rm|unlink|rmdir)\(/);
+  });
+});

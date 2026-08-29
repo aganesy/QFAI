@@ -160,7 +160,8 @@ export async function runInit(options: InitOptions): Promise<void> {
   // Refused rather than followed, and refused for the workflows only: the rest of `init` is
   // unaffected by what `.github` is, and failing the whole command over it would be a larger
   // change to an adopter's tree than declining to write two files.
-  const workflowsDirIsOwn = await workflowAncestorsAreRealDirectories(destRoot);
+  const workflowAncestorsBefore = await workflowAncestorIdentity(destRoot);
+  const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
   if (!workflowsDirIsOwn) {
     error(
       ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
@@ -179,6 +180,34 @@ export async function runInit(options: InitOptions): Promise<void> {
     protect: ["DESIGN.md"],
     exclude: workflowCopyExcludes,
   });
+
+  // The ancestors are still the directories that were inspected. Review finding [109]: the
+  // check above ran once and the copy that follows performs many asynchronous operations, so a
+  // concurrent swap of `.github` or `.github/workflows` for a link had the shipped workflow
+  // created outside the repository, and the later re-check stopped the provenance record without
+  // unwriting anything.
+  //
+  // REPORTED and unrecorded, not deleted. A rollback would have to remove those files THROUGH
+  // the parent that was just found untrustworthy — following the link this command refused to
+  // follow, into a directory whose other contents are not ours. This repository already ruled on
+  // that once, when the retired-name prune was found enumerating a linked workflows directory:
+  // the run that declines to write through a link must not delete through it either.
+  //
+  // So the operator is told, precisely, and nothing records the write. Leaving the entries out
+  // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
+  // rather than as ours to overwrite.
+  if (
+    workflowAncestorsBefore !== undefined &&
+    !options.dryRun &&
+    !(await workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore))
+  ) {
+    error(
+      ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
+    );
+    rootResult.copied = rootResult.copied.filter(
+      (rel) => !rel.split(/[\\/]/).slice(0, 2).join("/").startsWith(".github/workflows"),
+    );
+  }
 
   // Record provenance for the shipped workflow files this copy actually
   // wrote, IMMEDIATELY after the copy that wrote them (no-op on dry-run and
@@ -2141,18 +2170,67 @@ const WORKFLOW_DIR_SEGMENTS: readonly string[] = [".github", "workflows"];
  * `lstat`, so the link itself is inspected rather than its target.
  */
 async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
+  return (await workflowAncestorIdentity(destRoot)) !== undefined;
+}
+
+/**
+ * The identity of each ancestor of the shipped workflows directory, or `undefined` if any of
+ * them is not a real directory this command may write through.
+ *
+ * Review finding [109]: the ancestor CHECK ran once, before a copy that performs many
+ * asynchronous filesystem operations, and nothing held the answer still afterwards. A
+ * concurrent process that swaps `.github` or `.github/workflows` for a link between the check
+ * and a write has the shipped workflow created outside the repository — `COPYFILE_EXCL`
+ * refuses an existing destination and follows a linked PARENT without complaint. The
+ * re-check further down stops the provenance record; it does not unwrite the file.
+ *
+ * So the identity is captured here and compared after the copy. Node has no `openat`, so what
+ * this buys is what the artifact writers document: a swap becomes a detected swap with the
+ * files it produced removed, rather than a silent write into somebody else's tree.
+ *
+ * An ABSENT ancestor is `null` rather than a failure: `init` creates the directory it is
+ * about to fill, and absence before the copy is the ordinary first-run state. What must not
+ * change is a directory that existed into a different one.
+ */
+async function workflowAncestorIdentity(
+  destRoot: string,
+): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
+  const identities: Array<{ dev: number; ino: number } | null> = [];
   let current = destRoot;
   for (const segment of WORKFLOW_DIR_SEGMENTS) {
     current = path.join(current, segment);
     const inspected = await lstat(current).catch(() => undefined);
     if (inspected === undefined) {
+      identities.push(null);
       continue;
     }
     if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
-      return false;
+      return undefined;
     }
+    identities.push({ dev: inspected.dev, ino: inspected.ino });
   }
-  return true;
+  return identities;
+}
+
+/**
+ * Whether every ancestor that EXISTED before the copy is still the same directory.
+ *
+ * One that was absent and has since been created is the copy's own work. One that changed
+ * identity is the swap this comparison exists to catch.
+ */
+async function workflowAncestorsUnchanged(
+  destRoot: string,
+  before: Array<{ dev: number; ino: number } | null>,
+): Promise<boolean> {
+  const after = await workflowAncestorIdentity(destRoot);
+  if (after === undefined) return false;
+  return before.every((identity, index) => {
+    if (identity === null) return true;
+    const now = after[index];
+    return (
+      now !== undefined && now !== null && now.dev === identity.dev && now.ino === identity.ino
+    );
+  });
 }
 
 async function captureShippedWorkflowPreInitState(
