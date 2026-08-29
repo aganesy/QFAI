@@ -143,8 +143,9 @@ export interface Declaration {
     gatedVerifications?: Record<string, string>;
     nestedActions?: string[];
     dependencyMatrices?: Record<string, Record<string, string[]>>;
-    localActionDigests?: Record<string, string>;
+    pinnedBytes?: Record<string, string>;
     installLifecycle?: Record<string, Record<string, string>>;
+    closureActions?: string[];
   }[];
   // Everything else the artifact carries — `$comment` today — travels through untouched.
   [key: string]: unknown;

@@ -441,9 +441,18 @@ const COMMAND_FILES_REL = path.posix.join(".github", "command-files.txt");
  * A closed list, and short: these are the hooks `pnpm install` honours, and each of them runs in
  * every job before every verification in that job. Review finding [105].
  */
+/**
+ * The manifests `pnpm install` runs lifecycle hooks for in this workspace.
+ *
+ * The root and every workspace package. Enumerated rather than globbed from
+ * `pnpm-workspace.yaml`, because the point is that this list and the declaration's must be
+ * compared: a set derived from the same file the attack edits proves nothing.
+ */
+const WORKSPACE_MANIFESTS = ["package.json", "packages/qfai/package.json"];
+
 const INSTALL_LIFECYCLE = ["preinstall", "install", "postinstall", "prepare", "prepublishOnly"];
 /** Where the pinned local-action bytes live, for the pre-flight and for this lane. */
-const LOCAL_ACTION_DIGESTS_REL = path.posix.join(".github", "local-action-digests.txt");
+const PINNED_BYTES_REL = path.posix.join(".github", "pinned-bytes.txt");
 
 /**
  * The workflow command files, read from the tree rather than written here.
@@ -2176,27 +2185,22 @@ function checkRequiredContexts(root, jobs) {
     // Three agreements, because two of them can drift apart on their own: the declaration and the
     // data file the pre-flight reads, the data file and the bytes on disk, and the data file and
     // the set of files present.
-    const pinnedActions = isRecord(context.localActionDigests)
-      ? context.localActionDigests
-      : undefined;
+    const pinnedActions = isRecord(context.pinnedBytes) ? context.pinnedBytes : undefined;
     if (pinnedActions === undefined || Object.keys(pinnedActions).length === 0) {
       findings.push({
         rule: "required-context",
         file: DECLARATION_REL,
         job: declaredJob,
         detail:
-          "declares no `localActionDigests` mapping, so the composite actions that run before every verification in every job are pinned by nothing",
+          "declares no `pinnedBytes` mapping, so the composite actions that run before every verification in every job are pinned by nothing",
       });
     } else {
       const listed = new Map();
-      const listText = readBoundedText(
-        path.join(root, LOCAL_ACTION_DIGESTS_REL),
-        MAX_WORKFLOW_BYTES,
-      );
+      const listText = readBoundedText(path.join(root, PINNED_BYTES_REL), MAX_WORKFLOW_BYTES);
       if (listText === undefined) {
         findings.push({
           rule: "required-context",
-          file: LOCAL_ACTION_DIGESTS_REL,
+          file: PINNED_BYTES_REL,
           job: declaredJob,
           detail:
             "is missing or not a readable regular file, and the pre-flight refusal reads it before any action runs — without it that refusal has nothing to check",
@@ -2212,7 +2216,7 @@ function checkRequiredContexts(root, jobs) {
         if (listed.get(rel_) !== digest) {
           findings.push({
             rule: "required-context",
-            file: LOCAL_ACTION_DIGESTS_REL,
+            file: PINNED_BYTES_REL,
             job: declaredJob,
             detail: `pins ${rel_} as ${String(listed.get(rel_))} where ${DECLARATION_REL} declares ${String(digest)} — the pre-flight reads the file and this reads the declaration, and a refusal that checks a different list from the one it was given is no refusal`,
           });
@@ -2222,7 +2226,7 @@ function checkRequiredContexts(root, jobs) {
         if (!Object.prototype.hasOwnProperty.call(pinnedActions, rel_)) {
           findings.push({
             rule: "required-context",
-            file: LOCAL_ACTION_DIGESTS_REL,
+            file: PINNED_BYTES_REL,
             job: declaredJob,
             detail: `pins ${rel_}, which ${DECLARATION_REL} does not declare`,
           });
@@ -2233,7 +2237,9 @@ function checkRequiredContexts(root, jobs) {
       // where a reviewer reads, and catches a list that drifted from the tree in a pull request
       // that never reached the runner.
       const present = new Set();
-      for (const rel_ of filesUnder(root, ACTIONS_ROOT_REL)) present.add(rel_);
+      for (const pinnedRoot of [ACTIONS_ROOT_REL, "scripts"]) {
+        for (const rel_ of filesUnder(root, pinnedRoot)) present.add(rel_);
+      }
       for (const [rel_, digest] of Object.entries(pinnedActions)) {
         const bytes = readBoundedText(path.join(root, rel_), MAX_WORKFLOW_BYTES);
         if (bytes === undefined) {
@@ -2287,6 +2293,20 @@ function checkRequiredContexts(root, jobs) {
         detail:
           "declares no `installLifecycle` mapping, so the scripts the package manager runs in every job before every verification are pinned by nothing",
       });
+    }
+    // The manifest SET first. Review finding [107]: this loop walked the manifests the
+    // declaration names, so deleting a key here and adding a `prepare` to that manifest
+    // reported nothing — and `pnpm install --frozen-lockfile` runs a workspace package's
+    // lifecycle exactly as it runs the root's.
+    for (const manifestRel of WORKSPACE_MANIFESTS) {
+      if (!Object.prototype.hasOwnProperty.call(declaredLifecycle ?? {}, manifestRel)) {
+        findings.push({
+          rule: "required-context",
+          file: DECLARATION_REL,
+          job: declaredJob,
+          detail: `pins no install lifecycle for ${manifestRel}, which the workspace installs — the package manager runs its hooks in every job before every verification`,
+        });
+      }
     }
     for (const [manifestRel, declaredScripts] of Object.entries(declaredLifecycle ?? {})) {
       if (!isRecord(declaredScripts)) {
@@ -2368,6 +2388,18 @@ function checkRequiredContexts(root, jobs) {
     const actionWriters = new Map();
     // Read once per context, and a list this lane cannot read is a finding rather than an
     // empty search: a by-name rule with no names reports PASS over every step there is.
+    const closureActionsAllowed = Array.isArray(context.closureActions)
+      ? context.closureActions.filter((name) => typeof name === "string")
+      : [];
+    if (!Array.isArray(context.closureActions)) {
+      findings.push({
+        rule: "required-context",
+        file: DECLARATION_REL,
+        job: declaredJob,
+        detail:
+          "declares no `closureActions` array, so the external actions a step in this closure may invoke are pinned by nothing",
+      });
+    }
     const nestedActionsAllowed = Array.isArray(context.nestedActions)
       ? context.nestedActions.filter((name) => typeof name === "string")
       : [];
@@ -2531,6 +2563,19 @@ function checkRequiredContexts(root, jobs) {
         // …and the same refusal for a LOCAL composite action the step invokes, whose steps no
         // pinned digest covers. See `localActionCommandFileWrites`.
         const invoked = typeof step.uses === "string" ? step.uses : "";
+        // An EXTERNAL action invoked DIRECTLY by a step in this closure is examined by nothing:
+        // the scan below opens an action only when the reference starts with `./`, and
+        // `nestedActions` covers what a local action reaches rather than what the closure
+        // itself invokes. Review finding [106]. A SHA pin makes a reference immutable and says
+        // nothing about what it does.
+        if (invoked !== "" && !invoked.startsWith("./")) {
+          if (!closureActionsAllowed.includes(invoked)) {
+            actionWriters.set(
+              `${rel} step ${JSON.stringify(site)}`,
+              `invokes the external action ${invoked}, which ${DECLARATION_REL} does not enumerate — its code runs in this closure before the verdict, and nothing in this repository reads it`,
+            );
+          }
+        }
         if (invoked.startsWith("./")) {
           for (const write of localActionCommandFileWrites(root, invoked, commandFiles)) {
             if (write.note === EXTERNAL_ACTION_NOTE) {

@@ -1239,7 +1239,7 @@ describe("a local action arrives with its digest or not at all", () => {
     // the declaration; a refusal that checks a different list from the one it was handed is no
     // refusal at all.
     const dir = plantedTree((d) => {
-      const list = path.join(d, ".github", "local-action-digests.txt");
+      const list = path.join(d, ".github", "pinned-bytes.txt");
       const before = readFileSync(list, "utf-8");
       writeFileSync(list, before.replace(/^[0-9a-f]{64}/m, "0".repeat(64)), "utf-8");
     });
@@ -1252,17 +1252,17 @@ describe("a local action arrives with its digest or not at all", () => {
     }
   });
 
-  it("refuses a declaration that pins no local action at all", () => {
+  it("refuses a declaration that pins no guard or action bytes at all", () => {
     const dir = plantedTree((d) => {
       editDeclaration(d, (decl) => {
-        delete onlyContext(decl).localActionDigests;
+        delete onlyContext(decl).pinnedBytes;
         return decl;
       });
     });
     try {
       const run = runLane(dir);
       expect.soft(run.exitCode, `an unpinned action set must exit 1:\n${run.output}`).toBe(1);
-      expect.soft(run.output).toMatch(/no .?localActionDigests.? mapping/);
+      expect.soft(run.output).toMatch(/no .?pinnedBytes.? mapping/);
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
@@ -1270,7 +1270,7 @@ describe("a local action arrives with its digest or not at all", () => {
 
   it("reports the list going missing, which the pre-flight reads before anything runs", () => {
     const dir = plantedTree((d) => {
-      rmSync(path.join(d, ".github", "local-action-digests.txt"), { force: true });
+      rmSync(path.join(d, ".github", "pinned-bytes.txt"), { force: true });
     });
     try {
       const run = runLane(dir);
@@ -1407,5 +1407,149 @@ describe("what runs beside and before a verification is pinned too", () => {
     } finally {
       rmSync(dir, { recursive: true, force: true });
     }
+  });
+});
+
+describe("an external action the closure invokes directly is enumerated too", () => {
+  // Review finding [106]. `nestedActions` covers what a LOCAL composite action reaches, and the
+  // command-file scan opens an action only when the reference starts with `./` — so
+  // `uses: attacker/action@<sha>` added as a step in the closure was examined by nothing. A SHA
+  // pin makes a reference immutable and says nothing about what it does.
+
+  it("reports an external step action the declaration does not enumerate", () => {
+    const dir = plantedTree((d) => {
+      editWorkflow(d, firstContext(d).workflow, (text) => {
+        const anchor = "      - name: Run build & pack verification\n";
+        if (!text.includes(anchor)) throw new Error("the build-verify step anchor is stale");
+        return text.replace(
+          anchor,
+          "      - uses: planted/step-action@0000000000000000000000000000000000000000\n" + anchor,
+        );
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unenumerated step action must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toContain("planted/step-action@");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("checks the enumerated ones against the list rather than against nothing", () => {
+    // Emptying the list must make the SAME tree fail: the closure legitimately invokes a checkout
+    // and an artifact upload, so a passing tree proves nothing on its own.
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        onlyContext(decl).closureActions = [];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an emptied list must refuse what it used to allow:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/does not enumerate/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("refuses a declaration that pins no closure actions at all", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        delete onlyContext(decl).closureActions;
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `an unpinned closure action set must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/no .?closureActions.? array/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the lifecycle is pinned for every manifest the workspace installs", () => {
+  // Review finding [107]. The loop walked the manifests the DECLARATION names, so deleting a
+  // manifest's key and adding a `prepare` to that manifest reported nothing — and `pnpm install
+  // --frozen-lockfile` runs a workspace package's lifecycle exactly as it runs the root's.
+
+  it("reports a workspace manifest the declaration stopped covering", () => {
+    const dir = plantedTree((d) => {
+      editDeclaration(d, (decl) => {
+        const context = onlyContext(decl);
+        const lifecycle = context.installLifecycle;
+        if (lifecycle === undefined) throw new Error("no lifecycle to edit");
+        delete lifecycle["packages/qfai/package.json"];
+        return decl;
+      });
+    });
+    try {
+      const run = runLane(dir);
+      expect
+        .soft(run.exitCode, `a manifest dropped from the pin must exit 1:\n${run.output}`)
+        .toBe(1);
+      expect.soft(run.output).toMatch(/pins no install lifecycle for/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("the guard programs are pinned like the actions", () => {
+  // Review finding [108]. `pnpm ci:lint` ran `pnpm lint` before the hygiene lane, and
+  // `eslint.config.js` is top-level code a pull request controls — so it could replace the lane
+  // with a program that exits 0 before the lane ever ran, and ESLint would report success over
+  // the replacement. The lane is the first member of `ci:lint` now, and its own bytes are pinned
+  // beside the actions and verified by the pre-flight before any of it runs.
+
+  it("reports a guard program whose bytes moved", () => {
+    const dir = plantedTree((d) => {
+      const guard = path.join(d, "scripts", "check-workflow-hygiene.mjs");
+      writeFileSync(guard, `${readFileSync(guard, "utf-8")}// planted\n`, "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an edited guard must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/hashes to [0-9a-f]{64} where/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("reports a guard added to the tree that nothing pins", () => {
+    const dir = plantedTree((d) => {
+      writeFileSync(path.join(d, "scripts", "planted.mjs"), "// planted\n", "utf-8");
+    });
+    try {
+      const run = runLane(dir);
+      expect.soft(run.exitCode, `an unpinned guard must exit 1:\n${run.output}`).toBe(1);
+      expect.soft(run.output).toMatch(/pinned by nothing/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("runs the lane before any executable configuration in the same command", () => {
+    // The ordering half, asserted on the script the required step invokes. ESLint's config is
+    // top-level code the pull request controls; whatever it does, it must not do it first.
+    const manifest: unknown = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "package.json"), "utf-8"),
+    );
+    if (!isRecord(manifest) || !isRecord(manifest["scripts"])) {
+      throw new Error("the root manifest carries no scripts map");
+    }
+    const lane = String(manifest["scripts"]["ci:lint"]);
+    const members = lane.split("&&").map((member) => member.trim());
+    expect(
+      members[0],
+      "the hygiene lane must be the first member, before anything that loads a config",
+    ).toMatch(/check-workflow-hygiene\.mjs/);
   });
 });

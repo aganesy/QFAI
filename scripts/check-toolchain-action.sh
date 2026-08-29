@@ -49,7 +49,7 @@ fi
 #
 # `sha256sum -c` reads the list directly, so this needs no parser and no toolchain — and it runs
 # before anything the action could have changed.
-digests_file="${root}/.github/local-action-digests.txt"
+digests_file="${root}/.github/pinned-bytes.txt"
 if [ ! -f "${digests_file}" ]; then
   echo "::error::check-toolchain-action: ${digests_file} is missing, so the local actions are pinned by nothing."
   exit 1
@@ -59,18 +59,21 @@ if ! command -v sha256sum > /dev/null 2>&1; then
   exit 1
 fi
 if ! (cd "${root}" && sha256sum -c --quiet "${digests_file}"); then
-  echo "::error::A file under ${actions_dir} does not match the digest pinned in .github/local-action-digests.txt. A local action runs before every verification in this job; an edit to one is refused here rather than executed. If the change is intended, land the new digest in the same commit."
+  echo "::error::A pinned file does not match its digest in .github/pinned-bytes.txt. These are the local composite actions and the guard programs — they run before every verification in this job, and one of them decides whether this lane reports anything at all. An edit is refused here rather than executed; if it is intended, reseal with \`node scripts/pin-guard-bytes.mjs\` and land the new digests in the same commit."
   exit 1
 fi
 
-# The tree must hold exactly what the list pins, in both directions: a file added to the actions
-# tree and left out of the list is an action nothing pinned.
-listed="$(grep -cE "^[0-9a-f]{64}  " "${digests_file}" || true)"
-present="$(find "${actions_dir}" -type f | wc -l | tr -d " ")"
-if [ "${listed}" != "${present}" ]; then
-  echo "::error::check-toolchain-action: ${actions_dir} holds ${present} file(s) and .github/local-action-digests.txt pins ${listed}. A file the list does not name is a local action nothing pinned."
-  exit 1
-fi
+# The tree must hold exactly what the list pins, in both directions and per ROOT: a file added
+# to either tree and left out of the list is code nothing pinned. Counted per root rather than
+# in total, so an addition to one and a deletion from the other cannot cancel out.
+for pinned_root in ".github/actions" "scripts"; do
+  listed="$(grep -cE "^[0-9a-f]{64}  ${pinned_root}/" "${digests_file}" || true)"
+  present="$(find "${root}/${pinned_root}" -type f | wc -l | tr -d " ")"
+  if [ "${listed}" != "${present}" ]; then
+    echo "::error::check-toolchain-action: ${pinned_root} holds ${present} file(s) and .github/pinned-bytes.txt pins ${listed}. A file the list does not name is code nobody reviewed the bytes of."
+    exit 1
+  fi
+done
 
 names_file="${root}/.github/command-files.txt"
 if [ ! -f "${names_file}" ]; then
