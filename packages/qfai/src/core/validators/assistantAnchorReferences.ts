@@ -21,6 +21,12 @@ import { exists, issue } from "./utils.js";
  * spec packs and evidence files, which are not QFAI's to require. A citation
  * that does name a document inside the tree is held to both halves — the file
  * is there, and the heading is in it.
+ *
+ * Citations are read out of the tree's Markdown and out of the YAML manifests
+ * that carry Markdown bodies. `manifest/agent-catalog.yml` holds every agent's
+ * `developer_instructions`, an installed project may let it drift from the
+ * canonical agent document, and its citations are runtime instructions like any
+ * other.
  */
 
 /** Heading text with the markup GitHub drops before it slugs. */
@@ -248,7 +254,36 @@ function isStructuralDamage(error: unknown): boolean {
 }
 
 /**
- * Markdown files under `dir`.
+ * The extensions that can hold a citation.
+ *
+ * `.yml` / `.yaml` is here because `manifest/agent-catalog.yml` carries whole
+ * agent bodies in `developer_instructions`, complete with the runtime citations
+ * those bodies make. `qfai-configure` edits the manifest, and an installed
+ * project is allowed to let it drift from the canonical agent Markdown, so a
+ * citation added or changed on the manifest side alone existed in no `.md` file
+ * and was checked by nothing.
+ */
+const CITING_EXTENSIONS = new Set([".yml", ".yaml"]);
+
+/** What the walk found: the documents, the citing manifests, and the shape of the tree. */
+type TreeFiles = {
+  readonly markdown: string[];
+  readonly yaml: string[];
+  /**
+   * Every directory the walk listed.
+   *
+   * A relative citation is told apart from a consumer-relative one by whether
+   * the directory it names is part of the tree — see {@link resolveTarget}.
+   */
+  readonly directories: Set<string>;
+};
+
+function emptyTreeFiles(): TreeFiles {
+  return { markdown: [], yaml: [], directories: new Set() };
+}
+
+/**
+ * Every file under `dir` this rule reads, and every directory it listed.
  *
  * A subtree damaged in the ways `QFAI-LINK-001` reports is skipped rather than
  * thrown out of: raising `ENOTDIR` / `ELOOP` from here would reject the run and
@@ -256,7 +291,10 @@ function isStructuralDamage(error: unknown): boolean {
  * {@link isStructuralDamage}. Symlinked entries are listed but never descended
  * into, so a cycle cannot trap the walk.
  */
-async function collectMarkdownFiles(dir: string, out: string[] = []): Promise<string[]> {
+async function collectTreeFiles(
+  dir: string,
+  out: TreeFiles = emptyTreeFiles(),
+): Promise<TreeFiles> {
   let entries: Dirent[];
   try {
     entries = await readdir(dir, { withFileTypes: true });
@@ -264,12 +302,19 @@ async function collectMarkdownFiles(dir: string, out: string[] = []): Promise<st
     if (isStructuralDamage(error)) return out;
     throw error;
   }
+  out.directories.add(path.resolve(dir));
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
-      await collectMarkdownFiles(full, out);
-    } else if (entry.isFile() && entry.name.toLowerCase().endsWith(".md")) {
-      out.push(full);
+      await collectTreeFiles(full, out);
+      continue;
+    }
+    if (!entry.isFile()) continue;
+    const extension = path.extname(entry.name).toLowerCase();
+    if (extension === ".md") {
+      out.markdown.push(full);
+    } else if (CITING_EXTENSIONS.has(extension)) {
+      out.yaml.push(full);
     }
   }
   return out;
@@ -292,23 +337,46 @@ type TreeIndex = {
    * exactly before it binds one. See {@link resolveTarget}.
    */
   readonly byBasename: Map<string, string[]>;
+  /** Every directory the walk listed — see {@link TreeFiles.directories}. */
+  readonly directories: ReadonlySet<string>;
 };
 
-async function buildTreeIndex(files: readonly string[]): Promise<TreeIndex> {
+/**
+ * Read a file the walk listed, or `null` when it is damaged the way
+ * `QFAI-LINK-001` reports.
+ *
+ * Absent from the index, so citations to it are skipped rather than reported
+ * against a document nobody could read. Only the structural codes: a permission
+ * or I/O failure is not a clean answer.
+ */
+async function readIndexed(file: string): Promise<string | null> {
+  try {
+    return await readFile(file, "utf-8");
+  } catch (error) {
+    if (isStructuralDamage(error)) return null;
+    throw error;
+  }
+}
+
+/**
+ * Index the tree: Markdown documents both cite and are cited, YAML manifests
+ * only cite.
+ *
+ * A manifest is indexed with no slugs and is left out of `byBasename`, because
+ * nothing can name one: {@link ANCHOR_REFERENCE_RE} only matches a `.md`
+ * target. It is in `documents` so that the citation pass, which walks that map,
+ * reads it — the manifest is a citing file, never a cited one.
+ *
+ * Scanning the manifest's raw text rather than its parsed fields is deliberate:
+ * a `foo.md#slug` in it is a citation whichever field carries it, and the line
+ * the finding reports is then the line of the file the operator opens.
+ */
+async function buildTreeIndex(files: TreeFiles): Promise<TreeIndex> {
   const documents = new Map<string, IndexedDocument>();
   const byBasename = new Map<string, string[]>();
-  for (const file of files) {
-    let body: string;
-    try {
-      body = await readFile(file, "utf-8");
-    } catch (error) {
-      // Unreadable for the same reasons a directory is unlistable, and owned by
-      // the same rule. Absent from the index, so citations to it are skipped
-      // rather than reported against a document nobody could read. Only the
-      // structural codes: a permission or I/O failure is not a clean answer.
-      if (isStructuralDamage(error)) continue;
-      throw error;
-    }
+  for (const file of files.markdown) {
+    const body = await readIndexed(file);
+    if (body === null) continue;
     const absolute = path.resolve(file);
     documents.set(absolute, {
       slugs: collectHeadingSlugs(body),
@@ -317,7 +385,15 @@ async function buildTreeIndex(files: readonly string[]): Promise<TreeIndex> {
     const key = path.basename(file).toLowerCase();
     byBasename.set(key, [...(byBasename.get(key) ?? []), absolute]);
   }
-  return { documents, byBasename };
+  for (const file of files.yaml) {
+    const body = await readIndexed(file);
+    if (body === null) continue;
+    documents.set(path.resolve(file), {
+      slugs: new Set(),
+      references: collectAnchorReferences(body),
+    });
+  }
+  return { documents, byBasename, directories: files.directories };
 }
 
 /** Whether `candidate` sits strictly under `dir`. */
@@ -404,6 +480,15 @@ const OUTSIDE: Resolution = { kind: "outside" };
  * skipped. Nothing else guarantees it exists — `QFAI-LINK-001` covers the
  * symlinked entrypoints, not every document the tree cites.
  *
+ * A **relative** path is the same claim written the short way, and it needs the
+ * same answer: `skills/qfai-sdd/SKILL.md` citing `references/missing.md#rule`
+ * names a document the tree owns, and re-reading it from the repository root
+ * alone placed it outside and let a deleted or renamed reference file pass in
+ * silence. It is told apart from a consumer-relative citation — `tdd/…`,
+ * `.qfai/evidence/…`, which the tree also writes — by whether the directory it
+ * names is one the walk listed. `references/` under that skill is; `tdd/` is
+ * not, from any base.
+ *
  * The basename comparison is case-exact even though the index is keyed folded:
  * a unique `workflow.md` cited as `Workflow.md#entry` does not resolve in a
  * case-sensitive checkout, and binding it here passed a citation that is
@@ -428,14 +513,38 @@ function resolveTarget(
     if (index.documents.has(candidate)) return { kind: "document", path: candidate };
   }
   if (targetPath.includes("/")) {
-    const fromRoot = path.resolve(roots.root, targetPath);
-    return isUnder(roots.assistantDir, fromRoot) ? { kind: "missing", path: fromRoot } : OUTSIDE;
+    return missingInTree(index, roots, bases, targetPath);
   }
   const sameName = index.byBasename.get(targetPath.toLowerCase()) ?? [];
   const exact = sameName.filter((candidate) => path.basename(candidate) === targetPath);
   const only = exact.length === 1 ? (exact[0] ?? null) : null;
   if (only === null || isTemplateDocument(roots.assistantDir, only)) return OUTSIDE;
   return { kind: "document", path: only };
+}
+
+/**
+ * The tree-owned document an unresolved multi-segment citation names, if any.
+ *
+ * The repository-root spelling is checked first and on its own terms: a path
+ * written `.qfai/assistant/<anything>/missing.md` is QFAI's whether or not the
+ * directory survives, so a whole deleted directory is still reported. Every
+ * other base needs the directory to be part of the tree before the citation
+ * counts as one this rule owns.
+ */
+function missingInTree(
+  index: TreeIndex,
+  roots: ResolutionRoots,
+  bases: readonly string[],
+  targetPath: string,
+): Resolution {
+  const fromRoot = path.resolve(roots.root, targetPath);
+  if (isUnder(roots.assistantDir, fromRoot)) return { kind: "missing", path: fromRoot };
+  for (const base of bases) {
+    const candidate = path.resolve(base, targetPath);
+    if (!isUnder(roots.assistantDir, candidate)) continue;
+    if (index.directories.has(path.dirname(candidate))) return { kind: "missing", path: candidate };
+  }
+  return OUTSIDE;
 }
 
 export async function validateAssistantAnchorReferences(
@@ -446,7 +555,7 @@ export async function validateAssistantAnchorReferences(
   const assistantDir = resolveAssistantDir(skillsDir);
   if (!(await exists(assistantDir))) return [];
 
-  const files = await collectMarkdownFiles(assistantDir);
+  const files = await collectTreeFiles(assistantDir);
   const index = await buildTreeIndex(files);
   const roots: ResolutionRoots = { root, assistantDir, skillsDir };
 

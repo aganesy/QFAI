@@ -345,6 +345,51 @@ describe("validateAssistantAnchorReferences", () => {
     );
   });
 
+  it("reports a relative citation into the tree whose document is not there", async () => {
+    // `references/` under this skill is part of the tree, so the citation names
+    // a document QFAI owns however it is spelled. Re-reading it from the
+    // repository root alone put `/references/missing.md` outside the tree, and
+    // a reference file deleted or renamed out from under its SKILL passed in
+    // silence — the one drift this rule exists to catch.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skills/qfai-sdd/SKILL.md": [
+          "# qfai-sdd",
+          "",
+          "Follow `references/missing.md#rule`.",
+          "",
+        ].join("\n"),
+        ".qfai/assistant/skills/qfai-sdd/references/present.md": ["# Present", ""].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+        expect(issues[0]?.rule).toBe("assistantAnchorReferences.missingTarget");
+        expect(issues[0]?.loc?.line).toBe(3);
+        expect(issues[0]?.message).toContain("references/missing.md");
+      },
+    );
+  });
+
+  it("stays silent on a relative citation whose directory the tree does not hold", async () => {
+    // `tdd/test-list.md` is the consumer's ledger, written relative the same
+    // way. Nothing under the tree is called `tdd/`, from any resolution base,
+    // which is what tells the two apart.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skills/qfai-implement/SKILL.md": [
+          "# qfai-implement",
+          "",
+          "Record the row in `tdd/test-list.md#coverage`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
+
   it("stays silent when an absent cited path is the consumer's own artifact", async () => {
     await withAssistantTree(
       {
@@ -393,6 +438,53 @@ describe("validateAssistantAnchorReferences", () => {
         "skills/qfai-sdd/references/notes.md": ["# Notes", "", "See `SKILL.md#entry`.", ""].join(
           "\n",
         ),
+      },
+      async (root) => {
+        expect(await run(root)).toEqual([]);
+      },
+    );
+  });
+
+  it("reads citations out of a YAML manifest that carries agent bodies", async () => {
+    // `manifest/agent-catalog.yml#developer_instructions` holds whole agent
+    // bodies, `qfai-configure` edits it, and an installed project may let it
+    // drift from the canonical agent document. A citation added or changed on
+    // the manifest side alone existed in no `.md` file and was read by nothing.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/skills/qfai-atdd/SKILL.md": ["# qfai-atdd", "", "## Entry", ""].join("\n"),
+        ".qfai/assistant/manifest/agent-catalog.yml": [
+          "agents:",
+          "  - id: qa-gatekeeper",
+          "    developer_instructions: |",
+          "      Follow `.qfai/assistant/skills/qfai-atdd/SKILL.md#entry`.",
+          "      Then `.qfai/assistant/skills/qfai-atdd/SKILL.md#no-such-heading`.",
+          "",
+        ].join("\n"),
+      },
+      async (root) => {
+        const issues = await run(root);
+        expect(issues.map((entry) => entry.code)).toEqual(["QFAI-LINK-002"]);
+        expect(issues[0]?.rule).toBe("assistantAnchorReferences.dangling");
+        expect(issues[0]?.file).toBe(".qfai/assistant/manifest/agent-catalog.yml");
+        // The line of the manifest the operator opens, not of the extracted body.
+        expect(issues[0]?.loc?.line).toBe(5);
+      },
+    );
+  });
+
+  it("does not let a citation resolve to a manifest", async () => {
+    // Only `.md` targets are citable, so a manifest is a citing file and never
+    // a cited one. It stays out of the basename fallback for the same reason.
+    await withAssistantTree(
+      {
+        ".qfai/assistant/manifest/agent-routing.yml": ["profiles: []", ""].join("\n"),
+        ".qfai/assistant/catalog/test-layers.md": [
+          "# Test layers",
+          "",
+          "See `agent-routing.yml#profiles`.",
+          "",
+        ].join("\n"),
       },
       async (root) => {
         expect(await run(root)).toEqual([]);
