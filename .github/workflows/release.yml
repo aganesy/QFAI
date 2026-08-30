@@ -354,15 +354,35 @@ jobs:
         # environment, which would turn every tag push into an unattended
         # irreversible upload. Refuse rather than assume.
         env:
-          GH_TOKEN: ${{ github.token }}
+          # `Get an environment` wants repository `Administration: read`, and the workflow
+          # `permissions:` block has no key that grants it — so `github.token` may not be able to
+          # answer this at all. An optional secret carries a credential that can; without one the
+          # job token is still tried, because on many repositories it does work and requiring a
+          # secret nobody needs would be its own obstacle.
+          GH_TOKEN: ${{ secrets.ENVIRONMENT_READ_TOKEN || github.token }}
         run: |
           set -euo pipefail
-          rules="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
-            --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo "")"
-          case "$rules" in
-            *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
+          # A call this token cannot make is NOT the same answer as `no protection rules`.
+          #
+          # This read was `2>/dev/null || echo ""`, which collapsed both into an empty string —
+          # so a permission failure on a properly protected environment reported that the
+          # environment was unprotected, and every release stopped with a message pointing at the
+          # wrong thing. Both outcomes still refuse, because a check that cannot read its input
+          # must never report a pass; what changes is that they are now told apart, and the
+          # operator is sent to the right fix.
+          set +e
+          response="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
+            --jq '[.protection_rules[]?.type] | join(",")' 2>&1)"
+          status=$?
+          set -e
+          if [ "$status" -ne 0 ]; then
+            echo "::error::cannot read the 'release' environment (gh exited ${status}): ${response}. This is not a statement about whether the environment is protected — it is that this job could not find out, and publishing without knowing is the thing this guard refuses. \`Get an environment\` requires repository Administration: read, which the workflow permissions block cannot grant; supply a credential that has it as the ENVIRONMENT_READ_TOKEN secret."
+            exit 1
+          fi
+          case "$response" in
+            *required_reviewers*) echo "release environment requires reviewers: $response" ;;
             *)
-              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
+              echo "::error::the 'release' environment has no required reviewers (rules: ${response:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
               exit 1
               ;;
           esac

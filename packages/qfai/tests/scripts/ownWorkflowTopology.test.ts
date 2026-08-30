@@ -70,7 +70,7 @@
 // QFAI:SPEC-0017:TC-0017-0040
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2202,6 +2202,98 @@ describe("the publish job confirms its environment before it runs anything the t
         `${String(step["name"] ?? "(unnamed)")} installs without --ignore-scripts, so the tag's ` +
           "dependency lifecycle runs in a job holding id-token: write",
       ).toMatch(/--ignore-scripts/);
+    }
+  });
+});
+
+describe("the environment guard tells a denied read apart from an unprotected environment", () => {
+  // `Get an environment` requires repository `Administration: read`, and the workflow
+  // `permissions:` block has no key that grants it. The read was `2>/dev/null || echo ""`, so a
+  // permission failure and a genuinely unprotected environment collapsed to the same empty
+  // string — a properly protected repository would have been told its environment was
+  // unprotected, and every release would have stopped at a message pointing at the wrong thing.
+  //
+  // Both outcomes still refuse: a check that cannot read its input must never report a pass.
+  // What this row pins is that they are told APART, which is the part an operator acts on.
+  //
+  // Executed against a stubbed `gh`, because the defect was in what the shell did with an exit
+  // status — not something reading the YAML can see.
+
+  it("passes on required reviewers, and refuses the other three with the right diagnosis", () => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const steps = doc.jobs?.["publish"]?.steps ?? [];
+    const guard = steps.find(
+      (step) => String(step["name"] ?? "") === "Require an approved environment",
+    );
+    const body = guard?.["run"];
+    expect(body, "the publish job has no environment guard").toBeTypeOf("string");
+    const script = typeof body === "string" ? body : "";
+
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-envguard-"));
+    try {
+      const binDir = path.join(dir, "bin");
+      mkdirSync(binDir, { recursive: true });
+      writeFileSync(path.join(dir, "guard.sh"), script, "utf-8");
+
+      const run = (exitCode: number, output: string) => {
+        const stub = [
+          "#!/usr/bin/env bash",
+          `printf %s ${JSON.stringify(output)}`,
+          `exit ${exitCode}`,
+          "",
+        ].join("\n");
+        const gh = path.join(binDir, "gh");
+        writeFileSync(gh, stub, { encoding: "utf-8", mode: 0o755 });
+        const result = spawnSync("bash", ["guard.sh"], {
+          cwd: dir,
+          env: {
+            ...process.env,
+            PATH: `${binDir}${path.delimiter}${process.env.PATH ?? ""}`,
+            GITHUB_REPOSITORY: "aganesy/QFAI",
+            GH_TOKEN: "stub",
+          },
+          encoding: "utf-8",
+        });
+        if (result.error !== undefined) throw result.error;
+        return {
+          status: result.status ?? -1,
+          output: `${result.stdout ?? ""}${result.stderr ?? ""}`,
+        };
+      };
+
+      const protectedEnv = run(0, "required_reviewers,wait_timer");
+      expect
+        .soft(protectedEnv.status, `a protected environment must pass:\n${protectedEnv.output}`)
+        .toBe(0);
+
+      for (const [rules, why] of [
+        ["", "no rules at all"],
+        ["wait_timer", "a timer is not a reviewer"],
+      ] as Array<[string, string]>) {
+        const unprotected = run(0, rules);
+        expect.soft(unprotected.status, `${why} must refuse`).toBe(1);
+        expect
+          .soft(unprotected.output, `${why} must be diagnosed as unprotected`)
+          .toMatch(/no required reviewers/);
+      }
+
+      // The finding itself: a denied read must NOT read as an unprotected environment.
+      const denied = run(1, "gh: Resource not accessible by integration (HTTP 403)");
+      expect.soft(denied.status, "a denied read must still refuse").toBe(1);
+      expect
+        .soft(
+          denied.output,
+          "and must say the job could not find out, rather than that the environment is " +
+            "unprotected — the operator is otherwise sent to fix something that is not broken",
+        )
+        .toMatch(/could not find out/);
+      expect
+        .soft(denied.output, "naming the permission that is actually missing")
+        .toMatch(/Administration: read/);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
     }
   });
 });
