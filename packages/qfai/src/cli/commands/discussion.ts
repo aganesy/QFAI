@@ -3,7 +3,11 @@ import path from "node:path";
 import { loadConfig } from "../../core/config.js";
 import type { LocatedPack } from "../../core/packLocator.js";
 import { findPacks } from "../../core/packLocator.js";
-import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../core/state.js";
+import {
+  readDiscussionCurrentId,
+  readDiscussionPointer,
+  writeDiscussionCurrentId,
+} from "../../core/state.js";
 import { error, info } from "../lib/logger.js";
 
 export type DiscussionAction = "list" | "use";
@@ -28,11 +32,64 @@ type ResolvedDiscussionRoot = {
   discussionRoot: string;
   /** `qfai.config.yaml` load/normalize errors, already rendered. */
   configIssues: string[];
+  /**
+   * Set when the resolved `discussionRoot` may not be the configured one:
+   * the file could not be read or parsed, or `paths.discussionDir` itself
+   * was rejected and silently replaced by its default.
+   */
+  rootUntrusted?: string;
   configPath: string;
 };
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return value !== null && typeof value === "object" && !Array.isArray(value);
+}
+
+/**
+ * Decide whether the discussion root we just resolved is the one the
+ * config file asked for.
+ *
+ * `loadConfig` normalizes each key independently and degrades a rejected
+ * value to its default, so the presence of *an* issue says nothing about
+ * *which* key was lost: `baseBranch: 123` leaves `paths.discussionDir`
+ * perfectly intact. Only three things can make the resolved root a guess
+ * rather than the configured location, and each is read off the raw
+ * document instead of matched against issue text:
+ *
+ *   1. the file exists but could not be read or parsed (no document, yet
+ *      an issue was recorded — an absent file records neither),
+ *   2. the document, or its `paths` block, is not a mapping, so
+ *      `discussionDir` could not be looked up at all,
+ *   3. `paths.discussionDir` is present but is not a usable string.
+ */
+function untrustedRootReason(document: unknown, issues: string[]): string | undefined {
+  if (document === undefined) {
+    return issues.length > 0 ? issues.join("; ") : undefined;
+  }
+  if (!isRecord(document)) {
+    return "設定ファイルのトップレベルがマッピングではないため paths.discussionDir を読み取れません。";
+  }
+  const paths = document.paths;
+  if (paths === undefined || paths === null) {
+    return undefined;
+  }
+  if (!isRecord(paths)) {
+    return "paths がマッピングではないため paths.discussionDir を読み取れません。";
+  }
+  const discussionDir = paths.discussionDir;
+  if (discussionDir === undefined || discussionDir === null) {
+    return undefined;
+  }
+  if (typeof discussionDir !== "string" || discussionDir.trim().length === 0) {
+    return "paths.discussionDir は空でない文字列である必要があります。";
+  }
+  return undefined;
+}
+
 async function resolveDiscussionRoot(root: string): Promise<ResolvedDiscussionRoot> {
-  const { config, issues, configPath } = await loadConfig(root);
+  const { config, issues, configPath, document } = await loadConfig(root);
+  const configIssues = issues.map((issue) => issue.message);
+  const untrusted = untrustedRootReason(document, configIssues);
   // `path.resolve` (not `path.join`) so an absolute `paths.discussionDir`
   // is honored verbatim. With `path.join`, an absolute config value would
   // be naively concatenated under `<root>` (e.g. `<root>/tmp/discussion`),
@@ -40,11 +97,11 @@ async function resolveDiscussionRoot(root: string): Promise<ResolvedDiscussionRo
   return {
     discussionRoot: path.resolve(root, config.paths.discussionDir),
     // `loadConfig` swallows a broken config into `defaultConfig` + issues.
-    // Callers that enumerate the resolved root have to see those issues,
-    // otherwise they present the *default* location's contents as if it
-    // were the configured one. A missing file is not an issue (ENOENT
-    // returns an empty list), so this stays quiet on a config-less repo.
-    configIssues: issues.map((issue) => issue.message),
+    // Callers that enumerate the resolved root have to see those issues —
+    // silently listing under a broken config hides a real defect — but
+    // only the subset above decides whether the *root* is trustworthy.
+    configIssues,
+    ...(untrusted === undefined ? {} : { rootUntrusted: untrusted }),
     configPath,
   };
 }
@@ -192,9 +249,12 @@ async function runListActive(
  * 0 with an empty payload rather than reusing the `list --active`
  * recovery error. Failing to *read* the root is a different matter: it
  * exits non-zero rather than passing an unreadable directory off as an
- * empty list — and so is failing to *resolve* it: a broken
- * `qfai.config.yaml` aborts the listing instead of enumerating the
- * default dir as if it were the configured one.
+ * empty list — and so is failing to *resolve* it: a `qfai.config.yaml`
+ * that costs us `paths.discussionDir` aborts the listing instead of
+ * enumerating the default dir as if it were the configured one. The
+ * active-session pointer is held to the same standard: a state file we
+ * could not read is not the same fact as a pointer that was never set,
+ * and `active: false` on every pack would assert the latter.
  */
 async function runListPacks(
   options: DiscussionOptions,
@@ -202,17 +262,47 @@ async function runListPacks(
   writeErr: (m: string) => void,
 ): Promise<number> {
   const format = options.format ?? "text";
-  const { discussionRoot, configIssues, configPath } = await resolveDiscussionRoot(options.root);
-  if (configIssues.length > 0) {
+  const { discussionRoot, configIssues, rootUntrusted, configPath } = await resolveDiscussionRoot(
+    options.root,
+  );
+  if (rootUntrusted !== undefined) {
     // The configured discussion root is unknown, so any listing produced
     // here would enumerate the *default* dir while claiming to answer
     // "which packs exist?". Refuse rather than hand back a plausible-
     // looking but wrong candidate set under exit 0.
     writeErr(
       [
-        `qfai discussion list: ${configPath} を読み込めないため一覧を中止しました。`,
-        ...configIssues.map((message) => `  - ${message}`),
+        `qfai discussion list: ${configPath} から paths.discussionDir を確定できないため一覧を中止しました。`,
+        `  - ${rootUntrusted}`,
         "設定を修正してから再実行してください。",
+      ].join("\n"),
+    );
+    return 1;
+  }
+  if (configIssues.length > 0) {
+    // Every other config problem leaves `paths.discussionDir` intact —
+    // `loadConfig` normalizes key by key — so the candidate set below is
+    // the configured one and the listing stands. Report the problems
+    // anyway (on stderr, so `--format json` stdout stays parseable):
+    // a list verb is no place to hide a broken config file.
+    writeErr(
+      [
+        `qfai discussion list: ${configPath} に設定エラーがあります (一覧は続行します)。`,
+        ...configIssues.map((message) => `  - ${message}`),
+      ].join("\n"),
+    );
+  }
+  const pointer = await readDiscussionPointer(options.root);
+  if (!pointer.ok) {
+    // `active` is asserted for every row of the payload, so an
+    // indeterminate pointer would be published as "none of these packs is
+    // active" — a fact we do not have. Refuse instead of guessing.
+    writeErr(
+      [
+        `qfai discussion list: ${pointer.reason}`,
+        "どの pack が active かを確定できないため一覧を中止しました。",
+        "state ファイルを修復するか削除し (削除は pointer 未設定と同義)、" +
+          "qfai discussion use <id> で設定し直してください。",
       ].join("\n"),
     );
     return 1;
@@ -222,7 +312,7 @@ async function runListPacks(
     writeErr(`qfai discussion list: ${listing.message}`);
     return 1;
   }
-  const currentId = await readDiscussionCurrentId(options.root);
+  const currentId = pointer.currentId;
 
   // A `dangerous` dir is a `discussion-*` name the rest of the toolchain
   // refuses (QFAI-DPACK-005 asks for a rename or a removal), so it is not

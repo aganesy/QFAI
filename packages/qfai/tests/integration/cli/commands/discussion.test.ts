@@ -368,6 +368,157 @@ describe("bare `discussion list` enumerates packs", () => {
     expect(cap.err.join("\n")).toMatch(/qfai\.config\.yaml/);
     expect(cap.err.join("\n")).toMatch(/paths\.discussionDir/);
   });
+
+  // …but only the keys the listing actually depends on. `loadConfig`
+  // normalizes key by key, so a rejected `baseBranch` leaves
+  // `paths.discussionDir` — and therefore the candidate set — completely
+  // intact. Aborting on it would make an unrelated typo elsewhere in the
+  // file break the one command an operator runs to find out what to type
+  // next.
+  it("still enumerates when the config error does not touch paths.discussionDir", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "baseBranch: 123\npaths:\n  discussionDir: .qfai/discussion\n",
+      "utf-8",
+    );
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).toBe(0);
+    const body = JSON.parse(cap.out.join("\n")) as { packs?: { id: string }[] };
+    expect(body.packs).toEqual([{ id: "discussion-20260101000000000", active: false }]);
+    // The unrelated problem is still reported — on stderr, so the JSON
+    // view stays parseable — rather than silently swallowed.
+    expect(cap.err.join("\n")).toMatch(/baseBranch/);
+  });
+
+  // An unparsable file is the other half of the same rule: nothing at all
+  // was normalized, so `paths.discussionDir` is a guess.
+  it("exits non-zero when the config file cannot be parsed at all", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    await writeFile(path.join(root, "qfai.config.yaml"), "paths: [unclosed\n", "utf-8");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/qfai\.config\.yaml/);
+  });
+
+  // `active` is asserted for every row of the payload. A state file the
+  // command merely failed to read used to come back as `null` — the same
+  // value an untouched repository yields — so every pack was published as
+  // `active: false` under exit 0: an invented fact, and one a JSON
+  // consumer has no way to question.
+  it("exits non-zero instead of reporting every pack inactive when state.json is corrupt", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "state.json"), "{ not json", "utf-8");
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/state\.json/);
+  });
+
+  it("exits non-zero when state.json holds a currentId of the wrong type", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "state.json"),
+      `${JSON.stringify({ discussion: { currentId: 42 } })}\n`,
+      "utf-8",
+    );
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/currentId/);
+  });
+
+  // A directory where the state file belongs reproduces a present-but-
+  // unreadable state file (EISDIR) without depending on chmod, which does
+  // not restrain a root-owned test runner.
+  it("exits non-zero when state.json exists but cannot be read", async () => {
+    await makePack("discussion-20260101000000000");
+    await mkdir(path.join(root, ".qfai", "state.json"), { recursive: true });
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "list",
+      format: "json",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+    expect(code).not.toBe(0);
+    expect(cap.out).toEqual([]);
+    expect(cap.err.join("\n")).toMatch(/state\.json/);
+  });
+
+  // The determinate "no pointer" spellings must stay exit 0: an absent
+  // file, and a state file that simply records nothing about discussions.
+  it("keeps an absent or pointer-less state.json a determinate 'nothing active'", async () => {
+    const { writeFile } = await import("node:fs/promises");
+    await makePack("discussion-20260101000000000");
+    const absent = capture();
+    expect(
+      await runDiscussion({
+        root,
+        action: "list",
+        format: "json",
+        write: absent.write,
+        writeErr: absent.writeErr,
+      }),
+    ).toBe(0);
+
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(
+      path.join(root, ".qfai", "state.json"),
+      `${JSON.stringify({ other: { kept: true } })}\n`,
+      "utf-8",
+    );
+    const empty = capture();
+    expect(
+      await runDiscussion({
+        root,
+        action: "list",
+        format: "json",
+        write: empty.write,
+        writeErr: empty.writeErr,
+      }),
+    ).toBe(0);
+
+    const expected = { packs: [{ id: "discussion-20260101000000000", active: false }] };
+    expect(JSON.parse(absent.out.join("\n"))).toEqual(expected);
+    expect(JSON.parse(empty.out.join("\n"))).toEqual(expected);
+  });
 });
 
 // The tests above drive `runDiscussion` directly, which bypasses
