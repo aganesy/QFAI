@@ -405,6 +405,82 @@ describe("runSddPreflight", () => {
     }
   });
 
+  // Run directories are named from the run's START time, so a slow preflight
+  // started first can finish last. An unconditional pointer write then left
+  // `preflight_summary.md` describing the older run while a newer
+  // `preflight/run-*` sat beside it.
+  it("does not let an older run overwrite a newer run's latest pointer", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102013");
+
+      // The newer run publishes first; the older one finishes after it.
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+
+      expect(older.runId < newer.runId).toBe(true);
+
+      // The older run still owns its own run-scoped evidence...
+      const olderSummary = await readFile(older.preflightSummaryPath, "utf-8");
+      expect(olderSummary).toContain(older.runId);
+
+      // ...but the pointer keeps naming the newest run.
+      const latest = await readFile(newer.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reads the pointer's own run id when the newer run directory is gone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102014");
+
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+      // Prune the newer run's directory, leaving only the pointer it wrote —
+      // the second guard is the only thing left to notice it.
+      await rm(path.dirname(newer.preflightSummaryPath), { recursive: true, force: true });
+
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+
+      const latest = await readFile(older.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still refreshes the pointer when this run is the newest", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010102015");
+
+      const older = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T01:00:00.000Z"),
+      });
+      const newer = await runSddPreflight(root, defaultConfig, {
+        startedAt: new Date("2026-02-16T02:00:00.000Z"),
+      });
+
+      const latest = await readFile(newer.latestPreflightSummaryPath, "utf-8");
+      expect(latest).toContain(newer.runId);
+      expect(latest).not.toContain(older.runId);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps preflight runs out of the validate run-log namespace", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

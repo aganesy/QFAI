@@ -189,16 +189,26 @@ async function writeLatestValidateLog(
   await writeFile(filePath, `${buildContents()}\n`, "utf-8");
 }
 
-/** True when `outDir` already holds a `run-*` directory strictly newer than `runId`. */
-async function hasNewerRunDir(outDir: string, runId: string): Promise<boolean> {
+/**
+ * True when `runRoot` already holds a `run-*` directory strictly newer than
+ * `runId`.
+ *
+ * Exported because every writer of a "latest run" pointer needs the same rule
+ * and the same reasoning about the race — `allocateRunDir` creates the
+ * directory at the START of a run, so a newer concurrent run is visible here
+ * before it finishes. Run ids are `run-<17-digit local timestamp>`, so lexical
+ * order is chronological order.
+ */
+export async function hasNewerRunDir(runRoot: string, runId: string): Promise<boolean> {
   try {
-    const entries = await readdir(outDir, { withFileTypes: true });
+    const entries = await readdir(runRoot, { withFileTypes: true });
     return entries.some(
       (entry) => entry.isDirectory() && RUN_DIR_RE.test(entry.name) && entry.name > runId,
     );
   } catch {
-    // An unreadable outDir cannot prove a newer run exists; fall through to the
-    // validate.log guard rather than skipping the write and losing evidence.
+    // An unreadable run root cannot prove a newer run exists; fall through to
+    // the caller's own pointer guard rather than skipping the write and losing
+    // evidence.
     return false;
   }
 }

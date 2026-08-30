@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
-import { allocateRunDir } from "../runLog.js";
+import { allocateRunDir, hasNewerRunDir } from "../runLog.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 const PREFLIGHT_SUMMARY_FILE = "preflight_summary.md";
@@ -47,6 +47,8 @@ type PreflightRun = {
   runId: string;
   summaryPath: string;
   latestSummaryPath: string;
+  /** `<outDir>/preflight/` — where the `run-*` freshness check looks. */
+  runRoot: string;
 };
 
 export async function runSddPreflight(
@@ -133,17 +135,50 @@ async function allocatePreflightRun(reportRoot: string, startedAt: Date): Promis
     runId,
     summaryPath: path.join(runDir, PREFLIGHT_SUMMARY_FILE),
     latestSummaryPath: path.join(reportRoot, PREFLIGHT_SUMMARY_FILE),
+    runRoot,
   };
 }
+
+/** The `- run id:` line `buildReadyPreflightSummary` / `buildBlocked…` write. */
+const PREFLIGHT_RUN_ID_LINE_RE = /^-\s*run id:\s*(run-\d{17})\s*$/m;
 
 /**
  * Write the run-scoped summary first, then refresh the latest pointer with the
  * same body. The run-scoped copy is never rewritten, so an evidence file that
  * cites it keeps resolving to the state that justified its decisions.
+ *
+ * The pointer refresh is conditional, for the same reason
+ * `writeLatestValidateLog` makes it conditional: run directories are named from
+ * the run's START time, so a slow preflight started first can finish last, and
+ * an unconditional write would leave `preflight_summary.md` describing the
+ * older run while a newer `preflight/run-*` sits beside it — exactly what the
+ * "latest run" pointer promises not to do.
+ *
+ * Two guards, as there: the `run-*` listing catches a newer run that is still
+ * in flight (its directory exists from the moment it was allocated), and the
+ * existing file's own `run id:` catches a newer run whose directory was pruned
+ * after it wrote. Neither is mutual exclusion — the residual window is the gap
+ * between this check and the write — but it is bounded by that gap rather than
+ * by the whole duration of the slower run. An unreadable or unparseable
+ * existing pointer counts as "no newer run", so a truncated file self-heals.
  */
 async function publishPreflightSummary(run: PreflightRun, body: string): Promise<void> {
   const contents = `${body}\n`;
   await writeFile(run.summaryPath, contents, "utf-8");
+
+  if (await hasNewerRunDir(run.runRoot, run.runId)) {
+    return;
+  }
+  let existingRunId: string | null = null;
+  try {
+    existingRunId =
+      PREFLIGHT_RUN_ID_LINE_RE.exec(await readFile(run.latestSummaryPath, "utf-8"))?.[1] ?? null;
+  } catch {
+    existingRunId = null;
+  }
+  if (existingRunId !== null && existingRunId > run.runId) {
+    return;
+  }
   await writeFile(run.latestSummaryPath, contents, "utf-8");
 }
 
