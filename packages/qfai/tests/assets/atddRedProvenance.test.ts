@@ -205,10 +205,32 @@ describe.each(TREES)("%s — the split has one writer and reachable references",
       "Require an `Oracle proof` on each item that reached `red` **at a GREEN or completion gate**",
     );
     expect(gatekeeper).toContain(
-      "**An `exception` item is outside this requirement, at either gate.**",
+      "**A branch-3 `exception` is outside this requirement, at either gate.**",
     );
     expect(gatekeeper).toContain("`TDDLIST-001` waiver can carry it to the spec-level");
     expect(gatekeeper).not.toContain("Require an `Oracle proof` on each item **at a GREEN");
+  });
+
+  it("keys the exclusion on the DR, not on the exception status", async () => {
+    // `exception` is reachable from ANY active status, so a row that reached
+    // `red`, proved its oracle and was parked at `refactor -> exception` by a
+    // failing checkpoint is an `exception` that already owed a proof. Excluding
+    // on the status let a `TDDLIST-001` waiver walk that row into the
+    // completion gate with its proof unchecked.
+    const gatekeeper = flat(await read(tree, GATEKEEPER));
+    expect(gatekeeper).toContain("The status alone does not carry the exclusion; the `DR-*` does.");
+    expect(gatekeeper).toContain("reachable from **any** active status");
+    expect(gatekeeper).toContain("`refactor -> exception`");
+    expect(gatekeeper).toContain("records that **both** proof forms were unavailable");
+    // A DR naming some other anomaly leaves the obligation where `red` left it.
+    expect(gatekeeper).toContain("leaves the row's `Oracle proof` obligation exactly where its");
+    // The unqualified status-keyed form must not come back.
+    expect(gatekeeper).not.toContain("**An `exception` item is outside this requirement");
+
+    // The reference agrees, so the operator reading either lands in one place.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("excludes a branch-3 `exception` from the requirement");
+    expect(provenance).toContain("not on the status");
   });
 
   it("accepts a valid exception as the third evidence form", async () => {
