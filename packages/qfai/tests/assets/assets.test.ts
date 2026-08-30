@@ -528,6 +528,41 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toContain('">=18.0.0"');
   });
 
+  it("sets pnpm up on a project that declares no packageManager", async () => {
+    // `pnpm/action-setup@v4` resolves its version from
+    // `package.json#packageManager` and fails outright when neither that nor a
+    // `version:` input is present — so a repository holding a `pnpm-lock.yaml`
+    // and nothing else never reached the validate step the workflow exists to
+    // run. A blanket `version:` is not the fix: it would override a project
+    // that did declare one.
+    const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
+    const content = await readFile(workflowPath, "utf-8");
+
+    // Two setup steps, split on what the project actually declares.
+    expect(content).toContain("Set up pnpm (version from packageManager)");
+    expect(content).toContain("Set up pnpm (no packageManager declared)");
+    expect(content).toMatch(/steps\.pnpm_declared\.outputs\.declared == 'true'/);
+    expect(content).toMatch(/steps\.pnpm_declared\.outputs\.declared != 'true'/);
+    // Exactly one of them pins a version, so a declared packageManager wins.
+    expect([...content.matchAll(/^\s*version: \d/gm)]).toHaveLength(1);
+
+    // The detection reads package.json rather than guessing, and treats an
+    // unavailable node as "declared" so the fallback cannot fire on a guess.
+    expect(content).toContain(
+      "node -e 'process.exit(require(\"./package.json\").packageManager ? 0 : 1)'",
+    );
+    expect(content).toContain("declared=true");
+
+    // …and the README does not promise a lockfile alone is enough.
+    for (const readmePath of [
+      path.join(repoRoot, "README.md"),
+      path.join(repoRoot, "packages", "qfai", "README.md"),
+    ]) {
+      const readme = await readFile(readmePath, "utf-8");
+      expect(readme, readmePath).toContain("package.json#packageManager");
+    }
+  });
+
   // Both READMEs used to claim qfai generates no GitHub Actions workflow while
   // `qfai init` copied `root/.github/workflows/qfai-validate.yml` into every
   // initialized repository.

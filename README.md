@@ -340,7 +340,10 @@ QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `npx qfai validate --profile full --fail-on error` on every push to `main` or
 `master` and on every pull request, installing dependencies from whichever
 lockfile the repository has (pnpm / yarn / npm) and falling back to
-`npm install` when there is none. The `full` profile includes the
+`npm install` when there is none. On a pnpm project it uses the version your
+`package.json#packageManager` declares, and falls back to pnpm 10 only when
+you declare nothing — so pin `"packageManager": "pnpm@X.Y.Z"` if CI should
+match the version you develop against. The `full` profile includes the
 `QFAI-TEST-001` test-todo stub gate, so the job can fail your default branch on
 findings your existing CI never checked. The file is copied create-only —
 `qfai init` never overwrites an existing copy, not even with `--force` — so

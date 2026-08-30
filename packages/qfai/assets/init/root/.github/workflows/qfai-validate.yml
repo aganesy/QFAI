@@ -26,16 +26,36 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
-      - name: Set up pnpm (if project uses pnpm)
+      - name: Detect a declared packageManager
         if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
+        id: pnpm_declared
+        shell: bash
         # pnpm/action-setup@v4 resolves the pnpm version from
-        # `package.json#packageManager` when no `version:` input is
-        # provided. Setting `version:` would override the consumer's
-        # declared packageManager (e.g. forcing pnpm 9 on a pnpm 10
-        # project), so we leave it unset and require the consumer to
-        # declare `"packageManager": "pnpm@X.Y.Z"` in package.json —
-        # the most common pnpm-on-CI baseline.
+        # `package.json#packageManager`, and fails outright when neither
+        # that nor a `version:` input is present — so a repository with a
+        # `pnpm-lock.yaml` and no `packageManager` never reached the
+        # validate step at all. Passing `version:` unconditionally is not
+        # the fix either: it would override the consumer's declared
+        # packageManager (forcing pnpm 9 on a pnpm 10 project). Ask which
+        # case this is, and let the two steps below answer accordingly.
+        run: |
+          declared=true
+          if command -v node >/dev/null 2>&1; then
+            node -e 'process.exit(require("./package.json").packageManager ? 0 : 1)' \
+              >/dev/null 2>&1 || declared=false
+          fi
+          echo "declared=$declared" >> "$GITHUB_OUTPUT"
+      - name: Set up pnpm (version from packageManager)
+        if: ${{ hashFiles('pnpm-lock.yaml') != '' && steps.pnpm_declared.outputs.declared == 'true' }}
         uses: pnpm/action-setup@v4
+      - name: Set up pnpm (no packageManager declared)
+        if: ${{ hashFiles('pnpm-lock.yaml') != '' && steps.pnpm_declared.outputs.declared != 'true' }}
+        uses: pnpm/action-setup@v4
+        with:
+          # Only reached when the project declares nothing to override.
+          # Declaring `"packageManager": "pnpm@X.Y.Z"` pins the version you
+          # actually develop against and takes over from this default.
+          version: 10
       - uses: actions/setup-node@v4
         with:
           # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
