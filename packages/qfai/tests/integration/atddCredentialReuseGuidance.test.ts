@@ -184,6 +184,13 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // Enumerated, not counted: a set that lost one code and gained another
     // keeps its size. This is the row that reddens if the prose deliverable
     // quietly became a validator.
+    //
+    // `QFAI-ATDD-118` is in the baseline because a separate change added it
+    // deliberately, with its own tests: it is the `info` finding that reports a
+    // `US-*` deferred out of the current slice by `- x-qfai-status: planned`
+    // (`tests/core/atddUsPlannedDeferral.test.ts`). Moving the baseline is the
+    // correct response to a code someone meant to add; the row still reddens
+    // for one nobody declared.
     expect(await atddFindingCodes()).toEqual([
       "QFAI-ATDD-001",
       "QFAI-ATDD-101",
@@ -198,6 +205,7 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
       "QFAI-ATDD-115",
       "QFAI-ATDD-116",
       "QFAI-ATDD-117",
+      "QFAI-ATDD-118",
       "QFAI-ATDD-121",
       "QFAI-ATDD-122",
       "QFAI-ATDD-123",
