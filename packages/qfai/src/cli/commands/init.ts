@@ -2602,6 +2602,11 @@ export async function pruneMatchingEntries(
   const entries = await readdir(dir, { withFileTypes: true });
   const held: QuarantinedEntry[] = [];
   const pruned: string[] = [];
+  // Entries this run moved aside and could not put back. Review finding [138]: restoring by
+  // `rename` would silently replace whatever took the name meanwhile, so the restore refuses
+  // instead — and a refusal nobody hears is a file that has quietly moved. The run stops
+  // naming them, because they are recoverable and only while somebody knows where they are.
+  const stranded: string[] = [];
   try {
     for (const entry of entries) {
       if (!predicate(entry)) {
@@ -2632,7 +2637,9 @@ export async function pruneMatchingEntries(
       // The question re-asked against the OBJECT rather than the name. Everything before the
       // rename described a path; this describes what was moved, and it is what gets deleted.
       if (confirm !== undefined && !(await confirm(moved.quarantinePath, entry.name))) {
-        await restoreQuarantined(moved);
+        if (!(await restoreQuarantined(moved))) {
+          stranded.push(moved.quarantinePath);
+        }
         continue;
       }
       held.push(moved);
@@ -2649,14 +2656,23 @@ export async function pruneMatchingEntries(
   }
   removed.push(...pruned);
   for (const moved of held) {
-    await rm(moved.quarantinePath, { force: true }).catch(() => undefined);
+    await rm(moved.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+  if (stranded.length > 0) {
+    throw new Error(
+      "qfai: these files were moved aside and could not be put back, because something else " +
+        "took their names in the interval and replacing it would have destroyed it. They are " +
+        `intact where they are:\n${stranded.map((at) => `  ${at}`).join("\n")}`,
+    );
   }
 }
 
-/** A file moved aside under a name nothing else holds, pending its delete or its restore. */
+/** A file moved aside into a directory nothing else holds, pending its delete or its restore. */
 type QuarantinedEntry = {
   /** Where it was, and where a restore puts it back. */
   originalPath: string;
+  /** The private directory holding it — what a discard removes. */
+  quarantineDir: string;
   /** Where it is now — the object every step after the move acts on. */
   quarantinePath: string;
 };
@@ -2665,33 +2681,43 @@ type QuarantinedEntry = {
 const QUARANTINE_ATTEMPTS = 8;
 
 /**
- * Moves `target` aside under an exclusive name in the SAME directory, or answers `undefined`.
+ * Moves `target` into a private DIRECTORY in the same parent, or answers `undefined`.
  *
- * The name is claimed with `wx` before the rename: that is what makes it exclusive rather than
- * merely unlikely — a random name that happened to exist would be silently replaced by the
- * rename, and whatever was under it would become the thing this deletes. The rename then
- * replaces our own empty claim.
+ * A directory, not a claimed filename, and that is review finding [136]. The previous version
+ * claimed a random name with `wx`, closed the handle, and then renamed onto it — so between the
+ * close and the rename anything that can write the adopter's tree could replace the claim, and
+ * `rename` would silently destroy the replacement. The comment above it said the claim made the
+ * name exclusive; it made it exclusive at the moment of the claim and not at the moment of use.
  *
- * Same directory, because a rename across filesystems is not one operation, and the whole point
- * of the move is that it is one.
+ * `mkdir` without `recursive` fails with `EEXIST` when the name is taken, so the directory is one
+ * this process created. The move then targets a path INSIDE it — a path that did not exist a
+ * moment ago and whose parent nothing else knows the name of — so there is nothing there for the
+ * rename to overwrite.
+ *
+ * Same parent directory, because a rename across filesystems is not one operation, and the whole
+ * point of the move is that it is one.
+ *
+ * @param target the file to move aside
+ * @returns the entry, or `undefined` when it could not be moved
  */
 async function quarantineEntry(target: string): Promise<QuarantinedEntry | undefined> {
   const dir = path.dirname(target);
   const base = path.basename(target);
   for (let attempt = 0; attempt < QUARANTINE_ATTEMPTS; attempt += 1) {
-    const quarantinePath = path.join(dir, `.${base}.qfai-prune-${randomBytes(12).toString("hex")}`);
-    let claimed: FileHandle;
+    const quarantineDir = path.join(dir, `.${base}.qfai-prune-${randomBytes(12).toString("hex")}`);
     try {
-      claimed = await open(quarantinePath, "wx");
+      // Deliberately not `{ recursive: true }`: that succeeds on an existing directory, which is
+      // exactly the case this has to refuse.
+      await mkdir(quarantineDir);
     } catch {
-      continue; // the name is taken: try another rather than write over it
+      continue; // the name is taken: try another rather than move into somebody else's directory
     }
-    await claimed.close().catch(() => undefined);
+    const quarantinePath = path.join(quarantineDir, base);
     try {
       await rename(target, quarantinePath);
-      return { originalPath: target, quarantinePath };
+      return { originalPath: target, quarantineDir, quarantinePath };
     } catch {
-      await rm(quarantinePath, { force: true }).catch(() => undefined);
+      await rm(quarantineDir, { recursive: true, force: true }).catch(() => undefined);
       return undefined; // the entry is gone or unmovable; either way it is not ours to delete
     }
   }
@@ -2699,35 +2725,33 @@ async function quarantineEntry(target: string): Promise<QuarantinedEntry | undef
 }
 
 /**
- * Puts a quarantined entry back, without overwriting whatever took its name meanwhile.
+ * Puts a quarantined entry back, or leaves it quarantined — but never overwrites.
  *
- * `link` first, because it FAILS when the destination exists where `rename` would silently
- * replace it — and the name was vacated by this function's own move, so a file standing there
- * now is one somebody else wrote in the interval. On a filesystem with no hard links `link`
- * fails for its own reasons, and the fallback rename is gated on the name still being free;
- * that is a check and not a guarantee, but it is strictly better than replacing blind.
+ * `link` is the whole mechanism: it FAILS when the destination exists, where `rename` would
+ * silently replace it. The name was vacated by this function's own move, so a file standing there
+ * now is one somebody else wrote in the interval, and it is theirs.
+ *
+ * Review finding [138]: there used to be a fallback for filesystems without hard links — an
+ * `exists` check and then a plain `rename`. A check is not a guarantee, and between the two a
+ * concurrent `init` or the adopter could create the file that the rename then destroyed. There is
+ * no way to make `rename` refuse an occupied destination, so the fallback is gone: when the
+ * destination cannot be proven free, the entry stays in quarantine and the caller reports it.
+ * A file left in a `.qfai-prune-*` directory is recoverable; one silently replaced is not.
+ *
+ * @param entry the quarantined file
+ * @returns whether it was put back
  */
-async function restoreQuarantined(entry: QuarantinedEntry): Promise<void> {
+async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
   try {
     await link(entry.quarantinePath, entry.originalPath);
-    await rm(entry.quarantinePath, { force: true }).catch(() => undefined);
-    return;
-  } catch (error: unknown) {
-    if (fsErrorCode(error) === "EEXIST") {
-      return; // the name is somebody else's now; the quarantined copy stays where it is
-    }
+    await rm(entry.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
+    return true;
+  } catch {
+    // `EEXIST` means the name is somebody else's now; anything else means this filesystem cannot
+    // give the guarantee. Both leave the file where it is, which is the only outcome that
+    // destroys nothing.
+    return false;
   }
-  if (await exists(entry.originalPath)) {
-    return;
-  }
-  await rename(entry.quarantinePath, entry.originalPath).catch(() => undefined);
-}
-
-/** The `code` of a Node filesystem error, or `undefined` for anything else thrown. */
-function fsErrorCode(error: unknown): string | undefined {
-  if (typeof error !== "object" || error === null) return undefined;
-  const code: unknown = Reflect.get(error, "code");
-  return typeof code === "string" ? code : undefined;
 }
 
 // ---------------------------------------------------------------------------

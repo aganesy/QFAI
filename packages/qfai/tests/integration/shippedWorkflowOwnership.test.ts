@@ -1607,3 +1607,80 @@ describe("a run with nothing to copy is not a directory swap", () => {
     ).toMatch(/attemptedWorkflowCopy/);
   });
 });
+
+describe("moving a file aside claims something nothing else can replace", () => {
+  // Two findings on one mechanism, both about a claim on a watchable PATHNAME.
+  //
+  // [136]: the quarantine name was claimed with `open(..., "wx")`, the handle closed, and then
+  // renamed onto. Between the close and the rename anything that can write the adopter's tree
+  // could replace the claim, and `rename` destroys whatever is at the destination. The comment
+  // above it said the claim made the name exclusive — it made it exclusive at the moment of the
+  // claim, not at the moment of use.
+  //
+  // [138]: restoring fell back to `exists` then `rename` on a filesystem without hard links. A
+  // check is not a guarantee, and a file created between the two was destroyed by the rename.
+  //
+  // Asserted on the SOURCE. Both are races between processes, with no in-process seam a fixture
+  // can drive; what a row can pin is that the claim is a kind of object that cannot be replaced,
+  // and that the overwrite is gone rather than narrowed.
+
+  it("claims a directory, which mkdir refuses to create over", async () => {
+    const source = await readInitSource();
+    const at = source.indexOf("async function quarantineEntry(");
+    expect(at, "the quarantine helper must exist").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n}", at));
+
+    expect(
+      body,
+      "the claim must be a directory: `mkdir` fails when the name is taken, and the move then " +
+        "targets a path inside it that nothing else knows the name of",
+    ).toMatch(/await mkdir\(quarantineDir\)/);
+    expect(
+      body,
+      "and NOT recursively, which succeeds on an existing directory — exactly the case this " +
+        "has to refuse",
+    ).not.toMatch(/mkdir\(quarantineDir, \{[^}]*recursive/);
+    expect(
+      body,
+      "a filename claimed with `wx` is exclusive when claimed and not when used",
+    ).not.toMatch(/open\(quarantinePath/);
+    expect(body, "and the move must land inside that directory").toMatch(
+      /path\.join\(quarantineDir, base\)/,
+    );
+  });
+
+  it("restores by link only, so a name somebody else took is never overwritten", async () => {
+    const source = await readInitSource();
+    const at = source.indexOf("async function restoreQuarantined(");
+    expect(at, "the restore helper must exist").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n}", at));
+
+    expect(
+      body,
+      "link is the mechanism: it fails when the destination exists, where rename replaces it",
+    ).toMatch(/await link\(/);
+    expect(
+      body,
+      "and there must be no rename fallback — an `exists` check is not a guarantee, and the " +
+        "file created between the two is the one it destroys",
+    ).not.toMatch(/rename\(/);
+    expect(
+      body,
+      "with the outcome reported, because a refusal nobody hears is a file that quietly moved",
+    ).toMatch(/return false;/);
+  });
+
+  it("stops the run when a file could not be put back, naming where it is", async () => {
+    const source = await readInitSource();
+    const at = source.indexOf("export async function pruneMatchingEntries(");
+    const body = source.slice(at, source.indexOf("\n}", at));
+    expect(body, "a failed restore must be collected rather than dropped").toMatch(
+      /stranded\.push/,
+    );
+    expect(
+      body,
+      "and the run must stop naming them: they are recoverable only while somebody knows " +
+        "where they are",
+    ).toMatch(/stranded\.length > 0/);
+  });
+});
