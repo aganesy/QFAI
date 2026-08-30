@@ -172,11 +172,11 @@ describe("declared seam", () => {
       );
     });
 
-    it(`${tree}: colocated tests are excluded before the ownership comparison`, async () => {
+    it(`${tree}: colocated tests are split out before the ownership comparison`, async () => {
       const policy = flat(await read(tree, POLICY));
 
       // A positive-only pathspec lists `app/foo.test.ts` as a production path.
-      expect(policy).toContain("Drop test and fixture paths from that list before comparing");
+      expect(policy).toContain("**Split** test and fixture paths out of that list");
       expect(policy).toContain("The pathspec above is positive only");
       expect(policy).toContain("Go's `_test.go` in the package it tests");
       expect(policy).toContain("':(exclude)**/*.test.*'");
@@ -186,6 +186,41 @@ describe("declared seam", () => {
         "`Production roots` alone cannot do this: the excluded files sit **inside** a declared root",
       );
       expect(policy).toContain("Compare the remaining list against the slice's declared");
+    });
+
+    it(`${tree}: the split-out tests get their own duplicate check`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Two slices writing the same test module or shared fixture is a deny
+      // condition in its own right, and the merged suite is the least likely
+      // place to reveal it: interleaved writes can still compile and still
+      // pass. Discarding those paths removed the only check that could catch it.
+      expect(policy).toContain("split, not discard");
+      expect(policy).toContain("**Keep the excluded list.**");
+      expect(policy).toContain(
+        "Check the test and fixture list from step 2 separately, against each slice's declared `Test file`",
+      );
+      // Overlap is the breach here; undeclared is not — a slice legitimately
+      // writes fixtures its ledger row does not name.
+      expect(policy).toContain("A path written by more than one slice is a deny-condition breach");
+      expect(policy).toContain("Not being declared by any slice is not a breach here");
+    });
+
+    it(`${tree}: production roots are re-established on the merged tree`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Stage 0 refreshed the field before any slice ran, so a root a slice
+      // *created* is not in it — and the mis-read-root branch never fires for a
+      // slice that also touched a known root, because the diff is non-zero.
+      expect(policy).toContain(
+        "**Re-establish the roots against the merged tree before using them.**",
+      );
+      expect(policy).toContain("a root a slice _created_ is not in it");
+      expect(policy).toContain(
+        "because a slice that also touched a known root produces a non-zero diff",
+      );
+      expect(policy).toContain("`git diff --name-only <base>..<merge-head>`");
+      expect(policy).toContain("Add each new shipped-source root to `Production roots`");
     });
 
     it(`${tree}: the SKILL carries both the gate note and the reconcile step`, async () => {

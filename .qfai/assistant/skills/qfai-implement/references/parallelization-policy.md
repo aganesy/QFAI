@@ -153,15 +153,34 @@ passes**:
    repository listing, **write the derived `Production roots` line back into
    `catalog/structure.md` in the same pass**, and reconcile against it. Every
    later run then reads the field like any other.
-2. Drop test and fixture paths from that list before comparing. The pathspec
-   above is positive only, so a repo that colocates tests with production code
-   — `app/foo.test.ts` beside `app/foo.ts`, Go's `_test.go` in the package it
-   tests — lists them as touched production paths, and step 5 would report each
-   one as a breach. Exclude them in the same command, e.g.
-   `git diff --name-only <base>..<slice-head> -- <source root> ':(exclude)**/*.test.*' ':(exclude)**/*_test.go' ':(exclude)**/__tests__/**' ':(exclude)**/testdata/**'`,
-   extending the exclusions to whatever this repo's test and fixture naming
+   **Re-establish the roots against the merged tree before using them.** Stage 0
+   refreshed that field before any slice ran, so a root a slice _created_ is not
+   in it — and the mis-read-root branch in step 3 does not catch that either,
+   because a slice that also touched a known root produces a non-zero diff and
+   never reaches it. Take the whole merged diff once with no pathspec
+   (`git diff --name-only <base>..<merge-head>`), and for every path outside the
+   declared roots decide whether it is shipped source. Add each new
+   shipped-source root to `Production roots`, write it back the same way, and
+   only then run the per-slice pathspec. Without this pass a slice can add a
+   whole directory of production code that no ownership comparison ever sees.
+2. **Split** test and fixture paths out of that list — split, not discard. The
+   pathspec above is positive only, so a repo that colocates tests with
+   production code — `app/foo.test.ts` beside `app/foo.ts`, Go's `_test.go` in
+   the package it tests — lists them as touched production paths, and step 5
+   would report each one as an ownership breach. Separate them in the same
+   command, e.g.
+   `git diff --name-only <base>..<slice-head> -- <source root> ':(exclude)**/*.test.*' ':(exclude)**/*_test.go' ':(exclude)**/__tests__/**' ':(exclude)**/testdata/**'`
+   for the production list, and the same pathspec inverted for the test list —
+   extending the patterns to whatever this repo's test and fixture naming
    actually is. `Production roots` alone cannot do this: the excluded files sit
    **inside** a declared root.
+   **Keep the excluded list.** Two slices writing the same test module, shared
+   fixture, mock or global setup file is a deny condition in its own right (see
+   the allow / deny conditions above), and it is the one the merged suite is
+   least likely to reveal: the writes can interleave into a file that still
+   compiles and still passes. Dropping those paths here removed the only place
+   that check could happen, so the next parallel run was authorized on a claim
+   nothing had tested. Step 6 checks them.
 3. A zero-path result is not by itself evidence of a clean seam, and it is not
    automatically a mis-read root either. It is legitimate only when the slice's
    **whole** change record accounts for it, not just its RED route: every item
@@ -177,11 +196,18 @@ passes**:
    the empty diff as a mis-read root, re-read `catalog/structure.md`, correct
    the roots and re-run before continuing.
 4. Compare the remaining list against the slice's declared `Owning module`.
-5. Report every touched path that no slice declared, and every path touched by
-   more than one slice, as a **deny-condition breach**. It is a breach whether
-   or not anything broke: the gate was passed on a claim that turned out to be
-   false, so the next authorization is being made on the same basis.
-6. A breach does not automatically roll back a green merge. It does require the
+5. Report every touched production path that no slice declared, and every one
+   touched by more than one slice, as a **deny-condition breach**. It is a
+   breach whether or not anything broke: the gate was passed on a claim that
+   turned out to be false, so the next authorization is being made on the same
+   basis.
+6. Check the test and fixture list from step 2 separately, against each slice's
+   declared `Test file` rather than its `Owning module` — the ownership rule for
+   these paths is a different one. A path written by more than one slice is a
+   deny-condition breach on the same terms as above. Not being declared by any
+   slice is not a breach here: a slice legitimately writes fixtures its ledger
+   row does not name. Overlap is what this list is for.
+7. A breach does not automatically roll back a green merge. It does require the
    overlapping modules to be re-read for duplicated behaviour, and the finding
    to be recorded before `delivery-planner` authorizes another parallel run.
 
