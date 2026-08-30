@@ -17,7 +17,9 @@
  *   2. {@link stripModuleBindingStatements} deletes `import` / `export … from`
  *      / `export { … };` statements, which publish a binding without running
  *      anything.
- *   3. {@link stripDeclarationHeaders} deletes `function name(` headers so a
+ *   3. {@link stripTypeDeclarations} deletes `type X = …;` and
+ *      `interface X { … }`, which TypeScript erases entirely.
+ *   4. {@link stripDeclarationHeaders} deletes `function name(` headers so a
  *      function's own definition never counts as a use of itself.
  *
  * On top of those, {@link buildWiringGraph} answers the question the guard
@@ -25,9 +27,10 @@
  * entry file transitively imports is not enough, because `validators/index.ts`
  * is a barrel that re-exports every validator: a dead validator calling another
  * dead validator would make the second one look wired. The graph therefore
- * splits every module — the entry module included — into its top-level function
- * bodies (parameter list included, since defaults run per call) plus the
- * module-level residue, and then:
+ * splits every module — the entry module included — into its function bodies
+ * (parameter list included, since defaults run per call; a nested declaration
+ * carved out as a symbol of its own, since a closure runs only when something
+ * calls it) plus the module-level residue, and then:
  *
  *   - seeds reachability with every module's residue (top-level code does run
  *     on import) and with the entry module's *exported* functions, which are
@@ -39,7 +42,11 @@
  * Seeding the entry module's non-exported bodies too would defeat the guard it
  * is meant to be: deleting the `runPrototypingValidators(...)` call out of
  * `validateProject` would leave that orchestrator's body queued anyway, and
- * every validator it names would still read as wired.
+ * every validator it names would still read as wired. Nesting is the same
+ * argument one level down — `validate.ts` declares `runProfileOwnValidators`
+ * inside `runProfileValidators`, so leaving the inner body inside the outer
+ * chunk would keep the whole `switch` reachable after its one call site is
+ * deleted.
  *
  * A name is resolved to the module that owns it before its body is admitted:
  * an import binding is followed through re-export chains ({@link
@@ -58,8 +65,12 @@
  *   - a body assigned to something other than a `function` declaration or an
  *     arrow/function-expression `const` (an object-literal method, say) stays
  *     in the residue and is therefore treated as always reachable;
- *   - a name mentioned in a type position that survives stripping (`typeof
- *     validateFoo`) reads as a use; `import type` bindings do not.
+ *   - two functions declared with the same name in one module — a nested helper
+ *     and its module-level namesake, say — share one entry, so admitting either
+ *     admits both;
+ *   - a name mentioned in a type *annotation* rather than a type declaration
+ *     (`const slot: typeof validateFoo = …`) still reads as a use; type-only
+ *     imports, `type`/`interface` declarations and property names do not.
  */
 
 /**
@@ -226,7 +237,9 @@ export function stripDeclarationHeaders(code: string): string {
 
 /** Reduces a source file to the text a name can be looked for in. */
 export function toExecutableCode(source: string): string {
-  return stripDeclarationHeaders(stripModuleBindingStatements(stripCommentsAndLiterals(source)));
+  return stripDeclarationHeaders(
+    stripTypeDeclarations(stripModuleBindingStatements(stripCommentsAndLiterals(source))),
+  );
 }
 
 /**
@@ -252,18 +265,120 @@ export function stripModuleBindingStatements(code: string): string {
 }
 
 /**
- * Every identifier token in executable code.
+ * The head of a `type X …` / `interface X …` declaration. The leading guard
+ * keeps `obj.type`, `{ type: "x" }` and `const type = 1` out: a match needs
+ * whitespace and a name after the keyword, and must not follow `.` or a word
+ * character.
+ */
+const TYPE_DECLARATION_RE =
+  /(?:^|[^\w$.])((?:export\s+)?(?:declare\s+)?(?:type|interface)\s+[A-Za-z_$][\w$]*)/g;
+
+/** End of a `type X = …;` alias: the first `;` outside any bracket group. */
+function endOfTypeAlias(code: string, from: number): number {
+  let i = from;
+  while (i < code.length) {
+    const ch = code[i] ?? "";
+    if (ch === "(" || ch === "[" || ch === "{") {
+      i = matchBracket(code, i);
+      continue;
+    }
+    if (ch === ";") return i + 1;
+    i += 1;
+  }
+  return code.length;
+}
+
+/** End of an `interface X … { … }` declaration, or undefined if it has no body. */
+function endOfInterface(code: string, from: number): number | undefined {
+  for (let i = from; i < code.length; i += 1) {
+    if (code[i] === "{") return matchBracket(code, i);
+  }
+  return undefined;
+}
+
+/**
+ * Removes `type X = …;` and `interface X … { … }` declarations, which TypeScript
+ * erases entirely.
  *
- * Property names count (`registry.push(validators.validateFoo)` yields both
+ * Without this a reachable module could vouch for a dead validator purely in the
+ * type domain — `type Slot = typeof validateFoo;` names the validator without
+ * ever running it. Property *keys* inside such a declaration are handled by
+ * {@link identifiersIn} as well, but a member's type annotation
+ * (`slot: typeof validateFoo`) is only reachable by dropping the declaration.
+ */
+export function stripTypeDeclarations(code: string): string {
+  let out = "";
+  let cursor = 0;
+  TYPE_DECLARATION_RE.lastIndex = 0;
+  let match: RegExpExecArray | null;
+  while ((match = TYPE_DECLARATION_RE.exec(code)) !== null) {
+    const head = match[1] ?? "";
+    const start = match.index + match[0].length - head.length;
+    if (start < cursor) continue;
+    const end = head.includes("interface")
+      ? endOfInterface(code, start + head.length)
+      : endOfTypeAlias(code, start + head.length);
+    if (end === undefined) continue;
+    out += `${code.slice(cursor, start)} `;
+    cursor = end;
+    TYPE_DECLARATION_RE.lastIndex = end;
+  }
+  return out + code.slice(cursor);
+}
+
+/**
+ * Characters that, before a `name:`, put the name in a *declaring* position —
+ * an object-literal key, an interface or class property, a type member — rather
+ * than a value position. A ternary's `cond ? validateFoo : noop` is preceded by
+ * `?` and so still reads as a use.
+ */
+const PROPERTY_NAME_PREDECESSORS = new Set(["", "{", "}", ",", ";"]);
+
+/** Index of the last non-whitespace character before `from`, or -1. */
+function previousSignificant(code: string, from: number): number {
+  let i = from;
+  while (i >= 0 && /\s/.test(code[i] ?? "")) i -= 1;
+  return i;
+}
+
+/**
+ * True when the token spanning `[start, end)` names a property being declared
+ * rather than a value being read: `{ validateFoo: noop }`, `validateFoo?: T`,
+ * `class X { validateFoo: T }`. The `.`-qualified member of an expression
+ * (`validators.validateFoo`) is not one of these — it is followed by `(`, `,`
+ * or `]`, never by the `:` this looks for.
+ */
+function declaresProperty(code: string, start: number, end: number): boolean {
+  let after = end;
+  while (after < code.length && /\s/.test(code[after] ?? "")) after += 1;
+  if (code[after] === "?") after = nextSignificant(code, after + 1);
+  if (code[after] !== ":") return false;
+  const before = previousSignificant(code, start - 1);
+  return PROPERTY_NAME_PREDECESSORS.has(before < 0 ? "" : (code[before] ?? ""));
+}
+
+/**
+ * Every identifier token in executable code that reads as a *value*.
+ *
+ * A member name counts (`registry.push(validators.validateFoo)` yields both
  * `validators` and `validateFoo`): a validator handed to a dispatch table
  * through a namespace import is wired, and treating the member name as a use
  * keeps the guard from failing CI over that legitimate shape.
+ *
+ * A property *declaration* does not. `const registry = { validateFoo: noop };`
+ * defines a key that happens to spell a validator's name; counting it would let
+ * any reachable module vouch for an unwired validator just by naming a schema
+ * or registry key after it. Type-domain tokens are gone before this runs — see
+ * {@link stripTypeDeclarations}.
  */
 export function identifiersIn(code: string): Set<string> {
   const out = new Set<string>();
   const re = /[A-Za-z_$][\w$]*/g;
   let match: RegExpExecArray | null;
-  while ((match = re.exec(code)) !== null) out.add(match[0]);
+  while ((match = re.exec(code)) !== null) {
+    if (declaresProperty(code, match.index, re.lastIndex)) continue;
+    out.add(match[0]);
+  }
   return out;
 }
 
@@ -330,6 +445,29 @@ function parseDefaultBinding(clause: string): string | undefined {
   return match?.[1];
 }
 
+/**
+ * True when a clause binds nothing at runtime, so the edge is erased from the
+ * emitted JavaScript and never evaluates the target module.
+ *
+ * `import type { … }` / `export type { … }` are the explicit spelling; the
+ * inline one — `import { type Foo } from "./dead.js"` — does not start with
+ * `type`, so the clause has to be read specifier by specifier. Anything outside
+ * the braces (a default or namespace binding) is a runtime binding and keeps the
+ * edge, and an empty clause (`import {} from "x"`) still evaluates the module.
+ */
+function isTypeOnlyClause(clause: string): boolean {
+  if (/^\s*type\b/.test(clause)) return true;
+  const braces = /\{([^}]*)\}/.exec(clause);
+  if (braces === null) return false;
+  const outside = clause.slice(0, braces.index) + clause.slice(braces.index + braces[0].length);
+  if (outside.replace(/[,\s]/g, "") !== "") return false;
+  const specifiers = (braces[1] ?? "")
+    .split(",")
+    .map((specifier) => specifier.trim())
+    .filter((specifier) => specifier !== "");
+  return specifiers.length > 0 && specifiers.every((specifier) => /^type\s/.test(specifier));
+}
+
 /** The `ns` of `import * as ns from "y"`, if present. */
 function parseNamespaceBinding(clause: string): string | undefined {
   const match = /^\s*\*\s+as\s+([A-Za-z_$][\w$]*)/.exec(clause);
@@ -363,10 +501,12 @@ function recordExportClause(bindings: ModuleBindings, clause: string, specifier:
  *
  * Comments, template literals and regex literals are stripped first, and every
  * statement must start its line, so a specifier mentioned in prose, in a code
- * sample or inside a quoted string cannot become an edge. `import type` /
- * `export type` statements — and inline `{ type X }` specifiers — are skipped:
- * they are erased at compile time, so they neither run the target module nor
- * make a later mention of the binding evidence that a validator executes.
+ * sample or inside a quoted string cannot become an edge. A clause that binds
+ * nothing at runtime is skipped entirely ({@link isTypeOnlyClause}) — both the
+ * `import type { X } from "y"` spelling and the inline
+ * `import { type X } from "y"` one. Such an edge is erased at compile time, so
+ * it neither evaluates the target module's top-level code nor makes a later
+ * mention of the binding evidence that a validator executes.
  */
 export function collectModuleBindings(source: string): ModuleBindings {
   const code = stripCommentsKeepingQuoted(source);
@@ -383,7 +523,7 @@ export function collectModuleBindings(source: string): ModuleBindings {
     const keyword = match[1] ?? "";
     const clause = match[2] ?? "";
     const specifier = match[4] ?? "";
-    if (/^\s*type\b/.test(clause) || specifier === "") continue;
+    if (isTypeOnlyClause(clause) || specifier === "") continue;
     bindings.runtimeSpecifiers.push(specifier);
     if (keyword === "import") recordImportClause(bindings, clause, specifier);
     else recordExportClause(bindings, clause, specifier);
@@ -426,10 +566,25 @@ function nextSignificant(code: string, from: number): number {
 }
 
 /**
+ * Characters that, immediately after a balanced `{…}`, prove that block was
+ * part of the *return type* rather than the implementation body: a union or
+ * intersection member (`{ ok } | null`), an array suffix (`{ ok }[]`), a still
+ * closing generic argument list (`Promise<{ ok } | null>`, `Map<K, { v }>`), or
+ * a second brace (`function f(): { ok } { … }`).
+ *
+ * Object return types spelled this way are ordinary in `src/` —
+ * `mermaidEnforcement.ts` and `integrationSurface.ts` both use them — and
+ * mistaking one for the body leaves the real body in the module residue, where
+ * it is unconditionally reachable and can vouch for a validator nothing calls.
+ */
+const TYPE_CONTINUATION_AFTER_BLOCK = new Set(["{", "|", "&", "[", ">", ","]);
+
+/**
  * Finds the `{...}` block that follows a declaration header, skipping the
- * parameter list (whose destructuring patterns are braces of their own) and a
- * return type written as an object type literal (`function f(): { ok } {`).
- * Returns undefined for a bodyless declaration (an overload signature).
+ * parameter list (whose destructuring patterns are braces of their own) and any
+ * object type literal that belongs to the return type, however much union,
+ * intersection or generic syntax surrounds it. Returns undefined for a bodyless
+ * declaration (an overload signature).
  */
 function findBlockBody(code: string, from: number): { start: number; end: number } | undefined {
   let i = from;
@@ -443,7 +598,7 @@ function findBlockBody(code: string, from: number): { start: number; end: number
     if (ch === "{") {
       const end = matchBracket(code, i);
       const after = nextSignificant(code, end);
-      if (code[after] === "{") {
+      if (TYPE_CONTINUATION_AFTER_BLOCK.has(code[after] ?? "")) {
         i = after;
         continue;
       }
@@ -574,18 +729,31 @@ function findValueBody(
 }
 
 /**
- * Splits executable code (already comment- and literal-free) into its top-level
- * function bodies and the module-level residue. Nested declarations stay inside
- * the enclosing body: a closure runs only when its parent does.
- *
- * The parameter list travels with the body, not with the residue: a default
- * argument (`function unused(value = validateFoo()) {}`) is evaluated per call,
- * so it must not make `validateFoo` reachable while `unused` itself is dead.
- * The declared name is left out of both, so a definition is never a use of
- * itself.
+ * Blanks the name of a leading `function name(` so the recursive carve does not
+ * mistake a `const x = function name(…) {…}` binding's own function expression
+ * for a symbol nested inside it — which would leave the binding's slice empty
+ * and gate its body on the inner name being used instead of on `x` being
+ * called. The name is replaced by spaces so the chunk's length is unchanged.
  */
-export function sliceFunctions(code: string): ModuleSlices {
-  const functions: FunctionBody[] = [];
+function anonymizeLeadingFunction(chunk: string): string {
+  const match = /^(\s*(?:async\s+)?function\s*\*?\s*)([A-Za-z_$][\w$]*)/.exec(chunk);
+  if (match === null) return chunk;
+  const head = match[1] ?? "";
+  const name = match[2] ?? "";
+  return head + " ".repeat(name.length) + chunk.slice(head.length + name.length);
+}
+
+/**
+ * Carves every function body out of `code`, appending each — and every function
+ * nested inside it — to `out`, and returns the code left over.
+ *
+ * A nested declaration is a symbol of its own, not part of the enclosing body:
+ * `validate.ts` declares `runProfileOwnValidators` inside `runProfileValidators`,
+ * and reaching the outer function must not admit an inner body nothing invokes.
+ * Otherwise deleting the inner call would leave every validator it names reading
+ * as wired — exactly the disconnection this guard exists to catch.
+ */
+function carveFunctions(code: string, out: FunctionBody[]): string {
   let residue = "";
   let cursor = 0;
   for (const candidate of collectCandidates(code)) {
@@ -600,15 +768,29 @@ export function sliceFunctions(code: string): ModuleSlices {
         ? findBlockBody(code, chunkStart)
         : findValueBody(code, chunkStart);
     if (body === undefined) continue;
-    functions.push({
-      name: candidate.name,
-      code: code.slice(chunkStart, body.end),
-      exported: candidate.exported,
-    });
+    const nested: FunctionBody[] = [];
+    const own = carveFunctions(anonymizeLeadingFunction(code.slice(chunkStart, body.end)), nested);
+    out.push({ name: candidate.name, code: own, exported: candidate.exported }, ...nested);
     residue += code.slice(cursor, candidate.index);
     cursor = body.end;
   }
-  residue += code.slice(cursor);
+  return residue + code.slice(cursor);
+}
+
+/**
+ * Splits executable code (already comment- and literal-free) into named
+ * function bodies — nested ones included, each as an independent symbol — and
+ * the module-level residue.
+ *
+ * The parameter list travels with the body, not with the residue: a default
+ * argument (`function unused(value = validateFoo()) {}`) is evaluated per call,
+ * so it must not make `validateFoo` reachable while `unused` itself is dead.
+ * The declared name is left out of both, so a definition is never a use of
+ * itself.
+ */
+export function sliceFunctions(code: string): ModuleSlices {
+  const functions: FunctionBody[] = [];
+  const residue = carveFunctions(code, functions);
   return { residue, functions };
 }
 
@@ -656,7 +838,7 @@ function normalizeModulePath(file: string): string {
 
 function prepareModule(module: WiringModule): PreparedModule {
   const executable = stripCommentsAndLiterals(module.source);
-  const slices = sliceFunctions(stripModuleBindingStatements(executable));
+  const slices = sliceFunctions(stripTypeDeclarations(stripModuleBindingStatements(executable)));
   const bodies = new Map<string, string[]>();
   const exportedFunctions: string[] = [];
   for (const fn of slices.functions) {

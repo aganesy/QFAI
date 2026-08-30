@@ -139,6 +139,38 @@ describe("identifiersIn over executable code", () => {
     expect(namesUsedIn("validators.validateFoo(root, config);").has("validateFoo")).toBe(true);
     expect(namesUsedIn("const registry = [validators.validateFoo];").has("validateFoo")).toBe(true);
   });
+
+  it("does not see an object key that merely repeats a validator name", () => {
+    expect(namesUsedIn("const registry = { validateFoo: noop };").has("validateFoo")).toBe(false);
+    expect(namesUsedIn("const registry = { a: 1, validateFoo: noop };").has("validateFoo")).toBe(
+      false,
+    );
+  });
+
+  it("does not see a property declared in a class body", () => {
+    const names = namesUsedIn(
+      ["class Registry {", "  ready = true;", "  validateFoo: Validator;", "}"].join("\n"),
+    );
+    expect(names.has("validateFoo")).toBe(false);
+  });
+
+  it("does not see a name that lives only in the type domain", () => {
+    expect(namesUsedIn("type Slot = typeof validateFoo;").has("validateFoo")).toBe(false);
+    expect(
+      namesUsedIn(
+        ["export interface Registry {", "  slot: typeof validateFoo;", "}"].join("\n"),
+      ).has("validateFoo"),
+    ).toBe(false);
+  });
+
+  it("still sees a validator handed in as the value of a property", () => {
+    expect(namesUsedIn("const registry = { foo: validateFoo };").has("validateFoo")).toBe(true);
+    expect(namesUsedIn("const registry = { validateFoo };").has("validateFoo")).toBe(true);
+  });
+
+  it("still sees a validator picked by a ternary", () => {
+    expect(namesUsedIn("const fn = strict ? validateFoo : noop;").has("validateFoo")).toBe(true);
+  });
 });
 
 describe("buildWiringGraph", () => {
@@ -413,6 +445,90 @@ describe("buildWiringGraph", () => {
     expect(graph.isCalled("validateFoo")).toBe(false);
   });
 
+  it("does not count a call inside a nested helper the enclosing function never calls", () => {
+    // The shape `validate.ts` actually has: `runProfileOwnValidators` lives
+    // inside `runProfileValidators`. Reaching the outer function must not admit
+    // an inner body nothing invokes, or deleting the inner call would go unseen.
+    const graph = buildWiringGraph(
+      entry(
+        [
+          'import { validateFoo } from "./validators/index.js";',
+          "export function run(root) {",
+          "  async function runOwnValidators(target) {",
+          "    return validateFoo(target);",
+          "  }",
+          "  return [];",
+          "}",
+        ].join("\n"),
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("counts a call inside a nested helper the enclosing function does call", () => {
+    const graph = buildWiringGraph(
+      entry(
+        [
+          'import { validateFoo } from "./validators/index.js";',
+          "export function run(root) {",
+          "  async function runOwnValidators(target) {",
+          "    return validateFoo(target);",
+          "  }",
+          "  return runOwnValidators(root);",
+          "}",
+        ].join("\n"),
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+
+  it("does not count a call inside a nested arrow the enclosing function never calls", () => {
+    const graph = buildWiringGraph(
+      entry(
+        [
+          "export function run(root) {",
+          "  const runOwn = (target) => validateFoo(target);",
+          "  return [];",
+          "}",
+        ].join("\n"),
+      ),
+      [BARREL],
+    );
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("does not count a call inside an unused function with a union return type", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_(
+        "/src/core/validators/shapes.ts",
+        "export function unused(): { ok: boolean } | null {\n  return validateFoo(root);\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("does not count a call inside an unused function with a generic object return type", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return [];\n}"), [
+      module_(
+        "/src/core/validators/shapes.ts",
+        "export async function unused(): Promise<{ ok: boolean } | null> {\n  validateFoo(root);\n  return null;\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(false);
+  });
+
+  it("counts a call inside a reachable function with a union return type", () => {
+    const graph = buildWiringGraph(entry("export function run() {\n  return unused();\n}"), [
+      module_(
+        "/src/core/validators/shapes.ts",
+        "export function unused(): { ok: boolean } | null {\n  return validateFoo(root);\n}",
+      ),
+    ]);
+    expect(graph.isCalled("validateFoo")).toBe(true);
+  });
+
   it("still resolves a call that carries no import edge at all", () => {
     const graph = buildWiringGraph(
       entry("export function run(root) {\n  return helper(root);\n}"),
@@ -435,6 +551,32 @@ describe("collectModuleBindings", () => {
       ),
     );
     expect(bindings.runtimeSpecifiers).toEqual([]);
+  });
+
+  it("ignores an edge whose named specifiers are all inline type-only", () => {
+    const bindings = collectModuleBindings(
+      [
+        'import { type Issue } from "./dead.js";',
+        'export { type Issue as Alias } from "./dead2.js";',
+      ].join("\n"),
+    );
+    expect(bindings.runtimeSpecifiers).toEqual([]);
+  });
+
+  it("keeps an edge that mixes an inline type specifier with a value one", () => {
+    const bindings = collectModuleBindings('import { type Issue, validateFoo } from "./foo.js";');
+    expect(bindings.runtimeSpecifiers).toEqual(["./foo.js"]);
+    expect(bindings.imports.get("validateFoo")?.imported).toBe("validateFoo");
+  });
+
+  it("keeps an edge whose only runtime binding sits outside the braces", () => {
+    const bindings = collectModuleBindings('import fs, { type Stats } from "./fs.js";');
+    expect(bindings.runtimeSpecifiers).toEqual(["./fs.js"]);
+  });
+
+  it("keeps an empty named clause, which still evaluates the module", () => {
+    const bindings = collectModuleBindings('import {} from "./register.js";');
+    expect(bindings.runtimeSpecifiers).toEqual(["./register.js"]);
   });
 
   it("ignores a specifier written in a comment or inside a template literal", () => {
