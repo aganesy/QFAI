@@ -182,6 +182,31 @@ export async function runInit(options: InitOptions): Promise<void> {
   const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
     .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
     .map((name) => path.join(".github", "workflows", name));
+
+  // The workflow directory is CREATED here, before the copy, so its identity is one this run
+  // established rather than one it found afterwards.
+  //
+  // Review finding [129]. When a component did not exist before the copy there was nothing to
+  // compare it against, so the reading taken AFTER the copy became its identity — and on a first
+  // `init` that reading proves nothing about which directory the copy actually wrote into. A
+  // concurrent process that moved the freshly created `.github/workflows` aside and put another
+  // real directory at the name had that substitute settled as the identity, and provenance
+  // recorded workflows that are not where the record says they are. The next run reads those
+  // names as `declined` and never writes them again.
+  //
+  // `copyTemplatePaths` would create it either way; doing it here means the identity below is
+  // read from a directory this process made, with no window in which the question is open.
+  // `mkdir` is recursive and therefore silent on an existing directory, so this is not a claim
+  // that we created it — the identity read that follows is what settles that, and it uses
+  // `lstat`, which refuses a symlink swapped in between the two calls.
+  if (workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0) {
+    await mkdir(path.join(destRoot, ".github", "workflows"), { recursive: true });
+  }
+  const workflowAncestorsPinned =
+    workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0
+      ? await workflowAncestorIdentity(destRoot)
+      : workflowAncestorsBefore;
+
   const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths, {
     force: false,
     dryRun: options.dryRun,
@@ -204,9 +229,9 @@ export async function runInit(options: InitOptions): Promise<void> {
   // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
   // rather than as ours to overwrite.
   const settled =
-    workflowAncestorsBefore === undefined || options.dryRun
+    workflowAncestorsPinned === undefined || options.dryRun
       ? undefined
-      : await settleWorkflowAncestors(destRoot, workflowAncestorsBefore);
+      : await settleWorkflowAncestors(destRoot, workflowAncestorsPinned);
   const workflowsSwapped =
     workflowAncestorsBefore !== undefined && !options.dryRun && settled === undefined;
   if (workflowsSwapped) {
@@ -2240,7 +2265,7 @@ export function isWorkflowDestination(destination: string, destRoot: string): bo
  * about to fill, and absence before the copy is the ordinary first-run state. What must not
  * change is a directory that existed into a different one.
  */
-async function workflowAncestorIdentity(
+export async function workflowAncestorIdentity(
   destRoot: string,
 ): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
   const identities: Array<{ dev: number; ino: number } | null> = [];
@@ -2266,7 +2291,7 @@ async function workflowAncestorIdentity(
  * One that was absent and has since been created is the copy's own work. One that changed
  * identity is the swap this comparison exists to catch.
  */
-async function settleWorkflowAncestors(
+export async function settleWorkflowAncestors(
   destRoot: string,
   before: Array<{ dev: number; ino: number } | null>,
 ): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
@@ -2276,14 +2301,18 @@ async function settleWorkflowAncestors(
   for (const [index, identity] of before.entries()) {
     const observed = after[index] ?? null;
     if (identity === null) {
-      // Absent before the copy, so there is nothing to compare it against — this reading IS the
-      // identity, and from here on it is pinned. Review finding [121]: this branch used to
-      // return `true` and stop, so a directory the copy had just created could be moved aside
-      // and replaced with any other real directory, and the swap was never detected. The record
-      // then named workflows that are not where the record says they are, and the next run reads
-      // those names as `declined` and never writes them again.
-      settled.push(observed);
-      continue;
+      // A component with no identity to compare against is a REFUSAL, not an observation.
+      //
+      // Review finding [121] made this branch stop returning `true`, and review finding [129]
+      // showed that settling on the post-copy reading was not enough either: that reading says
+      // nothing about WHICH directory the copy wrote into, so a substitute put there by another
+      // process was pinned just as readily as the real one.
+      //
+      // The caller creates the workflow directory before the copy and reads its identity from
+      // the directory it made, so on every path that writes a workflow there is nothing absent
+      // here to begin with. Reaching this branch means a component vanished between that read
+      // and this one, which is exactly the event the comparison exists to catch.
+      return undefined;
     }
     if (observed === null || observed.dev !== identity.dev || observed.ino !== identity.ino) {
       return undefined;

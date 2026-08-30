@@ -1367,7 +1367,7 @@ describe("the workflows parent is pinned across the copy, not only before it", (
       "const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths",
     );
     const compared = source.indexOf(
-      "await settleWorkflowAncestors(destRoot, workflowAncestorsBefore)",
+      "await settleWorkflowAncestors(destRoot, workflowAncestorsPinned)",
     );
 
     expect(captured, "the identity must be captured").toBeGreaterThan(-1);
@@ -1382,7 +1382,7 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     // retired-name prune was found enumerating a linked workflows directory.
     const source = await readInitSource();
     const start = source.indexOf(
-      "await settleWorkflowAncestors(destRoot, workflowAncestorsBefore)",
+      "await settleWorkflowAncestors(destRoot, workflowAncestorsPinned)",
     );
     expect(start, "the comparison must exist to be checked").toBeGreaterThan(-1);
     const block = source.slice(start, source.indexOf("recordInstalledWorkflows(", start));
@@ -1453,7 +1453,7 @@ describe("the workflows parent is pinned across the copy, not only before it", (
       /workflowsDirIsOwn\s*&&\s*!workflowsSwapped/,
     );
   });
-  it("pins the identity of a directory the copy itself created", async () => {
+  it("establishes the workflow directory identity rather than observing it after the copy", async () => {
     // Review finding [121]. A component absent before the copy had no identity to compare
     // against, and the comparison returned `true` for it and stopped looking — so on a first
     // `init`, where `.github` and `.github/workflows` are both created by the copy, ANY real
@@ -1467,16 +1467,52 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     // that the settled value is what the record is checked against.
     const source = await readInitSource();
 
-    const settle = source.indexOf("async function settleWorkflowAncestors(");
-    expect(settle, "the settle function must exist").toBeGreaterThan(-1);
-    const body = source.slice(settle, source.indexOf("\n}", settle));
+    // The refusal is MEASURED rather than matched. A regex over the branch was tried and a
+    // plant defeated it: the lazy span reached the `return undefined` of the NEXT branch, so
+    // restoring `settled.push(observed)` left the row green. Calling the function answers the
+    // question the finding actually asks.
+    const dir = await newTempDir();
+
+    // A component that existed before: its identity is carried through unchanged.
+    await mkdir(path.join(dir, ".github", "workflows"), { recursive: true });
+    const present = await initModule.workflowAncestorIdentity(dir);
+    expect(present, "the fixture must be readable").not.toBeUndefined();
     expect(
-      body,
-      "a component absent before the copy must take this reading as its identity",
-    ).toMatch(/settled\.push\(observed\)/);
-    expect(body, "and must not be waived — returning early for it is the defect").not.toMatch(
-      /if \(identity === null\) (?:return|continue);/,
-    );
+      await initModule.settleWorkflowAncestors(dir, present ?? []),
+      "an unchanged tree settles on the identity it already had",
+    ).toEqual(present);
+
+    // A component that did NOT exist before — `null` in the pre-copy reading — is refused, even
+    // though a perfectly good real directory is standing there now. That directory is exactly
+    // what an attacker substitutes, and the post-copy reading cannot tell the two apart.
+    const fresh = await newTempDir();
+    const absent = await initModule.workflowAncestorIdentity(fresh);
+    expect(absent, "the premise: both components are absent, so the reading is all nulls").toEqual([
+      null,
+      null,
+    ]);
+    await mkdir(path.join(fresh, ".github", "workflows"), { recursive: true });
+    expect(
+      await initModule.settleWorkflowAncestors(fresh, absent ?? []),
+      "a component absent before the copy must be refused, not settled on what appeared",
+    ).toBeUndefined();
+
+    // …and the caller ESTABLISHES the identity rather than discovering it: the directory is
+    // created before the copy and read back, so on every path that writes a workflow there is
+    // no absent component for the branch above to reach.
+    const created = source.indexOf('await mkdir(path.join(destRoot, ".github", "workflows")');
+    const pinned = source.indexOf("const workflowAncestorsPinned =");
+    expect(
+      source.slice(pinned, pinned + 400),
+      "the pinned identity must be READ after the creation, not carried over from before it",
+    ).toMatch(/\?\s*await workflowAncestorIdentity\(destRoot\)/);
+    const copyAt = source.indexOf("const workflowResult = await copyTemplatePaths(");
+    expect(created, "the workflow directory must be created by this run").toBeGreaterThan(-1);
+    expect(pinned, "and its identity read after that creation").toBeGreaterThan(created);
+    expect(
+      copyAt,
+      "both before the copy, so there is no window in which the question is open",
+    ).toBeGreaterThan(pinned);
 
     // …and the record compares against the settled value, not merely `a real directory`, which
     // every swapped-in real directory also satisfies.
