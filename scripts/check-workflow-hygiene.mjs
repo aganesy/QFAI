@@ -464,7 +464,14 @@ function lifecycleManifests(root) {
   const names = text
     .split(/\r?\n/)
     .map((line) => line.trim())
-    .filter((line) => line !== "" && !line.startsWith("#"));
+    .filter((line) => line !== "" && !line.startsWith("#"))
+    // Each entry is `<sha256>  <path>`, the digest being of that manifest's lifecycle
+    // projection — review finding [124], which the pre-flight enforces before `pnpm install`.
+    // The lane reads only the PATH half: what it checks is that the declaration pins an install
+    // lifecycle for every manifest the list names, which is a question about the declaration and
+    // not about hook bodies. A bare path is still read, so a hand-edited list that has not been
+    // resealed yet is understood rather than silently emptied.
+    .map((line) => /^[0-9a-f]{64} {2}(.+)$/.exec(line)?.[1] ?? line);
   return names.length === 0 ? undefined : names;
 }
 

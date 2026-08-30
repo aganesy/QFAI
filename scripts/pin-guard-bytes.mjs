@@ -28,6 +28,8 @@ import path from "node:path";
 import { argv, cwd, exit, stdout } from "node:process";
 import { fileURLToPath } from "node:url";
 
+import { LIFECYCLE_MANIFESTS_REL, lifecycleProjection } from "./check-lifecycle-manifests.mjs";
+
 /** The roots whose every file is pinned, repo-relative and POSIX-separated. */
 const PINNED_ROOTS = [".github/actions", "scripts"];
 
@@ -109,6 +111,38 @@ function main(root) {
   }
   writeFileSync(declarationPath, `${JSON.stringify(declaration, null, 2)}\n`, "utf-8");
   stdout.write(`pinned into ${DECLARATION_REL}\n`);
+
+  // THEN the lifecycle allow-list, whose entries pin what each listed manifest runs at install
+  // time rather than merely naming it. Review finding [124]: being on the list permitted a
+  // manifest to run code at install time AND permitted that code to change unseen, so the root
+  // `preinstall` could become a step that neuters every later guard shell in the job.
+  //
+  // The digest is over the lifecycle PROJECTION, not the whole file, so a dependency bump or an
+  // ordinary script edit is not a pre-flight edit and a change to what runs at install time is.
+  // Paths are read from the file as it stands: which manifests are allowed is a human decision,
+  // and this tool re-pins what they run, never widens who may run it.
+  const listedPath = path.join(root, LIFECYCLE_MANIFESTS_REL);
+  const listedText = readFileSync(listedPath, "utf-8");
+  const listedLines = listedText.split(/\r?\n/);
+  const rewritten = [];
+  for (const line of listedLines) {
+    const trimmed = line.trim();
+    if (trimmed === "" || trimmed.startsWith("#")) {
+      rewritten.push(line);
+      continue;
+    }
+    const rel = /^[0-9a-f]{64} {2}(.+)$/.exec(trimmed)?.[1] ?? trimmed;
+    const projection = lifecycleProjection(path.join(root, rel));
+    if (projection === undefined) {
+      stdout.write(`${rel} is not readable as JSON, so its lifecycle cannot be pinned\n`);
+      return 1;
+    }
+    rewritten.push(`${projection.digest}  ${rel}`);
+    stdout.write(
+      `${projection.digest}  ${rel} (lifecycle: ${projection.keys.length === 0 ? "none" : projection.keys.join(", ")})\n`,
+    );
+  }
+  writeFileSync(listedPath, rewritten.join("\n"), "utf-8");
 
   // AND the workflow, last: the pre-flight and every file it reads its expectations out of.
   const workflowPath = path.join(root, WORKFLOW_REL);

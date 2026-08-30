@@ -1591,21 +1591,33 @@ describe("the pre-flight compares sets, and refuses code that runs at install ti
     // hook had it run before every verification, in a manifest nothing examined.
     //
     // Refused in the pre-flight because that is before `pnpm install`, the only moment that
-    // helps.
-    const source = readFileSync(
+    // helps. The computation itself moved into `scripts/check-lifecycle-manifests.mjs` when
+    // review finding [124] made it more than a grep; it is byte-verified before it runs, and
+    // this row pins that ordering because it is what makes running it safe at all.
+    const shell = readFileSync(
       path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh"),
       "utf-8",
     );
-    expect(source, "the allow-list must be read").toMatch(/lifecycle-manifests\.txt/);
-    expect(
-      source,
-      "every manifest in the tree must be searched, not only the ones already named",
-    ).toMatch(/find \. -name package\.json/);
-    expect(source, "and every lifecycle hook pnpm honours must be named").toMatch(
-      /"preinstall", "install", "postinstall", "prepare", "prepublishOnly"/,
+    const guard = readFileSync(
+      path.join(REPO_ROOT, "scripts", "check-lifecycle-manifests.mjs"),
+      "utf-8",
+    );
+
+    expect(shell, "the pre-flight must run the lifecycle guard").toMatch(
+      /node .*check-lifecycle-manifests\.mjs/,
     );
     expect(
-      source,
+      shell.indexOf("check-lifecycle-manifests.mjs"),
+      "after the pinned-bytes verification, which is what makes running it safe",
+    ).toBeGreaterThan(shell.indexOf("sha256sum -c --quiet"));
+
+    expect(guard, "the allow-list must be read").toMatch(/lifecycle-manifests\.txt/);
+    expect(
+      guard,
+      "every manifest in the tree must be searched, not only the ones already named",
+    ).toMatch(/manifestsUnder/);
+    expect(
+      guard,
       "read out of the parsed JSON. Review finding [118]: a pattern over line shape misses a " +
         "valid one-line manifest, which the executing rows further down measure",
     ).toMatch(/JSON\.parse\(readFileSync/);
@@ -1837,6 +1849,147 @@ describe("the pre-flight is run against planted trees, not read", () => {
             `a re-listed action must not verify against the list it rewrote:\n${run.output}`,
           )
           .toBe(1);
+      },
+    );
+  });
+  it("refuses a package declaring any hook the package manager runs at install time", () => {
+    // Review finding [125]. The first list stopped at `preinstall` / `install` / `postinstall`
+    // plus `prepare`, and the reviewer measured pnpm 10.28.1 running `preprepare` and
+    // `postprepare` too — so a package declaring only one of those was read as hookless and
+    // passed, and its hook could append to the environment file every later guard shell reads.
+    //
+    // Every hook is exercised rather than the two that were missing: a list is the kind of thing
+    // that loses a member in an edit, and a row naming only the new members would not notice.
+    for (const hook of [
+      "preinstall",
+      "install",
+      "postinstall",
+      "preprepare",
+      "prepare",
+      "postprepare",
+      "prepublish",
+      "prepack",
+      "postpack",
+    ]) {
+      withTree(
+        (dir) =>
+          manifest(dir, `{"name":"planted","private":true,"scripts":{"${hook}":"echo planted"}}`),
+        (dir) => {
+          const run = runPreflight(dir);
+          expect
+            .soft(run.status, `a package declaring ${hook} must be refused:\n${run.output}`)
+            .toBe(1);
+          expect.soft(run.output, `and ${hook} named in the finding`).toContain(hook);
+        },
+      );
+    }
+  });
+
+  it("refuses an allow-listed manifest whose hook body changed", () => {
+    // Review finding [124]. `package.json` and `packages/qfai/package.json` were on the list, and
+    // the list named PATHS — so the root `preinstall`, which really does run in every job before
+    // every verification, could become anything at all and pass. Being on the allow-list permits
+    // a manifest to run code at install time; it does not permit that code to change unseen.
+    withTree(
+      (dir) => {
+        const file = path.join(dir, "package.json");
+        const parsed = JSON.parse(readFileSync(file, "utf-8")) as {
+          scripts?: Record<string, string>;
+        };
+        parsed.scripts = {
+          ...(parsed.scripts ?? {}),
+          preinstall: "echo planted",
+        };
+        writeFileSync(file, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+      },
+      (dir) => {
+        const run = runPreflight(dir);
+        expect.soft(run.status, `a rewritten hook body must be refused:\n${run.output}`).toBe(1);
+        expect
+          .soft(run.output, "and the finding must say the pins disagree, not that it is unlisted")
+          .toMatch(/are not the ones .*lifecycle-manifests\.txt pins/);
+      },
+    );
+  });
+
+  it("refuses an allow-listed manifest that gained a hook it did not have", () => {
+    // The other half of [124], and the one a whole-file digest would also catch — but a whole-file
+    // digest makes every dependency bump a pre-flight edit, so the pin is over the lifecycle
+    // projection alone and this row is what says the projection still notices an addition.
+    withTree(
+      (dir) => {
+        const file = path.join(dir, "packages", "qfai", "package.json");
+        const parsed = JSON.parse(readFileSync(file, "utf-8")) as {
+          scripts?: Record<string, string>;
+        };
+        parsed.scripts = { ...(parsed.scripts ?? {}), postinstall: "echo planted" };
+        writeFileSync(file, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+      },
+      (dir) => {
+        const run = runPreflight(dir);
+        expect.soft(run.status, `an added hook must be refused:\n${run.output}`).toBe(1);
+      },
+    );
+  });
+
+  it("passes an allow-listed manifest whose unrelated scripts change", () => {
+    // The direction that decides whether the pin is over the projection or over the file. A
+    // dependency bump or an ordinary script edit must NOT be a pre-flight edit — otherwise the
+    // list is resealed so often that nobody reads the diff, which is the failure this whole
+    // arrangement exists to avoid.
+    withTree(
+      (dir) => {
+        const file = path.join(dir, "package.json");
+        const parsed = JSON.parse(readFileSync(file, "utf-8")) as {
+          scripts?: Record<string, string>;
+          devDependencies?: Record<string, string>;
+        };
+        parsed.scripts = { ...(parsed.scripts ?? {}), "planted:script": "echo planted" };
+        parsed.devDependencies = { ...(parsed.devDependencies ?? {}), planted: "1.2.3" };
+        writeFileSync(file, `${JSON.stringify(parsed, null, 2)}\n`, "utf-8");
+      },
+      (dir) => {
+        const run = runPreflight(dir);
+        expect(
+          run.status,
+          `an unrelated script and a dependency must not be a pre-flight edit:\n${run.output}`,
+        ).toBe(0);
+      },
+    );
+  });
+
+  it("refuses an allow-list entry that pins nothing", () => {
+    // A bare path was the old format. Accepting it now would be accepting exactly the state
+    // review finding [124] describes — a manifest permitted to run code with no pin on what.
+    withTree(
+      (dir) => {
+        const list = path.join(dir, ".github", "lifecycle-manifests.txt");
+        writeFileSync(list, readFileSync(list, "utf-8").replace(/^[0-9a-f]{64} {2}/m, ""), "utf-8");
+      },
+      (dir) => {
+        const run = runPreflight(dir);
+        expect.soft(run.status, `an entry pinning nothing must be refused:\n${run.output}`).toBe(1);
+        expect.soft(run.output).toMatch(/cannot read/i);
+      },
+    );
+  });
+
+  it("refuses a pin naming a manifest the tree does not hold", () => {
+    // A pin protecting nothing hides the rename that removed it, and leaves the list reading as
+    // though a manifest were still being watched.
+    withTree(
+      (dir) => {
+        const list = path.join(dir, ".github", "lifecycle-manifests.txt");
+        writeFileSync(
+          list,
+          `${readFileSync(list, "utf-8").trimEnd()}\n${"0".repeat(64)}  packages/gone/package.json\n`,
+          "utf-8",
+        );
+      },
+      (dir) => {
+        const run = runPreflight(dir);
+        expect.soft(run.status, `a pin protecting nothing must be refused:\n${run.output}`).toBe(1);
+        expect.soft(run.output).toMatch(/not a regular file in this tree/);
       },
     );
   });

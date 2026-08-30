@@ -13,6 +13,16 @@
 # the tree that declares one of those hooks must be on this list. Adding a package that needs
 # one is a change to this file, in the diff, beside the package.
 #
-# One path per line, relative to the repository root.
-package.json
-packages/qfai/package.json
+# One `<sha256>  <path>` entry per line, relative to the repository root.
+#
+# The digest is over the manifest's lifecycle PROJECTION — its hook keys and bodies, in a fixed
+# order — and not over the whole file. Review finding [124]: being on this list permitted a
+# manifest to run code at install time AND permitted that code to change unseen, so the root
+# `preinstall` could quietly become a step that neuters every later guard shell in the job.
+# Projecting rather than digesting the file keeps a dependency bump out of this diff and puts a
+# change to what runs at install time squarely in it.
+#
+# Reseal with `node scripts/pin-guard-bytes.mjs`, which re-pins what the listed manifests run and
+# never widens WHICH manifests are listed — that stays a human edit.
+ea712b76d5dea7c495ffd2d5472f6b3894e749a0693f1ab145df7a4957c02070  package.json
+3db2e6b28bf4117f860678d2f0e14c422319520751412635a7ed403797335ba0  packages/qfai/package.json

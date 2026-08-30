@@ -356,9 +356,9 @@ jobs:
           # So the root of trust for everything that runs before the hygiene lane is this step's
           # body, which `verificationBodies` pins and a reviewer reads in the diff.
           sha256sum -c --quiet <<'PINNED_INPUTS'
-          a0728e3df2e117300504efec998afbfa1195322ef4358ad5bac83d524db60077  scripts/check-toolchain-action.sh
-          995c856b9394b0d2d379cb7f3f1323fb316976a74808ce56f8c54c711f7451f2  .github/pinned-bytes.txt
-          7eeb1639c17b07bcd92062931af6fd6c536fb039e26e4eb78570882073ed2082  .github/lifecycle-manifests.txt
+          a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777  scripts/check-toolchain-action.sh
+          9062c1e4874d576439b71c52ce1c69ab00928e31a4b7dba4a49598f0555e27f5  .github/pinned-bytes.txt
+          bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
           43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
           PINNED_INPUTS
           bash ./scripts/check-toolchain-action.sh
