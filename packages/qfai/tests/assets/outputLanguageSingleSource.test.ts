@@ -18,14 +18,29 @@
  * constitution promised English, with no opt-out.
  *
  * The block is gone; what remains is a pointer at the one rule. These
- * assertions keep the shipped tree at one source: no constitution file may
- * hard-code an output language again.
+ * assertions keep the shipped tree at one source: no assistant document may
+ * bind output to a named language again.
+ *
+ * The tree-wide sweep does not look for the two Japanese strings that happened
+ * to leak in — the defect is a *class*, and `Always respond in English` or
+ * `出力は日本語とする` recreates it word-for-word differently. It delegates to
+ * {@link findFixedLanguageDirectives}, which matches directive *shapes* in
+ * both languages and admits exactly two ways to name a language: a clause
+ * conditional on the user's own language, and an explicit disclaimer that the
+ * file pins nothing. The matcher's own coverage — what it must catch, and the
+ * legitimate phrasings it must leave alone — is asserted at the bottom of this
+ * file.
  */
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
+
+import {
+  findFixedLanguageDirectives,
+  fixedLanguageOffenders,
+} from "../helpers/fixedOutputLanguage.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
@@ -70,9 +85,13 @@ describe("output language is stated in one place only", () => {
     it(`${tree}: agent-selection.md pins no language`, async () => {
       const text = await read(tree, AGENT_SELECTION);
 
+      // The exact block that leaked in, pinned by its literal wording so the
+      // regression that started this is named, not merely covered by class.
       expect(text).not.toContain("言語指示");
       expect(text).not.toContain("厳守");
       expect(text).not.toContain("報告・出力: 日本語");
+      // And the class it belongs to, whatever the wording.
+      expect(fixedLanguageOffenders(AGENT_SELECTION, text)).toEqual([]);
     });
 
     it(`${tree}: agent-selection.md points at the Absolute Rule instead`, async () => {
@@ -92,7 +111,7 @@ describe("output language is stated in one place only", () => {
       );
     });
 
-    it(`${tree}: no shipped assistant file hard-codes an output language`, async () => {
+    it(`${tree}: no shipped assistant file binds output to a named language`, async () => {
       const assistantDir = path.join(repoRoot, tree, "assistant");
       const files = await collectMarkdown(assistantDir);
       expect(files.length).toBeGreaterThan(0);
@@ -100,12 +119,67 @@ describe("output language is stated in one place only", () => {
       const offenders: string[] = [];
       for (const rel of files) {
         const text = await readFile(path.join(assistantDir, rel), "utf-8");
-        if (text.includes("言語指示") || text.includes("報告・出力: 日本語")) {
-          offenders.push(rel);
-        }
+        offenders.push(...fixedLanguageOffenders(rel, text));
       }
 
       expect(offenders).toEqual([]);
+    });
+  }
+});
+
+/**
+ * The sweep above is only as good as this matcher, so the matcher is pinned
+ * directly: the left column is what a re-port of the defect could look like,
+ * the right column is what already ships and must stay legal.
+ */
+describe("fixed-language directive matcher", () => {
+  const CAUGHT: ReadonlyArray<readonly [string, string]> = [
+    ["the original ported header", "> **言語指示（厳守）**"],
+    ["the original ported bullet", "> - 報告・出力: 日本語（Plan も含む）"],
+    ["an English directive", "Always respond in English."],
+    ["an English directive, passive", "All reports MUST be written in Japanese."],
+    ["an English exclusivity clause", "Use English only for user-facing output."],
+    ["an English key/value pin", "Output language: English"],
+    ["a Japanese directive", "出力は日本語とする。"],
+    ["a Japanese directive, emphatic", "必ず英語で回答すること。"],
+    ["a Japanese exclusivity clause", "ユーザー向けの応答は日本語に統一する。"],
+    ["a directive soft-wrapped over two lines", "Every plan is\nwritten in English."],
+  ];
+
+  for (const [label, sample] of CAUGHT) {
+    it(`catches ${label}`, () => {
+      expect(findFixedLanguageDirectives(sample)).not.toEqual([]);
+    });
+  }
+
+  const PERMITTED: ReadonlyArray<readonly [string, string]> = [
+    ["the Absolute Rule itself", ABSOLUTE_RULE],
+    ["the rule restated per language", "- If the user writes in Japanese, output Japanese."],
+    ["the rule restated per language (en)", "- If the user writes in English, output English."],
+    [
+      "the mixed-language tie-break",
+      "- If the user mixes languages, prefer the dominant language unless explicitly instructed otherwise.",
+    ],
+    [
+      "a per-language literal under a user-language instruction",
+      "You MUST end the output with a handoff sentence in the active user language.\n\n- Japanese output (use this exact sentence):",
+    ],
+    [
+      "the agent-selection disclaimer",
+      "> **出力言語**: `constitution.md` の Absolute Rule — Output Language に従う。\n" +
+        "> このファイルは出力言語を固定しない（本文が日本語であることは記述言語であって、\n" +
+        "> エージェントの出力に対する指示ではない）。",
+    ],
+    [
+      "prose that merely names a language",
+      "| `countWords` splits on `\\s+` | prose critiques pass trivially for Japanese/Chinese copy. |",
+    ],
+    ["a glossary term ending in 語", "- 用語・単語・述語は言語ごとに定義する。"],
+  ];
+
+  for (const [label, sample] of PERMITTED) {
+    it(`leaves ${label} alone`, () => {
+      expect(findFixedLanguageDirectives(sample)).toEqual([]);
     });
   }
 });
