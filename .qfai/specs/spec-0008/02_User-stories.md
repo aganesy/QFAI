@@ -27,3 +27,7 @@ As a QA Engineer, I want test cases evaluated for quality depth (boundary values
 ## US-0008-0007: ATDD Scaffold Bulk Skeleton Generation
 
 As a QA Engineer, I want `qfai atdd scaffold --spec spec-NNNN` to read the spec test*cases and emit one `tests/atdd/spec-NNNN/<TC-ID>.test.*`skeleton per TC (with framework primitives, a`// TODO: implement assertion for <TC-ID>`marker, and comment references to related US-* / CON-API-\_), so that I can bootstrap acceptance-test files in bulk without hand-creating each file — while`qfai validate`flags any unfilled placeholder via`D-SCAFFOLD-PLACEHOLDER` (warning, escalating to error after 3 validate cycles per DR-0272) and re-running the scaffold never overwrites my filled-in (non-TODO) content.
+
+## US-0008-0008: Worker-Scoped Credential-Reuse Guidance
+
+As a QA Engineer running acceptance tests in parallel, I want `/qfai-atdd` to carry backend-agnostic guidance on reusing one authenticated session per parallel worker — the seven session-reuse rules, the companion rule that a caller-injected environment identifier forbids the harness from provisioning or tearing that environment down, and the credential-class script-naming rule as adopter guidance — so that I can stop authenticating once per test without the guidance picking a browser backend for me, and without QFAI adding a validator, a finding code, a test layer or an annotation token to police it.
