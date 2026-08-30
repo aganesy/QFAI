@@ -1,4 +1,5 @@
 import path from "node:path";
+import { createHash, randomBytes } from "node:crypto";
 import { constants } from "node:fs";
 import type { Dirent, Stats } from "node:fs";
 import {
@@ -46,6 +47,18 @@ import {
   type AssistantLayer,
 } from "../../core/paths/assistantPaths.js";
 import { resolveToolVersion } from "../../core/version.js";
+import {
+  RETIRED_WORKFLOW_NAMES,
+  SHIPPED_WORKFLOW_NAMES,
+} from "../../shared/shippedWorkflowNames.js";
+import { readBoundedRegularFile } from "../../shared/boundedRead.js";
+import {
+  createWorkflowProvenanceEntry,
+  readInstallProvenance,
+  updateInstallProvenance,
+  type InstallProvenanceRecord,
+  type WorkflowProvenanceEntry,
+} from "../../shared/provenance.js";
 
 const execAsync = promisify(execCb);
 
@@ -120,14 +133,156 @@ export async function runInit(options: InitOptions): Promise<void> {
     ? await runUpgradeAssistantTree(destRoot, options.dryRun, toolVersion)
     : { copied: [], skipped: [], removed: [], preservedNotes: [] as string[] };
 
+  // Snapshot the shipped-workflow provenance state BEFORE the copy: the
+  // record decision keys off the pre-run state (an existing entry is never
+  // restamped — a declined name keeps its entry as-is), not off what the
+  // copy ends up writing.
+  const workflowPreInit = await captureShippedWorkflowPreInitState(destRoot);
+
+  // Declined names are excluded from the copy set BEFORE the copy runs:
+  // the file is absent on disk, so the create-only predicate ("write when
+  // absent") is exactly what would recreate it. Only pre-copy exclusion
+  // holds the declined row of the state table.
+  const workflowCopySet = resolveWorkflowCopySet(
+    SHIPPED_WORKFLOW_NAMES,
+    workflowPreInit.record,
+    workflowPreInit.presentOnDisk,
+  );
+  // …and every shipped name is excluded outright when the directory they would land in is
+  // not one this tree owns. Review finding [35]: `copyFile` — `COPYFILE_EXCL` included —
+  // follows a symlinked PARENT, so an adopter whose `.github` or `.github/workflows` points
+  // at a directory outside the repository had the workflows written there. The copy then
+  // reported those paths as written, the lexical comparison below counted them as in-repo
+  // (it resolves `..` and `.`, never a link), and provenance recorded QFAI as the owner of a
+  // file outside the tree — after which doctor's drift check and the retired prune both
+  // pointed at it too.
+  //
+  // Refused rather than followed, and refused for the workflows only: the rest of `init` is
+  // unaffected by what `.github` is, and failing the whole command over it would be a larger
+  // change to an adopter's tree than declining to write two files.
+  const workflowAncestorsBefore = await workflowAncestorIdentity(destRoot);
+  const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
+  if (!workflowsDirIsOwn) {
+    error(
+      ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
+    );
+  }
+  // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
+  //
+  // Review finding [123]: they used to ride along in the root copy, and the record followed it.
+  // A permission, I/O or disk error anywhere else in that copy — `DESIGN.md`, `qfai.config.yaml`,
+  // any of it — throws out of `copyTemplateTree` before the record runs, and the workflows are
+  // already on disk. An unrecorded shipped workflow reads as `adopter-owned` on every later run:
+  // never recorded again, invisible to doctor's drift detection, and outside the retired prune.
+  // The comment below the record already said nothing unrelated may run in between; the copy
+  // itself was the unrelated thing.
+  //
+  // Rolling back on failure was the alternative and is the wrong one here for the reason the swap
+  // branch gives: this command does not delete what it cannot verify it owns.
+  const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
+    .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
+    .map((name) => path.join(".github", "workflows", name));
+
+  // The workflow directory is CREATED here, before the copy, so its identity is one this run
+  // established rather than one it found afterwards.
+  //
+  // Review finding [129]. When a component did not exist before the copy there was nothing to
+  // compare it against, so the reading taken AFTER the copy became its identity — and on a first
+  // `init` that reading proves nothing about which directory the copy actually wrote into. A
+  // concurrent process that moved the freshly created `.github/workflows` aside and put another
+  // real directory at the name had that substitute settled as the identity, and provenance
+  // recorded workflows that are not where the record says they are. The next run reads those
+  // names as `declined` and never writes them again.
+  //
+  // `copyTemplatePaths` would create it either way; doing it here means the identity below is
+  // read from a directory this process made, with no window in which the question is open.
+  // `mkdir` is recursive and therefore silent on an existing directory, so this is not a claim
+  // that we created it — the identity read that follows is what settles that, and it uses
+  // `lstat`, which refuses a symlink swapped in between the two calls.
+  if (workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0) {
+    await mkdir(path.join(destRoot, ".github", "workflows"), { recursive: true });
+  }
+  const workflowAncestorsPinned =
+    workflowsDirIsOwn && !options.dryRun && workflowCopyPaths.length > 0
+      ? await workflowAncestorIdentity(destRoot)
+      : workflowAncestorsBefore;
+
+  const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths, {
+    force: false,
+    dryRun: options.dryRun,
+    conflictPolicy: "skip",
+  });
+
+  // The ancestors are still the directories that were inspected. Review finding [109]: the
+  // check above ran once and the copy performs many asynchronous operations, so a concurrent
+  // swap of `.github` or `.github/workflows` for a link had the shipped workflow created outside
+  // the repository, and the later re-check stopped the provenance record without unwriting
+  // anything.
+  //
+  // REPORTED and unrecorded, not deleted. A rollback would have to remove those files THROUGH
+  // the parent that was just found untrustworthy — following the link this command refused to
+  // follow, into a directory whose other contents are not ours. This repository already ruled on
+  // that once, when the retired-name prune was found enumerating a linked workflows directory:
+  // the run that declines to write through a link must not delete through it either.
+  //
+  // So the operator is told, precisely, and nothing records the write. Leaving the entries out
+  // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
+  // rather than as ours to overwrite.
+  // Only a run that actually tried to copy can have been swapped out from under one.
+  //
+  // Review finding [139], and a regression the previous round introduced: on a fresh clone
+  // where both shipped workflows are `declined` and `.github` does not exist, nothing is
+  // copied and no directory is created — but the pre-copy reading is `[null, null]`, not
+  // `undefined`. Making an absent component a refusal then turned that ordinary no-op into a
+  // reported swap, and the operator was told their workflows may have been written outside the
+  // repository when nothing had been written at all.
+  //
+  // The refusal is right and stays; what was wrong is asking the question when there is no copy
+  // to ask it about.
+  const attemptedWorkflowCopy = workflowCopyPaths.length > 0;
+  const settled =
+    !attemptedWorkflowCopy || workflowAncestorsPinned === undefined || options.dryRun
+      ? undefined
+      : await settleWorkflowAncestors(destRoot, workflowAncestorsPinned);
+  const workflowsSwapped =
+    attemptedWorkflowCopy &&
+    workflowAncestorsBefore !== undefined &&
+    !options.dryRun &&
+    settled === undefined;
+  if (workflowsSwapped) {
+    error(
+      ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
+    );
+    workflowResult.copied = [];
+  }
+
+  // Record provenance for the shipped workflow files this copy actually wrote (no-op on
+  // dry-run and when nothing new was written). Nothing runs between the copy and the record.
+  await recordInstalledWorkflows(
+    destRoot,
+    rootAssets,
+    workflowPreInit,
+    workflowResult.copied,
+    toolVersion,
+    options.dryRun,
+    settled,
+  );
+
   // root/ と .qfai/ は create-only（既存は skip）
   // STANDARD_ASSET_PATHS のみ --force で上書きする
+  //
+  // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
+  // it writes were written above, and the ones it declined must not arrive by another route.
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
     protect: ["DESIGN.md"],
+    exclude: [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
   });
+  // …and the summary counts them together, as one copy, which is what an operator sees.
+  rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
+  rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -156,7 +311,72 @@ export async function runInit(options: InitOptions): Promise<void> {
   const removedLegacySkills = options.force
     ? await pruneLegacySkillFiles(destRoot, options.dryRun)
     : [];
-  const removed = [...removedLegacySkills, ...wrappersResult.removed];
+
+  // Retired shipped workflows: retired-name-set membership AND recorded
+  // QFAI ownership, both. The adopter's `.github/workflows/` directory is
+  // adopter-authored; the `qfai-` filename prefix is a reservation notice,
+  // never a deletion selector, so a prefix predicate is forbidden here
+  // (shipped-workflows contract) — an adopter-created `qfai-*.yml` must stay
+  // untouched. Name membership alone is not the ownership test either: an
+  // adopter who authored a file under a name QFAI later retires has no
+  // provenance entry, and the acceptance criteria require provenance to be
+  // consulted before every overwrite and every prune.
+  // The SAME boundary the copy is held to, and for a worse reason. Review finding [68]:
+  // `workflowsDirIsOwn` excluded the copy and nothing else, so a `.github/workflows` that is a
+  // link to a shared directory or another repository was still ENUMERATED here — and a
+  // retired workflow on the far side whose bytes match a recorded digest was quarantined and
+  // deleted. The run that refused to write through the link would delete through it.
+  //
+  // Empty rather than skipped-with-a-message: the message is already emitted where the copy
+  // is excluded, and one refusal reported once is what an operator needs.
+  const removedRetiredWorkflows: string[] = [];
+  // A detected swap stops the prune as well as the record. Review finding [113]:
+  // `workflowsDirIsOwn` was computed BEFORE the copy and stayed `true`, so the retired-name
+  // prune went on to enumerate the swapped directory — and a retired workflow over there whose
+  // bytes match a recorded digest was quarantined and deleted. That is the exact operation the
+  // reporting-instead-of-deleting decision above exists to avoid, reached by another route: a
+  // run that declines to write through a swapped parent must not delete through it either.
+  const prunableRetiredNames =
+    workflowsDirIsOwn && !workflowsSwapped
+      ? await resolvePrunableRetiredWorkflows(destRoot, workflowPreInit.record)
+      : new Map<string, string>();
+  await pruneMatchingEntries(
+    path.join(destRoot, ".github", "workflows"),
+    (entry) => entry.isFile() && prunableRetiredNames.has(entry.name),
+    removedRetiredWorkflows,
+    options.dryRun,
+    // Re-asked here, against the file as it is now. `prunableRetiredNames` was computed before
+    // the copy above ran, and between the two the adopter — or a concurrent run — can put
+    // their own content under that name. The name would still match; the bytes would not.
+    // Review finding [30]. The primitive asks it a second time after moving the entry aside,
+    // which is why the digest is looked up by the entry's own NAME rather than by the basename
+    // of the path being read — after the move those are different strings.
+    async (target, name) => (await digestWorkflowFile(target)) === prunableRetiredNames.get(name),
+    // The entry goes with the file, in the same success unit. A pruned workflow whose provenance
+    // entry survives is read by the NEXT run as a name QFAI installed and the adopter deleted —
+    // the `declined` row — so the copy skips it forever. Retiring a workflow would silently
+    // poison the name against whatever ships under it later. Review finding [20].
+    //
+    // Review finding [34]: this ran AFTER the delete, as a separate step. A read-only `.qfai`, a
+    // full disk or a lock it could not take then left the file gone and the entry standing —
+    // which is exactly the poisoned name the paragraph above is about, reached by the code meant
+    // to prevent it. Running it while the files are still in quarantine means a failure here puts
+    // them back.
+    //
+    // Under the record lock and against the record on disk, not against the pre-init snapshot:
+    // the copy between them has already written entries of its own.
+    async (prunedPaths) => {
+      const prunedNames = new Set(prunedPaths.map((target) => path.basename(target)));
+      await updateInstallProvenance(destRoot, (current) => {
+        const workflows = Object.fromEntries(
+          Object.entries(current.workflows).filter(([name]) => !prunedNames.has(name)),
+        );
+        return { ...current, workflows };
+      });
+    },
+  );
+
+  const removed = [...removedLegacySkills, ...wrappersResult.removed, ...removedRetiredWorkflows];
 
   // 4-layer assistant-tree seed + project-root steering surface seed.
   // These run AFTER copyTemplateTree so they can detect when the
@@ -2104,25 +2324,587 @@ async function pruneStaleQfaiWrappers(
   return removed;
 }
 
-async function pruneMatchingEntries(
+/**
+ * The shipped and retired workflow name sets, re-exported.
+ *
+ * They moved to `shared/shippedWorkflowNames.ts` because `core/`'s doctor reader needs the same
+ * answer and may not import from `cli/`: review finding [86] found the packaged-tree
+ * precondition calling a gutted directory healthy, and the fix is for that reader to know what
+ * this package ships. The re-export keeps this module's public surface exactly as it was.
+ */
+export { RETIRED_WORKFLOW_NAMES, SHIPPED_WORKFLOW_NAMES };
+
+/**
+ * Pure copy-set construction for the shipped workflow names: a name is in
+ * the copy set unless its pre-run state is declined (record entry present
+ * AND file absent on disk — the adopter deliberately removed it, and the
+ * file is never recreated). Absent (never-installed) names stay in, and
+ * adopter-owned names (present on disk without an entry) stay in as well:
+ * their on-disk protection is the create-only skip, not this exclusion.
+ */
+export function resolveWorkflowCopySet(
+  shippedNames: ReadonlySet<string>,
+  record: InstallProvenanceRecord,
+  presentOnDisk: ReadonlySet<string>,
+): Set<string> {
+  const copySet = new Set<string>();
+  for (const name of shippedNames) {
+    const declined = record.workflows[name] !== undefined && !presentOnDisk.has(name);
+    if (!declined) {
+      copySet.add(name);
+    }
+  }
+  return copySet;
+}
+
+/**
+ * Pre-copy snapshot of the shipped-workflow provenance state: the record
+ * as it stood before this run, the shipped names that were absent (no
+ * record entry AND no file on disk), and the shipped names present on
+ * disk. This single snapshot feeds BOTH decisions — the copy-set
+ * exclusion (declined names are dropped before the copy) and the record
+ * write (only pre-run-absent names may gain an entry afterwards; a name
+ * with an existing entry keeps it untouched, and an adopter-authored
+ * file stays unrecorded because the create-only copy skips it).
+ */
+type ShippedWorkflowPreInitState = {
+  record: InstallProvenanceRecord;
+  absentNames: string[];
+  presentOnDisk: Set<string>;
+};
+
+/**
+ * The path components between the adopter's root and the shipped workflows, outermost first.
+ */
+const WORKFLOW_DIR_SEGMENTS: readonly string[] = [".github", "workflows"];
+
+/**
+ * Whether every existing component of `<destRoot>/.github/workflows` is a real directory.
+ *
+ * A component that is not there yet passes: the copy creates it, and a directory this run
+ * created is not a link to somewhere else. A component that IS there and is a symlink — or is
+ * not a directory at all — fails, because every write through it lands wherever it points,
+ * and `path.resolve` cannot tell that from a write into the tree.
+ *
+ * `lstat`, so the link itself is inspected rather than its target.
+ */
+async function workflowAncestorsAreRealDirectories(destRoot: string): Promise<boolean> {
+  return (await workflowAncestorIdentity(destRoot)) !== undefined;
+}
+
+/**
+ * Is this copy destination a file written into the shipped workflows directory?
+ *
+ * `copyTemplateTree` reports ABSOLUTE destinations, so the question is asked of paths rather
+ * than of leading path segments. Review finding [114] measured the first version doing the
+ * latter: it split `/tmp/repo/.github/workflows/qfai-tests.yml` and took the first two segments
+ * — `/tmp` — so the filter that was supposed to drop every written workflow after a detected
+ * directory swap dropped none of them, and `recordInstalledWorkflows` recorded provenance for a
+ * file that is not where the record says it is. The next run reads that name as `declined` and
+ * never writes it again, so the swap costs the adopter the workflow permanently.
+ *
+ * A predicate rather than an inline lambda so a test can hand it absolute paths, which is what
+ * the defect was made of; a source-level reading of the lambda would have accepted the broken
+ * one just as readily.
+ *
+ * @param destination absolute path a copy wrote
+ * @param destRoot the project root the copy targeted
+ * @returns whether the destination is directly inside `<destRoot>/.github/workflows`
+ */
+export function isWorkflowDestination(destination: string, destRoot: string): boolean {
+  const workflowsDir = path.resolve(path.join(destRoot, ".github", "workflows"));
+  return path.resolve(path.dirname(destination)) === workflowsDir;
+}
+/**
+ * The identity of each ancestor of the shipped workflows directory, or `undefined` if any of
+ * them is not a real directory this command may write through.
+ *
+ * Review finding [109]: the ancestor CHECK ran once, before a copy that performs many
+ * asynchronous filesystem operations, and nothing held the answer still afterwards. A
+ * concurrent process that swaps `.github` or `.github/workflows` for a link between the check
+ * and a write has the shipped workflow created outside the repository — `COPYFILE_EXCL`
+ * refuses an existing destination and follows a linked PARENT without complaint. The
+ * re-check further down stops the provenance record; it does not unwrite the file.
+ *
+ * So the identity is captured here and compared after the copy. Node has no `openat`, so what
+ * this buys is what the artifact writers document: a swap becomes a detected swap with the
+ * files it produced removed, rather than a silent write into somebody else's tree.
+ *
+ * An ABSENT ancestor is `null` rather than a failure: `init` creates the directory it is
+ * about to fill, and absence before the copy is the ordinary first-run state. What must not
+ * change is a directory that existed into a different one.
+ */
+export async function workflowAncestorIdentity(
+  destRoot: string,
+): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
+  const identities: Array<{ dev: number; ino: number } | null> = [];
+  let current = destRoot;
+  for (const segment of WORKFLOW_DIR_SEGMENTS) {
+    current = path.join(current, segment);
+    const inspected = await lstat(current).catch(() => undefined);
+    if (inspected === undefined) {
+      identities.push(null);
+      continue;
+    }
+    if (inspected.isSymbolicLink() || !inspected.isDirectory()) {
+      return undefined;
+    }
+    identities.push({ dev: inspected.dev, ino: inspected.ino });
+  }
+  return identities;
+}
+
+/**
+ * Whether every ancestor that EXISTED before the copy is still the same directory.
+ *
+ * One that was absent and has since been created is the copy's own work. One that changed
+ * identity is the swap this comparison exists to catch.
+ */
+export async function settleWorkflowAncestors(
+  destRoot: string,
+  before: Array<{ dev: number; ino: number } | null>,
+): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
+  const after = await workflowAncestorIdentity(destRoot);
+  if (after === undefined) return undefined;
+  const settled: Array<{ dev: number; ino: number } | null> = [];
+  for (const [index, identity] of before.entries()) {
+    const observed = after[index] ?? null;
+    if (identity === null) {
+      // A component with no identity to compare against is a REFUSAL, not an observation.
+      //
+      // Review finding [121] made this branch stop returning `true`, and review finding [129]
+      // showed that settling on the post-copy reading was not enough either: that reading says
+      // nothing about WHICH directory the copy wrote into, so a substitute put there by another
+      // process was pinned just as readily as the real one.
+      //
+      // The caller creates the workflow directory before the copy and reads its identity from
+      // the directory it made, so on every path that writes a workflow there is nothing absent
+      // here to begin with. Reaching this branch means a component vanished between that read
+      // and this one, which is exactly the event the comparison exists to catch.
+      return undefined;
+    }
+    if (observed === null || observed.dev !== identity.dev || observed.ino !== identity.ino) {
+      return undefined;
+    }
+    settled.push(identity);
+  }
+  return settled;
+}
+
+/**
+ * Are the workflow directory's ancestors still the ones this run settled on?
+ *
+ * Asked again at the moment of RECORDING, because that is the moment the claim is made. An
+ * entry is a claim of ownership over a file at a path, and it outlives the run: recording
+ * nothing is recoverable, recording a file that is not there is not.
+ *
+ * Exact equality, `null` included. A component that was absent when the identity settled and
+ * exists now was created by something other than this copy, which is the same event as a swap.
+ *
+ * @param destRoot the project root
+ * @param expected the identity settled after the copy
+ * @returns whether every component is still exactly what it was
+ */
+async function workflowAncestorsMatch(
+  destRoot: string,
+  expected: Array<{ dev: number; ino: number } | null>,
+): Promise<boolean> {
+  const now = await workflowAncestorIdentity(destRoot);
+  if (now === undefined) return false;
+  return expected.every((identity, index) => {
+    const observed = now[index] ?? null;
+    if (identity === null || observed === null) return identity === observed;
+    return observed.dev === identity.dev && observed.ino === identity.ino;
+  });
+}
+
+async function captureShippedWorkflowPreInitState(
+  destRoot: string,
+): Promise<ShippedWorkflowPreInitState> {
+  const record = await readInstallProvenance(destRoot);
+  const absentNames: string[] = [];
+  const presentOnDisk = new Set<string>();
+  for (const name of SHIPPED_WORKFLOW_NAMES) {
+    const onDisk = await exists(path.join(destRoot, ".github", "workflows", name));
+    if (onDisk) {
+      presentOnDisk.add(name);
+    }
+    if (record.workflows[name] === undefined && !onDisk) {
+      absentNames.push(name);
+    }
+  }
+  return { record, absentNames, presentOnDisk };
+}
+
+/**
+ * The retired names this run may remove: the file on disk carries a
+ * provenance entry AND still holds exactly the bytes QFAI recorded writing.
+ *
+ * Both conjuncts protect an adopter file from a name-set membership test:
+ * no entry means the adopter authored the file themselves (the
+ * `adopter-owned` row, never pruned), and a digest that no longer matches
+ * means they edited what QFAI wrote (the `modified` row, never pruned).
+ * A name that fails either test is left on disk untouched — a stale file is
+ * recoverable, a deleted one is not.
+ *
+ * The recorded digest is returned with each name, not just the name: the prune re-asks the
+ * content question against it immediately before deleting, because a decision made here and
+ * acted on later is a decision about a file that may since have been replaced.
+ */
+async function resolvePrunableRetiredWorkflows(
+  destRoot: string,
+  record: InstallProvenanceRecord,
+): Promise<Map<string, string>> {
+  const prunable = new Map<string, string>();
+  for (const name of RETIRED_WORKFLOW_NAMES) {
+    const entry = record.workflows[name];
+    if (entry === undefined) {
+      continue;
+    }
+    // Bounded, regular-file-only, one descriptor. This path is adopter-controlled, and an
+    // unbounded read of it hands a FIFO, a device or a multi-gigabyte file the ability to hang
+    // `qfai init` or exhaust its memory — on a file the command was only deciding whether to
+    // delete. Every refusal leaves the name un-pruned. Review finding [05].
+    const workflowPath = path.join(destRoot, ".github", "workflows", name);
+    if ((await digestWorkflowFile(workflowPath)) === entry.sha256) {
+      prunable.set(name, entry.sha256);
+    }
+  }
+  return prunable;
+}
+
+/**
+ * Read ceiling for one workflow file in an adopter tree. A shipped workflow is a few kilobytes;
+ * anything past this is not one, and reading it is the exhaustion the bounded reader stops.
+ */
+const MAX_WORKFLOW_BYTES = 1_048_576;
+
+/** The sha256 of a workflow file, or `undefined` for anything the bounded reader refuses. */
+async function digestWorkflowFile(filePath: string): Promise<string | undefined> {
+  const bytes = await readBoundedRegularFile(filePath, MAX_WORKFLOW_BYTES);
+  return bytes === undefined ? undefined : createHash("sha256").update(bytes).digest("hex");
+}
+
+/**
+ * Records provenance entries for the shipped workflow files this run
+ * actually wrote: a name qualifies only when its pre-run state was absent
+ * AND the copy primitive reported writing it, and each entry's sha256
+ * digests the bytes just written. The record file is untouched when nothing
+ * new was written (idempotent re-runs, declined names) and on --dry-run.
+ *
+ * `copiedPaths` is the copy primitive's own `copied` list, and it is the
+ * ONLY evidence of a write accepted here. Reading the destination back is
+ * not evidence: a create-only copy skips a path that appeared between the
+ * pre-run snapshot and the copy (another process, or a dangling symlink the
+ * snapshot saw as absent and whose target a later copy filled in), and the
+ * read-back would then claim QFAI wrote a file it never touched — which
+ * makes doctor report drift on an adopter-owned file forever.
+ */
+async function recordInstalledWorkflows(
+  destRoot: string,
+  sourceRoot: string,
+  preInit: ShippedWorkflowPreInitState,
+  copiedPaths: readonly string[],
+  toolVersion: string,
+  dryRun: boolean,
+  settled: Array<{ dev: number; ino: number } | null> | undefined,
+): Promise<void> {
+  if (dryRun) {
+    return;
+  }
+  if (settled === undefined) {
+    return; // the copy did not settle on an identity, so there is nothing to claim ownership of
+  }
+  // The identity this run settled on, not merely `a real directory`. Review finding [121]:
+  // the check below asks whether the ancestors are real directories, which every swapped-in
+  // real directory also satisfies.
+  if (!(await workflowAncestorsMatch(destRoot, settled))) {
+    return;
+  }
+  // Asked again, here, and not only before the copy. Review finding [35]: the check that
+  // refuses a linked parent runs before `copyTemplateTree`, and a link created between the
+  // two would still have the copy report paths that resolve lexically into the tree. An entry
+  // is a claim of OWNERSHIP, and it is the claim that outlives the run — recording nothing is
+  // recoverable, recording a file outside the repository is not.
+  if (!(await workflowAncestorsAreRealDirectories(destRoot))) {
+    return;
+  }
+  const workflowsDir = path.join(destRoot, ".github", "workflows");
+  const copiedNames = new Set(
+    copiedPaths
+      .filter((copied) => path.dirname(path.resolve(copied)) === path.resolve(workflowsDir))
+      .map((copied) => path.basename(copied)),
+  );
+  const installedAt = new Date().toISOString();
+  const added: Record<string, WorkflowProvenanceEntry> = {};
+  for (const name of preInit.absentNames) {
+    if (!copiedNames.has(name)) {
+      continue; // the copy skipped it: a skipped file produces no entry
+    }
+    // Digested from the SOURCE the copy read, not from the destination re-read. The copy is
+    // byte-for-byte, so the two agree at the instant of the write — and only then. Re-reading
+    // the destination records whatever the file holds NOW, which is a different question: an
+    // adopter or a concurrent process that rewrites the file between the copy and the read
+    // gets their own content stamped as the bytes QFAI installed. Drift detection would then
+    // be permanently blind to that edit, and the prune above would consider the file QFAI's to
+    // delete. Review finding [07].
+    const sourceBytes = await readBoundedRegularFile(
+      path.join(sourceRoot, ".github", "workflows", name),
+      MAX_WORKFLOW_BYTES,
+    );
+    if (sourceBytes === undefined) {
+      continue; // no source bytes to attest to, so no entry
+    }
+    added[name] = createWorkflowProvenanceEntry(sourceBytes, toolVersion, installedAt);
+  }
+  const addedNames = Object.keys(added);
+  if (addedNames.length === 0) {
+    return;
+  }
+  try {
+    // Merged onto the record as it is on disk, under the lock — never onto `preInit.record`.
+    // That snapshot was taken before the copy, and in a tree where a second `qfai init` is
+    // running (a monorepo bootstrap, a CI matrix sharing a checkout, two terminals) writing it
+    // back deletes every entry the other run recorded in between. Those files stay on disk with
+    // no entry, which the next run reads as `adopter-owned`: never recorded again, and invisible
+    // to drift detection from then on. Review finding [03].
+    await updateInstallProvenance(destRoot, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, ...added },
+    }));
+  } catch (error) {
+    // The file and its provenance entry land TOGETHER or neither lands. The
+    // record write can still fail after the copy succeeded — `.qfai` is a
+    // regular file, the directory is read-only, the disk is full — and a
+    // workflow left on disk with no entry is read on the next run as
+    // `adopter-owned`: the create-only copy skips it, nothing ever records it,
+    // and doctor's drift check and the declined state are both lost for that
+    // name permanently. Removing what this run created returns the tree to
+    // `absent`, the one state a re-run repairs.
+    //
+    // Only the names in `added` are removed, and every one of them was absent
+    // before this run AND reported written by the copy primitive, so nothing
+    // here can delete a file the adopter owned. Removal failures are swallowed:
+    // the original error is the one worth reporting, and a stale file is a
+    // smaller loss than a masked cause.
+    //
+    // Through `pruneMatchingEntries` and not a direct `rm`: the shipped-workflows
+    // contract keeps ONE removal primitive for QFAI-owned entries in an adopter
+    // tree, and a second call site is the parallel implementation it forbids.
+    // And only while they still hold the bytes this run wrote. `addedNames` is a name set, and
+    // the failing record write is exactly the moment another process may have replaced one of
+    // those files — rolling back on the name alone would delete their content to undo our own
+    // write. The digest is the one this run attested to, so a file that no longer matches it is
+    // not this run's to remove. Review finding [06].
+    const rolledBack: string[] = [];
+    await pruneMatchingEntries(
+      workflowsDir,
+      (entry) => entry.isFile() && addedNames.includes(entry.name),
+      rolledBack,
+      false,
+      async (target, name) => (await digestWorkflowFile(target)) === added[name]?.sha256,
+    ).catch(() => undefined);
+    throw error;
+  }
+}
+
+/**
+ * The only removal primitive for QFAI-owned entries in an adopter tree:
+ * removes the direct entries of `dir` that match `predicate`, appending
+ * each removed path to `removed`. Exported for reuse — the
+ * shipped-workflows contract forbids parallel removal implementations.
+ *
+ * `confirm` is the ownership question, and it is asked TWICE: once against the path as the
+ * snapshot named it, and once against the object after it has been moved aside. `predicate`
+ * can only ever see the `readdir` snapshot, and every caller here decides ownership by
+ * CONTENT — the file still holds the bytes QFAI recorded writing. A caller with no content
+ * test passes `undefined` and gets the snapshot behaviour. `confirm` receives the path to
+ * READ and, separately, the entry's original name, because after the move the two differ and
+ * a caller looking its digest up by basename would be looking up the quarantine name.
+ *
+ * Why the move at all — review finding [33]. Checking a pathname, re-checking it and then
+ * deleting it are three operations on a NAME, and between any two of them the adopter can put
+ * their own file there: the digest that was verified and the bytes that are deleted are then
+ * different objects, and the deleted one is theirs. Renaming the entry to a name nothing else
+ * holds collapses the three into one object — everything after the rename acts on what was
+ * moved, whatever later takes the vacated name.
+ *
+ * `commit` is what makes the removal a UNIT with whatever else has to happen for it. Review
+ * finding [34]: the retired-workflow caller deleted the files and then removed their provenance
+ * entries in a second step, so a read-only `.qfai`, a full disk or a lock it could not take left
+ * the files gone and the entries standing — which the next run reads as names the adopter
+ * deliberately removed, and never installs again. It runs while the entries are still in
+ * quarantine, so a failure puts them back rather than leaving the tree half-changed. It is
+ * called only when there is something to commit, and never on a dry run.
+ *
+ * The removal is deliberately NOT recursive. Every predicate here requires `isFile()`, so a
+ * directory reaching the `rm` can only be one swapped in after the snapshot — and recursing
+ * into it would delete a tree on the strength of a name. Refusing is the conservative
+ * direction: a stale entry is recoverable, a deleted tree is not.
+ */
+export async function pruneMatchingEntries(
   dir: string,
   predicate: (entry: Dirent) => boolean,
   removed: string[],
   dryRun: boolean,
+  confirm?: (target: string, name: string) => Promise<boolean>,
+  commit?: (removedPaths: readonly string[]) => Promise<void>,
 ): Promise<void> {
   if (!(await exists(dir))) {
     return;
   }
   const entries = await readdir(dir, { withFileTypes: true });
-  for (const entry of entries) {
-    if (!predicate(entry)) {
-      continue;
+  const held: QuarantinedEntry[] = [];
+  const pruned: string[] = [];
+  // Entries this run moved aside and could not put back. Review finding [138]: restoring by
+  // `rename` would silently replace whatever took the name meanwhile, so the restore refuses
+  // instead — and a refusal nobody hears is a file that has quietly moved. The run stops
+  // naming them, because they are recoverable and only while somebody knows where they are.
+  const stranded: string[] = [];
+  try {
+    for (const entry of entries) {
+      if (!predicate(entry)) {
+        continue;
+      }
+      const target = path.join(dir, entry.name);
+      if (confirm !== undefined && !(await confirm(target, entry.name))) {
+        continue; // still QFAI's name, no longer QFAI's bytes
+      }
+      // Re-checked against the path as it is NOW, not as `readdir` reported it. Every predicate
+      // here requires `isFile()`, but that is a fact about the snapshot: a directory swapped in
+      // after it — by the adopter, or by a concurrent run — still carries a matching name, and a
+      // recursive delete would take the whole tree on the strength of it. `lstat`, so a symlink is
+      // refused rather than followed, and the `rm` below is deliberately not recursive: two
+      // independent reasons a swapped directory survives. Review finding [30].
+      const atDeletion = await lstat(target).catch(() => undefined);
+      if (atDeletion === undefined || atDeletion.isSymbolicLink() || !atDeletion.isFile()) {
+        continue;
+      }
+      if (dryRun) {
+        pruned.push(target);
+        continue;
+      }
+      const moved = await quarantineEntry(target);
+      if (moved === undefined) {
+        continue; // could not take it aside; a file left alone is the conservative outcome
+      }
+      // The question re-asked against the OBJECT rather than the name. Everything before the
+      // rename described a path; this describes what was moved, and it is what gets deleted.
+      if (confirm !== undefined && !(await confirm(moved.quarantinePath, entry.name))) {
+        if (!(await restoreQuarantined(moved))) {
+          stranded.push(moved.quarantinePath);
+        }
+        continue;
+      }
+      held.push(moved);
+      pruned.push(target);
     }
-    const target = path.join(dir, entry.name);
-    removed.push(target);
-    if (!dryRun) {
-      await rm(target, { recursive: true, force: true });
+    if (commit !== undefined && !dryRun && pruned.length > 0) {
+      await commit(pruned);
     }
+  } catch (error) {
+    for (const moved of held) {
+      await restoreQuarantined(moved);
+    }
+    throw error;
+  }
+  removed.push(...pruned);
+  for (const moved of held) {
+    await rm(moved.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
+  }
+  if (stranded.length > 0) {
+    throw new Error(
+      "qfai: these files were moved aside and could not be put back, because something else " +
+        "took their names in the interval and replacing it would have destroyed it. They are " +
+        `intact where they are:\n${stranded.map((at) => `  ${at}`).join("\n")}`,
+    );
+  }
+}
+
+/** A file moved aside into a directory nothing else holds, pending its delete or its restore. */
+type QuarantinedEntry = {
+  /** Where it was, and where a restore puts it back. */
+  originalPath: string;
+  /** The private directory holding it — what a discard removes. */
+  quarantineDir: string;
+  /** Where it is now — the object every step after the move acts on. */
+  quarantinePath: string;
+};
+
+/** How many times a colliding quarantine name is retried before the entry is left alone. */
+const QUARANTINE_ATTEMPTS = 8;
+
+/**
+ * Moves `target` into a private DIRECTORY in the same parent, or answers `undefined`.
+ *
+ * A directory, not a claimed filename, and that is review finding [136]. The previous version
+ * claimed a random name with `wx`, closed the handle, and then renamed onto it — so between the
+ * close and the rename anything that can write the adopter's tree could replace the claim, and
+ * `rename` would silently destroy the replacement. The comment above it said the claim made the
+ * name exclusive; it made it exclusive at the moment of the claim and not at the moment of use.
+ *
+ * `mkdir` without `recursive` fails with `EEXIST` when the name is taken, so the directory is one
+ * this process created. The move then targets a path INSIDE it — a path that did not exist a
+ * moment ago and whose parent nothing else knows the name of — so there is nothing there for the
+ * rename to overwrite.
+ *
+ * Same parent directory, because a rename across filesystems is not one operation, and the whole
+ * point of the move is that it is one.
+ *
+ * @param target the file to move aside
+ * @returns the entry, or `undefined` when it could not be moved
+ */
+async function quarantineEntry(target: string): Promise<QuarantinedEntry | undefined> {
+  const dir = path.dirname(target);
+  const base = path.basename(target);
+  for (let attempt = 0; attempt < QUARANTINE_ATTEMPTS; attempt += 1) {
+    const quarantineDir = path.join(dir, `.${base}.qfai-prune-${randomBytes(12).toString("hex")}`);
+    try {
+      // Deliberately not `{ recursive: true }`: that succeeds on an existing directory, which is
+      // exactly the case this has to refuse.
+      await mkdir(quarantineDir);
+    } catch {
+      continue; // the name is taken: try another rather than move into somebody else's directory
+    }
+    const quarantinePath = path.join(quarantineDir, base);
+    try {
+      await rename(target, quarantinePath);
+      return { originalPath: target, quarantineDir, quarantinePath };
+    } catch {
+      await rm(quarantineDir, { recursive: true, force: true }).catch(() => undefined);
+      return undefined; // the entry is gone or unmovable; either way it is not ours to delete
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Puts a quarantined entry back, or leaves it quarantined — but never overwrites.
+ *
+ * `link` is the whole mechanism: it FAILS when the destination exists, where `rename` would
+ * silently replace it. The name was vacated by this function's own move, so a file standing there
+ * now is one somebody else wrote in the interval, and it is theirs.
+ *
+ * Review finding [138]: there used to be a fallback for filesystems without hard links — an
+ * `exists` check and then a plain `rename`. A check is not a guarantee, and between the two a
+ * concurrent `init` or the adopter could create the file that the rename then destroyed. There is
+ * no way to make `rename` refuse an occupied destination, so the fallback is gone: when the
+ * destination cannot be proven free, the entry stays in quarantine and the caller reports it.
+ * A file left in a `.qfai-prune-*` directory is recoverable; one silently replaced is not.
+ *
+ * @param entry the quarantined file
+ * @returns whether it was put back
+ */
+async function restoreQuarantined(entry: QuarantinedEntry): Promise<boolean> {
+  try {
+    await link(entry.quarantinePath, entry.originalPath);
+    await rm(entry.quarantineDir, { recursive: true, force: true }).catch(() => undefined);
+    return true;
+  } catch {
+    // `EEXIST` means the name is somebody else's now; anything else means this filesystem cannot
+    // give the guarantee. Both leave the file where it is, which is the only outcome that
+    // destroys nothing.
+    return false;
   }
 }
 
