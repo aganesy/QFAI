@@ -132,6 +132,18 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       );
     }
   });
+
+  it("does not claim the validator catches a misplaced declaration", async () => {
+    // `collectDeclaredDrIds` reads both files into one set and never compares
+    // an id's shape with the file it came from, so a policy-level `DR-NNNN`
+    // left in a spec's 07_Decisions.md resolves clean. Advertising the split
+    // as enforced would make an unchecked convention read as a gate.
+    const ledger = await read(tree, LEDGER);
+    expect(ledger).not.toContain("Resolving against the wrong one is what");
+    expect(ledger).toContain("**That split is a convention, not a gate.**");
+    expect(ledger).toContain("reports an id declared in **neither** file");
+    expect(ledger).toContain("resolves against their union");
+  });
 });
 
 describe("the spelled-out shapes are the ones the validator accepts", () => {
