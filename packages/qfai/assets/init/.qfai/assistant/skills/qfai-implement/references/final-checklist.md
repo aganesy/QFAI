@@ -69,14 +69,25 @@ releases completion.
       UI-affecting row**: the shared reviewer template makes that field required on every response,
       so the third reviewer is the same rule and not a new one) and the pack's
       `summary.json.revision`. `RED revision` (or `Falsifiability revision` in its place) is the
-      standing exception and the only one: that observation is taken before the code that makes it
-      pass exists. Nothing else in this sweep compares what the reviewers read with the tree the row
-      ended on — production or test code changed after a PASS leaves anchor, identity copy, pack seal
-      and every `Audited evidence hash` recomputing correctly, and the later checkpoint runs green
-      against the new tree, so the spec completes carrying a change no reviewer ever saw. A UI edited
-      after the parity PASS is that same failure: leave the product response's revision behind and
-      bring the other two into line and the surface that shipped is the one nobody reviewed
-      (gate item 10, `evidence-revision.md#what-makes-evidence-stale`).
+      standing exception among the observations this comparison reaches: that observation is taken
+      before the code that makes it pass exists. Nothing else in this sweep compares what the
+      reviewers read with the tree the row ended on — production or test code changed after a PASS
+      leaves anchor, identity copy, pack seal and every `Audited evidence hash` recomputing
+      correctly, and the later checkpoint runs green against the new tree, so the spec completes
+      carrying a change no reviewer ever saw. A UI edited after the parity PASS is that same failure:
+      leave the product response's revision behind and bring the other two into line and the surface
+      that shipped is the one nobody reviewed. **The comparison reaches the rounds written under the
+      current contract**, and a **registered legacy pack** is outside it — `revision_form: "legacy"`
+      corroborated by `.qfai/review/.legacy-packs`, whose `summary.json.revision` is accepted
+      malformed or absent because the tree that round described is not reconstructible and there is
+      no content hash to migrate it to, so the observations it holds name no revision to compare
+      against. The pack's own word is not enough: `legacy` without the manifest entry is a current
+      producer downgrading its own broken value, and is judged by the rule above. A row this run
+      advances opens a new pack under the current contract, so it can never reach this exception —
+      like `Pre-split-evidence: implement`, it covers only work that was already complete when the
+      migration ran, and without it re-checking such a spec would block completion forever with
+      nothing the operator could do (gate item 10,
+      `evidence-revision.md#what-makes-evidence-stale`, `evidence-revision.md#the-field`).
 - [ ] Every handed-over `E2E` / `API` / `Integration` row's `Round N: RED test hash` **recomputes**
       here over the manifest recorded beside it, and matches. The other three recomputations above
       address the evidence entry, not the test: a fixture, snapshot or the test body edited after

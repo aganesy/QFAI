@@ -9,6 +9,7 @@
  * drift the same way.
  */
 
+import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -249,6 +250,11 @@ const GATE_ITEM_PARITY: readonly {
   },
   {
     item: 10,
+    condition: "`test-list.md` Status is current",
+    box: "`test-list.md` statuses are accurate",
+  },
+  {
+    item: 10,
     condition:
       "Evidence cell's anchor resolves to a fresh per-item entry in the evidence file its `Layer` owns",
     box: "`Evidence` anchor resolves to a fresh entry in the file its `Layer` owns",
@@ -276,6 +282,11 @@ const GATE_ITEM_PARITY: readonly {
   },
   {
     item: 12,
+    condition: "Checkpoint verification passed (see `#checkpoint-verification`)",
+    box: "Checkpoint verification passed for **every** row advanced this run",
+  },
+  {
+    item: 12,
     condition:
       "`Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision",
     box: "`Checkpoint verification seal` recomputes over the recorded command, result and revision",
@@ -287,6 +298,40 @@ const GATE_ITEM_PARITY: readonly {
     box: "the **full** suite where the row sits on a checkpoint boundary",
   },
 ];
+
+/**
+ * The whole of each numbered item, addressed rather than sampled.
+ *
+ * `GATE_ITEM_PARITY` matches *substrings*, so it sees a clause it was told
+ * about and nothing else: leave gate item 7's existing sentence in place, append
+ * a second reviewer condition to it, and every mapped `condition` still matches,
+ * the item number still has an entry, `unmapped` is still empty — and the
+ * checklist never learns the item grew. That is the same silent drift the
+ * derivation rule exists to stop, one rung down: clause-level instead of
+ * item-level.
+ *
+ * No assertion can judge whether prose in a box covers prose in an item, so this
+ * does the part that is decidable: it pins the item's normalized text by
+ * content, which makes *any* edit to a gate item — an added clause, a reworded
+ * obligation, a deleted one — fail here until someone re-reads it against its
+ * box, extends `GATE_ITEM_PARITY` and the checklist, and re-pins the digest.
+ * `gateItems` folds continuation lines and collapses whitespace first, so a
+ * rewrap or a re-indent does not move a digest; only the words do.
+ */
+const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
+  1: "f8cfaffb0a9d878b17c22abf28aee9d1cedcc99f58b2b81994a9980eb46fd63f",
+  2: "49012cdcb1049e7d498e9b1eae4e890081b5b7db6c1cbd7aef9d44c3455776a3",
+  3: "7da8876bf5bcf89963e539fc16ddfc411718a17b8e3df90ca14c949fd323c0fc",
+  4: "bcba32532c2c863c57d09afdcadcb56df3fa0fbc882488fdb00c28aafcc9521e",
+  5: "a1b93900e1dc264e22873e9d3716b6cee62bbdfb9b810afdb905da4fe30a7096",
+  6: "aaaff54532bbe37f4bea22f5caa5e661d0c11474558e3ccdc91ba9ff309f7fba",
+  7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
+  8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
+  9: "031e9b26a54f4c45dd2f2af468efc2be1cd84a3bff4f57bdb3c74e266902a394",
+  10: "e35884f66fd75d7c91d73e33658880ec7f8c6551ab09ef5a804564bdeeacd15c",
+  11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
+  12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
+};
 
 /**
  * The spec-level half of the derivation rule, condition by condition.
@@ -447,6 +492,28 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(unmapped, "every numbered gate item has a mapped contract clause").toEqual([]);
   });
 
+  it("pins each numbered item whole, so a clause added to one cannot pass silently", async () => {
+    // `GATE_ITEM_PARITY` is satisfied by one matching clause per item number.
+    // Append a new reviewer condition to gate item 7's existing sentence and
+    // every mapped substring still matches, the number still has an entry and
+    // `unmapped` is still empty, so the checklist can stay a clause behind
+    // forever. Addressing the item's whole text is what makes that visible.
+    const items = gateItems(await readSkill(dir));
+    expect(items.map((item) => item.number)).toEqual(
+      Object.keys(GATE_ITEM_CONTRACT_DIGESTS)
+        .map(Number)
+        .sort((a, b) => a - b),
+    );
+    for (const item of items) {
+      const digest = createHash("sha256").update(item.text, "utf8").digest("hex");
+      expect(
+        digest,
+        `gate item ${item.number} changed: re-read it against the box that cites it, extend ` +
+          `GATE_ITEM_PARITY and final-checklist.md if it grew a clause, then re-pin the digest`,
+      ).toBe(GATE_ITEM_CONTRACT_DIGESTS[item.number]);
+    }
+  });
+
   it("counts a gate item as covered only from a box, never from prose", async () => {
     // Otherwise a number mentioned in narration keeps an item "covered" after
     // its box is deleted — deleting the per-row checkpoint box left item 12
@@ -563,6 +630,34 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     const checklist = await readChecklistProse(dir);
     expect(checklist).toContain("**plus `product-surface-reviewer` on a UI-affecting row**");
     expect(checklist).toContain("required on every response");
+  });
+
+  it("leaves a registered legacy pack outside the revision comparison", async () => {
+    // Naming `RED revision` as "the only" exception made the box impossible to tick on
+    // an upgraded project: `evidence-revision.md` accepts a malformed or absent
+    // `summary.json.revision` on a pack that declares `revision_form: "legacy"`
+    // and is listed in `.qfai/review/.legacy-packs`, because the tree that round
+    // described cannot be reconstructed and there is no content hash to migrate
+    // it to. A `done` row has no legal transition that would produce a fresh
+    // pack, so demanding agreement there blocked completion permanently — the
+    // same shape as the `Pre-split-evidence: implement` carve-out above.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("**registered legacy pack**");
+    expect(checklist).toContain('`revision_form: "legacy"`');
+    expect(checklist).toContain("`.qfai/review/.legacy-packs`");
+    expect(checklist).toContain(
+      "**The comparison reaches the rounds written under the current contract**",
+    );
+    // The exception is corroborated, never self-declared, and unreachable from
+    // a row this run advances — otherwise it is a way out of the whole box.
+    expect(checklist).toContain("The pack's own word is not enough");
+    expect(checklist).toContain(
+      "A row this run advances opens a new pack under the current contract",
+    );
+    // The waiver must not swallow the standing one it sits beside.
+    expect(checklist).toContain(
+      "`RED revision` (or `Falsifiability revision` in its place) is the standing exception",
+    );
   });
 
   it("asks for the spec-level checkpoint boundary gate item 12 never reaches", async () => {
