@@ -22,11 +22,15 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import { parse as parseToml } from "smol-toml";
 import { parse as parseYaml } from "yaml";
 import { describe, expect, it } from "vitest";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+/** Collapse markdown soft wraps so an assertion pins wording, not a column. */
+const unwrap = (markdown: string): string => markdown.replace(/\s*\n\s*/g, " ");
 
 const ROUTING_FILES = [
   "packages/qfai/assets/init/.qfai/assistant/manifest/agent-routing.yml",
@@ -184,5 +188,136 @@ describe.each(SKILL_FILES)("%s — the skill body owns the `plan` phase", (rel) 
     const body = skillBody(await readFile(path.join(repoRoot, rel), "utf-8"));
     const roster = body.slice(body.indexOf("### Formal Sub-agent Roster"));
     expect(roster).toContain("- `test-design-analyst`");
+  });
+
+  it("re-validates the plan's frame at every queue transition", async () => {
+    // The `plan` phase frames a whole queue in one pass, before the first row
+    // of the first spec moves. The specs ahead of a queued one then write
+    // production code and can open Change Requests, so reusing that plan
+    // unconditionally starts a later spec against a `CR-*` nothing reset and
+    // lets its parallel-dispatch decision stand over an import graph the
+    // earlier specs already changed.
+    const volume = rel.replace(/SKILL\.md$/, "references/volume-policy.md");
+    const queue = unwrap(await readFile(path.join(repoRoot, volume), "utf-8"));
+    expect(queue).toContain("re-validate the frame before loading its ledger");
+    expect(queue).toContain("change-request-reset.md#the-mandatory-preflight");
+    expect(queue).toContain("evidence-revision.md#the-field");
+    expect(queue).toContain("re-enter Stage 0 step 2 and `plan`");
+    // Over-correction pin: the phase stays per-invocation. An unmoved frame
+    // re-enters nothing — this is a guard, not a per-spec re-plan.
+    expect(queue).toContain("re-enters neither Stage 0 nor `plan`");
+    expect(queue).toContain("`iteration: per-invocation`");
+  });
+
+  it("points the other carriers of the non-re-entry claim at that check", async () => {
+    // Three files state "a queue transition does not re-enter `plan`". A guard
+    // written into only one of them leaves the other two licensing the
+    // unconditional reuse it exists to stop.
+    for (const target of [rel, rel.replace(/SKILL\.md$/, "references/plan-phase.md")]) {
+      const text = unwrap(await readFile(path.join(repoRoot, target), "utf-8"));
+      expect(text, `${target} does not name the frame check`).toContain(
+        "volume-policy.md#advancing-the-queue",
+      );
+    }
+  });
+});
+
+/**
+ * `test-design-analyst` is a shared role card: `qfai-sdd`'s `design` phase
+ * routes it as mandatory and `qfai-atdd`'s `coverage` phase as mandatory AND
+ * blocking. Listing `.qfai/contracts/api/**` among its unconditional "Inputs
+ * you must read" therefore reaches far past the `qfai-implement` `plan` phase
+ * that needs it: a fresh install ships no `.qfai/contracts/api/` at all and a
+ * spec with no API surface is normal, so the card's own Stop condition
+ * ("required source artifacts are missing") could halt a blocking agent on a
+ * perfectly good non-API project.
+ */
+describe("`.qfai/contracts/api/**` is a conditional input on the shared role card", () => {
+  const AGENT_CARD = "assistant/agents/test-design-analyst.md";
+  const CATALOG = "assistant/manifest/agent-catalog.yml";
+
+  /** Every shipped copy of the card body: canonical MD, catalog, codex TOML. */
+  async function roleCardBodies(): Promise<Array<[string, string]>> {
+    const bodies: Array<[string, string]> = [];
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      bodies.push([
+        `${tree}/${AGENT_CARD}`,
+        await readFile(path.join(repoRoot, tree, AGENT_CARD), "utf-8"),
+      ]);
+      const raw = await readFile(path.join(repoRoot, tree, CATALOG), "utf-8");
+      const catalog = parseYaml(raw) as {
+        agents?: Array<{ id?: string; developer_instructions?: string }>;
+      };
+      const entry = catalog.agents?.find((agent) => agent.id === "test-design-analyst");
+      const instructions = entry?.developer_instructions;
+      expect(instructions, `${tree}/${CATALOG} carries no test-design-analyst body`).toBeTypeOf(
+        "string",
+      );
+      bodies.push([`${tree}/${CATALOG}`, instructions ?? ""]);
+    }
+    const codexPath = ".codex/agents/test-design-analyst.toml";
+    const codex = parseToml(await readFile(path.join(repoRoot, codexPath), "utf-8")) as {
+      developer_instructions?: string;
+    };
+    expect(codex.developer_instructions, `${codexPath} carries no body`).toBeTypeOf("string");
+    bodies.push([codexPath, codex.developer_instructions ?? ""]);
+    return bodies;
+  }
+
+  it("marks the input conditional in every SSOT copy", async () => {
+    for (const [label, body] of await roleCardBodies()) {
+      const text = unwrap(body);
+      expect(text, `${label}: the Inputs entry is unconditional`).toContain(
+        "(CON-API) — **conditional**",
+      );
+      expect(text, `${label}: does not scope the read`).toContain(
+        "joins that obligation set **only where it applies**",
+      );
+    }
+  });
+
+  it("denies the Stop condition an absent contracts directory would trip", async () => {
+    for (const [label, body] of await roleCardBodies()) {
+      const text = unwrap(body);
+      expect(text, `${label}: absence still reads as a missing input`).toContain(
+        "its absence is **not** a missing required source artifact",
+      );
+      expect(text, `${label}: names no phase the exemption covers`).toContain(
+        "`qfai-atdd`'s blocking `coverage` phase",
+      );
+      expect(text, `${label}: Stop conditions still say every listed input`).toContain(
+        "**Required means required for the phase being run**",
+      );
+    }
+  });
+
+  it("keeps the row-independent obligation read the analyst was given it for", async () => {
+    // Over-correction pin. Scoping the API contracts must not undo the earlier
+    // finding: `TC-*` / `US-*` are still read in full, independently of the
+    // ledger rows, and the `plan` phase still reads `CON-API-*` where it has
+    // any — the fix narrows one input's *requiredness*, not the check.
+    for (const [label, body] of await roleCardBodies()) {
+      const text = unwrap(body);
+      expect(text, `${label}: derives the obligation set from the rows`).toContain(
+        "independently of whichever rows an execution ledger happens to hold",
+      );
+      expect(text, `${label}: no longer reads CON-API in the plan phase`).toContain(
+        "in `qfai-implement`'s `plan` phase",
+      );
+    }
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const detail = unwrap(
+        await readFile(
+          path.join(repoRoot, tree, "assistant/skills/qfai-implement/references/plan-phase.md"),
+          "utf-8",
+        ),
+      );
+      expect(detail, `${tree}: the plan phase stopped naming the contracts`).toContain(
+        "`.qfai/contracts/api/**` for `CON-API-*`",
+      );
+      expect(detail, `${tree}: an absent contracts dir still reads as missing`).toContain(
+        "**empty, not missing**",
+      );
+    }
   });
 });

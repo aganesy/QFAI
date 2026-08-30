@@ -14,6 +14,16 @@ cannot be planned (missing ledger, unresolved Change Request) is reported as blo
 first row of the first spec moves, rather than at its own turn. Planning only the head of the queue
 would leave every later spec with no reset, no tier, no group and no dispatch decision.
 
+**Reuse is conditional on the frame not having moved.** The specs ahead of a queued one write
+production code and can open Change Requests, so a plan taken before the first row moved is not
+automatically still true when the queue reaches that spec. The transition therefore compares the
+in-scope `CR-*` set and the plan's revision against the tree as it then stands, and re-enters Stage 0
+step 2 and this phase over the **remaining** queue when either moved
+(`volume-policy.md#advancing-the-queue`). Reusing a stale plan there moves rows past a mid-run
+approved reset and can license a parallel dispatch against an import graph the earlier specs already
+changed. That re-entry is a repair on a moved frame — the same one a blocking REVISE below takes —
+not the per-ledger iteration `per-invocation` rules out; when nothing moved, nothing is re-entered.
+
 **This does not loosen the cross-spec bar.** "One spec at a time, always"
 (`parallelization-policy.md#scope-of-this-policy`) forbids two specs being **in flight together**; it
 is a concurrency rule, not a count of how many ledgers one framing pass may read. A confirmed queue
@@ -71,7 +81,11 @@ Receives the same ledgers and each row's `Layer`, and — **listed independently
 hides the gap this role is here for: a coverage-target `TC-*` whose row was dropped is cited by
 nothing, so a check that starts from the rows can never see it. `US-*` and `CON-API-*` are read for
 the **layer-ownership** check below — which obligation an `E2E` / `API` row may cite — not as a row
-census.
+census. `.qfai/contracts/api/**` is the one entry of that set a spec may legitimately not have — a
+spec with no API surface, or a fresh install, which ships no such directory — and its `CON-API-*` set
+is then **empty, not missing**: the role card marks it conditional for exactly this reason
+(`agents/test-design-analyst.md`, "Inputs you must read"), so it is not a missing required source
+artifact and stops nothing here or in the phases `qfai-sdd` and `qfai-atdd` route the same card in.
 
 Returns **coverage and layer-ownership findings**:
 
