@@ -49,7 +49,10 @@ export async function validateImportLiteEvidencePresence(
         // following the remedy left the warning standing. Evidence, by
         // contrast, is canonical by design — see IMPORT_LITE_EVIDENCE_DIR_REL.
         `- \`${toRelativePath(root, discussionRoot)}/discussion-*/06_REQ.md\` を用意する`,
-        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<ts>.md\` を生成する（\`generated_at\` / \`entrypoint: import-lite\` を埋め、\`Sources\` か user excerpt に実在の入力源を最低 1 件記録する。テンプレートのプレースホルダのままのファイルは入力源として扱われません）`,
+        // `<ts>` alone sent an operator to `import-lite-draft.md`, which the
+        // name check rejects: the hyphenated form has to carry the canonical
+        // 17-digit stamp (`import-lite.md` without one is still accepted).
+        `- \`${IMPORT_LITE_EVIDENCE_DIR_REL}/import-lite-<17桁timestamp>.md\` を生成する（\`generated_at\` は ISO8601 の実在日時。\`entrypoint: import-lite\` を埋め、\`Sources\` か user excerpt に実在の入力源を最低 1 件記録する。テンプレートのプレースホルダのままのファイルは入力源として扱われません）`,
       ].join("\n"),
     ),
   ];

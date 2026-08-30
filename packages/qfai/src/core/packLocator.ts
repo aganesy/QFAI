@@ -42,7 +42,15 @@ const PACK_RULES: Record<PackKind, PackRule> = {
   },
 };
 
-const PACK_TIMESTAMP_RE = /^\d{17}$/;
+/**
+ * The 17-digit `YYYYMMDDhhmmssSSS` stamp a canonical QFAI artifact name carries.
+ *
+ * Exported because it is the naming rule, not a pack-local detail: every writer
+ * that stamps a name — the discussion packs here, the import-lite evidence file
+ * the SDD preflight selects — has to admit exactly the same width, or one of
+ * them starts accepting names the other rejects.
+ */
+export const CANONICAL_TIMESTAMP_RE = /^\d{17}$/;
 
 export function parsePackTimestamp(kind: PackKind, name: string): string | null {
   const rule = PACK_RULES[kind];
@@ -51,7 +59,7 @@ export function parsePackTimestamp(kind: PackKind, name: string): string | null 
     return null;
   }
   const suffix = name.slice(prefix.length);
-  if (!PACK_TIMESTAMP_RE.test(suffix)) {
+  if (!CANONICAL_TIMESTAMP_RE.test(suffix)) {
     return null;
   }
   return suffix;

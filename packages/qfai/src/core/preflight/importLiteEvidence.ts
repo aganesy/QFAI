@@ -4,7 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
-import { findPacks } from "../packLocator.js";
+import { CANONICAL_TIMESTAMP_RE, findPacks } from "../packLocator.js";
 import { collectSpecEntries } from "../specLayout.js";
 
 /**
@@ -26,6 +26,11 @@ export const IMPORT_LITE_EVIDENCE_DIR_REL = ".qfai/evidence";
  * `templates/evidence/import-lite.md`; requiring the separator meant an
  * operator who copied the template under its own name still got the warning it
  * was supposed to clear.
+ *
+ * The suffix is only captured here. Whether it is a legitimate stamp is decided
+ * by `CANONICAL_TIMESTAMP_RE` in `classifyEvidenceName`, so this pattern must
+ * stay permissive enough to hand every hyphenated candidate over for that
+ * check rather than silently reading it as the untimestamped name.
  */
 const IMPORT_LITE_EVIDENCE_RE = /^import-lite(?:-(.*))?\.md$/i;
 
@@ -112,6 +117,20 @@ type EvidenceCandidate = {
   stamp: string | null;
 };
 
+/**
+ * A directory entry as an evidence candidate, or `null` when the name is not
+ * one this project produces.
+ *
+ * Two shapes are legitimate and nothing else is: the bare template filename
+ * `import-lite.md`, and `import-lite-<canonical timestamp>.md`. Treating the
+ * hyphen as "anything may follow" admitted three kinds of file the writers
+ * never emit — `import-lite-.md` and `import-lite-draft.md` slipped through as
+ * untimestamped records, and a digit string of any width was ranked as a
+ * timestamp, so `import-lite-999999999999999999.md` (18 digits) outranked every
+ * real stamp forever. A hyphenated name that is not canonically stamped is
+ * therefore rejected outright rather than demoted to the untimestamped tier:
+ * demoting it would let `import-lite-draft.md` keep standing in for a record.
+ */
 function classifyEvidenceName(name: string): EvidenceCandidate | null {
   const key = name.trim();
   const matched = IMPORT_LITE_EVIDENCE_RE.exec(key);
@@ -119,20 +138,19 @@ function classifyEvidenceName(name: string): EvidenceCandidate | null {
     return null;
   }
   const suffix = matched[1];
-  return {
-    name,
-    key,
-    stamp: suffix !== undefined && /^\d+$/.test(suffix) ? suffix : null,
-  };
+  if (suffix === undefined) {
+    return { name, key, stamp: null };
+  }
+  return CANONICAL_TIMESTAMP_RE.test(suffix) ? { name, key, stamp: suffix } : null;
 }
 
+/**
+ * Oldest-to-newest ordering, so `.at(-1)` is the newest record. Every stamp
+ * that reaches here is the same canonical width, which is what makes plain
+ * string order chronological.
+ */
 function compareTimestampedCandidates(left: EvidenceCandidate, right: EvidenceCandidate): number {
-  const leftStamp = left.stamp ?? "";
-  const rightStamp = right.stamp ?? "";
-  if (leftStamp.length !== rightStamp.length) {
-    return leftStamp.length - rightStamp.length;
-  }
-  return leftStamp.localeCompare(rightStamp);
+  return (left.stamp ?? "").localeCompare(right.stamp ?? "");
 }
 
 async function recordsAnInputSource(filePath: string): Promise<boolean> {
@@ -179,9 +197,41 @@ const UNFILLED_VALUES = new Set([
 /** Wrappers an unfilled value is commonly dressed in: `(placeholder)`, `[TBD]`, `"none"`. */
 const VALUE_DECORATION_RE = /^[([{"'`*_]+|[)\]}"'`*_]+$/g;
 
+/**
+ * Sentence-final punctuation, ASCII and its full-width counterparts.
+ *
+ * A filler written as a sentence — `- URLs: TBD.`, `- Local paths: none.` — is
+ * the same non-answer as the bare word, but comparing the decorated-stripped
+ * value by exact equality accepted it as a real source. The placeholder rule
+ * this module's `Sources` check mirrors already tolerates the trailing period
+ * (`discussionPack.ts` ends its pattern `\.?$`), so normalizing here is what
+ * keeps the two readings of "unfilled" the same.
+ */
+const TRAILING_PUNCTUATION_RE = /[.,;:!?。、．，；：！？…]+$/u;
+
+/**
+ * The comparable core of a value: decoration and sentence punctuation removed,
+ * repeatedly, because the two interleave (`` `TBD`. `` strips only from the
+ * outside in, one layer per pass). Each pass strictly shortens the string or
+ * ends the loop, so it terminates.
+ */
+function bareValue(value: string): string {
+  let bare = value.trim();
+  for (;;) {
+    const stripped = bare
+      .replace(VALUE_DECORATION_RE, "")
+      .replace(TRAILING_PUNCTUATION_RE, "")
+      .trim();
+    if (stripped === bare) {
+      return bare;
+    }
+    bare = stripped;
+  }
+}
+
 /** `true` when a value is blank, a `<...>` placeholder, or one of the fillers above. */
 function isUnfilledValue(value: string): boolean {
-  const bare = value.replace(VALUE_DECORATION_RE, "").trim();
+  const bare = bareValue(value);
   if (bare.length === 0 || PLACEHOLDER_RE.test(bare)) {
     return true;
   }
@@ -286,6 +336,62 @@ function nextFenceState(fence: string | null, marker: string, info: string): str
   return closes ? null : fence;
 }
 
+/**
+ * The `<ISO8601>` datetime the template asks `generated_at` to be replaced
+ * with. The date is required; the time of day, its seconds, its fractional
+ * seconds and the offset are each optional, because an operator who records
+ * `2026-04-01` has still recorded when the evidence was produced — the field
+ * exists to make the artifact's provenance traceable, not to be a precise
+ * instant. `T` and a space both separate the halves, as ISO8601 permits.
+ */
+const ISO8601_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:[.,]\d+)?)?\s*(?:Z|[+-]\d{2}:?\d{2})?)?$/i;
+
+/**
+ * `true` when `value` is an ISO8601 datetime that names a real instant.
+ *
+ * The shape alone is not enough: `2026-99-99` has the right punctuation and no
+ * such day, and `Date` would silently roll it into another month. Every
+ * component is therefore read back off the constructed date, which rejects
+ * out-of-range months, days and times — a non-leap February 29 included.
+ */
+function isIso8601DateTime(value: string): boolean {
+  const matched = ISO8601_DATETIME_RE.exec(value);
+  if (matched === null) {
+    return false;
+  }
+  // The optional time groups are absent, not empty, when only a date was
+  // written, so each component is read with an explicit zero default.
+  const group = (index: number): number => {
+    const raw = matched[index];
+    return raw === undefined ? 0 : Number(raw);
+  };
+  const year = group(1);
+  const month = group(2);
+  const day = group(3);
+  const parsed = new Date(Date.UTC(year, month - 1, day));
+  if (Number.isNaN(parsed.getTime())) {
+    return false;
+  }
+  return (
+    parsed.getUTCFullYear() === year &&
+    parsed.getUTCMonth() === month - 1 &&
+    parsed.getUTCDate() === day &&
+    group(4) < 24 &&
+    group(5) < 60 &&
+    // 60 is the leap second ISO8601 allows.
+    group(6) < 61
+  );
+}
+
+/**
+ * `generated_at` is validated as a datetime, not merely as "something was
+ * typed". A free-text value (`yesterday`) or an impossible one (`2026-99-99`)
+ * left the artifact's provenance untraceable while still clearing
+ * `QFAI-IMPLITE-001` and, through `resolveImportLiteEntrypoint`, suppressing
+ * `QFAI-DPACK-001`. The check subsumes the unfilled-value rule: no placeholder
+ * or filler parses as a date.
+ */
 function hasRequiredMetadata(lines: string[]): boolean {
   const fields = new Map<string, string>();
   for (const line of lines) {
@@ -294,7 +400,7 @@ function hasRequiredMetadata(lines: string[]): boolean {
       fields.set((matched[1] ?? "").toLowerCase(), (matched[2] ?? "").trim());
     }
   }
-  if (isUnfilledValue(fields.get("generated_at") ?? "")) {
+  if (!isIso8601DateTime(bareValue(fields.get("generated_at") ?? ""))) {
     return false;
   }
   return (fields.get("entrypoint") ?? "").toLowerCase() === "import-lite";
@@ -370,17 +476,61 @@ export async function resolveImportLiteEntrypoint(
  */
 const SPEC_ANCHOR_FILES = new Set(["01_spec.md", "01_user-stories.md", "spec.md"]);
 
+/**
+ * The anchor has to carry something, not merely exist. Keying only on the
+ * filename made `touch spec-0001/01_Spec.md` the whole cost of the fallback:
+ * an empty anchor plus an evidence file flipped a project with no authored
+ * spec at all to `ready` and suppressed `QFAI-DPACK-001`, which is the same
+ * bypass the empty-directory rule above already closes one level up.
+ */
 async function hasRecognizableSpecFile(dir: string): Promise<boolean> {
+  let anchors: string[];
   try {
     const entries = await readdir(dir, { withFileTypes: true });
-    return entries.some(
-      (entry) => entry.isFile() && SPEC_ANCHOR_FILES.has(entry.name.toLowerCase()),
-    );
+    anchors = entries
+      .filter((entry) => entry.isFile() && SPEC_ANCHOR_FILES.has(entry.name.toLowerCase()))
+      .map((entry) => entry.name);
   } catch {
     // ENOENT / EACCES: an unreadable spec directory proves nothing, so it does
     // not enable the fallback.
     return false;
   }
+  const authored = await Promise.all(
+    anchors.map((name) => hasAuthoredSpecContent(path.join(dir, name))),
+  );
+  return authored.includes(true);
+}
+
+async function hasAuthoredSpecContent(filePath: string): Promise<boolean> {
+  try {
+    return recordsSpecContent(await readFile(filePath, "utf-8"));
+  } catch {
+    // ENOENT / EACCES / EISDIR: an anchor we cannot read carries nothing.
+    return false;
+  }
+}
+
+/**
+ * `true` when at least one line of the anchor says something an author put
+ * there — the weakest reading of "not empty and not placeholders only", which
+ * is deliberately where the bar sits. A heading counts: `# Spec 0001` is a
+ * one-line spec stub, and this predicate only decides whether the import-lite
+ * entrypoint applies, not whether the spec is complete (`QFAI-SPEC-*` owns
+ * that). Judging the anchor more harshly here would reject spec stubs the rest
+ * of the toolchain accepts and reopen the warning with no remedy in reach.
+ *
+ * Heading and bullet markers are stripped before the line is judged so a
+ * template still on `# <spec title>` reads as the placeholder it is.
+ */
+function recordsSpecContent(text: string): boolean {
+  return text.split(/\r?\n/).some((line) => {
+    const value = line
+      .trim()
+      .replace(/^#{1,6}\s*/, "")
+      .replace(/^[-*+]\s*/, "")
+      .trim();
+    return !isUnfilledValue(value);
+  });
 }
 
 /**

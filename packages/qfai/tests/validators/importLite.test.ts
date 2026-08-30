@@ -158,7 +158,9 @@ describe("validateImportLiteEvidencePresence", () => {
     expect(found?.code).toBe("QFAI-IMPLITE-001");
     expect(found?.severity).toBe("warning");
     expect(found?.rule).toBe("preflight.inputSource");
-    expect(found?.suggested_action).toContain("import-lite-<ts>.md");
+    // The remedy has to name the shape the name check accepts: `<ts>` alone
+    // sent an operator to `import-lite-draft.md`, which is rejected.
+    expect(found?.suggested_action).toContain("import-lite-<17桁timestamp>.md");
   });
 });
 
@@ -198,7 +200,7 @@ describe("importLite profile wiring", () => {
   it("qfai-sdd Stage 0 tells the agent how to produce the evidence file", async () => {
     const skill = await readFile(SKILL_MD, "utf-8");
     expect(skill).toContain("QFAI-IMPLITE-001");
-    expect(skill).toContain(".qfai/evidence/import-lite-<timestamp>.md");
+    expect(skill).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
     expect(skill).toContain("templates/evidence/import-lite.md");
   });
 });
@@ -849,7 +851,7 @@ describe("import-lite in the shipped Stage 0 guidance", () => {
     const body = stageZero.slice(0, stageZero.indexOf("\n## Stage 1"));
 
     expect(body).toContain("templates/evidence/import-lite.md");
-    expect(body).toContain(".qfai/evidence/import-lite-<timestamp>.md");
+    expect(body).toContain(".qfai/evidence/import-lite-<17-digit timestamp>.md");
     expect(body).toContain("QFAI-IMPLITE-001");
   });
 
@@ -863,4 +865,218 @@ describe("import-lite in the shipped Stage 0 guidance", () => {
       ".qfai/evidence/import-lite-*.md",
     );
   });
+});
+
+describe("unfilled values written as a sentence", () => {
+  // `isUnfilledValue` compared the decoration-stripped value by exact equality,
+  // so a filler with the trailing period an operator naturally types read as a
+  // real source: preflight went `ready` and `QFAI-DPACK-001` was suppressed on
+  // a project that had named nothing.
+  for (const filler of ["TBD.", "none.", "n/a.", "(placeholder).", "TODO。", "unknown!"]) {
+    it(`does not accept "${filler}" as a recorded source`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await writeEvidence(
+        root,
+        "import-lite-20260401000000000.md",
+        FILLED_EVIDENCE.replace("https://example.com/legacy-requirements", filler),
+      );
+
+      expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+      expect(await findImportLiteEvidence(root)).toBeNull();
+    });
+  }
+
+  it("does not accept a generated_at filler with a trailing period", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      FILLED_EVIDENCE.replace("2026-04-01T00:00:00Z", "TBD."),
+    );
+
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+  });
+
+  // Over-correction pin: only the filler vocabulary is normalised, so a real
+  // source that happens to end in punctuation is still a real source.
+  for (const source of [
+    "https://example.com/legacy-requirements.",
+    "docs/legacy/requirements.md.",
+    "運用チームのヒアリング記録。",
+  ]) {
+    it(`still accepts "${source}" as a recorded source`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await writeEvidence(
+        root,
+        "import-lite-20260401000000000.md",
+        FILLED_EVIDENCE.replace("https://example.com/legacy-requirements", source),
+      );
+
+      expect(await run(root)).toEqual([]);
+      expect(await findImportLiteEvidence(root)).not.toBeNull();
+    });
+  }
+});
+
+describe("import-lite evidence filename suffix", () => {
+  // The pattern let anything follow the hyphen, so two shapes no writer emits
+  // stood in for a record: `import-lite-.md` / `import-lite-draft.md` were read
+  // as the untimestamped template name, and a digit run of any width ranked as
+  // a timestamp — an 18-digit one outranking every real stamp forever.
+  for (const name of [
+    "import-lite-.md",
+    "import-lite-draft.md",
+    "import-lite-2026-04-01.md",
+    "import-lite-123.md",
+    "import-lite-999999999999999999.md",
+  ]) {
+    it(`does not accept "${name}" as evidence`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await seedEvidence(root, name);
+
+      expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+      expect(await findImportLiteEvidence(root)).toBeNull();
+    });
+  }
+
+  // A non-canonical name must not outrank a real record either: rejecting it
+  // outright is what keeps the 18-digit file from being selected as "newest".
+  it("selects the canonically stamped record beside a longer digit run", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await seedEvidence(root, "import-lite-999999999999999999.md");
+    await seedEvidence(root, "import-lite-20260401000000000.md");
+
+    expect(path.basename((await findImportLiteEvidence(root)) ?? "")).toBe(
+      "import-lite-20260401000000000.md",
+    );
+  });
+
+  // Over-correction pin: the two shapes the writers do emit — the shipped
+  // template filename and the canonically stamped record — still count.
+  for (const name of ["import-lite.md", "import-lite-20260401000000000.md"]) {
+    it(`still accepts "${name}" as evidence`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await seedEvidence(root, name);
+
+      expect(await run(root)).toEqual([]);
+      expect(path.basename((await findImportLiteEvidence(root)) ?? "")).toBe(name);
+    });
+  }
+});
+
+describe("import-lite evidence generated_at", () => {
+  // `generated_at` was only checked for being non-placeholder, so free text and
+  // impossible dates passed: the artifact's provenance was untraceable while
+  // the preflight went `ready` and `QFAI-DPACK-001` stayed suppressed.
+  for (const stamp of ["yesterday", "2026-99-99", "2026-13-01T00:00:00Z", "2026-02-30", "n0w"]) {
+    it(`does not accept generated_at "${stamp}"`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await writeEvidence(
+        root,
+        "import-lite-20260401000000000.md",
+        FILLED_EVIDENCE.replace("2026-04-01T00:00:00Z", stamp),
+      );
+
+      expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+      expect(await findImportLiteEvidence(root)).toBeNull();
+    });
+  }
+
+  it("keeps the preflight blocked on an unparseable generated_at", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      FILLED_EVIDENCE.replace("2026-04-01T00:00:00Z", "yesterday"),
+    );
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.selectedInputPath).toBeNull();
+  });
+
+  // Over-correction pin: the field records when the evidence was produced, so
+  // every ISO8601 spelling of a real instant has to keep working — offsets,
+  // fractional seconds, a space separator, and a bare date.
+  for (const stamp of [
+    "2026-04-01T00:00:00Z",
+    "2026-04-01T09:30:00+09:00",
+    "2026-04-01T09:30:00.123Z",
+    "2026-04-01 09:30",
+    "2026-04-01",
+    "2024-02-29T00:00:00Z",
+  ]) {
+    it(`still accepts generated_at "${stamp}"`, async () => {
+      const root = await newRoot();
+      await seedSpec(root);
+      await writeEvidence(
+        root,
+        "import-lite-20260401000000000.md",
+        FILLED_EVIDENCE.replace("2026-04-01T00:00:00Z", stamp),
+      );
+
+      expect(await run(root)).toEqual([]);
+      expect(await findImportLiteEvidence(root)).not.toBeNull();
+    });
+  }
+});
+
+describe("import-lite eligibility needs an authored spec anchor", () => {
+  const seedAnchor = async (root: string, body: string): Promise<void> => {
+    const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await writeFile(path.join(specDir, "01_Spec.md"), body, "utf-8");
+  };
+
+  // The empty-directory rule keyed the fallback on an anchor FILE existing, so
+  // `touch spec-0001/01_Spec.md` was the whole cost of bypassing
+  // `/qfai-discussion`: preflight went `ready` and `QFAI-DPACK-001` with it.
+  for (const [label, body] of [
+    ["an empty anchor", ""],
+    ["a whitespace-only anchor", "\n   \n\t\n"],
+    ["a placeholder-only anchor", "# <spec title>\n\n- TBD.\n- <spec-id>\n"],
+  ] as const) {
+    it(`does not apply with ${label}`, async () => {
+      const root = await newRoot();
+      await seedAnchor(root, body);
+      await seedEvidence(root, "import-lite-20260401000000000.md");
+
+      const result = await runSddPreflight(root, defaultConfig);
+      expect(result.status).toBe("blocked");
+      expect(result.source).toBe("discussion-pack");
+
+      const validated = await validateProject(root, undefined, { profile: "full" });
+      expect(validated.issues.map((found) => found.code)).toContain("QFAI-DPACK-001");
+    });
+  }
+
+  // Over-correction pin: this predicate only decides whether the entrypoint
+  // applies — `QFAI-SPEC-*` owns spec completeness — so a one-line stub is
+  // still an authored spec, as every other case in this file assumes.
+  for (const [label, body] of [
+    ["a heading-only stub", "# Spec 0001\n"],
+    ["a stub whose only content is a bullet", "- Spec: spec-0001\n"],
+  ] as const) {
+    it(`still applies with ${label}`, async () => {
+      const root = await newRoot();
+      await seedAnchor(root, body);
+      await seedEvidence(root, "import-lite-20260401000000000.md");
+
+      const result = await runSddPreflight(root, defaultConfig);
+      expect(result.status).toBe("ready");
+      expect(result.source).toBe("import-lite");
+
+      const validated = await validateProject(root, undefined, { profile: "full" });
+      expect(validated.issues.map((found) => found.code)).not.toContain("QFAI-DPACK-001");
+    });
+  }
 });
