@@ -92,6 +92,7 @@ import {
   detectHandoffSchemaDrift,
   validateStaleReferences,
 } from "./validators/index.js";
+import type { HtmlMockTiming } from "./validators/index.js";
 import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -576,19 +577,19 @@ async function runUiuxValidators(
   const uiuxStart = performance.now();
   const platformResult = await detectPlatform(root, config, platformOption);
   const platform = platformResult.platform;
-  let htmlMockMs = 0;
+  // The html-mock pass times itself and reports through here, rather than
+  // being wall-clocked from this side. Its budget is for parsing the mock
+  // blocks, and the parser is a jsdom-backed module loaded lazily inside the
+  // pass at ~910ms; a stopwatch around the call would charge that one-off load
+  // to the budget and report every sub-second `htmlMockTimeout` as an overrun
+  // however fast the blocks actually parsed.
+  //
+  // Stays 0 when there are no mock blocks to parse — nothing was loaded and
+  // nothing was parsed, so there is no cost to attribute.
+  const htmlMockTiming: HtmlMockTiming = { parseMs: 0 };
   const uiuxValidators: Array<() => Promise<Issue[]>> = [
     () => validateDesignToken(root, config),
-    // `finally` so a rejecting html-mock pass still leaves a measurement
-    // behind: what gets reported must not depend on the run succeeding.
-    async () => {
-      const htmlMockStart = performance.now();
-      try {
-        return await validateHtmlMock(root, platform, config);
-      } finally {
-        htmlMockMs = performance.now() - htmlMockStart;
-      }
-    },
+    () => validateHtmlMock(root, platform, config, htmlMockTiming),
     () => validateMermaidScreenFlow(root, config),
     () => validateBpApDb(root, config),
     () => validateUiDefinitionConsistency(root, config),
@@ -603,7 +604,7 @@ async function runUiuxValidators(
   timings.timings = {
     uiuxMs: performance.now() - uiuxStart,
     uiuxBudgetMs: UIUX_VALIDATION_BUDGET_MS,
-    htmlMockMs,
+    htmlMockMs: htmlMockTiming.parseMs,
     htmlMockBudgetMs: config.uiux?.htmlMockTimeout ?? HTML_MOCK_VALIDATION_BUDGET_MS,
   };
   return uiuxIssues;
