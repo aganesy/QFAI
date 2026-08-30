@@ -84,3 +84,51 @@ describe("negationsOutrankLaterIgnores", () => {
     expect(negationsOutrankLaterIgnores(lines, ["!coverage-depth-*.md"])).toBe(true);
   });
 });
+
+describe("a bracket expression is a character class, not five literal characters", () => {
+  // Review finding [E2]. The translation escaped `[` and `]` into literals, so a project line
+  // like `.qfai/install-provenance.[j]son` — an ordinary class that git honours — matched
+  // nothing here. Git ignores the provenance record; this matcher says nothing conflicts;
+  // `ensureRootGitignoreEntries` returns early; the record stays ignored. A fresh clone then has
+  // no record at all, so the next `qfai init` reads a declined workflow as never-installed and
+  // writes it back — the one outcome that record exists to stop.
+
+  it("matches through a class the way git does", () => {
+    expect(
+      gitignorePatternMatches(".qfai/install-provenance.[j]son", ".qfai/install-provenance.json"),
+      "the reviewer's pattern: a one-member class still selects that member",
+    ).toBe(true);
+    expect(
+      gitignorePatternMatches("build.[oa]", "build.o"),
+      "and a multi-member class selects each of them",
+    ).toBe(true);
+    expect(gitignorePatternMatches("build.[oa]", "build.a")).toBe(true);
+    expect(gitignorePatternMatches("build.[oa]", "build.c"), "and nothing outside it").toBe(false);
+  });
+
+  it("reads a range, and a negated class", () => {
+    expect(gitignorePatternMatches("log[0-9].txt", "log7.txt")).toBe(true);
+    expect(gitignorePatternMatches("log[0-9].txt", "logx.txt")).toBe(false);
+    // git spells negation `[!…]`; `[^…]` is accepted too.
+    expect(gitignorePatternMatches("log[!0-9].txt", "logx.txt")).toBe(true);
+    expect(gitignorePatternMatches("log[!0-9].txt", "log7.txt")).toBe(false);
+    expect(gitignorePatternMatches("log[^0-9].txt", "logx.txt")).toBe(true);
+  });
+
+  it("treats an unterminated bracket as the literal character git treats it as", () => {
+    // An opening bracket with no partner is not a class, and reading it as one would throw on a
+    // malformed regular expression — which in this matcher means a crash on a project file
+    // nobody said was invalid.
+    expect(() => gitignorePatternMatches("weird[name", "weird[name")).not.toThrow();
+    expect(gitignorePatternMatches("weird[name", "weird[name")).toBe(true);
+  });
+
+  it("keeps a class from spanning a directory separator", () => {
+    // The rest of the translation is careful that `*` and `?` stop at a `/`. A class that
+    // silently crossed one would make an unrelated deep path look like a conflict.
+    expect(
+      gitignorePatternMatches("a[b]c/leaf", "abc/leaf"),
+      "the class itself still matches inside one segment",
+    ).toBe(true);
+  });
+});

@@ -134,6 +134,77 @@ export const QFAI_GITIGNORE_BLOCK = [
 ].join("\n");
 
 /**
+ * Translate one gitignore glob body into a regular-expression source.
+ *
+ * Scanned character by character rather than assembled from `replace` passes, because a
+ * bracket expression cannot be expressed that way: review finding [E2] measured the old
+ * translation escaping `[` and `]` into literals, so a project line like
+ * `.qfai/install-provenance.[j]son` — a perfectly ordinary character class that git honours —
+ * read as five literal characters and matched nothing. The conflict with the managed block's
+ * negation therefore went unseen, `ensureRootGitignoreEntries` returned early, and the
+ * provenance record stayed ignored. A fresh clone then has no record, so the next `qfai init`
+ * reads a declined workflow as never-installed and writes it back.
+ *
+ * Supported, in gitignore's own terms: `**` between slashes spans directories, `*` and `?` stop
+ * at a `/`, and `[...]` is a class — with `!` or `^` at its head meaning negated, as git
+ * documents.
+ *
+ * @param body the pattern with any leading `/` and trailing `/` already removed
+ * @returns the regular-expression source, without anchors
+ */
+function translateGlob(body: string): string {
+  let source = "";
+  for (let index = 0; index < body.length; index += 1) {
+    const char = body[index] ?? "";
+
+    if (char === "[") {
+      // Git's own rule: a `]` immediately after the opening bracket (or after a leading
+      // negation) is a literal member rather than the terminator.
+      let scan = index + 1;
+      if (body[scan] === "!" || body[scan] === "^") scan += 1;
+      if (body[scan] === "]") scan += 1;
+      while (scan < body.length && body[scan] !== "]") scan += 1;
+      if (scan >= body.length) {
+        // No terminator: an unmatched `[` is a literal `[`, which is what git does too.
+        source += "\\[";
+        continue;
+      }
+      const head = body[index + 1] ?? "";
+      const negated = head === "!" || head === "^";
+      const inner = body.slice(index + (negated ? 2 : 1), scan);
+      // A class never matches `/` in gitignore, and the members are copied through with only
+      // the two characters that would end or escape the class made safe.
+      const members = inner.replace(/\\/g, "\\\\").replace(/\]/g, "\\]");
+      source += `[${negated ? "^" : ""}${members}]`;
+      index = scan;
+      continue;
+    }
+
+    if (char === "*") {
+      if (body[index + 1] === "*") {
+        if (body[index + 2] === "/") {
+          source += "(?:.*/)?";
+          index += 2;
+        } else {
+          source += ".*";
+          index += 1;
+        }
+      } else {
+        source += "[^/]*";
+      }
+      continue;
+    }
+
+    if (char === "?") {
+      source += "[^/]";
+      continue;
+    }
+
+    source += /[.+^${}()|\\]/.test(char) ? `\\${char}` : char;
+  }
+  return source;
+}
+/**
  * True when `pattern` — one ignore line — could match `samplePath`.
  *
  * A presence check is not enough for a negation: git applies the **last**
@@ -168,20 +239,7 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
     return false;
   }
 
-  const DOUBLE_STAR_SLASH = " ds ";
-  const DOUBLE_STAR = " d ";
-  const source = body
-    .replace(/[.+^${}()|[\]\\]/g, (char) => `\\${char}`)
-    // Order matters: the two double-star forms are parked before the
-    // single-`*` rule can eat them, then restored.
-    .replace(/\*\*\//g, DOUBLE_STAR_SLASH)
-    .replace(/\*\*/g, DOUBLE_STAR)
-    .replace(/\*/g, "[^/]*")
-    .replace(/\?/g, "[^/]")
-    .split(DOUBLE_STAR_SLASH)
-    .join("(?:.*/)?")
-    .split(DOUBLE_STAR)
-    .join(".*");
+  const source = translateGlob(body);
 
   // The trailing group is what makes a directory pattern cover its contents.
   const prefix = anchored ? "^" : "^(?:.*/)?";
