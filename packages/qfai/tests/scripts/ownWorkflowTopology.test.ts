@@ -2620,16 +2620,27 @@ describe("release automation performs decisions rather than making them", () => 
     ).toBe(true);
   });
 
-  it("tags only a release commit, and only one whose three statements agree", () => {
+  it("tags from the manifest, and only when the CHANGELOG names that version", () => {
     const tagWorkflow = workflow("tag-release.yml");
     const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
     const tagJob = jobs["tag"];
     expect(isRecord(tagJob), "tag-release must have a tag job").toBe(true);
     const job = isRecord(tagJob) ? tagJob : {};
+    // The TRIGGER, not a commit message. This repository merges pull requests with merge
+    // commits, so `head_commit.message` reads "Merge pull request #N from …" and a condition on
+    // the release commit's own subject could never have fired. A version is a fact about the
+    // tree; a commit subject is a fact about how somebody merged.
+    const push = isRecord(tagWorkflow["on"]) ? tagWorkflow["on"]["push"] : undefined;
+    const paths = isRecord(push) ? push["paths"] : undefined;
+    expect(
+      paths,
+      "the trigger must be the manifest changing: that is the only way a version can change, " +
+        "and it is independent of how the pull request was merged",
+    ).toEqual(["packages/qfai/package.json"]);
     expect(
       String(job["if"] ?? ""),
-      "every other push to main must skip this job rather than start it and decide",
-    ).toContain("chore(release): qfai ");
+      "and there must be no condition on a commit subject, which merge commits hide",
+    ).not.toContain("head_commit");
 
     const body =
       (job["steps"] as Array<Record<string, unknown>> | undefined)
@@ -2645,14 +2656,17 @@ describe("release automation performs decisions rather than making them", () => 
       .map((line) => line.trim())
       .filter((line) => line !== "" && !line.startsWith("#"))
       .join("\n");
-    expect(commands, "the manifest version must actually be read").toMatch(
-      /manifest=.*packages\/qfai\/package\.json/,
-    );
     expect(
       commands,
-      "and compared with what the commit claims: a tag naming a tree that disagrees with it is " +
-        "the one thing a tag must never be",
-    ).toMatch(/"\$manifest" != "\$claimed"/);
+      "the version must be read out of the manifest, which is the tree's own statement of it",
+    ).toMatch(/claimed=.*packages\/qfai\/package\.json/);
+    expect(
+      commands,
+      "and the CHANGELOG must be SEARCHED for that version before anything is tagged: the " +
+        "Release body is extracted from that section, so a tag without it publishes a release " +
+        "nobody described. The grep, not a mention — the message inside that branch names the " +
+        "file too, and a row that matched it stayed green when the check was removed",
+    ).toMatch(/grep[^\n]*CHANGELOG\.md/);
     expect(
       body,
       "and the CHANGELOG heading, because the GitHub Release body is extracted from that section",
