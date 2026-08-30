@@ -91,28 +91,48 @@ type StubGrade = {
 const STUB_ERROR: StubGrade = { code: "QFAI-TEST-001", severity: "error" };
 const SKIPPED_TEST_WARNING: StubGrade = { code: "QFAI-TEST-003", severity: "warning" };
 
+/**
+ * A `.` in a member chain, with the line break a formatter is free to put on
+ * either side of it.
+ *
+ * `test.concurrent` + newline + `.skip(...)` is one valid call, and it is what
+ * a printer emits once the chain grows past the print width. A `\.` demanding
+ * the next link on the same line matches no part of it, so an unconditionally
+ * skipped test written that way was reported by nothing. Paired with the
+ * whole-file scan in {@link collectStubIssues} — the chain has to be matched
+ * across the newline *and* looked for in text that still contains one.
+ */
+const CHAIN_DOT = String.raw`\s*\.\s*`;
+
+/**
+ * The vitest/jest construct, with a modifier chain allowed on **either** side
+ * of the `todo` / `skip` token; both sides are optional.
+ *
+ * - leading (the lazy chain before the token) — the `test.concurrent` and
+ *   `it.failing` spellings of skip. The modifier pushes `skip` off the root
+ *   identifier, so a pattern demanding it directly after `test` let an
+ *   unconditionally skipped concurrent test through unreported.
+ * - trailing (the chain inside the first branch) — `test.skip.each` and the
+ *   `it` / `describe` equivalents put a `.` where the bare form puts its `(`,
+ *   so a pattern anchored straight onto the open paren let an unconditionally
+ *   skipped parameterized suite through unreported.
+ *
+ * The second branch is the tagged-template call (`.each` followed by a
+ * template literal). It demands a **non-empty** trailing chain on purpose:
+ * this validator scans a repo's own test files, where prose routinely names
+ * the construct inside a markdown code span, and accepting a backtick straight
+ * after the bare form reports every such mention as a stub.
+ */
+const JS_STUB_PATTERN = new RegExp(
+  String.raw`\b(it|test|describe)(?:${CHAIN_DOT}\w+)*?${CHAIN_DOT}(todo|skip)\b` +
+    `(?:(?:${CHAIN_DOT}\\w+)*\\s*\\(|(?:${CHAIN_DOT}\\w+)+\\s*\`)`,
+  "g",
+);
+
 const STUB_DIALECTS: readonly StubDialect[] = [
   {
     extensions: [".ts", ".tsx", ".mts", ".cts", ".js", ".jsx", ".mjs", ".cjs"],
-    // A modifier chain may sit on **either** side of the `todo` / `skip`
-    // token, and both sides are optional:
-    //
-    // - leading (`(?:\.\w+)*?` before the token) — the `test.concurrent` and
-    //   `it.failing` spellings of skip. The modifier pushes `skip` off the
-    //   root identifier, so a pattern demanding it directly after `test` let
-    //   an unconditionally skipped concurrent test through unreported.
-    // - trailing (the `(?:\.\w+)*` inside the first branch) — `test.skip.each`
-    //   and the `it` / `describe` equivalents put a `.` where the bare form
-    //   puts its `(`, so a pattern anchored straight onto the open paren let
-    //   an unconditionally skipped parameterized suite through unreported.
-    //
-    // The second branch is the tagged-template call (`.each` followed by a
-    // template literal). It demands a **non-empty** trailing chain on purpose:
-    // this validator scans a repo's own test files, where prose routinely
-    // names the construct inside a markdown code span, and accepting a
-    // backtick straight after the bare form reports every such mention as a
-    // stub.
-    pattern: /\b(it|test|describe)(?:\.\w+)*?\.(todo|skip)\b(?:(?:\.\w+)*\s*\(|(?:\.\w+)+\s*`)/g,
+    pattern: JS_STUB_PATTERN,
     runner: "vitest/jest",
     // Deliberately the root + the token, dropping any modifier on either side:
     // a concurrent skipped `.each` suite labels as `test.skip`, exactly as the
@@ -130,63 +150,90 @@ const STUB_DIALECTS: readonly StubDialect[] = [
   { extensions: [".go"], pattern: /\bt\.Skip\w*\s*\(/g, runner: "go test" },
   { extensions: [".java", ".kt", ".kts"], pattern: /@(?:Disabled|Ignore)\b/g, runner: "JUnit" },
   { extensions: [".rs"], pattern: /#\[ignore\b/g, runner: "cargo test" },
-  { extensions: [".rb"], pattern: /^\s*(?:skip|pending)\b/gm, runner: "RSpec/minitest" },
+  // Indent matched with `[ \t]*`, not `\s*`: under the whole-file scan a `\s*`
+  // after `^` swallows the blank lines above the construct, and the finding
+  // would then carry the line number of the first of them.
+  { extensions: [".rb"], pattern: /^[ \t]*(?:skip|pending)\b/gm, runner: "RSpec/minitest" },
   { extensions: [".cs"], pattern: /\[Ignore\b|\bSkip\s*=\s*"/g, runner: ".NET test" },
 ];
 
-/** Every stub occurrence in one already-read file, one issue per occurrence. */
+/** The finding for one matched construct, worded for the rule it is filed under. */
+function stubIssue(
+  relFile: string,
+  dialect: StubDialect,
+  matchedKind: string,
+  grade: StubGrade,
+  lineNumber: number,
+): Issue {
+  const isSkip = grade.code === "QFAI-TEST-003";
+  // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
+  // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
+  // this. file is kept as the bare repo path so emitGitHub / waiver path
+  // matchers (matchFindingPath in waivers.ts) work correctly; the line
+  // number is carried in `loc.line`.
+  const found = issue(
+    grade.code,
+    isSkip
+      ? `Skipped test found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+          `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
+          `Drop the skip modifier to put it back in the run.`
+      : `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
+          `Implement the body or delete the stub.`,
+    grade.severity,
+    relFile,
+    "validation.testStrategy.forbidTestTodoStubs",
+    [matchedKind],
+    "canonical",
+    // A `.skip` keeps its body, so "delete the stub" is the wrong first
+    // move here: followed literally it throws away a working test. The
+    // normal fix is to remove the modifier; the waiver is for the case
+    // where the suite is parked on purpose.
+    isSkip
+      ? "Remove the skip modifier so the test runs again — restore " +
+          "`it` / `test` / `describe`, implementing the body first if it is " +
+          "still empty. Do not delete a test that already has one. If the " +
+          "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
+          ".qfai/waivers.yml; setting " +
+          "`validation.testStrategy.forbidTestTodoStubs: false` in " +
+          "qfai.config.yaml turns the whole check off instead."
+      : "Implement the test body, or delete the stub entirely. " +
+          "If you need to temporarily opt out of this check, set " +
+          "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
+  );
+  found.loc = { line: lineNumber };
+  return found;
+}
+
+/**
+ * Every stub occurrence in one already-read file, one issue per occurrence.
+ *
+ * The scan runs over the **whole file**, not line by line. A member chain is
+ * free to carry a line break at every `.` (`test.concurrent` newline
+ * `.skip(...)`, `test.skip` newline `.each(table)(...)`), and such a call is
+ * contained by no single line — the per-line loop this replaced reported
+ * nothing for it, so a suite parked that way was invisible even to
+ * `--fail-on warning`. The line number therefore comes from the offset the
+ * match *starts* at, which is where the construct's root identifier sits.
+ */
 function collectStubIssues(relFile: string, content: string, dialect: StubDialect): Issue[] {
   const issues: Issue[] = [];
-  const lines = content.split(/\r?\n/);
-  for (let i = 0; i < lines.length; i += 1) {
-    const line = lines[i] ?? "";
-    // The docstring promises one issue per stub occurrence. Walk every
-    // match on the line via matchAll (the regex carries the `g` flag) so
-    // a line like `it.todo(...); test.todo(...);` produces two issues
-    // instead of just the first.
-    const lineNumber = i + 1;
-    for (const match of line.matchAll(dialect.pattern)) {
-      const matchedKind = dialect.label ? dialect.label(match) : match[0].trim();
-      const grade = dialect.grade ? dialect.grade(match) : STUB_ERROR;
-      const isSkip = grade.code === "QFAI-TEST-003";
-      // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
-      // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
-      // this. file is kept as the bare repo path so emitGitHub / waiver path
-      // matchers (matchFindingPath in waivers.ts) work correctly; the line
-      // number is carried in `loc.line`.
-      const stubIssue = issue(
-        grade.code,
-        isSkip
-          ? `Skipped test found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
-              `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
-              `Drop the skip modifier to put it back in the run.`
-          : `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
-              `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
-              `Implement the body or delete the stub.`,
-        grade.severity,
-        relFile,
-        "validation.testStrategy.forbidTestTodoStubs",
-        [matchedKind],
-        "canonical",
-        // A `.skip` keeps its body, so "delete the stub" is the wrong first
-        // move here: followed literally it throws away a working test. The
-        // normal fix is to remove the modifier; the waiver is for the case
-        // where the suite is parked on purpose.
-        isSkip
-          ? "Remove the skip modifier so the test runs again — restore " +
-              "`it` / `test` / `describe`, implementing the body first if it is " +
-              "still empty. Do not delete a test that already has one. If the " +
-              "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
-              ".qfai/waivers.yml; setting " +
-              "`validation.testStrategy.forbidTestTodoStubs: false` in " +
-              "qfai.config.yaml turns the whole check off instead."
-          : "Implement the test body, or delete the stub entirely. " +
-              "If you need to temporarily opt out of this check, set " +
-              "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
-      );
-      stubIssue.loc = { line: lineNumber };
-      issues.push(stubIssue);
-    }
+  // matchAll yields matches in ascending offset order, so the line counter is
+  // carried forward from the previous match instead of re-counting from the
+  // top of the file: the whole scan stays linear however many stubs are found.
+  // The docstring also promises one issue per occurrence, and matchAll walks
+  // every match (the dialect regexes all carry the `g` flag) rather than
+  // stopping at the first one on a line.
+  let scanned = 0;
+  let lineNumber = 1;
+  for (const match of content.matchAll(dialect.pattern)) {
+    lineNumber += content.slice(scanned, match.index).split("\n").length - 1;
+    scanned = match.index;
+    // The whitespace a fallback label carries can now include the newline the
+    // match spanned, and `refs` / the message are single-line surfaces.
+    const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
+    const grade = dialect.grade ? dialect.grade(match) : STUB_ERROR;
+    issues.push(stubIssue(relFile, dialect, matchedKind, grade, lineNumber));
   }
   return issues;
 }

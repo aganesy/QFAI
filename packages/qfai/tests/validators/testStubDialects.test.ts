@@ -283,6 +283,47 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
+  it(`also matches a chain broken over a newline`, async () => {
+    // A member chain carries a line break at any of its dots, and that is what
+    // a printer emits once the chain outgrows the print width. The scan used
+    // to split the file into lines first, so `test.concurrent` + newline +
+    // `.skip(...)` — one valid call — was contained by no line it looked at
+    // and went unreported even under `--fail-on warning`.
+    const broken = [
+      "test.concurrent",
+      `  ${SKIP}("concurrent skip over two lines", async () => {});`,
+      `test${SKIP}`,
+      '  .each([[1]])("skip each over two lines %i", (n) => {});',
+      "it",
+      `  ${SKIP}("plain skip over two lines", () => {});`,
+      "describe",
+      `  ${TODO}("todo over two lines");`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": broken }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`test${SKIP}`, `test${SKIP}`, `it${SKIP}`]);
+      // The line the construct *starts* on — the root identifier's — and every
+      // finding after a multi-line match still lands on its own line.
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1, 3, 5]);
+      expect(skipped.every((i) => i.severity === "warning")).toBe(true);
+      const todo = issues.filter((i) => i.code === "QFAI-TEST-001");
+      expect(todo.map((i) => i.loc?.line)).toEqual([7]);
+    });
+  });
+
+  it("keeps a Ruby stub on its own line when blank lines precede it", async () => {
+    // Over-correction pin for the whole-file scan: the RSpec pattern anchors on
+    // `^` and then eats the indent, so a `\s*` indent would swallow the blank
+    // lines above the construct and file the finding against the first of them.
+    const spec = ["it 'x' do", "", "", "  skip 'later'", "end", ""].join("\n");
+    await withTests({ "tests/a_spec.rb": spec }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001").map((i) => i.loc?.line)).toEqual([4]);
+    });
+  });
+
   it("leaves a plain it()/describe() call alone", async () => {
     await withTests(
       {
@@ -291,6 +332,13 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
         // A modifier chain carrying no skip/todo token at all: the widened
         // leading-modifier match must not turn every chained call into a stub.
         "tests/d.test.ts": 'test.concurrent.each([[1]])("runs", async (n) => {});\n',
+        // The same chain broken over a newline. Tolerating the line break must
+        // not cost the negative case: still no skip/todo token in it.
+        "tests/e.test.ts": 'test.concurrent\n  .each([[1]])("runs", async (n) => {});\n',
+        // Prose naming the construct at a line end, with the next line opening
+        // on a comment marker rather than the call's paren. Only whitespace may
+        // stand between the token and the `(` that makes it a call.
+        "tests/f.test.ts": `// spellings: it${SKIP}\n// (and it${TODO})\n`,
         // Prose naming the construct inside a markdown code span. A repo's own
         // test files are full of these, and `qfai validate` scans them, so a
         // pattern that accepts a backtick straight after the bare form turns
