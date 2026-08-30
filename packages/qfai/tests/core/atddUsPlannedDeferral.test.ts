@@ -337,6 +337,65 @@ describe("collectPlannedUsIds", () => {
     expect(collectPlannedUsIds(text).size).toBe(0);
   });
 
+  it("requires the marker to reach the entry's content column, not its marker column", () => {
+    const text = userStories(["## US Catalog", "", "- US-0001: a", ` ${PLANNED}`, ""].join("\n"));
+    // One space clears the `-` at column 0 but falls short of the two columns a
+    // child of the entry needs, so Markdown reads this as a separate list item.
+    // Tracking the marker column instead of the content column let it pass as
+    // content of US-0001 and silently drop the `QFAI-ATDD-111` error.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
+  it("keeps a child indented to the content column inside the entry", () => {
+    const text = userStories(
+      ["## US Catalog", "", "-   US-0001: a", `    ${PLANNED}`, ""].join("\n"),
+    );
+    // The over-correction pin: the content column moves with the whitespace after
+    // the marker, so a legitimately nested marker still defers.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("counts a tab to the next Markdown tab stop when locating the content column", () => {
+    const text = userStories(["## US Catalog", "", "-\tUS-0001: a", `\t${PLANNED}`, ""].join("\n"));
+    // A tab after the marker advances to column 4, which is exactly where a
+    // tab-indented child sits — counting it as a flat four columns past the
+    // marker would have put the content column out of any child's reach.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("opens a catalog entry written with a `+` bullet", () => {
+    const text = userStories(
+      ["## US Catalog", "", "+ US-0001: a", `  ${PLANNED}`, "+ US-0002: b", ""].join("\n"),
+    );
+    // `collectShortIds` declares the id from this line like any other, so a
+    // catalog written with `+` owed `QFAI-ATDD-111` with no way to defer.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("opens a catalog entry written as an ordered list item", () => {
+    for (const marker of ["1.", "1)"]) {
+      const text = userStories(
+        ["## US Catalog", "", `${marker} US-0001: a`, `   ${PLANNED}`, ""].join("\n"),
+      );
+      expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+    }
+  });
+
+  it("accepts a `+` bullet on the marker line itself", () => {
+    const text = userStories(
+      ["## US Catalog", "", "+ US-0001: a", "  + x-qfai-status: planned", ""].join("\n"),
+    );
+    // A pack that writes its lists with `+` writes its meta lines that way too.
+    expect(Array.from(collectPlannedUsIds(text))).toEqual(["US-0001"]);
+  });
+
+  it("does not accept an ordered marker on the marker line", () => {
+    const text = userStories(["## US-0001: a", "", "1. x-qfai-status: planned", ""].join("\n"));
+    // A numbered step is not a story attribute; every shipped template writes
+    // the meta lines as bullets.
+    expect(collectPlannedUsIds(text).size).toBe(0);
+  });
+
   it("rejects a meta line that is not a list item", () => {
     const text = userStories(["## US-0001: a", "", "-x-qfai-status: planned", ""].join("\n"));
     // No space after the list marker: not a Markdown list item, so a typo cannot

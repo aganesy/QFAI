@@ -1163,6 +1163,12 @@ const US_HEADING_RE = /^#{2,6}\s+(US-\d{4}(?:-\d{4})?)(?:\s*[:：]\s*.*)?$/;
 /** Any ATX heading — the block terminator paired with {@link US_HEADING_RE}. */
 const ANY_HEADING_RE = /^#{1,6}\s+/;
 
+/** Markdown's bullet list markers, as a regex character class. */
+const BULLET_MARKER = "[-*+]";
+
+/** Markdown's ordered list marker — `1.` or `1)`, at its nine-digit ceiling. */
+const ORDERED_MARKER = "\\d{1,9}[.)]";
+
 /**
  * Catalog form of a user story, e.g. `- US-0001: summary`.
  *
@@ -1172,8 +1178,19 @@ const ANY_HEADING_RE = /^#{1,6}\s+/;
  * appear in it: `- Goal: as described in US-0002` is prose about another story,
  * not a declaration of one, and treating it as a block opener would hand the
  * next marker to the wrong id.
+ *
+ * Every list form Markdown writes opens a block, not just `-` and `*`. The
+ * declaring collector is not list-aware at all — its loose scan lifts the id out
+ * of `+ US-0001: …` and `1. US-0001: …` exactly as it does out of `- US-0001: …`
+ * — so a narrower opener here left a catalog written in either of those forms
+ * declared, owed and undeferrable.
+ *
+ * Group 1 is the prefix (indent, marker, and the whitespace after it), whose
+ * width is the item's content column; group 2 is the id.
  */
-const US_LIST_ITEM_RE = /^[-*][ \t]+(US-\d{4}(?:-\d{4})?)[ \t]*[:：]?/;
+const US_LIST_ITEM_RE = new RegExp(
+  `^([ \\t]*(?:${BULLET_MARKER}|${ORDERED_MARKER})[ \\t]+)(US-\\d{4}(?:-\\d{4})?)[ \\t]*[:：]?`,
+);
 
 /**
  * The `x-qfai-status: planned` deferral in user-story meta-line form.
@@ -1193,6 +1210,12 @@ const US_LIST_ITEM_RE = /^[-*][ \t]+(US-\d{4}(?:-\d{4})?)[ \t]*[:：]?/;
  * unterminated `- x-qfai-status: 'planned` nor a mixed `"…'` pair defers a
  * story). A typo in a meta line has to fail loudly rather than pass as a
  * deferral.
+ *
+ * The bullet class is the one {@link US_LIST_ITEM_RE} opens catalog entries
+ * with, so a pack that writes its lists with `+` can write this line the same
+ * way. An ordered marker is deliberately not accepted: a meta line is a bullet
+ * in every shipped template, and `1. x-qfai-status: planned` is a numbered step,
+ * not a story attribute.
  */
 const PLANNED_US_META_LINE_RE = (() => {
   const key = escapeRegExp(PLANNED_CONTRACT_KEY);
@@ -1200,24 +1223,32 @@ const PLANNED_US_META_LINE_RE = (() => {
   /** Bare, or wrapped in a matched pair of the same quote character. */
   const quoted = (token: string): string => `(?:"${token}"|'${token}'|${token})`;
   return new RegExp(
-    `^[ \\t]*[-*][ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${quoted(value)}[ \\t]*$`,
+    `^[ \\t]*${BULLET_MARKER}[ \\t]+${quoted(key)}[ \\t]*:[ \\t]*${quoted(value)}[ \\t]*$`,
     "i",
   );
 })();
 
-/** Indent column of a line, counting a tab as the four columns Markdown gives it. */
-function indentColumn(line: string): number {
+/** Markdown's tab stop: a tab advances to the next multiple of four columns. */
+const TAB_WIDTH = 4;
+
+/**
+ * Column reached after `prefix`, on Markdown's own accounting.
+ *
+ * A tab advances to the next tab stop rather than a flat four columns, so the
+ * content of `-\tUS-0001: …` starts at column 4 and a child line indented with
+ * one tab reaches it.
+ */
+function columnAfter(prefix: string): number {
   let column = 0;
-  for (const char of line) {
-    if (char === " ") {
-      column += 1;
-    } else if (char === "\t") {
-      column += 4;
-    } else {
-      break;
-    }
+  for (const char of prefix) {
+    column += char === "\t" ? TAB_WIDTH - (column % TAB_WIDTH) : 1;
   }
   return column;
+}
+
+/** Indent column of a line — where its first non-whitespace character sits. */
+function indentColumn(line: string): number {
+  return columnAfter(/^[ \t]*/.exec(line)?.[0] ?? "");
 }
 
 /**
@@ -1239,29 +1270,36 @@ function indentColumn(line: string): number {
  * every declared story can carry the marker and none inherits a neighbour's.
  *
  * A catalog entry closes on its Markdown item boundary as well: its block ends
- * at the first non-blank line that is not indented past the entry's own marker
- * column. Without that, prose or a blank line after `- US-0001: …` left the
- * entry open to the next heading, and a document-level `- x-qfai-status:
- * planned` written well outside it deferred US-0001 — the very leak the
- * document-root rule closes on the heading side. So the marker must sit *inside*
- * the entry, indented under it.
+ * at the first non-blank line that does not reach the entry's *content* column —
+ * the column its marker plus the whitespace after it ends at, which is where
+ * Markdown puts the item's own children. Without that, prose or a blank line
+ * after `- US-0001: …` left the entry open to the next heading, and a
+ * document-level `- x-qfai-status: planned` written well outside it deferred
+ * US-0001 — the very leak the document-root rule closes on the heading side.
+ *
+ * Comparing against the *marker* column instead would leave a narrower version
+ * of the same leak: under a column-0 `- US-0001: …` a one-space-indented
+ * ` - x-qfai-status: planned` clears the marker column while falling short of
+ * the two columns a child needs, so Markdown reads it as a separate list item
+ * and the entry must already be closed by then. The marker has to sit *inside*
+ * the entry, indented to its content.
  */
 export function collectPlannedUsIds(rawUsText: string): Set<string> {
   const planned = new Set<string>();
   const lines = maskNonSpecRegions(rawUsText).replace(/\r\n/g, "\n").split("\n");
   let current: string | null = null;
-  /** Marker column of the catalog entry that opened `current`; `null` for a heading. */
-  let entryColumn: number | null = null;
+  /** Content column of the catalog entry that opened `current`; `null` for a heading. */
+  let entryContentColumn: number | null = null;
   const close = (): void => {
     current = null;
-    entryColumn = null;
+    entryContentColumn = null;
   };
   for (const line of lines) {
     const trimmed = line.trim();
     const heading = US_HEADING_RE.exec(trimmed);
     if (heading?.[1]) {
       current = heading[1].toUpperCase();
-      entryColumn = null;
+      entryContentColumn = null;
       continue;
     }
     // Any other heading closes the block, at every depth: the marker belongs to
@@ -1275,15 +1313,17 @@ export function collectPlannedUsIds(rawUsText: string): Set<string> {
     // that has no heading. Checked after the heading arms and before the marker
     // arm: the marker's own line does not open with a `US-*` id, so the two
     // list forms cannot collide.
-    const listItem = US_LIST_ITEM_RE.exec(trimmed);
-    if (listItem?.[1]) {
-      current = listItem[1].toUpperCase();
-      entryColumn = indentColumn(line);
+    // Read from the raw line, not the trimmed one: the entry's own indent is
+    // part of the content column its children have to reach.
+    const listItem = US_LIST_ITEM_RE.exec(line);
+    if (listItem?.[2]) {
+      current = listItem[2].toUpperCase();
+      entryContentColumn = columnAfter(listItem[1] ?? "");
       continue;
     }
     // Left the catalog entry: a sibling list item, a paragraph, or any other
-    // content at or left of its marker column is no longer inside it.
-    if (entryColumn !== null && trimmed !== "" && indentColumn(line) <= entryColumn) {
+    // content short of its content column is no longer inside it.
+    if (entryContentColumn !== null && trimmed !== "" && indentColumn(line) < entryContentColumn) {
       close();
       continue;
     }
