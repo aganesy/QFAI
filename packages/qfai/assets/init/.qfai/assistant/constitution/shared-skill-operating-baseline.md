@@ -201,11 +201,16 @@ half — no note, or no Open Question — is a hit.
 
 ### What a surviving hit obligates
 
-A hit is **reported, not silently cleared**. List every surviving hit alongside
-the completion claim — file, line, token — and state for each one whether it is
-now resolved, deferred with rationale, or recorded as an Open Question. A
-completion claim that omits a surviving hit is invalid evidence under the rules
-above. Completion is blocked while a hit is none of the three.
+A hit is **reported, not silently cleared**, and **cleared by a re-scan, not by
+assertion**. Fix what you can, then run the scan again over the same artifacts:
+_resolved_ is the verdict for a hit the re-run no longer reports, and that re-run
+is its evidence. It is not available for a hit still present at that file and
+line — a token still readable there is unresolved whatever the report calls it.
+List every hit the re-scan still finds alongside the completion claim — file,
+line, token — and state for each one whether it is deferred with rationale or
+recorded as an Open Question. A completion claim that omits a surviving hit is
+invalid evidence under the rules above. Completion is blocked while a surviving
+hit is neither of the two.
 
 **Severity floor on the verdict.** _Deferred with rationale_ and _recorded as an
 Open Question_ are NOT available for a hit that stands in for a concrete

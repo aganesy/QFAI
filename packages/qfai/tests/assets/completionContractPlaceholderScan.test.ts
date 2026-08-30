@@ -124,11 +124,48 @@ describe("completion contract placeholder scan", () => {
       const baseline = flat(await read(tree, BASELINE));
 
       expect(baseline).toContain("### What a surviving hit obligates");
-      expect(baseline).toContain("A hit is **reported, not silently cleared**.");
+      expect(baseline).toContain("A hit is **reported, not silently cleared**");
       expect(baseline).toContain(
-        "whether it is now resolved, deferred with rationale, or recorded as an Open Question",
+        "state for each one whether it is deferred with rationale or recorded as an Open Question",
       );
-      expect(baseline).toContain("Completion is blocked while a hit is none of the three.");
+      expect(baseline).toContain(
+        "A completion claim that omits a surviving hit is invalid evidence",
+      );
+    });
+
+    it(`${tree}: resolved is earned by a re-scan, not claimed over a surviving hit`, async () => {
+      // A hit that survives is by definition still readable at that file and
+      // line, so letting the report call it `resolved` clears it by assertion:
+      // the artifact keeps its unfinished value and the next stage consumes it
+      // as finished input. `resolved` has to mean the re-run stopped finding it.
+      const baseline = flat(await read(tree, BASELINE));
+
+      expect(baseline).toContain("**cleared by a re-scan, not by assertion**");
+      expect(baseline).toContain(
+        "_resolved_ is the verdict for a hit the re-run no longer reports, and that re-run is its evidence",
+      );
+      expect(baseline).toContain(
+        "It is not available for a hit still present at that file and line",
+      );
+      // The verdict list for a surviving hit must not offer `resolved` back.
+      expect(baseline).not.toContain("now resolved, deferred with rationale");
+      expect(baseline).not.toContain("Completion is blocked while a hit is none of the three.");
+      expect(baseline).toContain(
+        "Completion is blocked while a surviving hit is neither of the two.",
+      );
+    });
+
+    it(`${tree}: withdrawing resolved keeps the other two exits open`, async () => {
+      // Over-correction pin: the point is to stop `resolved` being asserted over
+      // a live token, not to block completion on every hit. Deferral and the
+      // Open Question stay available, and the file/line/token report stays.
+      const baseline = flat(await read(tree, BASELINE));
+
+      expect(baseline).toContain("deferred with rationale");
+      expect(baseline).toContain("recorded as an Open Question");
+      expect(baseline).toContain(
+        "List every hit the re-scan still finds alongside the completion claim — file, line, token",
+      );
     });
 
     it(`${tree}: the severity floor withholds the Open Question verdict`, async () => {
