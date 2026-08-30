@@ -87,3 +87,35 @@
 - AC-Refs: AC-0008-0011
 - Type: error
 - Verify that re-running scaffold does NOT overwrite a skeleton whose TODO was replaced with a real assertion (idempotent boundary), and that a skeleton retaining its `// TODO: implement assertion for <TC-ID>` marker across 3 `qfai validate` cycles (default `atdd.scaffoldEscalateCycles: 3` per DR-0272) escalates `D-SCAFFOLD-PLACEHOLDER` from warning to error on the 3rd cycle.
+
+## TC-0008-0015: Seven Rules and Companion Rule Stated and Linked
+
+- EX-Ref: EX-0008-0011
+- AC-Refs: AC-0008-0012
+- Type: normal
+- Level: integration
+- Verify that the `/qfai-atdd` credential-reuse guidance artifact states all seven session-reuse rules as distinct statements plus the companion caller-injected-environment rule, and that the skill entry point cross-links the artifact.
+
+## TC-0008-0016: Guidance Names No Browser Backend
+
+- EX-Ref: EX-0008-0012
+- AC-Refs: AC-0008-0013
+- Type: error
+- Level: integration
+- Verify that a deny-list scan of the guidance artifact for browser-backend names, install commands and version pins returns zero matches, and that the same scan reports a non-zero count against a fixture with a planted backend name — so a green result is a checked result rather than a vacuous one.
+
+## TC-0008-0017: Guidance Adds No Layer, Token, Finding Code or Validator
+
+- EX-Ref: EX-0008-0012
+- AC-Refs: AC-0008-0013
+- Type: boundary
+- Level: integration
+- Verify that with the guidance artifact present the layer token set, the allowed annotation forms and the ATDD finding-code set are unchanged from baseline, and that the artifact itself contains no `QFAI:`-form annotation token, no finding code and no new layer heading.
+
+## TC-0008-0018: Script-Naming Rule Is Adopter-Only and Excludes Unit/Component
+
+- EX-Ref: EX-0008-0013
+- AC-Refs: AC-0008-0014
+- Type: boundary
+- Level: integration
+- Verify that the guidance records the credential-class script-naming rule as adopter guidance, states that QFAI keeps its own script names and that its own suite has zero credentials, and that its scope statement obliges E2E / API / Integration only with no unit or component obligation.

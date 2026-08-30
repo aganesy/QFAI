@@ -1,0 +1,332 @@
+name: "Set up the QFAI toolchain"
+description: >-
+  Enables the corepack shim, sets Node up with the pnpm cache, re-shims pnpm
+  against the toolcache Node, and installs with a frozen lockfile. The single
+  definition of the preamble every toolchain job in this repository needs.
+
+# ── Why this exists, and why it is a composite action ─────────────────────────
+#
+# This preamble was duplicated six times in `ci.yml`. Six copies of a four-step
+# sequence is six places for a version or a flag to drift, and the drift is
+# invisible until one job behaves differently from its neighbours.
+#
+# A composite action rather than a reusable workflow: a reusable workflow is
+# dispatched per job, and that overhead runs directly against the cost objective
+# this whole change set exists to serve. The obligation is SINGLE-DEFINITION, so
+# swapping the mechanism later is legal; adding a second definition is not.
+#
+# It lives in `.github/actions/`, deliberately OUTSIDE
+# `packages/qfai/assets/init/**`. Pack verification allow-lists `workflows` as
+# the only child of the shipped `.github/`, so a copy placed there would be a
+# hard pack failure — and, more to the point, this repository's toolchain is not
+# an adopter's to inherit.
+
+inputs:
+  engines-manifest:
+    description: >-
+      The manifest whose `engines.node` the floor is read from, repository-relative.
+      Defaults to the repository root's.
+
+      Review finding [58]: the floor is a promise the PUBLISHED package makes, and that
+      promise lives in `packages/qfai/package.json`. In this tree the two agree, so reading
+      the root one was invisible — but `release.yml` checks out an arbitrary TAG, and at
+      v1.7.12 the root said `>=18.0.0` while the package said `>=20.0.0`. A floor lane on a
+      re-published tag would have installed Node 18 and never exercised the floor the
+      package it is about to publish declares.
+
+      Still not a version literal: this names a FILE, and the version is read from it.
+      `TC-0017` pins the count of Node literals in this repository at one, and this keeps it
+      at one.
+    required: false
+    default: "./package.json"
+  pin-engines-floor:
+    description: >-
+      Set to "true" to install the exact FLOOR of `package.json#engines.node` instead of
+      the newest release satisfying it. Any other value keeps the default.
+
+      This exists for review finding [13]. Every toolchain job resolving the same broad
+      `>=20.19.0` range means `setup-node` gives all of them the newest satisfying
+      release, so nothing in CI or in the release gate ever runs on the floor the package
+      promises — and an API or syntax present in Node 24 and absent in the floor passes
+      every gate while breaking exactly the supported users the range was written for.
+
+      A BOOLEAN, deliberately, and not a version string. A `node-version` input would let
+      each caller write the floor as a literal, and `TC-0017` pins the count of Node
+      literals in this repository at one for a reason worth keeping: "a second literal is
+      a second answer to one question, and the stale one wins as often as not". Raising
+      `engines.node` must move the floor lane with it, so the lane reads `engines.node`
+      rather than restating it.
+
+      An input rather than a second setup definition: `BR-0017-0027` makes this action the
+      single definition of the preamble, and a floor lane restating four steps inline is
+      the drift its extraction removed. Pinning through a root-level `.node-version` was
+      the other route and is not available — no agent may add a root file without
+      approval.
+    required: false
+    default: "false"
+
+runs:
+  using: composite
+  steps:
+    # ── 1. Shim, before Node ──────────────────────────────────────────────────
+    # `setup-node`'s `cache: pnpm` needs a `pnpm` binary on PATH to compute the
+    # store path, so corepack has to be enabled first. This ordering is not
+    # cosmetic: with the steps reversed the cache key cannot be derived and the
+    # setup step fails.
+    - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
+      id: shim
+      # Corepack is BUNDLED with the Node line this repository floors at, and it
+      # stopped being bundled from Node 25 on. `engines.node` is `>=20.19.0` with
+      # no ceiling, and step 2 resolves "latest satisfying the range", so the day
+      # the runner image ships a Node past that boundary this command becomes
+      # `corepack: command not found` — and every job that consumes this action
+      # (lint, type checks, tests, the required build) stops being runnable at
+      # once. Installing it when it is absent keeps the resolution rule as it is
+      # instead of pinning the range down to whatever still bundles it.
+      #
+      # This step also RESOLVES the engines floor when the caller asked for it, rather than
+      # doing so in a fifth step. `TC-0017-0029` pins this action at exactly four steps in a
+      # fixed order, and that pin is worth more than the tidiness of a separate step: the
+      # four-step order is what makes the re-shim after Node load-bearing, and a fifth step
+      # is how that shape starts drifting. Both halves of this step prepare what step 2
+      # needs — a `pnpm` on PATH, and the version to install.
+      #
+      # The floor is READ from `engines.node` and never written here. A version literal in
+      # this file would be the second answer to a question `engines.node` already answers,
+      # and `TC-0017` pins the count of Node literals in this repository at one for that
+      # reason. `>=X.Y.Z` is the only shape this can pin: anything else is a hard failure
+      # rather than a guess, because a caller that asked for the floor and silently got the
+      # range back would report as the floor lane while testing nothing of the kind.
+      run: |
+        set -euo pipefail
+        if ! command -v corepack > /dev/null 2>&1; then
+          # PINNED — the version, the REGISTRY it comes from, and the bytes themselves.
+          #
+          # Review finding [55] pinned the version: an unpinned global install fetches whatever
+          # the registry calls latest at the moment the job runs, so the same commit installs a
+          # different corepack from one day to the next — inside a job whose every `uses:` is
+          # pinned to an immutable ref, and which then installs and verifies everything else.
+          #
+          # Review finding [83]: a version is not a source. `npm` resolves the registry from
+          # `NPM_CONFIG_REGISTRY` or a project `.npmrc`, both of which a pull request controls, so
+          # `corepack@0.35.0` from an attacker's registry is the same request answered by a
+          # different package — and its `corepack` bin runs on the very next line, before any
+          # verification in this job. `--registry` on the command line outranks both.
+          #
+          # And the bytes are checked rather than trusted: the tarball is fetched, its sha512
+          # compared with the integrity this file pins, and only then installed — from the local
+          # file, with `--ignore-scripts`, so nothing in the package runs during installation.
+          # A registry that answers the pinned name and version with different content is
+          # refused here rather than executed one line later.
+          registry="https://registry.npmjs.org/"
+          want="sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw=="
+          tgz="${RUNNER_TEMP:-/tmp}/corepack-0.35.0.tgz"
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "${registry}corepack/-/corepack-0.35.0.tgz" -o "${tgz}"
+          got="sha512-$(openssl dgst -sha512 -binary "${tgz}" | openssl base64 -A)"
+          if [ "${got}" != "${want}" ]; then
+            echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
+            exit 1
+          fi
+          npm install --global --ignore-scripts \
+            --registry https://registry.npmjs.org/ "${tgz}"
+        fi
+        corepack enable
+        if [ "${PIN_ENGINES_FLOOR}" = "true" ]; then
+          # The manifest the CALLER named, which defaults to the repository root's.
+          # The path is DATA, and reaches node as an ARGUMENT. Review finding [90]: it used to be
+          # spliced into the JavaScript source, so an `engines-manifest` input of
+          # `./package.json'); …; //` ran whatever followed — inside the toolchain preamble, before
+          # every verification in the job. The payload the finding names writes `BASH_ENV` through
+          # a name assembled at runtime, which no string search for the command file can see.
+          #
+          # And the shape is checked first, because code-versus-data is one half: a manifest path
+          # is a relative path to a `.json` file inside the workspace, and anything else is a
+          # caller mistake this action should refuse rather than resolve.
+          case "${ENGINES_MANIFEST}" in
+            # An ALLOW-list of characters, not a list of the dangerous ones. A quote, a dollar or
+            # a backtick is what this refuses, and enumerating those inside a `case` pattern in a
+            # YAML block scalar is three levels of escaping to get wrong once.
+            *[!A-Za-z0-9./_-]*|*..*|/*|'')
+              echo "::error::engines-manifest must be a relative path inside the workspace; got ${ENGINES_MANIFEST}"
+              exit 1
+              ;;
+            *.json) ;;
+            *)
+              echo "::error::engines-manifest must name a .json file; got ${ENGINES_MANIFEST}"
+              exit 1
+              ;;
+          esac
+          range="$(node -e 'const m = require(require("node:path").resolve(process.argv[1])); process.stdout.write(String(m.engines.node))' "${ENGINES_MANIFEST}")"
+          floor="${range#>=}"
+          case "$floor" in
+            [0-9]*.[0-9]*.[0-9]*) ;;
+            *)
+              echo "::error file=package.json::engines.node is '${range}'; this action can pin only a '>=X.Y.Z' floor"
+              exit 1
+              ;;
+          esac
+          case "$floor" in
+            *[!0-9.]*|*.*.*.*)
+              echo "::error file=package.json::engines.node floor '${floor}' is not a bare X.Y.Z"
+              exit 1
+              ;;
+          esac
+          # Each component on its own. The globs above are "digits and dots with three parts",
+          # which `20.19.0.5` and `20.019.0` both satisfy — neither is a version setup-node
+          # resolves, and handing it one is a failure two steps later rather than here.
+          rest="$floor"
+          for _part in 1 2 3; do
+            part="${rest%%.*}"
+            case "$part" in
+              ""|*[!0-9]*|0?*)
+                echo "::error file=package.json::engines.node floor '${floor}' has a component ('${part}') that is not a bare non-negative integer"
+                exit 1
+                ;;
+            esac
+            rest="${rest#*.}"
+          done
+          echo "version=${floor}" >> "$GITHUB_OUTPUT"
+          echo "setup: pinning Node to the engines floor ${floor}"
+        fi
+      env:
+        # Through the environment, so the input cannot be spliced into the script text.
+        PIN_ENGINES_FLOOR: ${{ inputs.pin-engines-floor }}
+        ENGINES_MANIFEST: ${{ inputs.engines-manifest }}
+      shell: bash
+
+    # ── 2. Node, from a FILE ──────────────────────────────────────────────────
+    # `node-version-file` and never a literal. The rule this satisfies exists so
+    # that a stale version comment becomes structurally impossible in this tree,
+    # and a literal cannot deliver that however carefully it is commented — the
+    # `NODE_LTS: "20.19"` workflow-level value this replaced had a comment three
+    # lines above it listing which jobs used it, which is exactly the kind of
+    # thing that rots.
+    #
+    # The file is `package.json`, whose `engines.node` is already the
+    # repository's declared floor. The trade is recorded rather than hidden: the
+    # resolved version becomes "latest satisfying the range" instead of the
+    # previously pinned `20.19`. Pinning exactly would need a root-level
+    # `.node-version`, which no agent may create without explicit approval, so
+    # the already-present file is what this uses. The risk is bounded by
+    # measurement — this repository's whole test suite passes on Node 24 locally,
+    # which is what the range resolves to today.
+    #
+    # `cache-dependency-path` is stated explicitly. Without it `setup-node`
+    # guesses from the working directory, which is right today and silently wrong
+    # the moment a second lockfile appears anywhere in the tree.
+    #
+    # `node-version` carries the derived floor when the caller asked for it, and is empty
+    # otherwise — `setup-node` ignores an empty value, so the default path is unchanged
+    # and the floor lane needs no second `uses:` of its own. The literal lives in
+    # `engines.node` and nowhere else.
+    - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      with:
+        node-version: ${{ steps.shim.outputs.version }}
+        node-version-file: package.json
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    # ── 3. Re-shim, AFTER Node ────────────────────────────────────────────────
+    # `setup-node` installs its own Node into the toolcache and puts it ahead of
+    # the one step 1's corepack was activated against, so the pnpm shim from step
+    # 1 no longer resolves. Without this step the install runs on whatever pnpm
+    # the runner image happened to ship. A re-shim placed BEFORE step 2 would be
+    # a no-op — which is why the four-step ORDER is pinned by a test and not just
+    # the membership.
+    - name: Re-shim pnpm against toolcache Node
+      # The availability guard is repeated rather than shared: the global install
+      # in step 1 landed in the RUNNER Node's global prefix, and step 2 has since
+      # put a different Node ahead of it, so the same absence can recur here.
+      run: |
+        if ! command -v corepack > /dev/null 2>&1; then
+          # Pinned for the reason the first fallback is; see above.
+          # Same three pins as the fallback above, and for the same reason — review finding [83]
+          # asks for every fallback site, because one unpinned site is the site an attacker uses.
+          registry="https://registry.npmjs.org/"
+          want="sha512-9BuIGHDFE7Zieor1CeRsvt7X7AJFEuJ6OnbSbsVprq83ChDFoBh1wP98NeUS9FT3ZwlzFllPElXcz/OiDf0YGw=="
+          tgz="${RUNNER_TEMP:-/tmp}/corepack-0.35.0.tgz"
+          curl -fsSL --proto '=https' --tlsv1.2 \
+            "${registry}corepack/-/corepack-0.35.0.tgz" -o "${tgz}"
+          got="sha512-$(openssl dgst -sha512 -binary "${tgz}" | openssl base64 -A)"
+          if [ "${got}" != "${want}" ]; then
+            echo "::error::corepack 0.35.0 from ${registry} hashed ${got}, not the pinned ${want}. Refusing to install it."
+            exit 1
+          fi
+          npm install --global --ignore-scripts \
+            --registry https://registry.npmjs.org/ "${tgz}"
+        fi
+        corepack prepare pnpm@9.12.3 --activate
+      shell: bash
+
+    # ── 4. Install ────────────────────────────────────────────────────────────
+    # The frozen-lockfile literal, and this is the one place it appears in the
+    # own CI tree. A copy anywhere else is a second thing to keep in sync.
+    #
+    # `--ignore-scripts` is review finding [127]. The pre-flight walks the
+    # manifests in THIS tree, and a dependency's manifest is not in this tree:
+    # it arrives inside a tarball, pnpm extracts it, and its `postinstall` ran
+    # before any verification in the job. A pull request adding a local `.tgz`
+    # under `packages/qfai/` and referencing it from the manifest and lockfile
+    # therefore executed arbitrary code with every guard still ahead of it —
+    # and a hook that appends `BASH_ENV` to the environment file makes every
+    # later guard shell in the job a no-op that exits 0.
+    #
+    # So installation runs nothing, and what may run is named in a file whose
+    # digest the pre-flight pins.
+    - name: Install dependencies
+      run: |
+        set -euo pipefail
+        # `--ignore-scripts` is review finding [127]. The pre-flight walks the manifests in
+        # THIS tree, and a dependency's manifest is not in this tree: it arrives inside a
+        # tarball, pnpm extracts it, and its `postinstall` ran before any verification in the
+        # job. A pull request adding a local `.tgz` under `packages/qfai/` and referencing it
+        # from the manifest and lockfile therefore executed arbitrary code with every guard
+        # still ahead of it.
+        #
+        # The frozen-lockfile literal, and this is the one place it appears in the own CI tree.
+        # `--ignore-pnpmfile` alongside it, because they are different capabilities and only
+        # one of them was closed. Review finding [140]: `--ignore-scripts` stops LIFECYCLE
+        # scripts, and a root `.pnpmfile.cjs` is not one — pnpm evaluates its top-level code
+        # and its hooks during the install regardless. The reviewer measured pnpm 10.28.1
+        # creating a marker from a pnpmfile under `--ignore-scripts`, and pnpm's own help lists
+        # the two flags as separate things. Nothing pinned that file, so it was executable
+        # configuration a pull request could add and have run before any verification here.
+        pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
+
+        # …and then exactly what the allow-list names, in the SAME step.
+        #
+        # One step rather than two, and that is review finding [132] rather than style: the
+        # shared definition is four steps by `TC-0017-0029`, and splitting the rebuild out made
+        # it five — an approved test case quietly violated by an implementation that then
+        # rewrote the test to agree with itself. Installing and authorising what may build are
+        # one unit anyway: the job of this step is to produce a usable `node_modules`, and
+        # nothing may come between an install that deliberately ran nothing and the rebuild
+        # that decides what runs after all.
+        #
+        # A missing or empty list is a REFUSAL, not a skip. An empty allow-list is a legitimate
+        # state — it means nothing may build — but a list this step could not read is a
+        # question that went unanswered, and answering it with silence is how a guard reports
+        # success having done nothing.
+        list="${{ github.action_path }}/dependency-builds.txt"
+        if [ ! -f "${list}" ]; then
+          echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
+          exit 1
+        fi
+
+        # Being on the list permits the package of that NAME to run its install scripts. It does
+        # not permit the name to be pointed somewhere else: a pull request that resolves
+        # `esbuild` to a local `.tgz`, a directory or a git checkout keeps the name and replaces
+        # the code, and the rebuild below runs it. So where each permitted package comes from is
+        # read out of the lockfile first.
+        node "${{ github.action_path }}/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
+
+        names=0
+        while IFS= read -r name || [ -n "${name}" ]; do
+          case "${name}" in "" | "#"*) continue ;; esac
+          names=$((names + 1))
+          echo "rebuilding ${name}"
+          pnpm rebuild "${name}"
+        done <"${list}"
+        echo "rebuilt ${names} permitted dependency package(s)"
+      shell: bash

@@ -6,11 +6,13 @@ on:
     branches:
       - main
 
-# ── Node version configuration ──────────────────────────────────────
-# Change these values to update the shared Node version for non-matrix jobs.
-# - NODE_LTS: used by lint, check-types, check-types-future, build
-env:
-  NODE_LTS: "20.19"
+# ── Least-privilege default for every job in this workflow ──────────
+# `contents: read` is the minimal scope. A job needing more declares its
+# own block; a job needing none declares an empty one, which is explicit
+# rather than missing. Reachability is what the requirement is written
+# against: a job with no block of its own is still governed by this one.
+permissions:
+  contents: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
@@ -18,6 +20,289 @@ concurrency:
 
 # ── Jobs (parallel) ─────────────────────────────────────────────────
 jobs:
+  # ── 0. Change detection ──────────────────────────────────────────
+  # The classifier is a program rather than a path filter so the rule can be
+  # EXECUTED by a test. The heredoc is quoted, so the bytes GitHub runs are the
+  # bytes the test extracts and runs.
+  detect:
+    permissions:
+      contents: read
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      full: ${{ steps.classify.outputs.full }}
+      reason: ${{ steps.classify.outputs.reason }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Full history: the diff is against the base commit, and a shallow clone is
+          # one of the two failures BR-0017-0008 requires to fail open with an
+          # annotation rather than silently narrow the lane set.
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify the change against the enumerated directory lists
+        id: classify
+        env:
+          # Both event shapes. On a pull request the base commit; on a push the
+          # previous head. Empty on neither, which matters because an empty base
+          # makes the diff fail and the classifier fail open — correct, but it
+          # would put a warning annotation on every push to the default branch,
+          # and an annotation that is always present is one nobody reads.
+          BASE_SHA: ${{ github.event.pull_request.base.sha || github.event.before }}
+          HEAD_SHA: ${{ github.sha }}
+          # Which of the two diff forms to take. They are not interchangeable, and each is the
+          # wrong answer for the other event.
+          #
+          # Review finding [21] measured the pull-request half: a two-dot diff compares the two
+          # TREES, so a source file changed on base after this branch forked lands in the changed
+          # list although the pull request never touched it — and a documentation-only pull
+          # request then runs the whole matrix, which is the saving this lane exists for. Three-dot
+          # asks the merge base instead, which is the set the pull request is responsible for.
+          #
+          # On a push there is no merge base worth asking about: `github.event.before` IS the
+          # previous head, and three-dot would silently drop everything the old head carried that
+          # the new one does not — the force-push case the shipped detection lane records.
+          EVENT_NAME: ${{ github.event_name }}
+        run: |
+          set -uo pipefail
+          # The diff is ATTEMPTED here and decided by the program. `|| true` is
+          # deliberate: a shallow clone or an unreachable base ref must reach the
+          # classifier as "no path list was produced", so that failing open and naming
+          # the reason live in the one place a test can execute.
+          # `--no-renames` is load-bearing. With rename detection ON git reports only the
+          # DESTINATION of a move, so `git mv src/x.ts docs/x.md` arrives here as a single
+          # documentation path and the source change skips every test lane. Turning
+          # detection off makes both halves visible, and the source half classifies as
+          # source. Measured: the default reports one path, `--no-renames` reports two.
+          # The STATUS is captured and handed on, not just the output. Git can
+          # write part of the list and then fail — a missing object, an I/O
+          # error — and a partial list that happens to hold only documentation
+          # paths would otherwise be classified as a complete, docs-only change.
+          # A non-zero status is "no path list was produced", whatever landed on
+          # stdout, and the classifier fails open on it.
+          if [ "${EVENT_NAME}" = "pull_request" ]; then
+            diff_range=("${BASE_SHA}...${HEAD_SHA}")
+          else
+            diff_range=("${BASE_SHA}" "${HEAD_SHA}")
+          fi
+          git diff --name-only --no-renames "${diff_range[@]}" \
+            > "${RUNNER_TEMP}/changed.txt" 2> "${RUNNER_TEMP}/diff-err.txt" \
+            && diff_status=0 || diff_status=$?
+          printf '%s\n' "${diff_status}" > "${RUNNER_TEMP}/diff-status.txt"
+          cat > "${RUNNER_TEMP}/detect.mjs" <<'NODE'
+          // Change detection: classify the pull request's changed paths against two
+          // ENUMERATED lists and select either the full lane set or the
+          // documentation-only minimum.
+          //
+          // The whole decision lives here, failure included. BR-0017-0008 requires a
+          // failed diff to emit an annotation naming the reason AND to select the full
+          // set; if that branch lived in the shell it would be the one part of the rule
+          // no test could execute. The workflow only attempts the diff.
+          import { appendFileSync, readFileSync } from "node:fs";
+          import process from "node:process";
+
+          // Directories this classifier knows how to reason about (BR-0017-0009). The
+          // list is CLOSED: a path outside every entry selects the full set and says so,
+          // because an unclassified path is never "nothing to run".
+          const RECOGNIZED_DIRS = [
+            ".agents/",
+            ".claude/",
+            ".codex/",
+            ".github/",
+            ".instruction/",
+            ".qfai/",
+            "packages/",
+            "scripts/",
+            "tests/",
+          ];
+
+          // The same closed-list rule at file granularity, for the repository root.
+          const RECOGNIZED_FILES = [
+            "AGENTS.md",
+            "CHANGELOG.md",
+            "CLAUDE.md",
+            "DESIGN.md",
+            "LICENSE",
+            "README.md",
+            "RELEASE.md",
+            "REVIEW.md",
+            "eslint.config.js",
+            "package.json",
+            "pnpm-lock.yaml",
+            "pnpm-workspace.yaml",
+            "qfai.config.yaml",
+            "tsconfig.base.json",
+            "tsconfig.json",
+          ];
+
+          // Paths that may NEVER be read as documentation, checked before the
+          // documentation set (BR-0017-0010). The assistant tree is named here rather
+          // than merely left out, so the exclusion is enforced instead of incidental:
+          // what lives there changes validate output, which is why the catalog is
+          // loaded and not merely shipped.
+          //
+          // The agent-integration mirrors are NOT here, and that is a recorded hazard
+          // rather than an oversight: BR-0017-0010 requires them in the
+          // documentation-only set with an explicit MUST, while
+          // `packages/qfai/tests/codex/agents.test.ts` and
+          // `.../tests/integration/agentsRulesSurface.test.ts` guard those same paths
+          // from inside the `test` job a documentation-only classification skips.
+          // CR-20260820-0004 carries that measurement and is open on which side moves.
+          // Adding a member here would decide it against the rule's own wording.
+          const NEVER_DOCUMENTATION = [".qfai/assistant/"];
+
+          // The documentation-only set (BR-0017-0010). Small, and measured rather than
+          // guessed: every other candidate is read by at least one test file, so
+          // classifying it as documentation would skip the lane that guards it.
+          //
+          // The agent-integration mirrors USED to be here because the rule names them,
+          // and review finding [12] measured what that cost. A pull request deleting the
+          // default values and the `tmp/pr-fix/` prose from
+          // `.agents/skills/pr-fix/SKILL.md` classified as documentation-only and skipped
+          // the `test` job entirely — while `tests/core/prFixMonitor.test.ts` asserts that
+          // prose explicitly.
+          //
+          // `CR-20260820-0004` was raised on exactly that, and the user approved **option A**:
+          // the mirror guards move into the lint lane, which selection never skips, so the
+          // mirrors keep their documentation-only saving without losing their guard. That is
+          // what `BR-0017-0010` and `AC-0017-0005` say, and it is what this list implements.
+          //
+          // A round of this work implemented option B instead — the four members were removed
+          // — on the reasoning that `lint:mirror-surface` did not cover the tests that read the
+          // mirrors. The measurement was right and the conclusion was not: the CR had already
+          // been decided, by the user, the other way. The answer is to finish option A rather
+          // than to substitute another, so the lane now runs every test whose subject is a root
+          // mirror tree — `agentsRulesSurface`, `skillLinkSurface`, `integrationSurface`,
+          // `integrationSurfaceReadErrors`, `reviewerVerdictVocabulary`, and the three that were
+          // missing: `codex/agents`, `core/prFixMonitor`, `core/prMergePlan`.
+          //
+          // Which three was measured, not listed from the CR: the test files that resolve the
+          // REPOSITORY ROOT and then enter `.agents/`, `.claude/`, `.codex/` or `.instruction/`.
+          // A grep for the bare directory names matches many more, but most of those read the
+          // SHIPPED copies under `packages/qfai/assets/init/`, which a mirror-only change does
+          // not touch.
+          //
+          // `packages/qfai/docs/` stays. Its single literal is a FIXTURE in this classifier's
+          // own tests (`packages/qfai/docs/anything.md`, a path that does not exist), not a file
+          // any test reads.
+          const DOCUMENTATION_DIRS = [
+            "packages/qfai/docs/",
+            ".agents/",
+            ".claude/",
+            ".codex/",
+            ".instruction/",
+          ];
+          const DOCUMENTATION_FILES = ["LICENSE", "REVIEW.md"];
+
+          const under = (dirs, file) => dirs.some((dir) => file.startsWith(dir));
+          const oneLine = (text) => text.replace(/[\r\n]+/g, " ").trim();
+
+          function read(file) {
+            if (typeof file !== "string" || file.length === 0) return null;
+            try {
+              return readFileSync(file, "utf-8");
+            } catch {
+              return null;
+            }
+          }
+
+          function emit(full, reason) {
+            const line = "full=" + (full ? "true" : "false") + "\n" + "reason=" + oneLine(reason) + "\n";
+            const target = process.env.GITHUB_OUTPUT;
+            if (typeof target === "string" && target.length > 0) appendFileSync(target, line);
+            else process.stdout.write(line);
+          }
+
+          // An EXECUTABLE inside a documentation directory is not documentation, whatever
+          // directory it sits in. `.agents/` holds `skills/pr-fix/scripts/run-pr-fix.ps1`
+          // and `skills/pr-merge/scripts/run-pr-merge.ps1` — automation, read by
+          // `tests/core/prFixMonitor.test.ts` and `tests/core/prMergePlan.test.ts`. Without
+          // this the whole `test` job is skipped for a change to either of them, and ten
+          // test files across five runner projects read something under `.agents/`.
+          //
+          // Narrowing rather than removing the directory: `BR-0017-0010` puts the
+          // agent-integration MIRRORS in the documentation-only set, and a PowerShell
+          // script is not a mirror. Reading the rule as "prose mirrors are documentation,
+          // the automation beside them is not" implements it more closely than treating
+          // every byte under the tree as prose.
+          const EXECUTABLE_SUFFIXES = [".ps1", ".sh", ".mjs", ".cjs", ".js", ".ts", ".py", ".bat", ".cmd"];
+          const executable = (file) => EXECUTABLE_SUFFIXES.some((ext) => file.endsWith(ext));
+
+          function classify(paths) {
+            for (const file of paths) {
+              if (!under(RECOGNIZED_DIRS, file) && !RECOGNIZED_FILES.includes(file)) {
+                return { full: true, reason: "unrecognized path, outside every recognized directory: " + file };
+              }
+              if (under(NEVER_DOCUMENTATION, file)) {
+                return { full: true, reason: "alters validate output: " + file };
+              }
+              const documentary =
+                under(DOCUMENTATION_DIRS, file) || DOCUMENTATION_FILES.includes(file);
+              // The executable test applies ONLY to a path the documentation rule would otherwise
+              // admit. Checked before the documentation test it also fired for `src/**.ts`, which
+              // selected the right lane set for the wrong stated reason — an operator reading
+              // `reason=executable ...` for a source file is being told something false about why
+              // their build ran. Same verdict, honest diagnosis.
+              if (documentary && executable(file)) {
+                return { full: true, reason: "executable inside a documentation directory: " + file };
+              }
+              if (!documentary) {
+                return { full: true, reason: "source path: " + file };
+              }
+            }
+            return { full: false, reason: "documentation-only: " + paths.length + " path(s)" };
+          }
+
+          function main() {
+            const [, , pathsFile, diffErrorFile, diffStatusFile] = process.argv;
+            const paths = (read(pathsFile) ?? "")
+              .split("\n")
+              .map((line) => line.trim())
+              .filter((line) => line.length > 0);
+
+            // A non-zero diff status is decisive on its own, BEFORE the list is
+            // read. Git writes to stdout as it walks, so a run that dies partway
+            // leaves a list that is syntactically fine and semantically short —
+            // and a short list holding only documentation paths selects no lane.
+            // An absent status file means the caller did not report one, which is
+            // the pre-existing shape and is treated as success.
+            const diffStatus = (read(diffStatusFile) ?? "0").trim();
+            if (diffStatus !== "" && diffStatus !== "0") {
+              const why = oneLine(read(diffErrorFile) ?? "") || "git exited " + diffStatus;
+              process.stdout.write(
+                "::warning title=change detection failed open::the changed-path list is incomplete (git exited " +
+                  diffStatus +
+                  "), so the full lane set is selected: " +
+                  why +
+                  "\n",
+              );
+              emit(true, "diff failed: " + why);
+              return;
+            }
+
+            // An EMPTY list is a failure to compute, never "nothing changed". A pull
+            // request always changes something, so an empty diff means the diff did not
+            // run — a shallow clone or an unreachable base ref, the two cases
+            // AC-0017-0004 names.
+            if (paths.length === 0) {
+              const why = oneLine(read(diffErrorFile) ?? "") || "git produced no output and no error text";
+              process.stdout.write(
+                "::warning title=change detection failed open::could not compute the changed-path list, so the full lane set is selected: " +
+                  why +
+                  "\n",
+              );
+              emit(true, "diff unavailable: " + why);
+              return;
+            }
+
+            const verdict = classify(paths);
+            emit(verdict.full, verdict.reason);
+          }
+
+          main();
+          NODE
+          node "${RUNNER_TEMP}/detect.mjs" "${RUNNER_TEMP}/changed.txt" "${RUNNER_TEMP}/diff-err.txt" "${RUNNER_TEMP}/diff-status.txt"
+
   # ── 1. Lint & format checks ──────────────────────────────────────
   # TODO(QFAI-PR206-followup): add a windows-latest matrix entry that runs
   # at minimum the agentsRulesSurface integration test, to catch the
@@ -29,31 +314,79 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          persist-credentials: false
           # pair-changed CI lane (check-prompt-scanner-pair.mjs) needs
           # `origin/main` reachable for `git diff --name-only
           # origin/main...HEAD`. Default shallow checkout doesn't fetch
           # base ref refs, so fetch full history here.
           fetch-depth: 0
+      # FIRST, before anything else in this job does any work.
+      #
+      # Review finding [82]: this job runs `./.github/actions/setup` — an action a pull request
+      # can edit — before it runs any guard. A step at the top of that action appending
+      # `BASH_ENV=<a script that exits 0>` to the environment file makes every later
+      # `shell: bash` step source that script and exit 0 without running its body, guards
+      # included. The hygiene lane reports that write, and cannot report it here: the lane is one
+      # of the steps that never really runs. A check the attack disables is not a check.
+      #
+      # So this one runs with only `actions/checkout` ahead of it, which sets no environment
+      # file, and needs nothing the setup action provides — `bash` and `grep`, both on the image.
+      - name: Verify the toolchain action before running it
+        run: |
+          set -euo pipefail
+          # The refusal's OWN bytes first, against a digest held HERE rather than in the file it
+          # checks. Review finding [101]: everything this step runs comes out of the pull
+          # request's checkout, so a pull request could rewrite `check-toolchain-action.sh` to
+          # `exit 0` and then poison the composite action freely — the digest agreement between
+          # the action list and the declaration is verified by the hygiene lane, and the lane runs
+          # after the action it was supposed to protect.
+          #
+          # This does not make the checkout trustworthy, and nothing in a repository can: on a
+          # `pull_request` event GitHub runs the workflow from the pull request's own tree. What
+          # it does is make each weakening a SEPARATE, VISIBLE edit — the script, this digest, and
+          # (through `verificationBodies`) this step's body — instead of one line in a shell
+          # script nobody re-reads. That is the property this whole declaration is built on.
+          #
+          # Its INPUTS are pinned here too, and that is review findings [117] and [119]. The
+          # script's own bytes were pinned while the three files it reads its expectations out of
+          # were not, and all three ship in the same checkout: a pull request could add a hostile
+          # manifest's path to `lifecycle-manifests.txt`, or rewrite `setup/action.yml` and record
+          # the new digest in `pinned-bytes.txt`, and the pre-flight would verify the pull
+          # request's own expectations and pass. The composite action then runs — and it runs
+          # BEFORE the hygiene lane that would have caught the disagreement, so a `prepare` hook
+          # appending `BASH_ENV` to the environment file a step may write turns every later guard
+          # shell in this job into a no-op that exits 0. (Spelled the long way round on purpose:
+          # this job refuses any step whose body names that file, and the refusal does not read
+          # comments differently from code, which is what keeps it simple enough to trust.)
+          #
+          # So the root of trust for everything that runs before the hygiene lane is this step's
+          # body, which `verificationBodies` pins and a reviewer reads in the diff.
+          sha256sum -c --quiet <<'PINNED_INPUTS'
+          a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777  scripts/check-toolchain-action.sh
+          9bb3915be5806a8f138ae66ef39408fcd57a9d360861a11ae7e8639fa6038d1b  .github/pinned-bytes.txt
+          bb649cb2684f9db02bdbe3872f029571a8e52c4c6e2ab95e8c8fcf804370af41  .github/lifecycle-manifests.txt
+          43d2586975550f5062b4af23112223068cc5676f0906c04fce2bc231df471a9e  .github/command-files.txt
+          PINNED_INPUTS
+          bash ./scripts/check-toolchain-action.sh
+        shell: bash
       - name: Ensure base ref is fetched (for pair-changed CI lane)
         run: |
           # PR runs already have origin/main as a remote-tracking ref
           # after fetch-depth: 0, but be defensive in case the workflow
           # is invoked from a fork or a non-PR event.
-          git fetch --no-tags --depth=1 origin main || true
+          # No `--depth`: the checkout above uses `fetch-depth: 0`, and a depth-limited fetch
+          # RE-SHALLOWS the repository at the fetched tip. Review finding [15]: on a pull request
+          # against a branch that has diverged from main, that removes the merge base and
+          # `check-prompt-scanner-pair.mjs` exits 2 on `origin/main...HEAD`, failing lint for a
+          # reason nothing in the diff explains. The fetch itself stays — `fetch-depth: 0` does not
+          # create the `origin/main` remote-tracking ref that script resolves.
+          git fetch --no-tags origin main || true
         shell: bash
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
-        with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run lint gate
         run: pnpm ci:lint
       - name: Sanity grep — no internal spec IDs or version markers leak
@@ -64,46 +397,117 @@ jobs:
 
   # ── 2. Type checking (current TypeScript) ────────────────────────
   check-types:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run type check
         run: pnpm check-types
 
   # ── 3. Type checking (future TypeScript) ─────────────────────────
   check-types-future:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run future TypeScript compatibility check
         run: pnpm check-types:future
 
+  # ── 3b. The supported floor ──────────────────────────────────────
+  # Every other toolchain job resolves `package.json#engines` — `>=20.19.0` with no
+  # ceiling — so `setup-node` gives all of them the newest satisfying release and
+  # nothing ever runs on the floor the package promises. Review finding [13]: an API
+  # or syntax that exists in Node 24 and not in Node 20.19 passes every gate,
+  # including the release gate, and breaks exactly the supported users the range was
+  # written for.
+  #
+  # One lane, pinned exactly, through the shared action's `node-version` input rather
+  # than a second inline preamble (`BR-0017-0027`). It runs the package test suite,
+  # because a runtime floor is a claim about running code and a type check would not
+  # notice a missing runtime API.
+  #
+  # Conditional on the same detection output as its neighbours, and DECLARED either
+  # way, so its check name persists for branch protection.
+  node-floor:
+    needs: [detect]
+    if: ${{ needs.detect.outputs.full == 'true' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
+        with:
+          # The floor is DERIVED from `engines.node` by the action, not written here.
+          # A literal would be a second answer to the same question, and raising
+          # `engines` would leave this lane certifying a floor nobody supports.
+          pin-engines-floor: "true"
+          # From the PACKAGE's manifest, which is where the promise to adopters lives — this
+          # lane runs the package's own suite. In this tree it agrees with the root's; the two
+          # are separate manifests and need not.
+          engines-manifest: "./packages/qfai/package.json"
+      - name: Confirm the pinned floor is what is running
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Asserted, not assumed. `setup-node` silently ignores an empty
+          # `node-version`, so a wiring mistake in the shared action would leave this
+          # lane running the newest release while still reporting as the floor lane —
+          # a green check for a claim nothing tested.
+          #
+          # The expected value is READ from `engines.node`, the same place the action
+          # derives it from. Writing `v20.19.0` here would be the second literal the
+          # repository's one-Node-literal rule exists to prevent, and it would go stale
+          # in the direction that passes.
+          range="$(node -p "require('./packages/qfai/package.json').engines.node")"
+          expected="v${range#>=}"
+          actual="$(node --version)"
+          echo "node-floor: engines floor ${expected}, running ${actual}"
+          if [ "$actual" != "$expected" ]; then
+            echo "::error::node-floor expected ${expected} but is running ${actual}; pin-engines-floor did not take effect"
+            exit 1
+          fi
+      # `dist/` is not committed, and the `e2e` and `integration` slices read it —
+      # `tests/integration/cliStartupCost.test.ts` fails with "no shipped bundle was readable" and
+      # `tests/e2e/spec0010DiscussionMockAndPointerE2E.test.ts` spawns `dist/cli/index.cjs`. Without
+      # this the floor lane is structurally ALWAYS RED, and an always-red required lane conveys no
+      # differential signal: a genuine Node 20 break and a missing bundle look identical, so the lane
+      # gets un-required or "fixed" by dropping the pin. Same step, same reason, as the `test` job's.
+      - name: Build qfai (the floor lane runs the slices that read dist/)
+        run: pnpm -C packages/qfai build
+      - name: Run the package test suite on the floor
+        run: pnpm -C packages/qfai test
+
   # ── 4. Tests (matrix: test slices) ──────────────────────────────
   test:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 10
     strategy:
@@ -111,18 +515,12 @@ jobs:
       matrix:
         slice: [core, validators, integration, e2e, cli, unit, scripts]
     steps:
-      - uses: actions/checkout@v4
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       # The e2e AND integration slices contain tests that exec the built
       # CLI at `packages/qfai/dist/cli/index.{cjs,mjs}` (e.g.
       # spec0010DiscussionMockAndPointerE2E, spec0008AtddScaffold,
@@ -135,7 +533,11 @@ jobs:
         if: matrix.slice == 'e2e' || matrix.slice == 'integration'
         run: pnpm -C packages/qfai build
       - name: Run tests (${{ matrix.slice }})
-        run: pnpm -C packages/qfai test -- --project ${{ matrix.slice }}
+        # The per-slice script, not the generic runner with a project name.
+        # While this read `test -- --project <slice>` a slice with no script of
+        # its own still ran, so nothing ever demanded the script exist and the
+        # three slice surfaces could drift silently.
+        run: pnpm -C packages/qfai test:${{ matrix.slice }}
 
   # ── 4b. Scanner module statement-coverage gate ───────────────────
   # Asserts that `packages/qfai/src/core/prototyping/designMdViolations.ts`
@@ -144,21 +546,20 @@ jobs:
   # the scanner suite); together they pin both breadth and depth of
   # the scanner test surface.
   scanner-coverage:
+    needs: [detect]
+    # Derived from the detection output, never hand-written. A leg stays
+    # DECLARED and reports skipped, so its check name persists and branch
+    # protection needs no repository setting change (BR-0017-0006, BR-0017-0013).
+    if: ${{ needs.detect.outputs.full == 'true' }}
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
       - name: Run scanner coverage gate
         run: pnpm ci:coverage
 
@@ -167,24 +568,88 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - name: "Enable corepack (provides pnpm for setup-node cache: pnpm)"
-        run: corepack enable
-        shell: bash
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
-          node-version: ${{ env.NODE_LTS }}
-          cache: pnpm
-      - name: Re-shim pnpm against toolcache Node
-        run: corepack prepare pnpm@9.12.3 --activate
-        shell: bash
-      - run: pnpm install --frozen-lockfile
+          persist-credentials: false
+      # The four-step toolchain preamble, defined once in
+      # `.github/actions/setup/action.yml`. It stood inline here six times.
+      - uses: ./.github/actions/setup
 
       - name: Run build & pack verification
         run: pnpm ci:build-verify
 
       - name: Sanity grep — no internal spec IDs or version markers leak (post-build)
         run: bash packages/qfai/scripts/check-no-internal-version-leakage.sh
+
+      # ── The hygiene lane's findings, where the Reviewer Gate can read them ──────────
+      # The gate ingests `{ findings: [...] }` JSON under `.qfai/review/**`, and the lane
+      # writes it — but the lane runs in `lint`, on that job's own checkout, and the
+      # dogfooding validate below runs HERE on a fresh one. Review finding [26]: with the
+      # artifact confined to another job's workspace and nothing transferring it, a hygiene
+      # violation reddened `lint` and never once reached the Reviewer Gate the
+      # shipped-workflows contract promises it reaches.
+      #
+      # Re-run rather than uploaded and downloaded between jobs. The lane parses a handful of
+      # YAML files — it is a second or two — and an artifact round trip would need `build` to
+      # wait on `lint`, serialising two lanes that run in parallel today. Producing the
+      # evidence beside the consumer also removes the transfer as a thing that can silently
+      # stop working.
+      #
+      # The lane's exit code is deliberately NOT propagated. `lint` is the job that fails on a
+      # hygiene violation, and it does; this step's job is to leave the findings where the gate
+      # looks, which it must do for a DIRTY tree above all. Failing here would abort before the
+      # validate steps that read them, so the finding would once again reach no reviewer.
+      #
+      # `|| status=$?` and not `set -uo pipefail` plus a bare call. GitHub runs `shell: bash` as
+      # `bash --noprofile --norc -eo pipefail {0}`, so `-e` comes from the INVOCATION and `set -uo`
+      # does not remove it — the first version of this step aborted on the lane's non-zero exit
+      # before `status=$?` ever ran, which is precisely the abort the comment above says must not
+      # happen. Making the call part of an `||` list is what suspends `-e` for it.
+      #
+      # A MISSING artifact is fatal, though, and that asymmetry is the point: the lane failing means
+      # a violation the gate should now see, while no artifact at all means the bridge did not run —
+      # and a silent bridge is the defect this step exists to remove.
+      - name: Write the hygiene lane's findings for the Reviewer Gate
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact=".qfai/review/workflow-hygiene/workflow-hygiene.json"
+          status=0
+          node scripts/check-workflow-hygiene.mjs --report-dir .qfai/review/workflow-hygiene || status=$?
+          if [ ! -s "$artifact" ]; then
+            echo "::error::the hygiene lane wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than a clean tree"
+            exit 1
+          fi
+          echo "hygiene findings at ${artifact}; lane exit ${status} (the lint job is what fails on a violation)"
+
+      # ── The shape gate's findings, for the same reason and in the same place ───────
+      # `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` sits in the gate's deferred-registration set beside
+      # `R-WORKFLOW-HYGIENE-DRIFT`, and the gate is required to ingest BOTH. Review finding [38]:
+      # the shape lane grew a producer, but it runs inside `lint:workflow-shape` — the `lint`
+      # job's checkout — and the bridge above re-runs only the hygiene lane. So shape drift wrote
+      # its artifact where nothing reads it, and the three self-validates below found no shape
+      # findings on this job's fresh checkout. Half the exemption still reached no reviewer.
+      #
+      # Re-run rather than transferred between jobs, for the same reasons as the hygiene bridge:
+      # an artifact round trip would make `build` wait on `lint`, serialising two lanes that run
+      # in parallel today, and producing the evidence beside the consumer removes the transfer as
+      # a thing that can silently stop working.
+      #
+      # The gate writes its artifact BEFORE it asserts, so a drifted tree produces findings here
+      # and then a non-zero exit — which is suspended by the `||` for the same reason as above,
+      # and for the same reason a missing artifact is fatal instead.
+      - name: Write the shape gate's findings for the Reviewer Gate
+        shell: bash
+        run: |
+          set -uo pipefail
+          artifact=".qfai/review/shipped-workflow-shape/shipped-workflow-shape.json"
+          status=0
+          pnpm -C packages/qfai lint:workflow-shape || status=$?
+          if [ ! -s "$artifact" ]; then
+            echo "::error::the shape gate wrote no findings artifact at ${artifact}; the Reviewer Gate below would ingest nothing, so this is a broken bridge rather than an accepted shape"
+            exit 1
+          fi
+          echo "shape findings at ${artifact}; lane exit ${status} (the lint job is what fails on drift)"
 
       - name: QFAI self-validate this repo (dogfooding — TDD gates)
         shell: bash
@@ -220,6 +685,27 @@ jobs:
             --format github \
             --root .
 
+      - name: QFAI self-validate this repo (dogfooding — full profile)
+        shell: bash
+        run: |
+          set -euo pipefail
+          # Folded in from the repository's own copy of the shipped validate
+          # workflow, which this change deletes. That copy was never a mirror of
+          # this job: it ran the `full` profile while the steps above run `tdd`
+          # and `sdd`, so deleting it without this step would have dropped
+          # coverage rather than removed a duplicate.
+          #
+          # The LOCAL binary, not a resolver. The root manifest declares no
+          # dependency on the package and provides no local binary, so `npx qfai`
+          # from here resolves to the PUBLISHED release — CI would validate a
+          # version nobody is reviewing. That is why the run was folded in rather
+          # than repointed at the shipped workflow file.
+          node packages/qfai/dist/cli/index.mjs validate \
+            --profile full \
+            --fail-on error \
+            --format github \
+            --root .
+
       - name: Run qfai validate gate (fail on error)
         shell: bash
         run: |
@@ -235,11 +721,21 @@ jobs:
           node packages/qfai/dist/cli/index.mjs report --root tmp/pack/sandbox/out --run-validate || true
 
       - name: Upload qfai artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
+        # `!cancelled()` and not `always()`. The difference is a cancelled run: the
+        # upload is most useful when the job FAILED, and worth nothing when nobody
+        # waited for the result. `always()` spends runner minutes on both.
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: qfai-report
-          retention-days: 14
+          # Seven days, not the action's default of ninety. These are diagnostic
+          # artifacts for a pull request under review; nothing reads them a week later.
+          retention-days: 7
+          # The report step above ends in `|| true`, so its files may legitimately be
+          # absent. Without this the upload fails the job for something that is not a
+          # verification failure — and the job it would fail is the one carrying the
+          # required status context.
+          if-no-files-found: warn
           path: |
             tmp/pack/sandbox/out/.qfai/report/validate.json
             tmp/pack/sandbox/out/.qfai/report/validate.log
@@ -249,25 +745,76 @@ jobs:
 
   # ── 6. Aggregate gate (for branch protection) ────────────────────
   ci-pass:
+    # An EMPTY map, not an omission. The verdict reads `needs` from the
+    # workflow context and touches no repository content, so it needs no
+    # scope — and declaring that explicitly is what makes the absence
+    # auditable instead of indistinguishable from an oversight.
+    permissions: {}
     if: always()
-    needs: [lint, check-types, check-types-future, test, scanner-coverage, build]
+    # `detect` is in this list, and it is the one entry that is not a lane.
+    # Without it a CRASHED detection would skip every job that needs it, the verdict
+    # would read those as `skipped`, and `skipped` is accepting — a green run with
+    # nothing verified. Failing OPEN is a decision the classifier makes and records;
+    # failing HARD must reach the gate.
+    needs:
+      [detect, lint, check-types, check-types-future, node-floor, test, scanner-coverage, build]
     runs-on: ubuntu-latest
     timeout-minutes: 5
     steps:
-      - name: Check all jobs passed
+      # The verdict is DERIVED from the serialized needs map and never from a
+      # hand-written list of job names. The body this replaced compared six names
+      # in a shell condition, so a seventh job could be wired into `needs:` above
+      # and this gate would pass while ignoring it — adding a lane cost two edits
+      # and one of them was silent to omit.
+      #
+      # Node rather than jq: the runner image ships both, but the accepting-set
+      # rule below is ALSO executed as a test over synthetic needs maps, and Node
+      # is the one interpreter guaranteed to exist wherever this repository's
+      # tests run. The rule is measured, not read.
+      #
+      # The heredoc is QUOTED (`<<'NODE'`), which is load-bearing twice over: bash
+      # performs no expansion inside it, so the bytes GitHub executes are the
+      # bytes the test extracts and runs, and no `$` or backtick in the program
+      # can be rewritten by the shell on the way in. An unquoted heredoc would
+      # make the executed text and the tested text differ silently.
+      - name: Derive the verdict from the serialized needs map
+        env:
+          NEEDS_JSON: ${{ toJSON(needs) }}
         run: |
-          echo "lint:                ${{ needs.lint.result }}"
-          echo "check-types:         ${{ needs['check-types'].result }}"
-          echo "check-types-future:  ${{ needs['check-types-future'].result }}"
-          echo "test:                ${{ needs.test.result }}"
-          echo "scanner-coverage:    ${{ needs['scanner-coverage'].result }}"
-          echo "build:               ${{ needs.build.result }}"
-          if [[ "${{ needs.lint.result }}" != "success" ||
-                "${{ needs['check-types'].result }}" != "success" ||
-                "${{ needs['check-types-future'].result }}" != "success" ||
-                "${{ needs.test.result }}" != "success" ||
-                "${{ needs['scanner-coverage'].result }}" != "success" ||
-                "${{ needs.build.result }}" != "success" ]]; then
-            echo "::error::One or more CI jobs failed."
-            exit 1
-          fi
+          cat > "${RUNNER_TEMP}/ci-verdict.mjs" <<'NODE'
+          // The accepting set is CLOSED: a state token absent from this set fails
+          // the verdict, so an unrecognized state never degrades to success.
+          // `skipped` accepts because change detection produces an all-skipped run
+          // on a documentation-only pull request, and "nothing needed running" is
+          // not the same claim as "nothing was verified" — it is the second that
+          // must never pass, and an empty needs map is how it would arrive.
+          const ACCEPTING = new Set(["success", "skipped"]);
+
+          const needs = JSON.parse(process.env.NEEDS_JSON ?? "{}");
+          const entries = Object.entries(needs);
+
+          // An empty map is REJECTED. Unreachable while `needs:` is non-empty, but
+          // the direction still has to be chosen, and accepting "no evidence" is
+          // exactly the degradation this job exists to prevent.
+          if (entries.length === 0) {
+            console.log("::error::The verdict received an empty needs map, so no job result was observed.");
+            process.exit(1);
+          }
+
+          let rejected = 0;
+          for (const [name, need] of entries) {
+            // A need with no `result` reads as the literal below rather than as
+            // `undefined`, so the log line stays legible and the accepting-set
+            // test rejects it for the same reason any other unknown token is
+            // rejected: it is not in the set.
+            const result = need?.result ?? "(no result)";
+            console.log(`${name}: ${result}`);
+            if (!ACCEPTING.has(result)) {
+              console.log(`::error::CI job ${name} concluded ${result}.`);
+              rejected += 1;
+            }
+          }
+
+          process.exit(rejected === 0 ? 0 : 1);
+          NODE
+          node "${RUNNER_TEMP}/ci-verdict.mjs"
