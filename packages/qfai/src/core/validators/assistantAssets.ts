@@ -188,7 +188,7 @@ function collectReachableDocuments(
   documents: Map<string, string>,
 ): Set<string> {
   const files = [...documents.keys()];
-  const reachable = new Set(files.filter((file) => path.basename(file) === "SKILL.md"));
+  const reachable = new Set(files.filter((file) => isSkillEntryPoint(context.skillsDir, file)));
   const queue = [...reachable];
   while (queue.length > 0) {
     const current = queue.shift();
@@ -208,6 +208,25 @@ function collectReachableDocuments(
 }
 
 /**
+ * The entry point a skill run actually opens: `<skillsDir>/<skill>/SKILL.md`.
+ *
+ * Rooting the closure at every file merely *named* `SKILL.md` would let a
+ * generator template or an example copy under `templates/` or `references/`
+ * seed it, so a reference only that copy cites would count as reachable even
+ * though no run can open it. The skill loader reads one `SKILL.md` per direct
+ * subdirectory of `skillsDir`, and the graph starts at exactly that set.
+ */
+function isSkillEntryPoint(skillsDir: string, file: string): boolean {
+  const segments = toPosixRelative(skillsDir, file).split("/");
+  return (
+    segments.length === 2 &&
+    segments[1] === "SKILL.md" &&
+    segments[0] !== "" &&
+    segments[0] !== ".."
+  );
+}
+
+/**
  * Path-ish tokens naming a skill document: `references/foo.md`, `two-hop.md`,
  * `.qfai/assistant/skills/qfai-sdd/references/rcp_footer.md`.
  *
@@ -216,9 +235,18 @@ function collectReachableDocuments(
  * lower-cases the extension before comparing and puts no constraint on the
  * stem, so `references/設計.md` and `references/Guide.MD` are documents the
  * reachability check has to be able to see cited.
+ *
+ * A segment also admits `%XX`, because that is how a Markdown link spells a
+ * character it cannot carry literally — `[設計](references/%E8%A8%AD%E8%A8%88.md)`
+ * names `references/設計.md`. Either separator is accepted, and a leading
+ * separator or drive letter is kept rather than dropped, so a path typed in
+ * Windows form and a path that is absolute both still name their file.
  */
-const DOCUMENT_CITATION_PATTERN =
-  /[\p{L}\p{N}\p{M}._-]+(?:\/[\p{L}\p{N}\p{M}._-]+)*\.(?:md|ya?ml)\b/giu;
+const CITATION_SEGMENT_SOURCE = String.raw`(?:[\p{L}\p{N}\p{M}._-]|%[0-9A-Fa-f]{2})+`;
+const DOCUMENT_CITATION_PATTERN = new RegExp(
+  String.raw`(?:[A-Za-z]:)?[\\/]?${CITATION_SEGMENT_SOURCE}(?:[\\/]${CITATION_SEGMENT_SOURCE})*\.(?:md|ya?ml)\b`,
+  "giu",
+);
 
 /** Everything a citation token is resolved against, derived from the config. */
 type CitationContext = {
@@ -301,7 +329,7 @@ function isTokenScannable(context: CitationContext, file: string): boolean {
 
 const SCANNABLE_SEGMENT_PATTERN = /^[\p{L}\p{N}\p{M}._-]+$/u;
 
-/** Every way `target` can be spelled from `citingFile`, URI form included. */
+/** Every way `target` can be spelled from `citingFile`, URI forms included. */
 function citationSpellings(context: CitationContext, citingFile: string, target: string): string[] {
   const skillRoot = skillRootOf(context.skillsDir, citingFile);
   const bases = [
@@ -311,16 +339,38 @@ function citationSpellings(context: CitationContext, citingFile: string, target:
     context.root,
   ];
   const spellings = new Set<string>();
-  for (const base of bases) {
-    const relative = toPosixRelative(base, target);
+  // The absolute form is a spelling too: a skillsDir outside the project has
+  // no usable reading relative to the project root.
+  for (const relative of [...bases.map((base) => toPosixRelative(base, target)), toPosix(target)]) {
     if (relative === "") {
       continue;
     }
-    spellings.add(relative);
-    // `[Guide](references/My%20Guide.md)` names the same file.
-    spellings.add(encodeURI(relative));
+    for (const spelling of pathSpellings(relative)) {
+      spellings.add(spelling);
+    }
   }
   return [...spellings];
+}
+
+/**
+ * One relative path, in each notation a document may write it in.
+ *
+ * `encodeURI` is not enough on its own: it treats `#` and `?` as reserved and
+ * leaves them in place, while a Markdown link target has to carry them as
+ * `%23` and `%3F` or the parser reads a fragment or a query. Encoding each
+ * segment the way a link does covers those; `encodeURI` is kept because it
+ * leaves characters such as `+` and `,` alone, which a link may too.
+ */
+function pathSpellings(relative: string): string[] {
+  const segments = relative.split("/");
+  return [
+    relative,
+    // `references\My Guide.md` is the same path typed on Windows.
+    segments.join("\\"),
+    // `[Guide](references/My%20Guide.md)` names the same file.
+    encodeURI(relative),
+    segments.map((segment) => encodeURIComponent(segment)).join("/"),
+  ];
 }
 
 function citesByExplicitPath(
@@ -374,6 +424,60 @@ function isTailBoundary(content: string, index: number): boolean {
 }
 
 function citationCandidates(context: CitationContext, citingFile: string, token: string): string[] {
+  return citationTokenReadings(token).flatMap((reading) =>
+    resolveCitationToken(context, citingFile, reading),
+  );
+}
+
+/**
+ * The paths one token can name: as typed, and with its `%XX` escapes decoded.
+ *
+ * Separators are folded to `/` first so a Windows-native `references\guide.md`
+ * resolves to the same document as its POSIX spelling. The literal reading is
+ * kept ahead of the decoded one so a file genuinely named `foo%20bar.md` still
+ * wins over the file named `foo bar.md`.
+ */
+function citationTokenReadings(token: string): string[] {
+  const normalized = token.split("\\").join("/");
+  const decoded = decodePathSegments(normalized);
+  return decoded === normalized ? [normalized] : [normalized, decoded];
+}
+
+/** Per segment, so a `%2F` cannot be mistaken for a separator we produced. */
+function decodePathSegments(token: string): string {
+  return token
+    .split("/")
+    .map((segment) => {
+      try {
+        return decodeURIComponent(segment);
+      } catch {
+        // A malformed escape is not an escape: keep the segment as typed.
+        return segment;
+      }
+    })
+    .join("/");
+}
+
+/**
+ * An absolute citation stays absolute.
+ *
+ * `paths.skillsDir` may point outside the project — `/shared/qfai-skills` — and
+ * a document there names its neighbours by full path. Dropping the leading
+ * separator and re-joining the rest under the citing file or the project root
+ * resolves every such citation to a file that does not exist, so the reference
+ * it names is reported as unreachable. The relative readings are kept as well,
+ * so a token that merely looks absolute resolves the way it always did.
+ */
+function resolveCitationToken(
+  context: CitationContext,
+  citingFile: string,
+  token: string,
+): string[] {
+  const candidates = ABSOLUTE_CITATION_PATTERN.test(token) ? [path.resolve(token)] : [];
+  const relativeToken = token.replace(ABSOLUTE_CITATION_PREFIX_PATTERN, "");
+  if (relativeToken === "") {
+    return candidates;
+  }
   const skillRoot = skillRootOf(context.skillsDir, citingFile);
   const bases = [
     path.dirname(citingFile),
@@ -381,14 +485,17 @@ function citationCandidates(context: CitationContext, citingFile: string, token:
     context.skillsDir,
     context.root,
   ];
-  const candidates = bases.map((base) => path.resolve(base, token));
-  const prefixMatch = context.skillsDirPrefix?.exec(token) ?? null;
+  candidates.push(...bases.map((base) => path.resolve(base, relativeToken)));
+  const prefixMatch = context.skillsDirPrefix?.exec(relativeToken) ?? null;
   if (prefixMatch !== null) {
-    const withinSkills = token.slice(prefixMatch.index + prefixMatch[0].length);
+    const withinSkills = relativeToken.slice(prefixMatch.index + prefixMatch[0].length);
     candidates.push(path.resolve(context.skillsDir, withinSkills));
   }
   return candidates;
 }
+
+const ABSOLUTE_CITATION_PATTERN = /^(?:[A-Za-z]:)?\//;
+const ABSOLUTE_CITATION_PREFIX_PATTERN = /^(?:[A-Za-z]:)?\/+/;
 
 /** The `<skillsDir>/<skill>` directory a document belongs to, if any. */
 function skillRootOf(skillsDir: string, file: string): string | null {
@@ -405,7 +512,11 @@ function isReferenceDocument(skillsDir: string, file: string): boolean {
 }
 
 function toPosixRelative(from: string, to: string): string {
-  return path.relative(from, to).split(path.sep).join("/");
+  return toPosix(path.relative(from, to));
+}
+
+function toPosix(target: string): string {
+  return target.split(path.sep).join("/");
 }
 
 async function collectSkillFiles(dirs: string[]): Promise<string[]> {

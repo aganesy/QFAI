@@ -138,6 +138,144 @@ async function writeSpacedNameSkillFixture(root: string): Promise<string> {
   return referencesDir;
 }
 
+/**
+ * A skill citing its non-ASCII reference through a percent-encoded link.
+ *
+ * `[設計](references/%E8%A8%AD%E8%A8%88.md)` is how a Markdown link spells the
+ * very path the previous fixture writes literally, so it has to reach the same
+ * file.
+ */
+async function writePercentEncodedSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "encoded-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# encoded-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "まず [設計](references/%E8%A8%AD%E8%A8%88.md) を読む。",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "設計.md"), "# 設計\n", "utf-8");
+  await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
+/**
+ * A reference whose name carries a URI-reserved character.
+ *
+ * `#` has to be written `%23` in a link target, and the surrounding brackets
+ * keep any path-ish token from spanning the name — so the file is found only
+ * if the spelling searched for is the one a link actually carries.
+ */
+async function writeReservedCharSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "reserved-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# reserved-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "Read [the guide](references/Guide(1)%232.md) first.",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "Guide(1)#2.md"), "# Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "Orphan(1)#2.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
+/**
+ * A skill whose only citation of a reference sits in a generator template.
+ *
+ * A run opens `<skillsDir>/<skill>/SKILL.md` and nothing else by that name, so
+ * a copy under `templates/` cannot make a reference readable.
+ */
+async function writeTemplateRootSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "template-skill");
+  const referencesDir = path.join(skillDir, "references");
+  const templateDir = path.join(skillDir, "templates", "scaffold");
+  await mkdir(referencesDir, { recursive: true });
+  await mkdir(templateDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    ["# template-skill", "", "[DRIFT-PROTOCOL:MANDATORY]", "", "Nothing else to read.", ""].join(
+      "\n",
+    ),
+    "utf-8",
+  );
+  await writeFile(
+    path.join(templateDir, "SKILL.md"),
+    ["# scaffold", "", "Read `references/template-only.md`.", ""].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "template-only.md"), "# Template only\n", "utf-8");
+  return referencesDir;
+}
+
+/** A skill that spells its citation with the native separator of Windows. */
+async function writeWindowsPathSkillFixture(root: string): Promise<string> {
+  const skillDir = path.join(root, ".qfai", "assistant", "skills", "windows-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# windows-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      "Read `references\\guide.md` before starting.",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "guide.md"), "# Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
+/**
+ * A `paths.skillsDir` that is absolute and outside the project.
+ *
+ * A document there names its neighbours by full path, which is the only
+ * spelling that reaches them — nothing under the project root does.
+ */
+async function writeExternalSkillsDirFixture(root: string, skillsDir: string): Promise<string> {
+  await writeFile(
+    path.join(root, "qfai.config.yaml"),
+    ["paths:", `  skillsDir: ${skillsDir}`, ""].join("\n"),
+    "utf-8",
+  );
+  const skillDir = path.join(skillsDir, "demo-skill");
+  const referencesDir = path.join(skillDir, "references");
+  await mkdir(referencesDir, { recursive: true });
+  await writeFile(
+    path.join(skillDir, "SKILL.md"),
+    [
+      "# demo-skill",
+      "",
+      "[DRIFT-PROTOCOL:MANDATORY]",
+      "",
+      `Read \`${path.join(referencesDir, "guide.md")}\` before starting.`,
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  await writeFile(path.join(referencesDir, "guide.md"), "# Guide\n", "utf-8");
+  await writeFile(path.join(referencesDir, "orphan.md"), "# Orphan\n", "utf-8");
+  return referencesDir;
+}
+
 /** A project that moved `paths.skillsDir` away from the default location. */
 async function writeRelocatedSkillFixture(root: string): Promise<string> {
   await writeFile(
@@ -230,6 +368,72 @@ describe("skill reference reachability", { timeout: 30000 }, () => {
       expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
     } finally {
       await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a percent-encoded link target back to its Unicode file name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-encoded-"));
+    try {
+      const referencesDir = await writePercentEncodedSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a link target whose file name carries a URI-reserved character", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-reserved-"));
+    try {
+      const referencesDir = await writeReservedCharSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([
+        path.join(referencesDir, "Orphan(1)#2.md"),
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not root the walk at a SKILL.md no skill run opens", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-template-root-"));
+    try {
+      const referencesDir = await writeTemplateRootSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([
+        path.join(referencesDir, "template-only.md"),
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves a citation written with a backslash separator", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-windows-"));
+    try {
+      const referencesDir = await writeWindowsPathSkillFixture(root);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("resolves an absolute citation inside a skillsDir outside the project", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-external-root-"));
+    const skillsDir = await mkdtemp(path.join(os.tmpdir(), "qfai-reference-external-skills-"));
+    try {
+      const referencesDir = await writeExternalSkillsDirFixture(root, skillsDir);
+      const issues = await reachabilityIssues(root);
+
+      expect(issues.map((entry) => entry.file)).toEqual([path.join(referencesDir, "orphan.md")]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+      await rm(skillsDir, { recursive: true, force: true });
     }
   });
 
