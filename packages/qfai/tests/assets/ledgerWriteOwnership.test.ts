@@ -65,9 +65,13 @@ describe.each(QFAI_TREES)("%s", (tree) => {
 
   it("says what a worker returns instead of writing", async () => {
     // Without this the ban is a prohibition with no replacement, and the
-    // evidence simply stops existing.
+    // evidence simply stops existing. All three carve-out cells: the
+    // orchestrator's reconcile is the only write an `exception` row's
+    // mandatory `DR-*` can come from.
     const policy = await read(tree, POLICY);
-    expect(policy).toContain("final `Status`, and the `Evidence` payload");
+    expect(policy).toContain(
+      "final `Status`, the `DR-ID` that status requires, and the `Evidence` payload",
+    );
   });
 
   it("reconciles the merged ledger before integration verify, and fails on a stale row", async () => {
