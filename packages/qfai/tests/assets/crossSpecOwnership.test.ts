@@ -68,6 +68,52 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     );
   });
 
+  it("checks the Red-phase seam before it writes to an existing production file", async () => {
+    // Phase Red's preflight covered the *test* write only, while the seam step
+    // right after it registers a route on an existing router or adds an export
+    // to an existing module — and a seam-only invocation ends there, so the
+    // Green and Refactor copies of the check were never reached.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain(
+      "**When the seam goes into a file that already exists — a route registered on an existing router, an export or signature added to an existing module — run the cross-spec check of `references/cross-spec-ownership.md` before writing it**",
+    );
+    expect(skill).toContain(
+      "**a seam-only invocation stops at this step**, so the Green and Refactor copies of that check are never reached",
+    );
+    // The reference states the same reason, so the two do not drift.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "its seam step writes to a **production** file in that same phase, a route registered on an existing router or an export added to an existing module, on a path that can end there without reaching Green or Refactor at all",
+    );
+    // Over-correction pin: the preflight stays conditioned on an *existing*
+    // file — a seam in a new module no other spec can own must not be gated —
+    // and the seam's own contract is untouched.
+    expect(skill).toContain("**Register it with a status the row does not contract for.**");
+    expect(skill).toContain("build the seam, leave the row at `todo`, and return");
+  });
+
+  it("counts a reverse-dependency match as cross-spec, not only a named one", async () => {
+    // A reverse hit names the edited file in neither column, so a recording
+    // condition of "if it is named" let exactly the case the closure exists to
+    // catch skip the obligation and the re-review.
+    const skill = await read(tree, SKILL);
+    expect(skill).toContain("**A match either way makes the edit cross-spec**");
+    expect(skill).toContain(
+      "named directly in one of those two columns, or reached only through that closure, which names it in neither",
+    );
+    expect(skill).not.toContain("If it is named, the edit is cross-spec");
+    // Same condition as the reference it summarises.
+    const reference = await read(tree, REFERENCE);
+    expect(reference).toContain(
+      "A `done` row matches in either of two ways, and either one means the edit is cross-spec",
+    );
+    // Over-correction pin: widening *what counts as a match* must not widen
+    // *which rows are read*. Only `done` rows carry a certification, and the
+    // direct branch stays a direct branch.
+    expect(skill).toContain("over its `Status = done` rows only");
+    expect(skill).toContain("the file is named in that row's `Owning module`");
+  });
+
   it("reaches a shared test artifact through the test import graph", async () => {
     // A fixture or assertion helper is in no `Test file` cell and no production
     // module imports it, so the production-graph walk returns an *empty*

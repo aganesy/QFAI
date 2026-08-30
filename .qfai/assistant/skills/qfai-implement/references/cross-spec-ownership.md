@@ -34,7 +34,10 @@ such a file does not require permission — it requires a record and a re-review
 
 1. **Detect.** Before editing a production file **or a test file** — in **any
    phase**, not only Refactor, because Phase Red writes to a test file before
-   Refactor is ever reached — look the file up in every other spec's
+   Refactor is ever reached, and its seam step writes to a **production** file
+   in that same phase, a route registered on an existing router or an export
+   added to an existing module, on a path that can end there without reaching
+   Green or Refactor at all — look the file up in every other spec's
    `tdd/test-list.md`, reading only the rows at `Status = done`. Those are the
    rows this rule protects: `done` has no outbound edge, so what they certify
    cannot be re-tested by reopening them, while a `todo` / `red` / `green` row
