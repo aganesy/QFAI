@@ -154,6 +154,34 @@ export type ParsedArgs = {
   };
 };
 
+/**
+ * Every command `main.ts` dispatches, in the order its switch lists them.
+ *
+ * A first argv token outside this set is a usage error, not a command that
+ * happens to take no options — and it has to be caught here rather than at the
+ * switch, because `--help` short-circuits the dispatch entirely.
+ *
+ * Keep it in step with that switch: a name missing here is rejected as a typo,
+ * and a name here that nothing dispatches falls through to `default:`.
+ * `tests/cli/main.test.ts` pins both directions.
+ */
+export const KNOWN_COMMANDS = [
+  "init",
+  "validate",
+  "report",
+  "doctor",
+  "guardrails",
+  "audit",
+  "atdd",
+  "handoff",
+  "discussion",
+  "prototyping",
+] as const;
+
+export function isKnownCommand(value: string): boolean {
+  return (KNOWN_COMMANDS as readonly string[]).includes(value);
+}
+
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     root: cwd,
@@ -190,6 +218,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     invalid = true;
     options.help = true;
   };
+
+  // An unknown top-level command is a usage error here, at parse time.
+  // Leaving it to `main.ts`'s `default:` branch covered `qfai typo` but not
+  // `qfai typo --help`: `--help` is parsed before the switch is reached, so
+  // the help early-return fired first and a misspelled command name reported
+  // success. Rejecting it here covers both, and `-h` with it.
+  if (command !== null && !isKnownCommand(command)) {
+    markInvalid();
+  }
 
   if (command === "guardrails") {
     const candidate = args[0];

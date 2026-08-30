@@ -9,7 +9,7 @@ import { runPrototypingIterate } from "./commands/prototypingIterate.js";
 import { runPrototypingCertify, runPrototypingShowSpec } from "./commands/prototypingCertify.js";
 import { runReport } from "./commands/report.js";
 import { runValidate } from "./commands/validate.js";
-import { parseArgs } from "./lib/args.js";
+import { isKnownCommand, parseArgs } from "./lib/args.js";
 import { error, info, warn } from "./lib/logger.js";
 import { findConfigRoot } from "../core/config.js";
 
@@ -17,6 +17,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
+    // The unknown-command diagnostic belongs here, not only at the switch's
+    // `default:`, because `--help` never reaches the switch.
+    if (command && !isKnownCommand(command)) {
+      error(`Unknown command: ${command}`);
+    }
     info(usage());
     if (invalid) {
       process.exitCode = options.invalidExitCode;
@@ -268,11 +273,13 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
 
     default:
+      // Backstop. `parseArgs` already rejects a command outside
+      // `KNOWN_COMMANDS`, so this is reachable only if that list and this
+      // switch drift apart — a name listed as known that nothing dispatches.
+      // Still a usage error, and still exit 2, so the drift cannot report
+      // success.
       error(`Unknown command: ${command}`);
       info(usage());
-      // 未知のトップレベルコマンドも usage エラー。usage() の "Exit codes"
-      // 表と一致させ、CLI を自動実行するスクリプトがコマンド名の誤記を
-      // 成功 (0) と誤判定しないようにする。
       process.exitCode = options.invalidExitCode;
       return;
   }
@@ -348,10 +355,16 @@ Options:
 
 Exit codes（全コマンド共通）:
   0   成功
-  1   gate 失敗（validate --fail-on <warning|error> / guardrails などの検査が不合格）
+  1   実行が目的を達しなかった。二種類あり、終了コードだけでは区別できない:
+      (a) gate 失敗（validate --fail-on <warning|error> / guardrails などの検査が不合格）
+      (b) 実行時エラー（audit log: decisions/ を読めない、
+          handoff upgrade: legacy ファイルが無い・壊れている・書き込めない 等）
+      検査不合格かどうかを機械判定する必要がある場合は、終了コードではなく
+      validate --format json の counts / report の JSON を読むこと。
       report は検査結果を表示するだけで gate ではない（不合格でも 0 を返す）。
       CI gate には validate --fail-on <warning|error> を使うこと。
   2   usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
+      --help / -h を伴っても未知のコマンドは 2（qfai typo --help も 2）。
 
   prototyping 系は canonical exit-code matrix に従い、上記に加えて次を返す:
   64  iterate: 収束して停止（正常終了） / certify: review.json coverage 不足
