@@ -25,16 +25,24 @@ So item 10 reads the marker, and this pass writes it.
 ## The guard
 
 The pass runs **once per repository**, not once per session — and "once" is
-keyed to the ledgers it actually read, not to the checkout. Its record is
+keyed to the inputs its answer was derived from: the ledgers it actually read
+and the boundary overrides it obeyed, not the checkout. Its record is
 `migrations.preSplitEvidence` in `.qfai/state.json`:
 
 ```json
-{ "migrations": { "preSplitEvidence": { "ledgers": "<fingerprint>" } } }
+{
+  "migrations": {
+    "preSplitEvidence": {
+      "ledgers": "<ledger fingerprint>",
+      "boundaries": "<boundary fingerprint>"
+    }
+  }
+}
 ```
 
-`<fingerprint>` addresses the ledgers this pass actually read and wrote, taken
-from the **working tree** and recomputed after it has written its markers: for
-every ledger it enumerated, `path + NUL + git hash-object <path>`, sorted by
+`<ledger fingerprint>` addresses the ledgers this pass actually read and wrote,
+taken from the **working tree** and recomputed after it has written its markers:
+for every ledger it enumerated, `path + NUL + git hash-object <path>`, sorted by
 path, joined with newlines, SHA-256 — the manifest form
 `references/evidence-revision.md` already defines. **Not a commit-tree address
 such as `git rev-parse HEAD:.qfai/specs`.** The markers are written to the
@@ -47,13 +55,28 @@ constant string for every state it can be in. It moves when any ledger moves and
 it differs between branches that carry different ledgers, which is the whole
 point of recording it.
 
-- **Flag set → skip.** Set means present **and** carrying the fingerprint
-  recomputed over the ledgers as they stand now — which costs one
-  `git hash-object` per ledger and nothing else. Parse no row, walk no history;
-  report the skip in one line and continue with the next Preflight obligation.
-- **Flag absent → run the procedure below, then set the flag.** Absent covers a
-  recorded fingerprint that no longer matches — a branch switch, a pull, a
-  merge. `.qfai/state.json` is checkout-local, so a flag pinned to nothing but
+`<boundary fingerprint>` addresses the operator overrides under
+`migrations.preSplitEvidence.boundary` (defined below), in the same manifest
+form over what they are rather than over files: `<layer> + NUL + <commit-ish>`
+for every layer set there, sorted by layer, joined with newlines, SHA-256 — and
+the SHA-256 of the empty string where none is set. **An override is an input to
+this pass's verdict, so it belongs in the guard that decides whether to re-run
+it.** An operator sets one exactly when the derived boundary was wrong or
+underivable — that is what the refusals below send them to do — and against a
+guard that addresses only the ledgers, adding or correcting one changes nothing
+the guard compares: the ledgers hash the same, the pass skips on sight, and the
+boundary supplied to fix a wrong verdict is never evaluated once. The rows the
+superseded boundary mismarked or refused stay exactly as they are, and nothing
+downstream re-examines them.
+
+- **Flag set → skip.** Set means present **and** carrying both addresses as they
+  recompute now — one `git hash-object` per ledger for the first, and no `git`
+  at all for the second. Parse no row, walk no history; report the skip in one
+  line and continue with the next Preflight obligation.
+- **Flag absent → run the procedure below, then set the flag.** Absent covers
+  either recorded address no longer matching — a branch switch, a pull, a merge,
+  or a boundary override added, corrected or removed.
+  `.qfai/state.json` is checkout-local, so a flag pinned to nothing but
   the checkout let the first branch processed decide for all of them: migrate a
   branch with no legacy row, record `done`, switch to a branch that has them,
   and this pass reads neither ledger nor history again while item 10 rejects
@@ -61,10 +84,11 @@ point of recording it.
   ledgers have no legacy row" is the answer, and re-deriving it every session is
   exactly the cost that put the migration in a per-item gate in the first place.
   The one exception is a run that **refused** something — a layer whose boundary
-  it could not resolve, or a row whose last advance it could not date. That run
-  reached no answer for what it refused, so it records none: a fingerprint taken
-  over the working tree would still match once the ledger is committed or the
-  history restored, and the pass would skip forever with those rows unmarked.
+  it could not resolve, or a row whose last advance it could not date or could
+  not date to one answer. That run reached no answer for what it refused, so it
+  records none — **neither address**: a fingerprint taken over the working tree
+  would still match once the ledger is committed or the history restored, and
+  the pass would skip forever with those rows unmarked.
 - Write the flag with the same create-or-merge rule as every other key in that
   file: preserve unrelated top-level keys, never rewrite the file wholesale.
 - **A re-run is cheap by construction.** Step 1 below filters to the rows that
@@ -143,9 +167,25 @@ For each such row:
      permanently ungateable. At a merge candidate, read the row at **every**
      parent (`git show <sha>^1:<test-list.md>`, `<sha>^2:…`, …): if any parent
      already carries the merge's values, the merge only took the change in —
-     drop it and continue the walk into that parent's history for the commit
-     that actually set them. Only when **no** parent carries them (a conflict
-     resolution that edited the row itself) is the merge the advance.
+     drop it and continue the walk into the history of **every** parent that
+     carries them, for the commit that actually set them. Only when **no**
+     parent carries them (a conflict resolution that edited the row itself) is
+     the merge the advance.
+   - **More than one parent can carry them, and then the verdicts must agree.**
+     Two branches can advance the same row to an identical `Layer`, `Status` and
+     anchor — one before the split, the other after it and written to the wrong
+     file — and the merge that joined them leaves both parents holding the
+     merge's values. Continuing into "that parent" picks one of the two by
+     nothing but enumeration order, so the same repository and the same history
+     can mark the row or refuse it depending on which side was read first, and
+     the pre-split side marks a row whose other lineage never produced an ATDD
+     handoff. Take **each** matching parent's own `A` through the boundary test
+     below and act only on a **unanimous** verdict: every lineage pre-split →
+     mark; every lineage post-split → no marker. **Verdicts that disagree →
+     refuse the marker for that row**, report the row and both lineages, and
+     record no fingerprint — the same fail-closed direction an undatable advance
+     takes. One lineage saying "legacy" is not evidence of age while another
+     says the row was advanced after its layer's split.
 5. **No `A` → refuse, do not mark.** An untracked spec tree, a ledger not yet
    committed, a row whose line has never been committed, or a history too
    shallow to hold its advance all leave the walk with no candidate. That is not
@@ -192,25 +232,30 @@ git show <sha>:.qfai/assistant/skills/qfai-implement/references/execution-ledger
 
 An operator can name the boundary instead: `migrations.preSplitEvidence.boundary`
 in `.qfai/state.json`, keyed by layer, holding any commit-ish. Where it is set
-for `L`, that is `B(L)` and no derivation runs.
+for `L`, that is `B(L)` and no derivation runs. **Setting, correcting or
+removing one re-runs this pass**, because the guard above addresses that map
+alongside the ledgers — an override exists to overturn a verdict, and a guard
+blind to it would skip the run that would apply the new boundary.
 
-Then, with `A` from step 4:
+Then, with `A` from step 4 — once per lineage, where step 4 produced more than
+one:
 
-- `git merge-base --is-ancestor <B(L)> <A>` succeeds → `A` is at or after the
-  split. No marker.
-- `git merge-base --is-ancestor <A> <B(L)>` succeeds → `A` predates the split
-  reaching this repository, and step 7's anchor test decides.
+- `git merge-base --is-ancestor <A> <B(L)>` succeeds → `A` predates the oldest
+  commit in this history that routes `L` to the ATDD file, so no contract it
+  could have been written under routed it there. Pre-split, and step 7's anchor
+  test decides. **This is the only case ancestry settles by itself**, and it has
+  to be: a row older than the vendored skill tree has no `execution-ledger.md`
+  to read at `A` at all, and requiring one would refuse the marker to the oldest
+  legacy rows of all.
+- `git merge-base --is-ancestor <B(L)> <A>` succeeds → the split had reached
+  this repository by `A`, **which is not the same as its having been in force
+  when the row advanced**. Decide from the contract as of `A`, below.
 - **Neither succeeds → `A` and `B(L)` have diverged; do not read that as
   "before".** Once several branches have updated the assistant tree and been
   merged, `B(L)` and `A` can be siblings, and the first test's failure then says
   only "not an ancestor". Taken as pre-split it marks a post-split `A`, and item
   10 accepts an implement anchor from a row that never produced an ATDD handoff.
-  Decide from the contract `A` itself was written under instead:
-  `git show <A>:.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`
-  — it routes `L` to `atdd-<spec-id>.md` → `A` is post-split, no marker; it
-  routes `L` to the implement file → pre-split, and step 7 decides; the file is
-  absent or unreadable at `A` → the boundary is unproven for that row, so refuse
-  the marker and record no fingerprint, exactly as below.
+  Decide from the contract `A` itself was written under instead, below.
 - **`B(L)` cannot be resolved → mark nothing for that layer.** The skill tree is
   untracked, or the clone is too shallow to hold the commit that introduced the
   split. **Fail closed**: an unproven boundary is not evidence that every row
@@ -223,10 +268,27 @@ Then, with `A` from step 4:
   (`git fetch --unshallow`, or commit the vendored `.qfai/` tree) or set
   `migrations.preSplitEvidence.boundary.<layer>` above.
 - **A run that refused a layer records no fingerprint**, and neither does one
-  that refused a row (step 2 or step 5), so the next Preflight tries again once
-  the history is there. That re-run costs one ledger read per spec plus the
-  boundary derivation — step 1 filters every settled row out before any per-row
-  history is walked.
+  that refused a row — an uncommitted advance (step 2), an undatable one (step
+  5), or a merge whose lineages disagreed (step 4) — so the next Preflight tries
+  again once the history is there. That re-run costs one ledger read per spec
+  plus the boundary derivation — step 1 filters every settled row out before any
+  per-row history is walked.
+
+**The contract as of `A` decides the second and third cases above.**
+`git show <A>:.qfai/assistant/skills/qfai-implement/references/execution-ledger.md`
+— it routes `L` to `atdd-<spec-id>.md` → `A` is post-split, no marker; it routes
+`L` to the implement file → pre-split, and step 7 decides; the file is absent or
+unreadable at `A` → the boundary is unproven for that row, so refuse the marker
+and record no fingerprint, exactly as an unresolvable `B(L)` does. **Descending
+from `B(L)` is not proof that the split was in force at `A`**: roll the vendored
+`.qfai/` tree back to a pre-split copy — a revert, a bad merge, a downgrade to
+pin a working version — advance the row under that older contract, then upgrade
+again, and `A` sits after `B(L)` in the graph while the ledger it actually obeyed
+still sent `L` to the implement file. Read as post-split, that row is refused the
+marker its lawful evidence needs, item 10 demands an ATDD anchor it has no entry
+for on every attempt, and a `done` row has no transition left that could produce
+one — the permanent failure this whole pass exists to remove. `B(L)` says where
+to start looking; only the contract at `A` says what the row was written under.
 
 Resolve `B(L)` once per layer per run and cache it: it is at most three walks of
 one file's history, never one per row.

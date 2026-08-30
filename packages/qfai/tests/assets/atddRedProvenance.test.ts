@@ -1095,7 +1095,7 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     // flag, and the next branch's legacy rows were never read again.
     const migration = flat(await read(tree, MIGRATION));
     expect(migration).toContain('{ "migrations": { "preSplitEvidence": { "ledgers"');
-    expect(migration).toContain("Absent covers a recorded fingerprint that no longer matches");
+    expect(migration).toContain("Absent covers either recorded address no longer matching");
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
       "**the fingerprint of the ledgers it read, taken from the working tree after it wrote its markers**",
@@ -1140,6 +1140,60 @@ describe.each(TREES)("%s (each gate reads what the step before it produced)", (t
     expect(migration).toContain("**A merge commit is not an advance in itself.**");
     expect(migration).toContain("read the row at **every** parent");
     expect(migration).toContain("the merge only took the change in");
+  });
+
+  it("resolves every parent that carries a merge's values, and disagrees closed", async () => {
+    // Two branches can advance the same row to identical Layer/Status/anchor,
+    // one before the split and one after it in error, so the merge leaves both
+    // parents carrying its values. Walking "that parent" picked one of them by
+    // enumeration order, and the pre-split side marked a row whose other
+    // lineage never produced an ATDD handoff.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).not.toContain("continue the walk into that parent's history");
+    expect(migration).toContain("into the history of **every** parent that carries them");
+    expect(migration).toContain(
+      "**More than one parent can carry them, and then the verdicts must agree.**",
+    );
+    expect(migration).toContain("**Verdicts that disagree → refuse the marker for that row**");
+    // Over-correction pin: a merge that no parent's values reach is still the
+    // advance, and a unanimous verdict is still acted on.
+    expect(migration).toContain("Only when **no** parent carries them");
+    expect(migration).toContain("every lineage pre-split → mark");
+  });
+
+  it("reads the contract at `A` when `B(L)` is an ancestor of it too", async () => {
+    // A skill-tree rollback puts `A` after `B(L)` in the graph while the ledger
+    // it obeyed still routed the layer to the implement file. Declared
+    // post-split unconditionally, that row is refused the marker its lawful
+    // evidence needs and `done` leaves it no transition to earn one.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).not.toContain("succeeds → `A` is at or after the split. No marker.");
+    expect(migration).toContain(
+      "**The contract as of `A` decides the second and third cases above.**",
+    );
+    expect(migration).toContain(
+      "**Descending from `B(L)` is not proof that the split was in force at `A`**",
+    );
+    // Over-correction pin: `A` older than `B(L)` is still settled by ancestry —
+    // a row predating the vendored tree has no contract to read at `A`.
+    expect(migration).toContain("**This is the only case ancestry settles by itself**");
+  });
+
+  it("re-runs the pass when a boundary override is added or corrected", async () => {
+    // The override exists to overturn a verdict, but a guard addressing only
+    // the ledgers skipped on sight: the ledgers hash the same, so the new
+    // boundary was never evaluated and the mismarked rows stayed as they were.
+    const migration = flat(await read(tree, MIGRATION));
+    expect(migration).toContain('"boundaries": "<boundary fingerprint>"');
+    expect(migration).toContain(
+      "**An override is an input to this pass's verdict, so it belongs in the guard that decides whether to re-run it.**",
+    );
+    expect(migration).toContain("**Setting, correcting or removing one re-runs this pass**");
+    expect(migration).toContain("or a boundary override added, corrected or removed");
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**and alongside it the fingerprint of the `migrations.preSplitEvidence.boundary` overrides it obeyed**",
+    );
   });
 
   it("refuses a row whose advance is still uncommitted", async () => {
