@@ -12,12 +12,13 @@
 // QFAI:SPEC-0004:TC-0004-0073
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { removeTempTree } from "../../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
 
@@ -61,7 +62,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(fixtureRoot, { recursive: true, force: true });
+  await removeTempTree(fixtureRoot);
 });
 
 describe("TC-0004-0073: untouched legacy review-old/ is NOT re-flagged (scope = staged/changed paths)", () => {
