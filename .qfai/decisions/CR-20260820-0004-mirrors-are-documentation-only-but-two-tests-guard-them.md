@@ -12,6 +12,14 @@ measurement contradicts`
 - Approved at: `2026-08-23T00:00:00Z`
 - Approved option: `A` — the mirror guards move into the lint lane
 - Applied at: `2026-08-23T00:00:00Z` — lint:mirror-surface added and wired into ci:lint; census re-measured at five guards across three slices
+- Completed at: `2026-08-31T00:00:00Z` — the five guards did not cover every test whose subject
+  is a root mirror tree, and a later round read that gap as grounds to implement option B
+  instead: the four members were removed from the documentation-only set. That reversed an
+  approved decision on the strength of a measurement the decision had already accounted for.
+  The members are restored, and option A is finished rather than substituted — the lane now also
+  runs `tests/codex/agents.test.ts`, `tests/core/prFixMonitor.test.ts` and
+  `tests/core/prMergePlan.test.ts`, which are the test files that resolve the repository root and
+  then enter a mirror directory. Eight guards, 144 tests.
 - Superseded by: `-`
 - Blocked set: `none — change 8 implements BR-0017-0010 as written; what is open is whether the guard moves or the member does`
 

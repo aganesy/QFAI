@@ -348,7 +348,7 @@
         "unconditional verification and joins `verificationSet` with the rest."
       ],
       "verificationBodies": {
-        "Classify the change against the enumerated directory lists": "df7acdcc41dd193d",
+        "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
         "Verify the toolchain action before running it": "5cc167f71ae02233",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9a546eaa55780192",
@@ -357,7 +357,7 @@
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "644e2ecf00da5c63",
+        "Run lint gate": "a46216cbdc246b6c",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",

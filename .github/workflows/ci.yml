@@ -160,30 +160,38 @@ jobs:
           // default values and the `tmp/pr-fix/` prose from
           // `.agents/skills/pr-fix/SKILL.md` classified as documentation-only and skipped
           // the `test` job entirely — while `tests/core/prFixMonitor.test.ts` asserts that
-          // prose explicitly, and `lint:mirror-surface`, which does run, does not include
-          // that test. Format, lint and build pass, and the change is green.
+          // prose explicitly.
           //
-          // An earlier round closed the half that needed no decision: an EXECUTABLE under
-          // one of these directories selects everything, because a PowerShell script is not
-          // a mirror. The PROSE half was left to `CR-20260820-0004`, open on whether the
-          // guards move or the members do. It is decided here, and the four members move —
-          // because the measurement is not close. Counting path literals in the test tree:
+          // `CR-20260820-0004` was raised on exactly that, and the user approved **option A**:
+          // the mirror guards move into the lint lane, which selection never skips, so the
+          // mirrors keep their documentation-only saving without losing their guard. That is
+          // what `BR-0017-0010` and `AC-0017-0005` say, and it is what this list implements.
           //
-          //     .agents/       every subtree (README, hooks, qfai-bootstrap, rules, skills)
-          //     .claude/       37
-          //     .codex/        9
-          //     .instruction/  1
+          // A round of this work implemented option B instead — the four members were removed
+          // — on the reasoning that `lint:mirror-surface` did not cover the tests that read the
+          // mirrors. The measurement was right and the conclusion was not: the CR had already
+          // been decided, by the user, the other way. The answer is to finish option A rather
+          // than to substitute another, so the lane now runs every test whose subject is a root
+          // mirror tree — `agentsRulesSurface`, `skillLinkSurface`, `integrationSurface`,
+          // `integrationSurfaceReadErrors`, `reviewerVerdictVocabulary`, and the three that were
+          // missing: `codex/agents`, `core/prFixMonitor`, `core/prMergePlan`.
           //
-          // Not one of them is unread. "Documentation the tests verify" is not
-          // documentation for this purpose, whatever the rule calls it, and a set whose
-          // every member is guarded by a test the set skips is not small — it is empty.
+          // Which three was measured, not listed from the CR: the test files that resolve the
+          // REPOSITORY ROOT and then enter `.agents/`, `.claude/`, `.codex/` or `.instruction/`.
+          // A grep for the bare directory names matches many more, but most of those read the
+          // SHIPPED copies under `packages/qfai/assets/init/`, which a mirror-only change does
+          // not touch.
           //
-          // `packages/qfai/docs/` stays. Its single literal is a FIXTURE in this
-          // classifier's own tests (`packages/qfai/docs/anything.md`, a path that does not
-          // exist), not a file any test reads — which is the distinction that decides
-          // membership, and is why the count above is worth reading rather than the bare
-          // presence of a string.
-          const DOCUMENTATION_DIRS = ["packages/qfai/docs/"];
+          // `packages/qfai/docs/` stays. Its single literal is a FIXTURE in this classifier's
+          // own tests (`packages/qfai/docs/anything.md`, a path that does not exist), not a file
+          // any test reads.
+          const DOCUMENTATION_DIRS = [
+            "packages/qfai/docs/",
+            ".agents/",
+            ".claude/",
+            ".codex/",
+            ".instruction/",
+          ];
           const DOCUMENTATION_FILES = ["LICENSE", "REVIEW.md"];
 
           const under = (dirs, file) => dirs.some((dir) => file.startsWith(dir));

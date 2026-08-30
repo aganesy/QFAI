@@ -1241,45 +1241,76 @@ describe("TC-0017-0010 (TDD-0010): assistant-tree Markdown is not documentation-
       )
       .toMatch(/validate output/i);
 
-    // And the mirrors go the other way — they select EVERYTHING now, prose included.
+    // And the mirrors are documentation-only, which is what `BR-0017-0010` and `AC-0017-0005`
+    // say and what the user approved when they took `CR-20260820-0004` **option A**: the mirror
+    // guards move into the lint lane, which selection never skips, so the mirrors keep their
+    // saving without losing their guard.
     //
-    // `CR-20260820-0004` was open on whether the guards move or the members do, and an earlier
-    // round closed only the half that needed no decision: an EXECUTABLE under one of those
-    // directories selects everything, because a PowerShell script is not a mirror. Review
-    // finding [12] closed the rest, by measuring the prose half instead of arguing it. A pull
-    // request deleting the default values and the `tmp/pr-fix/` prose from
-    // `.agents/skills/pr-fix/SKILL.md` was documentation-only and skipped the whole `test` job —
-    // while `tests/core/prFixMonitor.test.ts` asserts that prose, and `lint:mirror-surface`,
-    // which does run, does not include that test.
-    //
-    // The decision went to the members, because the count is not close: path literals in the
-    // test tree are 37 for `.claude/`, 9 for `.codex/`, 1 for `.instruction/`, and every subtree
-    // of `.agents/`. A documentation set whose every member is guarded by a test the set skips
-    // is not small — it is empty.
+    // A round of this work implemented option B instead — the four members were removed — on the
+    // measurement that `lint:mirror-surface` did not cover the tests that read the mirrors. The
+    // measurement was right and the conclusion was not: the CR had already been decided, by the
+    // user, the other way. So the fix was to FINISH option A, and the lane now runs every test
+    // whose subject is a root mirror tree — the three that were missing are `codex/agents`,
+    // `core/prFixMonitor` and `core/prMergePlan`.
     const mirrors = runClassifier({
       paths: [".claude/rules/temporary-files.md", ".codex/skills/whatever.md"],
     });
     expect
       .soft(
         mirrors.full,
-        "a mirror the tests verify is not documentation for this purpose, whatever the rule calls it",
+        "an agent-integration mirror is documentation-only — its guards run in the lint lane, " +
+          "which selection never skips",
+      )
+      .toBe(false);
+
+    // The saving is only real if the guard travels with it, so the row that matters is this one:
+    // every test whose subject is a root mirror tree must be IN the lane the classification
+    // skips past. Read from the manifest rather than restated, because a lane that lost a member
+    // would otherwise leave this row green while the mirror it guarded went unwatched.
+    const manifest = JSON.parse(
+      readFileSync(path.join(REPO_ROOT, "packages", "qfai", "package.json"), "utf-8"),
+    ) as { scripts?: Record<string, string> };
+    const lane = manifest.scripts?.["lint:mirror-surface"] ?? "";
+    for (const guard of [
+      "tests/integration/agentsRulesSurface.test.ts",
+      "tests/integration/skillLinkSurface.test.ts",
+      "tests/core/integrationSurface.test.ts",
+      "tests/core/integrationSurfaceReadErrors.test.ts",
+      "tests/assets/reviewerVerdictVocabulary.test.ts",
+      "tests/codex/agents.test.ts",
+      "tests/core/prFixMonitor.test.ts",
+      "tests/core/prMergePlan.test.ts",
+    ]) {
+      expect
+        .soft(
+          lane,
+          `${guard} reads a root mirror tree, so it must run in the lane a mirror-only change ` +
+            "does not skip",
+        )
+        .toContain(guard);
+    }
+
+    // The assistant catalog tree is still NOT a mirror, and still selects everything. Keeping
+    // this beside the row above is the point: re-admitting the mirrors must not re-admit it.
+    const catalog = runClassifier({
+      paths: [".qfai/assistant/catalog/test-layers.md"],
+    });
+    expect
+      .soft(
+        catalog.full,
+        "the assistant catalog tree alters validate output and is not documentation",
       )
       .toBe(true);
-    expect
-      .soft(mirrors.reason, "and it is a source path, not an unrecognized one")
-      .toMatch(/source path/);
 
     // `packages/qfai/docs/` is what is left, and it stays: its only appearance in the test tree
     // is a FIXTURE in this classifier's own rows — a path that does not exist — rather than a
     // file any test reads. That distinction is what decides membership.
     const docs = runClassifier({ paths: ["packages/qfai/docs/anything.md"] });
-    expect
-      .soft(docs.full, "the one remaining documentation directory still selects nothing")
-      .toBe(false);
+    expect.soft(docs.full, "the docs directory still selects nothing").toBe(false);
 
-    // The executable half still holds, and now for the plainer reason that the whole directory
-    // does. Kept as its own row because a later re-admission of a mirror must not silently take
-    // the executable case with it.
+    // The executable half still holds, and it is doing real work again now that the directory
+    // is documentation-only: a PowerShell script is not a mirror, so a change to one selects
+    // everything. `CR-20260820-0004` calls this the half that needed no decision.
     const script = runClassifier({ paths: [".agents/skills/pr-fix/scripts/run-pr-fix.ps1"] });
     expect
       .soft(script.full, "an executable under an instruction mirror must select everything")
