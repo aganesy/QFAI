@@ -1454,9 +1454,19 @@ agents:
       yet, so on a new-surface row the RED is necessarily observed with it in place.
       Accept it when all three hold: it resolves the symbol or route the test reaches
       for, it implements no predicate, and it answers with something the row does not
-      contract for. The third condition takes the seam's own form: a
-      **registered-route** seam answers with a status the row does not contract for,
-      while a **module, export or signature** seam — the form step 3a requires for a
+      contract for **in the place this row's predicate occupies**. The third condition
+      takes the seam's own form. A **registered-route** seam answers with a status the
+      row does not contract for **only when the status is the predicate the row
+      owns** — `201` on create, `204` on delete, `403` on a refusal. When the row's
+      predicate is a **body field or a header**, the selector reaches it _through_ the
+      contracted status, so the admissible seam answers with that contracted status
+      and the header and body _shape_ the selector assumes, withholding only the
+      predicate the row owns; demanding an uncontracted status there raises the
+      selector's status assertion first, which is not an assertion this row owns and
+      which the first accept condition above already rejects, and leaves the row no
+      seam that can satisfy both — the contracted status is exactly what
+      `red-provenance.md` ("Neutral, not empty") requires of it. A **module, export or
+      signature** seam — the form step 3a requires for a
       `Unit` / `Component` row whose test imports a new symbol — has no status to
       answer with and satisfies it by returning a placeholder value the row's
       predicate does not own. Requiring the status form of a module seam is what sent

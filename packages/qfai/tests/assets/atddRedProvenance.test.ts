@@ -329,14 +329,14 @@ describe.each(TREES)("%s (ownership and gate alignment)", (tree) => {
     expect(ledger).toContain("completion item 10 reads the same split");
   });
 
-  it("submits the observed RED to qa-gatekeeper before the row's predicate exists", async () => {
+  it("submits the observed RED to qa-gatekeeper while nothing makes the assertion pass", async () => {
     // Branch 1 went straight from recording the RED to building the surface,
     // so the blocking confirmation `qfai-implement` requires could only be
     // sought after the fact — post-hoc self-attestation of a state nobody can
     // re-observe.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "Submit that run to `qa-gatekeeper` (routing phase `red`) before any code implementing the row's predicate exists — the step 1 seam does not count",
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
     );
     expect(provenance).toContain("Stage gate **P1b** is where steps 1-4 happen.");
   });
@@ -2526,8 +2526,13 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
     // every seam, a `Unit` / `Component` row whose step 3a seam is a module or
     // export — which returns no status at all — could never satisfy it, so a
     // correctly observed assertion-level RED was REVISEd by construction.
+    // The place the answer has to be wrong in is the row's own predicate, not
+    // the status slot regardless of what the row owns.
     expect(flatGate).toContain(
-      "**registered-route** seam answers with a status the row does not contract for",
+      "it answers with something the row does not contract for **in the place this row's predicate occupies**",
+    );
+    expect(flatGate).toContain(
+      "**registered-route** seam answers with a status the row does not contract for **only when the status is the predicate the row owns**",
     );
     expect(flatGate).toContain(
       "**module, export or signature** seam — the form step 3a requires for a `Unit` / `Component` row whose test imports a new symbol — has no status to answer with and satisfies it by returning a placeholder value the row's predicate does not own",
@@ -2576,18 +2581,108 @@ describe.each(TREES)('%s ("production code" means one thing for the seam)', (tre
     // ambiguous phrasing in the comment that justifies the `red` phase.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "obtain confirmation **before** any code implementing the row's predicate exists — the step 3a seam does not count",
+      "obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none",
     );
     expect(implement).not.toContain("**before** any production code exists");
     // Including the `Handoff Contracts` restatement, which is the form an
     // implementation agent reads as its own obligation.
     expect(implement).toContain(
-      "submits the RED run to `qa-gatekeeper` **before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
+      "submits the RED run to `qa-gatekeeper` **while no implementation makes that assertion pass — neither the Phase Red step 3a seam nor a surface that already exists and implements the row's predicate wrongly does**",
     );
     expect(implement).not.toContain("**while no production code exists**");
 
+    // Asserted per comment line: `flat` keeps the leading `#` of every wrapped
+    // YAML comment line, so a phrase that spans two of them never matches.
     const routing = flat(await read(tree, "assistant/manifest/agent-routing.yml"));
-    expect(routing).toContain("row's predicate exists (the step 1 seam does not count)");
+    expect(routing).toContain("confirm the RED while nothing makes that assertion");
+    expect(routing).toContain("neither the step 1 seam nor an existing surface that implements");
+    expect(routing).not.toContain("row's predicate exists (the step 1 seam does not count)");
     expect(routing).not.toContain("confirm the RED *before any production code exists*");
+  });
+
+  it("does not demand an uncontracted status from a body- or header-predicate seam", async () => {
+    // Counter-example the status-only phrasing left open: an HTTP row whose
+    // predicate is a response body field or a header, whose selector checks the
+    // contracted `200` on the way to it. An uncontracted status raises that
+    // status assertion first — an assertion the row does not own, which the
+    // gate's first accept condition already rejects — while the contracted
+    // status was read as breaking the seam condition, so no admissible seam
+    // existed for the row at all. `red-provenance.md` "Neutral, not empty" has
+    // always required the contracted status there.
+    const gatekeeper = await read(tree, GATEKEEPER);
+    const redGate = flat(
+      gatekeeper.slice(
+        gatekeeper.indexOf("## RED/GREEN Observation Gate (MUST)"),
+        gatekeeper.indexOf("**Accept a GREEN**"),
+      ),
+    );
+    expect(redGate).toContain(
+      "**registered-route** seam answers with a status the row does not contract for **only when the status is the predicate the row owns**",
+    );
+    expect(redGate).toContain(
+      "When the row's predicate is a **body field or a header**, the selector reaches it _through_ the contracted status, so the admissible seam answers with that contracted status",
+    );
+    expect(redGate).toContain(
+      "which is not an assertion this row owns and which the first accept condition above already rejects",
+    );
+    // The old unconditional form is gone from the gate.
+    expect(redGate).not.toContain(
+      "seam's own form: a **registered-route** seam answers with a status the row does not contract for, while a **module",
+    );
+
+    // And the preamble that states the gate once carries the same scoping, so
+    // the producer and the gatekeeper cannot read the seam differently.
+    const provenance = await read(tree, PROVENANCE);
+    const preamble = flat(
+      provenance.slice(
+        provenance.indexOf("## The three branches (MUST)"),
+        provenance.indexOf("1. **Observed RED (preferred).**"),
+      ),
+    );
+    expect(preamble).toContain(
+      "answers with something the row does not contract for **in the place the row's predicate occupies** — a sentinel status where the status _is_ the predicate, the contracted status with only the owned body field or header withheld where it is not",
+    );
+    expect(preamble).not.toContain(
+      "does not contract for — a sentinel status for a registered-route seam",
+    );
+  });
+
+  it("lets an existing wrong implementation submit its observed RED", async () => {
+    // The gatekeeper was already scoped to "a tree that does not yet make that
+    // assertion pass", but the producer contract still said "before any code
+    // implementing that predicate was written". Branch 2's step 2 note routes a
+    // correct test failing against an existing, buggy surface into branch 1 as
+    // an `observed-red` — its predicate IS written, only wrongly — so the
+    // producer could not submit the handoff the gate is required to PASS.
+    const provenance = await read(tree, PROVENANCE);
+    const preamble = flat(
+      provenance.slice(
+        provenance.indexOf("## The three branches (MUST)"),
+        provenance.indexOf("1. **Observed RED (preferred).**"),
+      ),
+    );
+    expect(preamble).toContain(
+      "observed **against a tree that does not yet make that assertion pass**",
+    );
+    expect(preamble).not.toContain(
+      "observed **before any code implementing that predicate was written**",
+    );
+    expect(preamble).toContain(
+      "So is a surface that already existed and implements the predicate **wrongly**",
+    );
+    // And "production code" is defined by the same criterion, so step 4 and
+    // `qfai-implement` Phase Red inherit it rather than a stricter one.
+    expect(preamble).toContain(
+      "an implementation that already makes this row's assertion pass — never the seam, and never a surface that implements the row's predicate wrongly",
+    );
+
+    // Step 4 — the handoff the producer actually submits — carries it too.
+    const flatProvenance = flat(provenance);
+    expect(flatProvenance).toContain(
+      "Submit that run to `qa-gatekeeper` (routing phase `red`) while no implementation makes that assertion pass — the step 1 seam does not, and neither does an existing surface that implements the row's predicate wrongly",
+    );
+    expect(flatProvenance).not.toContain(
+      "(routing phase `red`) before any code implementing the row's predicate exists",
+    );
   });
 });

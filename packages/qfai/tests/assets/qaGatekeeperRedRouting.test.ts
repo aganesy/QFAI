@@ -99,11 +99,20 @@ describe.each(ROUTING_FILES)("%s — qfai-implement routing", (rel) => {
 });
 
 describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) => {
-  it("tells Phase: Red to obtain confirmation before the row's predicate exists", async () => {
+  it("tells Phase: Red to obtain confirmation while nothing makes the assertion pass", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
+    // Not "before any code implementing the row's predicate exists": that
+    // phrasing excluded the row `red-provenance.md` branch 1 sends here from
+    // its own step 2 note — an existing surface that implements the predicate
+    // wrongly, where a correct test fails on its first run. The predicate is
+    // written there, so the producer could not submit the handoff the gate is
+    // required to PASS.
     expect(flat).toContain(
-      "Submit that run to `qa-gatekeeper` and obtain confirmation **before** any code implementing the row's predicate exists — the step 3a seam does not count",
+      "Submit that run to `qa-gatekeeper` and obtain confirmation **while no implementation makes that assertion pass** — the step 3a seam does not, it implements none, and neither does a surface that already exists and implements the row's predicate wrongly",
+    );
+    expect(flat).not.toContain(
+      "obtain confirmation **before** any code implementing the row's predicate exists",
     );
   });
 
@@ -115,13 +124,19 @@ describe.each(SKILL_FILES)("%s — the skill says where the gate runs", (rel) =>
   it("splits the handoff contract into a RED and a GREEN submission", async () => {
     const skill = await readFile(path.join(repoRoot, rel), "utf-8");
     const flat = skill.replace(/\s+/g, " ");
-    // Predicate-scoped, not "no production code exists": Phase Red step 3a puts
-    // the seam in the production tree *before* the RED is taken, so the older
-    // phrasing made the contract unsatisfiable on every new-surface row.
+    // Scoped to what makes the row's assertion pass, not to "no production
+    // code exists" and not to "no code implementing the predicate exists":
+    // Phase Red step 3a puts the seam in the production tree *before* the RED
+    // is taken, and an existing surface that implements the predicate wrongly
+    // has that predicate written already. Both older phrasings made the
+    // contract unsatisfiable for a row the gate is required to PASS.
     expect(flat).toContain(
-      "submits the RED run to `qa-gatekeeper` **before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
+      "submits the RED run to `qa-gatekeeper` **while no implementation makes that assertion pass — neither the Phase Red step 3a seam nor a surface that already exists and implements the row's predicate wrongly does**",
     );
     expect(flat).not.toContain("**while no production code exists**");
+    expect(flat).not.toContain(
+      "**before any code implementing the row's predicate exists — the Phase Red step 3a seam does not count**",
+    );
     // The old text asked for one combined "RED/GREEN execution evidence"
     // submission, which is only satisfiable after the fact.
     expect(flat).not.toContain("Implementation agent submits RED/GREEN execution evidence");

@@ -37,17 +37,21 @@ Take the first that applies, and record which one in the evidence file.
 
 **What the `qa-gatekeeper` RED gate confirms on an `observed-red` row.** Not "no
 production code exists", but that the failure is an assertion inside this row's
-selector, naming the predicate the row owns, observed **before any code
-implementing that predicate was written**. A step 1 seam is inside that state,
+selector, naming the predicate the row owns, observed **against a tree that does
+not yet make that assertion pass**. A step 1 seam is inside that state,
 not a breach of it: it resolves the symbol or route, implements no predicate,
-and answers with something the row does not contract for — a sentinel status for
-a registered-route seam, a placeholder value for a module / export / signature
+and answers with something the row does not contract for **in the place the
+row's predicate occupies** — a sentinel status where the status _is_ the
+predicate, the contracted status with only the owned body field or header
+withheld where it is not, a placeholder value for a module / export / signature
 one, which has no status to answer with
 (`../../qfai-implement/references/red-admissibility.md`). So is a surface that
-already existed and was wrong — there the tree the RED is observed against is
+already existed and implements the predicate **wrongly** — the correct test
+fails against it on its first run, and the tree the RED is observed against is
 the one before the fix. Read "production code" in step 4 and in
-`qfai-implement/SKILL.md` Phase Red with this meaning: code that implements the
-row's predicate, never the seam.
+`qfai-implement/SKILL.md` Phase Red with this meaning: an implementation that
+already makes this row's assertion pass — never the seam, and never a surface
+that implements the row's predicate wrongly.
 
 **That precondition is branch 1's; it is not a gate on all three.** Branch 2
 observes its failure by mutating a predicate that is already implemented — that
@@ -175,12 +179,18 @@ gate condition where it is defined below.
       first leaves the planner nothing but "keep the PASS and open a new row",
       which cannot repair a handoff at the wrong granularity — the row has to be
       split before its RED is taken, not after.
-   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) before any code
-      implementing the row's predicate exists — the step 1 seam does not count —
-      and wait for PASS.** `qfai-implement/SKILL.md` requires an independent
-      reviewer to confirm the RED while the behaviour is still absent; a
-      confirmation sought after it is built is post-hoc self-attestation of a
-      state nobody can re-observe. Record the verdict beside the pair.
+   4. **Submit that run to `qa-gatekeeper` (routing phase `red`) while no
+      implementation makes that assertion pass — the step 1 seam does not, and
+      neither does an existing surface that implements the row's predicate
+      wrongly — and wait for PASS.** `qfai-implement/SKILL.md` requires an
+      independent reviewer to confirm the RED while the row's predicate is still
+      unsatisfied; a confirmation sought after it is built is post-hoc
+      self-attestation of a state nobody can re-observe. Phrased as "before any
+      code implementing the row's predicate exists" this shut out the
+      existing-but-wrong surface the step 2 note in branch 2 routes to this
+      branch: its predicate _is_ implemented, only incorrectly, so the producer
+      could not submit the very handoff the gate is required to PASS. Record the
+      verdict beside the pair.
    5. **Stop there. Do not build the surface.** This skill owns acceptance
       tests, not production code — `agent-routing.yml` gives its implementation
       phase `acceptance-test-engineer` and no backend or frontend agent. The
