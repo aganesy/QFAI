@@ -93,6 +93,45 @@ export const CATALOG_ADVISORY_FAILING_CODES = new Set<string>(
 );
 
 /**
+ * The workflow-set lint codes the Reviewer Gate ingests while their catalog
+ * registration is deferred.
+ *
+ * Both are declared lint-failure codes, i.e. error class, so the severity-class
+ * membership test above puts them INSIDE the catalog, on the
+ * `R-PACK-LOCATION-DRIFT` precedent. Registering them extends a closed set and
+ * has to move in lockstep with every SSOT that asserts the set's size, which is
+ * a wider slice than the ingestion itself — so registration is deferred with a
+ * named owner and trigger, not denied.
+ *
+ * Until then the gate ingests both WITHOUT demanding a `justification:`. Three
+ * properties of that handling are load-bearing and none of them is decorative:
+ *
+ *   - **Enumerated, not derived.** The exemption is this literal two-member
+ *     list. A code absent from it stays justification-gated whatever emits it,
+ *     and no property of a code (its emitter, its prefix, its severity) admits
+ *     anything to it.
+ *   - **Positive, not absence-by-default.** The gate consults this list and
+ *     recognizes the code as ingested-and-exempt. Leaving the codes simply
+ *     unknown to the gate would produce the same quiet result today and would
+ *     stop being a recorded decision the moment anything else changed.
+ *   - **Temporary.** It is a divergence from the membership test, not a
+ *     principle. Adding a member is a governance change; the resolution moves
+ *     these two INTO {@link JUSTIFICATION_CATALOG} and empties this list.
+ *
+ * Kept beside the catalog rather than in the consumer so the closed set and the
+ * recorded divergence from it cannot be read apart.
+ */
+export const DEFERRED_CATALOG_REGISTRATION_CODES: readonly string[] = [
+  "R-SHIPPED-WORKFLOW-SHAPE-DRIFT",
+  "R-WORKFLOW-HYGIENE-DRIFT",
+];
+
+/** Set view of {@link DEFERRED_CATALOG_REGISTRATION_CODES}. */
+export const DEFERRED_CATALOG_REGISTRATION_CODE_SET = new Set<string>(
+  DEFERRED_CATALOG_REGISTRATION_CODES,
+);
+
+/**
  * Convenience predicate: returns true when `code` is one of the 8
  * catalog codes that requires non-empty justification.
  */
