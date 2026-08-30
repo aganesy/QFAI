@@ -91,8 +91,22 @@ const PREAMBLE_SECTION = "(preamble)";
  */
 const BULLET_VALUE_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+(?:[^:`]{1,60}:\s*)?(.*)$/;
 
-/** A markdown table row: `| a | b |`. Its cells carry values of their own. */
+/** A markdown table row written with outer pipes: `| a | b |`. */
 const TABLE_ROW_PATTERN = /^\s*\|.*\|\s*$/;
+
+/**
+ * A GFM delimiter row — `| --- | --- |`, or `--- | ---` without outer pipes.
+ *
+ * Outer pipes are optional in GFM, so a Milestones table written as
+ * `Milestone | Description` / `TBD | TBD` matched neither
+ * {@link TABLE_ROW_PATTERN} nor the bare-keyword test on the whole line, and
+ * an unfilled table passed `--strict`. The delimiter row is what turns a
+ * pipe-separated block into a table, so it — rather than the mere presence of
+ * a `|` somewhere in a line of prose — is what {@link markTableRows} keys on.
+ * At least one `|` is required, which is also what keeps a `---` thematic
+ * break out.
+ */
+const TABLE_DELIMITER_ROW_PATTERN = /^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
 
 /**
  * Read-only, and non-blocking where the platform defines it.
@@ -311,18 +325,55 @@ function stripHtmlComments(content: string): string {
   return content.replace(HTML_COMMENT_PATTERN, (span) => span.replace(/[^\n]/g, " "));
 }
 
+/**
+ * Which lines are table rows, including tables written without outer pipes.
+ *
+ * A delimiter row marks its table: the header row immediately above it and
+ * every following line up to the blank line or heading that closes the block.
+ * Rows already carrying outer pipes stay rows whether or not a well-formed
+ * delimiter row accompanies them, so nothing that was counted before is lost.
+ */
+function markTableRows(lines: string[]): boolean[] {
+  const rows = lines.map((line) => TABLE_ROW_PATTERN.test(line));
+  for (const [index, line] of lines.entries()) {
+    if (index === 0 || !TABLE_DELIMITER_ROW_PATTERN.test(line)) {
+      continue;
+    }
+    // GFM needs a header row directly above the delimiter; without one this
+    // is not a table and its neighbours are ordinary prose.
+    const header = lines[index - 1] ?? "";
+    if (header.trim().length === 0 || ANY_MARKDOWN_HEADING_PATTERN.test(header)) {
+      continue;
+    }
+    rows[index - 1] = true;
+    rows[index] = true;
+    for (let next = index + 1; next < lines.length; next += 1) {
+      const body = lines[next] ?? "";
+      if (body.trim().length === 0 || ANY_MARKDOWN_HEADING_PATTERN.test(body)) {
+        break;
+      }
+      rows[next] = true;
+    }
+  }
+  return rows;
+}
+
 /** Placeholder counts per `## ` section, in document order. */
 function collectSteeringPlaceholders(content: string): SteeringPlaceholderSection[] {
   const bySection = new Map<string, { count: number; firstLine: number }>();
   let section = PREAMBLE_SECTION;
   const lines = stripHtmlComments(content).split(/\r?\n/);
+  const tableRows = markTableRows(lines);
   for (const [index, line] of lines.entries()) {
     const heading = SECTION_HEADING_PATTERN.exec(line);
     if (heading?.[1] !== undefined) {
+      // The heading names the section from here on — and is scanned too. A
+      // `## <product area>` left unreplaced is exactly the work `/qfai-configure`
+      // still owes, and skipping the line hid it whenever the body beneath it
+      // had been filled in.
       section = heading[1];
-      continue;
     }
-    const count = countUnfilledMarkers(line);
+    const count = countUnfilledMarkers(line, tableRows[index] === true);
     if (count === 0) {
       continue;
     }
@@ -349,7 +400,7 @@ function collectSteeringPlaceholders(content: string): SteeringPlaceholderSectio
  * the text handed to {@link countBareTodoValues} so a slot whose inner text is
  * itself a placeholder keyword (`<placeholder>`) is still charged once.
  */
-function countUnfilledMarkers(line: string): number {
+function countUnfilledMarkers(line: string, isTableRow: boolean): number {
   let count = 0;
   const withoutSlots = line.replace(
     PLACEHOLDER_TOKEN_PATTERN,
@@ -366,7 +417,7 @@ function countUnfilledMarkers(line: string): number {
       return match;
     },
   );
-  return count + countBareTodoValues(withoutSlots);
+  return count + countBareTodoValues(withoutSlots, isTableRow);
 }
 
 /**
@@ -398,8 +449,11 @@ function isPlaceholderToken(inner: string): boolean {
     return false;
   }
   // Every shipped slot is prose or a slot name, so it carries a letter. Keeps
-  // `<3`-style typography out of the count.
-  return /[A-Za-z]/.test(trimmed);
+  // `<3`-style typography out of the count. Any Unicode letter counts, not
+  // only `[A-Za-z]`: a steering file localised into Japanese names its slots
+  // in Japanese, and demanding an ASCII letter let every one of them
+  // (`<テストコマンド>`) pass as filled.
+  return /\p{L}/u.test(trimmed);
 }
 
 /**
@@ -411,9 +465,14 @@ function isPlaceholderToken(inner: string): boolean {
  * as a lone `TBD` line passed the same way. All three are the "placeholder-
  * only text" the Stage 0 baseline names, so all three are counted — per cell
  * for a table row, since each cell is its own value.
+ *
+ * Whether the line is a table row is decided per file by
+ * {@link markTableRows} rather than by the line alone: GFM makes the outer
+ * pipes optional, and `TBD | TBD` is only recognisable as two cells from the
+ * delimiter row above it.
  */
-function countBareTodoValues(line: string): number {
-  if (TABLE_ROW_PATTERN.test(line)) {
+function countBareTodoValues(line: string, isTableRow: boolean): number {
+  if (isTableRow) {
     // `| a | b |` splits to a leading and a trailing empty string; both are
     // whitespace-only and are declined by the length check below.
     return line.split("|").filter((cell) => isUnfilledValue(cell)).length;

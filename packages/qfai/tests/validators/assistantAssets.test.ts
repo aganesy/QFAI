@@ -154,6 +154,53 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(findings[0]?.message).toContain("Open questions (1)");
   });
 
+  it("counts cells of a table written without outer pipes", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        // Valid GFM: the outer pipes are optional, so this is a table whose
+        // two body cells are still unfilled.
+        "Milestone | Description",
+        "--------- | -----------",
+        "TBD       | TBD",
+        "GA        | 2026-09-01",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Milestones (2)");
+  });
+
+  it("reads cells off the delimiter row, not off any pipe in prose", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Notes",
+        "",
+        // No delimiter row above these, so they are prose that happens to
+        // contain a `|` — splitting them into cells would invent findings.
+        "TODO | write the runbook once staging exists",
+        "- Log: `pnpm test | tee test.log`",
+        "",
+      ].join("\n"),
+    );
+
+    expect(await steeringFindings(root)).toHaveLength(0);
+  });
+
   it("counts an angle-bracket slot and a bare TBD left on the same row", async () => {
     const root = await newRoot();
     await writeCatalog(
@@ -199,6 +246,84 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
 
     expect(findings).toHaveLength(1);
     expect(findings[0]?.message).toContain("Quality gates (SSOT) (2)");
+  });
+
+  it("counts a bare TBD behind an emphasised bullet label", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## Quality gates (SSOT)",
+        "",
+        // The label, not the value, carries the emphasis: the residual `**`
+        // left on the extracted value is decoration and is peeled off before
+        // the keyword test.
+        "- **Test:** TBD",
+        "- _Lint:_ TODO",
+        "- **Build:** `pnpm build`",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Quality gates (SSOT) (2)");
+  });
+
+  it("counts a slot whose name is written in a non-ASCII script", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "tech.md",
+      [
+        "# Tech Steering",
+        "",
+        "## Standard commands (copy-paste)",
+        "",
+        "- Test: `<テストコマンド>`",
+        "- Lint: `<リントコマンド>`",
+        "- Build: `pnpm build`",
+        // Digits only, no letter in any script: typography, not a slot.
+        "- Budget: <300> ms",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Standard commands (copy-paste) (2)");
+  });
+
+  it("counts a placeholder left in the section heading itself", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## <product area>",
+        "",
+        "- Summary: the ledger service",
+        "",
+        "## Milestones",
+        "",
+        "- GA: 2026-09-01",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    // The heading names its own section, and is charged to it.
+    expect(findings[0]?.message).toContain("<product area> (1)");
+    expect(findings[0]?.message).not.toContain("Milestones");
   });
 
   it("ignores a placeholder that has been commented out", async () => {
