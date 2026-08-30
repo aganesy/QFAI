@@ -220,10 +220,18 @@ Take the first that applies, and record which one in the evidence file.
    an earlier branch-1 row's production code has not made the branch stale, and
    hand the row over.** Nothing else in this branch is this stage's to run. The
    entry's fields are listed in the `Falsifiability` row of
-   `## Evidence shape` below, so no partial list here can disagree with it; the
-   `Round N:` prefix each field takes and its placement inside the round block
-   are step 3c's and `../../qfai-implement/references/round-evidence.md`'s, and
-   the entry is not complete without them.
+   `## Evidence shape` below, so no partial list here can disagree with it.
+   **Which of those fields take a `Round N:` prefix is not that table's to say,
+   and not this file's** — it is
+   `../../qfai-implement/references/round-evidence.md`'s closed list and only
+   that, as `/qfai-implement` step 3c reads it. They do not all take one: the
+   round block's fields are prefixed, and the row identity that same table row
+   opens with (`Layer`, `Test file`, `Selector`) is row-level and takes none.
+   Prefixing a row-level field is as malformed as dropping the prefix from a
+   round field — step 3b looks the identity up unprefixed, so a handoff that
+   writes `Round 1: Layer` stalls at `todo` with a perfectly good
+   falsifiability story. Do not re-derive the split here; the entry is not
+   complete until it matches the one that reference states.
 
    **`Satisfied-by` takes whatever already implements the predicate.** The
    shared reference names a sibling `TDD-NNNN` because that is its usual case,

@@ -695,12 +695,26 @@ describe.each(TREES)("%s (the contracts the handover has to land in)", (tree) =>
     // completion gate cannot find under the round it is judging.
     const provenance = flat(await read(tree, PROVENANCE));
     expect(provenance).toContain(
-      "`Round N:` prefix each field takes and its placement inside the round block",
+      "**Which of those fields take a `Round N:` prefix is not that table's to say, and not this file's**",
     );
     expect(provenance).toContain(
-      "`../../qfai-implement/references/round-evidence.md`'s, and the entry is not complete without them",
+      "`../../qfai-implement/references/round-evidence.md`'s closed list and only that",
     );
     expect(provenance).not.toContain("it is the one statement of the entry's contents");
+  });
+
+  // Deferring to the reference is not the same as claiming it prefixes
+  // everything: the `Falsifiability` row of `## Evidence shape` opens with the
+  // row identity, which `round-evidence.md` puts outside the round block. A
+  // blanket reading makes a handoff write `Round 1: Layer`, and step 3b — which
+  // looks the identity up unprefixed — leaves the row at `todo`.
+  it("keeps the round prefix off the row identity the Evidence shape row opens with", async () => {
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("They do not all take one");
+    expect(provenance).toContain("(`Layer`, `Test file`, `Selector`) is row-level and takes none");
+    expect(provenance).toContain("a handoff that writes `Round 1: Layer` stalls at `todo`");
+    // The split has one authority; restating it here is how the two drift.
+    expect(provenance).toContain("Do not re-derive the split here");
   });
 });
 
