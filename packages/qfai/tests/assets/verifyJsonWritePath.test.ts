@@ -44,7 +44,12 @@ const ANY_VERIFY_PATH = /`(\.qfai\/[^`]*verify\.json)`/g;
 const read = async (tree: string, rel: string): Promise<string> =>
   await readFile(path.join(repoRoot, tree, rel), "utf-8");
 
-const matchAll = (text: string, re: RegExp): string[] => [...text.matchAll(re)].map((m) => m[1]);
+// `flatMap` rather than `map`: group 1 is present in every match the two
+// patterns can produce, but `noUncheckedIndexedAccess` types it `string |
+// undefined`, and dropping the impossible case keeps the return type honest
+// without an assertion.
+const matchAll = (text: string, re: RegExp): string[] =>
+  [...text.matchAll(re)].flatMap((m) => (m[1] === undefined ? [] : [m[1]]));
 
 describe.each(QFAI_TREES)("%s", (tree) => {
   it("names the canonical path the code reads first as the contract's canonical path", async () => {
