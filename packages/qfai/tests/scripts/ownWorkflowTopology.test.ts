@@ -2038,3 +2038,95 @@ describe("TC-0017-0040 (TDD-0040): retention 7 passes, retention 8 and an uncond
     expect.soft(retention, "retention must be a positive number of days").toBeGreaterThan(0);
   });
 });
+
+describe("the release tag is exactly vX.Y.Z, and the check is run rather than read", () => {
+  // The pattern was `v[0-9]*.[0-9]*.[0-9]*`, and a shell `*` matches ANY run of characters — so
+  // `v1.10.1-beta.1` passed, and so did `v1x.2y.3junk`. Both were measured against the old
+  // pattern before this was changed, and both are in the table below.
+  //
+  // Why it matters more than a malformed tag usually would: the publish step passes no `--tag`,
+  // so npm points `latest` at whatever it publishes. A hand-dispatched prerelease would have
+  // gone out to every `npm install qfai`.
+  //
+  // EXECUTED, not pattern-matched. A row asserting the shape of the `case` statement is a row
+  // that agrees with whatever is written there, which is exactly how the old pattern survived.
+
+  /** The validation prefix of the `pin` step: everything before it touches git. */
+  const validationPrefix = (): string => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const steps = doc.jobs?.["verify"]?.steps ?? [];
+    const pin = steps.find((step) => step["id"] === "pin");
+    const body = pin?.["run"];
+    expect(body, "release.yml has no `pin` step with a body").toBeTypeOf("string");
+    const text = typeof body === "string" ? body : "";
+    // Everything up to the first git call — the part that decides whether the tag is a release.
+    const cut = text.indexOf("git fetch");
+    expect(
+      cut,
+      "the pin step never reaches git, so this row has the wrong subject",
+    ).toBeGreaterThan(0);
+    return text.slice(0, cut);
+  };
+
+  it("accepts a release tag and refuses everything else, measured by running it", () => {
+    const prefix = validationPrefix();
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-tag-"));
+    try {
+      const script = path.join(dir, "pin.sh");
+      writeFileSync(script, prefix, "utf-8");
+
+      const accepted = (tag: string): boolean => {
+        const run = spawnSync("bash", [script], {
+          env: { ...process.env, RELEASE_TAG: tag },
+          encoding: "utf-8",
+        });
+        if (run.error !== undefined) throw run.error;
+        return run.status === 0;
+      };
+
+      for (const [tag, expected, why] of [
+        ["v1.10.1", true, "an ordinary release"],
+        ["v0.0.0", true, "zeroes are numbers"],
+        ["v10.20.30", true, "multi-digit components"],
+        ["v1.10.1-beta.1", false, "the reviewer's prerelease: npm would point latest at it"],
+        ["v1x.2y.3junk", false, "the reviewer's second value, which the old glob also took"],
+        ["v1.2", false, "two components is not a version"],
+        ["v1.2.3.4", false, "and neither is four"],
+        ["1.2.3", false, "the v is required"],
+        ["v1..3", false, "an empty component"],
+        ["v1.2.", false, "a trailing dot"],
+      ] as Array<[string, boolean, string]>) {
+        expect.soft(accepted(tag), `${tag} (${why})`).toBe(expected);
+      }
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("still publishes to the default dist-tag, which is why the tag has to be strict", () => {
+    // The two halves are one property. If publish ever passes an explicit `--tag`, a prerelease
+    // stops reaching `latest` by accident and the strictness above is a different argument — so
+    // the row that pins the strictness names the reason beside it.
+    const text = readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8");
+    // The INVOCATION, not the file: a comment naming the flag is not the flag. Measured — the
+    // first version of this row matched the sentence a few lines above that explains why the
+    // flag is absent.
+    const invocations = text
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => /^(run: )?(npm|pnpm) publish\b/.test(line));
+    expect(
+      invocations.length,
+      "release.yml publishes nothing, so this row has the wrong subject",
+    ).toBeGreaterThan(0);
+    for (const invocation of invocations) {
+      expect(
+        invocation,
+        "publish passes no --tag, so npm points latest at whatever it publishes — which is what " +
+          "makes an unstable tag reaching this workflow a user-facing event",
+      ).not.toMatch(/--tag\b/);
+    }
+  });
+});

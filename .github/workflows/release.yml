@@ -84,11 +84,36 @@ jobs:
           RELEASE_TAG: ${{ inputs.tag || github.ref_name }}
         run: |
           set -euo pipefail
+          # Exactly `vX.Y.Z`, anchored at both ends.
+          #
+          # The pattern here was `v[0-9]*.[0-9]*.[0-9]*`, and a shell `*` matches ANY run of
+          # characters — so `v1.10.1-beta.1` passed, and so did `v1x.2y.3junk`. Both were
+          # measured. That matters more than it looks: the publish step passes no `--tag`, so npm
+          # points `latest` at whatever it publishes, and a hand-dispatched prerelease would have
+          # gone out to every `npm install qfai`.
+          #
+          # Checked by structure rather than by regex, so it holds under any POSIX shell: nothing
+          # but digits and dots after the `v`, no empty component, and exactly three of them.
+          # That is the same set as `^v[0-9]+\.[0-9]+\.[0-9]+$`.
+          reject() { echo "::error::'$RELEASE_TAG' is not a vX.Y.Z release tag: $1"; exit 1; }
           case "$RELEASE_TAG" in
-            v[0-9]*.[0-9]*.[0-9]*) ;;
-            *) echo "::error::'$RELEASE_TAG' is not a vX.Y.Z release tag"; exit 1 ;;
+            v*) ;;
+            *) reject "it must begin with v" ;;
           esac
           version="${RELEASE_TAG#v}"
+          case "$version" in
+            *[!0-9.]*)
+              reject "only digits and dots may follow the v, so a prerelease or build suffix is not a release"
+              ;;
+            *..* | .* | *.) reject "it has an empty version component" ;;
+          esac
+          after_major="${version#*.}"
+          [ "$after_major" != "$version" ] || reject "it must carry exactly three numeric components"
+          after_minor="${after_major#*.}"
+          [ "$after_minor" != "$after_major" ] || reject "it must carry exactly three numeric components"
+          case "$after_minor" in
+            *.*) reject "it must carry exactly three numeric components" ;;
+          esac
 
           # Fully qualified, so a branch that happens to share the tag's name
           # cannot stand in for it. `^{commit}` dereferences an annotated tag.
