@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T12:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "1d7c0c3f",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 10 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 11 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 6 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B4+M3+m2+A1 = 10, B5+M4+m1+A1 = 11 and B1+M2+m2+A1 = 6",
+  "notes": "The stage broke the round's own rule: two subject files carried an uncommitted change while `completion-reviewer` was measuring. Disclosed unprompted mid-round, reverted to HEAD, and the reviewer re-took every affected measurement at the clean tree with identical results — recorded as its B5 and in the stage evidence as the second occurrence. The gate's plant under `assets/init/root/` was partitioned and both siblings reported it rather than measuring through it; `implementation-reviewer` declined to run vitest at all for that reason and said so. Round 17's own findings: three quote models disagreeing between the two walks, the init-tree scope gap both non-gate reviewers predicted and the gate demonstrated, a parsed document used as an identity, three round-16 guard repairs failing again in one shape, and three findings against this stage's own round-16 corrections."
+}
