@@ -60,6 +60,17 @@ type StubDialect = {
    * See {@link maskNonCode}.
    */
   nonCode: NonCodeSyntax;
+  /**
+   * A second blanking pass, run after {@link maskNonCode}, for a token whose
+   * meaning depends on where it sits rather than on what encloses it.
+   *
+   * C# is the case: `Skip` skips a test only as an argument of `[Fact(…)]` /
+   * `[Theory(…)]`, and is an ordinary identifier everywhere else. The scan is
+   * line-oriented, so a pattern cannot look up to the attribute that opened on
+   * the line above — blanking the occurrences that are outside one lets the
+   * pattern stay simple and keeps a wrapped argument list working.
+   */
+  narrow?: (masked: string) => string;
 };
 
 /**
@@ -87,6 +98,15 @@ type NonCodeSyntax = {
    * than after the opener. See {@link maskHeredocBodies}.
    */
   heredocOpener?: RegExp;
+  /**
+   * An opener whose **closing** delimiter is computed from the opener itself.
+   *
+   * Rust's `r#"…"#` is the case: the body may hold unescaped `"`, which is the
+   * whole point of the form, so the fixed `"` … `"` span ends it at the first
+   * inner quote and exposes the rest of the line as code. The capture group
+   * carries the hashes; the closer is `"` followed by exactly those.
+   */
+  rawStringOpener?: RegExp;
 };
 
 const nonCodeSpan = (
@@ -95,6 +115,14 @@ const nonCodeSpan = (
   escaped: boolean,
   multiline: boolean,
 ): NonCodeSpan => ({ open, close, escaped, multiline });
+
+/**
+ * A Rust raw string: `r"…"`, `r#"…"#`, `br##"…"##`, any hash count.
+ *
+ * Sticky, matched at one exact offset like the heredoc opener. The hashes are
+ * captured so {@link maskRawString} can build the closer that matches them.
+ */
+const RUST_RAW_STRING_OPENER = /b?r(#*)"/y;
 
 const BLOCK_COMMENT = nonCodeSpan("/*", "*/", false, true);
 const DOUBLE_QUOTED = nonCodeSpan('"', '"', true, false);
@@ -167,6 +195,7 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     nonCode: {
       lineComments: ["//"],
       spans: [BLOCK_COMMENT, nonCodeSpan('"', '"', true, true)],
+      rawStringOpener: RUST_RAW_STRING_OPENER,
     },
   },
   {
@@ -186,12 +215,20 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // match the xUnit `[Fact(Skip = "reason")]` it exists for. Stopping at the
     // `=` also catches `Skip = SkipReasons.NotImplemented`; the lookahead keeps
     // a `Skip == x` comparison out.
+    //
+    // It only counts **inside a `[Fact(…)]` / `[Theory(…)]` argument list**,
+    // which is where xUnit's `Skip` skips anything: `narrow` blanks every
+    // other occurrence first. Matching it anywhere reported an ordinary
+    // `Skip = false` on a fixture record or a helper type, and widening the
+    // match past the quote to catch a constant reason made that misreading
+    // more likely, not less.
     pattern: /\[Ignore\b|\bSkip\s*=(?!=)/g,
     // Whitespace around the `=` varies, and `refs` is what waivers and report
     // grouping key on, so the label is normalised rather than taken verbatim.
     label: (match) => (match[0].startsWith("[") ? "[Ignore" : "Skip ="),
     runner: ".NET test",
     nonCode: { lineComments: ["//"], spans: [BLOCK_COMMENT, DOUBLE_QUOTED] },
+    narrow: narrowCSharpSkip,
   },
 ];
 
@@ -291,10 +328,85 @@ function maskNonCode(content: string, syntax: NonCodeSyntax): string {
       i += heredoc.length;
       continue;
     }
+    const raw = syntax.rawStringOpener
+      ? matchRawStringOpener(content, i, syntax.rawStringOpener)
+      : null;
+    if (raw) {
+      i = maskRawString(content, blank, i, raw);
+      continue;
+    }
     const span = syntax.spans.find((candidate) => content.startsWith(candidate.open, i));
     i = span ? maskSpan(content, blank, i, span) : i + 1;
   }
   return chars.join("");
+}
+
+/**
+ * Blank every `Skip` that is not an argument of a test attribute.
+ *
+ * Run on already-masked text, so `[` / `]` inside a string or a comment are
+ * gone and a plain bracket counter finds the attribute's own close. An
+ * attribute that never closes claims the rest of the file, which is the same
+ * direction the unterminated-comment case takes: it can only suppress
+ * findings, never invent one.
+ */
+function narrowCSharpSkip(masked: string): string {
+  const chars = masked.split("");
+  const spans: Array<readonly [number, number]> = [];
+  const attribute = /\[\s*(?:Fact|Theory)\s*\(/g;
+  for (const match of masked.matchAll(attribute)) {
+    let depth = 0;
+    let end = match.index;
+    for (; end < masked.length; end += 1) {
+      if (masked[end] === "[") depth += 1;
+      else if (masked[end] === "]") {
+        depth -= 1;
+        if (depth === 0) break;
+      }
+    }
+    spans.push([match.index, end === masked.length ? masked.length : end]);
+  }
+  for (const match of masked.matchAll(/\bSkip\b/g)) {
+    const at = match.index;
+    if (spans.some(([from, to]) => at > from && at < to)) continue;
+    for (let index = at; index < at + match[0].length; index += 1) {
+      if (chars[index] !== "\n") chars[index] = " ";
+    }
+  }
+  return chars.join("");
+}
+
+/** The raw string opened at `start`, or `null` when none is. */
+function matchRawStringOpener(
+  content: string,
+  start: number,
+  opener: RegExp,
+): { hashes: string; length: number } | null {
+  opener.lastIndex = start;
+  const match = opener.exec(content);
+  return match ? { hashes: match[1] ?? "", length: match[0].length } : null;
+}
+
+/**
+ * Blank a raw string, opener and closer included.
+ *
+ * The closer is `"` plus exactly the hashes the opener carried, so a `"` inside
+ * the body — the reason the form exists — does not end it. No escapes: a
+ * backslash in a raw string is a backslash. An unterminated one blanks to end
+ * of file, as an unterminated block comment does.
+ */
+function maskRawString(
+  content: string,
+  blank: (index: number) => void,
+  start: number,
+  raw: { hashes: string; length: number },
+): number {
+  const closer = `"${raw.hashes}`;
+  const bodyStart = start + raw.length;
+  const closeAt = content.indexOf(closer, bodyStart);
+  const end = closeAt === -1 ? content.length : closeAt + closer.length;
+  for (let index = start; index < end; index += 1) blank(index);
+  return end;
 }
 
 /** The heredoc opened at `start`, or `null` when none is. */
@@ -437,7 +549,8 @@ export async function validateTestTodoStubs(
     // Comments and string literals are blanked first: the pattern is a line
     // regex, so a quoted fixture token or a prose mention is otherwise
     // reported as an executing stub.
-    const lines = maskNonCode(content, dialect.nonCode).split(/\r?\n/);
+    const masked = maskNonCode(content, dialect.nonCode);
+    const lines = (dialect.narrow ? dialect.narrow(masked) : masked).split(/\r?\n/);
     for (let i = 0; i < lines.length; i += 1) {
       const line = lines[i] ?? "";
       // The docstring promises one issue per stub occurrence. Walk every

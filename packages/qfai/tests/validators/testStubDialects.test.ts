@@ -88,6 +88,18 @@ describe("every supported stack's stub construct is detected", () => {
       "[Fact(Skip = Reasons.NotDone)]\npublic void A() {}\n",
       "xUnit constant-reason Skip",
     ],
+    // `Theory` derives from `Fact` and takes the same `Skip`.
+    [
+      "tests/SkipTheory.cs",
+      '[Theory(DisplayName = "x", Skip = "later")]\npublic void A(int n) {}\n',
+      "xUnit Theory Skip",
+    ],
+    // The argument list may wrap; the attribute is still one attribute.
+    [
+      "tests/SkipWrapped.cs",
+      '[Fact(\n    Skip = "later"\n)]\npublic void A() {}\n',
+      "xUnit wrapped Skip",
+    ],
   ];
 
   for (const [file, body, runner] of cases) {
@@ -218,6 +230,60 @@ describe("STUB_SOURCE_FILE_PATTERN — coverage information for a caller's own g
           globs: [`tests/e2e/${STUB_SOURCE_FILE_PATTERN}`],
         });
         expect(issues.map((i) => i.code)).not.toContain("QFAI-TEST-002");
+      },
+    );
+  });
+});
+
+/**
+ * Masking and matching both have to hold on the forms a real repository writes.
+ *
+ * Each of these was a false positive: a construct that is not a skipped test,
+ * blocking the ATDD / full gate on work that has nothing to do with stubs.
+ */
+describe("constructs that look like stubs but are not", () => {
+  // `Skip` is an ordinary identifier. Matching it anywhere blocked a gate on a
+  // fixture record or a helper type that happens to carry a field of that name.
+  const csharpNonStubs: Array<[string, string, string]> = [
+    ["tests/Fixture.cs", "var options = new Options { Skip = false };\n", "a field assignment"],
+    ["tests/Row.cs", "public bool Skip = SomeValue;\n", "a field declaration"],
+    ["tests/Cmp.cs", "if (row.Skip == other.Skip) { }\n", "a comparison"],
+    // Not a test attribute: `Skip` on it skips nothing.
+    ["tests/Custom.cs", '[Trait(Skip = "x")]\npublic void A() {}\n', "a non-test attribute"],
+  ];
+
+  for (const [file, body, what] of csharpNonStubs) {
+    it(`does not report ${what} in C#`, async () => {
+      await withTests({ [file]: body }, async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      });
+    });
+  }
+
+  // A Rust raw string exists to hold unescaped quotes. Ending the span at the
+  // first inner `"` exposed the rest of the line as code, and prose about
+  // `#[ignore]` became a finding.
+  const rustRawStrings: Array<[string, string, string]> = [
+    ["tests/a.rs", 'let s = r#"Use " #[ignore] to disable"#;\n', "a hashed raw string"],
+    ["tests/b.rs", 'let s = r##"quote "# inside #[ignore]"##;\n', "a double-hashed raw string"],
+    ["tests/c.rs", 'let s = r"plain #[ignore] text";\n', "an unhashed raw string"],
+    ["tests/d.rs", 'let s = br#"bytes " #[ignore]"#;\n', "a byte raw string"],
+  ];
+
+  for (const [file, body, what] of rustRawStrings) {
+    it(`does not report #[ignore] inside ${what}`, async () => {
+      await withTests({ [file]: body }, async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      });
+    });
+  }
+
+  // …and the masking must not swallow the real thing that follows it.
+  it("still reports a real #[ignore] after a raw string", async () => {
+    await withTests(
+      { "tests/e.rs": 'let s = r#"see " #[ignore]"#;\n\n#[ignore]\nfn a() {}\n' },
+      async (root) => {
+        expect(await stubCodes(root)).toContain("QFAI-TEST-001");
       },
     );
   });
