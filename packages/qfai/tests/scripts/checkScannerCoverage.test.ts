@@ -15,12 +15,13 @@
  * pass/fail/missing cases are deterministic in CI.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 // tests/scripts → tests → packages/qfai → packages → repo root
@@ -71,7 +72,7 @@ afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
     if (dir) {
-      await rm(dir, { recursive: true, force: true });
+      await removeTempTree(dir);
     }
   }
 });
