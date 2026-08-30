@@ -30,6 +30,16 @@
 | TC-0006-0024 | integration | AC-0006-0019 | EX-0006-0019 | --profile <skill> probes manifest runtimeDependencies; missing reported (Type: normal)                      |
 | TC-0006-0025 | unit        | AC-0006-0020 | EX-0006-0020 | empty runtimeDependencies emits no probe finding (Type: boundary)                                           |
 | TC-0006-0026 | integration | AC-0006-0020 | EX-0006-0020 | manifest↔probe drift emits R-SKILL-MANIFEST-DRIFT (Type: error)                                             |
+| TC-0006-0027 | integration | AC-0006-0021 | EX-0006-0021 | edited installed shipped workflow → workflows.integrity advisory names the stale path (Type: normal)        |
+| TC-0006-0028 | integration | AC-0006-0021 | EX-0006-0021 | content-identical installed tree → severity ok, zero drift findings (Type: boundary)                        |
+| TC-0006-0029 | unit        | AC-0006-0022 | EX-0006-0022 | drift finding severity/group and --fail-on error exit-code invariance (Type: boundary)                      |
+| TC-0006-0030 | integration | AC-0006-0023 | EX-0006-0023 | repair text names no command; absent file and unresolved package copy are not drift (Type: error)           |
+| TC-0006-0031 | integration | AC-0006-0024 | EX-0006-0024 | adopter-authored name collision is never reported (Type: error)                                             |
+| TC-0006-0032 | unit        | AC-0006-0025 | EX-0006-0025 | drift-only tree exits 0 under `--fail-on warning` (Type: normal)                                            |
+| TC-0006-0033 | unit        | AC-0006-0025 | EX-0006-0026 | unrelated warning still exits 1 under `--fail-on warning` — control (Type: boundary)                        |
+| TC-0006-0034 | integration | AC-0006-0026 | EX-0006-0027 | details lists declined alongside modified without changing severity (Type: normal)                          |
+| TC-0006-0035 | integration | AC-0006-0026 | EX-0006-0028 | declined-only tree emits no finding at all (Type: boundary)                                                 |
+| TC-0006-0036 | integration | AC-0006-0022 | EX-0006-0029 | error severity の finding は `--fail-on error` で exit 非 0 になる (Type: normal)                           |
 
 ## TC-0006-0012: playwright primary probe detects node_modules/.bin/playwright
 
@@ -219,6 +229,82 @@ Verify:
 
 - `R-SKILL-MANIFEST-DRIFT` (SSOT-sync Pair III) が emit される
 
+## TC-0006-0027: edited installed shipped workflow yields a drift advisory
+
+**Level:** integration
+**Type:** normal
+**AC Refs:** AC-0006-0021
+
+Setup: temp dir に adopter tree を init し、`.github/workflows/` 配下の shipped workflow 1 ファイルに 1 行の手編集を加える。
+Action: `qfai doctor` を実行する。
+Verify:
+
+- `workflows.integrity` check が severity `info` で 1 件 fire する
+- finding の details / message に当該 stale file の adopter-tree 相対 path が含まれる
+
+## TC-0006-0028: content-identical installed tree reports no drift
+
+**Level:** integration
+**Type:** boundary
+**AC Refs:** AC-0006-0021
+
+Setup: TC-0006-0027 の手編集を戻し、install 済み shipped workflow を package 同梱 copy と内容一致 (改行正規化後) の状態にする。
+Action: `qfai doctor` を実行する。
+Verify:
+
+- `workflows.integrity` の severity が `ok` になる
+- drift finding が 1 件も emit されない (control case; false positive なし)
+
+## TC-0006-0029: drift advisory keeps the exit code unchanged
+
+**Level:** unit
+**Type:** boundary
+**AC Refs:** AC-0006-0022
+
+Setup: `workflows.integrity` が drift を返すフィクスチャ。
+Action: `runDoctor({ root, format: 'text', failOn: 'error' })` 相当を呼び、finding severity と `shouldFailDoctor` の判定を観測する。
+Verify:
+
+- finding が `severity: 'info'` で含まれる
+- `shouldFailDoctor` が false を返す (exit 0 — advisory は exit code を変えない)
+- text renderer が当該 finding を "warnings advisory of drift" group に配置する
+
+注: `--fail-on error` では `shouldFailDoctor` が `summary.error > 0` のみを見るため、`info` と
+`warning` は本 TC では区別できない。`info` 選択を識別的に falsify するのは TC-0006-0032 /
+TC-0006-0033 (`--fail-on warning` leg) である。
+
+## TC-0006-0030: repair text names no command; absent file and unresolved copy are not drift
+
+**Level:** integration
+**Type:** error
+**AC Refs:** AC-0006-0023
+
+Setup: (a) provenance entry を持つ shipped workflow を 1 つ手編集した drift 検出状態の tree、
+(b) shipped name の 1 つが `absent` state — provenance record に当該 name の entry が無く、adopter の
+workflows directory にも file が無い — であり、対照として provenance entry を持つ stale file を 1 つ
+併置した tree、(c) install 済み package 側の shipped copy を解決できない tree の 3 フィクスチャ。
+state 名は `CLI-WFSET` §3 の closed enum に従う (`absent` と `declined` は別 state であり、報告の
+され方も別である)。
+Action: 各フィクスチャで `qfai doctor` を実行する。
+Verify:
+
+- (a) message body に「install 済み package 内の copy で置き換える」手動 repair が含まれ、refresh
+  command / CLI verb / flag を示す token は 1 つも含まれない
+- (b) `absent` の name は `workflows.integrity` finding の title / message / `details` のいずれにも
+  現れない (不在は drift ではない)。同じ tree の対照 stale file は `details.modified` に報告され、
+  check は severity `info` で 1 度だけ registered される
+- (c) check が severity `info` で skip し、drift として報告しない
+
+注: leg (b) が主張するのは「check が 1 件も出ない」ことではなく「`absent` の name が drift として
+数えられない」ことである。`workflows.integrity` check 自体が 1 件も registered されないのは provenance
+record が空で比較対象が 0 件の tree であり、それは本 TC の 3 フィクスチャのいずれでもない
+(TC-0006-0028 の fixture 系列)。
+
+境界 (declined との分界): provenance entry が残ったまま file だけが削除された `declined` は `absent`
+とは別 state であり、本 TC の対象外である。owner は AC-0006-0026 / BR-0006-0022 配下の TC-0006-0034
+(drift finding が出る tree では `details.declined` が当該 name を列挙する) と TC-0006-0035 (`modified`
+が 0 件で declined だけの tree) である。
+
 ## TC-0006-0010: Coverage Placeholder for EX-0006-0003
 
 - EX-Ref: EX-0006-0003
@@ -230,3 +316,80 @@ Verify:
 - EX-Ref: EX-0006-0009
 - AC-Refs: AC-0006-0001
 - Verify that migrated example EX-0006-0009 is covered by at least one test case.
+
+## TC-0006-0031: adopter-authored name collision is never reported
+
+- **Type:** error
+- **Level:** integration
+- **AC-Refs:** AC-0006-0024
+- **EX-Ref:** EX-0006-0024
+- Setup: temp dir に `qfai init` した adopter tree を作り、`.github/workflows/` に shipped name 空間と
+  衝突する名前のファイルを adopter 自作として置く。`.qfai/install-provenance.json` には当該 name の
+  entry を作らない。対照として、provenance entry を持つ stale file を 1 つ併置する。
+- Assert: `workflows.integrity` の finding 集合に adopter 自作ファイルの名前が 1 度も現れないこと。
+  対照の stale file は報告されること (silence が「常に無報告」ではなく provenance 由来であることを
+  falsify 可能にする)。exit code は不変。
+- 負例の意味: provenance gate を外すと adopter 自作ファイルが `extra` / `changed` bucket に落ちて
+  報告され、本 TC は fail する。これが `CLI-WFSET` §1 / §8 の「prefix は selector ではない」を
+  spec 側で守るオラクル。
+
+## TC-0006-0032: drift-only tree exits 0 under --fail-on warning
+
+- **Type:** normal
+- **Level:** unit
+- **AC-Refs:** AC-0006-0025
+- **EX-Ref:** EX-0006-0025
+- Setup: `workflows.integrity` が drift を返し、他の check は 1 件も warning / error を返さない
+  フィクスチャ (`summary.warning === 0` かつ `summary.error === 0` になる状態)。
+- Action: `runDoctor({ root, format: 'text', failOn: 'warning' })` 相当を呼ぶ。
+- Assert: exit code が 0 であること。`summary.warning` が 0 のままであること (drift finding は
+  `info` として計上され warning バケットに入らない)。`summary.info` が 1 以上であること。
+- 負例の意味: severity を `warning` に戻すと `shouldFailDoctor` の `warning + error > 0` が真になり
+  exit 1 となって本 TC は fail する。`--fail-on error` leg (TC-0006-0029) では両 severity が
+  区別できないため、`info` 選択 (DR-0006-0004) を falsify できる唯一の leg が本 TC である。
+
+## TC-0006-0033: unrelated warning still exits 1 under --fail-on warning (control)
+
+- **Type:** boundary
+- **Level:** unit
+- **AC-Refs:** AC-0006-0025
+- **EX-Ref:** EX-0006-0026
+- Setup: TC-0006-0032 と同じ drift フィクスチャに、`workflows.integrity` とは無関係な warning
+  finding を 1 件だけ追加した状態。
+- Action: `runDoctor({ root, format: 'text', failOn: 'warning' })` 相当を呼ぶ。
+- Assert: exit code が 1 であること。exit 1 の原因が当該 warning であり、`workflows.integrity`
+  finding は依然 `info` のままであること。
+- 対照の意味: TC-0006-0032 単独では「`--fail-on warning` が何も捕まえない実装」でも green に
+  なりうる。本 TC は同じ leg が実際に warning を捕まえることを示し、TC-0006-0032 の主張が
+  vacuous でないことを保証する。
+
+## TC-0006-0034: details lists declined alongside modified
+
+- **Type:** normal
+- **Level:** integration
+- **AC-Refs:** AC-0006-0026
+- **EX-Ref:** EX-0006-0027
+- Setup: temp dir に init した adopter tree で、provenance entry を持つ shipped workflow の 1 つを
+  手編集し (modified)、別の 1 つを install 後に削除する (declined)。
+- Action: `qfai doctor --format json` を実行する。
+- Assert: `workflows.integrity` finding の `details` が `workflowsDir` / `modified` / `declined` /
+  `packagedDir` の 4 key を持つこと。`details.modified` が手編集 file を、`details.declined` が
+  削除 file を名指しすること。finding severity は `info` のままで exit code は不変であること。
+  message body は declined file を stale として名指ししないこと。
+- 負例の意味: `declined` を details から落とすと、operator は「QFAI が不在を認識した上で放置して
+  いる」ことを観測できず、`CLI-DOC` の transparency 条項が spec 側で無主のままになる。
+
+## TC-0006-0035: declined-only tree emits no finding at all
+
+- **Type:** boundary
+- **Level:** integration
+- **AC-Refs:** AC-0006-0026
+- **EX-Ref:** EX-0006-0028
+- Setup: provenance entry を持つ shipped workflow をすべて削除し、`changed` bucket が空
+  (modified 0 件) になる adopter tree。
+- Action: `qfai doctor --format json` を実行する。
+- Assert: `workflows.integrity` の drift finding が 1 件も emit されないこと。したがって
+  `details.declined` も出力に現れないこと。check severity は `ok` であること。
+- 境界の意味: `declined` は「finding が出るときに details へ同梱される情報」であって、それ自体が
+  finding を生む状態ではない (`CLI-WFSET` §3 の「declined は二度と報告しない」)。本 TC は
+  TC-0006-0034 が declined を報告のトリガに格上げしていないことを固定する。
