@@ -1561,3 +1561,49 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     );
   });
 });
+
+describe("a run with nothing to copy is not a directory swap", () => {
+  // Review finding [139], and a regression the identity fix introduced. On a fresh clone where
+  // both shipped workflows are `declined` and `.github` does not exist, nothing is copied and
+  // no directory is created — but the pre-copy reading is `[null, null]`, not `undefined`.
+  // Making an absent component a refusal turned that ordinary no-op into a reported swap, and
+  // the operator was told their workflows may have been written outside the repository when
+  // nothing had been written at all.
+  //
+  // Driven through `settleWorkflowAncestors` in both shapes, since that is the function whose
+  // answer the caller reads.
+
+  it("refuses an absent component, which is what the swap check is for", async () => {
+    const fresh = await newTempDir();
+    const absent = await initModule.workflowAncestorIdentity(fresh);
+    expect(absent, "the premise: both components are absent").toEqual([null, null]);
+    await mkdir(path.join(fresh, ".github", "workflows"), { recursive: true });
+    expect(
+      await initModule.settleWorkflowAncestors(fresh, absent ?? []),
+      "a component that appeared after the copy is still refused — that half is the point",
+    ).toBeUndefined();
+  });
+
+  it("does not ask the question at all when there is no copy to ask it about", async () => {
+    // The caller's half, on the source: the refusal above is correct and must stay, so what
+    // changed is that it is only consulted when a copy was attempted. A row that only checked
+    // the refusal would have passed throughout the regression.
+    const source = await readInitSource();
+    const at = source.indexOf("const attemptedWorkflowCopy");
+    expect(at, "the run must know whether it tried to copy anything").toBeGreaterThan(-1);
+
+    const settleAt = source.indexOf("const settled =", at);
+    const settleBlock = source.slice(settleAt, source.indexOf(";", settleAt));
+    expect(
+      settleBlock,
+      "settling must be skipped when nothing was copied, or an ordinary no-op run reads as a swap",
+    ).toMatch(/!attemptedWorkflowCopy/);
+
+    const swappedAt = source.indexOf("const workflowsSwapped =", at);
+    const swappedBlock = source.slice(swappedAt, source.indexOf(";", swappedAt));
+    expect(
+      swappedBlock,
+      "and the swap verdict itself must require that a copy was attempted",
+    ).toMatch(/attemptedWorkflowCopy/);
+  });
+});

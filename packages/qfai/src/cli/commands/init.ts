@@ -228,12 +228,27 @@ export async function runInit(options: InitOptions): Promise<void> {
   // So the operator is told, precisely, and nothing records the write. Leaving the entries out
   // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
   // rather than as ours to overwrite.
+  // Only a run that actually tried to copy can have been swapped out from under one.
+  //
+  // Review finding [139], and a regression the previous round introduced: on a fresh clone
+  // where both shipped workflows are `declined` and `.github` does not exist, nothing is
+  // copied and no directory is created — but the pre-copy reading is `[null, null]`, not
+  // `undefined`. Making an absent component a refusal then turned that ordinary no-op into a
+  // reported swap, and the operator was told their workflows may have been written outside the
+  // repository when nothing had been written at all.
+  //
+  // The refusal is right and stays; what was wrong is asking the question when there is no copy
+  // to ask it about.
+  const attemptedWorkflowCopy = workflowCopyPaths.length > 0;
   const settled =
-    workflowAncestorsPinned === undefined || options.dryRun
+    !attemptedWorkflowCopy || workflowAncestorsPinned === undefined || options.dryRun
       ? undefined
       : await settleWorkflowAncestors(destRoot, workflowAncestorsPinned);
   const workflowsSwapped =
-    workflowAncestorsBefore !== undefined && !options.dryRun && settled === undefined;
+    attemptedWorkflowCopy &&
+    workflowAncestorsBefore !== undefined &&
+    !options.dryRun &&
+    settled === undefined;
   if (workflowsSwapped) {
     error(
       ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
