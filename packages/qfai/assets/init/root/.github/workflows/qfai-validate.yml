@@ -276,6 +276,39 @@ jobs:
           done
           echo "::warning::qfai validate: no Node version file (.nvmrc or .node-version) found - using Node ${fallback} and continuing (fail open). Add one to pin the version this workflow uses."
           echo "version=${fallback}" >> "$GITHUB_OUTPUT"
+      - name: Choose a package-manager cache setup-node can actually resolve
+        id: node-cache
+        shell: bash
+        run: |
+          # setup-node resolves a cache DIRECTORY by running the package manager, before this
+          # workflow has installed anything. Asking it for a cache it cannot resolve fails the
+          # step outright, which is why the choice is made here rather than in an expression.
+          #
+          # pnpm and npm are already available at this point: `pnpm/action-setup` runs above, and
+          # npm ships with every Node. Yarn does not. Corepack is not bundled from Node 25 on, and
+          # the Node this workflow runs is the adopter's own `.nvmrc` / `.node-version` — so on a
+          # runner with neither Yarn nor Corepack preinstalled, `cache: yarn` sent setup-node to
+          # `yarn cache dir` and the job stopped there, BEFORE the install step below could
+          # install Corepack and enable the shim. The lane failed at the one point it was built to
+          # fail open.
+          #
+          # So the Yarn cache is claimed only when Yarn answers now. Skipping it costs a warm
+          # cache and nothing else: the install step still provisions Corepack and installs, so
+          # the lane runs. A missing optimisation is not a missing verification.
+          if [ -f pnpm-lock.yaml ]; then
+            echo "cache=pnpm" >> "$GITHUB_OUTPUT"
+          elif [ -f yarn.lock ]; then
+            if command -v yarn > /dev/null 2>&1; then
+              echo "cache=yarn" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::qfai validate: yarn is not on PATH yet, so the Yarn download cache is skipped for this run. The install step provisions Corepack and installs normally; preinstall Yarn or Corepack on this runner to get the cache back."
+              echo "cache=" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -f package-lock.json ]; then
+            echo "cache=npm" >> "$GITHUB_OUTPUT"
+          else
+            echo "cache=" >> "$GITHUB_OUTPUT"
+          fi
       - name: Set up Node via actions/setup-node 4.4.0
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
@@ -283,10 +316,9 @@ jobs:
           # version file when they have one, else the documented fallback
           # (Node 20, matching the package `engines: ">=20.19.0"` floor).
           node-version: ${{ steps.node-version.outputs.version }}
-          # setup-node@v4's `cache:` accepts a single package-manager value.
-          # Pick the one matching the consumer's lockfile (or leave unset
-          # when none of the three is present). The conditional expression
-          # short-circuits left-to-right.
+          # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
+          # decides it — an expression cannot ask whether the package manager is on PATH, and
+          # asking for a cache setup-node cannot resolve fails the step outright.
           #
           # NOTE: `cache: yarn` is built around Yarn Classic (v1)'s
           # `yarn cache dir`. Yarn Berry (v2+) keeps deps under `.yarn/cache`
@@ -294,7 +326,7 @@ jobs:
           # step below still picks the correct flag (`--immutable` for
           # Berry, `--frozen-lockfile` for Classic) so functionality is
           # preserved either way.
-          cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}
+          cache: ${{ steps.node-cache.outputs.cache }}
       - name: Install dependencies (lockfile-aware)
         shell: bash
         run: |

@@ -353,12 +353,97 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
     expect(violations).toEqual([]);
   });
 
-  it("every setup-node cache: value stays the nested lockfile-detection ternary, not a single package-manager literal", async () => {
+  it("never asks setup-node for a Yarn cache before Yarn can answer", async () => {
+    // The row above deliberately accepts the decision wherever it is made, which means it does
+    // NOT catch a return to the expression that caused this. This one does.
+    //
+    // `cache: yarn` makes setup-node run `yarn cache dir` to resolve the cache directory, and it
+    // does that BEFORE the install step below has provisioned anything. pnpm and npm are already
+    // there — `pnpm/action-setup` runs above and npm ships with Node — but Yarn is not, and
+    // Corepack is unbundled from Node 25 on. The Node a shipped lane runs is the ADOPTER's, from
+    // their own `.nvmrc` / `.node-version`, so on a runner with neither Yarn nor Corepack the job
+    // stopped at that step: the lane failing at the one point it is built to fail open.
+    //
+    // The property is not a shape. It is that nothing can hand setup-node the literal `yarn`
+    // unless Yarn answered first.
+    const violations: string[] = [];
+    for (const [name, body] of await loadShippedWorkflows()) {
+      for (const { jobId, job } of collectJobs(parse(body))) {
+        const steps = [...collectSteps(job)];
+        for (const step of steps) {
+          const uses = step["uses"];
+          if (typeof uses !== "string" || !uses.startsWith("actions/setup-node@")) continue;
+          const withNode = step["with"];
+          const cache = isRecord(withNode) ? withNode["cache"] : undefined;
+          if (typeof cache !== "string") continue;
+
+          // An expression that can evaluate to `yarn` on its own has no way to ask.
+          const named = /steps\.([A-Za-z0-9_-]+)\.outputs\./.exec(cache);
+          if (named === null) {
+            if (cache.includes("yarn")) {
+              violations.push(
+                `${name}: job ${jobId} decides the cache in an expression that can yield yarn, which cannot ask whether Yarn is on PATH`,
+              );
+            }
+            continue;
+          }
+
+          const producer = steps.find((candidate) => candidate["id"] === named[1]);
+          const deciding = producer?.["run"];
+          if (typeof deciding !== "string") {
+            violations.push(
+              `${name}: job "${jobId}" cache: names steps.${named[1]}, which produces no body`,
+            );
+            continue;
+          }
+
+          // Every emission of the yarn cache must sit behind a probe for Yarn itself.
+          const emits = /cache=yarn/.test(deciding);
+          const probes = /command -v yarn/.test(deciding);
+          if (emits && !probes) {
+            violations.push(`${name}: job ${jobId} emits the yarn cache without probing for yarn`);
+            continue;
+          }
+          if (emits) {
+            const probeAt = deciding.search(/command -v yarn/);
+            const emitAt = deciding.search(/cache=yarn/);
+            if (probeAt > emitAt) {
+              violations.push(
+                `${name}: job ${jobId} probes for yarn only after claiming its cache`,
+              );
+            }
+          }
+
+          // …and the skip has to leave the lane running: an EMPTY cache value, not a failure.
+          // `echo "cache=" >> "$GITHUB_OUTPUT"` is what that looks like, and setup-node reads an
+          // empty `cache:` as no cache at all.
+          if (emits && !/cache="\s*(>>|$)/m.test(deciding)) {
+            violations.push(
+              `${name}: job ${jobId} has no branch that emits an empty cache, so an unresolvable Yarn has nowhere to go but a failure`,
+            );
+          }
+        }
+      }
+    }
+    expect(violations).toEqual([]);
+  });
+  it("keeps all four lockfile branches deciding the setup-node cache, wherever that decision lives", async () => {
+    // The decision used to be a nested ternary in `cache:` itself. It moved into a step, because
+    // an expression cannot ask whether the package manager is on PATH and `cache: yarn` sends
+    // setup-node to `yarn cache dir` before anything has installed Yarn — which failed the job on
+    // a runner carrying neither Yarn nor Corepack.
+    //
+    // What this row protects is unchanged and is not the ternary: every lockfile the shipped lane
+    // supports must still decide the cache, and no `cache:` may collapse to a single literal that
+    // ignores what the adopter actually uses. So it follows the decision to wherever it is made —
+    // an expression, or the body of the step the expression reads.
     const violations: string[] = [];
     let cacheExpressionCount = 0;
     for (const [name, body] of await loadShippedWorkflows()) {
-      for (const { jobId, job } of collectJobs(parse(body))) {
-        for (const step of collectSteps(job)) {
+      const parsed = parse(body);
+      for (const { jobId, job } of collectJobs(parsed)) {
+        const steps = [...collectSteps(job)];
+        for (const step of steps) {
           const uses = step["uses"];
           if (typeof uses !== "string" || !uses.startsWith("actions/setup-node@")) {
             continue;
@@ -379,12 +464,32 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
             );
             continue;
           }
+
+          // Where the decision is made: in the expression, or in the step it names.
+          const named = /steps\.([A-Za-z0-9_-]+)\.outputs\./.exec(cache);
+          let deciding = cache;
+          if (named !== null) {
+            const producer = steps.find((candidate) => candidate["id"] === named[1]);
+            const producerRun = producer === undefined ? undefined : producer["run"];
+            if (typeof producerRun !== "string") {
+              violations.push(
+                `${name}: job "${jobId}" cache: reads steps.${named[1]}.outputs, and no step with that id produces a body`,
+              );
+              continue;
+            }
+            deciding = producerRun;
+          }
+
           for (const probe of LOCKFILE_PROBES) {
-            if (!cache.includes(`hashFiles('${probe}')`)) {
+            if (!deciding.includes(probe)) {
               violations.push(`${name}: job "${jobId}" cache: lost the ${probe} detection`);
             }
           }
-          if (!cache.includes("&&") || !cache.includes("||")) {
+          const branching =
+            named === null
+              ? deciding.includes("&&") && deciding.includes("||")
+              : /\bif\b/.test(deciding) && /\belif\b/.test(deciding);
+          if (!branching) {
             violations.push(`${name}: job "${jobId}" cache: is no longer a conditional chain`);
           }
         }

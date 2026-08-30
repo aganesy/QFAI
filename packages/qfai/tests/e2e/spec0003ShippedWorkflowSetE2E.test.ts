@@ -308,23 +308,44 @@ describe(
       ).toContain(declared);
     });
 
-    it("preserves the lockfile-detecting cache expression through delivery", async () => {
+    it("preserves the lockfile detection behind the cache through delivery", async () => {
       const job = (await jobsOf(VALIDATE))[`${VALIDATE}#validate`];
       expect(job, "the delivered validate workflow has no validate job").toBeDefined();
-      const setup = collectJobSteps(job ?? {}).find(
+      const steps = collectJobSteps(job ?? {});
+      const setup = steps.find(
         (step) =>
           typeof step["uses"] === "string" && step["uses"].startsWith("actions/setup-node@"),
       );
       expect(setup, "the delivered validate job sets no Node up").toBeDefined();
       const withBlock = setup?.["with"];
       const cache = isRecord(withBlock) ? String(withBlock["cache"] ?? "") : "";
-      // All three lockfiles, in one conditional expression: a delivery that replaced the chain with
-      // a single hard-coded manager would still parse and would still be a `cache:` key.
-      for (const lockfile of ["pnpm-lock.yaml", "yarn.lock", "package-lock.json"]) {
-        expect(cache, `the delivered cache expression stopped detecting ${lockfile}`).toContain(
-          lockfile,
-        );
+
+      // The decision used to be a ternary in `cache:` itself and now lives in a step, because an
+      // expression cannot ask whether the package manager is on PATH — and `cache: yarn` sends
+      // setup-node to `yarn cache dir` before anything has installed Yarn. What survives delivery
+      // is the DETECTION, so this row follows it to wherever it is made rather than pinning the
+      // shape it happened to have.
+      const named = /steps\.([A-Za-z0-9_-]+)\.outputs\./.exec(cache);
+      let deciding = cache;
+      if (named !== null) {
+        const producer = steps.find((step) => step["id"] === named[1]);
+        const body = producer?.["run"];
+        expect(
+          body,
+          `the delivered cache reads steps.${named[1]}.outputs and no step with that id produces a body`,
+        ).toBeTypeOf("string");
+        deciding = typeof body === "string" ? body : "";
       }
+
+      // All three lockfiles: a delivery that replaced the detection with a single hard-coded
+      // manager would still parse and would still be a `cache:` key.
+      for (const lockfile of ["pnpm-lock.yaml", "yarn.lock", "package-lock.json"]) {
+        expect(deciding, `the delivered lane stopped detecting ${lockfile}`).toContain(lockfile);
+      }
+      expect(
+        ["pnpm", "yarn", "npm"].includes(cache.trim()),
+        "a single package-manager literal ignores what the adopter actually uses",
+      ).toBe(false);
     });
   },
 );
