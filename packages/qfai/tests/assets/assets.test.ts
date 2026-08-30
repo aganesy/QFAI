@@ -534,14 +534,51 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     ];
 
     // qfai-discussion neither owns nor enforces the prototyping budget;
-    // restating it there is what produced a third value.
-    const restated = /iteration count[^.]*?\b\d+\b/i;
+    // restating it there is what produced a third value. Matching the exact
+    // sentence that was deleted would only forbid one spelling: `15
+    // iterations`, `fixed 15-cycle budget` and `cycles 1..15` all say the same
+    // thing and would all have passed. Reject a number *anywhere near* a
+    // cycle/iteration word instead — in these two files there is no legitimate
+    // reason for one, since the budget is stated by pointer.
+    const RESTATEMENTS: readonly { readonly label: string; readonly re: RegExp }[] = [
+      { label: "count before the noun", re: /\b\d+\s*[-\s]\s*(?:cycles?|iterations?)\b/i },
+      { label: "count after the noun", re: /\b(?:cycles?|iterations?)\b[^.\n]{0,40}?\b\d+\b/i },
+      { label: "range", re: /\b(?:C|cycles?|iterations?)\s*\d+\s*\.\.\s*\d+/i },
+    ];
     for (const filePath of files) {
       const content = await readFile(filePath, "utf-8");
-      expect(content, `${path.relative(repoRoot, filePath)} restates the budget`).not.toMatch(
-        restated,
-      );
+      const rel = path.relative(repoRoot, filePath);
+      for (const { label, re } of RESTATEMENTS) {
+        expect(content, `${rel} restates the budget (${label})`).not.toMatch(re);
+      }
       expect(content).toContain(".qfai/assistant/skills/qfai-prototyping/SKILL.md");
+    }
+
+    // The matcher itself is the deliverable here, so pin what it rejects:
+    // a guard that only ever sees clean files proves nothing about its reach.
+    for (const restated of [
+      "up to 15 iterations",
+      "a fixed 15-cycle budget",
+      "cycles 1..15",
+      "C1..15",
+      "iteration count is capped globally to 15",
+      "max-iterations: 15",
+      "the loop runs 10 cycles",
+    ]) {
+      expect(
+        RESTATEMENTS.some(({ re }) => re.test(restated)),
+        `must reject: ${restated}`,
+      ).toBe(true);
+    }
+    // …and what it must not reject: the pointer form these files actually use.
+    for (const allowed of [
+      "The single-thread evolution loop owns its iteration budget; see the skill.",
+      "# budget is owned by `.qfai/assistant/skills/qfai-prototyping/SKILL.md`.",
+    ]) {
+      expect(
+        RESTATEMENTS.some(({ re }) => re.test(allowed)),
+        `must allow: ${allowed}`,
+      ).toBe(false);
     }
   });
 
