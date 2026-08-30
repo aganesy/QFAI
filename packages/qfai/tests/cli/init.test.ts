@@ -1360,6 +1360,85 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("removes a pre-fix prose .gitkeep from a populated layer, and reports it", async () => {
+    // Stopping the write does nothing for a project that already ran an older
+    // init: the prose body — a stale directory index naming an internal change
+    // id — sat there forever, reported only as "skipped".
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const layer = path.join(root, ".qfai", "assistant", "constitution");
+      const gitkeep = path.join(layer, ".gitkeep");
+      const legacyBody = [
+        "# .qfai/assistant/constitution/",
+        "",
+        "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+        "",
+        "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+        "",
+      ].join("\n");
+      await writeFile(gitkeep, legacyBody, "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      await expect(access(gitkeep)).rejects.toThrow();
+      expect(output).toContain(path.join(".qfai", "assistant", "constitution", ".gitkeep"));
+      expect(output).toMatch(/removed legacy files/);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("previews the legacy .gitkeep removal without performing it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-legacy-gitkeep-dry-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "manifest", ".gitkeep");
+      await writeFile(
+        gitkeep,
+        [
+          "# .qfai/assistant/manifest/",
+          "",
+          "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+          "",
+          "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      expect(output).toMatch(/would remove legacy files/);
+      // The dry run reports it and leaves it on disk.
+      await access(gitkeep);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves a user-edited .gitkeep alone", async () => {
+    // Only the generator's exact output is removable. Anything else in that
+    // file is a deliberate edit, and deleting it would be data loss.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-edited-gitkeep-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const gitkeep = path.join(root, ".qfai", "assistant", "catalog", ".gitkeep");
+      await writeFile(gitkeep, "# our own note, do not delete\n", "utf-8");
+
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      expect(await readFile(gitkeep, "utf-8")).toBe("# our own note, do not delete\n");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): project-root .qfai/steering/ seed
   it("TC-0003-0022 (TDD-0022): seeds project-root .qfai/steering/ surface (README + .gitkeep + _templates/entry.md)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022-"));

@@ -202,7 +202,7 @@ export async function runInit(options: InitOptions): Promise<void> {
       ...projectSteeringResult.skipped,
       ...upgradeResult.skipped,
     ],
-    [...removed, ...upgradeResult.removed],
+    [...removed, ...upgradeResult.removed, ...assistantTreeResult.removed],
     options.dryRun,
     "init",
     destRoot,
@@ -227,32 +227,99 @@ export async function runInit(options: InitOptions): Promise<void> {
 // 4-layer assistant-tree seed + project-root steering surface seed
 // ---------------------------------------------------------------------------
 
+/**
+ * The exact `.gitkeep` bodies a pre-fix `qfai init` wrote, per layer.
+ *
+ * Every project that ran one of those versions still carries them, and
+ * stopping the write does nothing for those projects: the file is skipped
+ * forever, and its body is a stale directory index naming an internal change
+ * id. Matching the generator's output byte for byte is what makes removing it
+ * safe — anything else in that file is a user edit and is left alone.
+ */
+function legacyAssistantLayerGitkeepBodies(layer: AssistantLayer): string[] {
+  const purposes: Record<AssistantLayer, string> = {
+    constitution:
+      "Foundational normative rules (constitution, drift-protocol, distributed-surface, quality).",
+    manifest: "Declarative manifests (agent-catalog.yml, agent-routing.yml, review-profiles.yml).",
+    catalog:
+      "Reference catalogs (test-layers.md, review-gate.rules.yml, spec_required_files.json).",
+    process: "Workflow / process docs and migration memos (process/migrations/*).",
+  };
+  const body = [
+    `# .qfai/assistant/${layer}/`,
+    "",
+    purposes[layer],
+    "",
+    "Seeded by qfai init (4-layer assistant-tree recut, CHG-003).",
+    "",
+  ].join("\n");
+  // The generator produced exactly this string. A checkout with `core.autocrlf`
+  // on holds the same bytes with CRLF endings, so both forms count as
+  // "unedited"; anything else does not.
+  return [body, body.replace(/\n/g, "\r\n")];
+}
+
+/** True when this `.gitkeep` is an unedited pre-fix `qfai init` placeholder. */
+async function isLegacyGitkeep(gitkeep: string, layer: AssistantLayer): Promise<boolean> {
+  try {
+    const content = await readFile(gitkeep, "utf-8");
+    return legacyAssistantLayerGitkeepBodies(layer).includes(content);
+  } catch {
+    // Unreadable: not provably the generator's output, so leave it in place.
+    return false;
+  }
+}
+
 async function seedAssistantLayers(
   destRoot: string,
   assistantAssets: string,
   dryRun: boolean,
-): Promise<{ copied: string[]; skipped: string[] }> {
+): Promise<{ copied: string[]; skipped: string[]; removed: string[] }> {
   const copied: string[] = [];
   const skipped: string[] = [];
+  const removed: string[] = [];
 
   for (const layer of ASSISTANT_LAYERS) {
     const layerDir = joinAssistantLayer(destRoot, layer);
     const gitkeep = path.join(layerDir, ".gitkeep");
+    const exists = await pathExists(gitkeep);
+    const isLegacy = exists && (await isLegacyGitkeep(gitkeep, layer));
     // `.gitkeep` exists to keep an *empty* directory tracked. A layer the
     // asset templates already filled needs none, so seeding one there only
     // adds a file every reader is told to ignore. The asset side is checked
     // as well so `--dry-run` reports what a real run would do: on a fresh
     // directory copyTemplateTree has not written anything yet.
     if ((await hasEntries(layerDir)) || (await hasEntries(path.join(assistantAssets, layer)))) {
-      // Report it as skipped only when an existing file is actually being
-      // left in place. A placeholder that was never needed is neither
-      // created nor preserved, and listing its non-existent path under
-      // "skipped paths" would claim init protected a file that is not there.
-      if (await pathExists(gitkeep)) {
-        skipped.push(gitkeep);
+      if (!exists) {
+        // A placeholder that was never needed is neither created nor
+        // preserved, and listing its non-existent path under "skipped paths"
+        // would claim init protected a file that is not there.
+        continue;
       }
+      if (isLegacy) {
+        // Populated layer, unedited legacy placeholder: delete it. Leaving it
+        // is what kept the stale body — and its internal change id — in every
+        // project that ever ran a pre-fix init.
+        removed.push(gitkeep);
+        if (!dryRun) {
+          await rm(gitkeep, { force: true });
+        }
+        continue;
+      }
+      // Report it as skipped only when an existing file is actually being
+      // left in place.
+      skipped.push(gitkeep);
       continue;
     }
+    if (exists && !isLegacy) {
+      // Empty layer, and the placeholder is already there and not the
+      // generator's: it is doing its job, or it is a user edit. Either way,
+      // leave it.
+      skipped.push(gitkeep);
+      continue;
+    }
+    // Written either because nothing is there, or to replace the legacy prose
+    // body with the empty placeholder an empty layer actually needs.
     copied.push(gitkeep);
     if (!dryRun) {
       await mkdir(layerDir, { recursive: true });
@@ -261,7 +328,7 @@ async function seedAssistantLayers(
     }
   }
 
-  return { copied, skipped };
+  return { copied, skipped, removed };
 }
 
 /** True when `dir` exists and holds at least one entry. */
