@@ -319,8 +319,10 @@ after its surface passes on the first run. So:
   ordinary RED. Its stage gate P1b is where that happens.
 - **The evidence file follows the stage that produced it.**
   `implement-<spec-id>.md` holds the rows this skill runs itself;
-  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
-  because that is the stage that ran the commands. The `Evidence` cell is a
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the `E2E` / `API` /
+  `Integration` rows — every row this section names, not two of the three —
+  because that is the stage that ran the commands. `checkpoint-verification.md`
+  picks the same file for the checkpoint result and seal of those rows. The `Evidence` cell is a
   pointer either way and its anchor names which file. Calling
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.

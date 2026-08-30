@@ -287,6 +287,96 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(checklists).toContain("A row whose TC is still declared at `L3` is not stale");
     });
 
+    it(`${tree}: the delta reconciles per boundary, not only per TC`, async () => {
+      // A matrix-shaped TC is seeded one row per boundary, so its row set can
+      // shrink while the TC itself stays declared and stays `L3`. Keyed on the
+      // TC alone, no retirement rule fires for the dropped boundary and the
+      // changed-TC reset hands its row back as selectable work for behaviour
+      // the spec no longer states.
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Reconcile **per boundary, not only per TC**");
+      expect(checklists).toContain("match the existing rows to it by `Selector`");
+      expect(checklists).toContain("retire the row of a boundary the TC no longer declares");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**Within a TC it is keyed on the boundary.**");
+      expect(template).toContain("has its\nrow retired");
+
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("**per boundary within a matrix-shaped TC**");
+    });
+
+    it(`${tree}: the checkpoint writer sends an Integration row to the ATDD file`, async () => {
+      // Gate items 10 and 12 read the checkpoint fields out of the file the
+      // row's `Layer` owns, which for an `Integration` row is
+      // `atdd-<spec-id>.md`. The checkpoint writer named `E2E` / `API` only, so
+      // a seeded Integration row had its result and seal written where the gate
+      // does not look and could not reach `done`.
+      const checkpoint = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/checkpoint-verification.md",
+      );
+      expect(checkpoint).not.toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`\nrow",
+      );
+      expect(checkpoint).toContain(
+        "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`\n/ `Integration` row",
+      );
+      // The spec-level boundary picks its file by the same enumeration.
+      expect(checkpoint).toContain(
+        "row is `E2E` / `API` / `Integration`, where the implement file",
+      );
+
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).not.toContain("`## Ledger rows advanced` for the E2E/API rows");
+      expect(ledger).toContain(
+        "`## Ledger rows advanced` for the `E2E` / `API` /\n  `Integration` rows",
+      );
+    });
+
+    it(`${tree}: the shared falsifiability exception covers an Integration row`, async () => {
+      // `red-provenance.md` and `qa-gatekeeper.md` already accept a production
+      // path+symbol as `Satisfied-by` on an Integration row. The shared rule
+      // sent the same handoff to a blocking `exception`, so one correct RED
+      // resolved two ways depending on which file the agent opened.
+      const shared = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/red-not-observable.md",
+      );
+      expect(shared).toContain(
+        "**is accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration`\n   row handed over by `/qfai-atdd`**",
+      );
+      expect(shared).toContain("On a `Unit` / `Component` row it is\n   **not** accepted");
+      expect(shared).toContain(
+        "**`Integration` sits\n   with `E2E` and `API`, not with `Unit` and `Component`**",
+      );
+      // The removed claim: the exception was E2E/API only and an Integration
+      // row was named beside Unit/Component as excluded from it.
+      expect(shared).not.toContain(
+        "On a `Unit` / `Component` /\n   `Integration` row it is **not** accepted",
+      );
+      expect(shared).not.toContain(
+        "which is not true of\n  a `Unit` / `Component` / `Integration` row",
+      );
+
+      // The two files it has to agree with.
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance).toContain("`Layer = Integration` rows are tracked there");
+      const gatekeeper = await read(tree, "assistant/agents/qa-gatekeeper.md");
+      expect(gatekeeper).toContain(
+        "On an `E2E` / `API` / `Integration` row, `Satisfied-by` need not be a sibling `TDD-NNNN`",
+      );
+    });
+
     it(`${tree}: reseeding is stated as a delta, not a regeneration`, async () => {
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("Reseeding is a **delta**, never a regeneration");

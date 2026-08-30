@@ -57,6 +57,15 @@ still declared at `L3` is a row Phase 2b seeds today: **do not retire it for
 not being a coverage target**. That reading would sweep away every existing
 `Layer = Integration` row, evidence and all.
 
+**Within a TC it is keyed on the boundary.** A matrix-shaped TC holds one row
+per independently observable boundary, so re-derive that set and match the
+existing rows to it by `Selector`: a boundary the TC no longer declares has its
+row retired, a boundary it has gained is appended at `todo`, and the rest are
+reset. Reconciling per TC alone leaves a TC that drops from three boundaries to
+two holding all three rows — the TC is still declared and still `L3`, so no
+retirement rule fires, and the changed-TC reset hands the third row back as
+selectable work for behaviour the spec no longer states.
+
 ## Ledger
 
 The **first** markdown table in this file is the ledger — `validateTddList`

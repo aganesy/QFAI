@@ -224,7 +224,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    `/qfai-implement` starts with zero selectable items. **Seeding is a delta,
    not a regeneration, in both directions**: unchanged rows keep their state,
    new TCs append at `todo`, and changed / removed TCs are reset or retired
-   under the upstream-reset rule (`references/sdd-phase-checklists.md`).
+   under the upstream-reset rule — **per boundary within a matrix-shaped TC**,
+   so a boundary the TC no longer declares has its row retired rather than
+   reset back to `todo` (`references/sdd-phase-checklists.md`).
 8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
    against the `BR` / `AC` Phase 2 produced: name the realizing contract for
    each, and resolve every persisted attribute it names to a column, field or

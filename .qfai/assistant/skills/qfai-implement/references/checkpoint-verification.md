@@ -121,7 +121,10 @@ change. Only then report "nothing to do".
 row's `Layer`, and this result belongs to no row. The spec-level boundary is written to
 `.qfai/evidence/implement-<spec-id>.md` whenever that file exists, and to
 `.qfai/evidence/atdd-<spec-id>.md` when it does not — the terminal-ledger case of a spec whose every
-row is `E2E` / `API`, where the implement file was never created. Read and write are the same rule,
+row is `E2E` / `API` / `Integration`, where the implement file was never created. All three, because
+`/qfai-sdd` Phase 2b seeds a `Layer = Integration` row per integration-level TC and `/qfai-atdd`
+authors its test: a spec whose obligations are all integration-level is now an ordinary shape, and
+naming only `E2E` / `API` sent its spec-level boundary to a file nothing created. Read and write are the same rule,
 so a re-run finds what the previous run wrote instead of judging the boundary unrecorded, and the
 one-file-per-spec contract holds: a spec never has this boundary in both files.
 
@@ -130,7 +133,9 @@ one-file-per-spec contract holds: a spec never has this boundary in both files.
 Record a **per-item** result in the evidence file the row's `Layer` owns (the spec-level boundary
 above has no row, and its own rule is stated there) —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API`
-row — using the per-item evidence fields `Checkpoint verification command`,
+/ `Integration` row — **all three**, the split gate items 10 and 12 read
+(`../SKILL.md`; `execution-ledger.md#atdd-owned-rows`), because an `Integration` row is ATDD-owned
+on exactly the terms an `E2E` one is — using the per-item evidence fields `Checkpoint verification command`,
 `Checkpoint verification result` and `Checkpoint verification seal`. The seal is the audit hash over
 the first two together with the `Revision` this run was made against, taken the moment the run ends
 and recomputed at gate item 12: these fields are appended after every reviewer has hashed, so they
