@@ -75,7 +75,17 @@ Everything step 1 would have proved is already covered by the full suite. Steps 
 boundary and only at it — it is the boundary whose owner can act on what they report.
 
 3. The project's static gates, when the repository defines them — formatter check, linter, and type
-   check.
+   check. **These take no `--spec`**, and a repository's own gates are whole-tree by construction —
+   `prettier -c .`, `eslint .`, `tsc -b` — so a file a sibling spec or another package has in flight
+   fails them at a boundary whose owner never wrote it. Classify every static finding by the file it
+   names before repairing anything, exactly as step 4 classifies its own: a file a `done` row of
+   **this** spec produced, or a test file this spec's ledger names in `Test file`, is this
+   boundary's to repair (_Repairing a per-spec FAIL_). Any other file — a sibling spec's source,
+   another package's, one no row of this ledger touched — takes the record-and-wait branch instead:
+   record the finding with the owning spec or area and why it is not this checkpoint's work, and
+   leave the boundary unpassed until that owner clears it. Repairing it from here would rewrite a
+   spec this run is not processing, and the boundary owner can act on what a gate reports only for
+   the files this spec's rows produced.
 4. `npx qfai validate --profile tdd --fail-on error --spec <spec-id>` — qfai is a project
    dependency, not a global command; a bare `qfai …` is `command not found` (exit 127) on a normal
    local install, which would fail every checkpoint. `--spec` scopes the run to the spec this
@@ -123,11 +133,13 @@ and 4 run **only** here — so an ordinary implementation defect over code a `do
 formatter, linter or type-check failure among them, first becomes visible at a boundary where
 `execution-ledger.md#allowed-transitions` gives `done` a single exit (the approved upstream reset)
 and `SKILL.md` skips `done` rows on re-execution. Stated without the rest of this section, that
-failure would have no legal repair path at all.
+failure would have no legal repair path at all. **Everything below is about a finding this spec
+owns**: steps 3 and 4 classify each one first, and a finding over a file this spec's rows neither
+produced nor name is recorded for its owner there and never enters this path.
 
 **A per-spec FAIL is not a ledger event.** Fix it in place and leave every `Status` where it is: no
-row's obligation moved, its test asserts what it always asserted and still passes, so no TDD cycle
-restarts and no reset is owed. What the fix does move is the tree. The GREEN of gate item 5, the
+row's obligation moved — the test still owes the criterion it always owed and still passes — so no
+TDD cycle restarts and no reset is owed. What the fix does move is the tree. The GREEN of gate item 5, the
 reviewer verdicts of items 7-9 and the per-item checkpoint of item 12 that the affected rows
 recorded were all taken against a `Revision` the repair replaces, and
 `evidence-revision.md#what-makes-evidence-stale` calls an observation stale the moment the tree its
@@ -144,6 +156,13 @@ later row edited — the row keeps the observation it made, and the record that 
 the proof that it still holds. That record here is the spec-level boundary's own, in the evidence
 file the rule below selects, under a `## Shared-artifact re-verify` heading beside it: this stage is
 the one that moved the artifact, so this is the second of the two places gate item 10 already reads.
+**The gate consumes it as the substitute for the observations the repair invalidated**, not only as
+the entry that clears a handed-over row's `RED test hash`: for a `done` row this block names, gate
+items 5, 7-9 and 12 are verified from what the block carries at the `Revision` it names, and that
+`Revision` is the one those items agree on — `SKILL.md` item 10 states the same rule from the gate's
+side, and the two are one contract. Without it the gate still read the un-rewritten entry, whose
+GREEN, verdicts and checkpoint describe the pre-fix tree, so a row could be re-verified exactly as
+this section requires and remain stale for ever with nothing able to clear it.
 One line per `done` row the fix touched, naming **its spec and `TDD-ID` together**
 (`spec-0002/TDD-0001`) and carrying, at the new `Revision`:
 
@@ -162,7 +181,9 @@ One line per `done` row the fix touched, naming **its spec and `TDD-ID` together
   artifact's new manifest and hash — the evidence the `RED test hash` recomputation at item 10 is
   looking for, which mismatches by construction once a test file moves. **Item 3 is not re-taken**:
   a RED addresses the manifest as it was when it was observed, and a `done` row has no transition
-  that would let it observe another.
+  that would let it observe another. **That is the rule for an edit that leaves every assertion
+  asserting what it asserted**; an edit that moves what one asserts owes item 3 evidence of its own,
+  and the paragraph below is where that evidence is taken.
 
 The spec-level `Checkpoint verification seal` is taken over this block as well as over the command
 and result, so a line added afterwards moves it. **`exception` rows are outside all of this.** A
@@ -184,20 +205,50 @@ are repaired by the re-verification above. Routing them to the approved reset in
 CR that `change-request-reset.md` cannot legitimately issue — that reset exists for an approved
 **upstream** change invalidating rows, and here no upstream artifact moved — leaving the row holding
 a static gate it may never clear. A correction that does move the assertion owes more inside the
-same path, not a different path: the re-taken `Oracle proof` is what shows the corrected assertion
-still discriminates, and `completion-reviewer`'s fresh verdict is what confirms it still covers the
-row's `TC-ref`.
+same path, not a different path — and more than a re-taken `Oracle proof`. That mutation was chosen
+against the assertion the correction replaced, so re-taking it shows the **old** predicate
+discriminating; the row's RED is the old assertion failing, and
+`evidence-revision.md#what-makes-evidence-stale` invalidates it the moment a later change touches
+the test. Between them nothing says the corrected assertion would have failed before the production
+code existed, which is what item 3 is. A `done` row cannot take a fresh RED, so it takes the
+substitute item 3 already admits: **falsifiability evidence for the corrected assertion.** Break the
+production predicate that assertion names, run the row's `Selector`, and confirm the failure is
+admissible — an assertion failure raised by the corrected assertion, its message naming that
+predicate (`red-admissibility.md`) — then revert and re-run for the restored GREEN. Record on that
+row's line, at the mutated tree's `Falsifiability revision`, the trio `Satisfied-by`,
+`Falsifiability command` and `Falsifiability result` with `RED failure mode: falsifiability`, and
+route `qa-gatekeeper` on the mutation run exactly as Phase Red step 3c does — so what satisfies item
+3 is an observation of the assertion the row now carries, not one of the assertion it replaced.
+`completion-reviewer`'s fresh verdict is what confirms it still covers the row's `TC-ref`. An edit
+that leaves every assertion asserting what it asserted owes none of this.
 
 Two findings do leave the in-place path. When the repair cannot be made without moving the
 obligation itself — the acceptance criterion, the business rule or the test case behind the row, so
 an upstream artifact has to change — that is a Change Request, and the row re-enters through the
 approved reset (`change-request-reset.md`), which is the legal reopen precisely because something
 upstream changed. When the finding has no owner inside this spec — the `.qfai/contracts/**` and
-un-owned `QFAI-TRACE-*` findings step 4 describes, **and every `QFAI-TEST-001`** — it is not
-repaired from here at all. A todo stub is not code a `done` row of this spec produced: in a sibling
-spec's tests it is that spec's to clear, and in this spec's own it is an obligation this ledger has
-not discharged, which is a row's work and not a boundary repair. Record it with its owning artifact
-or spec as step 4 requires, and the boundary stays unpassed until its owner clears it.
+un-owned `QFAI-TRACE-*` findings step 4 describes, the out-of-spec static findings step 3
+classifies, **and a `QFAI-TEST-001` this spec does not own** — it is not repaired from here at all.
+Record it with its owning artifact or spec as step 4 requires, and the boundary stays unpassed until
+its owner clears it.
+
+**A `QFAI-TEST-001` is split by the file it names, not by the rule id.** A stub in a test file no
+row of this ledger names in `Test file` sits in the tests of the spec that owns that file, and is
+that spec's to clear — repairing it from here would edit a spec this run is not processing. A stub
+in a file this ledger **does** name splits once more, on the obligation behind it:
+
+- one standing for an obligation a row of this spec already carries is scaffolding a `done` row left
+  behind. Deleting it removes no assertion and moves no obligation, so it is an obligation-preserving
+  test edit: the in-place re-verification above is the whole of its repair, including the new
+  manifest and hash the edit moves;
+- one standing for an obligation no row carries is a **missing row**, and rows are upstream — this
+  skill writes the ledger's `Status`, `DR-ID` and `Evidence` cells and nothing else (`SKILL.md`
+  Non-goals) — so record it with the obligation it names for `/qfai-sdd`, and the boundary waits for
+  that row to exist and run.
+
+Routing every `QFAI-TEST-001` to record-and-wait made the first case name this spec as its own
+owner while every row was terminal and skipped: the finding had no repair subject anywhere and the
+boundary could never be passed.
 
 ## Spec-level boundary on an already-complete ledger
 
@@ -249,6 +300,11 @@ same way — the audit hash over the spec-level `Checkpoint verification command
 (_Repairing a per-spec FAIL_), together with the `Revision` that run was made against — record it
 beside them as `Checkpoint verification seal`, and recompute it before spec-level completion is
 declared. A mismatch means the record was edited after the run, and completion is not declared.
+**Those four inputs are the whole subject, and the recomputation takes the same four.** The spec
+completion conditions in `SKILL.md` name them from the completion side and this list is the same
+one: a recomputation over the command, the result and the revision alone can never match a seal
+taken over a block as well, so a spec that used the repair path would be uncompletable by
+construction. Where no repair ran, the boundary wrote no block and the subject is the other three.
 
 **Both seals — per item and per spec — are recorded when the run ends and recomputed at the gate**,
 and `evidence-revision.md` says once, for every seal in this contract, what that catches and what
