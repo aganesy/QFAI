@@ -82,6 +82,17 @@ export const QFAI_GITIGNORE_GOVERNANCE_NEGATIONS: readonly string[] = [
   // which is the self-declaration the corroboration exists to replace.
   "!.qfai/review/",
   "!.qfai/review/.legacy-packs",
+  // The install-provenance record. It is the only thing that tells a FRESH CLONE
+  // which shipped files QFAI wrote and which the adopter deliberately deleted, so
+  // it has to survive in version control — and it sits directly under `.qfai/`,
+  // where a broad rule an adopting project already had (`.qfai/*`) matches it.
+  // Measured with `git check-ignore -v .qfai/install-provenance.json` on a tree
+  // carrying `.qfai/*` above the managed block: without this line the broad rule is
+  // still the winner, because `!.qfai/` re-includes only the DIRECTORY. Commit an
+  // install and then a deletion in that state and the fresh clone has neither the
+  // workflow nor the record, so the next `qfai init` reads the declined name as
+  // never-installed and writes it back — the one outcome the record exists to stop.
+  "!.qfai/install-provenance.json",
 ] as const;
 
 /**
@@ -421,10 +432,14 @@ function lastMatchVerdict(lines: readonly string[], samplePath: string): boolean
  * A concrete path the negation re-includes, for feeding
  * {@link gitignorePatternMatches}.
  *
- * A negation is itself a glob, and glob-vs-glob overlap has no cheap exact
- * answer. A representative instance is enough and errs the safe way: a false
- * "conflict" only re-appends a negation that was already last, which is where
- * it belongs anyway.
+ * A negation is itself a glob, and glob-vs-glob overlap has no cheap exact answer. The two
+ * directions of error are NOT symmetric, and this docblock used to have it backwards: a false
+ * "conflict" only re-appends a negation that was already last, which is where it belongs
+ * anyway — but a MISSED conflict leaves a file git is ignoring outside version control, with
+ * nothing to notice it afterwards.
+ *
+ * So the caller instantiates BOTH patterns and asks the question both ways round; see
+ * {@link negationsOutrankLaterIgnores}.
  */
 export function negationSamplePath(negation: string): string {
   const body = negation.replace(/^!/, "");
@@ -451,8 +466,34 @@ export function negationsOutrankLaterIgnores(
       return false;
     }
     const sample = negationSamplePath(negation);
+    const negationBody = negation.replace(/^!/, "");
     for (let index = at + 1; index < lines.length; index += 1) {
-      if (gitignorePatternMatches(lines[index] ?? "", sample)) {
+      const later = lines[index] ?? "";
+
+      // Direction 1: a path this negation re-includes, matched by the later ignore.
+      if (gitignorePatternMatches(later, sample)) {
+        return false;
+      }
+
+      // Direction 2: a path the later ignore covers, matched by this negation.
+      //
+      // Review finding [E1]. One direction decides overlap from ONE instance of the negation,
+      // and two globs can overlap without that instance being in the intersection. Measured:
+      // the negation `!.qfai/evidence/coverage-depth-*.md` instantiates as
+      // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
+      // does not match it — while a real matrix, whose name carries a spec number, is matched
+      // by both. The conflict went unseen, the block was left where it was, and the Coverage
+      // Depth Matrix — a record this repository requires in version control — stayed ignored.
+      //
+      // Instantiating the LATER pattern and asking whether the negation covers it closes that
+      // case: `coverage-depth-spec-sample.md` is matched by `coverage-depth-*.md`. Neither
+      // direction alone is exact, and two are not exact either — but each one can only ADD
+      // conflicts, and a false conflict costs a relocation that was harmless anyway.
+      const trimmed = later.trim();
+      if (trimmed.length === 0 || trimmed.startsWith("#") || trimmed.startsWith("!")) {
+        continue;
+      }
+      if (gitignorePatternMatches(negationBody, negationSamplePath(trimmed))) {
         return false;
       }
     }
