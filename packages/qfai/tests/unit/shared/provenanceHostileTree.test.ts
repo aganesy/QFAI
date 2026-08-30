@@ -10,6 +10,7 @@
 import { createHash } from "node:crypto";
 import {
   existsSync,
+  mkdirSync,
   readFileSync,
   readdirSync,
   renameSync,
@@ -1050,5 +1051,131 @@ describe("releasing a lock does not follow a name that was swapped under it", ()
       "qfai-tests.yml",
       "qfai-validate.yml",
     ]);
+  });
+});
+
+describe("a holder that was reclaimed does not disturb the lock that replaced it", () => {
+  it("leaves a successor's lock exactly where it is", async () => {
+    // Review finding [128]. The release freed the canonical NAME before it could tell whose
+    // lock was under it: holder A is judged stale, holder B takes over, A resumes and releases,
+    // and A's unconditional `rename` moves B's lock aside. If a third writer then takes the
+    // freed name, B's restore fails — and B, still inside its section, is joined by that writer.
+    // Two writers in there at once is the lost update this primitive exists to prevent, and it
+    // is not self-healing: the entry is simply absent afterwards, its file reads as
+    // `adopter-owned`, and it is never recorded again.
+    //
+    // Driven from inside A's section, which is where the takeover happens in the scenario. The
+    // mutator stands in for the reclaim: it removes A's lock and publishes a DIFFERENT directory
+    // at the same name, which is exactly what `clearAbandonedLock` plus B's rename produce.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+
+    const lockDir = path.join(root, ".qfai", ".install-provenance.lock.d");
+    const successorMarker = "successor-marker";
+    let replaced = false;
+
+    await updateInstallProvenance(root, (current) => {
+      // Inside A's section. Take A's lock away and publish B's in its place.
+      try {
+        for (const entry of readdirSync(lockDir)) {
+          rmSync(path.join(lockDir, entry), { force: true });
+        }
+        rmSync(lockDir, { recursive: true, force: true });
+        const staging = path.join(root, ".qfai", ".successor.staging");
+        mkdirSync(staging, { recursive: true });
+        writeFileSync(path.join(staging, successorMarker), "", "utf-8");
+        renameSync(staging, lockDir);
+        replaced = true;
+      } catch {
+        // the fixture could not be built here; the assertions below skip
+      }
+      return {
+        ...current,
+        workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() },
+      };
+    });
+
+    if (!replaced) return;
+
+    // A has now released. B's lock must be untouched — same directory, same marker inside.
+    expect(
+      existsSync(lockDir),
+      "the resumed holder removed or moved the lock that replaced it",
+    ).toBe(true);
+    expect(readdirSync(lockDir), "and its marker must still be the successor's").toEqual([
+      successorMarker,
+    ]);
+
+    // …and nothing was left lying around under a released name, which would mean the rename
+    // happened and only the cleanup was skipped.
+    expect(
+      readdirSync(path.join(root, ".qfai")).filter((name) => name.includes(".released-")),
+      "the canonical name must never have been freed at all",
+    ).toEqual([]);
+  });
+
+  it("decides whose lock it is BEFORE it frees the canonical name", async () => {
+    // The row above pins the OUTCOME, and the outcome is not the whole of review finding [128].
+    //
+    // Measured while writing this: with the identity check removed, a resumed holder still
+    // renames its successor's lock away and then restores it, and every observation a
+    // single-process fixture can make afterwards is identical — same directory, same inode,
+    // same marker. What differs is the WINDOW. Between the rename and the restore the canonical
+    // name is free, and the finding's third writer takes it there; the restore then declines to
+    // overwrite, the successor's lock is orphaned under a released name, and two writers are
+    // inside the section. Producing that interleaving needs a third process scheduled into a
+    // window of a few syscalls, which is not a test this suite can make deterministic.
+    //
+    // So the ordering is pinned instead, on the source, and the assertion is that the question
+    // is ASKED before the name is freed rather than only after. The row above still holds the
+    // outcome, and the two together are what the finding asks for.
+    const source = await readFile(
+      new URL("../../../src/shared/provenance.ts", import.meta.url),
+      "utf-8",
+    );
+    const release = source.indexOf("const release = async (): Promise<void> => {");
+    expect(release, "the release must exist to be checked").toBeGreaterThan(-1);
+    const body = source.slice(release, source.indexOf("\n  };", release));
+
+    const asked = body.search(/standing\.dev !== held\.dev/);
+    const freed = body.search(/await rename\(lockDir, quarantine\)/);
+    expect(
+      asked,
+      "the standing lock must be compared against the object this holder published",
+    ).toBeGreaterThan(-1);
+    expect(
+      freed,
+      "the canonical name must still be freed by moving, not by unlinking through it",
+    ).toBeGreaterThan(-1);
+    expect(
+      asked,
+      "and the question must be asked BEFORE the name is freed — after it, the window review " +
+        "finding [128] describes is already open",
+    ).toBeLessThan(freed);
+
+    // …and asked again of the object in hand, because the check and the rename are two calls.
+    expect(
+      body.search(/moved\.ino !== held\.ino/),
+      "the moved object must be proven this holder's by identity, not by having been at a path",
+    ).toBeGreaterThan(freed);
+  });
+  it("still releases its own lock when it was never reclaimed", async () => {
+    // The other direction. A release that refuses too readily leaves the lock standing, and the
+    // next writer waits out its whole patience before failing.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() },
+    }));
+
+    expect(
+      existsSync(path.join(root, ".qfai", ".install-provenance.lock.d")),
+      "the lock must be gone, or the next writer waits out its whole patience",
+    ).toBe(false);
+    expect(
+      readdirSync(path.join(root, ".qfai")).filter((name) => name.includes(".released-")),
+      "and its own object removed rather than parked",
+    ).toEqual([]);
   });
 });

@@ -530,6 +530,8 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   const lockDir = path.join(recordDir, LOCK_DIR_NAME);
   const marker = randomUUID();
   const staging = path.join(recordDir, `${LOCK_DIR_NAME}.${randomUUID()}.staging`);
+  /** The identity of the lock directory this holder published, once it has one. */
+  let held: { dev: number; ino: number } | undefined;
 
   // The marker's mtime is the holder's sign of life, and something has to keep moving it.
   //
@@ -593,26 +595,62 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
    */
   const release = async (): Promise<void> => {
     clearInterval(heartbeat);
+    if (held === undefined) return; // never published, so nothing under that name is ours
+
+    // Asked BEFORE the canonical name is freed. Review finding [128]: the rename was
+    // unconditional, so a holder that had been reclaimed as stale and then resumed moved its
+    // SUCCESSOR's lock aside. A third writer taking the freed name then made the restore fail,
+    // and the successor — still inside its section — was joined by that third writer. Two
+    // writers in there at once is the lost update this primitive exists to prevent, and it is
+    // not self-healing: the entry is simply absent afterwards, its file reads as
+    // `adopter-owned`, and it is never recorded again.
+    const standing = await lstat(lockDir).catch(() => undefined);
+    if (standing === undefined) return; // already gone
+    if (standing.isSymbolicLink() || !standing.isDirectory()) {
+      // Swapped for something that is not a lock. Not followed and not removed: taking away a
+      // link somebody else put there is the act this whole primitive refuses, and the next run
+      // stops on it with the path named.
+      return;
+    }
+    if (standing.dev !== held.dev || standing.ino !== held.ino) {
+      // Somebody else's lock stands at the name — this holder was reclaimed while it worked.
+      // Freeing the name here is what review finding [128] describes, so nothing is touched.
+      return;
+    }
+
+    // Only now is the name freed, and it is freed by MOVING rather than by unlinking through
+    // it. Review finding [122]: `unlink(lockDir/marker)` resolved the lock name at the moment
+    // of the call, and the marker's name is readable from inside the section — so a directory
+    // swapped for a link, with a file of that name waiting on the other side, had an external
+    // file deleted. `refuseLinkedLockPath` cannot help; it runs once, before acquisition.
     const quarantine = path.join(recordDir, `${LOCK_DIR_NAME}.released-${randomUUID()}`);
     try {
       await rename(lockDir, quarantine);
     } catch {
-      // Gone, or reclaimed by somebody else. Nothing under that name is this holder's to
-      // remove, which is exactly the outcome the old `ENOENT` / `ENOTEMPTY` pair produced.
-      return;
+      return; // gone between the check and the move; nothing there is ours to remove
     }
 
+    // And asked again, of the object now in hand, because the check above and the rename are
+    // two calls: what was moved is proven ours by identity, not by having been at a path.
     const moved = await lstat(quarantine).catch(() => undefined);
     if (moved === undefined) return;
-    if (moved.isSymbolicLink() || !moved.isDirectory()) {
-      // Not a lock at all. Left where it is, under a name nothing will acquire.
+    if (
+      moved.isSymbolicLink() ||
+      !moved.isDirectory() ||
+      moved.dev !== held.dev ||
+      moved.ino !== held.ino
+    ) {
+      // Not the object this holder published. Put it back if the name is still free, and
+      // otherwise leave it where it is rather than overwrite a lock somebody has since taken.
+      await restoreLockDirectory(quarantine, lockDir);
       return;
     }
 
-    const held = await readdir(quarantine).catch(() => undefined);
-    if (held === undefined) return;
-    if (held.length !== 1 || held[0] !== marker) {
-      // Somebody else's lock, moved by a `rename` that could not ask first. Put it back.
+    const markers = await readdir(quarantine).catch(() => undefined);
+    if (markers === undefined) return;
+    if (markers.length !== 1 || markers[0] !== marker) {
+      // Our directory, holding something other than our marker alone. That is not a state this
+      // primitive produces, so it is reported by being left alone rather than cleaned up.
       await restoreLockDirectory(quarantine, lockDir);
       return;
     }
@@ -654,6 +692,14 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
         // the section.
         const published = new Date();
         await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
+        // The object this holder published, by identity. Review finding [128]: release used to
+        // free the canonical NAME before it could tell whose lock was under it, so a stalled
+        // holder that resumed after being reclaimed moved its successor's lock aside — and if a
+        // third writer then took the freed name, the restore failed and two writers were in the
+        // section at once. `dev`/`ino` is what distinguishes the directory this holder created
+        // from any other directory that has since been published at the same path.
+        const own = await lstat(lockDir).catch(() => undefined);
+        if (own !== undefined) held = { dev: own.dev, ino: own.ino };
         return release;
       } catch {
         // Held, or the destination is not publishable. Age decides which.
