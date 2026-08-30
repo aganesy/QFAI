@@ -132,3 +132,79 @@ describe("a bracket expression is a character class, not five literal characters
     ).toBe(true);
   });
 });
+
+describe("glob overlap is decided from both patterns, not from one instance of one", () => {
+  // Review finding [E1]. The check instantiated the NEGATION and asked whether each later
+  // ignore matched that one instance — and two globs can overlap without that instance being in
+  // the intersection.
+  //
+  // The measured case: `!.qfai/evidence/coverage-depth-*.md` instantiates as
+  // `coverage-depth-sample.md`, and a project line `.qfai/evidence/coverage-depth-spec-*.md`
+  // does not match it — while the file that actually exists, `coverage-depth-spec-0017.md`, is
+  // matched by both. The conflict went unseen, the managed block was left where it was, and the
+  // Coverage Depth Matrix stayed ignored: a governance record this repository requires in
+  // version control, silently absent from every clone.
+  //
+  // The two directions of error are not symmetric, which is what makes over-reporting the right
+  // bias: a false conflict only re-appends a negation that was already last, while a missed one
+  // leaves a required file outside version control with nothing to notice it afterwards.
+
+  const MANAGED = "!.qfai/evidence/coverage-depth-*.md";
+
+  it("finds a later ignore that overlaps without covering the negation's own instance", () => {
+    const lines = [".qfai/evidence/*", MANAGED, ".qfai/evidence/coverage-depth-spec-*.md"];
+    expect(
+      negationsOutrankLaterIgnores(lines, [MANAGED]),
+      "the real file coverage-depth-spec-0017.md is matched by both patterns, so the negation " +
+        "is not the last word on it",
+    ).toBe(false);
+  });
+
+  it("still finds the plain case, where the later ignore covers the instance directly", () => {
+    const lines = [MANAGED, ".qfai/evidence/*.md"];
+    expect(negationsOutrankLaterIgnores(lines, [MANAGED])).toBe(false);
+  });
+
+  it("finds a later ignore written as a character class", () => {
+    // The sibling finding, from this side: the class has to translate for the overlap to be
+    // visible at all.
+    const negation = "!.qfai/install-provenance.json";
+    const lines = [negation, ".qfai/install-provenance.[j]son"];
+    expect(negationsOutrankLaterIgnores(lines, [negation])).toBe(false);
+  });
+
+  it("reports no conflict when the later ignores genuinely do not overlap", () => {
+    // The direction that decides whether this is a check or a permanent `false`. Over-reporting
+    // is cheap but not free: a rule that always relocates says nothing, and would hide the day
+    // an actual conflict appears.
+    const lines = [
+      ".qfai/evidence/*",
+      MANAGED,
+      "node_modules/",
+      "dist/",
+      ".qfai/report/*",
+      "*.log",
+    ];
+    expect(
+      negationsOutrankLaterIgnores(lines, [MANAGED]),
+      "none of these can match a coverage-depth matrix, so the negation is still the last word",
+    ).toBe(true);
+  });
+
+  it("ignores comments, blanks and other negations when looking for a conflict", () => {
+    const lines = [
+      MANAGED,
+      "",
+      "# a comment mentioning .qfai/evidence/coverage-depth-anything.md",
+      "!.qfai/evidence/decisions/",
+    ];
+    expect(
+      negationsOutrankLaterIgnores(lines, [MANAGED]),
+      "a comment is not a rule, and a later negation does not re-ignore anything",
+    ).toBe(true);
+  });
+
+  it("reports a missing negation rather than calling it effective", () => {
+    expect(negationsOutrankLaterIgnores([".qfai/evidence/*"], [MANAGED])).toBe(false);
+  });
+});
