@@ -22,6 +22,14 @@
 - US-0003-0018: migration memo authoring (v1.9.0) - migration 実行時に `.qfai/assistant/process/migrations/v<X.Y.Z>-assistant-layer-recut.md` を生成
 - US-0003-0019: assistantPaths.ts SSOT module (v1.9.0) - assistant-tree のパス文字列を単一の TypeScript module から供給し、hard-coded literal を排除
 - US-0003-0020: 旧 layout backwards-compatibility window (v1.9.0) - 旧 `.qfai/assistant/steering/` を 1 minor release window だけ読み取り可能とし、sunset version を `D-DEPRECATED-PATH` warning で明示
+- US-0003-0021: 配布 workflow の hardening (CHG-007) - 既存の配布 validate workflow が least privilege / cancellation 付き concurrency / checkout credential hygiene / bounding を備え、header の Node floor 主張を止め、既存の lockfile 検出 cache 式を保持する
+- US-0003-0022: 配布 action pin ポリシーと trailer 解決 (CHG-007) - 配布 workflow の action 参照を SHA pin しつつ、可読 version を step name 側に置くことで comment-blind な leakage guard の breadth を落とさずに再現性を得る
+- US-0003-0023: layer 分離された credential-free 配布 workflow set (CHG-007) - `qfai-` prefix の複数ファイル構成で layer 別 lane を提供し、adopter が対応スクリプトを宣言するまで全 lane が inert のままである
+- US-0003-0024: 配布 change detection と green-on-skip verdict (CHG-007) - third-party action なしの diff ベース lane 選択が、diff 失敗時に fail open し、空 matrix でも verdict が green になる
+- US-0003-0025: 配布 runner label 間接化 (CHG-007) - 配布 workflow の runner 選択を repository variable 経由にし、default を public label に保ち、誤値時の失敗モードを header table で明示する
+- US-0003-0026: 配布 Node / package manager portability (CHG-007) - adopter の Node version ファイルを優先しつつ不在時は fail open、package manager 解決不能時は fail closed とし、lockfile 検出 install branch を全配布ファイルに拡張する
+- US-0003-0027: 配布 workflow 所有権コントラクト (CHG-007) - QFAI が adopter の workflows ディレクトリで何を所有するかを文書化・テストし、adopter 作成ファイルと `declined` ファイルを構造的に守る
+- US-0003-0028: 配布 set の structural contract gate (CHG-007) - 宣言された期待形状に対して配布 set を assert する gate が、pull request が実際に走らせる経路から semantic drift を落とす
 
 ## US-0003-0016: 4-layer asset-tree + work-log surface seeding
 
@@ -152,3 +160,59 @@
 - Goal: `qfai init` 時に導入プロジェクトのルート `.gitignore` に QFAI 管理ブロック（marker 行 + `.qfai/report/*`, `.qfai/evidence/*`, `.qfai/review/*`, `.qfai/discussion/discussion-*/`, README ファイルの negation）を追記する。旧バージョンで追記されたレガシー行（`!.qfai/review/review-*/`, `!.qfai/review/review-*/**`）は再実行時に自動除去する
 - Non-goals: ユーザー独自の gitignore エントリの変更/削除、review-pack を追跡したい場合のプロジェクト固有 negation 追加（プロジェクト側で明示追加する）
 - Notes: NFR-0012（冪等性）を満たす。`review-*/` ディレクトリはデフォルトで gitignore されるため、必要に応じてプロジェクト側で negation を追加して追跡できる
+
+## US-0003-0021: 配布 workflow の hardening
+
+- Parent: CAP-0003
+- Goal: `qfai init` が配布する `.github/workflows/qfai-validate.yml` が、job-reachable な least-privilege `permissions:` ブロック、cancellation 付きの ref-scoped `concurrency:` group、`persist-credentials: false`、job 単位の `timeout-minutes` と artifact hygiene を備え、header comment が package が `engines` で宣言していない Node floor を主張しなくなる。既存の lockfile 検出 `cache:` 式は置換されずに保持される
+- Non-goals: QFAI 自身の `.github/workflows/**` の hardening（spec-0017 / CAP-0017 が所有）、リポジトリ自身が持つ配布 workflow 複製の廃止（spec-0017）
+- Notes: REQ-0024 を実装する。上流 pack REQ-0014。cascade: `spec-0012/09_delta.md` が記録する配布 workflow の現行形状記述は本変更で stale になる（companion row は spec-0012 側 09_delta）
+
+## US-0003-0022: 配布 action pin ポリシーと trailer 解決
+
+- Parent: CAP-0003
+- Goal: 配布 workflow の全 action 参照が 40-hex commit SHA に pin され、可読な version が step `name:` 側に leading `v` なしで記載されることで、pin の可読性と comment-blind な leakage guard の breadth が同時に成立する。third-party 参照は package-manager availability の最小限 1 件に closed sanctioned set として限定される
+- Non-goals: leakage guard の pattern narrowing、pragma の新設、guard への allow-list entry 追加、QFAI 自身のツリーの pin（そちらは配布サーフェス外なので慣例的 trailer が合法 — spec-0017 が所有）
+- Notes: REQ-0025 を実装する。上流 pack REQ-0015 / OQ-0003。`\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b` は comment 行でも一致するため、慣例的な `# v<X.Y.Z>` trailer は配布ツリーで必ずビルドを落とす。leading `v` を落とした綴りは一致しないことが probe で確認済み。co-change 義務として `packages/qfai/tests/assets/assets.test.ts` の floating major 参照 assertion を同一変更で更新する
+
+## US-0003-0023: layer 分離された credential-free 配布 workflow set
+
+- Parent: CAP-0003
+- Goal: `qfai init` が `qfai-` prefix の複数 workflow ファイルを配布し、layer 別 lane は orchestrator ファイル内の job として表現され、adopter が対応する layer 名スクリプトを宣言するまで各 lane が false 条件で skip される。set 全体で secret を宣言も参照もしない
+- Non-goals: composite-action テンプレートの配布（配布 `.github/` の allow-list が `workflows` のみを許すため構造的に不可能）、secret を消費する配布テンプレート、ephemeral environment / browser backend を前提とする lane
+- Notes: REQ-0026 を実装する。上流 pack REQ-0016 / OQ-0001, OQ-0002, OQ-0012。配布ファイルが他の配布ファイルを参照しないことが、部分 install を「単に不完全」に留める条件（参照先不在は参照側を parse error にし、create-only install に修復経路がない）
+
+## US-0003-0024: 配布 change detection と green-on-skip verdict
+
+- Parent: CAP-0003
+- Goal: 配布 orchestrator の detection job が third-party action を使わない name-only diff + JSON filtering で走る lane を決め、diff 失敗・shallow clone・認識外パスでは warning annotation を出して full superset に fail open し、同一ファイル内の verdict job が空 matrix でも exit 0 する
+- Non-goals: 配布側で third-party change-detection action を使うこと（pin と trailer 問題を adopter 全員に押し付ける）、path filter だけで required check を満たそうとすること
+- Notes: REQ-0027 を実装する。上流 pack REQ-0017 / OQ-0011。QFAI 自身の CI 側は third-party action を使う別実装（spec-0017）であり、surface による意図的な二重実装
+
+## US-0003-0025: 配布 runner label 間接化
+
+- Parent: CAP-0003
+- Goal: 配布 set の全 runner selector が repository variable を読み、その default が public GitHub-hosted label であり、各配布ファイルの header table が variable 名 / default / 誤値時に GitHub が fail fast せず無期限 queue する失敗モードを明示する
+- Non-goals: organization-private label の配布、`qfai.config.yaml` への CI キー追加、runner tier の二段階化（2 つ目の job class が実在してから）
+- Notes: REQ-0028 を実装する。上流 pack REQ-0018 / OQ-0008。誤値が fail fast しないため、knob より default の方がリスクを負う
+
+## US-0003-0026: 配布 Node / package manager portability
+
+- Parent: CAP-0003
+- Goal: 配布 workflow が adopter 自身の Node version ファイルを優先し、不在時は warning 付きで documented literal に fail open する。package manager が解決できない場合は修正方法を名指しする actionable annotation で fail closed する。既存の lockfile 検出 install branch（4 package manager + no-lockfile）は保持され新規配布ファイルにも拡張される
+- Non-goals: 単一 package manager / 単一言語の前提、無条件のファイル由来 Node version 指定、leakage guard 対応を理由にした綴り変更（bare major literal は元々 guard に一致しない）
+- Notes: REQ-0029 を実装する。上流 pack REQ-0019 / NFR-C0013。同じ setup-install 列の 2 つの前提条件が逆方向に degrade する点が load-bearing であり、どちらの節も他方を支配しない
+
+## US-0003-0027: 配布 workflow 所有権コントラクト
+
+- Parent: CAP-0003
+- Goal: QFAI が adopter の workflows ディレクトリ配下で「自身が配布する `qfai-` prefix ファイルのみ」を所有することを、文書化かつテストされたコントラクトとして宣言する。write set は配布名リスト、prune set は過去配布名リストに由来し、provenance を overwrite / prune の前に参照することで adopter 作成ファイルと `declined` ファイルが構造的に守られる
+- Non-goals: unconditional-overwrite refresh コマンドの動詞（上流 pack OQ-0021 で deferred、OQ-0003-0003 として mirror）、導入済みファイルの drift 検出（spec-0006 = `qfai doctor` が所有）、prefix glob による所有判定
+- Notes: REQ-0030 を実装する。上流 pack REQ-0020 の shipped 半分 / OQ-0004, OQ-0020。`packages/qfai/src/cli/commands/init.ts` はルート asset を `force: false` かつ `conflictPolicy: "skip"` でハードコードして copy するため、`qfai init --force` は既に導入済みの workflow を決して更新しない。本 US は所有権の定義のみを与える
+
+## US-0003-0028: 配布 set の structural contract gate
+
+- Parent: CAP-0003
+- Goal: テストスイート内に保持された 1 つの宣言された期待形状に対して配布 set を assert する gate が、lint aggregate または test matrix から実行され、profile 値や failure threshold といった load-bearing な semantic 値の drift で exit 1 する
+- Non-goals: リポジトリ自身の複製との byte-identity 比較（比較対象は spec-0017 の上流 pack REQ-0025 で削除されるため operand が存在しない）、release 専用 gate aggregate への配置、numeric drift scoring
+- Notes: REQ-0031 を実装する。上流 pack REQ-0021 / OQ-0016。ordering: spec-0017 の上流 pack REQ-0025 と同一変更またはそれ以前に着地させる。既存 asset test の ad-hoc string assertion を subsume する際、その test-case annotation は保持または再登録する
