@@ -69,6 +69,32 @@ describe("qfai init contract: steering seed provenance", () => {
       // Each of the three states where the seed comes from; all three must
       // agree with the contract that it is built, not copied.
       expect(doc, `${rel} no longer says where the seed comes from`).toContain("dist/");
+      // ...and on *what* it produces. `seedProjectSteering` writes three
+      // targets, so a two-name list makes the third read as off-contract to
+      // anyone auditing the distributed surface.
+      expect(doc, `${rel} omits .gitkeep from the steering seed`).toContain("`.gitkeep`");
+    }
+  });
+
+  it("enumerates every target seedProjectSteering actually writes", async () => {
+    const init = await readRepo(INIT_SRC);
+    const seedFn = init.slice(init.indexOf("async function seedProjectSteering("));
+    const targets = seedFn.slice(0, seedFn.indexOf("for (const target of targets)"));
+
+    // Read the rel arrays out of the source rather than restating them: a
+    // fourth target added here has to reach the contract too.
+    const written = [...targets.matchAll(/rel: \[([^\]]*)\]/gu)].map((match) =>
+      (match[1] ?? "")
+        .split(",")
+        .map((part) => part.trim().replace(/^"|"$/gu, ""))
+        .filter((part) => part.length > 0)
+        .join("/"),
+    );
+    expect(written).toEqual(["README.md", ".gitkeep", "_templates/entry.md"]);
+
+    const contract = flat(await readRepo(CONTRACT));
+    for (const rel of written) {
+      expect(contract, `the contract omits the seeded ${rel}`).toContain(`\`${rel}\``);
     }
   });
 
