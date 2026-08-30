@@ -547,7 +547,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await expectSymlink(path.join(root, ".claude", "agents", "orchestrator.md"));
       await expectSymlink(path.join(root, ".github", "agents", "orchestrator.agent.md"));
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -566,7 +566,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await expect(lstat(flattened)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -599,7 +599,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect((await lstat(foreignWrapper)).isSymbolicLink()).toBe(true);
       await expect(lstat(retiredWrapper)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -620,7 +620,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(await readFile(padded, "utf-8")).toBe(content);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -650,7 +650,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(dotted, "utf-8")).toBe(dottedContent);
       expect(await readFile(absolute, "utf-8")).toBe(absoluteContent);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -669,7 +669,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect((await lstat(nested)).isSymbolicLink()).toBe(true);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -687,15 +687,15 @@ describe("qfai init", { timeout: 60000 }, () => {
       await symlink("../../.qfai/assistant/agents/retired-agent.md", foreign, "file");
 
       const claudeAgents = path.join(root, ".claude", "agents");
-      await rm(claudeAgents, { recursive: true, force: true });
+      await removeTempTree(claudeAgents);
       await symlink(outside, claudeAgents, process.platform === "win32" ? "junction" : "dir");
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
       expect((await lstat(foreign)).isSymbolicLink()).toBe(true);
     } finally {
-      await rm(root, { recursive: true, force: true });
-      await rm(outside, { recursive: true, force: true });
+      await removeTempTree(root);
+      await removeTempTree(outside);
     }
   });
 
