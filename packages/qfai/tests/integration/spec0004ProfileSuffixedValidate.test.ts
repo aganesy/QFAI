@@ -19,7 +19,7 @@
 // QFAI:SPEC-0004:TC-0004-0066
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile, access } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -30,6 +30,7 @@ import { runValidate } from "../../src/cli/commands/validate.js";
 import { runPrototypingCertify } from "../../src/cli/commands/prototypingCertify.js";
 import { loadConfig } from "../../src/core/config.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
 
@@ -82,7 +83,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await removeTempTree(root);
 });
 
 // ────────────────────────────────────────────────────────────────────────────
