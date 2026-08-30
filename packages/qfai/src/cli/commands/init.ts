@@ -1024,6 +1024,26 @@ function toReportPaths(paths: string[], baseDir: string): string[] {
   return [...new Set(paths.map((absolute) => path.relative(baseDir, absolute)))].sort();
 }
 
+/**
+ * The skip set with everything the run wrote taken out of it.
+ *
+ * De-duplicating each list on its own only settles repeats *within* a list; the
+ * two lists can still name the same path. On a real `--upgrade-assistant-tree`
+ * run the migration writes its destination and books it into `copied`, and the
+ * template copy that follows finds that destination present and books the same
+ * path into `skipped` — so one path was reported as both written and skipped,
+ * and the skip count (the number shown when `--verbose` is off, and therefore
+ * the only thing most operators see) was too high by one per migrated file.
+ *
+ * A write beats a skip: some producer did act on the path, so the categories
+ * are resolved in the writer's favour rather than reported twice. `written` is
+ * already relative, deduplicated and sorted, so the survivors keep their order.
+ */
+function excludeWritten(skippedPaths: string[], writtenPaths: string[]): string[] {
+  const written = new Set(writtenPaths);
+  return skippedPaths.filter((relative) => !written.has(relative));
+}
+
 function listReportPaths(relativePaths: string[]): void {
   for (const relative of relativePaths) {
     info(`    - ${formatReportPath(relative)}`);
@@ -1052,6 +1072,12 @@ function listReportPaths(relativePaths: string[]): void {
  * ソートしないと同じ書き込み集合でも一覧の並びが変わり、プレビューを別
  * チェックアウトと差分比較できない。
  *
+ * リスト内の重複排除だけではカテゴリ間の重複は残る。実行時の
+ * `--upgrade-assistant-tree` では移行処理が移行先を書いて `copied` に積み、
+ * 後続のテンプレートコピーがその移行先を既存とみなして `skipped` に積むため、
+ * 同一パスが written と skipped の両方に出て skipped 件数も膨らむ。書き込まれた
+ * パスは skip ではないので、`excludeWritten` で skipped から除外する。
+ *
  * この 3 リストは `baseDir` 配下のパスだけを扱う。working tree 外への変更
  * (`configureGitSymlinks` の `core.symlinks`) はここには入らないので、その
  * 開示はその書き込み自身が行う。
@@ -1066,7 +1092,7 @@ function report(
   verbose: boolean,
 ): void {
   const writtenPaths = toReportPaths(copied, baseDir);
-  const skippedPaths = toReportPaths(skipped, baseDir);
+  const skippedPaths = excludeWritten(toReportPaths(skipped, baseDir), writtenPaths);
   const removedPaths = toReportPaths(removed, baseDir);
 
   info(`qfai ${label}: ${dryRun ? "dry-run" : "done"}`);

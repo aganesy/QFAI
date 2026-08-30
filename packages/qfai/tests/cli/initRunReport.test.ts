@@ -16,7 +16,7 @@
  * install; the neutral `written` / `would write` covers both.
  */
 
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -40,6 +40,13 @@ function pathsUnder(output: string, heading: string): string[] {
     listed.push(line.slice("    - ".length));
   }
   return listed;
+}
+
+/** The `N` on a `  <heading>: N` count line; 0 when the line is absent. */
+function reportedCount(output: string, heading: string): number {
+  const prefix = `  ${heading}: `;
+  const line = output.split("\n").find((entry) => entry.startsWith(prefix));
+  return line === undefined ? 0 : Number(line.slice(prefix.length));
 }
 
 describe("qfai init run report", { timeout: 60000 }, () => {
@@ -228,6 +235,71 @@ describe("qfai init run report", { timeout: 60000 }, () => {
       const listed = pathsUnder(output, "  would write paths:");
       expect(listed.length).toBeGreaterThan(0);
       expect(listed.filter((entry) => entry.startsWith('"'))).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A real `--upgrade-assistant-tree` run writes the migration target and books
+  // it into `copied`; the template copy that follows then finds the destination
+  // present and books the SAME path into `skipped`. De-duplicating each list on
+  // its own cannot see across the two, so the path was reported as both written
+  // and skipped and inflated the skip count. A path that was actually written is
+  // not a skip.
+  it("does not report a written path as skipped on a real --upgrade-assistant-tree run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(legacy, { recursive: true });
+      await writeFile(path.join(legacy, "quality.md"), "# legacy quality\n", "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+          verbose: true,
+        });
+      });
+
+      const written = pathsUnder(output, "  written paths:");
+      const skipped = pathsUnder(output, "  skipped paths:");
+      const migrated = path.join(".qfai", "assistant", "constitution", "quality.md");
+
+      // The migration really wrote the file — this is not a dry run.
+      await expect(readFile(path.join(root, migrated), "utf-8")).resolves.toContain(
+        "# legacy quality",
+      );
+      expect(written).toContain(migrated);
+      expect(skipped).not.toContain(migrated);
+      // No path may be reported under both categories.
+      expect(written.filter((entry) => skipped.includes(entry))).toEqual([]);
+      // The count has to match the list the operator is shown.
+      expect(reportedCount(output, "skipped")).toBe(skipped.length);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Over-correction pin: only paths that were actually written leave the skip
+  // set. A no-op re-run writes nothing, so every skip must survive.
+  it("keeps genuinely skipped paths in the skipped list", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const secondRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
+      });
+
+      const written = pathsUnder(secondRun, "  written paths:");
+      const skipped = pathsUnder(secondRun, "  skipped paths:");
+      expect(skipped).toContain("DESIGN.md");
+      expect(written).not.toContain("DESIGN.md");
+      expect(skipped.length).toBeGreaterThan(1);
+      expect(reportedCount(secondRun, "skipped")).toBe(skipped.length);
     } finally {
       await rm(root, { recursive: true, force: true });
     }
