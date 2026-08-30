@@ -143,12 +143,15 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain(
-        "a reseed matches rows on `Boundary`, not on `Selector` or `TC-Refs`",
-      );
+      expect(rules).toContain("identified by the (`TC-Refs`, `Boundary`) pair");
+      // A slug is unique inside its own TC and nowhere wider, so `Boundary`
+      // alone is not a ledger-wide key: a generic slug (`not-found`) recurs
+      // across TCs and would match a sibling of the wrong one.
+      expect(rules).toContain("`Boundary` on its own is not a ledger-wide key");
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain("identified by its `Boundary` cell");
+      expect(template).toContain("matches on the (`TC-Refs`, `Boundary`) pair");
       expect(template).toContain(
         "A boundary dropped from a surviving TC has its row retired the same way",
       );
@@ -167,7 +170,10 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         checklists.indexOf("## Phase 2b"),
         checklists.indexOf("## Phase 2c"),
       );
-      expect(phase2b).toContain("a reseed matches rows on `Boundary` and on nothing else");
+      expect(phase2b).toContain(
+        "a reseed matches rows on the (`TC-*`, `Boundary`) pair and on nothing else",
+      );
+      expect(phase2b).toContain("The pair, not the slug");
       expect(phase2b).toContain("it is the runtime test name");
       expect(phase2b).toContain("is written only here, and is never rewritten downstream");
 
@@ -212,7 +218,14 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(phase2b).toContain("Migrate legacy aggregate rows before applying the delta");
       expect(phase2b).toContain("the preserve rule above does not protect it");
-      expect(phase2b).toContain("reset that row to `todo`");
+      // The disposal is per-row and asymmetric: a row that maps to exactly one
+      // boundary may be kept and reset, one that maps to none must be retired.
+      // A reset row with no `Boundary` stays selectable, so `/qfai-implement`
+      // would run the whole matrix as one RED ahead of the split rows — the
+      // shape the migration exists to remove.
+      expect(phase2b).toContain("When its `Selector` names **exactly one** boundary, keep the row");
+      expect(phase2b).toContain("When it names none, or names several, **retire it**");
+      expect(phase2b).toContain("A reset is not an option there");
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
@@ -239,14 +252,18 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         checklists.indexOf("## Phase 2b"),
         checklists.indexOf("## Phase 2c"),
       );
-      expect(phase2b).toContain("a row past `todo` moves backwards only under an approved `CR-*`");
+      expect(phase2b).toContain("Gate the whole migration on one approved `CR-*`");
       expect(phase2b).toContain("qfai-implement/references/change-request-reset.md");
       expect(phase2b).toContain("constitution/drift-protocol.md");
       expect(phase2b).toContain("listing the aggregate rows by `TDD-ID`");
-      // The unapproved half must still run: appending the missing boundary
-      // rows moves no Status, so the split is never abandoned for want of a CR.
-      expect(phase2b).toContain("rewrite no `Status` and need no approval");
-      expect(phase2b).toContain("never abandon the split for want of it");
+      // The append is not the free half. `drift-protocol.md` puts adding,
+      // removing and re-scoping ledger rows on the upstream path, and landing
+      // the appends alone would leave the aggregate row and its N replacements
+      // both selectable if the CR were then rejected or stalled.
+      expect(phase2b).toContain("it lands whole or not at all");
+      expect(phase2b).toContain("not the appended rows, not the `Boundary` column");
+      expect(phase2b).toContain("must leave the ledger exactly as it was, not half re-split");
+      expect(phase2b).not.toContain("need no approval");
 
       const reset = await read(
         tree,
@@ -256,13 +273,15 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
 
       const template = await read(tree, TEMPLATE);
       expect(template).toContain(
-        "a row past `todo` is reset or retired only under an approved `CR-*` that",
+        "That migration is a\nsingle re-scope and lands whole or not at all",
       );
+      expect(template).toContain("until approval change nothing here");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
       expect(skill).toContain(
-        "its own `Status` moves backwards only under an approved\n   `CR-*` that enumerates it",
+        "the whole migration (appended rows included) waits on an\n   approved `CR-*` that enumerates the aggregate rows",
       );
+      expect(skill).toContain("maps to no single boundary is retired, never reset");
     });
 
     it(`${tree}: the delta reconciles changed and removed TCs, not only new ones`, async () => {
@@ -372,6 +391,56 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "## An empty ledger is a fault only when `06_Test-Cases.md` disagrees",
       );
       expect(preconditions).toContain('Report\n  "nothing to do" and exit');
+    });
+
+    it(`${tree}: every surface that tells you how to seed says "per boundary"`, async () => {
+      // The recovery advice a missing ledger prints, and the ATDD note on a
+      // spec with no ATDD-owned rows, both still said "one row per
+      // coverage-target TC". Follow either and a matrix TC comes back as a
+      // single aggregate row — the shape this rule exists to prevent — so the
+      // in-repo guidance has to agree with the checklist.
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance.replace(/\s+/g, " ")).toContain(
+        "seeds ledger rows per **coverage-target** `TC-*` — one per independently observable boundary",
+      );
+      expect(provenance).not.toContain("seeds one row\nper coverage-target `TC-*`");
+
+      // The runtime advice lives in the validator, not the shipped tree, so it
+      // is read from source once rather than per tree.
+      const validator = await readFile(
+        path.join(repoRoot, "packages/qfai/src/core/validators/tddList.ts"),
+        "utf-8",
+      );
+      expect(validator).not.toContain("with one row per coverage-target TC");
+      expect(validator).toContain(
+        "with one row per independently observable boundary of a coverage-target TC",
+      );
+    });
+
+    it(`${tree}: the Boundary invariant names the rule that enforces it`, async () => {
+      // A rule stated only in prose is a rule with no reader: sibling rows
+      // could leave `Boundary` empty, or spend one slug twice, and validate
+      // clean. Both surfaces name the codes so an operator can connect the
+      // finding to the rule.
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("TDDLIST_SPLIT_BOUNDARY_MISSING");
+      expect(rules).toContain("TDDLIST_SPLIT_BOUNDARY_DUPLICATE");
+      // The severities are not interchangeable: a legacy ledger cannot be
+      // migrated before its CR is approved, so the missing slug must not fail
+      // `--fail-on error`; a duplicate can only come from a Phase 2b that
+      // already writes the column.
+      expect(rules).toContain("(`warning`, since a legacy ledger cannot be migrated");
+      expect(rules).toContain("(`error`, since only a Phase 2b that already writes the column");
+
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("TDDLIST_SPLIT_BOUNDARY_MISSING");
+      expect(template).toContain("TDDLIST_SPLIT_BOUNDARY_DUPLICATE");
     });
 
     it(`${tree}: a spec seeded from the template passes validateTddList`, async () => {

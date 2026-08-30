@@ -30,8 +30,10 @@ observable boundary the row owns, seeded at Phase 2b while `Test file` is still
 so neither tells two rows of one `TC-*` apart, and `Selector` cannot either: it
 is the runtime test name, which `/qfai-implement` rewrites when a review-fix
 handback replaces the test. `Boundary` is written here and never rewritten
-downstream, so the reseed matches on it; matching on `Selector` would read such
-a rename as one boundary dropped and another added.
+downstream, so the reseed matches on the (`TC-Refs`, `Boundary`) pair; matching
+on `Selector` would read such a rename as one boundary dropped and another
+added. It is the pair and not the slug alone: a slug is unique inside its own
+`TC-*` and nowhere wider, so a generic one (`not-found`) recurs across TCs.
 
 Reseeding is a **delta**, never a regeneration, and its unit is the boundary,
 not the `TC-*`: a row whose boundary is unchanged keeps its `TDD-ID`, `Status`,
@@ -51,13 +53,17 @@ obligation that no longer exists.
 A ledger seeded before this rule holds **one** row for a matrix-shaped TC and no
 `Boundary` column.
 Such a legacy aggregate row is not unchanged and the delta does not preserve it:
-add the column and re-split it into one row per boundary. Appending the missing
-rows needs no approval; moving the aggregate row's own `Status` backwards does —
-a row past `todo` is reset or retired only under an approved `CR-*` that
-enumerates it
-(`.qfai/assistant/skills/qfai-implement/references/change-request-reset.md`).
-Raise that CR when the row's `Selector` names no single boundary or its `Status`
-is past `todo`, and leave the row as it stands until it is approved. A single
+add the column and re-split it into one row per boundary. That migration is a
+single re-scope and lands whole or not at all — appending the boundary rows
+while the aggregate row still stands covers the TC twice, and
+`/qfai-implement` would run the whole matrix as one RED before reaching the
+split rows. Gate all of it on one approved `CR-*` that enumerates the aggregate
+rows
+(`.qfai/assistant/skills/qfai-implement/references/change-request-reset.md`),
+and until approval change nothing here. Once approved: keep the aggregate row
+only when its `Selector` names exactly one boundary — write that slug into
+`Boundary` and reset a `Status` past `todo` — and retire it whenever it maps to
+no single boundary, since a row without a `Boundary` stays selectable. A single
 RED stops at the first failing assert, so an aggregate row's `Evidence` proves
 no boundary in full.
 
@@ -94,9 +100,12 @@ Optional columns, appended after the required eight:
 | US-Refs      | E2E obligation, on an `E2E` row                           |
 | CON-API-Refs | API obligation, on an `API` row                           |
 
-`Boundary` is written by `/qfai-sdd` Phase 2b and by nothing else — it is what
-a reseed matches on, so `/qfai-implement` never rewrites it even when a
-review-fix handback changes `Selector` or `Test file`.
+`Boundary` is written by `/qfai-sdd` Phase 2b and by nothing else — paired with
+`TC-Refs` it is what a reseed matches on, so `/qfai-implement` never rewrites it
+even when a review-fix handback changes `Selector` or `Test file`. `validate`
+requires it once a `TC-*` holds more than one row: siblings with no slug raise
+`TDDLIST_SPLIT_BOUNDARY_MISSING` (`warning`) and two siblings sharing one slug
+raise `TDDLIST_SPLIT_BOUNDARY_DUPLICATE` (`error`).
 
 See `.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`
 for the full rules.

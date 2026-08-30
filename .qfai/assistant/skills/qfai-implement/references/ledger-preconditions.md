@@ -15,8 +15,10 @@ handback rewrites `Selector` and `Test file`, never `Boundary`, so the next
 reseed still matches the row it belongs to. A ledger seeded before that rule can
 still hold one aggregate row for a matrix TC; rerun `/qfai-sdd <spec-id>` to have
 Phase 2b re-split it — splitting a row in-cycle is an upstream edit this skill
-does not own, and resetting an aggregate row already past `todo` needs an
-approved `CR-*` per `references/change-request-reset.md`.
+does not own, and the re-split lands whole or not at all under an approved
+`CR-*` enumerating the aggregate rows, per
+`references/change-request-reset.md`. Until that CR is approved the ledger is
+unchanged, so an aggregate row you meet is still the row to execute.
 `US-*` / `CON-API-*` are ATDD obligations traced by `QFAI:`
 annotations, not ledger rows — they never appear as rows here.
 
