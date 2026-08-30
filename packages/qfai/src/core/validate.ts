@@ -48,6 +48,7 @@ import {
   validatePrototypingEvidence,
   validateScreenIdCasing,
   validateCompletionCertificateIssues,
+  validatePrototypingDelegationMap,
   validateConfigReferenceIntegrity,
   validatePrototypingArtifactRefIntegrity,
   validateSpecIdLinkage,
@@ -434,6 +435,7 @@ async function runPrototypingValidators(
     ...(await validateConfigReferenceIntegrity(root, config)),
     ...(await validatePrototypingArtifactRefIntegrity(root, config)),
     ...(await validateSpecIdLinkage(root, config)),
+    ...(await validatePrototypingDelegationMap(root)),
   ];
   // CHG-006 prototyping-mode relaxation: under `mode: exploration` the
   // soft-rubric gates (QFAI-CRIT-008, QFAI-DCON-030..032) downgrade
