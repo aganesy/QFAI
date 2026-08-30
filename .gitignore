@@ -60,3 +60,16 @@ coverage/
 .qfai/discussion/*
 .qfai/review/*
 .qfai/state.json
+!.qfai/
+!.qfai/evidence/
+!.qfai/decisions/
+!.qfai/decisions/**
+!.qfai/evidence/decisions/
+!.qfai/evidence/decisions/**
+!.qfai/evidence/change-request-*.md
+!.qfai/evidence/decision-*.md
+!.qfai/evidence/coverage-depth-*.md
+!.qfai/review/
+!.qfai/review/.legacy-packs
+!.qfai/install-provenance.json
+
