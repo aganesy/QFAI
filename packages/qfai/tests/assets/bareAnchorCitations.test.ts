@@ -36,9 +36,9 @@ function slugify(headingText: string): string {
 function collectHeadingSlugs(content: string): Set<string> {
   const slugs = new Set<string>();
   for (const line of content.split(/\r?\n/)) {
-    const heading = /^#{1,6}\s+(.*)$/.exec(line);
-    if (heading) {
-      slugs.add(slugify(heading[1]));
+    const headingText = /^#{1,6}\s+(.*)$/.exec(line)?.[1];
+    if (headingText !== undefined) {
+      slugs.add(slugify(headingText));
     }
   }
   return slugs;
@@ -61,7 +61,9 @@ describe("bare `#anchor` citations in shipped assistant markdown", () => {
 
       lines.forEach((line, index) => {
         for (const match of line.matchAll(BARE_ANCHOR_SPAN)) {
-          const anchor = match[1].slice(1);
+          const span = match[1];
+          if (span === undefined) continue;
+          const anchor = span.slice(1);
           if (!slugs.has(anchor)) {
             dangling.push(
               `${path.relative(repoRoot, filePath).replace(/\\/g, "/")}:${index + 1}: #${anchor}`,
