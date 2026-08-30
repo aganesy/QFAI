@@ -57,7 +57,7 @@ type ReviewerFinding = {
 };
 
 /**
- * Control characters, which no file path, job id, rule name or lane detail contains.
+ * Does this field carry a control character? No file path, job id, rule name or lane detail does.
  *
  * C0 and DEL. Review finding [40]: these reports come out of `.qfai/review/**`, a directory a
  * pull request writes, and the fields here are passed through to `Issue` — where the GitHub
@@ -65,14 +65,28 @@ type ReviewerFinding = {
  * split the command in two and let a fork's pull request inject one of its own. The formatter
  * now escapes what it emits, which is the fix for every producer; this is the other half, and
  * it is worth having: a payload carrying a newline is corrupt whoever eventually renders it.
+ *
+ * Scanned by CODE POINT rather than matched by a regular expression. The pattern needed an
+ * `eslint-disable` for `no-control-regex`, and `.instruction/00_universal/quality.md` forbids
+ * adding one of those without the user asking for it — a rule this change had broken. Reading
+ * the code points needs no suppression and says the same thing more directly.
+ *
+ * @param value the field as the lane reported it
+ * @returns whether it carries a C0 control character or DEL
  */
-// eslint-disable-next-line no-control-regex -- the point of this pattern is the control range
-const LANE_CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
+function hasLaneControlCharacter(value: string): boolean {
+  for (const char of value) {
+    const code = char.codePointAt(0);
+    if (code === undefined) continue;
+    if (code <= 0x1f || code === 0x7f) return true;
+  }
+  return false;
+}
 
 /** One lane-reported field, or `undefined` when the report omitted it or corrupted it. */
 function laneField(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined;
-  if (LANE_CONTROL_CHARS.test(value)) return undefined;
+  if (hasLaneControlCharacter(value)) return undefined;
   const trimmed = value.trim();
   return trimmed.length === 0 ? undefined : trimmed;
 }

@@ -85,6 +85,7 @@
     "tests/scripts/workflowHygiene.test.ts",
     "tests/scripts/workflowHygieneRequiredContext.test.ts",
     "tests/scripts/testTypeCheckEnumeration.test.ts",
+    "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/unit/buildCommand.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
