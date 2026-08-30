@@ -29,6 +29,13 @@ run.
   approved upstream reset has its retained GREEN withdrawn, not resumed; a row
   blocked at `todo` or `red` never wrote the GREEN this form points at. Both
   take the ordinary classification.
+- **Or satisfied by pre-existing production state that no row and no work
+  order created** — a regression guard over a property the system already had
+  before this spec existed. **Not an anomaly** either: nothing built the
+  property, so there is no sibling row to cite and no route to name, and a row
+  pushed to `exception` because the field had no honest value is a
+  classification failure rather than a defect in the row. `Satisfied-by` takes
+  the artifact **and the property it already had** (step 1).
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -41,7 +48,12 @@ The row still needs to be falsifiable, so substitute falsifiability evidence
 for the natural RED and let the row proceed to `green` and `done`:
 
 1. Record `Satisfied-by` — **the sibling `TDD-NNNN` whose implementation
-   already satisfies this obligation**.
+   already satisfies this obligation**, or, on the three branches after it, the
+   production path and symbol, this row's own row id and round, or the artifact
+   **plus the property it already had** — never the artifact alone, because a
+   file name says nothing about what made the predicate true. A decision record
+   id is accepted where the property was established by a decision rather than
+   by code.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
    **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
@@ -101,6 +113,15 @@ for the natural RED and let the row proceed to `green` and `done`:
    `Falsifiability result`. It does **not** substitute for GREEN: the row still
    records a `GREEN command` / `GREEN result` from a run with the predicate
    intact, either the original passing run or an explicit re-run.
+
+## The seam is not production code
+
+When what satisfies the obligation is the **seam** — the interface the test
+reaches through, an exported helper, a fixture builder — record it as the seam
+and name it. Do not dress it as a production path: the seam exists for the
+test, so citing it as production state claims the system does something it does
+not. This recurs in every spec, which is why it is named here instead of being
+re-derived by each author.
 
 ## Effect on the gates
 

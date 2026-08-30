@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-23T00:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "2e1d5d9f2",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 8 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 16 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 15 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B1+M4+m2+A1 = 8, B6+M4+m4+A2 = 16 and B2+M4+m3+A6 = 15",
+  "notes": "Round 20 reviewed round 19's repairs and found that four of them opened new holes in the place they closed. The lexer blocker is the twelfth spelling and it lives inside the bookkeeping round 19 added to close the eleventh: `cat <<A <<B` is two here-documents whose data begins in different places, both were computed from the line end, so they shared a dataStart, the mask's region lookup matched only the first, and the walk went through the second's data as code. The corpus guard's widened needle LOST a stated site the narrow one caught while double-counting another, so the site total still came to four; widening the region terminators to any heading level made a `#` inside a fence end a section, restoring round 15's phantom-member finding; and `BULLET` still called a blockquoted line an assertion sixty lines below the import of the function that calls it a quotation. The gate found a fifth route into an adopter tree — a file with no shebang, no executable bit and no known name, run as `sh <file>` — and a third init source tree that nothing walked. It also found every branch of `initMustNotShip` exercised by nothing on any platform, and three defects in the bash oracle committed one round earlier, two of them silent, including a missing `bash` reading as a PASS. The completion review judged all five rewritten lessons supported by what happened for the first time, and found three of them violated by the commit that rewrote them. Gap 10 was filed with a count its own enumeration contradicted, a universal seven counter-examples refute, and a citation of lesson 5 for something lesson 5 does not say — and the real gap turned out to be a contract gap, since the matrix's enumeration and its guard both key on the cross rather than the warning."
+}

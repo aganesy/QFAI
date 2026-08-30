@@ -6,7 +6,7 @@ import fg from "fast-glob";
 import type { QfaiConfig } from "../config.js";
 import type { Issue } from "../types.js";
 import { computeContrastRatio } from "../uiux/contrastRatio.js";
-import { parseHtmlMock, extractTokenComments } from "../uiux/htmlMockParser.js";
+import { extractTokenComments } from "../uiux/htmlMockParser.js";
 import { collectHtmlMockBlocks } from "./htmlMockBlocks.js";
 import { issue } from "./utils.js";
 
@@ -20,7 +20,6 @@ export async function validateHtmlMock(
   config: QfaiConfig,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
-  const startTime = performance.now();
   const budget = config.uiux?.htmlMockTimeout ?? 2000;
 
   const patterns = [
@@ -46,8 +45,32 @@ export async function validateHtmlMock(
     }
   }
 
+  // Nothing to parse, so nothing to load. Moving the import off module scope stopped every `qfai`
+  // command paying jsdom's 910 ms; importing it here regardless handed that cost straight back to
+  // every `validate` run, including the overwhelmingly common one with no mock block at all.
+  if (mockBlocks.length === 0) {
+    return issues;
+  }
+
+  // Loaded here, not at module scope: this is the only production caller, and the module it pulls
+  // in requires jsdom, which costs 910 ms measured. Static, every qfai command paid it.
+  const { parseHtmlMock } = await import("../uiux/htmlMockDom.js");
+
+  // The clock starts AFTER the load, and that is the finding rather than a tidiness.
+  //
+  // `htmlMockTimeout` is a budget for parsing mock blocks — the message it produces says "All
+  // blocks were validated" — and while the clock started above it, the one-off cost of pulling in
+  // jsdom was charged to it. Measured at 910 ms, so every project configuring anything under a
+  // second raised QFAI-MOCK-099 on every run however fast its blocks parsed, and
+  // `--fail-on warning` then failed the run. The comment where the import used to sit predicted
+  // exactly this and the code was arranged the other way round.
+  //
+  // The load is a real cost and it is still paid; it is simply not what this budget is about, and
+  // it is paid once per process rather than per block.
+  const startTime = performance.now();
+
   for (const block of mockBlocks) {
-    const result = parseHtmlMock(block.html);
+    const result = await parseHtmlMock(block.html);
 
     for (const err of result.parseErrors) {
       issues.push(
