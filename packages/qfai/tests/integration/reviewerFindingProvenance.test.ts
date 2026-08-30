@@ -33,6 +33,21 @@ const FINDING_CLASSIFICATION = path.join(
   "references",
   "finding-classification.md",
 );
+const CONFIGURE_SKILL = path.join(assistantDir, "skills", "qfai-configure", "SKILL.md");
+const REVIEW_ARTIFACT_LAYOUT = path.join(
+  assistantDir,
+  "skills",
+  "qfai-implement",
+  "references",
+  "review-artifact-layout.md",
+);
+const EVIDENCE_REVISION = path.join(
+  assistantDir,
+  "skills",
+  "qfai-implement",
+  "references",
+  "evidence-revision.md",
+);
 const REVIEWER_AGENTS = [
   path.join(assistantDir, "agents", "completion-reviewer.md"),
   path.join(assistantDir, "agents", "implementation-reviewer.md"),
@@ -70,6 +85,28 @@ function headingSlugs(markdown: string): Set<string> {
   }
   return slugs;
 }
+
+/**
+ * The body of one `###` section, so a rule can be asserted against the section
+ * that states it rather than against the whole document — several of these
+ * documents legitimately use the same tokens elsewhere for a different purpose.
+ */
+function section(markdown: string, heading: string): string {
+  const start = markdown.indexOf(`### ${heading}\n`);
+  if (start < 0) return "";
+  const rest = markdown.slice(start + heading.length + 5);
+  const end = rest.search(/^#{1,3} /m);
+  return end < 0 ? rest : rest.slice(0, end);
+}
+
+const STAGES_WITHOUT_A_DRAIN = [
+  "/qfai-sdd",
+  "/qfai-atdd",
+  "/qfai-configure",
+  "/qfai-verify",
+  "/qfai-discussion",
+  "/web-research",
+] as const;
 
 describe("reviewer finding provenance", () => {
   it("keeps a demonstrable defect blocking without requiring an upstream ID", async () => {
@@ -214,6 +251,18 @@ describe("reviewer finding provenance", () => {
     expect(skill).toMatch(
       /0 blocking reviewer issues remain, and this spec's `## Record defects` queue is drained/,
     );
+    // The gate that actually enforces the drain must say the same thing the
+    // rule says. It restated the superseded either/or — "repaired in place or
+    // converted to a bug report" — so a spec could complete on the report
+    // alone with the wrong Evidence cell still wrong, which is exactly what
+    // the corrected rule two documents up forbids.
+    expect(skill).not.toMatch(/repaired in place or converted to/);
+    expect(skill).toMatch(/queue is drained[\s\S]{0,220}\*\*repaired in place\*\*/);
+    expect(skill).toMatch(/\*\*also\*\* owes a `validateTddList` bug report/);
+    expect(skill).toMatch(/never stands in for the repair/);
+    expect(skill).toMatch(/repair is the only close/);
+    // …and the no-third-exit clause travels with it.
+    expect(skill).toMatch(/cannot be repaired honestly[\s\S]{0,120}`defect:code-quality`/);
     // …while still not gating any individual row's `done`.
     for (const doc of [drift, classification]) {
       expect(doc).toMatch(/never holds an\s*\n?\s*individual row out of `done`/);
@@ -239,33 +288,106 @@ describe("reviewer finding provenance", () => {
       // …and a "repair" that moves the revision is a code change, not a repair.
       expect(doc.replace(/\s+/g, " ")).toContain("is not a record repair");
     }
-    expect(drift).toMatch(/of the role that issued the verdict/);
+    // Wrap-tolerant: the sentence is the rule, its wrap column is not.
+    expect(drift.replace(/\s+/g, " ")).toContain("of the role that issued the verdict");
     expect(drift).toMatch(/spends no round|costs no round/);
-    expect(baseline).toMatch(/re-attested where a reviewer hashed it/);
+    expect(baseline).toMatch(/re-attested in a new pack where a reviewer hashed it/);
   });
 
-  it("withholds the record class from a stage with nowhere to drain it", async () => {
-    // The baseline is read by every shared stage, but the queue is defined by a
-    // spec-scoped evidence file and a completion boundary. A stage with neither
-    // would file entries nothing consumes — the round dropped AND the defect
-    // dropped, which is the outcome the queue exists to prevent.
-    const [baseline, drift] = await Promise.all([
+  it("re-attests in a new pack instead of rewriting the sealed one", async () => {
+    // A verdict is stored in a `review-<timestamp>/` pack fixed by a
+    // `Review pack seal` the completion gate recomputes. Replacing that
+    // verdict's `Audited evidence hash` line in place breaks the seal by
+    // construction; replacing only the evidence file's copy leaves the sealed
+    // reviewer response carrying a hash nothing agrees with. Either way the
+    // repair is unverifiable, so the re-attestation needs a pack and a seal of
+    // its own that the gate can recompute.
+    const [drift, classification, skill, layout, revision] = await Promise.all([
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+      readFile(IMPLEMENT_SKILL, "utf-8"),
+      readFile(REVIEW_ARTIFACT_LAYOUT, "utf-8"),
+      readFile(EVIDENCE_REVISION, "utf-8"),
+    ]);
+    // The superseded instruction — restamp the verdict's own line — is gone.
+    expect(drift).not.toMatch(/It replaces the\s+`Audited evidence hash` line/);
+    for (const doc of [drift, classification]) {
+      expect(doc).toMatch(/`Review pack seal`/);
+      expect(doc.replace(/\s+/g, " ")).toMatch(
+        /its own `review-<timestamp>\/` pack|a pack of its own/,
+      );
+      expect(doc.replace(/\s+/g, " ")).toContain("the pack it supersedes is left untouched");
+    }
+    // The artifact and its seal exist as named fields, so a validator has
+    // something to recompute rather than an untraceable edit.
+    for (const doc of [drift, classification, skill, revision]) {
+      expect(doc).toContain("Record re-attestation pack seal");
+    }
+    // The gate recomputes the superseding hash and both seals.
+    expect(skill).toMatch(/compared against \*\*that\*\* hash and not the superseded original/);
+    expect(skill.replace(/\s+/g, " ")).toContain("beside the round's `Review pack seal`");
+    // The pack layout recognizes the shape, so it is not an ad-hoc directory.
+    expect(layout).toMatch(/record re-attestation/i);
+    expect(layout).toMatch(/not a round/);
+    // It is not a round, so it takes no `Round N:` prefix.
+    for (const doc of [drift, classification, revision]) {
+      expect(doc).toMatch(/not a `Round N:` pack|no `Round N:` prefix/);
+    }
+  });
+
+  it("withholds the record class from every stage with no drain, not just web-research", async () => {
+    // The baseline is read by every shared stage, but only `/qfai-implement`
+    // drains the queue. Barring `/web-research` alone still let a `/qfai-sdd`,
+    // `/qfai-atdd`, `/qfai-configure`, `/qfai-verify` or `/qfai-discussion`
+    // reviewer file an advisory nothing consumes — the round dropped AND the
+    // defect dropped, which is the outcome the queue exists to prevent.
+    const [baseline, drift, classification] = await Promise.all([
       readFile(DELEGATION_BASELINE, "utf-8"),
       readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
     ]);
-    for (const doc of [baseline, drift]) {
-      expect(doc).toMatch(/The class needs a queue/);
-      expect(doc).toMatch(/web-research/);
+    for (const doc of [baseline, drift, classification]) {
+      expect(doc).toMatch(/needs a drain/);
+      expect(doc).toMatch(/MUST NOT/);
+      for (const stage of STAGES_WITHOUT_A_DRAIN) expect(doc).toContain(stage);
     }
-    // The queue's home is the stage's evidence file, so each stage can find it.
-    expect(drift).toContain(".qfai/evidence/<stage>-<spec-id>.md");
-    expect(baseline).toContain(".qfai/evidence/<stage>-<spec-id>.md");
-    expect(drift).toContain("configure-<spec-id>.md");
-    expect(drift).toContain("sdd-<spec-id>.md");
-    // A stage without a queue does not lose the finding — it keeps the class it
+    // The operative rule is a property of the stage's own completion contract,
+    // so a stage that adds the drain gains the class without editing this list.
+    expect(drift).toMatch(/completion\s+conditions must require this queue drained/);
+    expect(drift).toMatch(/gains\s+the class by adding the drain to its completion conditions/);
+    // A stage without a drain does not lose the finding — it keeps the class it
     // would otherwise have had.
-    expect(baseline).toMatch(/keeps the class the finding would otherwise have had/);
+    expect(baseline).toMatch(/keeps the class it would otherwise have had/);
     expect(drift).toMatch(/blocking under the rule it names/);
+  });
+
+  it("names the queue's home from each stage's own evidence file, not a pattern", async () => {
+    // `<stage>-<spec-id>.md` generalized a spec-scoped shape onto stages that
+    // do not have one: `/qfai-configure`'s only evidence file is
+    // `configure-<run-id>.md`, so the queue pointed at a path no run creates
+    // and the orchestrator had nowhere to file the entry.
+    const [drift, classification, configureSkill] = await Promise.all([
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+      readFile(CONFIGURE_SKILL, "utf-8"),
+    ]);
+    // The shipped path this has to agree with.
+    expect(configureSkill).toContain(".qfai/evidence/configure-<run-id>.md");
+    expect(configureSkill).not.toContain("configure-<spec-id>.md");
+    const queue = section(drift, "The record-defect queue");
+    expect(queue).not.toEqual("");
+    // The superseded derivation, and the file it invented, are both gone.
+    expect(queue).not.toMatch(/`\/qfai-sdd` files in/);
+    expect(queue).not.toContain("sdd-<spec-id>.md");
+    expect(queue).toMatch(/Do not derive the path from a\s+`<stage>-<spec-id>\.md` pattern/);
+    for (const doc of [queue, classification]) {
+      expect(doc).toContain(".qfai/evidence/configure-<run-id>.md");
+      // The home is read off the stage's own completion contract instead.
+      expect(doc).toMatch(/names its own evidence file/);
+    }
+    // …and the one stage that does drain still names its real files.
+    expect(queue).toContain(".qfai/evidence/implement-<spec-id>.md");
+    expect(queue).toContain(".qfai/evidence/atdd-<spec-id>.md");
   });
 
   it("keeps an evidence-integrity violation blocking instead of record class", async () => {

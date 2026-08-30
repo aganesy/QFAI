@@ -333,22 +333,29 @@ Making `record:*` advisory removes the round it used to force. It does not remov
 the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
 one queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
 
-- **Where.** A `## Record defects` section in the evidence file of the stage whose review raised
-  it: `.qfai/evidence/<stage>-<spec-id>.md`, so `/qfai-sdd` files in `sdd-<spec-id>.md` and
-  `/qfai-configure` in `configure-<spec-id>.md`. For a `/qfai-implement` review that is
+- **Where.** A `## Record defects` section in the evidence file the reviewing stage's **own
+  completion contract** names. For a `/qfai-implement` review that is
   `.qfai/evidence/implement-<spec-id>.md` when that file exists, otherwise
   `.qfai/evidence/atdd-<spec-id>.md` — the same file rule the spec-level checkpoint boundary uses,
-  so a spec never has this queue in two places.
+  so a spec never has this queue in two places. **Do not derive the path from a
+  `<stage>-<spec-id>.md` pattern.** Each stage names its own evidence file and not every one of
+  them is spec-scoped — `/qfai-configure` writes `.qfai/evidence/configure-<run-id>.md`, one per
+  run, and has no `configure-<spec-id>.md` at all — so the pattern named files no stage creates.
   Never `08_Open-questions.md`: that file is upstream SSOT owned by `/qfai-sdd` (see
   `#core-rule`), and a record defect is not a product obligation.
-- **The class needs a queue, so a stage without one does not use it.** Every stage sharing
-  `shared-skill-delegation-baseline.md` reads the provenance rules, but the queue above is defined
-  by a spec-scoped evidence file and a stage completion boundary to drain it at. A stage that has
-  neither — `/web-research`, which is not spec-scoped — has nowhere to file an entry and nothing
-  that would consume it, so its reviewers MUST NOT classify a finding `record:*`; it keeps the
-  class it would have had, blocking under the rule it names. A class whose entries are written
-  where nothing drains them is the round-dropped-and-defect-dropped outcome this queue exists to
-  prevent, and it is worse in the stages that never gained the queue than the round ever was.
+- **The class needs a drain, so a stage whose completion contract has none does not use it.** Every
+  stage sharing `shared-skill-delegation-baseline.md` reads the provenance rules, but an entry is
+  only worth filing where something consumes it, and the queue above is defined as much by the
+  drain as by the destination. The test is textual and local: **that stage's own completion
+  conditions must require this queue drained before it declares completion.** `/qfai-implement`
+  states it (`skills/qfai-implement/SKILL.md#spec-completion-conditions`), and no other stage's
+  completion conditions mention the queue at all — so `/qfai-sdd`, `/qfai-atdd`, `/qfai-configure`,
+  `/qfai-verify`, `/qfai-discussion` and `/web-research` reviewers MUST NOT classify a finding
+  `record:*`; it keeps the class it would have had, blocking under the rule it names. A stage gains
+  the class by adding the drain to its completion conditions, never by being named here. A class
+  whose entries are written where nothing drains them is the round-dropped-and-defect-dropped
+  outcome this queue exists to prevent, and it is worse in the stages that never gained the queue
+  than the round ever was.
 - **Who.** The reviewer records the finding in its response as an advisory, as for any advisory.
   The **orchestrator** that dispatched the review appends it to the queue when the round closes —
   the same role that owns the ledger. A finding that stays in the reviewer response and never
@@ -372,18 +379,30 @@ one queue per spec, and it is defined by a destination, an owner, an entry shape
   not a correct record of the work but any evidence the work happened, which is the integrity case
   above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path.
   There is no third exit: an entry closes on a corrected record or on a blocking finding.
-- **Re-attest a repair; never re-run it.** A defect inside a `Satisfied-by`, a round block or any
-  other phase-authored field sits inside the exact bytes a reviewer's `Audited evidence hash`
-  covers, and the completion gate recomputes that hash — so repairing in place makes a correct
-  PASS read as stale, and skipping the recomputation would accept evidence nobody read. Repair the
-  record, then have a reviewer **of the role that issued the verdict** re-read the repaired entry
-  and emit a **record re-attestation**: the `TDD-ID`, the same `Reviewed revision`, the same
-  `Result`, a recomputed `Audited evidence hash`, and the queue entry's `<CODE>`. It replaces the
-  `Audited evidence hash` line of the verdict it re-attests. No code runs, no row changes status,
-  and it spends no round — `Reviewed revision` excludes `.qfai/evidence/**`, so by construction
-  nothing outside the record moved. **A repair that would move the revision is not a record
-  repair**: it is a change to the deliverable and takes the ordinary path. A repaired entry whose
-  verdict carries no re-attestation is still an open entry.
+- **Re-attest a repair in a pack of its own; never re-run it, and never edit a sealed one.** A
+  defect inside a `Satisfied-by`, a round block or any other phase-authored field sits inside the
+  exact bytes a reviewer's `Audited evidence hash` covers, and the completion gate recomputes that
+  hash — so repairing in place makes a correct PASS read as stale, and skipping the recomputation
+  would accept evidence nobody read. Repair the record, then have a reviewer **of the role that
+  issued the verdict** re-read the repaired entry and emit a **record re-attestation**: the
+  `TDD-ID`, the same `Reviewed revision`, the same `Result`, a recomputed `Audited evidence hash`,
+  and the queue entry's `<CODE>`.
+- **The re-attestation is a new review pack, and the pack it supersedes is left untouched.** A
+  verdict lives in a `review-<timestamp>/` pack fixed by a `Review pack seal` the completion gate
+  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks
+  the seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
+  response carrying a hash nothing agrees with. Write the re-attestation as its own
+  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash
+  it recorded — it was correct over the bytes it read — and its pack keeps recomputing. The
+  evidence entry records `Record re-attestation` beside the verdict it supersedes, with its own
+  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate
+  recomputes the superseding hash and both seals, which is what makes the re-attestation an
+  artifact a validator can see rather than an untraceable edit. No code runs, no row changes
+  status, and it spends no round — it opens none, so it is not a `Round N:` pack. The revision a
+  verdict names excludes `.qfai/evidence/**`, so by construction nothing outside the record moved.
+  **A repair that would move the revision is not a record repair**: it is a change to the
+  deliverable and takes the ordinary path. A repaired entry whose verdict carries no
+  re-attestation is still an open entry.
 
 An unconsumed queue would make the class worse than what it replaced: the round is gone and the
 defect is gone with it. The drain is what pays for dropping the round.
