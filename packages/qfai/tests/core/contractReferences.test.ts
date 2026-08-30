@@ -558,6 +558,64 @@ describe("the contract index's Depends On column", () => {
     }
   });
 
+  it("leaves an example table inside an HTML comment out of the index", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      const exampleTable = [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-sample.yaml` | - | create draft |",
+      ];
+      // A commented-out example is the same class of "not rendered content" as a
+      // fenced one — and it is the spelling the shipped `05_Contracts.md`
+      // template writes its own example rows in, so it is what an author copies.
+      // Read as data, it satisfied `-034` coverage and the `-033` row check
+      // while a reader of the rendered index saw no contract row at all.
+      await writeIndex(root, ["0 items", "", "<!-- Example row:", ...exampleTable, "-->"]);
+
+      const commented = await validateContractReferences(root, defaultConfig);
+      expect(commented.find((item) => item.code === "QFAI-CONTRACT-034")?.refs).toEqual([
+        "CON-API-0001",
+      ]);
+
+      // The over-correction pin: uncommented, the same table is the real index.
+      await writeIndex(root, exampleTable);
+      const real = await validateContractReferences(root, defaultConfig);
+      expect(real.some((item) => item.code === "QFAI-CONTRACT-034")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps a heading hidden in a comment out of the table's enclosing heading", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      // An empty table is judged by the heading above it, so a commented-out
+      // heading could silence the check on the real table below: the shipped
+      // `0 items` API table owes its `Depends On` column, but read the hidden
+      // `### Design Contracts` as its heading and it becomes a lookalike table
+      // that owes nothing.
+      await writeIndex(root, [
+        "<!--",
+        "### Design Contracts",
+        "-->",
+        "",
+        "0 items",
+        "",
+        "| Short ID | Router | Declared ID | File | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ------- |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-032")).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves a table that indexes another artifact kind by slug alone", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {

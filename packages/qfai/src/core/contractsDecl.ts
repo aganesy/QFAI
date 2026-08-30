@@ -77,15 +77,24 @@ const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#
  * this key exists to state. The truncated list then disagreed with the correct
  * index row, which earned `QFAI-CONTRACT-033`.
  *
+ * Line breaks are `\r?\n` throughout. This is the one form spanning several
+ * lines, so it was also the only one a CRLF file broke: the key's hard `\n` did
+ * not match `\r\n`, and even past it every item ended at its own `\r`, so the
+ * repetition stopped after the first. A contract saved on Windows therefore
+ * declared its apply order to no effect — `QFAI-CONTRACT-015` on a file that
+ * had declared, and `-033` against its correct index row. The sibling forms
+ * anchor on `$`, which already matches before a `\r`.
+ *
  * The ids are read from the item *values* (see {@link blockSequenceValues})
  * rather than from this capture, so a contract id mentioned inside a comment is
  * not silently taken for a dependency.
  */
 const DEPENDS_ON_YAML_BLOCK_RE =
-  /^x-qfai-depends-on:[ \t]*(?:#[^\n]*)?\n((?:[ \t]*-[ \t]*\S+[ \t]*(?:#[^\n]*)?\n?)+)/im;
+  /^x-qfai-depends-on:[ \t]*(?:#[^\r\n]*)?\r?\n((?:[ \t]*-[ \t]*\S+[ \t]*(?:#[^\r\n]*)?\r?\n?)+)/im;
 /** One block-sequence item: `-`, its value, and whatever comment follows it. */
 const BLOCK_SEQUENCE_ITEM_RE = /^[ \t]*-[ \t]*(\S+)/;
-const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
+/** What separates one listed dependency from the next, in a comment or a flow sequence. */
+const DECLARATION_SEPARATOR_RE = /[,\s]+/;
 /** The explicit ways to write "nothing must be applied before this contract". */
 const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
 /** Non-global on purpose: a `/g` regex carries `lastIndex` between `exec` calls. */
@@ -174,7 +183,7 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
  * of the declaration: `- CON-DB-0001 # replaces CON-DB-0002` would list two
  * dependencies, one of which the author explicitly said is not one.
  */
-function blockSequenceValues(blob: string): string {
+function blockSequenceValues(blob: string): string[] {
   const values: string[] = [];
   for (const line of blob.split(/\r?\n/)) {
     const value = BLOCK_SEQUENCE_ITEM_RE.exec(line)?.[1];
@@ -182,11 +191,58 @@ function blockSequenceValues(blob: string): string {
       values.push(value);
     }
   }
-  return values.join(" ");
+  return values;
 }
 
 /** A cell/element holding a contract id and nothing else. */
 const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
+
+/**
+ * The ids a listed declaration states, or `undefined` when an element of it is
+ * not a contract id.
+ *
+ * **Every** element must be one. Harvesting only the recognisable ids and
+ * discarding the rest let a half-written declaration read as a finished one:
+ * `-- Depends on: CON-DB-0001, TBD` yielded `["CON-DB-0001"]`, so
+ * `QFAI-CONTRACT-015` saw a declaration, `-014` found every id it was given to
+ * resolve, and an index cell mirroring just the known half agreed with it under
+ * `-033`. The undetermined element left no trace anywhere, which is the one
+ * outcome these rules exist to prevent.
+ *
+ * Rejecting the whole list rather than the bad element is what makes the file
+ * fall back to `QFAI-CONTRACT-015` ("states no apply order at all") — the
+ * accurate finding, and the one the JSON lane already produced for `["TBD"]`.
+ * This is the shared judgement behind all four lanes, so a `.sql` comment, a
+ * YAML flow or block sequence and a JSON array cannot drift apart on what
+ * counts as declared.
+ */
+function dependencyIdsFromElements(elements: string[]): string[] | undefined {
+  const ids: string[] = [];
+  for (const element of elements) {
+    const value = element.trim();
+    if (!CONTRACT_ID_EXACT_RE.test(value)) {
+      return undefined;
+    }
+    ids.push(value.toUpperCase());
+  }
+  return ids;
+}
+
+/**
+ * The ids a comment line or a YAML flow sequence states.
+ *
+ * Both write the list as text: `CON-DB-0002, CON-DB-0003` in a `-- Depends on:`
+ * comment, the same between brackets in `x-qfai-depends-on: [...]`. An empty
+ * value is the flow spelling of "none" and lists nothing; anything else is
+ * split on commas and whitespace so that every token is judged on its own.
+ */
+function textDependencyIds(value: string): string[] | undefined {
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return [];
+  }
+  return dependencyIdsFromElements(trimmed.split(DECLARATION_SEPARATOR_RE));
+}
 
 /**
  * The ids a JSON `x-qfai-depends-on` value declares, or `undefined` if it is not
@@ -206,18 +262,14 @@ function jsonDependencyIds(value: unknown): string[] | undefined {
   if (!Array.isArray(value)) {
     return undefined;
   }
-  const ids: string[] = [];
+  const elements: string[] = [];
   for (const element of value) {
     if (typeof element !== "string") {
       return undefined;
     }
-    const trimmed = element.trim();
-    if (!CONTRACT_ID_EXACT_RE.test(trimmed)) {
-      return undefined;
-    }
-    ids.push(trimmed.toUpperCase());
+    elements.push(element);
   }
-  return ids;
+  return dependencyIdsFromElements(elements);
 }
 
 /**
@@ -238,27 +290,23 @@ function statesJsonDependencies(value: unknown): boolean {
 export function extractDeclaredDependencies(text: string, file?: string): string[] {
   const lane = laneFor(file);
   const found = new Set<string>();
-  const push = (blob: string): void => {
-    for (const match of blob.matchAll(CONTRACT_ID_TOKEN)) {
-      found.add(match[0].toUpperCase());
+  const add = (ids: string[] | undefined): void => {
+    for (const id of ids ?? []) {
+      found.add(id);
     }
   };
   if (lane !== "structured") {
     for (const match of text.matchAll(DEPENDS_ON_COMMENT_RE)) {
-      push(match[1] ?? "");
+      add(textDependencyIds(match[1] ?? ""));
     }
   }
   if (lane !== "comment") {
     const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
-    if (flow) push(flow[1] ?? "");
+    if (flow) add(textDependencyIds(flow[1] ?? ""));
     const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
-    if (block) push(blockSequenceValues(block[1] ?? ""));
+    if (block) add(dependencyIdsFromElements(blockSequenceValues(block[1] ?? "")));
     const json = readJsonDependsOn(text);
-    if (json) {
-      for (const id of jsonDependencyIds(json.value) ?? []) {
-        found.add(id);
-      }
-    }
+    if (json) add(jsonDependencyIds(json.value));
   }
   return Array.from(found).sort();
 }
@@ -278,6 +326,12 @@ export function extractDeclaredDependencies(text: string, file?: string): string
  * suppress `QFAI-CONTRACT-015` for exactly the file the rule is about. Only a
  * value counts: contract ids, or one of the explicit "none" spellings (`-`,
  * `[]`, `none`).
+ *
+ * A **partly** stated order does not count either. The answer is derived from
+ * {@link extractDeclaredDependencies}, which yields nothing unless every listed
+ * element is a contract id (see {@link dependencyIdsFromElements}), so
+ * `CON-DB-0001, TBD` reads as silence here rather than as the finished
+ * declaration its resolvable half made it look like.
  */
 export function hasDependencyDeclaration(text: string, file?: string): boolean {
   const lane = laneFor(file);

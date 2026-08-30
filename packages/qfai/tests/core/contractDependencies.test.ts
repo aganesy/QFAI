@@ -130,6 +130,37 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     ).toEqual(["CON-DB-0001"]);
   });
 
+  it("reads a YAML block sequence saved with CRLF line endings", () => {
+    // The block form is the one declaration spanning several lines, so it was
+    // the only one CRLF broke: the key's `\n` did not match `\r\n`, and past it
+    // each item ended at its own `\r`, stopping the repetition after the first.
+    // A contract saved on Windows declared its apply order to no effect —
+    // `QFAI-CONTRACT-015` on a file that had declared, and `-033` against its
+    // correct index row.
+    const crlf = "openapi: 3.0.0\r\nx-qfai-depends-on:\r\n  - CON-DB-0001\r\n  - CON-API-0002\r\n";
+    expect(extractDeclaredDependencies(crlf, "a.yaml")).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    expect(hasDependencyDeclaration(crlf, "a.yaml")).toBe(true);
+    // The trailing-comment form has to survive CRLF too.
+    expect(
+      extractDeclaredDependencies(
+        "x-qfai-depends-on:\r\n  - CON-DB-0001 # schema first\r\n",
+        "a.yaml",
+      ),
+    ).toEqual(["CON-DB-0001"]);
+  });
+
+  it("reads the single-line forms saved with CRLF line endings", () => {
+    // A pin, not a regression: `$` already matches before a `\r`, so these were
+    // never broken and must not be disturbed by the block form's `\r?\n`.
+    expect(extractDeclaredDependencies("-- Depends on: CON-DB-0002\r\n", "a.sql")).toEqual([
+      "CON-DB-0002",
+    ]);
+    expect(extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001]\r\n", "a.yaml")).toEqual([
+      "CON-DB-0001",
+    ]);
+    expect(hasDependencyDeclaration("-- Depends on: -\r\n", "a.sql")).toBe(true);
+  });
+
   it("reads `-` as no dependencies rather than as a malformed one", () => {
     // The shipped template writes `-` for the empty case; parsing it as a
     // dependency would make every scaffolded contract fail the new rule.
@@ -292,6 +323,53 @@ describe("the declaration itself is distinguishable from its absence", () => {
     expect(hasDependencyDeclaration(json('["CON-API-0002"]'))).toBe(true);
   });
 
+  it("does not accept a SQL or YAML list holding an element that is not an id", () => {
+    // Harvesting the recognisable ids and discarding the rest let a half-written
+    // declaration read as a finished one: the resolvable half satisfied
+    // `QFAI-CONTRACT-014`, suppressed `-015`, and agreed under `-033` with an
+    // index cell mirroring the same half — so the undetermined element left no
+    // trace anywhere. `["TBD"]` was already rejected in the JSON lane; the other
+    // three lanes now make the same judgement.
+    expect(extractDeclaredDependencies("-- Depends on: CON-DB-0001, TBD\n", "a.sql")).toEqual([]);
+    expect(hasDependencyDeclaration("-- Depends on: CON-DB-0001, TBD\n", "a.sql")).toBe(false);
+    expect(
+      extractDeclaredDependencies("x-qfai-depends-on: [CON-DB-0001, TBD]\n", "a.yaml"),
+    ).toEqual([]);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: [CON-DB-0001, TBD]\n", "a.yaml")).toBe(
+      false,
+    );
+    expect(
+      extractDeclaredDependencies("x-qfai-depends-on:\n  - CON-DB-0001\n  - TBD\n", "a.yaml"),
+    ).toEqual([]);
+    expect(
+      hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-DB-0001\n  - TBD\n", "a.yaml"),
+    ).toBe(false);
+  });
+
+  it("keeps reading a list whose every element is an id", () => {
+    // The over-correction pin: rejecting a whole list on one bad element must
+    // not touch a well-formed one, in any of the three text lanes, whichever
+    // separator it uses.
+    expect(
+      extractDeclaredDependencies("-- Depends on: CON-DB-0002, CON-DB-0003\n", "a.sql"),
+    ).toEqual(["CON-DB-0002", "CON-DB-0003"]);
+    expect(
+      extractDeclaredDependencies("-- Depends on: CON-DB-0002 CON-DB-0003\n", "a.sql"),
+    ).toEqual(["CON-DB-0002", "CON-DB-0003"]);
+    expect(
+      extractDeclaredDependencies("x-qfai-depends-on: [CON-API-0002, CON-DB-0001]\n", "a.yaml"),
+    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    expect(
+      extractDeclaredDependencies(
+        "x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n  - CON-API-0002\n",
+        "a.yaml",
+      ),
+    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    // `-` / `[]` still say "none" rather than naming a malformed element.
+    expect(hasDependencyDeclaration("-- Depends on: -\n", "a.sql")).toBe(true);
+    expect(hasDependencyDeclaration("x-qfai-depends-on: []\n", "a.yaml")).toBe(true);
+  });
+
   it("ignores `Depends on:` written as prose in a YAML body", () => {
     // Without a comment marker the line is documentation, not a declaration —
     // and an OpenAPI `description` is where a *runtime* reference gets
@@ -401,6 +479,26 @@ describe("QFAI-CONTRACT-015 — a contract must state its apply order", () => {
         const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
         expect(found?.refs).toEqual(["CON-API-0001"]);
         // The prose id must not reach the referential lane either.
+        expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
+      },
+    );
+  });
+
+  it("warns on a contract whose list holds an undetermined element", async () => {
+    await withContracts(
+      {
+        db: {
+          "a.sql":
+            "-- QFAI-CONTRACT-ID: CON-DB-0001\n-- Depends on: CON-DB-0002, TBD\nCREATE TABLE a (x int);\n",
+          "b.sql": "-- QFAI-CONTRACT-ID: CON-DB-0002\n-- Depends on: -\nCREATE TABLE b (x int);\n",
+        },
+      },
+      async (root) => {
+        const issues = await validateContracts(root, defaultConfig);
+        const found = issues.find((i) => i.code === "QFAI-CONTRACT-015");
+        expect(found?.refs).toEqual(["CON-DB-0001"]);
+        // The resolvable half must not reach the referential lane either — it
+        // would resolve, and reporting nothing is what made the gap invisible.
         expect(issues.map((i) => i.code)).not.toContain("QFAI-CONTRACT-014");
       },
     );

@@ -41,7 +41,10 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
   - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
     at all. Write `-` when nothing must be applied first: "no dependencies" and
     "never stated" are different claims, and only the first is checkable. The
-    key on its own (`-- Depends on:` with nothing after it) is still silence.
+    key on its own (`-- Depends on:` with nothing after it) is still silence,
+    and so is a list holding anything but `CON-*` ids: in `CON-DB-0001, TBD`
+    the resolvable half would otherwise make an undetermined order look
+    settled, leaving `TBD` unreported by every check.
   - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
     the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
     whose cell disagrees with the declaration in the file that row names — a

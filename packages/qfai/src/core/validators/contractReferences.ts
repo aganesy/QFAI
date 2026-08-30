@@ -2,7 +2,12 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { buildContractIndex, type ContractIndex } from "../contractIndex.js";
 import { collectSpecEntries } from "../specLayout.js";
-import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  maskNonSpecRegions,
+  splitMarkdownRow,
+} from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { issue, readSafe } from "./utils.js";
 
@@ -39,8 +44,6 @@ const CANONICAL_CONTRACT_HEADING_RE = /(?:^|[^A-Za-z])(?:DB|API|UI)[ \t]*(?:Cont
  */
 const CANONICAL_CELL_ID_RE = /^CON-(API|DB|UI)-(\d+)$/i;
 const CELL_DECORATION_RE = /^[`*_]+|[`*_]+$/g;
-/** The opening or closing line of a fenced code block, with its indent and run length. */
-const CODE_FENCE_RE = /^[ \t]{0,3}(`{3,}|~{3,})(.*)$/;
 /**
  * A concrete contract path inside a `File` cell.
  *
@@ -244,29 +247,29 @@ function canonicalCellContractId(cell: string): string | undefined {
 /**
  * Every markdown table in the file, as header + body rows with 1-based lines.
  *
- * Lines inside a fenced code block are skipped: the natural way to document the
- * index is to show a filled-in example table in a fence, and reading one as
- * data let the example stand in for the real thing — its rows satisfied both
+ * The scan runs over {@link maskNonSpecRegions}, so the regions markdown does
+ * not render as content — fenced code blocks, HTML comments, top-level indented
+ * code — contribute neither tables nor headings. The natural way to document
+ * the index is to show a filled-in example table, and reading one as data let
+ * the example stand in for the real thing: its rows satisfied both
  * `QFAI-CONTRACT-034` coverage and the `-033` row check while the rendered
- * index still listed no contract.
+ * index still listed no contract at all. Tracking fences alone left the same
+ * hole open one `<!-- … -->` away — and that is the form the shipped
+ * `05_Contracts.md` template writes its own example rows in, so it is the
+ * spelling an author is most likely to copy.
+ *
+ * The masker blanks lines in place rather than dropping them, which is what
+ * keeps every `loc.line` reported from here pointing at the real line.
  */
 function parseIndexTables(text: string): IndexTable[] {
   const tables: IndexTable[] = [];
-  const lines = text.split(/\r?\n/);
+  const lines = maskNonSpecRegions(text).split("\n");
   let heading = "";
-  let openFence: string | undefined;
 
   for (let lineIndex = 0; lineIndex < lines.length - 1; lineIndex++) {
     const headerLine = lines[lineIndex];
     const separatorLine = lines[lineIndex + 1];
     if (headerLine === undefined || separatorLine === undefined) {
-      continue;
-    }
-    const fenceAfter = nextFenceState(openFence, headerLine);
-    // The delimiter lines themselves are skipped along with the block body.
-    const fenced = openFence !== undefined || fenceAfter !== undefined;
-    openFence = fenceAfter;
-    if (fenced) {
       continue;
     }
     const headingMatch = /^#{1,6}[ \t]+(.*)$/.exec(headerLine);
@@ -296,30 +299,6 @@ function parseIndexTables(text: string): IndexTable[] {
   }
 
   return tables;
-}
-
-/**
- * The fence state after `line`: the open fence's run, or `undefined` outside one.
- *
- * A fence closes only on a run of the same character at least as long as the
- * one that opened it, so a nested ```` ``` ```` inside a `~~~` block does not
- * end it. Table body rows start with `|`, so the row scan above always stops
- * before a fence line and no line escapes this walk.
- */
-function nextFenceState(openFence: string | undefined, line: string): string | undefined {
-  const match = CODE_FENCE_RE.exec(line);
-  if (!match) {
-    return openFence;
-  }
-  const run = match[1] ?? "";
-  if (openFence === undefined) {
-    return run;
-  }
-  const closes =
-    run[0] === openFence[0] &&
-    run.length >= openFence.length &&
-    (match[2] ?? "").trim().length === 0;
-  return closes ? undefined : openFence;
 }
 
 /**
