@@ -129,13 +129,20 @@ invocation the agent is in **clarification-exhausted mode** — ask no further
 clarifying questions, proceed with explicit assumptions, and label every
 assumption in the outputs.
 
+The mode has **two entry conditions and one meaning**: the budget is spent, or
+the user closes it early by answering `proceed` / `done`. Such an answer waives
+the clarifying questions the agent still had, and nothing else.
+
 Clarification-exhausted mode is **not `--auto`**. `--auto` is a no-question mode
 (Article X, rule 4) that forbids AskUserQuestion and plain-text questions
-outright; clarification-exhausted mode silences clarifications only, so the
-exemptions above survive it unchanged — mandatory approvals and needed
-`hard-required` inputs MUST still be asked. An agent that exhausts the budget
-mid-invocation therefore never has to choose between skipping a mandatory
-approval and breaking the `--auto` rules: it is not under them.
+outright, and only the explicit `--auto` flag turns it on — neither a spent
+budget nor a `proceed` / `done` answer does; clarification-exhausted mode
+silences clarifications only, so the exemptions above survive it unchanged —
+mandatory approvals and needed `hard-required` inputs MUST still be asked, under
+either entry condition. An agent that exhausts the budget mid-invocation, or is
+told to `proceed` before an approval-required change is discovered, therefore
+never has to choose between skipping a mandatory approval and breaking the
+`--auto` rules: it is not under them.
 
 An explicit **“stop” is not exhaustion** and MUST NOT be read as `--auto` or as
 clarification-exhausted mode. It ends the invocation: ask nothing further, do no
@@ -145,7 +152,10 @@ what remains.
 Stop conditions:
 
 - User says “stop” → abort the invocation; no further work or file changes.
-- User says “proceed / done” → `--auto` behaviour for the rest of the invocation.
+- User says “proceed / done” → clarification-exhausted mode for the rest of the
+  invocation. It waives clarifications only; it is **not** `--auto`, and the
+  mandatory approvals and needed `hard-required` inputs above MUST still be
+  asked.
 - Question budget is exhausted → clarification-exhausted mode for the rest of the
   invocation.
 
@@ -208,7 +218,9 @@ Rules:
 5. **Exhausting the Article VI budget is not `--auto`**: it enters
    clarification-exhausted mode, which silences clarifying questions only.
    Rule 4 does not apply to it — mandatory approvals and the `hard-required`
-   inputs that invocation actually consumes MUST still be asked.
+   inputs that invocation actually consumes MUST still be asked. A user's
+   `proceed` / `done` answer enters that same mode and is likewise not `--auto`;
+   this rule is activated by the `--auto` flag alone.
 
 This article survives context compaction because `constitution.md` is a P1 reload target.
 

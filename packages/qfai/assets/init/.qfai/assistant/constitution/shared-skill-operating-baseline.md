@@ -44,8 +44,8 @@ the rule. A skill approaching it is a signal to move a section out.
   **that this invocation actually consumes** MUST be asked for rather than
   assumed — if it stays missing, stop instead of guessing. A `hard-required`
   input the requested path never reads is neither asked for nor a blocker.
-  Exhaustion is not `--auto`, so these questions survive it.
-  See `constitution.md` Article VI.
+  Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`, so
+  these questions survive both. See `constitution.md` Article VI.
 
 ## Canonical qfai Launcher (Mandatory)
 

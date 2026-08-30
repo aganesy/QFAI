@@ -87,7 +87,38 @@ describe("the clarification budget is countable", () => {
       expectPhrase(content, "MUST NOT be read as `--auto`");
       expectPhrase(content, "make no further\nfile changes");
       expectPhrase(content, "User says “stop” → abort the invocation");
-      expectPhrase(content, "User says “proceed / done” → `--auto` behaviour");
+    });
+
+    it(`${tree}: a user “proceed / done” silences clarifications, not approvals`, async () => {
+      const content = await read(tree, CONSTITUTION);
+      // Routing the waiver into `--auto` re-creates the contradiction rule 5
+      // was added to remove: Article X rule 4 forbids every question under
+      // `--auto`, while a /qfai-sdd row classified after the waiver still
+      // requires its mandatory approval.
+      expectPhrase(content, "**two entry conditions and one meaning**");
+      expectPhrase(content, "the user closes it early by answering `proceed` / `done`");
+      expectPhrase(content, "User says “proceed / done” → clarification-exhausted mode");
+      expectPhrase(content, "It waives clarifications only; it is **not** `--auto`");
+      expectPhrase(content, "neither a spent\nbudget nor a `proceed` / `done` answer does");
+      expect(unwrap(content)).not.toContain(unwrap("“proceed / done” → `--auto` behaviour"));
+      // Both `--auto` declarations must carry the same exclusion.
+      expectPhrase(
+        content,
+        "A user's\n   `proceed` / `done` answer enters that same mode and is likewise not `--auto`",
+      );
+      const communication = await read(tree, COMMUNICATION);
+      expectPhrase(
+        communication,
+        "A user's `proceed` / `done` answer enters that same mode and is likewise\n   not `--auto`",
+      );
+      const operating = await read(tree, OPERATING);
+      expectPhrase(
+        operating,
+        "Neither exhaustion nor a user's `proceed` / `done` answer is `--auto`",
+      );
+      const sdd = await read(tree, SDD);
+      expectPhrase(sdd, "A `proceed` / `done`\nanswer to a pre-Stage-1 question does the same");
+      expectPhrase(sdd, "it closes the clarifications,\nnot the approvals");
     });
 
     it(`${tree}: Article VI decides whether approval questions count`, async () => {
