@@ -34,10 +34,21 @@ Codes that predate the grammar are frozen in
 `tests/core/findingCodeGrammar.test.ts` (`LEGACY_FINDING_CODES`). The guard
 there enforces both directions:
 
-- a code literal in `src/` that is neither canonical nor registered fails the
-  test — so the legacy set cannot grow;
+- a code in `src/` that is neither canonical nor registered fails the test — so
+  the legacy set cannot grow;
 - a registered code that no longer appears in `src/` fails the test — so the
   registry cannot rot behind a rename.
+
+What counts as "in `src/`" is read off the TypeScript AST, not off a regular
+expression: the guard first finds every function that turns a code into an
+`Issue` — the shared `issue()` helper plus each local factory taking the code as
+its first parameter — and then reads the code out of every call to one, out of
+every `code:` field, and out of every `_CODE` / `_RULE_ID` / `_RULE` constant. A
+literal scan for `issue("…")` matched none of the nine local factories
+(`\bissue\(` does not match `classificationIssue(`), so the codes raised through
+them were registered nowhere and a new non-conforming one added the same way
+passed. The factory set itself is asserted, so a factory renamed out of the
+convention fails loudly instead of quietly shrinking the scanned surface.
 
 The frozen families, none of which may take a new member:
 
