@@ -67,9 +67,32 @@ external-runtime-resource condition all still bind it:
   once, by the orchestrator, from what the roles returned — never one block per
   role, and a row whose block is missing a field stays out of `done` exactly as
   in the coordinated mode below.
-- **One GREEN, judged over both outputs.** `qa-gatekeeper` blocks `build` on
-  the row's single GREEN observation, and that observation covers the merged
-  result of both roles. Neither role's output is admissible on its own.
+- **One GREEN, judged over both outputs — taken on the merged tree by one
+  role.** `qa-gatekeeper` blocks `build` on the row's single GREEN
+  observation, and that observation covers the merged result of both roles;
+  neither role's output is admissible on its own. On a full-stack row neither
+  worktree can produce it: each holds half the behaviour, so the selector
+  fails there for a reason that is not the row's. **Nobody else may supply it
+  either** — Handoff Contract 2 has the _implementation agent_ submit the
+  GREEN run and Contract 3 has `qa-gatekeeper` judge what was submitted, so
+  the orchestrator cannot synthesize a pass it never observed (it may not
+  write or run production code at all) and the gatekeeper cannot stand in for
+  an observation nobody made. So once the per-role reconciliation below
+  passes, the orchestrator merges the two heads and **re-delegates the merged
+  tree to one of the two roles: the one that owns the row's `Selector`** — its
+  layer decides, a UI or E2E selector being the frontend's and an API or
+  service-level one the backend's. That role runs Phase Green steps 2 and 2a
+  against the merged tree — `Oracle proof` mutation, its failing output, the
+  immediate revert, and the restored run that **is** the GREEN — and returns
+  both in the per-item evidence contract's form for the orchestrator to write
+  into the row's one evidence block before `qa-gatekeeper` is routed. Only
+  that one agent runs, so no worktree separation is owed for this step; it is
+  still the `build` phase and still one of its `conditional_agents`, so it
+  needs no new routing. If the only predicate that can falsify the row sits in
+  the other role's assigned range, that role takes the mutation run on the
+  same merged tree **after** the first role's run and never beside it — two
+  runs, still one evidence block. A fanned-out row that reaches `build` with
+  no such post-merge run has no admissible GREEN and does not leave it.
 - **Seam reconciliation stays per row, and adds a per-role pass.**
   `#seam-reconciliation-after-a-parallel-run` diffs slices, and a fanned-out
   row is one slice: its touched `src/` paths are compared against its one
@@ -83,6 +106,21 @@ external-runtime-resource condition all still bind it:
   every path outside its assignment, or touched by both, as a deny-condition
   breach under step 3 of that section. Without this pass the non-overlapping
   write ranges required above are asserted at dispatch and never verified.
+
+  That command is a **two-commit range**, which `git diff` defines as a
+  separate usage from its working-tree forms: it enumerates commits and
+  nothing else, so a role that returns with its edits still in its index, its
+  working tree, or as untracked files contributes an empty list and passes the
+  comparison however it wrote. So **reconcile no uncommitted role.** Each role
+  commits in its own worktree before it returns — `git add` over the paths it
+  was assigned, so that anything it wrote outside them stays visible in
+  `git status` instead of being swept into the same commit unexamined — and
+  returns that commit as its `<role-head>`. Verify the return rather than
+  trust it: `git status --porcelain` in that worktree must come back empty.
+  A non-empty status is itself a deny-condition breach — record it, add every
+  path it names (untracked `??` entries included) to that role's touched set,
+  and compare the union against both the assignment and the other role
+  **before anything merges**.
 
 ## Gates and precedence
 

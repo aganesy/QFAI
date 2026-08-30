@@ -83,7 +83,9 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(section).toContain("exactly one non-empty `parallel_groups`");
       expect(section).toContain("**One row, one `Owning module`, split between the roles.**");
       expect(section).toContain("**One evidence block per row.**");
-      expect(section).toContain("**One GREEN, judged over both outputs.**");
+      expect(section).toContain(
+        "**One GREEN, judged over both outputs — taken on the merged tree by one role.**",
+      );
       expect(section).toContain("**Seam reconciliation stays per row, and adds a per-role pass.**");
       // The summary bullet must carry the same answers, so a reader who never
       // opens the reference is not left with the disclaimer alone.
@@ -153,6 +155,46 @@ describe("qfai-implement states one parallelization policy", () => {
       expect(skill).toContain(
         "has each role's head diffed against its assigned range at seam reconciliation",
       );
+    });
+
+    it(`${tree}: the per-role diff is taken over committed work only`, async () => {
+      // `git diff <a>..<b>` is the two-commit usage: a role that returns with
+      // its edits still in the index, the working tree or untracked files
+      // enumerates as nothing and passes the overlap check however it wrote.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**two-commit range**");
+      expect(section).toContain("**reconcile no uncommitted role.**");
+      expect(section).toContain("Each role commits in its own worktree before it returns");
+      expect(section).toContain("`git status --porcelain` in that worktree must come back empty");
+      expect(section).toContain("A non-empty status is itself a deny-condition breach");
+      expect(section).toContain("untracked `??` entries included");
+      expect(section).toContain("**before anything merges**");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "over a scoped commit whose worktree `git status --porcelain` comes back empty",
+      );
+      expect(skill).toContain("a two-commit range diff cannot see uncommitted or untracked");
+    });
+
+    it(`${tree}: the post-merge GREEN names the agent that produces it`, async () => {
+      // Neither worktree holds the whole full-stack behaviour, and Handoff
+      // Contracts 2-3 let neither the orchestrator nor the gatekeeper supply
+      // an observation nobody submitted — so the merged tree goes back to a
+      // role.
+      const section = unwrap(await policy(tree));
+      expect(section).toContain("**Nobody else may supply it either**");
+      expect(section).toContain("the orchestrator cannot synthesize a pass it never observed");
+      expect(section).toContain(
+        "**re-delegates the merged tree to one of the two roles: the one that owns the row's `Selector`**",
+      );
+      expect(section).toContain("runs Phase Green steps 2 and 2a against the merged tree");
+      expect(section).toContain("returns both in the per-item evidence contract's form");
+      expect(section).toContain("has no admissible GREEN and does not leave it");
+      const skill = unwrap(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      expect(skill).toContain(
+        "**taken after the merge by the role that owns the row's `Selector`**",
+      );
+      expect(skill).toContain("neither the orchestrator nor `qa-gatekeeper` may supply");
     });
 
     it(`${tree}: out-of-module work needs an upstream row, never an invented one`, async () => {
