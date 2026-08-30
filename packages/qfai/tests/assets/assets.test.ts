@@ -9,6 +9,12 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import {
+  findRepositoryAttribution,
+  formatAttributionOffender,
+  isBinary,
+  listShippedAssistantFiles,
+} from "../helpers/repositoryAttribution.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -238,47 +244,25 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   it("ensures shipped assistant prose never attributes a concrete artifact id to this repository", async () => {
     // Every file under assistant/ is copied verbatim by `qfai init`, so
     // "this repository" resolves to the consuming project. Pairing that phrase
-    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` id therefore asserts a fact
-    // about a spec the consumer does not have. The bare phrase is legitimate
-    // (qfai-atdd / qfai-configure / qfai-verify all use it correctly), so the
-    // guard fires only on the phrase plus an id.
+    // with a concrete `spec-NNNN` / `TC-NNNN-NNNN` / `CON-API-NNNN` id
+    // therefore asserts a fact about an artifact the consumer does not have.
+    //
+    // The matcher, the soft-wrap normalizer and the file list live in
+    // `tests/helpers/repositoryAttribution.ts`; what stays here is the scan of
+    // the shipped tree. `tests/assets/repositoryAttributionGuard.test.ts`
+    // covers the matcher's own behaviour, so the two cannot drift.
     const assistantDir = path.join(templateQfaiDir, "assistant");
-    const files = await fg(["**/*.{md,yml,yaml}"], { cwd: assistantDir, absolute: true });
-    const ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US|CON)-\d{4}-\d{4})\`?`;
-    // Both orders. The attribution is the same claim whichever half comes
-    // first — "`spec-0006` in this repository" reads exactly as
-    // "this repository's `spec-0006`" — and checking only one of them let the
-    // other spelling through the guard that promises "never attributes".
-    const attributions = [
-      new RegExp(String.raw`this repository(?:'s)?[^.\n]{0,80}${ID}`, "i"),
-      new RegExp(String.raw`${ID}[^.\n]{0,80}this repository`, "i"),
-    ];
-
-    const attributes = (text: string): boolean =>
-      attributions.some((pattern) => pattern.test(text));
-
-    // A guard nothing can trip proves nothing about the tree it scans.
-    expect(attributes("this repository's `spec-0006` covers it")).toBe(true);
-    expect(attributes("see `spec-0006` in this repository")).toBe(true);
-    expect(attributes("`TC-0006-0001` belongs to this repository")).toBe(true);
-    // The bare phrase stays legitimate — qfai-atdd / qfai-configure /
-    // qfai-verify all use it correctly.
-    expect(attributes("run the relevant test suite for this repository")).toBe(false);
-    expect(attributes("`spec-0006` covers the parser")).toBe(false);
+    const files = await listShippedAssistantFiles(assistantDir);
 
     const offenders = (
       await Promise.all(
         files.map(async (filePath) => {
-          // Collapse soft wraps: the phrase and the id routinely straddle a
-          // markdown line break.
-          const content = (await readFile(filePath, "utf-8")).replace(/\s*\n\s*/g, " ");
-          for (const attribution of attributions) {
-            const found = attribution.exec(content);
-            if (found !== null) {
-              return `${path.relative(repoRoot, filePath)}: ${found[0]}`;
-            }
+          const raw = await readFile(filePath);
+          if (isBinary(raw)) {
+            return null;
           }
-          return null;
+          const found = findRepositoryAttribution(raw.toString("utf-8"));
+          return found === null ? null : formatAttributionOffender(repoRoot, filePath, found);
         }),
       )
     ).filter((result): result is string => result !== null);
