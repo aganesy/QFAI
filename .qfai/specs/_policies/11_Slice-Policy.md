@@ -26,12 +26,13 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 
 ## スライスカテゴリ
 
-| Category   | Slice Rule                     | ID Range                   |
-| ---------- | ------------------------------ | -------------------------- |
-| structural | 1 pack-type = 1 spec           | spec-0001..0002            |
-| cli        | 1 command = 1 spec             | spec-0003..0007            |
-| skill      | 1 skill = 1 spec               | spec-0008..0014, spec-0016 |
-| agent      | all agents = 1 collective spec | spec-0015                  |
+| Category   | Slice Rule                        | ID Range                   |
+| ---------- | --------------------------------- | -------------------------- |
+| structural | 1 pack-type = 1 spec              | spec-0001..0002            |
+| cli        | 1 command = 1 spec                | spec-0003..0007            |
+| skill      | 1 skill = 1 spec                  | spec-0008..0014, spec-0016 |
+| agent      | all agents = 1 collective spec    | spec-0015                  |
+| toolchain  | all repository toolchain = 1 spec | spec-0017                  |
 
 ### カテゴリ定義
 
@@ -39,6 +40,26 @@ companion 行 (UPDATE:MODIFY / UPDATE:REMOVE) を Triage table に追加
 - **cli**: `packages/qfai/src/cli/commands/` に実装される CLI コマンド。1 コマンド = 1 spec。
 - **skill**: `packages/qfai/assets/init/.qfai/assistant/skills/` に定義される SKILL.md。1 skill = 1 spec。
 - **agent**: `packages/qfai/assets/init/.qfai/assistant/agents/` に定義されるサブエージェント。全エージェントで 1 spec。
+- **toolchain**: リポジトリ自身のツールチェーン。`.github/workflows/`、リポジトリ内部の
+  composite action (`.github/actions/**`)、リポジトリ root `scripts/`、
+  `packages/qfai/scripts/`、テストランナー構成 (`vitest.config.ts` / `vitest.workspace.ts`) を
+  1 spec で集約所有する。他 4 カテゴリが「配布される製品面」を扱うのに対し、本カテゴリは
+  「製品を作る側の道具」を扱う。
+  - `.github/actions/**` を明示列挙するのは、`scripts/verify-pack.mjs` の composite-action 禁止が
+    **配布される** `.github` tree (`assets/init/root/.github`) にしか掛からないため。
+    リポジトリ内部の composite action は合法であり、列挙から漏らすと本リポジトリ唯一の
+    composite action が無所有になる。
+  - **所有するのは lane の配線・実行トポロジ・runner 構成であって、個々の guard が
+    検査する規則ではない。** ある script の検査規則が別 spec の surface に属する場合、
+    規則はその spec が持ち続け、toolchain spec は「どの lane で、どの順で、どの
+    権限で走らせるか」だけを所有する (例: pack-location lane と SSOT-sync pair lane の
+    規則は CAP-0004 が保持し、本カテゴリはその CI 配線のみを見る)。無条件の
+    collective 所有と読むと既存 spec の所有権と衝突する。
+  - 配布される workflow テンプレート (`assets/init/root/.github/workflows/**`) は
+    **本カテゴリではなく CAP-0003 (`qfai init`) の所有**。配布物か否かが境界。
+  - agent カテゴリと同じ collective 型: ツールチェーン構成要素ごとに spec を増やさない
+    (`10_delta.md:212` 「異なる機能を1つのスペックに詰め込まない」の裏返しとして、
+    同一関心の道具群を分散させないことを優先する)。
 
 ## Triage オペレーション (8 種)
 
@@ -127,14 +148,38 @@ ${operation} を実行します。
 
 1. structural specs (0001-0002) は固定。
 2. CLI specs は `03_Capabilities.md` 記載順で spec-0003 から付番。
-3. skill specs はアルファベット順で CLI specs の次から付番。late-added skill (spec-0016 / spec-0017 等) はカテゴリ末尾に追加して既存 ID を保つ。
+3. skill specs はアルファベット順で CLI specs の次から付番。late-added skill (spec-0016 等) はカテゴリ末尾に追加して既存 ID を保つ。
 4. agent collective spec (`spec-0015`) は新規追加時点では skill range の末尾に置かれた歴史的経緯から `0015` を保持する。後続 skill が追加されても renumber しない。
-5. SUPERSEDE / DELETE 後も既存 ID は再利用しない（gap を残す）。
+5. SUPERSEDE / DELETE 後の ID は**一時的に**空けてよい（gap を残す）。ただし
+   **恒久予約はできない。gap 番号 `spec-000M` は、CAP 件数が M に達した時点で
+   必ず再採番する。**
+
+   `validateSpecSplitByCapability` は CAP 件数 N から `spec-0001..spec-000N` の
+   連番を **positional に**導出する
+   (`packages/qfai/src/core/validators/specSplitByCapability.ts:75` — CAP の
+   *番号*は読まず、リスト内の位置だけを使う)。したがって予約 ID `spec-000M` は
+   N が M に達した瞬間に充足不能になる: gap 位置の ID を使えば予約違反、
+   次番を使えば `QFAI-SPLIT-103` (不足) と `QFAI-SPLIT-104` (余剰) が同時に error。
+   N は単調増加するので、**すべての恒久予約は「いつか必ず爆発する」**。
+   gap が予約時点で range の内側にあったか末尾にあったかは無関係 — 決めるのは
+   「CAP 件数がその番号に到達するか」だけであり、到達しない保証は存在しない。
+
+   実例: `spec-0017` は予約時点では末尾 gap (CAP 16 件 / spec-0001..0016) だったが、
+   次の capability 追加 (CHG-007) でちょうど detonate した。末尾だから安全、という
+   読みは誤りである。
+
+   この構造的制約自体の解消 (gate を番号照合に変更) は `OQ-0023` で追跡する。
+   それが入るまでは、本ルールが唯一の運用回避策。
 
 ## ギャップポリシー
 
-- 削除時はギャップを残す（リナンバリングしない）。
-- 新規 spec はカテゴリ末尾に追加。
+- 削除時はギャップを一時的に残してよい（即時リナンバリングは不要）。ただし
+  §ID 安定性ルール 5 のとおり恒久予約はできず、CAP 件数がその番号に達した時点で
+  必ず再採番する。gap が内側か末尾かは判断材料にならない。
+- **新規 spec の付番は gap を最優先で埋める。** カテゴリ末尾に足すのは gap が
+  無いときだけ — positional gate が要求するのは `spec-0001..spec-000N` の連番で
+  あり、カテゴリごとの ID Range 表はその連番制約の下位にある。両者が衝突した
+  場合は連番を優先し、ID Range 表を実態に合わせて更新する。
 - 順序変更は Change Request + delta.md 記録必須。
 
 ## Current Slicing Notes
@@ -142,4 +187,16 @@ ${operation} を実行します。
 - `spec-0015` は agent collective spec として維持し、renumber は行わない。
 - `spec-0016` は late-added skill spec として active range に含める (CAP-0016 = Web Research Enhancement)。
 - contract-first downstream への収束は既存 slice model に閉じており、追加の reslicing は不要。
-- spec-0017 は 2026-05-06 に CAP-0012 へ統合（破壊的変更）。spec-0017 の番号は永久 gap、再利用禁止（§ID 安定性ルール 5）。
+- `spec-0017` は 2026-05-06 に CAP-0012 へ統合され、当時 `spec-0017` / `CAP-0017` は
+  恒久 gap として再利用禁止に指定された。**2026-08-05 にこの恒久予約を撤廃した**
+  (ユーザ承認)。撤廃理由は §ID 安定性ルール 5 に記載の機械的制約 — この予約は
+  取った時点では **末尾** gap (CAP 16 件 / `spec-0001..0016`) だったが、positional gate の
+  期待集合は CAP 件数 N から `spec-0001..spec-000N` を導出するため、N が 17 に達した
+  時点で予約を保持したままでは 17 件目の capability をどう命名しても validate が
+  error になる。末尾 gap だから安全という読みが誤りであることの実例。
+  `spec-0017` / `CAP-0017` は再採番可能な通常 ID に戻る。
+- `spec-0017` は 2026-08-05 に **CAP-0017 = Repository Toolchain** として再採番された
+  (toolchain カテゴリの初 spec)。過去の `spec-0017` = Prototyping v2.0 という
+  参照は歴史記録であり、現行 ID Range とは一致しない。
+- 現行の active range は `spec-0001..spec-0017` の連番（gap なし）。
+  positional validator (`QFAI-SPLIT-102..105`) が要求する連番条件を満たす。
