@@ -60,3 +60,4 @@ coverage/
 .qfai/discussion/*
 .qfai/review/*
 .qfai/state.json
+.qfai/state.json.lock

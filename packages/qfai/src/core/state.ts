@@ -1,8 +1,7 @@
-import { createHash, randomUUID } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import type { Stats } from "node:fs";
 import type { FileHandle } from "node:fs/promises";
-import { mkdir, open, readFile, realpath, rm, stat, writeFile } from "node:fs/promises";
-import os from "node:os";
+import { mkdir, open, readFile, rm, stat, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /**
@@ -36,50 +35,39 @@ function stateAbsPath(root: string): string {
 }
 
 /**
- * Resolve `target` through symlinks, tolerating a path that does not
- * exist yet: the deepest existing ancestor is canonicalized and the
- * missing tail re-joined onto it.
+ * Lock path for one project root: a sibling of the state file it guards.
  *
- * Keying the lock on raw `path.resolve` output is not enough — the same
- * project reached once by its real path and once through a symlink
- * would hash to two different lock names, and both writers would then
- * sit inside the critical section at the same time.
+ * It used to live in the OS temp dir, keyed by a hash of the project's real
+ * path, to keep an untracked `.qfai/state.json.lock` out of consumer repos.
+ * That put the lock outside the repository's own permissions: on a machine
+ * where several Unix users share a checkout, the first writer's lock is created
+ * under that user's uid in a sticky `/tmp`, and no other user can unlink it —
+ * so a crash there wedged every later update for everybody, whatever the age or
+ * the owner's liveness. Beside `state.json` the lock inherits exactly the
+ * permissions that already decide who may write the state, which is the set of
+ * people who must be able to reap it. `QFAI_GITIGNORE_BLOCK` carries the
+ * matching ignore line.
+ *
+ * A sibling also needs no key: two aliases of one project resolve to the same
+ * file through the filesystem itself, where a hash of the pathname needed
+ * `realpath` to notice they were the same project.
  */
-async function realpathBestEffort(target: string): Promise<string> {
-  const absolute = path.resolve(target);
-  let current = absolute;
-  const tail: string[] = [];
-  for (;;) {
-    try {
-      return path.join(await realpath(current), ...tail);
-    } catch {
-      const parent = path.dirname(current);
-      if (parent === current) return absolute;
-      tail.unshift(path.basename(current));
-      current = parent;
-    }
-  }
+function stateLockPath(root: string): string {
+  return `${stateAbsPath(root)}.lock`;
 }
 
 /**
- * Lock path for one project root.
+ * Path of the short-lived lock that serializes **reapers**.
  *
- * It lives in the OS temp dir rather than next to `state.json`: the
- * QFAI-managed `.gitignore` block ignores `.qfai/state.json` by exact
- * name, so a sibling `.qfai/state.json.lock` would surface as an
- * untracked file in every consumer repo. Concurrency here is between
- * CLI runs on one machine, which a temp-dir lock covers.
- *
- * The key is the symlink-resolved real path so that every alias of one
- * project maps to one lock. Windows paths are case-insensitive, so the
- * key is lowercased there — otherwise `C:\repo` and `c:\repo` would
- * take two different locks.
+ * Reaping is read-then-unlink, and the two cannot be made one operation: Node
+ * has no "unlink only this inode". Two waiters reaping the same stale lock
+ * could therefore both pass the identity check, the first delete it and take a
+ * fresh one, and the second delete *that* one. Taking this lock first makes at
+ * most one process a reaper at a time, so between one reaper's check and its
+ * unlink no other reaper can slip a new lock onto the path.
  */
-async function stateLockPath(root: string): Promise<string> {
-  const resolved = await realpathBestEffort(root);
-  const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
-  const digest = createHash("sha256").update(key).digest("hex").slice(0, 16);
-  return path.join(os.tmpdir(), `qfai-state-${digest}.lock`);
+function reapLockPath(lockPath: string): string {
+  return `${lockPath}.reap`;
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -231,15 +219,48 @@ async function removeLockIfUnchanged(lockPath: string, before: LockSnapshot): Pr
  * stamped must not be mistaken for an abandoned one.
  */
 async function reapStaleLock(lockPath: string): Promise<void> {
-  const before = await readLockSnapshot(lockPath);
-  if (before === null) return;
-  const ownerAlive = before.owner !== null && isProcessAlive(before.owner.pid);
-  if (before.owner === null || ownerAlive) {
-    const age = Date.now() - before.mtimeMs;
-    if (age < LOCK_STALE_MS) return;
-    if (age < LOCK_ABANDON_MS && ownerAlive) return;
+  // One reaper at a time. Without this, two waiters could both clear the same
+  // identity check, the first unlink and take a fresh lock, and the second
+  // unlink that one — see {@link reapLockPath}. Losing the race is not a
+  // failure: the caller retries, and by then the winner has finished.
+  let reaper: FileHandle;
+  try {
+    reaper = await open(reapLockPath(lockPath), "wx");
+  } catch {
+    return;
   }
-  await removeLockIfUnchanged(lockPath, before);
+  try {
+    const before = await readLockSnapshot(lockPath);
+    if (before === null) return;
+    const ownerAlive = before.owner !== null && isProcessAlive(before.owner.pid);
+    if (before.owner === null || ownerAlive) {
+      const age = Date.now() - before.mtimeMs;
+      if (age < LOCK_STALE_MS) return;
+      if (age < LOCK_ABANDON_MS && ownerAlive) return;
+    }
+    await removeLockIfUnchanged(lockPath, before);
+  } finally {
+    await reaper.close().catch(() => undefined);
+    await rm(reapLockPath(lockPath), { force: true }).catch(() => undefined);
+  }
+}
+
+/**
+ * Whether `lockPath` still names the file this holder created.
+ *
+ * The `LOCK_ABANDON_MS` backstop can take a lock away from a holder that is
+ * still alive — a recycled pid, or a critical section stalled past the
+ * backstop — and pid liveness alone cannot tell those apart from a genuinely
+ * abandoned lock. Prevention is therefore not enough on its own: the holder
+ * checks, immediately before it writes, that the lock it took is still on the
+ * path. A holder whose lock was reaped writes nothing and reports it, so the
+ * worst a wrong reap can do is fail one update — never let two writers into
+ * the critical section and lose an increment, which is what this module exists
+ * to prevent.
+ */
+async function lockStillOurs(lockPath: string, lock: StateLock): Promise<boolean> {
+  const owner = await readLockOwner(lockPath);
+  return owner !== null && owner.token === lock.owner.token;
 }
 
 /**
@@ -257,6 +278,10 @@ async function reapStaleLock(lockPath: string): Promise<void> {
 async function acquireStateLock(lockPath: string): Promise<StateLock> {
   const owner: LockOwner = { pid: process.pid, token: randomUUID() };
   const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  // The lock is a sibling of `state.json`, so on a project whose first write
+  // this is, `.qfai/` does not exist yet — `writeStateObject` creates it, but
+  // the lock has to be taken before that runs.
+  await mkdir(path.dirname(lockPath), { recursive: true });
   for (;;) {
     let handle: FileHandle | null = null;
     try {
@@ -372,12 +397,20 @@ export async function updateState<T>(
   root: string,
   mutate: (current: Record<string, unknown>) => StateMutation<T>,
 ): Promise<T> {
-  const lockPath = await stateLockPath(root);
+  const lockPath = stateLockPath(root);
   const lock = await acquireStateLock(lockPath);
   try {
     const current = (await readStateObject(root)) ?? {};
     const { next, result } = mutate(current);
     if (next !== null) {
+      // Re-checked here rather than trusted from the acquire: see
+      // {@link lockStillOurs}. Nothing is written without it.
+      if (!(await lockStillOurs(lockPath, lock))) {
+        throw new Error(
+          `qfai: state lock ${lockPath} was taken over while this update ran; ` +
+            "refusing to write .qfai/state.json from a stale snapshot.",
+        );
+      }
       await writeStateObject(root, next);
     }
     return result;

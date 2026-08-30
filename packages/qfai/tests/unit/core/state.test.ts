@@ -9,22 +9,16 @@
  */
 // QFAI:SPEC-0010:TC-0010-0012
 
-import { createHash } from "node:crypto";
-import {
-  mkdir,
-  mkdtemp,
-  readFile,
-  realpath,
-  rm,
-  symlink,
-  utimes,
-  writeFile,
-} from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, stat, symlink, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
+import {
+  QFAI_GITIGNORE_BLOCK,
+  QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
+} from "../../../src/core/gitignore.js";
 import {
   readDiscussionCurrentId,
   readStateObject,
@@ -149,15 +143,59 @@ describe("TC-0010-0012: updateState serializes concurrent read-modify-write", ()
 });
 
 /**
+ * The lock must live where the repository's own permissions decide who may
+ * touch it.
+ *
+ * In the OS temp dir it was created under whichever uid wrote the state first,
+ * in a sticky directory: on a machine where several Unix users share a
+ * checkout, nobody else could unlink it, so one crash wedged every later
+ * update for everyone — whatever the lock's age or its owner's liveness said.
+ * Beside `state.json` it inherits exactly the permissions that already decide
+ * who may write the state.
+ */
+describe("TC-0010-0012: where the state lock lives", () => {
+  it("puts the lock beside the state file it guards", async () => {
+    await updateState(root, (existing) => ({ next: { ...existing, a: 1 }, result: null }));
+    // Taken and released, so the path is what the test can assert on.
+    const lockPath = path.join(root, ".qfai", "state.json.lock");
+    let held: string | null = null;
+    await updateState(root, (existing) => {
+      held = lockPath;
+      return { next: { ...existing, b: 2 }, result: null };
+    });
+    expect(held).toBe(lockPath);
+    // Released, and nothing was left in the OS temp dir under our name.
+    await expect(stat(lockPath)).rejects.toMatchObject({ code: "ENOENT" });
+  });
+
+  it("takes the lock on a project whose .qfai does not exist yet", async () => {
+    const fresh = await mkdtemp(path.join(os.tmpdir(), "qfai-state-fresh-"));
+    try {
+      await expect(
+        updateState(fresh, (existing) => ({ next: { ...existing, n: 1 }, result: 1 })),
+      ).resolves.toBe(1);
+    } finally {
+      await rm(fresh, { recursive: true, force: true });
+    }
+  });
+
+  it("is ignored by the .gitignore block qfai init writes", () => {
+    expect(QFAI_GITIGNORE_BLOCK).toContain(".qfai/state.json.lock");
+    // Deliberately not a recommended entry: a project whose `.gitignore`
+    // predates the lock must not start failing validation over it.
+    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).not.toContain(".qfai/state.json.lock");
+  });
+});
+
+/**
  * The lock file path `state.ts` derives for `target`. Mirrors
- * `stateLockPath`, which is module-private: sha256 of the
- * symlink-resolved root, lowercased on case-insensitive Windows.
+ * `stateLockPath`, which is module-private: a sibling of the state file, so
+ * every alias of one project resolves to one lock through the filesystem
+ * itself.
  */
 async function lockPathFor(target: string): Promise<string> {
-  const resolved = await realpath(target);
-  const key = process.platform === "win32" ? resolved.toLowerCase() : resolved;
-  const digest = createHash("sha256").update(key).digest("hex").slice(0, 16);
-  return path.join(os.tmpdir(), `qfai-state-${digest}.lock`);
+  await mkdir(path.join(target, ".qfai"), { recursive: true });
+  return path.join(target, ".qfai", "state.json.lock");
 }
 
 /** Plant a lock file with a chosen owner stamp and mtime age. */
