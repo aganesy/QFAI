@@ -160,6 +160,53 @@ describe("Completion Contract keeps its executable step executable", () => {
       expect(configure).not.toContain("**judged only over the findings this skill owns**");
     });
 
+    it(`${tree}: a run terminalised only by exception still has a smoke target`, async () => {
+      // The no-op branch was scoped to a ledger that was *already* terminal on
+      // entry. A session that writes its remaining rows `todo` -> `exception`
+      // under approved accepted-risk waivers terminalises the ledger itself: it
+      // moved nothing to `done` and started on a non-terminal ledger, so it
+      // matched neither branch and every such completion was UNRUN, i.e.
+      // blocked — although the skill's own Completion step 3 permits it and the
+      // checkpoint reference already owes the boundary on that exit.
+      const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+
+      expect(implement).toContain(
+        "**every exit that leaves the ledger terminal without a `done` transition of its own**",
+      );
+      expect(implement).toContain("`todo` -> `exception`");
+      // The narrow reading is what has to stay gone.
+      expect(implement).toContain(
+        'Reading the branch as "already terminal on entry" made that exit an unconditional UNRUN',
+      );
+      // The reference this branch defers to must still say the two terminal
+      // statuses end the loop alike, or the cross-reference goes dangling.
+      const checkpoint = flat(
+        await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+      );
+      expect(checkpoint).toContain(
+        "The last row reaching `exception` ends the loop exactly as `done` does",
+      );
+    });
+
+    it(`${tree}: the configure verdict fails on the glob defect it owns`, async () => {
+      // `doctor --fail-on error` was named as the verdict while
+      // `traceability.testGlobs` capped at `warning` for globs that collect no
+      // test — so a configuration matching zero files exited 0 and passed the
+      // one non-waivable bullet. `doctor` now raises that state as `error`,
+      // matching `validate`'s `QFAI-TRACE-124`; the residual `warning` states
+      // (unset globs, truncated scan) are read off the same check.
+      const configure = flat(await read(tree, "assistant/skills/qfai-configure/SKILL.md"));
+
+      expect(configure).toContain("**and globs it wrote that match no test file**");
+      expect(configure).toContain("the same defect `validate` raises as a `QFAI-TRACE-124` error");
+      expect(configure).toContain("**`traceability.testGlobs` must report `[ok]`**");
+      expect(configure).toContain("Anything but `ok` there is this bullet's FAIL");
+      // The stale claim: a scan failure was the only glob state doctor failed on.
+      expect(configure).not.toContain(
+        "`traceability.testGlobs` (a scan failure in the globs it wrote)",
+      );
+    });
+
     it(`${tree}: a reused checkpoint PASS is pinned to the tree it ran against`, async () => {
       // The no-op branch reused a recorded checkpoint result whenever it
       // postdated the last ledger change. A terminal ledger stops moving while
