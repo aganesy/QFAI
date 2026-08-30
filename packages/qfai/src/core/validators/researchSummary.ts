@@ -206,9 +206,17 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
   }
 
-  const missing = await buildMissingSectionIssue(root, discussionRoot, files, filesWithHeading);
-  if (missing) {
-    issues.push(missing);
+  // `uiux.requireResearchSummary: false` is a project stating the section is
+  // not required here, so reporting its absence contradicts the setting — and
+  // under `--fail-on warning` or `--strict` it fails the run over a rule the
+  // project opted out of. Only the absence rule is governed by it: every rule
+  // above judges a section the project chose to write, and declining the
+  // requirement is not a licence to record the protocol wrongly.
+  if (config.uiux?.requireResearchSummary !== false) {
+    const missing = await buildMissingSectionIssue(root, discussionRoot, files, filesWithHeading);
+    if (missing) {
+      issues.push(missing);
+    }
   }
 
   return issues;

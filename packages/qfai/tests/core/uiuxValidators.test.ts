@@ -262,6 +262,64 @@ describe("uiux validators", () => {
     expect(missing[0]?.file).toContain("discussion-20260101000000000");
   });
 
+  it("respects uiux.requireResearchSummary: false for the absence rule", async () => {
+    // A project that turned the requirement off should not be told the section
+    // is missing — and under `--fail-on warning` or `--strict` that warning
+    // fails the run over a rule it opted out of.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const optedOut = {
+      ...defaultConfig,
+      uiux: { ...(defaultConfig.uiux ?? {}), requireResearchSummary: false },
+    };
+    expect((await validateResearchSummary(root, optedOut)).map((item) => item.code)).not.toContain(
+      "QFAI-RESEARCH-012",
+    );
+
+    // Absent and `true` both keep the rule on: turning it off is an explicit
+    // act, not the default.
+    for (const uiux of [
+      defaultConfig.uiux,
+      { ...(defaultConfig.uiux ?? {}), requireResearchSummary: true },
+    ]) {
+      const config = { ...defaultConfig, ...(uiux ? { uiux } : {}) };
+      expect((await validateResearchSummary(root, config)).map((item) => item.code)).toContain(
+        "QFAI-RESEARCH-012",
+      );
+    }
+  });
+
+  it("keeps a malformed Research Summary reported under requireResearchSummary: false", async () => {
+    // The setting says the section is not required. It does not say a section
+    // the project chose to write may record the protocol wrongly, so the
+    // content rules stay on.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Research Summary", "sources:", "  - id: SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (
+      await validateResearchSummary(root, {
+        ...defaultConfig,
+        uiux: { ...(defaultConfig.uiux ?? {}), requireResearchSummary: false },
+      })
+    ).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).toContain("QFAI-RESEARCH-004");
+  });
+
   it("does not report a missing Research Summary once the latest pack carries one", async () => {
     const root = await newTempDir();
     const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
