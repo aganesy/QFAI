@@ -94,6 +94,7 @@
     "tests/integration/spec0006WorkflowsIntegrity.guttedPackage.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
+    "tests/unit/cli/lib/warnings.truncatedScanIssue.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
     "tests/unit/shippedLaneCommands.test.ts"
