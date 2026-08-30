@@ -367,23 +367,28 @@ function collectExportedValidatorNames(fileName: string, body: string): string[]
 // may sit in a helper nobody invokes, or in a comment. Reachability is
 // therefore computed over *declarations* — who calls whom.
 //
-// A node is the pair (declaring file, declared name), never a bare name. Bare
-// names merge every same-named declaration in the import graph: a reachable
-// `check()` in one module and an unreachable `check()` in another that calls a
-// validator would collapse into one node and report the validator as executed.
-// Callees are resolved through the caller's own import bindings (following
-// `export { x } from` barrels), so an edge always lands on the declaration the
-// call actually reaches.
+// A node is one specific declaration: (declaring file, declared name, position
+// of the declaration). Every coarser key merges declarations that are not the
+// same code. A bare name merges same-named declarations across the import
+// graph; `file#name` still merges them *within* one file, so a top-level
+// `check()` and a class method `check()` shared a node and a validator called
+// only from the method read as executed whenever anything called the function.
+//
+// Edges resolve a call site by lexical scope: innermost enclosing scope first,
+// then outward, then the module's own import bindings (following
+// `export { x } from` barrels). Names only a receiver can reach — class
+// methods, object-literal properties — are deliberately absent from every
+// scope, so `check()` can never borrow `adapter.check`.
 // ---------------------------------------------------------------------------
 
-/** A call-graph node: the declaration `name` inside `file`. */
-function declId(file: string, name: string): string {
-  return `${file}#${name}`;
+/** A call-graph node: the declaration `name` at `pos` inside `file`. */
+function declId(file: string, name: string, pos: number): string {
+  return `${file}#${name}@${pos}`;
 }
 
 /** Node for statements outside any function; importing the module runs them. */
 function moduleTopLevelOwner(file: string): string {
-  return declId(file, "<module>");
+  return `${file}#<module>`;
 }
 
 /**
@@ -416,11 +421,6 @@ const CALLBACK_INVOKING_METHODS: ReadonlySet<string> = new Set<string>([
   "finally",
 ]);
 
-/** A graph node for an unnamed function expression / arrow. */
-function anonymousId(file: string, node: ts.Node): string {
-  return declId(file, `<anonymous@${node.pos}>`);
-}
-
 /**
  * Whether an unnamed function runs at the point it is written — an IIFE, or the
  * callback of a combinator that invokes it. `register(() => validateAtddFoo())`
@@ -444,23 +444,91 @@ function invokedInPlace(node: ts.FunctionExpression | ts.ArrowFunction): boolean
   return false;
 }
 
-/** `const validateX = async () => {}` / `{ validateX: () => {} }` name their function. */
-function boundName(node: ts.Node): string | undefined {
-  const parent: ts.Node | undefined = node.parent;
-  if (parent === undefined) return undefined;
-  if (ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
-  if (ts.isPropertyAssignment(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
+/** Every node that opens a scope and can own call edges. */
+type FunctionLike =
+  | ts.FunctionDeclaration
+  | ts.FunctionExpression
+  | ts.ArrowFunction
+  | ts.MethodDeclaration
+  | ts.ConstructorDeclaration
+  | ts.GetAccessorDeclaration
+  | ts.SetAccessorDeclaration;
+
+function asFunctionLike(node: ts.Node): FunctionLike | undefined {
+  if (
+    ts.isFunctionDeclaration(node) ||
+    ts.isFunctionExpression(node) ||
+    ts.isArrowFunction(node) ||
+    ts.isMethodDeclaration(node) ||
+    ts.isConstructorDeclaration(node) ||
+    ts.isGetAccessorDeclaration(node) ||
+    ts.isSetAccessorDeclaration(node)
+  ) {
+    return node;
+  }
   return undefined;
+}
+
+/**
+ * The name a *bare identifier* call site can use to reach this function —
+ * `function validateX()` or `const validateX = async () => {}`.
+ *
+ * A class method and an object-literal property are deliberately nameless
+ * here. Both are reachable only through a receiver (`adapter.check()`), which
+ * `calleeName` refuses to resolve, so putting them in a scope under their bare
+ * name would hand every `check()` an edge into a method nobody calls.
+ */
+function bindingName(node: FunctionLike): string | undefined {
+  if (ts.isFunctionDeclaration(node)) return node.name?.text;
+  if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
+    const parent: ts.Node | undefined = node.parent;
+    if (parent !== undefined && ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) {
+      return parent.name.text;
+    }
+  }
+  return undefined;
+}
+
+/** Human-readable half of a node id. The position is what makes it unique. */
+function declLabel(node: FunctionLike): string {
+  const bound = bindingName(node);
+  if (bound !== undefined) return bound;
+  if (ts.isConstructorDeclaration(node)) return "<constructor>";
+  if (
+    (ts.isMethodDeclaration(node) ||
+      ts.isGetAccessorDeclaration(node) ||
+      ts.isSetAccessorDeclaration(node)) &&
+    ts.isIdentifier(node.name)
+  ) {
+    return `<method ${node.name.text}>`;
+  }
+  const parent: ts.Node | undefined = node.parent;
+  if (parent !== undefined && ts.isPropertyAssignment(parent) && ts.isIdentifier(parent.name)) {
+    return `<property ${parent.name.text}>`;
+  }
+  return "<anonymous>";
 }
 
 /** Where an imported / re-exported binding comes from. */
 type ImportTarget = { file: string; name: string };
 
+/** One lexical scope: what a bare identifier resolves to inside it. */
+type ScopeInfo = {
+  /** The enclosing scope's owning node; `undefined` for the module scope. */
+  parent: ts.Node | undefined;
+  /** Bare-callable name -> graph node id, for functions declared in this scope. */
+  names: Map<string, string>;
+};
+
 type ModuleFacts = {
   file: string;
   source: ts.SourceFile;
-  /** Names declared in this module (functions, methods, function-valued bindings). */
-  declared: Set<string>;
+  /** Scope-owner node -> its bindings. The module scope is keyed by `source`. */
+  scopes: Map<ts.Node, ScopeInfo>;
+  /** Function-like node -> its graph node id. */
+  functionIds: Map<ts.Node, string>;
+  /** Module-scope declarations — the only ones an import can land on. */
+  topLevel: Map<string, string>;
   /** Local binding name -> origin, for static and `await import()` named imports. */
   imports: Map<string, ImportTarget>;
   /** `export { a as b } from "./x.js"` — exported name -> origin. */
@@ -490,7 +558,9 @@ function dynamicImportTarget(file: string, initializer?: ts.Expression): string 
 /** Declarations and binding origins of one module — the input to edge resolution. */
 function moduleFacts(file: string, body: string): ModuleFacts {
   const source = parse(file, body);
-  const declared = new Set<string>();
+  const moduleScope: ScopeInfo = { parent: undefined, names: new Map<string, string>() };
+  const scopes = new Map<ts.Node, ScopeInfo>([[source, moduleScope]]);
+  const functionIds = new Map<ts.Node, string>();
   const imports = new Map<string, ImportTarget>();
   const reExports = new Map<string, ImportTarget>();
   const starReExports: string[] = [];
@@ -500,14 +570,17 @@ function moduleFacts(file: string, body: string): ModuleFacts {
       ? specifierTarget(file, specifier.text)
       : undefined;
 
-  const visit = (node: ts.Node): void => {
-    if (ts.isFunctionDeclaration(node) && node.name) {
-      declared.add(node.name.text);
-    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
-      declared.add(node.name.text);
-    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
-      const bound = boundName(node);
-      if (bound !== undefined) declared.add(bound);
+  const visit = (node: ts.Node, scope: ts.Node): void => {
+    let childScope = scope;
+    const fn = asFunctionLike(node);
+    if (fn !== undefined) {
+      const id = declId(file, declLabel(fn), fn.pos);
+      functionIds.set(fn, id);
+      // The name belongs to the *enclosing* scope; the function opens its own.
+      const bound = bindingName(fn);
+      if (bound !== undefined) scopes.get(scope)?.names.set(bound, id);
+      scopes.set(fn, { parent: scope, names: new Map<string, string>() });
+      childScope = fn;
     }
 
     if (
@@ -556,10 +629,19 @@ function moduleFacts(file: string, body: string): ModuleFacts {
       }
     }
 
-    ts.forEachChild(node, visit);
+    ts.forEachChild(node, (child) => visit(child, childScope));
   };
-  visit(source);
-  return { file, source, declared, imports, reExports, starReExports };
+  visit(source, source);
+  return {
+    file,
+    source,
+    scopes,
+    functionIds,
+    topLevel: moduleScope.names,
+    imports,
+    reExports,
+    starReExports,
+  };
 }
 
 /** Follow `export { x } from` / `export *` chains to the declaring module. */
@@ -569,12 +651,13 @@ function resolveExport(
   name: string,
   seen: Set<string>,
 ): string | undefined {
-  const key = declId(file, name);
+  const key = `${file}#${name}`;
   if (seen.has(key)) return undefined;
   seen.add(key);
   const module = facts.get(file);
   if (module === undefined) return undefined;
-  if (module.declared.has(name)) return key;
+  const declared = module.topLevel.get(name);
+  if (declared !== undefined) return declared;
   const reExport = module.reExports.get(name);
   if (reExport !== undefined) return resolveExport(facts, reExport.file, reExport.name, seen);
   for (const star of module.starReExports) {
@@ -584,15 +667,26 @@ function resolveExport(
   return undefined;
 }
 
-/** The declaration a call site named `callee` inside `file` actually reaches. */
+/**
+ * The declaration a call site named `callee` reaches from inside `scope`.
+ * Scopes are searched innermost first, so a nested `helper()` answers for its
+ * own callers rather than for its module-scope namesake, and only then do the
+ * module's import bindings apply.
+ */
 function resolveCallee(
   facts: ReadonlyMap<string, ModuleFacts>,
-  file: string,
+  module: ModuleFacts,
+  scope: ts.Node,
   callee: string,
 ): string | undefined {
-  const module = facts.get(file);
-  if (module === undefined) return undefined;
-  if (module.declared.has(callee)) return declId(file, callee);
+  let current: ts.Node | undefined = scope;
+  while (current !== undefined) {
+    const info = module.scopes.get(current);
+    if (info === undefined) break;
+    const local = info.names.get(callee);
+    if (local !== undefined) return local;
+    current = info.parent;
+  }
   const imported = module.imports.get(callee);
   if (imported === undefined) return undefined;
   return resolveExport(facts, imported.file, imported.name, new Set<string>());
@@ -610,37 +704,49 @@ function collectCallEdges(
   module: ModuleFacts,
   edges: Map<string, Set<string>>,
 ): void {
-  const walk = (node: ts.Node, owner: string): void => {
+  const walk = (node: ts.Node, owner: string, scope: ts.Node): void => {
     let nextOwner = owner;
-    if (ts.isFunctionDeclaration(node) && node.name) {
-      nextOwner = declId(module.file, node.name.text);
-    } else if (ts.isMethodDeclaration(node) && ts.isIdentifier(node.name)) {
-      nextOwner = declId(module.file, node.name.text);
-    } else if (ts.isFunctionExpression(node) || ts.isArrowFunction(node)) {
-      const bound = boundName(node);
-      if (bound !== undefined) {
-        nextOwner = declId(module.file, bound);
-      } else {
-        // An unnamed closure owns its own body. It joins the caller only where
-        // it is actually invoked, so a validator parked in a callback nobody
-        // runs stays unreachable.
-        nextOwner = anonymousId(module.file, node);
-        if (invokedInPlace(node)) addEdge(edges, owner, nextOwner);
+    let nextScope = scope;
+    const fn = asFunctionLike(node);
+    const id = fn === undefined ? undefined : module.functionIds.get(fn);
+    if (fn !== undefined && id !== undefined) {
+      // Every function-like declaration owns its own body — a class method
+      // included, so its calls never leak to a same-named function next to it.
+      nextOwner = id;
+      nextScope = fn;
+      if (
+        (ts.isFunctionExpression(fn) || ts.isArrowFunction(fn)) &&
+        bindingName(fn) === undefined &&
+        invokedInPlace(fn)
+      ) {
+        // An unnamed closure joins its caller only where it is actually
+        // invoked, so a validator parked in a callback nobody runs stays
+        // unreachable.
+        addEdge(edges, owner, id);
       }
     }
 
     if (ts.isCallExpression(node)) {
       const callee = calleeName(node.expression);
-      const target = callee === undefined ? undefined : resolveCallee(facts, module.file, callee);
+      const target = callee === undefined ? undefined : resolveCallee(facts, module, scope, callee);
       if (target !== undefined) addEdge(edges, owner, target);
     }
-    ts.forEachChild(node, (child) => walk(child, nextOwner));
+    ts.forEachChild(node, (child) => walk(child, nextOwner, nextScope));
   };
-  walk(module.source, moduleTopLevelOwner(module.file));
+  walk(module.source, moduleTopLevelOwner(module.file), module.source);
 }
 
-/** Declaration-level call graph over a `path -> source` module set. */
-function buildCallGraph(modules: ReadonlyMap<string, string>): Map<string, Set<string>> {
+/**
+ * Declaration-level call graph over a `path -> source` module set. `nodeOf`
+ * hands back the node of a module-scope declaration: node ids carry a
+ * declaration position, so a name alone can no longer address one.
+ */
+type CallGraph = {
+  edges: Map<string, Set<string>>;
+  nodeOf: (file: string, name: string) => string | undefined;
+};
+
+function buildCallGraph(modules: ReadonlyMap<string, string>): CallGraph {
   const facts = new Map<string, ModuleFacts>();
   for (const [file, body] of modules) {
     facts.set(file, moduleFacts(file, body));
@@ -649,7 +755,7 @@ function buildCallGraph(modules: ReadonlyMap<string, string>): Map<string, Set<s
   for (const module of facts.values()) {
     collectCallEdges(facts, module, edges);
   }
-  return edges;
+  return { edges, nodeOf: (file, name) => facts.get(file)?.topLevel.get(name) };
 }
 
 /** Names transitively invoked starting from `roots`. */
@@ -705,11 +811,11 @@ async function buildImportedModules(): Promise<Map<string, string>> {
   return modules;
 }
 
-type ExecutionGraph = { edges: Map<string, Set<string>>; modules: ReadonlyMap<string, string> };
+type ExecutionGraph = { graph: CallGraph; modules: ReadonlyMap<string, string> };
 
 async function buildExecutionGraph(): Promise<ExecutionGraph> {
   const modules = await buildImportedModules();
-  return { edges: buildCallGraph(modules), modules };
+  return { graph: buildCallGraph(modules), modules };
 }
 
 /**
@@ -718,12 +824,11 @@ async function buildExecutionGraph(): Promise<ExecutionGraph> {
  * merges here — this set answers "does this run at all", never "does this run
  * for a given profile".
  */
-function executedFromEntry(graph: ExecutionGraph): Set<string> {
-  const roots = [
-    declId(VALIDATE_TS, VALIDATE_ENTRY),
-    ...[...graph.modules.keys()].map(moduleTopLevelOwner),
-  ];
-  return reachableFrom(graph.edges, roots);
+function executedFromEntry(execution: ExecutionGraph): Set<string> {
+  const entry = execution.graph.nodeOf(VALIDATE_TS, VALIDATE_ENTRY);
+  const roots = [...execution.modules.keys()].map(moduleTopLevelOwner);
+  if (entry !== undefined) roots.push(entry);
+  return reachableFrom(execution.graph.edges, roots);
 }
 
 /**
@@ -731,8 +836,9 @@ function executedFromEntry(graph: ExecutionGraph): Set<string> {
  * profile's own orchestrator so that a validator moved to another profile's
  * branch — still reachable from `validateProject` — reads as unwired here.
  */
-function executedFromAtddProfile(graph: ExecutionGraph): Set<string> {
-  return reachableFrom(graph.edges, [declId(VALIDATE_TS, ATDD_PROFILE_ENTRY)]);
+function executedFromAtddProfile(execution: ExecutionGraph): Set<string> {
+  const entry = execution.graph.nodeOf(VALIDATE_TS, ATDD_PROFILE_ENTRY);
+  return entry === undefined ? new Set<string>() : reachableFrom(execution.graph.edges, [entry]);
 }
 
 /**
@@ -782,16 +888,30 @@ async function collectAtddEmittingModules(): Promise<AtddModule[]> {
 describe("meta-test: ATDD validators are reachable from the production graph", () => {
   const SAMPLE_FILE = path.join(SRC_ROOT, "atddSample.ts");
   const SAMPLE_SOURCE = "export async function validateAtddSample() {\n  return [];\n}";
-  const sampleDecl = declId(SAMPLE_FILE, "validateAtddSample");
   const caller = (file: string, source: string): ReadonlyMap<string, string> =>
     new Map([
       [SAMPLE_FILE, SAMPLE_SOURCE],
       [file, source],
     ]);
 
+  /**
+   * Whether the module-scope declaration `file#name` reaches the sample
+   * validator. Node ids carry a declaration position, so roots are looked up
+   * rather than spelled out; a missing root is a broken fixture, not a `false`.
+   */
+  const reachesSample = (graph: CallGraph, file: string, name: string): boolean => {
+    const root = graph.nodeOf(file, name);
+    if (root === undefined) {
+      throw new Error(`fixture ${path.basename(file)} declares no module-scope ${name}`);
+    }
+    const sample = graph.nodeOf(SAMPLE_FILE, "validateAtddSample");
+    if (sample === undefined) throw new Error("the sample validator is missing from the graph");
+    return reachableFrom(graph.edges, [root]).has(sample);
+  };
+
   it("neither a barrel re-export nor a commented-out call is a call site", () => {
     const barrel = path.join(SRC_ROOT, "barrel.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       caller(
         barrel,
         [
@@ -804,10 +924,10 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(edges, [declId(barrel, "runAtddValidators")]).has(sampleDecl)).toBe(false);
+    expect(reachesSample(graph, barrel, "runAtddValidators")).toBe(false);
 
     const live = path.join(SRC_ROOT, "live.ts");
-    const liveEdges = buildCallGraph(
+    const liveGraph = buildCallGraph(
       caller(
         live,
         [
@@ -818,14 +938,12 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(liveEdges, [declId(live, "runAtddValidators")]).has(sampleDecl)).toBe(
-      true,
-    );
+    expect(reachesSample(liveGraph, live, "runAtddValidators")).toBe(true);
   });
 
   it("a call inside a function nobody invokes is not reachable", () => {
     const orphan = path.join(SRC_ROOT, "orphanHelper.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       caller(
         orphan,
         [
@@ -839,8 +957,8 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(edges, [declId(orphan, "runAtddValidators")]).has(sampleDecl)).toBe(false);
-    expect(reachableFrom(edges, [declId(orphan, "unusedHelper")]).has(sampleDecl)).toBe(true);
+    expect(reachesSample(graph, orphan, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, orphan, "unusedHelper")).toBe(true);
   });
 
   it("same-named declarations in different modules are distinct graph nodes", () => {
@@ -849,7 +967,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     // `check()` and the validator reads as executed while nothing invokes it.
     const wired = path.join(SRC_ROOT, "wired.ts");
     const orphan = path.join(SRC_ROOT, "orphanModule.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       new Map([
         [SAMPLE_FILE, SAMPLE_SOURCE],
         [
@@ -874,8 +992,91 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ],
       ]),
     );
-    expect(reachableFrom(edges, [declId(wired, "runAtddValidators")]).has(sampleDecl)).toBe(false);
-    expect(reachableFrom(edges, [declId(orphan, "check")]).has(sampleDecl)).toBe(true);
+    expect(reachesSample(graph, wired, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, orphan, "check")).toBe(true);
+  });
+
+  it("same-named declarations inside one module are distinct graph nodes", () => {
+    // Keying nodes by `file#name` was not enough: a top-level `check()` and a
+    // class method `check()` still shared one node, so calling the function
+    // dragged in the method's body and the validator only the method calls read
+    // as executed. A method is reachable through a receiver alone, and
+    // `adapter.check()` is not resolvable, so nothing reaches it here.
+    const mixed = path.join(SRC_ROOT, "mixedDecls.ts");
+    const graph = buildCallGraph(
+      caller(
+        mixed,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "function check() {",
+          "  return [];",
+          "}",
+          "class Adapter {",
+          "  check() {",
+          "    return validateAtddSample();",
+          "  }",
+          "}",
+          "async function runAtddValidators() {",
+          "  return check();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachesSample(graph, mixed, "runAtddValidators")).toBe(false);
+
+    // Over-correction pin: the top-level `check()` is still a live call target
+    // next to a same-named method, so a validator it does call stays wired.
+    const wired = path.join(SRC_ROOT, "wiredLocal.ts");
+    const wiredGraph = buildCallGraph(
+      caller(
+        wired,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "function check() {",
+          "  return validateAtddSample();",
+          "}",
+          "class Adapter {",
+          "  check() {",
+          "    return [];",
+          "  }",
+          "}",
+          "async function runAtddValidators() {",
+          "  return check();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachesSample(wiredGraph, wired, "runAtddValidators")).toBe(true);
+  });
+
+  it("a nested declaration does not answer for its module-scope namesake", () => {
+    // The same merge one level down: `helper` declared inside an unreachable
+    // function is not the module-scope `helper` that runAtddValidators calls.
+    const nested = path.join(SRC_ROOT, "nestedScopes.ts");
+    const graph = buildCallGraph(
+      caller(
+        nested,
+        [
+          'import { validateAtddSample } from "./atddSample.js";',
+          "function helper() {",
+          "  return [];",
+          "}",
+          "function unusedOuter() {",
+          "  function helper() {",
+          "    return validateAtddSample();",
+          "  }",
+          "  return helper();",
+          "}",
+          "async function runAtddValidators() {",
+          "  return helper();",
+          "}",
+        ].join("\n"),
+      ),
+    );
+    expect(reachesSample(graph, nested, "runAtddValidators")).toBe(false);
+    // Over-correction pin: inside `unusedOuter`, `helper()` still resolves to
+    // the nested declaration — scopes are searched innermost first.
+    expect(reachesSample(graph, nested, "unusedOuter")).toBe(true);
   });
 
   it("a validator reached only from another profile's branch is not ATDD-wired", () => {
@@ -883,7 +1084,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     // validateProject merges every branch, so profile membership must be read
     // from the profile's own orchestrator instead.
     const entry = path.join(SRC_ROOT, "profileEntry.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       caller(
         entry,
         [
@@ -908,8 +1109,8 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(edges, [declId(entry, "validateProject")]).has(sampleDecl)).toBe(true);
-    expect(reachableFrom(edges, [declId(entry, "runAtddValidators")]).has(sampleDecl)).toBe(false);
+    expect(reachesSample(graph, entry, "validateProject")).toBe(true);
+    expect(reachesSample(graph, entry, "runAtddValidators")).toBe(false);
   });
 
   it("a property call does not borrow a same-named local declaration", () => {
@@ -917,7 +1118,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
     // `check()` below — which nothing invokes — and the validator it calls read
     // as executed.
     const receiver = path.join(SRC_ROOT, "receiver.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       caller(
         receiver,
         [
@@ -931,15 +1132,13 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(edges, [declId(receiver, "runAtddValidators")]).has(sampleDecl)).toBe(
-      false,
-    );
-    expect(reachableFrom(edges, [declId(receiver, "check")]).has(sampleDecl)).toBe(true);
+    expect(reachesSample(graph, receiver, "runAtddValidators")).toBe(false);
+    expect(reachesSample(graph, receiver, "check")).toBe(true);
   });
 
   it("a validator parked in an unrun callback is not reachable from its registrar", () => {
     const registry = path.join(SRC_ROOT, "registry.ts");
-    const edges = buildCallGraph(
+    const graph = buildCallGraph(
       caller(
         registry,
         [
@@ -955,13 +1154,11 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(edges, [declId(registry, "runAtddValidators")]).has(sampleDecl)).toBe(
-      false,
-    );
+    expect(reachesSample(graph, registry, "runAtddValidators")).toBe(false);
 
     // A callback a combinator invokes where it stands still counts as running.
     const mapped = path.join(SRC_ROOT, "mapped.ts");
-    const mappedEdges = buildCallGraph(
+    const mappedGraph = buildCallGraph(
       caller(
         mapped,
         [
@@ -972,9 +1169,7 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
         ].join("\n"),
       ),
     );
-    expect(reachableFrom(mappedEdges, [declId(mapped, "runAtddValidators")]).has(sampleDecl)).toBe(
-      true,
-    );
+    expect(reachesSample(mappedGraph, mapped, "runAtddValidators")).toBe(true);
   });
 
   it("prose that merely names an ATDD code does not make a module an emitter", () => {
@@ -1033,11 +1228,12 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
 
   it("every exported validator of an ATDD-emitting module runs on the atdd profile", async () => {
     const modules = await collectAtddEmittingModules();
-    const graph = await buildExecutionGraph();
-    const executed = executedFromAtddProfile(graph);
+    const execution = await buildExecutionGraph();
+    const executed = executedFromAtddProfile(execution);
 
+    const atddEntry = execution.graph.nodeOf(VALIDATE_TS, ATDD_PROFILE_ENTRY);
     expect(
-      executedFromEntry(graph).has(declId(VALIDATE_TS, ATDD_PROFILE_ENTRY)),
+      atddEntry !== undefined && executedFromEntry(execution).has(atddEntry),
       "runAtddValidators must itself be reachable from validateProject, or the check below " +
         "measures nothing.",
     ).toBe(true);
@@ -1052,7 +1248,10 @@ describe("meta-test: ATDD validators are reachable from the production graph", (
       // Per validator, not per module: a module that co-locates a wired
       // `validateA` with an unwired `validateB` must still fail on B.
       for (const name of exports) {
-        if (!executed.has(declId(file, name))) unwired.push(`${rel}#${name}`);
+        const node = execution.graph.nodeOf(file, name);
+        // No node at all means the module is not even in validate.ts's import
+        // closure — the strictest form of unwired.
+        if (node === undefined || !executed.has(node)) unwired.push(`${rel}#${name}`);
       }
     }
 
