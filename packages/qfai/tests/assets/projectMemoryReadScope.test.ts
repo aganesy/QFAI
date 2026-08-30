@@ -81,6 +81,20 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(article).toContain("on demand");
   });
 
+  it("only lets the skip stand when the card and the catalog body agree", async () => {
+    // `init --force` regenerates the card and deliberately leaves `manifest/`
+    // alone so a taxonomy tuned through `/qfai-configure` survives, so the two
+    // bodies can differ in an upgraded or customised project. Skipping on the
+    // card's mere presence then drops the role contract the catalog carries.
+    const article = articleIII(await read(tree, CONSTITUTION));
+    expect(article).toContain("the mirror can be");
+    expect(article).toContain(
+      "skip that body only when it matches the card in context; when they differ, the catalog entry is the role contract and wins",
+    );
+    expect(article).toContain("stale-manifest.md");
+    expect(article).not.toContain("skip that body when the card is already in context");
+  });
+
   it("still mandates the authored project memory it always did", async () => {
     // The scoping must not become a licence to skip the authored assets: only
     // the machine-derived duplicate leaves the unconditional path.
@@ -143,8 +157,16 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       expect(body, `${card}: dropped the catalog entry entirely`).toContain(
         ".qfai/assistant/manifest/agent-catalog.yml",
       );
+      // The skip is conditional on the two bodies AGREEING. `init --force`
+      // regenerates the card and deliberately leaves `manifest/` alone, so an
+      // upgraded or `/qfai-configure`-tuned project can hold two different
+      // bodies for one role — skipping on the card's mere presence then drops
+      // the role contract the catalog carries.
       expect(body, `${card}: does not scope the mirrored body`).toContain(
-        "Skip a `developer_instructions` body when that agent card is already in context",
+        "Skip a `developer_instructions` body only when it matches the agent card already in context",
+      );
+      expect(body, `${card}: does not say which side wins on divergence`).toContain(
+        "when the two differ the catalog entry is the role contract and wins",
       );
       // `doctor`'s `extractLiteralRequiredInputs` (src/core/doctor.ts) treats a
       // bullet that starts with "." and carries no glob character as a literal
@@ -154,6 +176,30 @@ describe.each(QFAI_TREES)("%s", (tree) => {
         body,
         `${card}: the catalog scope is its own bullet and doctor will read it as a path`,
       ).not.toContain("- .qfai/assistant/manifest/agent-catalog.yml —");
+    }
+  });
+
+  // Scoping the article and the cards is still not enough: `qfai-sdd`,
+  // `qfai-atdd`, `qfai-configure` and `qfai-verify` each carry their own
+  // `Inputs Priority`, and a whole-manifest glob there re-reads the mirror on
+  // every ordinary run of those workflows.
+  it("scopes the manifest read in the skills that declare their own inputs", async () => {
+    const dir = path.join(repoRoot, tree, "assistant/skills");
+    const skills = (await readdir(dir)).filter((name) => name.startsWith("qfai-"));
+    expect(skills.length, "no qfai-* skills found").toBeGreaterThan(0);
+
+    for (const skill of skills) {
+      const body = flat(await readFile(path.join(dir, skill, "SKILL.md"), "utf-8"));
+      if (!body.includes("Inputs Priority")) {
+        continue;
+      }
+      expect(body, `${skill}: still globs the whole manifest tree`).not.toContain(
+        "P2: `.qfai/assistant/manifest/*`",
+      );
+      if (!body.includes("agent-catalog.yml")) {
+        continue;
+      }
+      expect(body, `${skill}: does not scope the catalog read`).toContain("not the file whole");
     }
   });
 });

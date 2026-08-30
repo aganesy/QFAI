@@ -46,7 +46,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-s
 When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
-- P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
+- P2: `.qfai/assistant/manifest/agent-routing.yml` + `.qfai/assistant/manifest/review-profiles.yml` + `.qfai/assistant/catalog/*`; from `.qfai/assistant/manifest/agent-catalog.yml` read the acting `orchestrator`'s and each routed role's entry (`owned_artifacts` / `tool_profile` / `permission_profile` / `specialization_tags`), not the file whole — its `developer_instructions` bodies mirror the agent cards (`constitution/constitution.md` Article III)
 - P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View)
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
