@@ -57,6 +57,7 @@ coverage/
 .qfai/report/*
 .qfai/output/*
 .qfai/evidence/*
+!.qfai/evidence/skeleton.md
 .qfai/discussion/*
 .qfai/review/*
 .qfai/state.json

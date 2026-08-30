@@ -286,7 +286,7 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       // supposed to prevent.
       expect(skill).toContain("**Write the seam debt back in the same commit**");
       expect(skill).toContain("**through the ledger's owner**");
-      expect(skill).toContain("raise the missing rows as a Change Request for `/qfai-sdd`");
+      expect(skill).toContain("raise a Change Request for `/qfai-sdd`");
       expect(skill).toContain("Adding a row here would be drift");
       expect(skill).toContain("The skeleton may be shallow; it may not be invisible to the ledger");
       expect(doc).toContain("**Written back through the ledger's owner, not into the ledger.**");
@@ -441,6 +441,97 @@ describe("qfai-implement has a phase whose exit criterion is that the product ru
       // Nor may it become a licence to write prose where output belongs.
       expect(doc).toContain("Redaction is not licence to paraphrase");
       expect(skill).toContain("**with known secret values replaced by a named placeholder**");
+    });
+
+    // A contract-only target declares no user story: `catalog/test-layers.md`
+    // gives the API layer its obligations as `CON-API-*`. Requiring a `US-*`
+    // left such a project with no surface the smoke script could name.
+    it(`${tree}: an API entrypoint may name a CON-API-* as its boot obligation`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain(
+        "**The boot obligation is a `US-*`, or a `CON-API-*` on an API entrypoint.**",
+      );
+      expect(doc).toContain("a correct project whose in-scope rows are all `Layer = API`");
+      // The exit criterion itself must not re-narrow it to `US-*`.
+      expect(doc).toContain("the surface one declared **boot obligation** names is **reached**");
+      expect(doc).toContain("a `US-*`, or a `CON-API-*` on an API entrypoint");
+    });
+
+    // `--force` regenerates skills and agents but deliberately never
+    // `manifest/**`, so a project updating to this version gets the phase and
+    // no route to dispatch it through.
+    it(`${tree}: an installation that predates the phase is told to add the route`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("**An installation that predates this phase adds the route itself.**");
+      expect(doc).toContain("never `manifest/**`");
+      expect(doc).toContain("through `qfai-configure`");
+    });
+
+    // A CR that asks for a duplicate row, or for a row `/qfai-sdd` does not
+    // generate, is unapprovable — and an unresolved CR blocks completion.
+    it(`${tree}: skeleton debt is attributed before anything is requested`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("Attribute first, request second.");
+      expect(doc).toContain("**coverage-target `TC-*`** and nothing else");
+      expect(doc).toContain(
+        "a request to add a row for a `US-*` or a `CON-API-*` produces no row and returns",
+      );
+      expect(doc).toContain("only the shortcuts that step 1 could not attribute to anything");
+    });
+
+    // The 3-cycle table told the agent to fix a Code failure inside a phase
+    // the same paragraph had just halted, and never said when the budget
+    // resets.
+    it(`${tree}: the halt names who repairs, when work resumes, and the new budget`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("### After the halt");
+      expect(doc).toContain("The halt ends the **invocation**, not the work.");
+      expect(doc).toContain("belongs to the **next** invocation of the phase");
+      expect(doc).toContain("**The budget is per invocation**");
+      expect(doc).toContain("A cause that survives two halts is reported to the operator");
+    });
+
+    // A library declares no entrypoint, so the verdict it still owes had no
+    // section it could legally be written in.
+    it(`${tree}: a target with no entrypoint has a section for its verdict`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("`## (no entrypoint)` section");
+      expect(doc).toContain("carrying `Skeleton verdict: not applicable` and its reason");
+      expect(doc).toContain("Later invocations read it exactly like the others");
+    });
+
+    // The stored command is re-run, so a redacted one is re-run against
+    // nothing — and nothing seals the file it is stored in.
+    it(`${tree}: the stored command stays runnable and defers to the committed script`, async () => {
+      const doc = unwrap(await read(tree, SKELETON));
+
+      expect(doc).toContain("**`Skeleton command` stays runnable after redaction.**");
+      expect(doc).toContain("`Skeleton command` may not");
+      expect(doc).toContain("resolves the secret at run time instead of quoting it");
+      expect(doc).toContain(
+        "**The command is a pointer to the committed script, not an independent copy.**",
+      );
+      expect(doc).toContain("the committed script wins and the entrypoint is **unproven**");
+      expect(doc).toContain("with a fresh `qa-gatekeeper` judgement");
+    });
+
+    // A mandatory reviewer whose input contract names artifacts this phase
+    // does not have would enter its Stop condition on every run.
+    it(`${tree}: qa-gatekeeper has an input contract for the skeleton gate`, async () => {
+      const card = unwrap(await read(tree, "assistant/agents/qa-gatekeeper.md"));
+
+      expect(card).toContain("**The Skeleton observation gate reads a different set.**");
+      expect(card).toContain("before the first ledger row is selected");
+      expect(card).toContain("`.qfai/evidence/skeleton.md`, the section of the entrypoint");
+      expect(card).toContain("the committed smoke script `catalog/tech.md` names");
+      // It judges the exit criterion, and nothing the rows own.
+      expect(card).toContain("Correctness of the boot obligation is **not** in scope");
+      expect(card).toContain("**no ledger row or per-item evidence is required or expected**");
     });
   }
 });

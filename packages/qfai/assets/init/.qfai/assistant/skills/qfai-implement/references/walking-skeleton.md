@@ -58,14 +58,23 @@ a **different** entrypoint runs the phase for that one before its first row.
 
 ## Exit criterion
 
-> The system starts from a declared entrypoint and the surface one declared `US-*` names is **reached** over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker — proven by a committed smoke script that exits non-zero otherwise.
+> The system starts from a declared entrypoint and the surface one declared **boot obligation** names is **reached** over the **real transport that entrypoint declares** — a socket for a service, stdio for a CLI, the queue for a worker — proven by a committed smoke script that exits non-zero otherwise.
 
 Executable, not prose. "The skeleton is in place" is not an exit criterion; the
 script's exit status is.
 
+**The boot obligation is a `US-*`, or a `CON-API-*` on an API entrypoint.**
+A contract-only target declares no user story: `catalog/test-layers.md` gives
+the `API` layer its obligations as `CON-API-*`, and a correct project whose
+in-scope rows are all `Layer = API` has none of the former to name. Requiring a
+`US-*` there left the smoke script with no surface to reach and stopped the
+project at P1a with nothing it could legally write. Either kind names a surface,
+which is all this phase asks of it; pick the one the entrypoint actually serves,
+and prefer a `US-*` where the target declares both.
+
 **Reached, not satisfied — this is a boot obligation.** The entrypoint starts,
-the request the `US-*` names arrives at the surface it names, and the started
-process answers it — **with whatever that surface already returns**. That is the
+the request the obligation names arrives at the surface it names, and the
+started process answers it — **with whatever that surface already returns**. That is the
 whole criterion. Nothing here asserts the `US-*`'s outcome, and nothing here
 prescribes one either.
 
@@ -93,6 +102,19 @@ The transport clause is what the entrypoint declares, not a socket in every
 case: a CLI that opens no socket satisfies the criterion over stdio, and a
 worker over its queue. Requiring a socket of them would leave a correct CLI
 unable to exit the phase with a passing smoke script.
+
+**An installation that predates this phase adds the route itself.** The phase
+is dispatched through `manifest/agent-routing.yml`'s `skeleton` entry, and
+`npx qfai init --force` regenerates `assistant/skills/**` and
+`assistant/agents/**` but deliberately never `manifest/**` — that taxonomy is
+the project's, and `qfai-configure` is its supported editor. So a project
+updating to this version gets this document and the phase it requires while its
+own routing table still has no `skeleton` phase, and no role is dispatched to
+write the entrypoint or the smoke script. Before the first run on such a
+project, add the phase to `manifest/agent-routing.yml` through `qfai-configure`,
+copying the shipped entry — `iteration: per-invocation`, `qa-gatekeeper`
+mandatory and blocking, the engineer roles conditional. A project initialised at
+or after this version already has it.
 
 **`qa-gatekeeper` judges the exit, not the author.** Whenever the verdict is
 `applicable`, the phase's routing entry (`manifest/agent-routing.yml`, phase
@@ -185,10 +207,24 @@ debt is discharged in two writes this skill _is_ allowed to make, both in the
 skeleton's commit:
 
 1. the enumerated shortcuts in `Skeleton debt` (`#evidence`), one line per
-   boundary, each naming the obligation the missing row would carry; and
+   boundary, each naming the obligation it defers **and the row or obligation
+   that already carries it**; and
 2. a Change Request at `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md` per
-   `constitution/drift-protocol.md#when-drift-is-detected`, listing exactly
-   those rows for `/qfai-sdd` to add.
+   `constitution/drift-protocol.md#when-drift-is-detected`, listing **only the
+   shortcuts that step 1 could not attribute to anything**.
+
+Attribute first, request second. Most shortcuts are already owned: an
+in-memory store stands in for persistence a `TC-*` row already plans, a fixed
+identity for an authorization `TC-*`, and those rows need nothing added. And
+what a CR may ask for is narrow — `/qfai-sdd` generates rows for
+**coverage-target `TC-*`** and nothing else, so a request to add a row for a
+`US-*` or a `CON-API-*` produces no row and returns
+(`../../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`).
+A CR that asks for a duplicate or for a row nothing generates is unapprovable,
+and an unresolved CR blocks completion for as long as it sits there. So a
+shortcut reaches the CR only when it defers a coverage-target `TC-*` that the
+spec set genuinely does not declare; write the rest into `Skeleton debt` with
+the row that owns them and raise nothing.
 
 Adding the rows here instead would be a Drift Protocol violation, and skipping
 them would be Bound 1 reached by omission — hence the CR, which is the one route
@@ -228,6 +264,28 @@ those, and an unapprovable CR left open blocks completion for as long as it
 sits there. Once such a CR is approved, its reset is applied by
 `change-request-reset.md` like any other.
 
+### After the halt
+
+The halt ends the **invocation**, not the work. The class decides who repairs
+and where, and the repair is not a fourth cycle taken here:
+
+- **Environment / Steering** — the operator repairs the machine or refreshes
+  the steering file. Neither is this skill's artifact, and neither can be
+  fixed from inside a halted phase.
+- **Code** — this phase owns it, and the repair belongs to the **next**
+  invocation of the phase, not to a cycle past the budget. The budget is what
+  stops an unbounded loop; spending a fourth cycle because the class came out
+  `Code` would remove it.
+- **Upstream** — the Change Request is raised now and the repair waits on its
+  approval and the owner rerun.
+
+Resume by invoking the phase again once the cause is addressed. **The budget is
+per invocation**, so the next one starts at `Skeleton cycles: 0 of 3`; record
+the previous halt and its class in the same section, so a reader can see three
+invocations that each burned three cycles for the same reason. A cause that
+survives two halts is reported to the operator whatever its class — three more
+cycles will not find what six did not.
+
 The halt itself is not conditional on the class: the phase stops either way and
 `Phase: Red` does not start. This is deliberately the opposite of the row-level
 policy, which refines and retries. If the product cannot be made to start,
@@ -254,18 +312,29 @@ inside the working directory that happened to run the phase. A project whose
 `.gitignore` predates that negation adds it before the first run.
 
 One `## <entrypoint>` section per declared entrypoint, written before the first
-row is selected, each carrying:
+row is selected, each carrying the fields below.
 
-| Field                 | Content                                                                   |
-| --------------------- | ------------------------------------------------------------------------- |
-| `Skeleton verdict`    | `applicable` or `not applicable` plus the reason                          |
-| `Skeleton entrypoint` | the declared entrypoint, as a command                                     |
-| `Skeleton US`         | the `US-*` whose surface the smoke script reaches                         |
-| `Skeleton command`    | the smoke-script invocation, verbatim, secret values redacted             |
-| `Skeleton result`     | its output and **exit status**, verbatim, secret values redacted          |
-| `Skeleton gatekeeper` | the `qa-gatekeeper` verdict on that run — `PASS` required when applicable |
-| `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows         |
-| `Skeleton cycles`     | cycles used, of 3                                                         |
+A target that declares **no** runnable entrypoint has no such section to write
+its verdict in, and the verdict is still required. It goes in a single
+project-level `## (no entrypoint)` section — the one section whose heading names
+no command — carrying `Skeleton verdict: not applicable` and its reason, and
+nothing else. Later invocations read it exactly like the others: a target that
+declares no entrypoint and finds this section records nothing further and
+continues; one that has since declared an entrypoint gets a section of its own
+and runs the phase for it, leaving this one where it is.
+
+The fields:
+
+| Field                 | Content                                                                                                                |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------- |
+| `Skeleton verdict`    | `applicable` or `not applicable` plus the reason                                                                       |
+| `Skeleton entrypoint` | the declared entrypoint, as a command                                                                                  |
+| `Skeleton US`         | the boot obligation whose surface the smoke script reaches — a `US-*`, or a `CON-API-*` on an API entrypoint           |
+| `Skeleton command`    | the smoke-script invocation, in a form that **re-runs** — secrets referenced (`$QUEUE_URL`), never inlined or redacted |
+| `Skeleton result`     | its output and **exit status**, verbatim, secret values redacted                                                       |
+| `Skeleton gatekeeper` | the `qa-gatekeeper` verdict on that run — `PASS` required when applicable                                              |
+| `Skeleton debt`       | the shortcuts enumerated, and the `CR-*` raised to add their rows                                                      |
+| `Skeleton cycles`     | cycles used, of 3                                                                                                      |
 
 `Skeleton result` follows the same rule as every other gate result in this
 skill: the command and its real output, never a prose verdict
@@ -294,6 +363,31 @@ altered. The redaction is bounded by what it must leave intact:
 Redaction is not licence to paraphrase. A prose verdict where output belongs is
 the failure this rule already forbids, and a redacted transcript is still a
 transcript.
+
+**`Skeleton command` stays runnable after redaction.** The record is not only
+read — the next invocation and the spec-level checkpoint below **re-run it**, so
+a command whose connection string became `<DB_PASSWORD>` would be re-run against
+nothing and fail an entrypoint that is perfectly healthy. `Skeleton result` may
+carry a placeholder for a value; `Skeleton command` may not. Write it in a form
+that resolves the secret at run time instead of quoting it — the environment
+variable (`$QUEUE_URL`), the secret-provider invocation, or the `.env` the
+project already loads — and name in `Skeleton command` which variables it needs.
+That is the same command a human would type, and it is what makes the re-run
+mean anything. A command that cannot be written without an inline secret is a
+smoke script that needs a wrapper, not a record that needs a placeholder.
+
+**The command is a pointer to the committed script, not an independent copy.**
+Nothing seals this file: it is edited by hand, merged, and rebased like any
+document, and a `Skeleton command` quietly changed to `true` would re-run,
+exit 0, and carry a stale `Skeleton gatekeeper: PASS` past a product that no
+longer starts. So the re-run resolves the script the way the first run did —
+from `catalog/tech.md` and the committed smoke script it names — and treats
+`Skeleton command` as the arguments and environment that script was given. When
+the two disagree, the committed script wins and the entrypoint is **unproven**:
+it re-enters the 3-cycle budget with a fresh `qa-gatekeeper` judgement, because
+a `PASS` recorded against a command that is no longer the one on disk is a
+verdict about something else. Record the resolution in `Skeleton result` so the
+disagreement is visible rather than silently repaired.
 
 **On every later invocation, read this file first.** An entrypoint with no
 section runs the phase. An entrypoint whose latest recorded `Skeleton result` is

@@ -4,5 +4,6 @@
 !change-request-*.md
 !decision-*.md
 !coverage-depth-*.md
+!skeleton.md
 !decisions/
 !decisions/**

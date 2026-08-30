@@ -2,6 +2,7 @@ import { execFile as execFileCb } from "node:child_process";
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 
 import { describe, expect, it } from "vitest";
@@ -96,6 +97,18 @@ describe("git honours the managed block against a broad pre-existing rule", () =
     ".qfai/decisions/CR-0001.md",
     ".qfai/evidence/skeleton.md",
   ];
+
+  // This repository uses its own root `.qfai/` as an installed QFAI tree, and
+  // the skeleton phase writes its evidence there. The generated block and the
+  // per-directory ignore both have to carry the negation here too, or the
+  // record the phase requires in its own commit never enters one.
+  it("this repository's own ignores keep the skeleton evidence trackable", async () => {
+    const here = path.dirname(fileURLToPath(import.meta.url));
+    const repoRoot = path.resolve(here, "..", "..", "..", "..");
+    expect(await isIgnored(repoRoot, ".qfai/evidence/skeleton.md")).toBe(false);
+    // The neighbours it sits among stay ignored, so the negation is scoped.
+    expect(await isIgnored(repoRoot, ".qfai/evidence/implement-spec-0001.md")).toBe(true);
+  });
 
   async function isIgnored(root: string, relativePath: string): Promise<boolean> {
     try {
