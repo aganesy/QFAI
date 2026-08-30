@@ -118,23 +118,52 @@ describe("declared seam", () => {
       // Stage 0 fills `<...>` placeholders, so the field must exist to be filled.
       expect(structure).toContain("## Key packages / entrypoints");
       expect(structure).toContain(
-        "- Production roots: <every directory that holds shipped source, exhaustively",
+        "- Production roots: <every shipped-source path, exhaustively, as Git pathspecs",
       );
-      expect(structure).toContain("exclude tests, fixtures, build output and config>");
+      expect(structure).toContain(
+        "Exclude tests, fixtures, build output, config and documentation>",
+      );
+    });
+
+    it(`${tree}: Production roots expresses pathspecs, so root-level source needs no bare .`, async () => {
+      const structure = flat(await read(tree, STRUCTURE));
+      const policy = flat(await read(tree, POLICY));
+
+      // A directory-only field leaves `.` as the only value a repo with
+      // production source at the root can write, which drags `go.mod`,
+      // `package.json`, config, docs and build output into the production list
+      // and makes step 5 call each of them an undeclared seam breach.
+      expect(structure).toContain(
+        "a directory where the whole directory is source (`src/`, `app/`, `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not",
+      );
+      expect(structure).toContain(
+        "Production code sitting at the repository root takes globs (`*.go` plus `cmd/` and `internal/`; `*.py` plus the package directory), never a bare `.`",
+      );
+      expect(structure).toContain(
+        "which would sweep `go.mod`, `package.json`, CI config, documentation and build output in as production paths",
+      );
+      // The consumer has to pass a glob entry through, not re-read it as a dir.
+      expect(policy).toContain(
+        "The field holds **Git pathspecs, not only directory names** — pass every entry through verbatim",
+      );
+      expect(policy).toContain("pathspec never has to be a bare `.`");
     });
 
     it(`${tree}: a legitimately empty diff is not an infinite re-read loop`, async () => {
       const policy = flat(await read(tree, POLICY));
 
-      // Zero paths is ambiguous, and the falsifiability path makes it legal.
-      expect(policy).toContain("A zero-path result is not by itself evidence of a clean seam");
+      // Zero paths is ambiguous, and a slice of falsifiability items makes it
+      // legal.
+      expect(policy).toContain(
+        "A zero-path **production** list is not by itself evidence of a clean seam",
+      );
       expect(policy).toContain("it is not automatically a mis-read root either");
       expect(policy).toContain(
-        "every item on the slice took the falsifiability path, which adds no production code and reverts its mutation (`references/red-not-observable.md`)",
+        "That is what a slice of falsifiability-path items looks like — `references/red-not-observable.md` adds no production code and reverts its mutation",
       );
       // Re-reading the roots is the branch for the *other* case only.
       expect(policy).toContain(
-        "if even one item claims production code, treat the empty diff as a mis-read root",
+        "Any shipped-source path the production list did not carry is a **mis-read root**",
       );
     });
 
@@ -144,17 +173,39 @@ describe("declared seam", () => {
       // Refactor and a no-round REVISE edit production code with no RED of
       // their own, so falsifiability-only RED does not imply an empty diff.
       expect(policy).toContain(
-        "It is legitimate only when the slice's **whole** change record accounts for it, not just its RED route",
+        "it covers every phase of the slice — RED, Green, Refactor and each review-fix round — and depends on no root",
       );
       expect(policy).toContain(
-        "**and** the slice's Refactor step and every review-fix round on it left production files untouched",
+        "both change production code with no RED of their own, so a falsifiability-only RED never implied an empty production diff",
       );
       expect(policy).toContain(
-        "falsifiability-only RED does not on its own imply an empty production diff",
+        "The empty production list is legitimate only when no listed path is shipped source",
+      );
+    });
+
+    it(`${tree}: the empty-diff judgement rests on a diff, not on the evidence schema`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // The per-item evidence contract records commands, results and revisions
+      // and no per-phase manifest of changed files, so "confirm it from the
+      // slice's evidence blocks" asked for a fact nothing recorded — a worker
+      // that never mentions a production edit passed unchallenged.
+      expect(policy).toContain("**Settle it by observation, not from the evidence blocks.**");
+      expect(policy).toContain(
+        "records commands, results and revisions and no manifest of changed files",
       );
       expect(policy).toContain(
-        "Confirm both from the slice's evidence blocks, Refactor verify and review-fix rounds included",
+        "`Refactor verify result` proves the suite was green, not what the refactor edited",
       );
+      expect(policy).toContain(
+        "a worker who simply never mentions a production edit passes the check",
+      );
+      // The replacement is root-independent and covers every phase.
+      expect(policy).toContain("Take the slice's whole diff with **no pathspec** instead");
+      expect(policy).toContain(
+        "neither an incomplete `Production roots` nor an unrecorded edit can hide inside it",
+      );
+      expect(policy).not.toContain("Confirm both from the slice's evidence blocks");
     });
 
     it(`${tree}: a catalog predating the field gets a derivation, not a src/ fallback`, async () => {
@@ -176,8 +227,7 @@ describe("declared seam", () => {
       const policy = flat(await read(tree, POLICY));
 
       // A positive-only pathspec lists `app/foo.test.ts` as a production path.
-      expect(policy).toContain("**Split** test and fixture paths out of that list");
-      expect(policy).toContain("The pathspec above is positive only");
+      expect(policy).toContain("Step 1's pathspec is positive only");
       expect(policy).toContain("Go's `_test.go` in the package it tests");
       expect(policy).toContain("':(exclude)**/*.test.*'");
       expect(policy).toContain("':(exclude)**/*_test.go'");
@@ -185,18 +235,20 @@ describe("declared seam", () => {
       expect(policy).toContain(
         "`Production roots` alone cannot do this: the excluded files sit **inside** a declared root",
       );
-      expect(policy).toContain("Compare the remaining list against the slice's declared");
+      expect(policy).toContain(
+        "Compare the production list from step 2 against the slice's declared `Owning module`",
+      );
     });
 
-    it(`${tree}: the split-out tests get their own duplicate check`, async () => {
+    it(`${tree}: the test and fixture paths get their own duplicate check`, async () => {
       const policy = flat(await read(tree, POLICY));
 
       // Two slices writing the same test module or shared fixture is a deny
       // condition in its own right, and the merged suite is the least likely
       // place to reveal it: interleaved writes can still compile and still
-      // pass. Discarding those paths removed the only check that could catch it.
-      expect(policy).toContain("split, not discard");
-      expect(policy).toContain("**Keep the excluded list.**");
+      // pass. Dropping those paths removed the only check that could catch it.
+      expect(policy).toContain("Build **two lists with two commands**");
+      expect(policy).toContain("Step 6 checks this list.");
       expect(policy).toContain(
         "Check the test and fixture list from step 2 separately, against each slice's declared `Test file`",
       );
@@ -204,6 +256,47 @@ describe("declared seam", () => {
       // writes fixtures its ledger row does not name.
       expect(policy).toContain("A path written by more than one slice is a deny-condition breach");
       expect(policy).toContain("Not being declared by any slice is not a breach here");
+    });
+
+    it(`${tree}: the test list has a positive pathspec, not an inverted one`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // Git has no pathspec inversion: excludes are applied after the
+      // non-excludes, and to the whole tree when there are none — so pairing
+      // `<source root>` with a test glob unions them, and an exclude-only
+      // pathspec just re-derives the production list.
+      expect(policy).toContain("there is no such thing as inverting the first one");
+      expect(policy).toContain(
+        'Git applies exclude pathspecs after the non-exclude ones and, when there are no non-exclude ones, to the whole tree (`git help glossary`, "pathspec")',
+      );
+      expect(policy).toContain("adding a test glob beside `<source root>` unions the two");
+      expect(policy).toContain(
+        "git diff --name-only <base>..<slice-head> -- 'tests/**' '**/*.test.*' '**/*_test.go' '**/__tests__/**' '**/testdata/**'",
+      );
+      expect(policy).not.toContain("the same pathspec inverted");
+    });
+
+    it(`${tree}: the test list is derived independently of Production roots`, async () => {
+      const policy = flat(await read(tree, POLICY));
+
+      // The catalog field excludes tests by construction, so in the ordinary
+      // src/ + tests/ layout step 1's list never held a test path and
+      // subtracting one from the other yields an empty list on every run —
+      // step 6 then reports a clean check having compared nothing.
+      expect(policy).toContain(
+        "**Derive it independently of `Production roots`, never by subtraction from the production list.**",
+      );
+      expect(policy).toContain("production under `src/`, tests under `tests/`");
+      expect(policy).toContain(
+        "filtering one out of the other yields an empty test list on every run while step 6 reports a clean check",
+      );
+      // The repo's own globs and the dispatched rows are what supply it.
+      expect(policy).toContain(
+        "the `testFileGlobs` of `qfai.config.yaml` and the `Test file` column of the dispatched rows",
+      );
+      expect(policy).toContain(
+        "Two slices both writing `tests/shared-helper.ts` or a shared fixture outside every production root",
+      );
     });
 
     it(`${tree}: production roots are re-established on the merged tree`, async () => {

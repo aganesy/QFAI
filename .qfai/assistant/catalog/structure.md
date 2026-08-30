@@ -13,9 +13,14 @@
 - Package(s) of interest: <list packages>
 - CLI / service entry: <entrypoint files>
 - Core modules: <key module directories>
-- Production roots: <every directory that holds shipped source, exhaustively —
-  e.g. `src/`, `app/`, `lib/`, `internal/`, `cmd/`, `packages/*/src`; exclude
-  tests, fixtures, build output and config>
+- Production roots: <every shipped-source path, exhaustively, as Git
+  pathspecs — a directory where the whole directory is source (`src/`, `app/`,
+  `lib/`, `internal/`, `cmd/`, `packages/*/src`), a glob where it is not.
+  Production code sitting at the repository root takes globs (`*.go` plus
+  `cmd/` and `internal/`; `*.py` plus the package directory), never a bare
+  `.`, which would sweep `go.mod`, `package.json`, CI config, documentation
+  and build output in as production paths. Exclude tests, fixtures, build
+  output, config and documentation>
 
 ## Architecture constraints
 
