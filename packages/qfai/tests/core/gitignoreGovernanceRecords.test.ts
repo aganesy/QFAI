@@ -1,5 +1,5 @@
 import { execFile as execFileCb } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -14,6 +14,7 @@ import {
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
 
@@ -26,7 +27,7 @@ async function withGitignore(
     await writeFile(path.join(root, ".gitignore"), content, "utf-8");
     assertion(await validateReviewArtifacts(root));
   } finally {
-    await rm(root, { recursive: true, force: true });
+    await removeTempTree(root);
   }
 }
 
@@ -156,7 +157,7 @@ describe("git honours the managed block against a broad pre-existing rule", () =
           );
         }
       } finally {
-        await rm(root, { recursive: true, force: true });
+        await removeTempTree(root);
       }
     });
   }

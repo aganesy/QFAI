@@ -8,9 +8,21 @@
 # (you can opt out via `validation.testStrategy.forbidTestTodoStubs: false`
 # in qfai.config.yaml).
 #
-# Install step auto-detects the project's lockfile (pnpm / yarn /
-# npm) and runs the appropriate frozen-lockfile install. `npx qfai`
-# works with any Node package manager.
+# What this file needs from your repository, and how it behaves when it does
+# not get it:
+#
+# | Field                         | Value                                                                                                    |
+# | ----------------------------- | -------------------------------------------------------------------------------------------------------- |
+# | Covered layer                 | specification and repository validation (`qfai validate`); it runs none of your own tests                |
+# | Runner selector               | `vars.QFAI_CI_RUNNER`, default `ubuntu-latest`                                                           |
+# | Wrong runner value            | GitHub does not fail fast: an unknown label leaves the job queued indefinitely, never red                |
+# | `packageManager` precondition | a `pnpm-lock.yaml` needs `"packageManager": "pnpm@<version>"` in package.json, or this lane stops CLOSED |
+# | Inert when                    | never inert; delete this file to opt out - `qfai init` will not recreate a file you removed              |
+# | Fail-open behaviour           | no `.nvmrc` / `.node-version` in your tree: warning annotation, Node 20, and the lane continues          |
+# | Node support floor            | the package declares `engines: ">=20.19.0"`; the fall-open Node 20 satisfies it                          |
+# | Dependency install            | follows your lockfile: pnpm / yarn Berry / yarn Classic / npm, else `npm install`                        |
+#
+# `.nvmrc` wins over `.node-version`; both are read before the fall-open.
 
 name: qfai validate
 
@@ -19,33 +31,299 @@ on:
     branches: [main, master]
   pull_request:
 
+# One live run per ref: a superseded push or PR update cancels the older run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   validate:
     name: qfai validate (full profile, fail on error)
-    runs-on: ubuntu-latest
+    runs-on: ${{ vars.QFAI_CI_RUNNER || 'ubuntu-latest' }}
+    # Least privilege: the job only checks out the repository and runs the
+    # validator; it writes nothing back to GitHub.
+    permissions:
+      contents: read
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
-      - name: Set up pnpm (if project uses pnpm)
-        if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
-        # pnpm/action-setup@v4 resolves the pnpm version from
-        # `package.json#packageManager` when no `version:` input is
-        # provided. Setting `version:` would override the consumer's
-        # declared packageManager (e.g. forcing pnpm 9 on a pnpm 10
-        # project), so we leave it unset and require the consumer to
-        # declare `"packageManager": "pnpm@X.Y.Z"` in package.json —
-        # the most common pnpm-on-CI baseline.
-        uses: pnpm/action-setup@v4
-      - uses: actions/setup-node@v4
+      - name: Checkout via actions/checkout 4.4.0
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          # Match the QFAI repo's CI baseline (Node 20 LTS) and the package
-          # `engines: ">=18.0.0"`. Bump deliberately when QFAI raises its
-          # supported floor.
-          node-version: "20"
-          # setup-node@v4's `cache:` accepts a single package-manager value.
-          # Pick the one matching the consumer's lockfile (or leave unset
-          # when none of the three is present). The conditional expression
-          # short-circuits left-to-right.
+          # Nothing in this job pushes back, so the token never needs to
+          # outlive the checkout step.
+          persist-credentials: false
+      - name: Resolve the package manager (pnpm route fails closed)
+        id: package-manager
+        shell: bash
+        run: |
+          # Package manager resolution, fail CLOSED. The pnpm setup action
+          # below is invoked with no `version:` input on purpose —
+          # overriding the version the adopter declared would be worse, e.g.
+          # forcing pnpm 9 on a pnpm 10 project — so
+          # `package.json#packageManager` is its only source. With that
+          # field missing the action stops with a resolution error naming
+          # neither the file nor the fix; we stop first and name both.
+          # Continuing without an install is not an option: the lane would
+          # report a validate result it never computed.
+          #
+          # Scoped to the pnpm route deliberately: Yarn Classic and npm ship
+          # with the runner and do resolve without the field, so stopping
+          # there would stop on a resolvable case.
+          if [ ! -f pnpm-lock.yaml ]; then
+            echo "qfai validate: no pnpm lockfile - no manifest-declared package manager required"
+            exit 0
+          fi
+          declared=""
+          if [ -f package.json ]; then
+            declared="$(node -e '
+              const { readFileSync } = require("node:fs");
+              let field = "";
+              try {
+                const parsed = JSON.parse(readFileSync("package.json", "utf8"));
+                if (
+                  parsed !== null &&
+                  typeof parsed === "object" &&
+                  typeof parsed.packageManager === "string"
+                ) {
+                  field = parsed.packageManager;
+                }
+              } catch {
+                field = "";
+              }
+              // The value is adopter input and this step echoes it, so every
+              // whitespace run collapses to one space: a `\n` (a legal JSON
+              // string escape) would otherwise start a new stdout line, and
+              // the runner reads `::`-leading lines as workflow commands - a
+              // fork PR could forge annotations against any file, mask
+              // output, or stop command processing for the rest of the step.
+              // Collapsing beats keeping the first line only: it also
+              // neutralises a lone `\r`, and it keeps the whole value
+              // visible in the log for diagnosis instead of silently
+              // truncating it.
+              process.stdout.write(field.trim().replace(/\s+/g, " "));
+            ')" || declared=""
+          fi
+          if [ -z "$declared" ]; then
+            echo '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json does not resolve a "packageManager" string (the field is missing, is empty, is not a string, or package.json could not be read). Add "packageManager": "pnpm@<the pnpm version you use>" to package.json and commit it - the pnpm setup action reads the pnpm version from that field only, so this lane cannot install and must not report a validate result it did not compute.'
+            exit 1
+          fi
+          # Non-empty is not the same claim as resolvable. "yarn@4.9.2" and a
+          # bare "pnpm" both pass a presence test, and the setup action below
+          # then stops with an opaque resolution error naming neither the file
+          # nor the fix - which is the failure this guard exists to replace.
+          # So the pnpm route also checks the VALUE resolves to a pnpm version.
+          # Checked to the END of the value. `pnpm@[0-9]*` was not that check:
+          # a shell `*` is any string, not a repetition of digits, so
+          # `pnpm@9junk` matched on its first character and the opaque
+          # resolution error this guard exists to replace arrived one step
+          # later anyway. The shape required is `pnpm@` then MAJOR.MINOR.PATCH
+          # of digits, with corepack's optional `-<prerelease>` and `+<hash>`
+          # suffixes allowed but not required.
+          # The suffixes are VALIDATED, not stripped. Dropping everything from the
+          # first `-` or `+` and checking only what was left accepted
+          # `pnpm@9.12.3-`, `pnpm@9.12.3+` and `pnpm@9.12.3-foo_bar`: the core
+          # read as 9.12.3, this guard said `resolvable=yes`, and corepack then
+          # failed with the opaque resolution error the guard exists to replace.
+          # Corepack's own grammar is `<name>@<semver>` with an optional
+          # `+<algorithm>.<hex digest>` integrity suffix, so that is what is
+          # required here - whole value, one shape at a time.
+          version="${declared#pnpm@}"
+          resolvable=no
+          if [ "$version" != "$declared" ]; then
+            shape_ok=yes
+            body="$version"
+            case "$version" in
+              *+*)
+                body="${version%%+*}"
+                integrity="${version#*+}"
+                # `<algorithm>.<digest>`: an algorithm name, a dot, a hex digest.
+                # A bare `+`, a missing digest and a second `+` all fail — `+` is
+                # not a hex character, so the digest test rejects it too.
+                case "$integrity" in
+                  *.*) ;;
+                  *) shape_ok=no ;;
+                esac
+                # The algorithm is not guessed at from a fixed list, and it
+                # is not taken on shape alone either.
+                #
+                # A closed list of `sha1|sha224|sha256|sha384|sha512`
+                # refuses anything corepack accepts through
+                # `crypto.createHash` that is not on it - `sha3-256` is the
+                # obvious one - and refuses it with THIS guard's message,
+                # sending an adopter to fix a value that was already
+                # correct. But shape alone accepted
+                # `pnpm@9.12.3+garbage.deadbeef`: `garbage` is a run of
+                # letters, so this guard said the value was resolvable, and
+                # corepack then failed to hash with it - the opaque failure
+                # this precondition exists to replace, reached through the
+                # precondition.
+                #
+                # So the runner is asked. `crypto.getHashes()` is the set
+                # `crypto.createHash` accepts on THIS runner, which is the
+                # question that matters and the one a list in this file
+                # cannot answer.
+                algorithm="${integrity%%.*}"
+                case "$algorithm" in
+                  ""|*[!0-9A-Za-z-]*) shape_ok=no ;;
+                  *)
+                    if ! node -e '
+                      const { getHashes } = require("node:crypto");
+                      const wanted = String(process.argv[1]).toLowerCase();
+                      process.exit(
+                        getHashes().some((name) => name.toLowerCase() === wanted)
+                          ? 0
+                          : 1,
+                      );
+                    ' "$algorithm" 2>/dev/null; then
+                      shape_ok=no
+                    fi
+                    ;;
+                esac
+                case "${integrity#*.}" in
+                  ""|*[!0-9a-fA-F]*) shape_ok=no ;;
+                esac
+                ;;
+            esac
+            case "$body" in
+              *-*)
+                core="${body%%-*}"
+                # A prerelease is dot-separated identifiers of alphanumerics and
+                # hyphens, none of them empty. `9.12.3-` has none at all.
+                case "${body#*-}" in
+                  ""|.*|*.|*..*|*[!0-9A-Za-z.-]*) shape_ok=no ;;
+                esac
+                # And a NUMERIC identifier carries no leading zero, which SemVer
+                # forbids: `9.12.3-01` is not a version, and node-semver rejects
+                # it. An alphanumeric one may start with a zero (`0alpha`), so
+                # the two cases are separated rather than lumped together.
+                ids="${body#*-}"
+                while [ -n "$ids" ]; do
+                  id="${ids%%.*}"
+                  case "$id" in
+                    "") shape_ok=no ;;
+                    *[!0-9]*) ;;
+                    0) ;;
+                    0*) shape_ok=no ;;
+                  esac
+                  case "$ids" in
+                    *.*) ids="${ids#*.}" ;;
+                    *) ids="" ;;
+                  esac
+                done
+                ;;
+              *) core="$body" ;;
+            esac
+            case "$core" in
+              ""|.*|*.|*[!0-9.]*|*.*.*.*) shape_ok=no ;;
+              [0-9]*.[0-9]*.[0-9]*) ;;
+              *) shape_ok=no ;;
+            esac
+            # MAJOR.MINOR.PATCH, each without a leading zero. The glob above is
+            # "digits and dots", not SemVer: `pnpm@9.12.03` and `pnpm@01.02.03`
+            # passed it, and neither is a version node-semver or corepack will
+            # resolve — so the guard said `resolvable` and the opaque downstream
+            # failure it exists to replace arrived one step later anyway. A
+            # dropped digit is an ordinary typo, which is exactly the case this
+            # guard is for.
+            rest="$core"
+            for _part in 1 2 3; do
+              part="${rest%%.*}"
+              case "$part" in
+                ""|*[!0-9]*) shape_ok=no ;;
+                0) ;;
+                0*) shape_ok=no ;;
+              esac
+              rest="${rest#*.}"
+            done
+            if [ "$shape_ok" = yes ]; then
+              resolvable=yes
+            fi
+          fi
+          if [ "$resolvable" != yes ]; then
+            printf '::error file=package.json::qfai validate: pnpm-lock.yaml is present but package.json "packageManager" is %s, which does not name a pnpm version. Set it to "pnpm@<the pnpm version you use>" and commit it - the pnpm setup action resolves the version from that field only, so this lane cannot install and must not report a validate result it did not compute.\n' "$declared"
+            exit 1
+          fi
+          echo "qfai validate: package manager ${declared} (from the package.json packageManager field)"
+      - name: Set up pnpm via pnpm/action-setup 4.4.0 (if project uses pnpm)
+        if: ${{ hashFiles('pnpm-lock.yaml') != '' }}
+        # No `version:` input: the action reads it from
+        # `package.json#packageManager`, whose presence the step above has
+        # already established (see its comment for why it is required).
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320
+      - name: Resolve the Node version (adopter file wins, else fall open)
+        id: node-version
+        shell: bash
+        run: |
+          # Node version resolution, fail OPEN. An adopter version file
+          # wins in the order probed below; with none present we use the
+          # documented fallback and warn, so the lane continues.
+          #
+          # setup-node's `node-version-file:` input is deliberately NOT
+          # used: it fails the job outright for every adopter who has no
+          # such file, which would make this workflow unusable on a tree
+          # that simply never pinned a Node version.
+          fallback="20"
+          for candidate in .nvmrc .node-version; do
+            [ -f "$candidate" ] || continue
+            first_line=""
+            IFS= read -r first_line < "$candidate" || true
+            resolved="$(printf '%s' "$first_line" | tr -d '[:space:]')"
+            if [ -n "$resolved" ]; then
+              echo "qfai validate: Node ${resolved} (from ${candidate})"
+              echo "version=${resolved}" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          done
+          echo "::warning::qfai validate: no Node version file (.nvmrc or .node-version) found - using Node ${fallback} and continuing (fail open). Add one to pin the version this workflow uses."
+          echo "version=${fallback}" >> "$GITHUB_OUTPUT"
+      - name: Choose a package-manager cache setup-node can actually resolve
+        id: node-cache
+        shell: bash
+        run: |
+          # setup-node resolves a cache DIRECTORY by running the package manager, before this
+          # workflow has installed anything. Asking it for a cache it cannot resolve fails the
+          # step outright, which is why the choice is made here rather than in an expression.
+          #
+          # pnpm and npm are already available at this point: `pnpm/action-setup` runs above, and
+          # npm ships with every Node. Yarn does not. Corepack is not bundled from Node 25 on, and
+          # the Node this workflow runs is the adopter's own `.nvmrc` / `.node-version` — so on a
+          # runner with neither Yarn nor Corepack preinstalled, `cache: yarn` sent setup-node to
+          # `yarn cache dir` and the job stopped there, BEFORE the install step below could
+          # install Corepack and enable the shim. The lane failed at the one point it was built to
+          # fail open.
+          #
+          # So the Yarn cache is claimed only when Yarn answers now. Skipping it costs a warm
+          # cache and nothing else: the install step still provisions Corepack and installs, so
+          # the lane runs. A missing optimisation is not a missing verification.
+          if [ -f pnpm-lock.yaml ]; then
+            echo "cache=pnpm" >> "$GITHUB_OUTPUT"
+          elif [ -f yarn.lock ]; then
+            # The QUERY setup-node will make, not merely whether something called yarn is on
+            # PATH. A self-hosted runner can carry a stale Corepack shim, or a `yarn` that
+            # cannot resolve its own cache — `command -v` succeeds there and `yarn cache dir`
+            # does not, which is the case that still stopped the job. Asking the real question
+            # costs one subprocess and answers exactly what the cache needs.
+            if yarn cache dir > /dev/null 2>&1; then
+              echo "cache=yarn" >> "$GITHUB_OUTPUT"
+            else
+              echo "::warning::qfai validate: yarn is not on PATH yet, so the Yarn download cache is skipped for this run. The install step provisions Corepack and installs normally; preinstall Yarn or Corepack on this runner to get the cache back."
+              echo "cache=" >> "$GITHUB_OUTPUT"
+            fi
+          elif [ -f package-lock.json ]; then
+            echo "cache=npm" >> "$GITHUB_OUTPUT"
+          else
+            echo "cache=" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Set up Node via actions/setup-node 4.4.0
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          # The version resolved by the step above: the adopter's own
+          # version file when they have one, else the documented fallback
+          # (Node 20, matching the package `engines: ">=20.19.0"` floor).
+          node-version: ${{ steps.node-version.outputs.version }}
+          # setup-node@v4's `cache:` accepts a single package-manager value, and the step above
+          # decides it — an expression cannot ask whether the package manager is on PATH, and
+          # asking for a cache setup-node cannot resolve fails the step outright.
           #
           # NOTE: `cache: yarn` is built around Yarn Classic (v1)'s
           # `yarn cache dir`. Yarn Berry (v2+) keeps deps under `.yarn/cache`
@@ -53,13 +331,38 @@ jobs:
           # step below still picks the correct flag (`--immutable` for
           # Berry, `--frozen-lockfile` for Classic) so functionality is
           # preserved either way.
-          cache: ${{ hashFiles('pnpm-lock.yaml') != '' && 'pnpm' || (hashFiles('yarn.lock') != '' && 'yarn' || (hashFiles('package-lock.json') != '' && 'npm' || '')) }}
+          cache: ${{ steps.node-cache.outputs.cache }}
       - name: Install dependencies (lockfile-aware)
         shell: bash
         run: |
           if [ -f pnpm-lock.yaml ]; then
             pnpm install --frozen-lockfile
           elif [ -f yarn.lock ]; then
+            # Corepack is not bundled from Node 25 on, and the Node this workflow runs is the
+            # adopter's own `.nvmrc` / `.node-version`, which QFAI does not choose. Calling
+            # `corepack enable` unconditionally stopped the run at `command not found` before a
+            # single dependency was installed. Installed when absent, which is what this
+            # repository's own composite action does for the same reason.
+            if ! command -v corepack > /dev/null 2>&1; then
+              # Pinned rather than latest: an unpinned global install fetches whatever the
+              # registry calls latest at the moment the job runs, so the same commit installs a
+              # different corepack from one day to the next — and this is the step that
+              # bootstraps the toolchain everything after it depends on.
+              # The version AND the registry it comes from. `npm` resolves its registry from
+              # `NPM_CONFIG_REGISTRY` or from a project `.npmrc`, so a pinned version alone names
+              # WHAT to fetch and not WHERE from — and this package's bin runs on the very next
+              # line. `--registry` on the command line outranks both, and `--ignore-scripts` stops
+              # the package running during installation rather than when it is invoked.
+              #
+              # The own-CI copy of this fallback goes further: it downloads the tarball, compares
+              # its sha512 with a pinned integrity, and installs from the verified file. That is
+              # deliberately NOT done here. This lane runs in an ADOPTER's repository, where the
+              # enumerated set of programs a shipped lane may invoke is itself a reviewed
+              # contract — putting `curl` and `openssl` into it widens what every adopter's CI is
+              # allowed to run, to defend against a file that adopter owns and reviews. The flag
+              # closes the redirect; the download would import a capability instead.
+              npm install --global --ignore-scripts --registry https://registry.npmjs.org/ corepack@0.35.0
+            fi
             corepack enable
             # Yarn Berry (v2+) uses `--immutable`; Yarn Classic (v1) uses
             # `--frozen-lockfile`. Pick the right flag based on the
