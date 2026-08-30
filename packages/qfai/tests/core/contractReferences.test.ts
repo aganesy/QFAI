@@ -417,6 +417,147 @@ describe("the contract index's Depends On column", () => {
     }
   });
 
+  it("reports a row whose File does not declare the row's id", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      await writeFile(
+        path.join(root, ".qfai", "contracts", "api", "api-0002-sample.yaml"),
+        ["# QFAI-CONTRACT-ID: CON-API-0002", 'openapi: "3.1.0"', "x-qfai-depends-on: []", ""].join(
+          "\n",
+        ),
+        "utf-8",
+      );
+      // The mirror check reads the declaration by id and never looked at the
+      // `File` cell, so this row passed `-030` (both ids exist), `-033` (the
+      // dependencies compared are the ones `CON-API-0001` really declares) and
+      // `-034` (the id is listed) while sending every reader to the wrong file.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0002-sample.yaml` | - | create draft |",
+        "| API-002 | /api/items | CON-API-0002 | `.qfai/contracts/api/api-0002-sample.yaml` | - | list |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-035");
+
+      expect(issue?.severity).toBe("warning");
+      expect(issue?.refs).toEqual(["CON-API-0001"]);
+      expect(issue?.loc?.line).toBe(7);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-030")).toBe(false);
+      // The second row names its own file, so only the first row is reported.
+      expect(issues.filter((item) => item.code === "QFAI-CONTRACT-035")).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves a File cell that names no single file alone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      // A glob is how a long-lived index names a whole contract family; it points
+      // at no one file, so there is nothing to hold the row to.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | CON-API-0001 | `.qfai/contracts/api/*.yaml` | - | create draft |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.some((item) => item.code === "QFAI-CONTRACT-035")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let a short ID in the Declared ID column stand in for the id", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      // `API-001` normalizes to `CON-API-0001`, so a canonical column that never
+      // states the id counted as coverage while the row checks skipped the row.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | API-001 | `.qfai/contracts/api/api-0001-sample.yaml` | - | create draft |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      const issue = issues.find((item) => item.code === "QFAI-CONTRACT-034");
+      expect(issue?.refs).toEqual(["CON-API-0001"]);
+
+      // The full id still counts as coverage, backticks and all.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | `CON-API-0001` | `.qfai/contracts/api/api-0001-sample.yaml` | - | create draft |",
+      ]);
+
+      const mirrored = await validateContractReferences(root, defaultConfig);
+      expect(mirrored.some((item) => item.code === "QFAI-CONTRACT-034")).toBe(false);
+      expect(mirrored.some((item) => item.code === "QFAI-CONTRACT-035")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps the columns aligned across an escaped pipe", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedDbContract(root, "CON-DB-0001");
+      await seedApiContract(root, "CON-API-0001", ["CON-DB-0001"]);
+      // `\|` is the only way to write a pipe inside a GFM cell. Splitting on a
+      // bare `|` turned this row into seven cells and shifted `Declared ID`,
+      // `File` and `Depends On` one place left, so a correct row lost its id.
+      await writeIndex(root, [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | GET /orders \\| POST /orders | CON-API-0001 | `.qfai/contracts/api/api-0001-sample.yaml` | CON-DB-0001 | create draft |",
+        "| DB-001 | orders | CON-DB-0001 | `.qfai/contracts/db/db-0001-sample.sql` | - | schema |",
+      ]);
+
+      const issues = await validateContractReferences(root, defaultConfig);
+      expect(issues.map((item) => item.code)).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves an example table inside a code fence out of the index", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
+    try {
+      await seedLayered(root);
+      await seedApiContract(root, "CON-API-0001", []);
+      const exampleTable = [
+        "| Short ID | Router | Declared ID | File | Depends On | Purpose |",
+        "| -------- | ------ | ----------- | ---- | ---------- | ------- |",
+        "| API-001 | /api/orders | CON-API-0001 | `.qfai/contracts/api/api-0001-sample.yaml` | - | create draft |",
+      ];
+      // Showing a filled-in example is the natural way to document the index.
+      // Read as data, it satisfied coverage and the row check while the rendered
+      // index still listed no contract at all.
+      await writeIndex(root, ["0 items", "", "```markdown", ...exampleTable, "```"]);
+
+      const fenced = await validateContractReferences(root, defaultConfig);
+      expect(fenced.find((item) => item.code === "QFAI-CONTRACT-034")?.refs).toEqual([
+        "CON-API-0001",
+      ]);
+
+      // The same table outside the fence is the real index and still counts.
+      await writeIndex(root, exampleTable);
+      const real = await validateContractReferences(root, defaultConfig);
+      expect(real.some((item) => item.code === "QFAI-CONTRACT-034")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("leaves a table that indexes another artifact kind by slug alone", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-contract-ref-"));
     try {

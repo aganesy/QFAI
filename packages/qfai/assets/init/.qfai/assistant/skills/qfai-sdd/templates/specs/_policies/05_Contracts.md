@@ -56,7 +56,8 @@
   contract. `QFAI-CONTRACT-015` warns on a contract that states no apply order
   at all, `QFAI-CONTRACT-032` on a table that dropped this column,
   `QFAI-CONTRACT-033` on a row whose cell is blank or disagrees with the file it
-  names, and `QFAI-CONTRACT-034` on a contract with no row in any table.
+  names, `QFAI-CONTRACT-034` on a contract with no row in any table, and
+  `QFAI-CONTRACT-035` on a row whose `File` does not declare that row's id.
 
 - If no contracts are needed, keep each table and state `0 items` explicitly.
 - `<slug>` must be kebab-case from entity/router/screen.

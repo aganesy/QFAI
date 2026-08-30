@@ -103,6 +103,33 @@ describe("the dependency declaration is parsed in each kind's own idiom", () => 
     ).toEqual(["CON-API-0002", "CON-API-0003"]);
   });
 
+  it("reads a YAML block sequence whose items carry trailing comments", () => {
+    // Same comment, block spelling. The item pattern allowed only whitespace
+    // after the value, so the sequence ended at the first commented item and
+    // `CON-API-0002` was dropped — leaving a truncated apply order that
+    // disagrees with the correct index row (`QFAI-CONTRACT-033`).
+    expect(
+      extractDeclaredDependencies(
+        "x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n  - CON-API-0002\n",
+        "a.yaml",
+      ),
+    ).toEqual(["CON-API-0002", "CON-DB-0001"]);
+    expect(
+      hasDependencyDeclaration("x-qfai-depends-on:\n  - CON-DB-0001 # schema first\n", "a.yaml"),
+    ).toBe(true);
+  });
+
+  it("does not read a contract id out of a block item's comment", () => {
+    // The ids come from the item values, not from the matched block text: a
+    // comment naming a contract says it is *not* a dependency.
+    expect(
+      extractDeclaredDependencies(
+        "x-qfai-depends-on:\n  - CON-DB-0001 # replaces CON-DB-0002\n",
+        "a.yaml",
+      ),
+    ).toEqual(["CON-DB-0001"]);
+  });
+
   it("reads `-` as no dependencies rather than as a malformed one", () => {
     // The shipped template writes `-` for the empty case; parsing it as a
     // dependency would make every scaffolded contract fail the new rule.

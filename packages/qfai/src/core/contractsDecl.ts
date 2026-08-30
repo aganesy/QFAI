@@ -66,7 +66,25 @@ const DEPENDS_ON_COMMENT_RE = /^[ \t]*(?:#|\/\/|--|\*)[ \t]*Depends on:[ \t]*(.+
  * `QFAI-CONTRACT-015` and its correct index row `QFAI-CONTRACT-033`.
  */
 const DEPENDS_ON_YAML_FLOW_RE = /^x-qfai-depends-on:[ \t]*\[([^\]]*)\][ \t]*(?:#[^\n]*)?$/im;
-const DEPENDS_ON_YAML_BLOCK_RE = /^x-qfai-depends-on:[ \t]*\n((?:[ \t]*-[ \t]*\S+[ \t]*\n?)+)/im;
+/**
+ * The block form, where a `#` comment may follow the key and every item.
+ *
+ * `- CON-DB-0001 # schema first` is valid YAML and says the same thing the flow
+ * form's trailing comment does, but the item pattern allowed only whitespace
+ * after the value, so the sequence ended at the first commented item and every
+ * later one was dropped — silently, and worst where it matters most: a
+ * declaration listing several contracts is exactly the multi-file composition
+ * this key exists to state. The truncated list then disagreed with the correct
+ * index row, which earned `QFAI-CONTRACT-033`.
+ *
+ * The ids are read from the item *values* (see {@link blockSequenceValues})
+ * rather than from this capture, so a contract id mentioned inside a comment is
+ * not silently taken for a dependency.
+ */
+const DEPENDS_ON_YAML_BLOCK_RE =
+  /^x-qfai-depends-on:[ \t]*(?:#[^\n]*)?\n((?:[ \t]*-[ \t]*\S+[ \t]*(?:#[^\n]*)?\n?)+)/im;
+/** One block-sequence item: `-`, its value, and whatever comment follows it. */
+const BLOCK_SEQUENCE_ITEM_RE = /^[ \t]*-[ \t]*(\S+)/;
 const CONTRACT_ID_TOKEN = /CON-(?:API|UI|DB)-\d+/gi;
 /** The explicit ways to write "nothing must be applied before this contract". */
 const DEPENDS_ON_NONE_VALUE_RE = /^(?:[-–—]|\[[ \t]*\]|none)$/i;
@@ -149,6 +167,24 @@ function parseJsonObjectEntries(text: string): [string, unknown][] | undefined {
   return Object.entries(parsed);
 }
 
+/**
+ * The values a YAML block sequence lists, with each item's comment dropped.
+ *
+ * Scanning the matched block text for ids instead would read a comment as part
+ * of the declaration: `- CON-DB-0001 # replaces CON-DB-0002` would list two
+ * dependencies, one of which the author explicitly said is not one.
+ */
+function blockSequenceValues(blob: string): string {
+  const values: string[] = [];
+  for (const line of blob.split(/\r?\n/)) {
+    const value = BLOCK_SEQUENCE_ITEM_RE.exec(line)?.[1];
+    if (value) {
+      values.push(value);
+    }
+  }
+  return values.join(" ");
+}
+
 /** A cell/element holding a contract id and nothing else. */
 const CONTRACT_ID_EXACT_RE = /^CON-(?:API|UI|DB)-\d+$/i;
 
@@ -216,7 +252,7 @@ export function extractDeclaredDependencies(text: string, file?: string): string
     const flow = DEPENDS_ON_YAML_FLOW_RE.exec(text);
     if (flow) push(flow[1] ?? "");
     const block = DEPENDS_ON_YAML_BLOCK_RE.exec(text);
-    if (block) push(block[1] ?? "");
+    if (block) push(blockSequenceValues(block[1] ?? ""));
     const json = readJsonDependsOn(text);
     if (json) {
       for (const id of jsonDependencyIds(json.value) ?? []) {

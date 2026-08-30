@@ -49,11 +49,18 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
   - `QFAI-CONTRACT-034` (warning) reports a contract that appears in no index
     table. Deleting the row hides the contract and its apply order from every
     reader of the index, and the row-level checks need a row to compare.
+  - `QFAI-CONTRACT-035` (warning) reports a row whose `File` is not a file
+    declaring that row's id. The mirror is checked by id, so a row pointing at
+    another contract's file otherwise passes every check while sending the
+    reader to the wrong contract. A glob or a `<slug>` placeholder names no one
+    file and is left alone.
   - Only tables whose `Declared ID` column holds `CON-*` ids are held to these
     rules; a table indexing another artifact kind by slug is left alone, and an
     empty one qualifies only under a `DB` / `API` / `UI` contract heading.
-    Coverage is read from `Declared ID` alone: a `Short ID` cannot stand in for
-    a blank or mistyped one.
+    Coverage is read from a `Declared ID` cell that **is** a full `CON-*` id: a
+    `Short ID` — in its own column or written into this one — cannot stand in
+    for a blank or mistyped one. An example table inside a code fence is
+    documentation, not index data, and is not read either.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not
