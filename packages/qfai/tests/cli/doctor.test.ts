@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { createServer, type Server } from "node:http";
-import { chmod, mkdtemp, mkdir, readFile, rm, stat, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readdir, readFile, rm, stat, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -49,19 +49,19 @@ describe("doctor", { timeout: 60000 }, () => {
   it("resolves a relative --out against the resolved root, not the process cwd", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const relativeOut = "doctor-relative-out.json";
-    const strayOut = path.resolve(process.cwd(), relativeOut);
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
 
-      await captureStdout(async () => {
-        await runDoctor({ root, rootExplicit: true, format: "json", outPath: relativeOut });
+      await withSandboxCwd(async (sandbox) => {
+        await captureStdout(async () => {
+          await runDoctor({ root, rootExplicit: true, format: "json", outPath: relativeOut });
+        });
+        expect(await readdir(sandbox)).toEqual([]);
       });
 
       const raw = await readFile(path.join(root, relativeOut), "utf-8");
       expect(JSON.parse(raw)).toMatchObject({ tool: "qfai" });
-      await expect(stat(strayOut)).rejects.toThrow();
     } finally {
-      await rm(strayOut, { force: true });
       await rm(root, { recursive: true, force: true });
     }
   });
@@ -70,21 +70,21 @@ describe("doctor", { timeout: 60000 }, () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const cwd = path.join(root, "packages", "app");
     const relativeOut = "doctor-subdir-out.json";
-    const strayOut = path.resolve(process.cwd(), relativeOut);
     try {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       await mkdir(cwd, { recursive: true });
 
-      await captureStdout(async () => {
-        await run(["doctor", "--format", "json", "--out", relativeOut], cwd);
+      await withSandboxCwd(async (sandbox) => {
+        await captureStdout(async () => {
+          await run(["doctor", "--format", "json", "--out", relativeOut], cwd);
+        });
+        expect(await readdir(sandbox)).toEqual([]);
       });
 
       const raw = await readFile(path.join(root, relativeOut), "utf-8");
       expect(JSON.parse(raw)).toMatchObject({ tool: "qfai" });
       await expect(stat(path.join(cwd, relativeOut))).rejects.toThrow();
-      await expect(stat(strayOut)).rejects.toThrow();
     } finally {
-      await rm(strayOut, { force: true });
       await rm(root, { recursive: true, force: true });
     }
   });
@@ -700,6 +700,32 @@ async function readDoctorData(
 
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
   return checks.find((check) => check.id === id);
+}
+
+/**
+ * Run `body` with the process cwd pointed at a throwaway directory, handing
+ * that directory to the body so it can assert on what landed there.
+ *
+ * The two relative-`--out` tests assert the negative half of the contract:
+ * the artifact must NOT be resolved against the process cwd. Naming that
+ * location `path.resolve(process.cwd(), "<fixed name>")` made the cleanup
+ * delete a path the test had not necessarily created — a contributor who
+ * happened to keep a `doctor-relative-out.json` next to `package.json` would
+ * silently lose it, and worst of all on the run where the assertion already
+ * failed. Redirecting the cwd instead keeps the regression check honest (a
+ * cwd-resolved write still shows up, under any name) while confining every
+ * byte the test can produce to a directory it owns outright.
+ */
+async function withSandboxCwd(body: (sandbox: string) => Promise<void>): Promise<void> {
+  const sandbox = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-cwd-"));
+  const previous = process.cwd();
+  process.chdir(sandbox);
+  try {
+    await body(sandbox);
+  } finally {
+    process.chdir(previous);
+    await rm(sandbox, { recursive: true, force: true });
+  }
 }
 
 async function seedPrototypingFixture(root: string, targetUrl: string): Promise<void> {
