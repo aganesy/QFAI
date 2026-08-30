@@ -79,8 +79,19 @@ function differsIgnoringEol(root: string, baseBranch: string, file: string): boo
  * `--no-renames` keeps the row format to three tab-separated fields (rename
  * detection prints `old => new` in the path column) and makes a moved artifact
  * report both endpoints, which is what a drift guard wants to see.
+ *
+ * `dropRenameSources` is for the caller that wants the opposite. Asking "was
+ * the file this ledger row points at modified?" is answered wrongly by a
+ * rename's **source**: that path no longer exists, and finding it in the set
+ * let a ledger still naming it pass as though its implementation had been
+ * touched. The sources are listed separately and subtracted, so the drift guard
+ * keeps both endpoints and the traceability check sees only the destination.
  */
-export function getChangedFilesAgainstBase(root: string, baseBranch: string): Set<string> {
+export function getChangedFilesAgainstBase(
+  root: string,
+  baseBranch: string,
+  options: { dropRenameSources?: boolean } = {},
+): Set<string> {
   const output = gitStdout(root, [
     "diff",
     "--ignore-cr-at-eol",
@@ -113,5 +124,53 @@ export function getChangedFilesAgainstBase(root: string, baseBranch: string): Se
     }
     changed.add(normalizeRepoPath(file));
   }
+
+  if (options.dropRenameSources === true) {
+    for (const source of getRenameSourcesAgainstBase(root, baseBranch)) {
+      changed.delete(source);
+    }
+  }
   return changed;
+}
+
+/**
+ * The **from** side of every rename between `baseBranch` and `HEAD`.
+ *
+ * Listed on its own rather than by parsing rename rows out of the main diff:
+ * with rename detection on, `--numstat` writes the pair into the path column as
+ * `old => new`, and abbreviates a shared prefix to `dir/{old => new}.ts`, which
+ * is not a format worth reconstructing a path from. `--name-status -z` under
+ * `--diff-filter=R` emits the two paths as separate NUL-terminated records
+ * instead, so each entry is exactly `R<score>`, from, to.
+ *
+ * `-M` is explicit because a consumer may have `diff.renames` turned off.
+ */
+function getRenameSourcesAgainstBase(root: string, baseBranch: string): Set<string> {
+  const output = gitStdout(root, [
+    "diff",
+    "-M",
+    "--diff-filter=R",
+    "--name-status",
+    "-z",
+    `${baseBranch}..HEAD`,
+  ]);
+  const sources = new Set<string>();
+  if (output === null) {
+    return sources;
+  }
+
+  const records = output.split("\0");
+  for (let index = 0; index + 2 < records.length; index += 3) {
+    // A record that is not the expected `R<score>` means the layout is not what
+    // this parse assumes, so stop rather than subtract a path read at the wrong
+    // offset — dropping a real change is the worse failure of the two.
+    if (!/^R\d*$/.test(records[index] ?? "")) {
+      break;
+    }
+    const from = records[index + 1] ?? "";
+    if (from.length > 0) {
+      sources.add(normalizeRepoPath(from));
+    }
+  }
+  return sources;
 }
