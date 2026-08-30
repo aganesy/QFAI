@@ -14,7 +14,7 @@
 #
 # `sha256sum -c` format, so the pre-flight needs no parser: two spaces between the digest and
 # the path, paths relative to the repository root.
-7ab9263cfe42a3b50469ea79afbc41fdbd4f53e3a1dccd72ad743f339396d0f6  .github/actions/setup/action.yml
+7952e55c83a08e1b473acdce06dcdf2afbfb0fc305609febde71c42f6ba2af7e  .github/actions/setup/action.yml
 f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be  scripts/check-atdd-annotation-ledger.mjs
 4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965  scripts/check-bidi.mjs
 f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077  scripts/check-build-warnings.mjs
@@ -29,7 +29,7 @@ a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777  scripts/check-
 c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203  scripts/check-types-future.mjs
 88301295913cd60d28b7ee21243e0b0e4f4d53ae0c0282b2902885de2f2001eb  scripts/check-workflow-hygiene.mjs
 1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444  scripts/lib/bounded-read.mjs
-2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97  scripts/pin-guard-bytes.mjs
+fd189b32d698d68eea5e81387e46e44ccb75386902a6ddcecf96ed257c209645  scripts/pin-guard-bytes.mjs
 7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d  scripts/pin-verification-bodies.mjs
 f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c  scripts/sync-init-to-root.mjs
 e7f5001d1665fd380214d4beccd08005ca17688c21a0771213bda33d90d66c74  scripts/verify-pack.mjs
