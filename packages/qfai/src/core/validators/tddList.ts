@@ -1,4 +1,5 @@
-import { readdir, stat } from "node:fs/promises";
+import type { Dirent } from "node:fs";
+import { readdir, realpath, stat } from "node:fs/promises";
 import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
@@ -29,7 +30,7 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
-import { exists, issue, readSafe } from "./utils.js";
+import { exists, isInside, issue, readSafe } from "./utils.js";
 
 /**
  * The one authoritative list of ledger status transitions.
@@ -356,12 +357,29 @@ const DR_POLICY_DECLARATION_FILE = path.join("_policies", "08_Decisions.md");
  */
 const DR_RECORD_DIR = path.join(".qfai", "decisions");
 
-/** Every location a `DR-*` may be declared in, for the unresolved-DR message. */
+/**
+ * Every location a `DR-*` may be declared in, for the DR findings' messages.
+ *
+ * One list, read by all three: `TDDLIST_EXCEPTION_MISSING_DR` and
+ * `TDDLIST_EXCEPTION_INVALID_DR` named only the two upstream files, which the
+ * implement stage carrying `[DRIFT-PROTOCOL:MANDATORY]` may not write — so an
+ * operator following the finding's own instructions was sent into the SSOT
+ * violation the standalone-record home exists to avoid. A finding that names a
+ * home must name the same homes the resolver actually searches, and sharing the
+ * list is what keeps that true after the next one is added.
+ */
 const DR_SEARCHED_LOCATIONS = [
-  ...DR_DECLARATION_FILES,
-  toPosixRel(DR_POLICY_DECLARATION_FILE),
-  `${toPosixRel(DR_RECORD_DIR)}/DR-*.md`,
+  ...DR_DECLARATION_FILES.map((name) => `${name} (spec-scoped)`),
+  `${toPosixRel(DR_POLICY_DECLARATION_FILE)} (policy-level)`,
+  `${toPosixRel(DR_RECORD_DIR)}/DR-*.md (standalone record)`,
 ].join(", ");
+
+/** The same homes for the Japanese fix hints, record directory first. */
+const DR_DECLARATION_HOMES_JA = [
+  `\`${toPosixRel(DR_RECORD_DIR)}/DR-<id>-<slug>.md\`（implement 段で書き込めるのはここだけです）`,
+  ...DR_DECLARATION_FILES.map((name) => `spec の \`${name}\``),
+  `\`${toPosixRel(DR_POLICY_DECLARATION_FILE)}\``,
+].join("、");
 
 /** Waiver rule id for `TDDLIST_EXCEPTION_UNRESOLVED_DR`. */
 export const UNRESOLVED_DR_RULE_ID = "TDDLIST-003";
@@ -371,30 +389,104 @@ function toPosixRel(value: string): string {
 }
 
 /**
- * Every `DR-*` one standalone record filename declares, upper-cased.
+ * A record filename's slug: `-`, `_` or `.`-joined words, each non-empty.
  *
- * The documented name is `DR-<id>-<slug>.md`, whose grammar is ambiguous
- * whenever the slug itself opens with four digits (a year, say): the name then
- * reads either as a policy-level `DR-<id>` carrying that whole slug, or as a
- * spec-scoped `DR-<spec>-<seq>` carrying the rest of it. Parsing one id out of
- * the filename has to pick a reading, and picking the longest left the
- * policy-level id the ledger actually cites unresolved. Both readings are
- * indexed instead — the safe direction for a warning whose subject is only
+ * Checking it is what tells a Decision Record apart from a file that merely
+ * starts like one. `DR-<id>-<slug>.md` with the placeholder never substituted,
+ * or trimmed to `DR-<id>-.md` with the separator and nothing behind it, is a
+ * name shaped by a template rather than by a decision — and indexing it
+ * silenced the very warning that would have said the record is still missing.
+ * Only the id prefix used to be checked, so every such file declared its id.
+ *
+ * Words are Unicode letters and digits rather than `[a-z0-9]`: a slug written
+ * in the project's own language is a record, not a placeholder. `<`, `>` and a
+ * doubled separator are what the placeholder and the truncation leave behind,
+ * and neither can occur inside a word.
+ */
+const DR_RECORD_SLUG = /^[\p{L}\p{N}]+(?:[-_.][\p{L}\p{N}]+)*$/u;
+
+/**
+ * The two ways the documented `DR-<id>-<slug>.md` name reads, whole-basename
+ * anchored, each capturing the id and the slug behind it.
+ *
+ * The grammar is ambiguous whenever the slug itself opens with four digits (a
+ * year, say): the name then reads either as a policy-level `DR-<id>` carrying
+ * that whole slug, or as a spec-scoped `DR-<spec>-<seq>` carrying the rest of
+ * it. Parsing one id out of the filename has to pick a reading, and picking the
+ * longest left the policy-level id the ledger actually cites unresolved. Both
+ * are indexed instead — the safe direction for a warning whose subject is only
  * whether the record exists.
+ *
+ * The slug group is optional so that a record named by its id alone still
+ * declares it: that name is unambiguous and nothing about it is a placeholder,
+ * so rejecting it would trade one false negative for a false positive.
+ */
+const DR_RECORD_FILE_READINGS = [
+  /^(DR-\d{4}-\d{4})(?:-(.+))?\.md$/iu,
+  /^(DR-\d{4})(?:-(.+))?\.md$/iu,
+] as const;
+
+/**
+ * Every `DR-*` one standalone record filename declares, upper-cased.
  *
  * The filename is what is read, never the body: a record that cites a
  * neighbouring decision in its prose must not thereby declare it.
  */
 function recordFileDeclaredIds(fileName: string): string[] {
-  const name = fileName.toUpperCase();
-  if (!name.endsWith(".MD")) return [];
-  const match = /^(DR-\d{4})(?:-(\d{4}))?(?=$|-)/.exec(name.slice(0, -".MD".length));
-  if (match === null) return [];
-  const policyLevel = match[1];
-  const sequence = match[2];
-  // Group 1 is not optional, so this only satisfies `noUncheckedIndexedAccess`.
-  if (policyLevel === undefined) return [];
-  return sequence === undefined ? [policyLevel] : [policyLevel, `${policyLevel}-${sequence}`];
+  const ids: string[] = [];
+  for (const reading of DR_RECORD_FILE_READINGS) {
+    const match = reading.exec(fileName);
+    // Group 1 is not optional, so the `undefined` arm only satisfies
+    // `noUncheckedIndexedAccess`; group 2 is genuinely absent for a slugless
+    // name, which is accepted, unlike a slug that is present but malformed.
+    const id = match?.[1];
+    if (id === undefined) continue;
+    const slug = match?.[2];
+    if (slug !== undefined && !DR_RECORD_SLUG.test(slug)) continue;
+    ids.push(id.toUpperCase());
+  }
+  return ids;
+}
+
+/**
+ * The project root with its own symlinks resolved, or the path itself when
+ * that cannot be taken.
+ *
+ * Containment is decided between two resolved paths or not at all: a project
+ * checked out under a symlinked parent — a temp dir on macOS is the everyday
+ * case — resolves every record to a path that shares no prefix with the
+ * unresolved root, and each one would read as an escape. Falling back to the
+ * unresolved root on failure keeps the direction safe: links are rejected
+ * rather than trusted.
+ */
+async function resolvedRoot(root: string): Promise<string> {
+  try {
+    return await realpath(root);
+  } catch {
+    return root;
+  }
+}
+
+/**
+ * Whether a directory entry is a Decision Record file this project carries.
+ *
+ * A regular file is one. A symlink is one only while what it resolves to stays
+ * inside the project root: a link to `/tmp/record.md` or into a sibling
+ * checkout resolves for whoever created it and for nobody else, so it silenced
+ * the unresolved-DR warning locally while a clean checkout — CI's, a
+ * colleague's — has a dangling link and a governance record that was never
+ * committed. Anything else (a directory, a socket, a dangling link) is not.
+ */
+async function isRecordFile(dir: string, entry: Dirent, projectRoot: string): Promise<boolean> {
+  if (entry.isFile()) return true;
+  if (!entry.isSymbolicLink()) return false;
+  try {
+    const target = await realpath(path.join(dir, entry.name));
+    if (!isInside(projectRoot, target)) return false;
+    return (await stat(target)).isFile();
+  } catch {
+    return false;
+  }
 }
 
 /**
@@ -410,8 +502,8 @@ function recordFileDeclaredIds(fileName: string): string[] {
  * an unreadable one must not fail the whole ledger check, so both yield an
  * empty set. Directories are dropped rather than indexed: a directory called
  * `DR-<id>-<slug>.md/` would otherwise satisfy the existence check that the
- * Decision Record itself is supposed to satisfy. A symlink is resolved, so a
- * record kept elsewhere and linked in still counts.
+ * Decision Record itself is supposed to satisfy. A symlink is resolved and
+ * counts only while it lands inside the project — see `isRecordFile`.
  */
 async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<string>> {
   const ids = new Set<string>();
@@ -422,16 +514,11 @@ async function collectDeclaredRecordIds(root: string): Promise<ReadonlySet<strin
   } catch {
     return ids;
   }
+  const projectRoot = await resolvedRoot(root);
   const names = await Promise.all(
-    entries.map(async (entry) => {
-      if (entry.isFile()) return entry.name;
-      if (!entry.isSymbolicLink()) return null;
-      try {
-        return (await stat(path.join(dir, entry.name))).isFile() ? entry.name : null;
-      } catch {
-        return null;
-      }
-    }),
+    entries.map(async (entry) =>
+      (await isRecordFile(dir, entry, projectRoot)) ? entry.name : null,
+    ),
   );
   for (const name of names) {
     if (name === null) continue;
@@ -1134,10 +1221,13 @@ async function validateSpecTddList(
         issues.push(
           issue(
             "TDDLIST_EXCEPTION_MISSING_DR",
-            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in 07_Decisions.md (spec-scoped) or _policies/08_Decisions.md (policy-level)`,
+            `Status=exception but ${reason} in tdd/test-list.md for spec-${specNumber} (${rowIdxLabel}). Add a DR-ID reference in the form DR-NNNN or DR-NNNN-NNNN, declared in one of ${DR_SEARCHED_LOCATIONS}`,
             "error",
             relPath,
             "tddList.exceptionDrId",
+            undefined,
+            "canonical",
+            `DR-ID 列に DR-NNNN（policy-level）または DR-NNNN-NNNN（spec-scoped）を記載し、対応する Decision Record を ${DR_DECLARATION_HOMES_JA} のいずれかに用意してください。retained な \`CR-*\` は再開の記録であって anomaly の記録ではないので、\`DR-*\` を併記してください（\`DR-NNNN, CR-YYYYMMDD-NNNN\`）。`,
           ),
         );
         continue;
@@ -1165,7 +1255,7 @@ async function validateSpecTddList(
             "tddList.exceptionDrFormat",
             malformed,
             "change",
-            `DR-ID を DR-NNNN もしくは DR-NNNN-NNNN の形式に直してください。宣言先は spec の 07_Decisions.md、または _policies/08_Decisions.md です。`,
+            `DR-ID を DR-NNNN もしくは DR-NNNN-NNNN の形式に直してください。宣言先は ${DR_DECLARATION_HOMES_JA} です。`,
           ),
         );
       }
@@ -1187,7 +1277,7 @@ async function validateSpecTddList(
             UNRESOLVED_DR_RULE_ID,
             unresolved,
             "change",
-            `該当の Decision Record を \`.qfai/decisions/DR-<id>-<slug>.md\` に作成するか、spec の 07_Decisions.md（policy-level なら _policies/08_Decisions.md）に記載してください。この 3 箇所のいずれでもない場所で管理している場合に限り、\`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
+            `該当の Decision Record を ${DR_DECLARATION_HOMES_JA} のいずれかに用意してください。このいずれでもない場所で管理している場合に限り、\`.qfai/waivers.yml\` に rule: ${UNRESOLVED_DR_RULE_ID} の waiver を登録してください。`,
           ),
         );
       }
