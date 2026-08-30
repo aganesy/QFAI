@@ -76,19 +76,41 @@ of them matches a declared UI path:
 Candidate 2 adds matches; it must not invent one. "A path put through it names no declared
 directory" is false for a root-level file with a dotted name: `app.config.ts` becomes
 `app/config/ts`, which a declared `app/**` matches — and the row is then sent for rendered evidence
-and a parity review over a config file that renders nothing. So candidate 2 is **only** tried when
-the cell could be a dotted module in the first place:
+and a parity review over a config file that renders nothing.
 
-- the cell contains no `/` (a path with segments always has one), **and**
-- its final dot-separated segment is not a file extension — that is, the cell does not end in a
-  `.` followed by 1–5 characters that are letters or digits. `app.config.ts` ends in `.ts` and is
-  read as a path only; `src.components.Button` ends in `Button` and gets both readings.
+**Guessing the form from the string is not the way to stop that.** The shape of an extension — a
+final `.` followed by a few letters or digits — is also the shape of a component name, so
+`src.components.Card` and its `Form`, `Page`, `View` and `Modal` siblings all read as files with a
+`Card` extension and lose candidate 2. Those are the rows this definition exists to catch, and a
+length rule sends them back to answering `n/a` on exactly the technicality the translation was
+added to remove. It costs `src.components.api` too.
 
-An extension list is not needed for this, only the shape of one: a module segment that happens to
-be 1–5 alphanumerics — `src.components.api` — loses candidate 2, so it is matched as a path alone.
-That is the safe direction, and it is the one case where writing the cell as a path
-(`src/components/api`) removes the ambiguity outright. Clause 2 is unaffected either way:
-`Test file` is required and always a path.
+So the cell is never classified. Candidate 2 is **formed** whenever the cell contains no `/`, and
+kept only when it **names something that is in the tree** — an explicit test, decided by the
+repository rather than by the shape of a name:
+
+- **List the tree once** — `git ls-files --cached --others --exclude-standard`: tracked files plus
+  the ones git does not track yet. The untracked half is not optional: a brand-new
+  `src/components/Card.tsx` is untracked on the working tree a TDD row is evaluated on, and
+  dropping it would lose the same rows again.
+- **Keep candidate 2** when a listed path is the candidate itself, or begins with the candidate
+  followed by `/` (it names a directory) or by `.` (it names that file with an extension). The
+  delimiter is required, so `src.components.Car` cannot borrow the entry `src/components/Card.tsx`.
+- **Otherwise discard it** and match the cell verbatim alone.
+
+| Cell                  | Candidate 2           | In the tree?                    | Read as   |
+| --------------------- | --------------------- | ------------------------------- | --------- |
+| `src.components.Card` | `src/components/Card` | yes — `src/components/Card.tsx` | both      |
+| `src.components.api`  | `src/components/api`  | yes — a directory               | both      |
+| `app.config.ts`       | `app/config/ts`       | no                              | path only |
+| `App.tsx`             | `App/tsx`             | no                              | path only |
+
+Both root-level files translate to names no directory has, so the invented `app/**` match cannot
+occur; `src.components.api`, which a shape rule dropped, is kept because the directory is there. A
+cell naming production code the row has not written yet has no tree entry either and is read as a
+path only — that is an early reading, and item 9 is decided at the gate on the tree the row landed
+at (`#when-owning-module-is-not-declared`), where the file exists. Clause 2 is unaffected either
+way: `Test file` is required and always a path.
 
 ### When `Owning module` is not declared
 
@@ -102,19 +124,36 @@ The fix is not to make the column mandatory — `execution-ledger.md` requires i
 dispatch, and requiring it on every row would put a declaration where the ledger deliberately has
 none. Instead, when the cell is `-`, clause 1 reads the paths the row's **own change** touched:
 
-- **The list** — the production files this row created or modified, taken the way the seam
-  reconciliation takes them (`parallelization-policy.md#seam-reconciliation-after-a-parallel-run`),
-  **plus the files git does not track yet**. A TDD row is normally evaluated on an uncommitted
-  tree, and a brand-new `src/components/Button.tsx` is untracked there: `git diff` alone lists
-  nothing for it, so the row that most needs this clause is the one it missed. Take both, and
-  concatenate:
-  - `git diff --name-only <the revision the row started from>` — tracked changes, working tree
-    included (no second revision: comparing two commits omits everything not yet committed);
-  - `git ls-files --others --exclude-standard` — files created and not yet added.
+- **The list** — the production files **this row** created or modified. Attribution is the whole
+  difficulty, and a pair of whole-tree readings does not give it: diffing the working tree against
+  the revision the row started from also reports every file that was already dirty when the row
+  started, and `git ls-files --others --exclude-standard` is repo-wide with no revision anchor at
+  all. Concatenated they describe the tree, not the row — one pre-existing edit under a declared UI
+  path, or one stray untracked file anywhere, fires clause 1 on an unrelated `Owning module = -`
+  row and demands rendered evidence for a screen it never touched.
 
-  Restrict both to production paths and exclude test files with the same patterns (clause 2 already
-  reads those). Each path is matched against the declared UI paths verbatim — a diff path is always
-  a path, so the dotted-module candidate does not apply.
+  So the list is the difference between **two snapshots of the row's own window**. Each covers the
+  whole working tree, untracked files included, and is written through a **scratch index**, so
+  neither the real index nor the working tree is disturbed:
+  - **At the start of the row** — `GIT_INDEX_FILE=$(mktemp -u) sh -c 'git add -A && git write-tree'`.
+    Record the tree sha it prints beside the row's start revision.
+  - **At the completion gate** — the same command again, for the second sha.
+  - **The row's change** is then `git diff --name-only <start-tree> <gate-tree>`.
+
+  `git add -A` into a scratch index takes in **the files git does not track yet** — a brand-new
+  `src/components/Button.tsx` is untracked, `git diff` alone lists nothing for it, and the row that
+  most needs this clause is that one — while still honouring `.gitignore`. Comparing the two trees
+  then carries no dirt from before the row: a file already modified at the start is identical in
+  both snapshots and drops out, while a file already modified **and then edited again by the row**
+  differs between them and stays. Subtracting path lists gets that second case wrong; the snapshots
+  compare content, which is what makes the list attributable to the row.
+
+  Restrict the result to production paths and exclude test files with the same patterns (clause 2
+  already reads those). Each path is matched against the declared UI paths verbatim — a diff path is
+  always a path, so the dotted-module candidate does not apply. Seam reconciliation
+  (`parallelization-policy.md#seam-reconciliation-after-a-parallel-run`) answers a neighbouring
+  question — which slice touched what — between two **commits**, so its form is not substitutable
+  here: on the uncommitted tree a TDD row is evaluated on it lists nothing.
 
 - **When it is evaluated** — at the completion gate, where item 9 is checked and the change exists.
   Before that the row has no diff, so a trigger answered early (the Visual Review Guard reads the

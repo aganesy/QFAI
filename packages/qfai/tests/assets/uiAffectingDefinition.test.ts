@@ -417,13 +417,47 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
     });
 
     it(`${tree}: the dotted candidate cannot invent a match for a root-level file`, async () => {
-      // `app.config.ts` -> `app/config/ts` matches a declared `app/**`, so a
-      // non-UI config file was routed for rendered evidence and a parity review.
+      // Over-correction pin for the test below. `app.config.ts` -> `app/config/ts`
+      // matches a declared `app/**`, so a non-UI config file was routed for
+      // rendered evidence and a parity review. Widening candidate 2 to catch
+      // short module tails must not bring that back: both root-level files
+      // still translate to names no directory has, and stay path-only.
       const definition = await read(tree, DEFINITION);
       expect(definition).toContain("Candidate 2 adds matches; it must not invent one");
-      expect(definition).toContain("`app.config.ts` becomes\n`app/config/ts`");
-      expect(definition).toContain("its final dot-separated segment is not a file extension");
-      expect(definition).toContain("`app.config.ts` ends in `.ts` and is\n  read as a path only");
+      expect(definition).toContain("| `app.config.ts`       | `app/config/ts`       | no");
+      expect(definition).toContain("| `App.tsx`             | `App/tsx`             | no");
+    });
+
+    it(`${tree}: a short dotted module tail still produces a path candidate`, async () => {
+      // The guard on candidate 2 was a length heuristic: a tail of 1-5 letters
+      // or digits counted as a file extension. That is also the shape of a
+      // component name, so `src.components.Card` — and its `Form`, `Page`,
+      // `View`, `Modal` siblings — lost the `src/components/Card` candidate,
+      // missed the declared `src/components/**` glob, and recorded
+      // `n/a (not UI-affecting)` on precisely the rows this definition exists
+      // to catch. `src.components.api` was lost the same way.
+      const definition = await read(tree, DEFINITION);
+
+      expect(definition).not.toContain("1–5");
+      expect(definition).not.toContain("final dot-separated segment is not a file extension");
+      expect(definition).toContain(
+        "**Guessing the form from the string is not the way to stop that.**",
+      );
+      expect(definition).toContain("its `Form`, `Page`, `View` and `Modal` siblings");
+
+      // The replacement classifies nothing. It forms the candidate whenever the
+      // cell has no `/` and keeps it only when the tree actually has that path,
+      // so the decision comes from the repository rather than from the shape of
+      // a name. The delimiter stops a prefix borrowing a longer entry.
+      expect(definition).toContain("`git ls-files --cached --others --exclude-standard`");
+      expect(definition).toContain(
+        "**Keep candidate 2** when a listed path is the candidate itself",
+      );
+      expect(definition).toContain("| `src.components.Card` | `src/components/Card` |");
+      expect(definition).toContain("| `src.components.api`  | `src/components/api`  |");
+      expect(definition).toContain(
+        "`src.components.Car` cannot borrow the entry `src/components/Card.tsx`",
+      );
     });
 
     it(`${tree}: the CON-API source entry has a resolver of its own`, async () => {
@@ -439,13 +473,40 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
     });
 
     it(`${tree}: the fallback diff sees a file git does not track yet`, async () => {
-      // A TDD row is evaluated on an uncommitted tree, where a brand-new
-      // `src/components/Button.tsx` is untracked: `git diff` lists nothing for
-      // it, so the row that most needs the fallback was the one it missed.
+      // Over-correction pin for the test below. A TDD row is evaluated on an
+      // uncommitted tree, where a brand-new `src/components/Button.tsx` is
+      // untracked and `git diff` lists nothing for it. Scoping the list to the
+      // row must not drop the untracked half again.
       const definition = await read(tree, DEFINITION);
-      expect(definition).toContain("**plus the files git does not track yet**");
-      expect(definition).toContain("`git ls-files --others --exclude-standard`");
-      expect(definition).toContain("comparing two commits omits everything not yet committed");
+      expect(definition).toContain("**the files git does not track yet**");
+      expect(definition).toContain("`src/components/Button.tsx` is untracked");
+      expect(definition).toContain("while still honouring `.gitignore`");
+    });
+
+    it(`${tree}: the fallback diff is scoped to the row's own window`, async () => {
+      // The list was "everything that differs from the revision the row started
+      // from" concatenated with "every untracked file in the repo". Neither
+      // half is attributable to the row: the first carries whatever was already
+      // dirty when the row started, the second has no revision anchor at all.
+      // One pre-existing edit under a declared UI path, or one stray untracked
+      // file, then fired clause 1 on an unrelated `Owning module = -` row and
+      // demanded rendered evidence for a screen it never touched.
+      const definition = await read(tree, DEFINITION);
+
+      expect(definition).not.toContain("comparing two commits omits everything not yet committed");
+      expect(definition).toContain("is repo-wide with no revision anchor");
+
+      // Replaced by two whole-tree snapshots of the row's own window, taken
+      // through a scratch index and diffed against each other. Content, not
+      // path membership: a file dirty before the row AND edited by it must stay
+      // in the list, which subtracting path sets loses.
+      expect(definition).toContain("**two snapshots of the row's own window**");
+      expect(definition).toContain(
+        "GIT_INDEX_FILE=$(mktemp -u) sh -c 'git add -A && git write-tree'",
+      );
+      expect(definition).toContain("git diff --name-only <start-tree> <gate-tree>");
+      expect(definition).toContain("already modified **and then edited again by the row**");
+      expect(definition).toContain("Subtracting path lists gets that second case wrong");
     });
 
     it(`${tree}: item 9 shares the revision whether or not a clause fired`, async () => {
