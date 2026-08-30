@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { access, readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 
@@ -10,6 +11,7 @@ import {
   loadConfig,
   resolvePath,
   type ConfigPathKey,
+  type QfaiConfig,
 } from "./config.js";
 import { readUiContractScreenContracts } from "./contracts/screenContracts.js";
 import {
@@ -34,7 +36,7 @@ import {
 import { resolvePrimaryPrototypingSpec } from "./prototyping/specResolution.js";
 import { collectSpecEntries } from "./specLayout.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "./traceability.js";
-import { diffProjectSkillsAgainstInitAssets } from "./skillsIntegrity.js";
+import { diffProjectSkillsAgainstInitAssets, type SkillsIntegrityDiff } from "./skillsIntegrity.js";
 import { validateSddDesignContractReadiness } from "./validators/designContractReadiness.js";
 import { resolveToolVersion } from "./version.js";
 import { loadDecisionGuardrails, normalizeDecisionGuardrails } from "./decisionGuardrails.js";
@@ -205,8 +207,22 @@ export async function createDoctorData(options: CreateDoctorDataOptions): Promis
     });
 
     if (key === "skillsDir") {
-      const diff = await diffProjectSkillsAgainstInitAssets(root, config);
-      if (diff.status === "skipped_missing_skills") {
+      // Isolated, not awaited bare: `collectFiles` inside the diff rejects on
+      // an unreadable skills tree, and this call sits before every check that
+      // follows — including `assets.lineBudget`, whose whole job is to report
+      // exactly that kind of damage. One EACCES here used to take the entire
+      // `qfai doctor` run down and emit no diagnostics at all.
+      const diff = await inspectSkillsIntegrity(root, config);
+      if (diff === null) {
+        addCheck(checks, {
+          id: "skills.integrity",
+          severity: "warning",
+          title: "Skills integrity (.qfai/assistant/skills)",
+          message:
+            "skills を検査できませんでした（ディレクトリまたはファイルの読み取りに失敗）。権限とパスを確認してください。",
+          details: { skillsDir: toRelativePath(root, resolved) },
+        });
+      } else if (diff.status === "skipped_missing_skills") {
         addCheck(checks, {
           id: "skills.integrity",
           severity: "info",
@@ -685,6 +701,25 @@ function assetLineBudgetNextActions(oversized: ReadonlyArray<{ path: string }>):
   return actions;
 }
 
+/**
+ * The skills diff, or `null` when the tree could not be inspected.
+ *
+ * `diffProjectSkillsAgainstInitAssets` walks the configured skills directory,
+ * so an unreadable subdirectory rejects it. That call runs before every later
+ * check, so letting the rejection escape means `qfai doctor` reports nothing —
+ * not even the findings that exist to describe an unreadable tree.
+ */
+async function inspectSkillsIntegrity(
+  root: string,
+  config: QfaiConfig,
+): Promise<SkillsIntegrityDiff | null> {
+  try {
+    return await diffProjectSkillsAgainstInitAssets(root, config);
+  } catch {
+    return null;
+  }
+}
+
 async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   const agentsDir = path.join(root, ".qfai", "assistant", "agents");
   if (!(await exists(agentsDir))) {
@@ -697,7 +732,20 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
     };
   }
 
-  const entries = await readdir(agentsDir, { withFileTypes: true });
+  let entries: Dirent[];
+  try {
+    entries = await readdir(agentsDir, { withFileTypes: true });
+  } catch {
+    // `exists()` passed, so this is a permission or race failure rather than
+    // an absent tree. Reporting it beats rejecting the whole doctor run.
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: "agent ディレクトリを列挙できませんでした（権限またはロックを確認してください）",
+      details: { path: toRelativePath(root, agentsDir) },
+    };
+  }
   const markdownFiles = entries
     .filter((entry) => entry.isFile() && entry.name.endsWith(".md") && entry.name !== "README.md")
     .map((entry) => entry.name)
@@ -714,15 +762,35 @@ async function buildAgentFrontmatterCheck(root: string): Promise<DoctorCheck> {
   }
 
   const invalidFiles: Array<{ file: string; error: string }> = [];
+  const unreadableFiles: string[] = [];
   for (const fileName of markdownFiles) {
     const filePath = path.join(agentsDir, fileName);
-    const parsed = parseAgentFrontmatter(await readFile(filePath, "utf-8"));
+    let content: string;
+    try {
+      content = await readFile(filePath, "utf-8");
+    } catch {
+      // Deleted between the listing and the read, or unreadable. It is not
+      // "valid frontmatter" and it must not reject the run either.
+      unreadableFiles.push(`.qfai/assistant/agents/${fileName}`);
+      continue;
+    }
+    const parsed = parseAgentFrontmatter(content);
     if (!parsed.ok) {
       invalidFiles.push({
         file: `.qfai/assistant/agents/${fileName}`,
         error: parsed.error,
       });
     }
+  }
+
+  if (unreadableFiles.length > 0 && invalidFiles.length === 0) {
+    return {
+      id: "agents.frontmatter",
+      severity: "warning",
+      title: "Agent frontmatter",
+      message: `agent 定義を読み取れず検査できませんでした (count=${unreadableFiles.length}): ${formatMessagePaths(unreadableFiles)}`,
+      details: { count: markdownFiles.length, unreadableFiles },
+    };
   }
 
   if (invalidFiles.length > 0) {

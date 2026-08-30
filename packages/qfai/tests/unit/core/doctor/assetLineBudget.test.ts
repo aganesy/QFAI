@@ -57,6 +57,18 @@ const UNTYPED_ROOT = "qfai-untyped-";
 /** An entry inside an untyped root whose `lstat` also fails. */
 const UNSTATTABLE_ASSET = "qfai-unstattable-fixture.md";
 
+/**
+ * Markers for the two directories `createDoctorData` walks *before* it reaches
+ * `assets.lineBudget`.
+ *
+ * `diffProjectSkillsAgainstInitAssets` and `buildAgentFrontmatterCheck` both
+ * ran their `readdir` unguarded, so one unreadable subdirectory rejected the
+ * whole `qfai doctor` run — including the finding whose job is to report that
+ * kind of damage.
+ */
+const UNLISTABLE_SKILL_DIR = "qfai-unlistable-skill";
+const UNLISTABLE_AGENTS_ROOT = "qfai-unlistable-agents-";
+
 vi.mock("node:fs/promises", async (importOriginal) => {
   const actual = await importOriginal<typeof NodeFsPromises>();
   return {
@@ -71,6 +83,13 @@ vi.mock("node:fs/promises", async (importOriginal) => {
       return actual.access(target, mode);
     },
     readdir: async (target: string, options?: { withFileTypes?: true }) => {
+      const targetPath = String(target);
+      if (
+        targetPath.includes(UNLISTABLE_SKILL_DIR) ||
+        (targetPath.includes(UNLISTABLE_AGENTS_ROOT) && targetPath.endsWith("agents"))
+      ) {
+        throw Object.assign(new Error("EACCES: permission denied"), { code: "EACCES" });
+      }
       if (options?.withFileTypes !== true) {
         return actual.readdir(target);
       }
@@ -363,6 +382,49 @@ describe("checkAssistantAssetLineBudget", () => {
 });
 
 describe("doctor assets.lineBudget check", () => {
+  it("still reports assets.lineBudget when the skills tree cannot be listed", async () => {
+    await withTempRoot(async (root) => {
+      await writeAsset(root, `skills/${UNLISTABLE_SKILL_DIR}/SKILL.md`, 3);
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 2);
+
+      // The skills diff runs first and used to reject, so the run produced no
+      // diagnostics at all — not even the oversized asset below it.
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      const integrity = data.checks.find((entry) => entry.id === "skills.integrity");
+      expect(integrity?.severity).toBe("warning");
+      expect(integrity?.message).toContain("検査できませんでした");
+
+      const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
+      expect(budget?.severity).toBe("warning");
+      expect(budget?.details?.["oversized"]).toEqual([
+        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_ASSET_MAX_LINES + 2 },
+      ]);
+    });
+  });
+
+  it("still reports assets.lineBudget when the agents tree cannot be listed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), UNLISTABLE_AGENTS_ROOT));
+    try {
+      await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
+      await writeAsset(root, "constitution/long-rule.md", ASSISTANT_ASSET_MAX_LINES + 5);
+
+      const data = await createDoctorData({ startDir: root, rootExplicit: true });
+
+      const frontmatter = data.checks.find((entry) => entry.id === "agents.frontmatter");
+      expect(frontmatter?.severity).toBe("warning");
+      expect(frontmatter?.message).toContain("列挙できませんでした");
+
+      const budget = data.checks.find((entry) => entry.id === "assets.lineBudget");
+      expect(budget?.severity).toBe("warning");
+      expect(budget?.details?.["oversized"]).toEqual([
+        { path: "assistant/constitution/long-rule.md", lines: ASSISTANT_ASSET_MAX_LINES + 5 },
+      ]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("warns with the ceiling and the offending files in details", async () => {
     await withTempRoot(async (root) => {
       await writeAsset(root, "skills/qfai-demo/SKILL.md", ASSISTANT_ASSET_MAX_LINES + 1);
