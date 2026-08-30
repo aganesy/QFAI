@@ -181,9 +181,9 @@ Before declaring completion, you MUST:
 ### What the placeholder scan does not flag
 
 **`OQ` and `OPEN QUESTION` are exempt only as tracking structure.** Exempt: an
-`OQ-NNNN-NNNN` row carrying its tracking fields — ID, owner, status, due — and
-the `Open Questions` heading, `OQ-ID` table header and empty-state row that the
-required `Open-questions.md` files ship with while recording zero open
+Open Questions register row carrying its tracking fields — ID, owner, status,
+due — and the `Open Questions` heading, `OQ-ID` table header and empty-state row
+that the required `Open-questions.md` files ship with while recording zero open
 questions. Article II and `workflow.md` both end an unverifiable fact by
 recording an Open Question, so the tracked record they prescribe must never be
 reported as an unresolved placeholder. Everywhere else the two strings are still

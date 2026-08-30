@@ -30,6 +30,18 @@ const read = (tree: string, rel: string): Promise<string> =>
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
+/**
+ * The shape of a QFAI-internal open-question ID: `OQ-` plus two four-character
+ * groups, whether spelled with real digits or with a placeholder stand-in.
+ * `.agents/rules/distributed-surface.md` forbids that shape in anything `qfai
+ * init` copies into a user's tree, and the shipped baseline lives under
+ * `assets/`. The leakage guard only greps the digit spelling, so the
+ * placeholder spelling reaches users unchallenged — this is the pin for it.
+ * The neutral `OQ-ID` the templates use is two characters wide and never
+ * matches.
+ */
+const INTERNAL_OQ_ID_SHAPE = /\bOQ-[0-9A-Za-z]{4}-[0-9A-Za-z]{4}\b/;
+
 /** The single scan bullet, isolated: the carve-outs below it legitimately name `OQ`. */
 const scanBullet = (baseline: string): string => {
   const line = baseline
@@ -68,6 +80,18 @@ describe("completion contract placeholder scan", () => {
       );
       expect(baseline).toContain("row carrying its tracking fields — ID, owner, status, due");
       expect(baseline).toContain("must never be reported as an unresolved placeholder");
+    });
+
+    it(`${tree}: the carve-out names the tracked row without publishing the internal OQ ID format`, async () => {
+      const baseline = await read(tree, BASELINE);
+
+      expect(baseline).not.toMatch(INTERNAL_OQ_ID_SHAPE);
+      // Over-correction pin: dropping the internal format must not cost the
+      // carve-out its precision. The neutral spelling the `Open-questions.md`
+      // templates already use stays, and the exemption stays scoped to a row
+      // that carries its tracking fields.
+      expect(flat(baseline)).toContain("`OQ-ID` table header");
+      expect(flat(baseline)).toContain("row carrying its tracking fields");
     });
 
     it(`${tree}: untracked OQ / OPEN QUESTION occurrences stay scanned`, async () => {
