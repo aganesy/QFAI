@@ -481,13 +481,11 @@ async function mergeRequiredRoutingPhases(
     knownProfiles: await readProjectManifestNames(destRoot, REVIEW_PROFILES_FILE, readProfileNames),
   });
   if (result.content !== null && !dryRun) {
-    const replaced = await replaceFileAtomically(projectPath, result.content, project.mode, () =>
+    const replaced = await replaceFileAtomically(projectPath, result.content, project.pinned, () =>
       directoryPinIntact(destRoot, parent),
     );
-    if (!replaced) {
-      return [
-        `  ${ROUTING_WARNING_CODES["manifest-shape"]}: the directory holding ${rel} is no longer the one that passed the write-safety check; skipped the phase merge rather than replace a file that may now be outside the project.`,
-      ];
+    if (replaced !== null) {
+      return [`  ${ROUTING_WARNING_CODES["manifest-shape"]}: ${rel} ${replaced}`];
     }
   }
   return formatRoutingMergeNotes(result, rel, dryRun);
@@ -534,7 +532,7 @@ async function readProjectManifestNames(
 }
 
 type ManifestRead =
-  | { kind: "ok"; content: string; mode: number }
+  | { kind: "ok"; content: string; pinned: PinnedFileRead }
   | { kind: "missing" }
   | { kind: "unusable"; reason: string };
 
@@ -559,7 +557,7 @@ type ManifestRead =
  * construction.
  */
 async function readMergeableManifest(target: string): Promise<ManifestRead> {
-  let pinned: { content: Buffer; mode: number } | null;
+  let pinned: PinnedFileRead | null;
   try {
     pinned = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
   } catch (err: unknown) {
@@ -584,7 +582,7 @@ async function readMergeableManifest(target: string): Promise<ManifestRead> {
   if (content === null) {
     return { kind: "unusable", reason: "is not valid UTF-8; skipped the phase merge" };
   }
-  return { kind: "ok", content, mode: pinned.mode };
+  return { kind: "ok", content, pinned };
 }
 
 /**
@@ -648,16 +646,33 @@ async function describeUnsafeManifestPath(
  * another process can touch, `manifest/` swapped for a link out of the project
  * in between would send the replacement there. Node has no `renameat`, so the
  * directory cannot be held as a descriptor — instead its identity is re-checked
- * immediately before each of the two operations that trust the name, and a
- * mismatch aborts the replacement (`false`) rather than following the swap.
+ * immediately before each of the two operations that trust the name.
+ *
+ * The **file** is re-checked for the same reason, and the directory pin does
+ * not cover it: an editor or a `qfai-configure` run that saves over
+ * `agent-routing.yml` after it was read leaves the directory exactly as it was,
+ * and the rename would then replace that new content with a merge built from
+ * the old. Its inode and its bytes are both compared, because the ordinary save
+ * that truncates and rewrites keeps the inode.
+ *
+ * The original's **ownership** travels with its mode. The replacement is a new
+ * inode created by whoever is running `init`, so under `sudo qfai init --force`
+ * — or in any shared tree where the manifest belongs to somebody else — a
+ * silent `rename` would hand the user's own file to root and leave them unable
+ * to edit it through `qfai-configure`. Where the ownership cannot be restored,
+ * the replacement is declined rather than made.
+ *
+ * Returns `null` on success, or the reason it declined.
  */
 async function replaceFileAtomically(
   target: string,
   content: string,
-  mode: number,
+  pinned: PinnedFileRead,
   stillSafe: () => Promise<boolean>,
-): Promise<boolean> {
-  if (!(await stillSafe())) return false;
+): Promise<string | null> {
+  const directoryMoved =
+    "is in a directory that is no longer the one that passed the write-safety check; skipped the phase merge rather than replace a file that may now be outside the project.";
+  if (!(await stillSafe())) return directoryMoved;
   const temp = path.join(path.dirname(target), `.${path.basename(target)}.${randomUUID()}.tmp`);
   try {
     // `O_EXCL`: the temp name is ours or nothing is written. It is created
@@ -670,22 +685,65 @@ async function replaceFileAtomically(
     );
     try {
       await handle.writeFile(content, "utf-8");
+      if (!(await restoreOwnership(handle, pinned))) {
+        await rm(temp, { force: true });
+        return "belongs to another user and this process cannot restore that ownership; skipped the phase merge rather than take the file over.";
+      }
+      await handle.chmod(pinned.mode);
     } finally {
       await handle.close();
     }
-    await chmod(temp, mode);
     if (!(await stillSafe())) {
       await rm(temp, { force: true });
-      return false;
+      return directoryMoved;
+    }
+    if (!(await isUnchangedManifest(target, pinned))) {
+      await rm(temp, { force: true });
+      return "changed while the merge was being prepared; skipped the phase merge rather than overwrite the newer content with a merge of the older.";
     }
     await rename(temp, target);
-    return true;
+    return null;
   } catch (err: unknown) {
     // The temp file is this function's alone — leaving it behind would litter
     // the manifest directory with a partial YAML on every failed merge.
     await rm(temp, { force: true });
     throw err;
   }
+}
+
+/**
+ * Give the replacement the original's `uid` / `gid`, or say it could not.
+ *
+ * Already-correct ownership is the common case and needs no syscall — a user
+ * replacing their own file in their own group. `EPERM` is the case that
+ * matters: the process may not hand the file to that owner, so proceeding would
+ * change it. Windows has no meaningful `fchown`.
+ */
+async function restoreOwnership(handle: FileHandle, pinned: PinnedFileRead): Promise<boolean> {
+  if (process.platform === "win32") return true;
+  const current = await handle.stat();
+  if (current.uid === pinned.uid && current.gid === pinned.gid) return true;
+  try {
+    await handle.chown(pinned.uid, pinned.gid);
+    return true;
+  } catch (err: unknown) {
+    if ((err as NodeJS.ErrnoException | null)?.code === "EPERM") return false;
+    throw err;
+  }
+}
+
+/** Whether `target` still holds exactly the inode and bytes that were read. */
+async function isUnchangedManifest(target: string, pinned: PinnedFileRead): Promise<boolean> {
+  let now: PinnedFileRead | null;
+  try {
+    now = await readPinnedRegularFileBytes(target, MANIFEST_MAX_BYTES);
+  } catch {
+    return false;
+  }
+  if (now === null) return false;
+  const sameInode =
+    pinned.ino === 0 || now.ino === 0 || (now.dev === pinned.dev && now.ino === pinned.ino);
+  return sameInode && now.content.equals(pinned.content);
 }
 
 /** A `destRoot`-relative path with forward slashes, for operator notes. */
@@ -2077,6 +2135,23 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 }
 
 /**
+ * One bounded read of a regular file: its bytes, and everything a replacement
+ * has to put back.
+ *
+ * `mode`, `uid` and `gid` because an atomic replace writes a **new** inode;
+ * `dev` and `ino` so the replacement can tell it is still about to replace the
+ * file it read.
+ */
+type PinnedFileRead = {
+  content: Buffer;
+  mode: number;
+  uid: number;
+  gid: number;
+  dev: number;
+  ino: number;
+};
+
+/**
  * The same read, returning the bytes.
  *
  * The restore copy writes back what it read, and decoding as UTF-8 first
@@ -2086,7 +2161,7 @@ async function readPinnedRegularFile(filePath: string, maxBytes: number): Promis
 async function readPinnedRegularFileBytes(
   filePath: string,
   maxBytes: number,
-): Promise<{ content: Buffer; mode: number } | null> {
+): Promise<PinnedFileRead | null> {
   let handle: FileHandle | undefined;
   try {
     handle = await open(filePath, OPEN_READ_FLAGS);
@@ -2100,11 +2175,18 @@ async function readPinnedRegularFileBytes(
       filled += bytesRead;
     }
     if (filled > maxBytes) return null;
-    // The mode comes from this `fstat`, not from a separate `stat` on the
+    // The metadata comes from this `fstat`, not from a separate `stat` on the
     // pathname. Two operations could land on two inodes: content read from a
     // replacement that somebody made `0600` for a reason, restored under the
     // `0644` the old entry carried, and readable by everyone.
-    return { content: Buffer.from(buffer.subarray(0, filled)), mode: pinned.mode & 0o7777 };
+    return {
+      content: Buffer.from(buffer.subarray(0, filled)),
+      mode: pinned.mode & 0o7777,
+      uid: pinned.uid,
+      gid: pinned.gid,
+      dev: pinned.dev,
+      ino: pinned.ino,
+    };
   } catch (error: unknown) {
     const code = (error as NodeJS.ErrnoException | null)?.code;
     if (code === "ENXIO" || code === "EISDIR") return null;

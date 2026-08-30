@@ -1,6 +1,7 @@
 import {
   access,
   chmod,
+  chown,
   lstat,
   mkdtemp,
   mkdir,
@@ -828,6 +829,37 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(routingPath, "utf-8")).toBe(stale);
     } finally {
       await chmod(routingPath, 0o600).catch(() => undefined);
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The replacement is a new inode created by whoever runs `init`, so under
+  // `sudo qfai init --force` — or in any shared tree where the manifest belongs
+  // to somebody else — a silent rename hands the user's own file to root and
+  // leaves them unable to edit it through `qfai-configure`.
+  it("--force keeps the routing manifest's owner across the merge", async () => {
+    // Needs a process that may hand a file to another owner.
+    if (process.platform === "win32" || process.getuid?.() !== 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-owner-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      await chown(routingPath, 1000, 1000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      const after = await lstat(routingPath);
+      expect(after.uid).toBe(1000);
+      expect(after.gid).toBe(1000);
+    } finally {
       await rm(root, { recursive: true, force: true });
     }
   });
