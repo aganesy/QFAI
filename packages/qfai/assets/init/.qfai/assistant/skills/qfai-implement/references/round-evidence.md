@@ -132,15 +132,30 @@ finding:
    production change on a scratch tree. The row's `Test file` stays as it is,
    so the failure is the row's assertions again.
 2. Observe the RED there and take its stripped run on that same tree, both
-   exactly as `red-admissibility.md` requires, and record that tree as this
-   round's `RED revision`.
-3. Restore the production code and re-run to take this round's GREEN pair.
-4. Record the trigger on `Round N: reviewer verdict` as "evidence migration —
+   exactly as `red-admissibility.md` requires. Then write **the whole of this
+   round's RED subject** against that tree — the pair, the stripped run,
+   `RED revision`, and `RED test hash` with its manifest wherever the row owes
+   one — from the **Round block** list above, which is the only statement of it.
+   Step 4 puts the production code back and the tree these fields address stops
+   existing, so this is the last moment any of them can be taken.
+3. **Submit that RED to `qa-gatekeeper`, routing phase `red`, and obtain its
+   verdict here — before the restore.** This round is judged as an ordinary
+   round, so it owes the ordinary RED gate an ordinary subject, and the
+   completion gate re-asks for that verdict on every round. Restoring first and
+   submitting after would put the gatekeeper in front of a tree the RED was not
+   observed on, and would close the migration on the one round nobody judged —
+   which is the audit gap the migration exists to repair, reproduced by the
+   procedure meant to repair it. Nothing here is exempt from the gate: the round
+   carries no absence to admit, so a REVISE is answered as it is in any other
+   round.
+4. Restore the production code and re-run to take this round's GREEN pair.
+5. Record the trigger on `Round N: reviewer verdict` as "evidence migration —
    `RED assertion-stripped result` added by the canonical-skills update; round
    N-1 could not warrant `pre-contract`".
 
-It needs no gate of its own and is no bypass: it costs a real RED observation
-and a real stripped run, which is the whole of what the field asks for. So
+It needs no gate of its own — step 3 sends it through the one every round
+uses — and it is no bypass: it costs a real RED observation, a real stripped
+run and a real verdict, which is the whole of what the field asks for. So
 `pre-contract` is **not** available on a migration round — the round exists to
 produce the very run it would excuse — and a row takes at most one per field.
 

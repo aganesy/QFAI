@@ -106,8 +106,10 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   the name is a changed command and therefore a REVISE.
 - **`pre-contract` is the one admissible absence.** A round whose RED was
   observed before this field existed cannot produce the run — the production
-  code is already in the tree — so `references/round-evidence.md` grandfathers
-  it. Accept it **only** on a round that already holds a complete GREEN pair
+  code is already in the tree — so
+  `.qfai/assistant/skills/qfai-implement/references/round-evidence.md`
+  grandfathers it. Accept it **only** on a round that already holds a complete
+  GREEN pair
   **and** whose `RED revision` is a commit shown to be a **strict** ancestor
   of the commit that added this field — `--is-ancestor` holds and the two
   revisions differ, since a RED taken on the field commit itself was taken on
@@ -118,9 +120,15 @@ the row's own evidence; nothing in the calling work order substitutes for it.
   stripped run is takeable. Where no such warrant can exist — the project does
   not track `.qfai`, or the revision is `working-tree+<content hash>` — the
   row is not stranded and `pre-contract` is still refused: it takes the
-  **evidence-migration round** of `references/round-evidence.md`, which you
-  judge as an ordinary round, with a real RED pair and a real strip and no
-  absence to admit.
+  **evidence-migration round** of
+  `.qfai/assistant/skills/qfai-implement/references/round-evidence.md`, which
+  you judge as an ordinary round: it submits its own RED here before it restores
+  the production code, so it arrives with a real RED pair, a real strip, a
+  revision and a hash, and no absence to admit. Every reference on this page is
+  written from the project root: this file's own directory holds no
+  `references/`, and the same text ships inside `agent-catalog.yml` and
+  `.codex/agents/`, so a path relative to any one of the three resolves nowhere
+  in the other two.
 
 **Accept a GREEN** only when the same command shape ran after the production
 change and the recorded output shows the row's own selector passing. A full-suite

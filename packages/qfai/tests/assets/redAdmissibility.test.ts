@@ -12,7 +12,8 @@
  * one were indistinguishable at every gate.
  */
 
-import { readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
+import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,8 +30,24 @@ const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const PROVENANCE = "assistant/skills/qfai-atdd/references/red-provenance.md";
 const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const WORKFLOW = "assistant/constitution/workflow.md";
+const AGENTS_DIR = "assistant/agents";
+const CODEX_GATEKEEPER = ".codex/agents/qa-gatekeeper.toml";
+
+/**
+ * A backtick-quoted doc reference in a shipped agent whose target is decidable:
+ * written from the project root (`.qfai/assistant/…`), or explicitly relative to
+ * the agent's own directory (`./`, `../`, `references/`). Bare first segments
+ * are excluded — `uiux/40_screen_contracts.md` names a spec artifact, not a
+ * sibling file — as are placeholder paths (`<spec-id>`, `spec-*`), which address
+ * runtime artifacts no template tree holds.
+ */
+const AGENT_DOC_REF =
+  /`((?:\.qfai\/assistant\/|\.{1,2}\/|references\/)[^`\s<>*#]+\.(?:md|ya?ml))(?:#[^`]*)?`/g;
 
 const flat = (s: string): string => s.replace(/\s+/g, " ");
+
+/** The Codex copy stores the same prose as an escaped TOML string. */
+const flatToml = (s: string): string => flat(s.replace(/\\n/g, "\n"));
 
 const read = async (tree: string, rel: string): Promise<string> =>
   flat(await readFile(path.join(repoRoot, tree, rel), "utf-8"));
@@ -252,6 +269,75 @@ describe.each(TREES)("%s", (tree) => {
     );
   });
 
+  it("sends the migration round's RED through the ordinary gate, before the restore", async () => {
+    // The numbered procedure recorded the pair, the strip and `RED revision`
+    // and then restored the production code — without `RED test hash` and its
+    // manifest, which the round block requires and which address a tree the
+    // restore destroys, and without submitting anything. The gatekeeper judges
+    // a migration round as an ordinary round and completion re-asks for that
+    // verdict, so the round closed with the one part nobody had judged.
+    const doc = await read(tree, ROUND_EVIDENCE);
+    expect(doc).toContain("**the whole of this round's RED subject**");
+    expect(doc).toContain("`RED test hash` with its manifest wherever the row owes one");
+    expect(doc).toContain(
+      "**Submit that RED to `qa-gatekeeper`, routing phase `red`, and obtain its verdict here — " +
+        "before the restore.**",
+    );
+    // Ordering is the whole point: a submission after the restore shows the
+    // gatekeeper a tree the RED was not observed on.
+    const submit = doc.indexOf("Submit that RED to `qa-gatekeeper`");
+    const restore = doc.indexOf("Restore the production code and re-run to take this round's");
+    expect(submit).toBeGreaterThan(-1);
+    expect(restore).toBeGreaterThan(submit);
+    // And the receiving side says what it now expects to arrive.
+    expect(await read(tree, GATEKEEPER)).toContain(
+      "it submits its own RED here before it restores the production code",
+    );
+  });
+
+  it("points the grandfather and migration clauses at a path that resolves", async () => {
+    // Read from `assistant/agents/`, `references/round-evidence.md` resolves to
+    // `assistant/agents/references/round-evidence.md`, which no tree holds — so
+    // the shipped gatekeeper could not reach the procedure it delegates
+    // `pre-contract` and the migration round to.
+    const gate = await read(tree, GATEKEEPER);
+    expect(gate).toContain(`\`.qfai/${ROUND_EVIDENCE}\``);
+    expect(gate).not.toContain("`references/round-evidence.md`");
+    // Same prose, third depth: the catalog embeds this agent's instructions.
+    const catalog = await read(tree, "assistant/manifest/agent-catalog.yml");
+    expect(catalog).toContain(`\`.qfai/${ROUND_EVIDENCE}\``);
+    expect(catalog).not.toContain("`references/round-evidence.md`");
+  });
+
+  it("keeps every shipped agent's assistant-tree reference resolvable", async () => {
+    // The over-correction pin for the clause above: a differently-shaped path
+    // is not a fix unless it addresses a file that exists. This resolves every
+    // unambiguous reference in every shipped agent — root-relative, and the
+    // directory-relative forms `./`, `../` and `references/` — so the whole
+    // class is covered rather than the one string the review named. The
+    // legitimately relative `../skills/…` references already in these files
+    // resolve and must keep doing so.
+    const dir = path.join(repoRoot, tree, AGENTS_DIR);
+    const files = (await readdir(dir)).filter((name) => name.endsWith(".md")).sort();
+    expect(files.length).toBeGreaterThan(0);
+
+    const unresolvable: string[] = [];
+    let checked = 0;
+    for (const file of files) {
+      const text = await readFile(path.join(dir, file), "utf-8");
+      for (const match of text.matchAll(AGENT_DOC_REF)) {
+        const ref = match[1];
+        checked += 1;
+        const target = ref.startsWith(".qfai/")
+          ? path.join(repoRoot, tree, ref.slice(".qfai/".length))
+          : path.resolve(dir, ref);
+        if (!existsSync(target)) unresolvable.push(`${file}: ${ref}`);
+      }
+    }
+    expect(unresolvable).toEqual([]);
+    expect(checked).toBeGreaterThan(0);
+  });
+
   it("makes the ATDD producer take the stripped run its handover form requires", async () => {
     // The handover table requires the field on every observed-red entry, and
     // /qfai-implement step 3b consumes such a row without running its own
@@ -379,5 +465,19 @@ describe.each(TREES)("%s", (tree) => {
     expect(doc).toContain(
       "Never weaken a correct test until it fails in order to manufacture a RED.",
     );
+  });
+});
+
+describe(CODEX_GATEKEEPER, () => {
+  it("carries the same resolvable reference as the canonical agent", async () => {
+    // This copy embeds the gatekeeper's instructions verbatim at a third depth,
+    // and it is not covered by the `.qfai` mirror the sync script maintains, so
+    // it drifts silently. A path relative to the canonical file would resolve
+    // to `.codex/agents/references/…` here; only the root-relative form is
+    // right in all three copies.
+    const toml = flatToml(await readFile(path.join(repoRoot, CODEX_GATEKEEPER), "utf-8"));
+    expect(toml).toContain(`\`.qfai/${ROUND_EVIDENCE}\``);
+    expect(toml).not.toContain("`references/round-evidence.md`");
+    expect(toml).toContain("it submits its own RED here before it restores the production code");
   });
 });
