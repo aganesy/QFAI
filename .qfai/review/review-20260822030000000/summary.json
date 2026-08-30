@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T03:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "4d737f3a",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 10 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 14 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 14 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B5+m3+A2 = 10, B3+M4+m4+A3 = 14 and B4+M4+m3+A3 = 14",
+  "notes": "`revision` is the commit the round reviewed, recorded under the only admissible current `revision_form`; the first version of this file wrote `\"commit\"`, which QFAI-REVIEW-007 rejects and which round 15 found as one of forty-five in the unscoped profile — the only one of the forty-five this stage wrote. Round 13's three reviewers died on ENOTFOUND before writing anything, so its pack holds only a request and this round restated its live targets. All three roles here reported REVISE. Two findings were made independently by two reviewers each, which is why they are the two that mattered: the second bodyDigest collision (implementation B4, gate B4) and the eight-TC table's four stale ledger cells (completion B2, gate M3). Plants were partitioned by role and the gatekeeper's transient plant was visible to the other two, who both reported it rather than measuring through it; the implementation reviewer re-took every number after the restore and credits the gate for surfacing the working-directory channel. The stage did not edit the subject while the round ran."
+}
