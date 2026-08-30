@@ -63,3 +63,27 @@
 
 - Re-running scaffold MUST NOT overwrite existing non-TODO content (idempotent); only files still carrying the TODO marker (or absent files) may be (re)written.
 - `D-SCAFFOLD-PLACEHOLDER` escalates from warning to error after 3 `qfai validate` cycles with the placeholder unremoved (DR-0272), configurable via `qfai.config.yaml#atdd.scaffoldEscalateCycles`. The default of 3 gives an operator a normal red→green TDD turnaround before the placeholder hard-blocks completion-claim.
+
+## BR-0008-0010: Worker-Scoped Session-Reuse Rule Set
+
+- AC-Refs: AC-0008-0012
+
+- The guidance MUST state all seven rules as distinct statements: (1) never sign in per test; (2) never share one account across parallel workers; (3) key the cached session by the pair of worker index and actor; (4) tear the cache down at worker exit; (5) re-authenticate and rewrite the cache when a restored session is rejected; (6) a test that mutates its own account creates a dedicated one; (7) test-level parallelism costs more workers, not more sign-ins.
+- The guidance MUST state the companion rule in the same artifact: when an environment identifier is injected by the caller, the harness MUST NOT provision or tear down that environment.
+- The transferable asset is the rule set, not a fixture. The guidance is authored as a `/qfai-atdd` reference artifact under the skill's `references/` directory and MUST be cross-linked from the skill entry point, so the rules are reachable without reading the whole skill.
+
+## BR-0008-0011: Backend-Agnostic, Vocabulary-Frozen Prose
+
+- AC-Refs: AC-0008-0013
+
+- The guidance MUST NOT name a browser backend, MUST NOT contain an install command, and MUST NOT pin a version. A worked example is permitted only when presented as one illustration among possible backends, with nothing named, installed or pinned.
+- The guidance is prose only: it MUST NOT introduce a validator, a finding code, a test layer or an annotation token. The layer token set, the allowed annotation forms and the ATDD finding-code set stay unchanged from baseline — the layer vocabulary does not grow.
+- The guidance artifact ships under the distributed asset tree, so it MUST carry no internal spec / capability / decision / open-question identifier and no version marker beyond the canonical package version.
+
+## BR-0008-0012: Script-Naming Rule Is Adopter-Only and Layer-Scoped
+
+- AC-Refs: AC-0008-0014
+
+- A credential-free lane and a credentialed lane MUST be reachable by different script names, so a lane that structurally cannot touch the network stays distinguishable from one that must. This is recorded as adopter guidance; QFAI keeps its own script names and adopts no renaming.
+- The guidance MUST state that QFAI's own suite has zero credentials and that none of this is dogfooded here, rather than implying the rules were verified by execution in this repository.
+- The guidance obliges the E2E / API / Integration layers only. It MUST NOT introduce a unit or component obligation — unit and component tests belong to `/qfai-implement` (RJ-0008-0001).
