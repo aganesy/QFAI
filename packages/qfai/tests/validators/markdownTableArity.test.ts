@@ -20,7 +20,6 @@ import { describe, expect, it, afterEach } from "vitest";
 import { defaultConfig } from "../../src/core/config.js";
 import {
   findTableArityMismatches,
-  isLedgerPath,
   validateMarkdownTableArity,
 } from "../../src/core/validators/markdownTableArity.js";
 
@@ -33,6 +32,19 @@ const LEDGER_SEPARATOR = "| --- | --- | --- | --- | --- | --- | --- | --- |";
 const TRACE_LEDGER_HEADER =
   "| trace_id | obj_id | init_id | cap_id | flow_id | us_id | ac_id | ex_ids | tc_ids |";
 const TRACE_LEDGER_SEPARATOR = "| --- | --- | --- | --- | --- | --- | --- | --- | --- |";
+/** Eight cells under those nine columns: `tc_ids` reads as empty. */
+const TRACE_LEDGER_SHORT_ROW =
+  "| TR-0001 | OBJ-0001 | INIT-0001 | CAP-0001 | FLOW-0001 | US-0001 | AC-0001 | EX-0001 |";
+
+const TRACE_LEDGER = [TRACE_LEDGER_HEADER, TRACE_LEDGER_SEPARATOR, TRACE_LEDGER_SHORT_ROW].join(
+  "\n",
+);
+/** Seven cells under the eight ledger columns: `Evidence` reads as empty. */
+const TDD_LEDGER = [
+  LEDGER_HEADER,
+  LEDGER_SEPARATOR,
+  "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
+].join("\n");
 
 const tempDirs: string[] = [];
 
@@ -129,21 +141,6 @@ describe("findTableArityMismatches", () => {
     const text = ["| A | B |", "| --- | --- |", "| a \\| b | 2 |"].join("\n");
 
     expect(findTableArityMismatches(text)).toEqual([]);
-  });
-});
-
-describe("isLedgerPath", () => {
-  it("matches the ledger paths of every spec layout, case-insensitively", () => {
-    expect(isLedgerPath(".qfai/specs/spec-0001/tdd/test-list.md")).toBe(true);
-    expect(isLedgerPath(".qfai/specs/spec-0001/16_Traceability-ledger.md")).toBe(true);
-    expect(isLedgerPath(".qfai/specs/spec-0001/traceability-matrix.md")).toBe(true);
-    expect(isLedgerPath(".qfai\\specs\\spec-0001\\tdd\\test-list.md")).toBe(true);
-  });
-
-  it("does not match a look-alike name outside the ledger set", () => {
-    expect(isLedgerPath(".qfai/specs/spec-0001/test-list.md")).toBe(false);
-    expect(isLedgerPath(".qfai/specs/spec-0001/06_Test-Cases.md")).toBe(false);
-    expect(isLedgerPath(".qfai/specs/spec-0001/tdd/test-list-archive.md")).toBe(false);
   });
 });
 
@@ -301,6 +298,62 @@ describe("validateMarkdownTableArity", () => {
     expect(issues[0]?.severity).toBe("warning");
   });
 
+  it("keeps `warning` on a nine-column ledger the entry's layout sends no reader to", async () => {
+    // Reader admission is not enough on its own — the reader has to open that
+    // path for *this* entry. `validateSpecPacks` calls
+    // `validateTraceabilityLedger` in its `layout === "spec-pack"` branch only,
+    // and `specPackReport#parseLedgerRows` opens `entry.traceabilityLedgerPath`,
+    // which `specLayout` puts at `traceability-matrix.md` for a layered entry.
+    // A layered `16_Traceability-ledger.md` is therefore opened by
+    // `traceabilityIntegrity` alone, and that reader skips a table with no
+    // `Implementation File` column: these rows are position-read by nobody.
+    const root = await withSpec({
+      ".qfai/specs/spec-0001/01_Spec.md": "# spec-0001\n",
+      ".qfai/specs/spec-0001/02_User-stories.md": "# User stories\n",
+      ".qfai/specs/spec-0001/16_Traceability-ledger.md": TRACE_LEDGER,
+      // Pin: the ledger a layered entry's nine-column reader does open.
+      ".qfai/specs/spec-0001/traceability-matrix.md": TRACE_LEDGER,
+      // Pin: the same file name under the spec-pack layout, where
+      // `traceabilityLedgerPath` points at it and the nine columns are read.
+      ".qfai/specs/spec-0002/01_Spec.md": "# spec-0002\n",
+      ".qfai/specs/spec-0002/02_Objective.md": "# Objective\n",
+      ".qfai/specs/spec-0002/16_Traceability-ledger.md": TRACE_LEDGER,
+    });
+
+    const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+    expect(issues.map((found) => [found.file, found.severity])).toEqual([
+      [".qfai/specs/spec-0001/16_Traceability-ledger.md", "warning"],
+      [".qfai/specs/spec-0001/traceability-matrix.md", "error"],
+      [".qfai/specs/spec-0002/16_Traceability-ledger.md", "error"],
+    ]);
+  });
+
+  // Skipped where the filesystem itself conflates the two names: on NTFS and
+  // APFS `TDD/test-list.md` *is* `tdd/test-list.md`, the fixture cannot even be
+  // written, and the mis-cased path is one a reader really opens.
+  it.skipIf(process.platform === "win32" || process.platform === "darwin")(
+    "keeps `warning` on a mis-cased ledger path where the filesystem is case-sensitive",
+    async () => {
+      // `validateTddList` opens exactly `path.join(entry.dir, "tdd",
+      // "test-list.md")`. On a case-sensitive filesystem `TDD/test-list.md` is
+      // a different file it never opens, so folding case into the path
+      // comparison would stop a gate over rows nobody reads.
+      const root = await withSpec({
+        ".qfai/specs/spec-0001/TDD/test-list.md": TDD_LEDGER,
+        ".qfai/specs/spec-0001/tdd/test-list.md": TDD_LEDGER,
+      });
+
+      const issues = await validateMarkdownTableArity(root, defaultConfig);
+
+      expect(issues.map((found) => [found.file, found.severity])).toEqual([
+        [".qfai/specs/spec-0001/TDD/test-list.md", "warning"],
+        // Pin: the case-exact ledger is still read positionally.
+        [".qfai/specs/spec-0001/tdd/test-list.md", "error"],
+      ]);
+    },
+  );
+
   it("scores the traceability table the readers take, fence and all", async () => {
     // All three readers hand the *raw* content to `parseFirstMarkdownTable`,
     // so a fenced example ahead of the real ledger is what they position-read.
@@ -333,24 +386,19 @@ describe("validateMarkdownTableArity", () => {
   it("keeps `warning` on an evacuated ledger copy no reader opens", async () => {
     // `validateTddList` opens exactly `<specDir>/tdd/test-list.md`; the arity
     // validator walks `specsDir/**/*.md`, so a nested copy shares the suffix
-    // while its rows are read by nobody.
+    // while its rows are read by nobody. A look-alike name beside the real
+    // ledger is out for the same reason.
     const root = await withSpec({
-      ".qfai/specs/spec-0001/tdd/test-list.md": [
-        LEDGER_HEADER,
-        LEDGER_SEPARATOR,
-        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
-      ].join("\n"),
-      ".qfai/specs/spec-0001/archive/tdd/test-list.md": [
-        LEDGER_HEADER,
-        LEDGER_SEPARATOR,
-        "| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | a | done | - |",
-      ].join("\n"),
+      ".qfai/specs/spec-0001/tdd/test-list.md": TDD_LEDGER,
+      ".qfai/specs/spec-0001/archive/tdd/test-list.md": TDD_LEDGER,
+      ".qfai/specs/spec-0001/tdd/test-list-archive.md": TDD_LEDGER,
     });
 
     const issues = await validateMarkdownTableArity(root, defaultConfig);
 
     expect(issues.map((found) => [found.file, found.severity])).toEqual([
       [".qfai/specs/spec-0001/archive/tdd/test-list.md", "warning"],
+      [".qfai/specs/spec-0001/tdd/test-list-archive.md", "warning"],
       [".qfai/specs/spec-0001/tdd/test-list.md", "error"],
     ]);
   });
