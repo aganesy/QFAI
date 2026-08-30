@@ -1,7 +1,9 @@
 # CLI Contract: `qfai doctor`
 
 - Contract scope: public CLI surface for environment / profile / skill-integrity probing
-- Owning spec: spec-0012 (prototyping profile inputs) and spec-0004 (skill integrity)
+- Owning spec: spec-0006 (the `qfai doctor` command itself, including
+  `workflows.integrity`), with spec-0012 owning the prototyping profile inputs
+  and spec-0004 the skill-integrity comparison
 - Used-by: `/qfai-prototyping` (precondition check), CI lanes that gate on environment readiness
 - SSOT modules:
   - `packages/qfai/src/cli/commands/doctor.ts`
@@ -16,6 +18,9 @@
     and the `getProbeOrder` candidate list)
   - `packages/qfai/src/core/skillsIntegrity.ts` (skill / asset
     checksum diff via `diffProjectSkillsAgainstInitAssets`)
+- Companion contracts:
+  - `.qfai/contracts/cli/shipped-workflows.md` — the file-state enum and
+    provenance record that `workflows.integrity` reads
 
 ## Public sub-commands
 
@@ -280,6 +285,88 @@ operate on the actual installed files, not the expected mirror.
 `skills.integrity` warnings belong to the "warnings advisory of
 drift" bucket regardless of message wording.
 
+## `workflows.integrity` — installed shipped-workflow drift
+
+Reports an installed shipped GitHub Actions workflow whose bytes differ from
+the copy inside the installed package. It is the adopter's only route by which a
+corrected template becomes visible, because the shipped tree is copied
+create-only and `qfai init --force` never refreshes it.
+
+- Check id: `workflows.integrity` (dotted lowercase, matching the existing
+  diagnostic scheme; a sibling of `skills.integrity`, which performs the same
+  installed-versus-packaged comparison for the skills tree).
+- Inputs (read; never written): `.qfai/install-provenance.json`, the adopter's
+  `.github/workflows/`, and the packaged shipped tree resolved through
+  `getInitAssetsDir()`.
+- State vocabulary: exactly the closed enum in
+  `.qfai/contracts/cli/shipped-workflows.md` §3. This check introduces no state
+  of its own.
+
+### Severity is `info`, not `warning`
+
+The requirement is that the finding does not change the process exit code.
+`shouldFailDoctor` in `cli/commands/doctor.ts` exits 1 when
+`summary.warning + summary.error > 0` under `--fail-on warning`, so a
+`warning`-severity finding **would** change the exit code — for every adopter
+running one version behind, which is exactly the population the finding exists
+to inform. `info` is the only severity that satisfies "exit code unchanged"
+under every `--fail-on` value, and the text renderer already routes both
+`warning` and `info` into the advisory bucket, so the finding is grouped
+correctly without being blocking.
+
+Promotion to `warning` is not a free later tightening: it is a behaviour change
+to every adopter's `doctor --fail-on warning` lane, and it is only defensible
+once a refresh command exists to clear the finding. That is the same release in
+which the message below changes, so the two move together or neither moves.
+
+### Emission per state
+
+| State           | Emitted severity | Message content                                                |
+| --------------- | ---------------- | -------------------------------------------------------------- |
+| `installed`     | `ok`             | installed shipped workflows match the packaged copies          |
+| `modified`      | `info`           | names each stale file and the manual repair (below)            |
+| `declined`      | (not emitted)    | a declined file is never reported as stale                     |
+| `adopter-owned` | (not emitted)    | no provenance entry — the file is the adopter's                |
+| `absent`        | (not emitted)    | never installed; `qfai init` is the route, not a drift finding |
+
+When more than one file is `modified`, one check is emitted naming all of them
+in `details`, mirroring `skills.integrity`'s single-finding-with-lists shape.
+
+### The message must not name a refresh command
+
+No refresh command exists (`OQ-0021`). The message names the stale file and the
+repair available at that moment: **replace it with the copy inside the installed
+package**. It names a command only in the release that ships one, so this
+contract and the deferred item cannot diverge into an advisory that tells an
+adopter to run something that is not there.
+
+Required message content:
+
+- the repository-relative path of each stale file;
+- the packaged source path to copy from;
+- an explicit statement that QFAI will not overwrite the file itself;
+- no imperative naming a `qfai` subcommand as the repair.
+
+`details` carries the structured form: `{ workflowsDir, modified: [...],
+declined: [...], packagedDir }`. `declined` is listed in `details` for
+transparency — an operator can see that QFAI knows the file is gone and is
+deliberately leaving it that way — while contributing nothing to the severity.
+
+### Non-goals for this check
+
+- It does not overwrite, recreate or delete anything. `qfai doctor` is
+  read-only, including under `--autoremediate`: refreshing a shipped workflow is
+  not an autoremediation, because the conflict policy for a hand-edited file is
+  undecided (`OQ-0021`).
+- It does not distinguish "QFAI shipped a newer template" from "the adopter
+  hand-edited it" **in its severity**. The provenance record makes the two
+  distinguishable and `details` may carry the distinction, but both are reported
+  as `modified` at `info`, because the repair the message can honestly offer
+  today is the same in both cases.
+- It reports nothing for a workflow with no provenance entry. Adopters who
+  installed before the record existed are outside the channel; the adoption path
+  is recorded in the companion contract's §3 known limitation.
+
 ## Finding grouping
 
 The doctor summary MUST group findings into exactly two buckets per
@@ -308,6 +395,10 @@ Findings that surface drift without blocking the profile. Examples:
 - `D-DEPRECATED-PATH` — legacy assistant-tree path encountered
   (mirrors the `qfai validate` finding code; reused here for
   visibility).
+- `workflows.integrity` — an installed shipped GitHub Actions
+  workflow differs from the packaged copy. Severity `info`, so it
+  never changes the exit code under any `--fail-on` value. See the
+  dedicated section above.
 
 ## Exit codes
 
@@ -356,6 +447,10 @@ returns 0; the summary is the signal, not the exit code.
 - `qfai doctor` does NOT enforce `skills.integrity` as an error in
   the current minor (REQ-0122). Promotion to error severity, if
   pursued, is deferred to a post-1.10.0 review.
+- `qfai doctor` does NOT refresh, recreate or prune a shipped
+  GitHub Actions workflow. `workflows.integrity` is detection only;
+  the repair half is deferred on `OQ-0021` and is gated behind the
+  ownership contract in `.qfai/contracts/cli/shipped-workflows.md`.
 
 ## Determinism posture
 
@@ -364,3 +459,9 @@ returns 0; the summary is the signal, not the exit code.
 - The list of installed mirror checksums consumed by
   `skills.integrity` is deterministic for a given installed copy of
   the assistant tree.
+- `workflows.integrity`'s state resolution is deterministic in the
+  pair (provenance record, adopter tree) for a given installed
+  package: the state table in
+  `.qfai/contracts/cli/shipped-workflows.md` §3 is total over that
+  pair, so there is no "unknown" outcome and no timestamp or
+  environment input.
