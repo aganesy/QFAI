@@ -172,10 +172,22 @@ describe("issue code uniqueness", () => {
 //
 // The census behind them counts every emission site, including `Issue` object
 // literals, codes named by a module-level constant rather than a string
-// literal, codes forwarded through a validator's own `Issue` factory, and codes
-// whose `suggested_action` is passed on only some of their call sites — all
-// four were invisible to earlier cuts of the helper, so the lists were
-// re-baselined to name the codes those holes had been hiding.
+// literal, codes forwarded through a validator's own `Issue` factory or handed
+// to `issue(...)` from a caller's config object, and codes whose
+// `suggested_action` is passed on only some of their call sites — every one of
+// those was invisible to an earlier cut of the helper, so the lists were
+// re-baselined each time to name the codes that hole had been hiding.
+//
+// Two kinds of entry leave the lists without an entry being written. The
+// `QFAI-GR-*` codes left because they never belonged: `guardrails check` builds
+// them, `qfai validate` does not return them, and only a census that read
+// `severity` without `category` mistook `GuardrailIssue` for `Issue`.
+// `R-PACK-LOCATION-DRIFT` left the same way — it is a
+// `JustificationCatalogEntry` descriptor, not an emission. It does reach
+// `validate`, but only through `validateReviewerJustification` re-emitting a
+// code it read out of a reviewer report, a data-driven path no static census
+// can see; `R-WORKLOG-DRIFT` and `R-REJECTED-READOPT` reach it the same way and
+// have never been listed here either.
 const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "D-DEPRECATED-PATH",
   "D-SCAFFOLD-PLACEHOLDER",
@@ -244,11 +256,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
-  "QFAI-GR-001",
-  "QFAI-GR-003",
-  "QFAI-GR-004",
-  "QFAI-GR-005",
-  "QFAI-GR-008",
   "QFAI-ID-001",
   "QFAI-LAYER-100",
   "QFAI-LAYER-101",
@@ -274,8 +281,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "QFAI-NAV-001",
   "QFAI-NAV-004",
   "QFAI-NAV-005",
-  "QFAI-ORPHAN-106",
-  "QFAI-ORPHAN-107",
   "QFAI-PLAN-001",
   "QFAI-PLAN-005",
   "QFAI-PROT-001",
@@ -356,7 +361,6 @@ const PENDING_EXPECTED_CATALOG_CODES = new Set<string>([
   "R-HANDOFF-INCOMPLETE",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
-  "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
   "TDDLIST_BLOCKED_MISSING_REF",
@@ -488,11 +492,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
-  "QFAI-GR-001",
-  "QFAI-GR-003",
-  "QFAI-GR-004",
-  "QFAI-GR-005",
-  "QFAI-GR-008",
   "QFAI-ID-001",
   "QFAI-LAYER-100",
   "QFAI-LAYER-101",
@@ -513,8 +512,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "QFAI-NAV-001",
   "QFAI-NAV-004",
   "QFAI-NAV-005",
-  "QFAI-ORPHAN-106",
-  "QFAI-ORPHAN-107",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -583,7 +580,6 @@ const PENDING_FIX_CATALOG_CODES = new Set<string>([
   "R-HANDOFF-INCOMPLETE",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
-  "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-SKILL-MANIFEST-DRIFT",
   "TDDLIST_DUPLICATE_ID",
@@ -630,6 +626,35 @@ describe("issue report metadata", () => {
       // call site fills it in.
       everyErrorSiteHasSuggestedAction: true,
     });
+  });
+
+  it("counts codes a caller hands to a validator's own emission helper", async () => {
+    const usage = await collectErrorCapableUsage();
+    // `validators/orphanProhibition.ts` raises eight codes through one
+    // `validateParentExists({ …, missingCode, unknownCode })` helper. The code
+    // is a literal at every call site, one frame above the `issue(...)` the
+    // helper writes, so dropping the unresolvable argument hid the whole ladder
+    // behind a helper that only looks dynamic.
+    for (const code of [100, 101, 102, 103, 104, 105, 108, 109]) {
+      expect(usage.has(`QFAI-ORPHAN-${code}`)).toBe(true);
+    }
+    // The pin: a helper whose code really is runtime data stays out.
+    // `designAudit.findingToIssue` forwards `finding.ruleId`, and its call
+    // sites pass a value rather than an object literal.
+    expect(usage.has("QFAI-AUD-001")).toBe(false);
+  });
+
+  it("counts only object literals that build an Issue, not look-alike records", async () => {
+    const usage = await collectErrorCapableUsage();
+    // `core/decisionGuardrails.ts` builds `GuardrailIssue` records with a
+    // `severity` but no `category`. They are consumed by `guardrails check`
+    // alone, so letting them into the census made the ratchet answer to a CLI
+    // that never prints an `expected:` line.
+    for (const code of ["QFAI-GR-001", "QFAI-GR-003", "QFAI-GR-004", "QFAI-GR-005"]) {
+      expect(usage.has(code)).toBe(false);
+    }
+    // The pin: a real `Issue` object literal is still counted.
+    expect(usage.has("QFAI-SKILLS-001")).toBe(true);
   });
 
   it("every error-capable issue code has an expected-state catalog entry or is pending", async () => {
@@ -679,6 +704,38 @@ describe("issue report metadata", () => {
     });
     expect(expected).toBe(UNCATALOGUED_EXPECTED);
     expect(expected).not.toContain("bpApDb");
+  });
+
+  it("states the skills-integrity expected state without naming a configured path", () => {
+    // `paths.skillsDir` is settable, so an expected state that spelled the
+    // default tree would contradict the finding's own `target:` line on any
+    // project that moved it.
+    const expected = resolveIssueExpected({
+      code: "QFAI-SKILLS-001",
+      severity: "error",
+      category: "change",
+      message: "標準資産 'tools/skills/**' が改変されています（変更: 1）。",
+      rule: "skills.integrity",
+    });
+    expect(expected).not.toBe(UNCATALOGUED_EXPECTED);
+    expect(expected).not.toContain(".qfai/");
+  });
+
+  it("remediates a BP/AP required field that is present but invalid, not only one that is absent", () => {
+    // `toSafeString(value).trim() === ""` fires on `description: []` as well as
+    // on an absent key, and "add the missing field" cannot repair that entry:
+    // a second key of the same name is a YAML duplicate.
+    const base = { severity: "error", category: "canonical" } as const;
+    for (const code of ["QFAI-BPAP-006", "QFAI-BPAP-009"]) {
+      const fix = resolveIssueFix({
+        ...base,
+        code,
+        message: `Missing required field "description" in entry`,
+      });
+      expect(fix).not.toBe(UNCATALOGUED_FIX);
+      expect(fix).toMatch(/add the key/i);
+      expect(fix).toMatch(/overwrite the value/i);
+    }
   });
 
   it("resolves remediation from the emitter first, then the catalog, then the generic", () => {

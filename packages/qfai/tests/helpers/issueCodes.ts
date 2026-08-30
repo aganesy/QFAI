@@ -160,6 +160,9 @@ const ISSUE_RETURN_TYPE_RE = /^\s*:\s*Issue\s*\{/;
 const RETURN_OBJECT_RE = /\breturn\s*\{/;
 const PARAM_NAME_RE = /^([A-Za-z_$][A-Za-z0-9_$]*)/;
 const DECLARATION_PREFIX_RE = /\bfunction\s+$/;
+const MEMBER_ACCESS_RE = /^([A-Za-z_$][A-Za-z0-9_$]*)\.([A-Za-z_$][A-Za-z0-9_$]*)$/;
+/** A function body opening after an optional return-type annotation. */
+const BODY_START_RE = /^\s*(?::[^{;=]*)?\{/;
 /** Helpers whose argument layout this module knows first-hand. */
 const HARDCODED_HELPERS = new Set(["issue", "makeIssue"]);
 const SEVERITY_ARG_INDEX = 2;
@@ -250,10 +253,13 @@ function readCallSites(source: string, constants: Map<string, string>): Emission
 }
 
 /**
- * Emission sites of the form `{ code: CODE, severity: ..., ... }`. An object
- * literal counts as an `Issue` only when it also names `severity` directly:
- * that field is required by the type, and demanding it keeps look-alike shapes
- * (schema-validation records, config descriptors) out of the catalog census.
+ * Emission sites of the form `{ code: CODE, severity: ..., category: ..., ... }`.
+ * An object literal counts as an `Issue` only when it names both `severity` and
+ * `category` directly. Both are required by the type, and `category` is the
+ * discriminating one: `severity` alone also matches diagnostic records that
+ * `qfai validate` never returns — `decisionGuardrails.GuardrailIssue`, consumed
+ * only by `guardrails check`, was pulling `QFAI-GR-*` into the census on that
+ * looser test.
  */
 function readObjectSites(source: string, constants: Map<string, string>): EmissionSite[] {
   const sites: EmissionSite[] = [];
@@ -272,7 +278,7 @@ function readObjectSites(source: string, constants: Map<string, string>): Emissi
     const code = resolveCodeToken(match[1], constants);
     if (code === null) continue;
     const severity = properties.get("severity");
-    if (severity === undefined) continue;
+    if (severity === undefined || !properties.has("category")) continue;
 
     sites.push({
       code,
@@ -284,14 +290,17 @@ function readObjectSites(source: string, constants: Map<string, string>): Emissi
 }
 
 /**
- * Where one `Issue` field of a factory's result comes from: a parameter the
- * caller fills in, or a token fixed by the factory body (a literal, or an
- * expression the census cannot evaluate — both read the same way downstream).
+ * Where one `Issue` field of a helper's result comes from: an argument the
+ * caller fills in — either whole, or one `property` of an argument the caller
+ * writes as a config object — or a token fixed by the helper body (a literal,
+ * or an expression the census cannot evaluate; both read the same downstream).
  */
-type ValueBinding = { kind: "arg"; index: number } | { kind: "token"; token: string };
+type ValueBinding =
+  | { kind: "arg"; index: number; property?: string }
+  | { kind: "token"; token: string };
 
-/** How a file-local `(...) => Issue` factory maps its parameters onto an `Issue`. */
-type IssueFactory = {
+/** How a file-local helper maps its parameters onto the `Issue` it produces. */
+type IssueTemplate = {
   code: ValueBinding;
   severity: ValueBinding;
   suggestedAction: ValueBinding;
@@ -301,12 +310,57 @@ function bindValue(token: string | undefined, params: readonly string[]): ValueB
   if (token === undefined || token === "") {
     return { kind: "token", token: "" };
   }
-  const index = params.indexOf(token);
-  return index >= 0 ? { kind: "arg", index } : { kind: "token", token };
+  const direct = params.indexOf(token);
+  if (direct >= 0) {
+    return { kind: "arg", index: direct };
+  }
+  const member = MEMBER_ACCESS_RE.exec(token);
+  if (member) {
+    const index = params.indexOf(member[1]);
+    if (index >= 0) {
+      return { kind: "arg", index, property: member[2] };
+    }
+  }
+  return { kind: "token", token };
+}
+
+/** The value a call site's object-literal argument gives `property`. */
+function readObjectArgument(argument: string, property: string): string {
+  const trimmed = argument.trim();
+  if (!trimmed.startsWith("{")) {
+    return "";
+  }
+  const object = splitBalancedList(trimmed, 0);
+  return object === null ? "" : (readProperties(object.members).get(property) ?? "");
 }
 
 function readBinding(binding: ValueBinding, args: readonly string[]): string {
-  return binding.kind === "arg" ? (args[binding.index] ?? "") : binding.token;
+  if (binding.kind === "token") {
+    return binding.token;
+  }
+  const argument = args[binding.index] ?? "";
+  return binding.property === undefined ? argument : readObjectArgument(argument, binding.property);
+}
+
+function addTemplates(
+  into: Map<string, IssueTemplate[]>,
+  name: string,
+  templates: readonly IssueTemplate[],
+): void {
+  if (templates.length === 0) return;
+  into.set(name, [...(into.get(name) ?? []), ...templates]);
+}
+
+/** Span of the body of the `function` declaration whose signature ends at `signatureEnd`. */
+function readFunctionBody(
+  source: string,
+  signatureEnd: number,
+): { open: number; end: number } | null {
+  const header = BODY_START_RE.exec(source.slice(signatureEnd + 1));
+  if (header === null) return null;
+  const open = signatureEnd + header[0].length;
+  const body = splitBalancedList(source, open);
+  return body === null ? null : { open, end: body.end };
 }
 
 /**
@@ -317,12 +371,10 @@ function readBinding(binding: ValueBinding, args: readonly string[]): string {
  *
  * A factory qualifies when it is declared `function NAME(...): Issue` and
  * returns an object literal naming `code` and `severity`. A factory that
- * delegates to `issue(...)` instead (`designAudit.findingToIssue`) is not
- * registered: its code is whatever the caller's data carries, which no static
- * pass can name.
+ * delegates to `issue(...)` instead is picked up by `readIssueForwarders`.
  */
-function readIssueFactories(source: string): Map<string, IssueFactory> {
-  const factories = new Map<string, IssueFactory>();
+function readIssueFactories(source: string): Map<string, IssueTemplate[]> {
+  const factories = new Map<string, IssueTemplate[]>();
   for (const match of source.matchAll(FUNCTION_DECL_RE)) {
     const name = match[1];
     if (match.index === undefined || HARDCODED_HELPERS.has(name)) continue;
@@ -345,23 +397,86 @@ function readIssueFactories(source: string): Map<string, IssueFactory> {
     if (!properties.has("code") || !properties.has("severity")) continue;
 
     const params = signature.members.map((param) => PARAM_NAME_RE.exec(param)?.[1] ?? "");
-    factories.set(name, {
-      code: bindValue(properties.get("code"), params),
-      severity: bindValue(properties.get("severity"), params),
-      suggestedAction: bindValue(properties.get("suggested_action"), params),
-    });
+    addTemplates(factories, name, [
+      {
+        code: bindValue(properties.get("code"), params),
+        severity: bindValue(properties.get("severity"), params),
+        suggestedAction: bindValue(properties.get("suggested_action"), params),
+      },
+    ]);
   }
   return factories;
 }
 
-/** Emission sites that call one of the file's own `Issue` factories. */
+/**
+ * File-local helpers that call `issue(...)` with a code their own caller
+ * supplies — `validateParentExists({ …, missingCode: "…", unknownCode: "…" })`
+ * in `validators/orphanProhibition.ts` is the pattern. The code is a literal in
+ * the source, just one frame up, so dropping the unresolvable argument at the
+ * `issue(...)` call would hide a whole family of real codes behind a helper
+ * that looks dynamic and is not.
+ *
+ * Only bindings that reach a parameter are registered — the argument itself, or
+ * one property of an argument the caller writes as a config object. A helper
+ * whose code comes from runtime data (`designAudit.findingToIssue` forwards
+ * `finding.ruleId`) is registered too, but resolves to nothing at its call
+ * sites, where the argument is a value rather than an object literal.
+ */
+function readIssueForwarders(
+  source: string,
+  constants: Map<string, string>,
+): Map<string, IssueTemplate[]> {
+  const forwarders = new Map<string, IssueTemplate[]>();
+  for (const match of source.matchAll(FUNCTION_DECL_RE)) {
+    const name = match[1];
+    if (match.index === undefined || HARDCODED_HELPERS.has(name)) continue;
+    const signature = splitBalancedList(source, match.index + match[0].length - 1);
+    if (signature === null) continue;
+    const body = readFunctionBody(source, signature.end);
+    if (body === null) continue;
+
+    const params = signature.members.map((param) => PARAM_NAME_RE.exec(param)?.[1] ?? "");
+    const bodyText = source.slice(body.open, body.end + 1);
+    addTemplates(forwarders, name, readForwardedTemplates(bodyText, constants, params));
+  }
+  return forwarders;
+}
+
+/** The `issue(...)` calls in `bodyText` whose code is bound to one of `params`. */
+function readForwardedTemplates(
+  bodyText: string,
+  constants: Map<string, string>,
+  params: readonly string[],
+): IssueTemplate[] {
+  const templates: IssueTemplate[] = [];
+  for (const call of bodyText.matchAll(ISSUE_CALL_RE)) {
+    if (call.index === undefined) continue;
+    const args = splitBalancedList(bodyText, call.index + call[0].length - 1)?.members ?? [];
+    // A code already readable at this call site is counted by `readCallSites`;
+    // only a parameter-bound one needs the caller's argument to name it.
+    if (resolveCodeToken(args[0] ?? "", constants) !== null) continue;
+    const code = bindValue(args[0], params);
+    if (code.kind !== "arg") continue;
+    templates.push({
+      code,
+      severity:
+        call[1] === "makeIssue"
+          ? { kind: "token", token: '"error"' }
+          : bindValue(args[SEVERITY_ARG_INDEX], params),
+      suggestedAction: bindValue(args[SUGGESTED_ACTION_ARG_INDEX], params),
+    });
+  }
+  return templates;
+}
+
+/** Emission sites that call one of the file's own `Issue` factories or forwarders. */
 function readFactorySites(
   source: string,
   constants: Map<string, string>,
-  factories: Map<string, IssueFactory>,
+  factories: Map<string, IssueTemplate[]>,
 ): EmissionSite[] {
   const sites: EmissionSite[] = [];
-  for (const [name, factory] of factories) {
+  for (const [name, templates] of factories) {
     for (const match of source.matchAll(new RegExp(`\\b${name}\\(`, "g"))) {
       if (match.index === undefined) continue;
       // The declaration matches its own name; only calls are emission sites.
@@ -370,16 +485,28 @@ function readFactorySites(
       }
       const openParen = match.index + match[0].length - 1;
       const args = splitBalancedList(source, openParen)?.members ?? [];
-      const code = resolveCodeToken(readBinding(factory.code, args), constants);
-      if (code === null) continue;
-      sites.push({
-        code,
-        errorCapable: !NON_ERROR_SEVERITY_RE.test(readBinding(factory.severity, args)),
-        hasSuggestedAction: isPresentValue(readBinding(factory.suggestedAction, args)),
-      });
+      for (const template of templates) {
+        const code = resolveCodeToken(readBinding(template.code, args), constants);
+        if (code === null) continue;
+        sites.push({
+          code,
+          errorCapable: !NON_ERROR_SEVERITY_RE.test(readBinding(template.severity, args)),
+          hasSuggestedAction: isPresentValue(readBinding(template.suggestedAction, args)),
+        });
+      }
     }
   }
   return sites;
+}
+
+function mergeTemplates(...maps: Map<string, IssueTemplate[]>[]): Map<string, IssueTemplate[]> {
+  const merged = new Map<string, IssueTemplate[]>();
+  for (const map of maps) {
+    for (const [name, templates] of map) {
+      addTemplates(merged, name, templates);
+    }
+  }
+  return merged;
 }
 
 function foldSites(sites: Iterable<EmissionSite>, into: Map<string, IssueCodeUsage>): void {
@@ -397,18 +524,24 @@ function foldSites(sites: Iterable<EmissionSite>, into: Map<string, IssueCodeUsa
 /**
  * Scan `srcDir` for statically decidable issue-code emissions: the first
  * argument of `issue`/`makeIssue`, the `code:` property of an inline `Issue`
- * object, or an argument a file-local `Issue` factory forwards into one —
- * written either as a string literal or as a file-local constant that holds
- * one. Codes assembled at runtime are out of scope.
+ * object, or an argument a file-local helper forwards into one — the helper
+ * either building the `Issue` itself or passing the caller's code straight on
+ * to `issue(...)`. Every form reads the code as a string literal or as a
+ * file-local constant that holds one; codes assembled at runtime are out of
+ * scope.
  */
 export async function collectIssueCodeUsage(srcDir: string): Promise<Map<string, IssueCodeUsage>> {
   const merged = new Map<string, IssueCodeUsage>();
   for (const filePath of await collectTsFiles(srcDir)) {
     const source = await readFile(filePath, "utf-8");
     const constants = readStringConstants(source);
+    const helpers = mergeTemplates(
+      readIssueFactories(source),
+      readIssueForwarders(source, constants),
+    );
     foldSites(readCallSites(source, constants), merged);
     foldSites(readObjectSites(source, constants), merged);
-    foldSites(readFactorySites(source, constants, readIssueFactories(source)), merged);
+    foldSites(readFactorySites(source, constants, helpers), merged);
   }
   return merged;
 }

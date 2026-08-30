@@ -945,15 +945,37 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
   "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
   "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
-  "QFAI-BPAP-006": "Every BP entry populates all of its required fields.",
+  // The check is `toSafeString(value).trim() === ""`, so a required key that is
+  // present but holds `[]`, `{}`, or `null` fails it exactly like an absent
+  // one. The expected state says "non-empty scalar", not "present", so the
+  // report does not read as if the key were missing when it is not.
+  "QFAI-BPAP-006": "Every BP entry gives each of its required fields a non-empty scalar value.",
   "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
   "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
-  "QFAI-BPAP-009": "Every AP entry populates all of its required fields.",
+  "QFAI-BPAP-009": "Every AP entry gives each of its required fields a non-empty scalar value.",
   "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
   "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
   "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
+  // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
+  // rung raises an even code when the `Parent` is absent and the odd one above
+  // it when the `Parent` is there but names nothing the level above defines —
+  // the same two states at five different heights.
+  "QFAI-ORPHAN-100": "Every US declares a `Parent` naming the capability it delivers.",
+  "QFAI-ORPHAN-101": "Every US `Parent` names a `CAP-XXXX` the shared capability policy defines.",
+  "QFAI-ORPHAN-102": "Every AC declares a `Parent` naming the user story it refines.",
+  "QFAI-ORPHAN-103": "Every AC `Parent` names a `US-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-104": "Every BR declares a `Parent` naming the acceptance criterion it constrains.",
+  "QFAI-ORPHAN-105": "Every BR `Parent` names an `AC-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-106":
+    "Every EX scenario carries a `Parent` comment naming the criterion or rule it illustrates.",
+  "QFAI-ORPHAN-107": "Every EX `Parent` names an `AC-XXXX` or `BR-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-108": "Every TC declares a `Parent` naming the example it executes.",
+  "QFAI-ORPHAN-109": "Every TC `Parent` names an `EX-XXXX` the same spec defines.",
+  // `paths.skillsDir` is configurable and the diff is taken against whatever it
+  // resolves to, so the expected state names the tree by role. The directory
+  // actually compared is on the finding's `target:` line.
   "QFAI-SKILLS-001":
-    "`.qfai/assistant/skills/**` matches the skill assets shipped by the installed QFAI version.",
+    "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
   "D-SAAS-PACKAGE-ATTESTATION-MISSING":
     "The saas-package profile finds a design-system attestation at its configured path.",
   "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
@@ -981,16 +1003,45 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
   "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
   "QFAI-BPAP-005":
     "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
+  // Both codes fire on a present-but-empty value as well as on an absent key:
+  // the check reads `toSafeString(value).trim()`, and a `description: []` or a
+  // `detection_method: {}` reduces to the empty string. "Add the missing field"
+  // is unusable on that path — the key is already there, and adding a second
+  // one of the same name is a YAML duplicate rather than a repair.
   "QFAI-BPAP-006":
-    "Add the missing field to the BP entry, or drop the entry if it is no longer needed.",
+    "Give the BP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the practice is no longer needed.",
   "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
   "QFAI-BPAP-008":
     "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
   "QFAI-BPAP-009":
-    "Add the missing field to the AP entry, or drop the entry if it is no longer needed.",
+    "Give the AP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the anti-pattern is no longer needed.",
   "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
   "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
   "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // The orphan-prohibition emitter passes no `suggested_action` on any path, so
+  // every rung of the ladder depends on this catalog for its `fix:` line. The
+  // even codes are repaired by writing a `Parent`, the odd ones by pointing an
+  // existing `Parent` at something the level above actually defines.
+  "QFAI-ORPHAN-100":
+    "Add a `Parent: CAP-XXXX` line to the user story, naming the capability it delivers; register that capability in the shared capability policy first if it is not there yet.",
+  "QFAI-ORPHAN-101":
+    "Point the user story's `Parent` at a capability the shared policy defines — correct the reference, or add the capability there.",
+  "QFAI-ORPHAN-102":
+    "Add a `Parent: US-XXXX` line to the acceptance criterion, naming the user story it refines.",
+  "QFAI-ORPHAN-103":
+    "Point the criterion's `Parent` at a user story the same spec defines — correct the reference, or add the story.",
+  "QFAI-ORPHAN-104":
+    "Add a `Parent: AC-XXXX` line to the business rule, naming the criterion it constrains.",
+  "QFAI-ORPHAN-105":
+    "Point the rule's `Parent` at a criterion the same spec defines — correct the reference, or add the criterion.",
+  "QFAI-ORPHAN-106":
+    "Add a `Parent:` comment to the scenario, naming the criterion (`AC-XXXX`) or rule (`BR-XXXX`) it illustrates.",
+  "QFAI-ORPHAN-107":
+    "Point the scenario's `Parent` at a criterion or rule the same spec defines — correct the reference, or add the criterion or rule.",
+  "QFAI-ORPHAN-108":
+    "Add a `Parent: EX-XXXX` line to the test case, naming the example it executes.",
+  "QFAI-ORPHAN-109":
+    "Point the test case's `Parent` at an example the same spec defines — correct the reference, or add the example.",
   // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
   // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
   // component guidance, a mirror value that diverges from DESIGN.md, and a
