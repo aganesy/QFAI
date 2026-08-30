@@ -15,10 +15,21 @@ import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 const CAP_ID_RE = /\bCAP-\d{4}\b/g;
 const SPEC_CELL_RE = /^spec-\d{4}$/i;
 const HEADER_CAP_CELL_RE = /cap\s*id/i;
+const CAP_HEADER_EXACT_RE = /^cap\s*id$/i;
 const HEADER_SPEC_CELL_RE = /(^|[^a-z])spec([^a-z]|$)/i;
 const SPEC_HEADER_EXACT_RE = /^spec$/i;
 const ATX_HEADING_RE = /^ {0,3}(#{1,6})\s+/;
-const CAP_CATALOG_HEADING_RE = /^ {0,3}(#{1,6})\s+.*\bcap\s+catalog\b/i;
+/**
+ * The SSOT section heading, matched whole.
+ *
+ * Substring matching also accepted `## CAP Catalog Format` and
+ * `## Not a CAP Catalog`. Either one placed above the real heading claimed the
+ * window, which then ended at the real heading — and a window with no table in
+ * it fell through to the document-wide scan, so the catalogue's own wrong
+ * `Spec` values went unreported. A closed ATX sequence (`## CAP Catalog ##`) is
+ * still the same heading.
+ */
+const CAP_CATALOG_HEADING_RE = /^ {0,3}(#{1,6})\s+cap\s+catalog(?:\s+#+)?\s*$/i;
 
 /** Stands in for the declared value in QFAI-SPLIT-106 when the cell is blank. */
 const UNDECLARED_SPEC_CELL = "(未宣言)";
@@ -38,6 +49,14 @@ type CapCatalogueRow = {
 };
 
 type CapCatalogue = {
+  /**
+   * A catalogue table was identified — header row, GFM separator, CAP column.
+   * Distinct from `rows.length > 0`: a confirmed table with no capability row
+   * is the SSOT saying the catalogue is empty, which `QFAI-SPLIT-101` is there
+   * to report. Falling back to the document-wide scan there let a CAP quoted
+   * in a history table or in prose stand in for the empty catalogue.
+   */
+  confirmed: boolean;
   /** A confirmed CAP catalogue table carried a `Spec` header. */
   hasSpecColumn: boolean;
   /** Data rows of the confirmed CAP catalogue table(s), in table order. */
@@ -87,14 +106,33 @@ function findCatalogueWindow(lines: string[]): { start: number; end: number } {
  * no column at all rather than guessing one.
  */
 function findSpecColumn(header: string[]): number {
+  return findColumn(header, SPEC_HEADER_EXACT_RE, HEADER_SPEC_CELL_RE);
+}
+
+/**
+ * Picks the column the row's own CAP ID is read from, by the same rule.
+ *
+ * A `Previous CAP ID` companion column ahead of the real one was chosen by the
+ * loose match, and a blank companion column produced zero rows — which then
+ * fell through to the document-wide scan and validated a catalogue whose `Spec`
+ * cells were never read.
+ */
+function findCapColumn(header: string[]): number {
+  return findColumn(header, CAP_HEADER_EXACT_RE, HEADER_CAP_CELL_RE);
+}
+
+/**
+ * An exact header spelling wins outright; the loose one is honoured only when
+ * nothing matches exactly and exactly one column is a candidate. An ambiguous
+ * header declares no column at all rather than guessing one.
+ */
+function findColumn(header: string[], exactRe: RegExp, looseRe: RegExp): number {
   const normalized = header.map((cell) => cell.replace(/[`*_]/g, "").trim());
-  const exact = normalized.findIndex((cell) => SPEC_HEADER_EXACT_RE.test(cell));
+  const exact = normalized.findIndex((cell) => exactRe.test(cell));
   if (exact >= 0) {
     return exact;
   }
-  const loose = normalized.flatMap((cell, index) =>
-    HEADER_SPEC_CELL_RE.test(cell) ? [index] : [],
-  );
+  const loose = normalized.flatMap((cell, index) => (looseRe.test(cell) ? [index] : []));
   return loose.length === 1 ? (loose[0] ?? -1) : -1;
 }
 
@@ -177,18 +215,19 @@ function parseCapCatalogue(markdown: string): CapCatalogue {
       continue;
     }
     const header = splitMarkdownRow(line);
-    const capColumn = header.findIndex((cell) => HEADER_CAP_CELL_RE.test(cell));
+    const capColumn = findCapColumn(header);
     if (capColumn < 0) {
       continue;
     }
     const specColumn = findSpecColumn(header);
     return {
+      confirmed: true,
       hasSpecColumn: specColumn >= 0,
       ...readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
     };
   }
 
-  return { hasSpecColumn: false, rows: [], ambiguousRows: [] };
+  return { confirmed: false, hasSpecColumn: false, rows: [], ambiguousRows: [] };
 }
 
 function normalizeDeclaredSpecCell(cell: string): string {
@@ -261,10 +300,9 @@ export async function validateSpecSplitByCapability(
   // catalogue table exists does the document-wide scan stand in, so a catalogue
   // that lists its CAPs in prose still reports 101 / 102 as before.
   const catalogue = parseCapCatalogue(capabilityText);
-  const capIds =
-    catalogue.rows.length > 0
-      ? catalogue.rows.map((row) => row.capId)
-      : uniqueMatches(capabilityText, CAP_ID_RE);
+  const capIds = catalogue.confirmed
+    ? catalogue.rows.map((row) => row.capId)
+    : uniqueMatches(capabilityText, CAP_ID_RE);
   if (capIds.length === 0) {
     issues.push(
       issue(

@@ -281,6 +281,103 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("resolves the CAP Catalog heading whole, not as a substring", async () => {
+    // `## CAP Catalog Format` above the real heading claimed the window, which
+    // then ended at the real heading — a window with no table in it, which fell
+    // through to the document-wide scan, so the catalogue's own wrong `Spec`
+    // value went unreported.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-9999" },
+        undefined,
+        {
+          catalogHeading: true,
+          leader: ["## CAP Catalog Format", "", "One row per capability.", ""],
+        },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mismatches = issues.filter((item) => item.code === "QFAI-SPLIT-106");
+      expect(mismatches).toHaveLength(1);
+      expect(mismatches[0]?.refs).toContain("spec-9999");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("prefers an exact CAP ID header over a companion column", async () => {
+    // A blank `Previous CAP ID` column ahead of the real one produced zero
+    // rows, and the fallback then validated a catalogue whose `Spec` cells were
+    // never read.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"], { "CAP-0001": "spec-0001" }, undefined, {
+        catalogHeading: true,
+      });
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| Previous CAP ID | CAP ID   | Statement  | Spec      |",
+          "| --------------- | -------- | ---------- | --------- |",
+          "|                 | CAP-0001 | capability | spec-9999 |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mismatches = issues.filter((item) => item.code === "QFAI-SPLIT-106");
+      expect(mismatches).toHaveLength(1);
+      expect(mismatches[0]?.refs).toContain("spec-9999");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("treats a confirmed but empty catalogue as empty, not as absent", async () => {
+    // A CAP quoted in a history table stood in for the empty catalogue, so
+    // QFAI-SPLIT-101 never fired on a catalogue that lists nothing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"], undefined, undefined, { catalogHeading: true });
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| CAP ID | Statement | Success metrics | Notes |",
+          "| ------ | --------- | --------------- | ----- |",
+          "",
+          "## Retired IDs",
+          "",
+          "| CAP ID   | Reason    |",
+          "| -------- | --------- |",
+          "| CAP-0001 | withdrawn |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((item) => item.code)).toContain("QFAI-SPLIT-101");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("numbers rows by catalogue position, not by a CAP quoted in an earlier cell", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
