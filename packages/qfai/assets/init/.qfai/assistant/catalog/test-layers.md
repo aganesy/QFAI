@@ -432,12 +432,11 @@ measurable:
   and no validator emits a volume rule, so "unmet" is a judgement call with no
   tool-checkable meaning. Record the observation and the reasoning.
 - **A non-gating reference band.** `skills/qfai-atdd/references/volume-signals.md`
-  publishes one band per estimator signal (`E2E_s` / `API_s` / `INT_s`) so the
-  judgement call above has something to be judged against. That is all it is:
-  no validator reads it, no value of it fails a run or raises a Change Request,
-  and a signal outside its band is recorded with its reason like any other
-  volume observation. It is not a configured threshold and does not become one
-  by being observed.
+  publishes one band per estimator signal (`E2E_s` / `API_s` / `INT_s`) so the judgement
+  call above has something to be judged against. That is all it is: no validator reads
+  it, no value of it fails a run or raises a Change Request, and a signal outside its
+  band is recorded with its reason like any other volume observation. It is not a
+  configured threshold and does not become one by being observed.
 - **A configured guardrail.** When a project sets
   `validation.testStrategy.maxE2eScenarioRatio` or `maxE2eScenarioCount` to a
   non-null value, `report.ts` measures it and reports `ratioExceeded` /
