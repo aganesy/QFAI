@@ -142,4 +142,94 @@ describe("qfai init run report", { timeout: 60000 }, () => {
       await rm(root, { recursive: true, force: true });
     }
   });
+
+  // `collectTemplateFiles()` accumulates `readdir()` results, whose order no
+  // filesystem guarantees, so an unsorted list makes the preview undiffable
+  // against another checkout and churns snapshots with no change in content.
+  it("lists the written paths in a stable sorted order", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      const listed = pathsUnder(output, "  would write paths:");
+      expect(listed.length).toBeGreaterThan(1);
+      expect(listed).toEqual([...listed].sort());
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("sorts the skipped and removed lists too", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const secondRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true, verbose: true });
+      });
+
+      const skipped = pathsUnder(secondRun, "  skipped paths:");
+      expect(skipped.length).toBeGreaterThan(1);
+      expect(skipped).toEqual([...skipped].sort());
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // A migrated legacy file's name is chosen by the repository being upgraded,
+  // not by qfai. Printed verbatim, a newline in it forges the report's own
+  // headings and an ANSI escape drives the terminal — in the one mode whose
+  // purpose is reviewing changes before they are made.
+  it("escapes and quotes a control character in a migrated file name", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      const legacy = path.join(root, ".qfai", "assistant", "instructions");
+      await mkdir(legacy, { recursive: true });
+      const hostile = "spoof\n    - forged-entry.md\u001b[31m.md";
+      await writeFile(path.join(legacy, hostile), "# hostile\n", "utf-8");
+
+      const output = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: true,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
+      });
+
+      // Neither the raw newline nor the raw escape reaches stdout.
+      expect(output).not.toContain(hostile);
+      expect(output).not.toContain("\u001b[31m");
+      expect(output).toContain("\\x0a");
+      expect(output).toContain("\\x1b");
+      // The forged bullet is not a list entry of its own.
+      expect(pathsUnder(output, "  would write paths:")).not.toContain("forged-entry.md");
+      // The escaped form is quoted, so the escapes read as one token.
+      const quoted = pathsUnder(output, "  would write paths:").filter((entry) =>
+        entry.startsWith('"'),
+      );
+      expect(quoted).toHaveLength(1);
+      expect(quoted[0]?.endsWith('"')).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("leaves an ordinary path unquoted", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-report-"));
+    try {
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+
+      const listed = pathsUnder(output, "  would write paths:");
+      expect(listed.length).toBeGreaterThan(0);
+      expect(listed.filter((entry) => entry.startsWith('"'))).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
 });
