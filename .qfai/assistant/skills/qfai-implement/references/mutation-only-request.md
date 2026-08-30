@@ -23,9 +23,17 @@ The request names, **per affected row**:
 - the mutation its `Oracle proof` plan or `Satisfied-by` names;
 - the selector to run under the changed artifact.
 
+One shared artifact is read by every completed row that uses it, so a request
+routinely carries several rows. **Work all of them** — one per iteration, in the
+order given. `Phase: Red` step 1's "each iteration works exactly one row" bounds
+an iteration, not a request; stopping after the first leaves the remaining rows
+with no `Shared-artifact re-verify` line, so their stale `RED test hash` stays
+unclearable and the requesting stage cannot complete — the very deadlock this
+branch exists to break.
+
 ## Execution sequence
 
-Run it in this order and finish it in the same step:
+Run it in this order, per affected row, and finish each row in the same step:
 
 1. Apply the mutation.
 2. Run the selector and capture the failure.

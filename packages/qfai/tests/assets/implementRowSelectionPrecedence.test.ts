@@ -76,6 +76,27 @@ describe("Phase Red row selection states its precedence as an order", () => {
       expect(step).toContain("works them all, one per iteration, in the order given");
     });
 
+    it(`${dir}: the multi-row exception covers the mutation-only branch too`, async () => {
+      const step = flat(stepOne(await read(dir, "SKILL.md")));
+
+      // A mutation-only request names its inputs *per affected row*, because
+      // one shared artifact is read by every completed row that uses it.
+      // Naming only branch 2 as the exception let branch 1 verify the first
+      // row and stop, leaving the rest without a `Shared-artifact re-verify`
+      // line and their stale `RED test hash` unclearable.
+      expect(step).toContain("**branches 1 and 2 are the exceptions in extent, not in rank**");
+      expect(step).toContain("branch 1 carries its inputs **per affected row**");
+      expect(step).toContain("work **every** row it names");
+    });
+
+    it(`${dir}: the mutation-only reference states the same multi-row obligation`, async () => {
+      const reference = flat(await read(dir, "references/mutation-only-request.md"));
+
+      expect(reference).toContain("**Work all of them**");
+      expect(reference).toContain("bounds an iteration, not a request");
+      expect(reference).toContain("Run it in this order, per affected row");
+    });
+
     it(`${dir}: the winning branch no longer back-references the weakest one`, async () => {
       const step = stepOne(await read(dir, "SKILL.md"));
 
