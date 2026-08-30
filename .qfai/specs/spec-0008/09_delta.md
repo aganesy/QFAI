@@ -32,9 +32,10 @@
 
 ## Triage
 
-| Source                                                     | Subject                                                                                                                                                                           | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                              |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ---------------------------------------------------------------------------------------------------------------------- |
-| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-atdd` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読む。kind 別 write-trigger に従う。handoff entry body を 5 セクション schema に従わせる。 | spec-0008     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。SKILL.md は配布物。subject-token overlap (`skill`, `atdd`)。新 CAP 不要。 |
+| Source                                                     | Subject                                                                                                                                                                           | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                                         |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-atdd` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読む。kind 別 write-trigger に従う。handoff entry body を 5 セクション schema に従わせる。 | spec-0008     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。SKILL.md は配布物。subject-token overlap (`skill`, `atdd`)。新 CAP 不要。                                                                                                                                                                                                                                            |
+| REQ-0024 (discussion-20260804173914356, CHG-007)           | worker-scoped credential-reuse rule as ATDD guidance (seven rules + companion injected-environment rule + credential-class script-naming rule)                                    | spec-0008     | UPDATE    | APPEND | -           | ATDD owns E2E / API / Integration orchestration, so acceptance-harness credential handling is its subject. Prose guidance only, backend-agnostic, names no browser backend; no validator, no finding code, no new test layer and no new annotation token, so the layer vocabulary does not grow. No size signal: ac 11→14 (threshold 30), tc 14→18 (threshold 50) |
 
 ## CHG-003 (v1.9.0) — Work-log Read Contract + project_memory Declaration
 
@@ -65,3 +66,35 @@
   - REQ-0157 が "default deferred to /qfai-sdd" としていた escalate-cycle count は DR-0272 (既定 3, `atdd.scaffoldEscalateCycles` 可変) で確定。
   - Required edges US-0008-0007 → AC-0008-0010/0011 → BR-0008-0008/0009 → EX-0008-0009/0010 → TC-0008-0013/0014; TC は normal (0013) AND error/boundary (0014) を両方カバー。
 - Source: REQ-0157 (discussion-20260527075558258)
+
+## 2026-08-05 — CHG-007 — Worker-scoped credential-reuse rule as ATDD guidance (spec-0008)
+
+- Discussion pack: `.qfai/discussion/discussion-20260804173914356/`
+- Policy record: `_policies/10_delta.md` § `2026-08-05 — CHG-007` (Triage Table row `REQ-0024 → spec-0008 UPDATE:APPEND`)
+- Operation: UPDATE:APPEND (additive; preserves every existing US/AC/BR/EX/TC ID and sentence)
+- Local ID ranges added: US-0008-0008, AC-0008-0012..0014, BR-0008-0010..0012, EX-0008-0011..0013, TC-0008-0015..0018
+- Approved By: `-` (append-first; no AskUserQuestion-gated operation in this row)
+- Triage row: recorded in this file's `## Triage` table (canonical column set), appended rather than duplicated as a second section.
+
+### CHG-007 Operations (spec-0008)
+
+| Op ID  | Op Type       | Target                                                                                            | Summary                                                                                              |
+| ------ | ------------- | ------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| OP-001 | UPDATE:APPEND | 01_Spec.md (Scope In bullet; Relevant Requirements: REQ-0024; US range → 0008; CHG-007 copy-down) | guidance contract を execution SSOT に copy-down                                                     |
+| OP-002 | UPDATE:APPEND | 02_User-stories.md (US-0008-0008)                                                                 | worker-scoped credential-reuse guidance user story                                                   |
+| OP-003 | UPDATE:APPEND | 03_Acceptance-Criteria.md (AC-0008-0012..0014)                                                    | rule set present / backend-agnostic + vocabulary frozen / adopter-only script-naming and layer scope |
+| OP-004 | UPDATE:APPEND | 04_Business-Rules.md (BR-0008-0010..0012)                                                         | mirror BR layer                                                                                      |
+| OP-005 | UPDATE:APPEND | 05_Examples.md (EX-0008-0011..0013)                                                               | worked examples per BR                                                                               |
+| OP-006 | UPDATE:APPEND | 06_Test-Cases.md (TC-0008-0015..0018)                                                             | normal (0015) + error (0016) + boundary (0017, 0018) coverage                                        |
+| OP-007 | UPDATE:APPEND | 08_Open-questions.md (OQ-0007 resolution note)                                                    | OQ-0007 は upstream で resolved (backend-agnostic guidance only) — residual なしを記録               |
+| OP-008 | UPDATE:APPEND | 10_Plan.md (CHG-007 How section)                                                                  | How-only 実装ノート                                                                                  |
+| OP-009 | UPDATE:APPEND | tdd/test-list.md (TDD-0015..0018)                                                                 | ledger rows for TC-0008-0015..0018 (Status `todo`)                                                   |
+
+- Notes:
+  - **Prose only.** No validator, no new finding code, no new test layer, no new annotation token. NFR-0015 (the layer vocabulary does not grow) is the binding constraint, and the layer-policy loader reads only `catalog/test-layers.md` plus its legacy fallback, so a skill reference artifact is invisible to it by construction.
+  - **Backend-agnostic.** OQ-0007 resolved to backend-agnostic guidance only; a recorded decision rejects hard-coding a browser backend. The guidance therefore names none, and any worked example is one illustration among possible backends with nothing named, installed or pinned. TC-0008-0016 carries a planted-name negative case so a green scan is not vacuous.
+  - **Companion rule** (caller-injected environment identifier forbids provisioning / teardown) is recorded in the same artifact, per the upstream requirement.
+  - **Script-naming rule** (`OQ-0014` resolved to document rather than adopt) ships as adopter guidance only; QFAI keeps its own script names.
+  - **Not dogfooded, and it says so.** QFAI's own suite has zero credentials, so the rules cannot be verified by execution here — only by inspection. That is why the upstream priority is `should`, and the guidance states the position rather than hiding it.
+  - **RJ-0008-0001 respected.** The guidance obliges E2E / API / Integration only. No unit or component obligation is introduced; unit and component tests remain `/qfai-implement` territory.
+- Source: REQ-0024 (discussion-20260804173914356)
