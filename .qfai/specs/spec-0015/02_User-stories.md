@@ -59,3 +59,11 @@ As a downstream-project operator on a legacy handoff file, I want `qfai handoff 
 ## US-0015-0015: Cross-skill documentation realignment to implementation
 
 As a QFAI maintainer, I want every `references/*.md` and each skill's SKILL.md rewritten to match the implementations chosen for the OQ-0152..0157 outcomes, landing in the same atomic PR as the implementation, with `qfai validate --report` verifying zero stale references at HEAD after sunset, so that cross-skill documentation does not drift from the shipped behavior (REQ-0173).
+
+## US-0015-0016: Reviewer-Gate ingests workflow-hygiene and shipped-shape drift
+
+- Parent: CAP-0015
+- Source: discussion-20260804173914356#REQ-0013, #REQ-0022 (CHG-007)
+- Goal: As a reviewer, I want the Reviewer Gate to ingest the two drift findings the workflow-hygiene lane emits, so that a hygiene or shipped-shape regression is surfaced in review rather than only in a CI log.
+- Non-goals: authoring the lane itself (spec-0017), the shipped-file rules it checks (spec-0003), and any change to `qfai validate`'s own check set.
+- Notes: follows the established emitter/ingestion split — an upstream CI lane emits, this spec defines how the gate consumes it. `R-PROMPT-SCANNER-DRIFT` is the precedent.
