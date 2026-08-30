@@ -39,7 +39,7 @@ const RULES = `# 04 Business Rules
 
 async function run(
   ledger: string,
-  options: { rules?: string } = {},
+  options: { rules?: string; examples?: string; testCases?: string } = {},
 ): Promise<Array<{ code: string; severity: string; message: string }>> {
   const root = path.join(
     os.tmpdir(),
@@ -52,12 +52,15 @@ async function run(
       ["01_Spec.md", "# Spec\n"],
       ["02_User-stories.md", "# US\n"],
       ["03_Acceptance-Criteria.md", "# AC\n"],
-      ["06_Test-Cases.md", "# TC\n"],
+      ["06_Test-Cases.md", options.testCases ?? "# TC\n"],
     ] as const) {
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
     if (options.rules !== undefined) {
       await writeFile(path.join(specDir, "04_Business-Rules.md"), options.rules, "utf-8");
+    }
+    if (options.examples !== undefined) {
+      await writeFile(path.join(specDir, "05_Examples.md"), options.examples, "utf-8");
     }
     await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
     const issues = await validateTddList(root, defaultConfig);
@@ -69,6 +72,33 @@ async function run(
 
 const row = (brRef: string): string =>
   `| TDD-0001 | TC-0001 | ${brRef} | Unit | tests/a.test.ts | a | todo | - | - |\n`;
+
+/** A row citing the TC the derivation fixtures below declare. */
+const keyedRow = (brRef: string, tcRefs = "TC-0001-0004"): string =>
+  `| TDD-0001 | ${tcRefs} | ${brRef} | Unit | tests/a.test.ts | a | todo | - | - |\n`;
+
+/** Two rules sharing one AC — the pair the AC-first resolution conflated. */
+const DERIVATION_RULES = `# 04 Business Rules
+
+| BR-ID | Title | AC-Refs | Rule |
+| ----- | ----- | ------- | ---- |
+| BR-0001-0004 | Fourth | AC-0001-0003 | A rule |
+| BR-0001-0005 | Fifth | AC-0001-0003 | Another rule |
+`;
+
+const derivationExamples = (brRef: string): string => `# 05 Examples
+
+| EX-ID | BR-Ref | Input | Expected |
+| ----- | ------ | ----- | -------- |
+| EX-0001-0005 | ${brRef} | in | out |
+`;
+
+const derivationTestCases = (exRef: string): string => `# 06 Test Cases
+
+| TC-ID | Level | AC-Refs | EX-Ref | Type |
+| ----- | ----- | ------- | ------ | ---- |
+| TC-0001-0004 | L1 | AC-0001-0003 | ${exRef} | normal |
+`;
 
 describe("the ledger's review-group key is checked when it is declared", () => {
   it("says nothing about a key that names a declared BR", async () => {
@@ -127,6 +157,34 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     expect(declared.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
   });
 
+  it("does not let a table without a `BR-ID` header declare a rule", async () => {
+    // A `04_Business-Rules.md` carries auxiliary tables, and the first column
+    // of one is exactly where a retired id is written down. Falling back to
+    // column 0 when no `BR-ID` header is present put those ids back into the
+    // declaration set through the side door — the same silent resolve the
+    // prose rule above exists to prevent, and the key would name a rule the
+    // file deliberately no longer declares.
+    const rules = `# 04 Business Rules
+
+| BR-ID | Title | AC-Refs | Rule |
+| ----- | ----- | ------- | ---- |
+| BR-0001-0001 | First | AC-0001-0001 | A rule |
+
+## Superseded
+
+| Superseded | Reason |
+| ------------ | ------ |
+| BR-0001-0009 | Split into BR-0001-0001 |
+`;
+    const retired = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`, { rules });
+    expect(retired.find((i) => i.code === "TDDLIST_BR_REF_UNRESOLVED")?.message).toContain(
+      "BR-0001-0009",
+    );
+    // Over-correction pin: the real definition table still declares.
+    const declared = await run(`${WITH_KEY}\n${row("BR-0001-0001")}`, { rules });
+    expect(declared.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+  });
+
   it("accepts a rule declared by a `## BR-NNNN-NNNN` heading", async () => {
     // The heading layout `layerCoverage.ts` also walks. Reading only tables
     // would report every key of such a pack as dangling.
@@ -140,6 +198,76 @@ Superseded by BR-0001-0009 during triage; see also BR-0001-0008.
     // row of a layout that legitimately has no `04`.
     const issues = await run(`${WITH_KEY}\n${row("BR-0001-0009")}`);
     expect(issues.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_UNRESOLVED");
+  });
+
+  it("reports a declared key that is not the one the row's TC-Refs derive", async () => {
+    // "Declared" is a weaker claim than "this row's". `TC-0001-0004` is pinned
+    // through `EX-0001-0005` to `BR-0001-0005`; the superseded AC-first rule
+    // produced `BR-0001-0004`, which exists and shares the AC — so shape and
+    // referent both pass while the row is batched under a rule it does not
+    // verify, and two rows verifying different rules land in one review unit.
+    const options = {
+      rules: DERIVATION_RULES,
+      examples: derivationExamples("BR-0001-0005"),
+      testCases: derivationTestCases("EX-0001-0005"),
+    };
+    const issues = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
+    const finding = issues.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH");
+    expect(finding?.severity).toBe("warning");
+    expect(finding?.message).toContain("BR-0001-0005");
+
+    // Over-correction pin: the derived key itself is silent.
+    const correct = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
+    expect(correct.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+  });
+
+  it("falls back to the AC join only for a TC with no EX-Ref", async () => {
+    // The fallback is per TC, not per row, and its union is both rules sharing
+    // `AC-0001-0003` — so the tie-break, not the EX edge, decides.
+    const options = {
+      rules: DERIVATION_RULES,
+      examples: derivationExamples("BR-0001-0005"),
+      testCases: derivationTestCases("-"),
+    };
+    const lowest = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
+    expect(lowest.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    const other = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
+    expect(other.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH")?.message).toContain(
+      "Expected BR-0001-0004",
+    );
+  });
+
+  it("runs the tie-break over the whole union when one EX names several BRs", async () => {
+    // A cohesive rule bundle is legal in one `BR-Ref` cell, so the EX hop is
+    // not single-valued. Without the union tie-break the key is ambiguous and
+    // two agents reading the same spec derive different ones.
+    const options = {
+      rules: DERIVATION_RULES,
+      examples: derivationExamples("BR-0001-0005, BR-0001-0004"),
+      testCases: derivationTestCases("EX-0001-0005"),
+    };
+    const lowest = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, options);
+    expect(lowest.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    const other = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0005")}`, options);
+    expect(other.find((i) => i.code === "TDDLIST_BR_REF_MISMATCH")?.message).toContain(
+      "Expected BR-0001-0004",
+    );
+  });
+
+  it("says nothing about derivation when the layer files reach no rule", async () => {
+    // The check contradicts a key only when it can compute one. A spec whose
+    // `05` / `06` name nothing, and a row whose cell is the documented "not
+    // resolved" state, must both stay silent.
+    const bare = await run(`${WITH_KEY}\n${keyedRow("BR-0001-0004")}`, { rules: DERIVATION_RULES });
+    expect(bare.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    for (const unresolved of ["-", ""]) {
+      const degraded = await run(`${WITH_KEY}\n${keyedRow(unresolved)}`, {
+        rules: DERIVATION_RULES,
+        examples: derivationExamples("BR-0001-0005"),
+        testCases: derivationTestCases("EX-0001-0005"),
+      });
+      expect(degraded.map((i) => i.code)).not.toContain("TDDLIST_BR_REF_MISMATCH");
+    }
   });
 
   it("leaves a ledger seeded without the column alone", async () => {

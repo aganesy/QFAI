@@ -12,6 +12,8 @@ const repoRoot = path.resolve(process.cwd(), "..", "..");
 const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/tdd/test-list.md";
+const EXAMPLES_TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/05_Examples.md";
+const RULES_TEMPLATE = "assistant/skills/qfai-sdd/templates/specs/spec/04_Business-Rules.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -94,10 +96,44 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       ).replace(/\s*\n\s*/g, " ");
       expect(ssot).toContain("`Blocked-By`, `BR-Ref`");
       expect(ssot).toContain("`BR-Ref` is **conditionally required**");
-      expect(ssot).toContain("its cells are checked for both — shape and referent — at `warning`");
+      expect(ssot).toContain(
+        "its cells are checked for shape, referent **and derivation** — at `warning`",
+      );
+      // "Declared" is a weaker claim than "this row's": a key resolved by some
+      // other route names a real rule and still batches the row under one its
+      // own `TC-Refs` never reach, so the SSOT has to say the value is
+      // recomputed and compared, not merely resolved.
+      expect(ssot).toContain("the value is recomputed from `TC` -> `EX` -> `BR`");
       // Empty is the same "not resolved" state the validator accepts, so the
       // SSOT must not leave `""` readable as a key rows share.
       expect(ssot).toContain('`-` for "not resolved" — an empty cell reads the same');
+    });
+
+    it(`${tree}: the Examples template permits the multi-BR cell the key derivation assumes`, async () => {
+      // The key derivation takes "every `BR-*` listed there" and tie-breaks
+      // over the union, which only has an input if the template an SDD agent
+      // writes `05_Examples.md` from allows more than one. While it said
+      // "Every EX must reference one BR" that agent collapsed or split a
+      // cohesive bundle, and the union the ledger rule is written for could
+      // never occur.
+      const examples = (await read(tree, EXAMPLES_TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(examples).not.toContain("Every EX must reference one BR");
+      expect(examples).toContain("Every EX must reference **at least one** BR");
+      expect(examples).toContain(
+        "**A cohesive rule bundle may be written as several comma-separated `BR-*` in the one cell.**",
+      );
+      expect(examples).toContain("do not collapse such a bundle to a single `BR-*`");
+      // Order-independence is what makes the lowest-numbered tie-break the
+      // key rather than "whatever was written first".
+      expect(examples).toContain("The cell is read as a **set**");
+      expect(examples).toContain("the lowest-numbered `BR-*` of the union it reaches");
+
+      // Over-correction pin: one `BR-*` stays the default, here and in the
+      // granularity rule that argues from it.
+      expect(examples).toContain("**One `BR-*` is the default.**");
+      const rules = (await read(tree, RULES_TEMPLATE)).replace(/\s*\n\s*/g, " ");
+      expect(rules).toContain("pins `EX` to `BR` 1:1 by default");
+      expect(rules).toContain("only for a cohesive rule bundle");
     });
 
     it(`${tree}: the template states who produces the rows`, async () => {

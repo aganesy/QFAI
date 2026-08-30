@@ -12,9 +12,11 @@
   it is two BRs.
 - A BR that needs the words "and also", "additionally", or an enumerated list
   of unrelated conditions to be stated is almost always several BRs.
-- Splitting late is expensive: `05_Examples.md` pins `EX` to `BR` 1:1, so a
-  coarse BR propagates downward by construction and is usually discovered only
-  after it has been projected into one oversized test module.
+- Splitting late is expensive: `05_Examples.md` pins `EX` to `BR` 1:1 by
+  default — several `BR-*` in one `BR-Ref` cell is legal, but only for a
+  cohesive rule bundle — so a coarse BR propagates downward by construction and
+  is usually discovered only after it has been projected into one oversized
+  test module.
 - `QFAI-DENSITY-005` (`warning`) flags a `Rule` cell that is a size outlier
   against the other rules in the same file. It is a signal, not a gate.
 - See `.qfai/assistant/constitution/requirements-decomposition.md#item-granularity-acbrextc`.

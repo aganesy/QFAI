@@ -3,7 +3,7 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { collectSpecEntries } from "../specLayout.js";
+import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import {
   maskNonSpecRegions,
   parseAllMarkdownTables,
@@ -33,6 +33,11 @@ import {
 // progress figure cannot disagree about which TCs a spec declares.
 import { collectTestCaseIds, TEST_CASES_FILE_NAME } from "../testCaseCoverageTargets.js";
 import type { Issue } from "../types.js";
+// The same `AC` / `BR` / `EX` / `TC` walk `layerCoverage.ts` scores coverage
+// with. The review-group key is derived from those very edges, so re-parsing
+// the layer files here is how the derived key and the coverage graph would come
+// to disagree about what a `TC` reaches.
+import { collectV1421LayerRefs, type V1421LayerRefs } from "./layerCoverage.js";
 import { exists, issue, readSafe } from "./utils.js";
 
 /**
@@ -383,13 +388,23 @@ function toPosixRel(value: string): string {
  * that legitimately have no `04`. Fenced and commented regions are masked so a
  * rule quoted in an example block does not count as a declaration.
  *
- * Only definition positions count — the rule table's `BR-ID` column (its first
- * column when the header is absent) and a `## BR-NNNN-NNNN` heading — which is
- * the same walk `layerCoverage.ts` uses to build the v1421 `BR` set. Scanning
- * the whole file instead would collect a `BR-*` that a `Rule` or `Notes` cell,
- * or the prose around the table, merely mentions: a retired or compared-against
- * id would then resolve, and `TDDLIST_BR_REF_UNRESOLVED` would stay silent
- * while the T1 group is keyed on a rule the file no longer declares.
+ * Only definition positions count — a table's `BR-ID` column and a
+ * `## BR-NNNN-NNNN` heading. Scanning the whole file instead would collect a
+ * `BR-*` that a `Rule` or `Notes` cell, or the prose around the table, merely
+ * mentions: a retired or compared-against id would then resolve, and
+ * `TDDLIST_BR_REF_UNRESOLVED` would stay silent while the T1 group is keyed on
+ * a rule the file no longer declares.
+ *
+ * **A table with no `BR-ID` header declares nothing**, rather than having its
+ * first column read as one. `04_Business-Rules.md` legitimately carries
+ * auxiliary tables — a `| Superseded | Reason |` list of retired rules is the
+ * plain case — and their first column is exactly where a `BR-*` this file no
+ * longer declares is written down. Falling back to column 0 put those ids back
+ * into the declaration set through the side door, which is the same silent
+ * resolve the prose rule above exists to prevent. The header is the only signal
+ * that separates a definition table from a table that talks about definitions,
+ * so its absence has to mean "not a definition table" — the `## BR-NNNN-NNNN`
+ * heading layout stays supported for a pack that declares rules without one.
  */
 async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null> {
   const file = path.join(specDir, BR_DECLARATION_FILE);
@@ -401,16 +416,79 @@ async function collectDeclaredBrIds(specDir: string): Promise<Set<string> | null
     if (id !== undefined) declared.add(id.toUpperCase());
   }
   for (const table of parseAllMarkdownTables(text)) {
-    const named = table.headers.findIndex(
+    const idIndex = table.headers.findIndex(
       (header) => header.trim().toLowerCase() === BR_ID_COLUMN.toLowerCase(),
     );
-    const idIndex = named >= 0 ? named : 0;
+    if (idIndex < 0) continue;
     for (const row of table.rows) {
       const value = (row[idIndex] ?? "").trim().toUpperCase();
       if (BR_ID_FORMAT.test(value)) declared.add(value);
     }
   }
   return declared;
+}
+
+/**
+ * One TC's references, tolerating a ledger that cites a sub-id whose parent is
+ * what `06_Test-Cases.md` declares — the same `resolveParentTcId` fallback
+ * Check 5 applies to `TC-Refs`.
+ */
+function tcRefsOf(map: Map<string, Set<string>>, tcId: string): Set<string> {
+  const direct = map.get(tcId);
+  if (direct !== undefined) return direct;
+  const parent = resolveParentTcId(tcId);
+  return (parent !== undefined ? map.get(parent) : undefined) ?? new Set<string>();
+}
+
+/**
+ * The `BR-Ref` the documented resolution procedure derives for one ledger row,
+ * or `null` when the spec's layer files reach no rule from it.
+ *
+ * Checking that the cell names a *declared* rule is not the same as checking it
+ * names *this row's* rule: a key left over from an earlier AC-first resolution
+ * rule resolves against the rules file perfectly well and still files the row
+ * under a rule its own `TC-Refs` never reach, which is precisely the
+ * misattribution the procedure was changed to prevent. Recomputing it is the
+ * only comparison that can see that.
+ *
+ * The procedure, per TC the row's `TC-Refs` name: the direct
+ * `TC` -> `EX` -> `BR` edge; the `AC` join **only** for a TC with no `EX-Ref`;
+ * then the lowest-numbered `BR-*` of the union everything reached. The
+ * tie-break is what makes the key reproducible between two agents, so a cell
+ * holding a member of the union that is not its lowest is as much a
+ * disagreement as one holding a rule from elsewhere.
+ *
+ * Only long-form `BR-NNNN-NNNN` candidates count. The cell itself is held to
+ * that shape one step earlier, so a pack written in the short `BR-NNNN`
+ * vocabulary would otherwise be compared against ids the column can never
+ * legally hold — every row of it would report a mismatch it cannot fix.
+ */
+function deriveExpectedBrRef(refs: V1421LayerRefs, tcRefsCell: string): string | null {
+  const reached = new Set<string>();
+  for (const raw of splitTcRefs(tcRefsCell)) {
+    const tcId = raw.toUpperCase();
+    const exRefs = tcRefsOf(refs.tcToExRefs, tcId);
+    if (exRefs.size > 0) {
+      for (const exId of exRefs) {
+        // One `EX` may pin a cohesive rule bundle to several `BR-*`; all of
+        // them enter the union.
+        for (const brId of refs.exToBrRefs.get(exId) ?? []) reached.add(brId);
+      }
+      continue;
+    }
+    const acRefs = tcRefsOf(refs.tcToAcRefs, tcId);
+    if (acRefs.size === 0) continue;
+    for (const [brId, brAcRefs] of refs.brToAcRefs) {
+      for (const acId of acRefs) {
+        if (brAcRefs.has(acId)) {
+          reached.add(brId);
+          break;
+        }
+      }
+    }
+  }
+  const candidates = [...reached].filter((id) => BR_ID_FORMAT.test(id)).sort();
+  return candidates[0] ?? null;
 }
 
 /**
@@ -607,7 +685,7 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
   const issues: Issue[] = [];
 
   for (const entry of entries) {
-    const specIssues = await validateSpecTddList(root, entry.dir, entry.specNumber, specsRoot);
+    const specIssues = await validateSpecTddList(root, entry, specsRoot);
     issues.push(...specIssues);
   }
 
@@ -616,10 +694,14 @@ export async function validateTddList(root: string, config: QfaiConfig): Promise
 
 async function validateSpecTddList(
   root: string,
-  specDir: string,
-  specNumber: string,
+  specEntry: SpecEntry,
   specsRoot: string,
 ): Promise<Issue[]> {
+  // The whole entry, not its directory: Check 8c derives the review-group key
+  // from the spec's layer files, and `SpecEntry` is what already resolves those
+  // paths per layout.
+  const specDir = specEntry.dir;
+  const specNumber = specEntry.specNumber;
   const filePath = path.join(specDir, TDD_LIST_REL_PATH);
   const relPath = toRelPath(root, filePath);
   const issues: Issue[] = [];
@@ -1140,7 +1222,8 @@ async function validateSpecTddList(
     }
   }
 
-  // Phase 2 – Check 8c: a declared review-group key has to resolve.
+  // Phase 2 – Check 8c: a declared review-group key has to resolve, and has to
+  // be the one this row's own `TC-Refs` derive.
   //
   // `BR-Ref` is optional, so its absence is silent. Its *presence* is a claim
   // `/qfai-implement` acts on: it opens, fills and closes a T1 review group by
@@ -1151,6 +1234,7 @@ async function validateSpecTddList(
   // not start failing CI on upgrade.
   if (anyTableHasColumn(coverageTables, BR_REF_COLUMN)) {
     const declaredBrIds = await collectDeclaredBrIds(specDir);
+    const layerRefs = await collectV1421LayerRefs(specEntry);
     for (const ref of ledgerRows()) {
       const brRef = cell(ref, BR_REF_COLUMN);
       // Empty and `-` are the same legal state — "not resolved" — and
@@ -1185,6 +1269,30 @@ async function validateSpecTddList(
             [token],
             "change",
             `${BR_DECLARATION_FILE} に該当 BR を追加するか、${BR_REF_COLUMN} を実在する \`BR-*\`（または \`-\`）に直してください。`,
+          ),
+        );
+        continue;
+      }
+      // "Declared" is a weaker claim than "this row's". A key resolved by the
+      // superseded AC-first rule names a real rule and the check above passes,
+      // while the row is filed under a rule its own `TC-Refs` never reach — the
+      // misattribution the `TC` -> `EX` -> `BR` procedure exists to prevent,
+      // and two rows that verify different rules then share a review unit.
+      // Silent when the layer files reach nothing, and silent on `-` / empty,
+      // which the column documents as the legal "not resolved" degradation
+      // rather than a wrong key.
+      const expected = deriveExpectedBrRef(layerRefs, cell(ref, "TC-Refs"));
+      if (expected !== null && expected !== token) {
+        issues.push(
+          issue(
+            "TDDLIST_BR_REF_MISMATCH",
+            `${BR_REF_COLUMN} ${token} in tdd/test-list.md for spec-${specNumber} (${ref.label}) is not the key this row's TC-Refs resolve to. Expected ${expected}`,
+            "warning",
+            relPath,
+            "tddList.brRefDerivation",
+            [token, expected],
+            "change",
+            `${BR_REF_COLUMN} を \`${expected}\` に直してください。行の \`TC-Refs\` が名指す各 TC について \`EX-Ref\` -> \`05_Examples.md\` の \`BR-Ref\` で解決し（\`EX-Ref\` を持たない TC のみ \`AC-Refs\` 経由にフォールバック）、到達した \`BR-*\` の和集合から最小番号の1件を採るのが規定の手順です。`,
           ),
         );
       }

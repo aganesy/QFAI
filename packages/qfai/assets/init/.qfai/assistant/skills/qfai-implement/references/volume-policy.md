@@ -101,7 +101,17 @@ the review-ready state — and waits there for its group. Members still move
   pick is the `B` — which can neither join the open `A` group nor open one of
   its own, while the `A` below it holds that group open. Selection returns to
   ledger order only once no `todo` T1 row carries the key, and the second close
-  condition has closed the group by then. The one-item-at-a-time constraint is
+  condition has closed the group by then. **It outranks the named-row override
+  too.** `SKILL.md`'s "a named row wins" is a selection rule, not a licence to
+  strand one: a named T1 row whose `BR-Ref` differs from the open key is
+  **deferred** until the group closes, then processed in the order given. Open
+  fires on a T1 row _reaching_ `refactor` while no group is open — an event,
+  not a state — so a differently-keyed row driven to `refactor` underneath an
+  open group can neither join it nor be offered one later, and sits at
+  `refactor` permanently. Deferral cannot deadlock: both close conditions read
+  the open key's own T1 rows, so the group closes without the deferred row. A
+  named row carrying the open key is an ordinary member; a named T2 / T3 row is
+  reviewed alone and is never deferred. The one-item-at-a-time constraint is
   about the Red/Green cycle: at most one row is in `red` or `green` at any
   moment. A row parked in `refactor` is an in-flight member of the **open**
   group, not an abandoned item, so parking is not a violation of that

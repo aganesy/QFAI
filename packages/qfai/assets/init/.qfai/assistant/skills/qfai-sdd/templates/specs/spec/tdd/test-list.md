@@ -67,6 +67,9 @@ union of everything reached and keep the **lowest-numbered** `BR-*` of it —
 across several `TC-Refs` and across a multi-`BR` `EX` alike — so the key is the
 same for whoever resolves it next. Write `-` when no `BR` reaches the row. An
 empty cell reads the same as `-`, and that row is reviewed alone.
+`npx qfai validate` recomputes this same derivation and reports
+`TDDLIST_BR_REF_MISMATCH` when the cell holds a different rule, so a key
+resolved by any other route is named rather than silently regrouping rows.
 `/qfai-implement` batches its T1 reviews on this value and can close no group
 without it. It is derived from upstream, not from run state, so a reseed
 re-resolves it — that is not the row rewrite the delta rule forbids.

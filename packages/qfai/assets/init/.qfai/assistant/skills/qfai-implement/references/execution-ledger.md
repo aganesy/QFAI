@@ -93,9 +93,15 @@ behaviour at T1 cost.
 - The column is optional to `npx qfai validate` — the required set above is what it
   enforces, so a ledger seeded before the column keeps passing — but a ledger
   that **declares** it has its cells checked: `TDDLIST_BR_REF_INVALID` (not a
-  single `BR-NNNN-NNNN`, and not `-`) and `TDDLIST_BR_REF_UNRESOLVED` (no such
-  rule in `04_Business-Rules.md`). Both are `warning`: a ledger written against
-  an older rules file must not start failing CI on upgrade.
+  single `BR-NNNN-NNNN`, and not `-`), `TDDLIST_BR_REF_UNRESOLVED` (no such
+  rule in `04_Business-Rules.md`) and `TDDLIST_BR_REF_MISMATCH` (a real rule,
+  but not the one the procedure above derives from this row's own `TC-Refs` —
+  the validator recomputes it and names the expected value). All three are
+  `warning`: a ledger written against an older rules file must not start failing
+  CI on upgrade. `TDDLIST_BR_REF_UNRESOLVED` reads declarations from a table's
+  `BR-ID` column and from `## BR-NNNN-NNNN` headings only, so a rule named in an
+  auxiliary table — a `| Superseded | Reason |` list of retired ids is the plain
+  case — does not make a key resolve.
 
 ## Obligation columns (optional, required by layer)
 

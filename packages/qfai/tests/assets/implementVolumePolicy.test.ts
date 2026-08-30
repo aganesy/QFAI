@@ -224,6 +224,35 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(skill).toContain("`references/volume-policy.md` > Group formation, Fill");
     });
 
+    it(`${tree}: a named row of another key is deferred, not stranded at refactor`, async () => {
+      // "A named row wins" applied before the keyed selection: a named T1 row
+      // of key B, invoked while group A is open, can neither join A nor open
+      // its own group — and Open fires on a row *reaching* `refactor` while no
+      // group is open, an event that has passed by the time A closes. B sat at
+      // `refactor` permanently, with no rule that re-offers it a group.
+      const section = unwrap(await read(tree, REFERENCE));
+      const skill = unwrap(await read(tree, SKILL));
+
+      expect(skill).toContain("**An open T1 review group outranks even that**");
+      expect(skill).toContain(
+        "a named T1 row whose `BR-Ref` differs from the open group's key is **deferred**",
+      );
+      expect(section).toContain("**It outranks the named-row override too.**");
+      expect(section).toContain("is a selection rule, not a licence to strand one");
+      // Deferral, not rejection: the ids are still processed, and the reason it
+      // cannot deadlock is that no close condition needs them.
+      for (const doc of [skill, section]) {
+        expect(doc).toContain("an event, not a state");
+        expect(doc).toContain("then processed in the order given");
+      }
+      expect(skill).toContain("Deferring cannot deadlock");
+      expect(section).toContain("Deferral cannot deadlock");
+      // Over-correction pin: a named row that shares the open key, and a named
+      // T2/T3 row, are not deferred.
+      expect(skill).toContain("A named row carrying the open key joins the group");
+      expect(section).toContain("a named T2 / T3 row is reviewed alone and is never deferred");
+    });
+
     it(`${tree}: the direct TC -> EX -> BR edge wins over the AC join`, async () => {
       // The AC join alone misattributes a row: a TC pinned through its `EX` to
       // one `BR` was filed under the lowest-numbered `BR` merely sharing its
@@ -232,6 +261,14 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       // The key is only reproducible if a wrong one is named: optional to the
       // validator, checked when the ledger declares it.
       expect(ledger).toContain("`TDDLIST_BR_REF_UNRESOLVED`");
+      // Resolving is not deriving: a key from some other route names a real
+      // rule and still batches the row under one its `TC-Refs` never reach.
+      expect(ledger).toContain("`TDDLIST_BR_REF_MISMATCH`");
+      expect(ledger).toContain("the validator recomputes it and names the expected value");
+      // And a rule named only in an auxiliary table is not a declaration.
+      expect(ledger).toContain(
+        "reads declarations from a table's `BR-ID` column and from `## BR-NNNN-NNNN` headings only",
+      );
       expect(ledger).toContain("**`TC` -> `EX` -> `BR`.**");
       expect(ledger).toContain("that `EX`'s `BR-Ref` in `05_Examples.md`");
       expect(ledger).toContain("**Only for a TC with no `EX-Ref`:**");

@@ -151,8 +151,12 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   Phase 2b seeds it. One value per row: a single `BR-*` declared in `04_Business-Rules.md`, or
   `-` for "not resolved" — an empty cell reads the same — and that row is reviewed alone,
   never batched with the other unresolved rows. When the column is present its cells are
-  checked for both — shape and referent — at `warning`, so a mistyped or dangling key is named
-  rather than silently regrouping rows.
+  checked for shape, referent **and derivation** — at `warning`, so a mistyped, dangling or
+  misattributed key is named rather than silently regrouping rows. Derivation is the third
+  check because the first two pass on any real rule of the spec: a key resolved by some other
+  route still files the row under a rule its own `TC-Refs` never reach, so the value is
+  recomputed from `TC` -> `EX` -> `BR` (with the `AC` fallback and the lowest-numbered
+  tie-break) and compared.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
