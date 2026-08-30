@@ -12,6 +12,7 @@ import {
   type TriageRow,
 } from "../../src/core/sddTriage.js";
 import type { SpecSummary } from "../../src/core/specSummary.js";
+import { validateTriageSection } from "../../src/core/validators/specPack.js";
 
 function makeSummary(spec: Partial<SpecSummary> & { specId: string }): SpecSummary {
   return {
@@ -247,6 +248,37 @@ describe("classifyTriage", () => {
       summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", acCount: 5 })],
     });
     expect(rows[0]?.op).toEqual({ update: "REMOVE" });
+  });
+
+  it("marks the targetless DELETE proposal as a placeholder the validator will refuse", () => {
+    // No active spec absorbs the removal, so the classifier can only propose
+    // DELETE with an unresolved target. DELETE removes a whole spec
+    // directory, so `QFAI-TRIAGE-008` refuses the rendered row until the
+    // target is filled in — the rationale has to say so, the same contract
+    // the CREATE placeholder has with `QFAI-TRIAGE-006`.
+    const rows = classifyTriage({
+      reqs: [
+        {
+          id: "REQ-0011",
+          subject: "retire zeta",
+          capability: "CAP-0099",
+          removalHint: true,
+        },
+      ],
+      summaries: [makeSummary({ specId: "spec-0001", capability: "CAP-0001", title: "alpha" })],
+    });
+    const proposal = rows[0];
+    expect(proposal?.op).toBe("DELETE");
+    expect(proposal?.existingSpec).toBeNull();
+    expect(proposal?.rationale).toContain("QFAI-TRIAGE-008");
+    expect(proposal?.rationale).toMatch(/Existing Spec/);
+    if (!proposal) return;
+    const rendered = renderTriageMarkdown([{ ...proposal, approvedBy: "user@host" }]);
+    expect(
+      validateTriageSection(`# 09 Delta\n\n${rendered}`, "spec-0042/09_delta.md").map(
+        (entry) => entry.code,
+      ),
+    ).toEqual(["QFAI-TRIAGE-008"]);
   });
 
   it("classifies removal hint with multiple capability matches as MERGE", () => {

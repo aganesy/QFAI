@@ -325,19 +325,6 @@ const TRIAGE_REQUIRED_COLUMNS = ["source", "subject", "existing spec", "operatio
  */
 const SPEC_SCOPED_OPS = new Set<TriageTopLevelOp>(["SPLIT", "MERGE", "SUPERSEDE", "DELETE"]);
 
-/**
- * Every `spec-`-prefixed token a single `Existing Spec` cell names, taken
- * whole: the match may not start inside another token and runs until one of
- * the separators that legitimately ends a target — whitespace, an
- * enumeration separator, a backtick, a closing bracket, or the end of the
- * cell. Stopping at the end of the *alphanumeric* run instead would read
- * `spec-0001_old` / `spec-0001/01_Spec.md` as the bare `spec-0001` they
- * happen to start with, so a misspelling or an unsupported path form would
- * inherit that spec's existence. The token is captured whole here and
- * checked against the well-formed shape below.
- */
-const EXISTING_SPEC_TOKEN_RE = /(?<![0-9A-Za-z])spec-[^\s`+,、，;；*)）\]】」]*/g;
-
 /** The only well-formed spec token: `spec-` plus exactly four digits. */
 const EXISTING_SPEC_ID_RE = /^spec-\d{4}$/;
 
@@ -362,34 +349,97 @@ const EXISTING_SPEC_POLICY_RE = /^_policies(?:\/[0-9A-Za-z._-]+)*$/;
 const EXISTING_SPEC_SEPARATOR_RE = /[+,、，]/;
 
 /**
- * Whether every target in the cell is a `_policies` path. The value may
- * arrive markdown-escaped (`\_policies`) or backticked (`` `_policies` ``),
- * so those decorations are stripped before each part is matched whole.
+ * A part that was *meant* to be a spec ID but is not one. Used only to pick
+ * the error wording: a botched ID is reported as such, anything else as a
+ * cell that names no target at all.
  */
-function isPolicyOnlyTarget(cell: string): boolean {
+const EXISTING_SPEC_ATTEMPT_RE = /spec[-_]?\d/i;
+
+/**
+ * What one `Existing Spec` cell resolves to, or why it resolves to nothing.
+ * The grammar declared in `references/sdd-triage.md` is closed and applies to
+ * the **whole** cell, so the cell is parsed once and every gate below reads
+ * the parse. Matching a well-formed token *inside* the cell and ignoring the
+ * remainder is what let `spec-0001 trailing prose`, `spec-0001+`,
+ * `spec-0001++spec-0003` and `spec-0001+_policies` through: each contains a
+ * valid token, and none of them is a valid cell.
+ */
+type ExistingSpecTarget =
+  | { readonly kind: "specs"; readonly ids: readonly string[] }
+  | { readonly kind: "policies" }
+  | { readonly kind: "malformed"; readonly message: string; readonly refs: readonly string[] };
+
+/**
+ * Parse the whole cell into its targets. The value may arrive
+ * markdown-escaped (`\_policies`, written by `renderTriageMarkdown`) or
+ * backticked (`` `_policies` ``), so those decorations are stripped first;
+ * what is left must split cleanly on the enumeration separators into parts
+ * that are each either a well-formed spec ID or a `_policies` path, and the
+ * two kinds may not be mixed in one cell.
+ */
+function parseExistingSpecCell(cell: string): ExistingSpecTarget {
   const parts = cell
     .replace(/[`\\]/g, "")
+    .trim()
     .split(EXISTING_SPEC_SEPARATOR_RE)
-    .map((part) => part.trim())
-    .filter((part) => part.length > 0);
-  return parts.length > 0 && parts.every((part) => EXISTING_SPEC_POLICY_RE.test(part));
+    .map((part) => part.trim());
+  if (parts.some((part) => part.length === 0)) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec の区切りの前後に対象がありません: ${cell}`,
+      refs: [cell],
+    };
+  }
+  const unreadable = parts.filter(
+    (part) => !EXISTING_SPEC_ID_RE.test(part) && !EXISTING_SPEC_POLICY_RE.test(part),
+  );
+  if (unreadable.length > 0) {
+    return unreadable.some((part) => EXISTING_SPEC_ATTEMPT_RE.test(part))
+      ? {
+          kind: "malformed",
+          message: `Existing Spec の spec ID 表記が不正です: ${unreadable.join(", ")}`,
+          refs: unreadable,
+        }
+      : {
+          kind: "malformed",
+          message: `Existing Spec が対象を名指ししていません: ${cell}`,
+          refs: [cell],
+        };
+  }
+  const ids = parts.filter((part) => EXISTING_SPEC_ID_RE.test(part));
+  if (ids.length > 0 && ids.length < parts.length) {
+    return {
+      kind: "malformed",
+      message: `Existing Spec に spec と policy の対象が混在しています: ${cell}`,
+      refs: [cell],
+    };
+  }
+  return ids.length > 0 ? { kind: "specs", ids } : { kind: "policies" };
 }
 
 /**
  * Operations whose completion removes the spec directory the row names.
- * `sdd-triage.md` "Status field interaction" defines DELETE as removing the
- * directory entirely, and MERGE / SPLIT collapse or decompose their source
- * into other spec IDs — so once such a row has been carried out, its target
- * is gone by construction while the row itself stays in delta.md as history.
- * Checking those targets against the specs currently on disk would turn every
- * completed removal into a permanent `QFAI-TRIAGE-008`. Shape is still
- * enforced for them; only the existence check is skipped. SUPERSEDE is not
- * in the set: it flips the source spec's Status and keeps the directory.
+ * `sdd-triage.md` "Operation scope" defines DELETE as removing the directory
+ * entirely, and MERGE / SPLIT collapse or decompose their source into other
+ * spec IDs — so once such a row has been carried out, its targets are gone by
+ * construction while the row itself stays in delta.md as history. SUPERSEDE
+ * is not in the set: it flips the source spec's Status and keeps the
+ * directory.
  */
-const SPEC_REMOVING_TRIAGE_OPS = new Set<string>(["DELETE", "MERGE", "SPLIT"]);
+const SPEC_REMOVING_TRIAGE_OPS = new Set<TriageTopLevelOp>(["DELETE", "MERGE", "SPLIT"]);
+
+/** Whether the row's operation acts on a whole spec directory. */
+function isSpecScopedOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_SCOPED_OPS.has(opUpper);
+}
+
+/** Whether carrying the row out removes the spec directories it names. */
+function isSpecRemovingOp(opUpper: "UPDATE" | TriageTopLevelOp): boolean {
+  return opUpper !== "UPDATE" && SPEC_REMOVING_TRIAGE_OPS.has(opUpper);
+}
 
 const EXISTING_SPEC_GRAMMAR_HINT =
-  "Existing Spec は `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies`、対象 spec がまだ無い CREATE 行は `-` を記載してください。";
+  "Existing Spec はセル全体が `spec-NNNN` (複数は `+` 連結)、policy 専用行は `_policies` (spec 単位の操作では不可)、対象 spec がまだ無い CREATE 行は `-` のいずれかである必要があります。";
 
 /** Bracket pairs that mark a parenthetical citation in a `Subject` cell. */
 const CITATION_BRACKETS: ReadonlyArray<readonly [string, string]> = [
@@ -620,13 +670,19 @@ export async function validateCreateRowCapabilityRefs(
  * Enforce QFAI-TRIAGE-008: the `Existing Spec` cell binds the row to the
  * spec it acts on, so its value must be readable — and readable the same
  * way by every author. The grammar is declared in
- * `references/sdd-triage.md`: one or more `spec-NNNN` joined by `+`,
- * `_policies` for a policy-only row, or `-` when the row has no existing
- * spec (CREATE, and DELETE — see below). `knownSpecIds` is the set of spec
- * directories actually on disk; when it is absent (callers that validate a
- * delta.md in isolation) only the grammar is checked, not existence.
- * Existence is also skipped for the operations that remove their own target
- * (`SPEC_REMOVING_TRIAGE_OPS`), whose rows outlive the directory they name.
+ * `references/sdd-triage.md` and applies to the whole cell: one or more
+ * `spec-NNNN` joined by `+`, `_policies` for a policy-only row (never for a
+ * spec-scoped operation), or `-` on a CREATE row, which has no existing spec
+ * yet. `knownSpecIds` is the set of spec directories actually on disk; when
+ * it is absent (callers that validate a delta.md in isolation) only the
+ * grammar is checked, not existence.
+ *
+ * A removal row (`SPEC_REMOVING_TRIAGE_OPS`) outlives the directories it
+ * names, so existence is read as a state rather than a requirement: every
+ * target still present means the row has not been carried out, every target
+ * gone means it has and the row is the tombstone. A row where only *some*
+ * targets resolve is in neither state — one of its sources is misspelled or
+ * was never allocated — and it is reported.
  */
 function validateExistingSpecCell(
   cell: string,
@@ -660,44 +716,58 @@ function validateExistingSpecCell(
           [cell],
         );
   }
-  if (cell.length === 0) {
-    return report(`Triage ${opUpper} の Existing Spec が空です`, [cell]);
-  }
-  if (isNoneLiteral) {
-    // DELETE is the one non-CREATE op that may legitimately name nothing.
-    // `classifyTriage` emits `op: "DELETE", existingSpec: null` when a
-    // removal-shaped REQ was absorbed by no active spec, and
-    // `renderTriageMarkdown` writes that as `-`; a DELETE already carried
-    // out has no surviving directory to name either. Rejecting the literal
-    // here would make the library's own DELETE proposal impossible to
-    // persist, so it is accepted and the approval gate
-    // (`QFAI-TRIAGE-005`, mandatory for DELETE) carries the review burden.
-    return opUpper === "DELETE"
-      ? []
-      : report(`Triage ${opUpper} の Existing Spec が空です`, [cell]);
+  if (cell.length === 0 || isNoneLiteral) {
+    // Including DELETE. `classifyTriage` emits `op: "DELETE",
+    // existingSpec: null` when no active spec absorbed a removal-shaped REQ,
+    // and `renderTriageMarkdown` writes that as `-` — but a DELETE removes a
+    // whole spec directory, so a row that names none has nothing to carry
+    // out and the approval gate cannot supply the target either. That row is
+    // a proposal, not a persistable decision: the classifier says so in its
+    // rationale and this gate is what forces the target to be filled in,
+    // exactly as QFAI-TRIAGE-006 forces the CREATE `CAP-NNNN` placeholder.
+    return report(`Triage ${opUpper} の Existing Spec が対象を持ちません: ${cell || "(empty)"}`, [
+      cell,
+    ]);
   }
   if (EXISTING_SPEC_RANGE_RE.test(cell)) {
     return report(`Existing Spec の範囲表記は形式として認められません: ${cell}`, [cell]);
   }
 
-  const namedTokens = cell.match(EXISTING_SPEC_TOKEN_RE) ?? [];
-  const malformed = namedTokens.filter((token) => !EXISTING_SPEC_ID_RE.test(token));
-  if (malformed.length > 0) {
-    return report(`Existing Spec の spec ID 表記が不正です: ${malformed.join(", ")}`, malformed);
+  const target = parseExistingSpecCell(cell);
+  if (target.kind === "malformed") {
+    return report(target.message, [...target.refs]);
   }
-  const namedIds = namedTokens;
-  if (namedIds.length === 0) {
-    return isPolicyOnlyTarget(cell)
-      ? []
-      : report(`Existing Spec が対象を名指ししていません: ${cell}`, [cell]);
+  if (target.kind === "policies") {
+    // `_policies` names no spec directory, and SPLIT / MERGE / SUPERSEDE /
+    // DELETE are defined on one — an approved policy-target row would have
+    // nothing to execute against, or would be read as a destructive
+    // operation on the policy files themselves.
+    return isSpecScopedOp(opUpper)
+      ? report(
+          `Triage ${opUpper} は spec 単位の操作なので policy target は指定できません: ${cell}`,
+          [cell],
+        )
+      : [];
   }
-  if (!knownSpecIds || SPEC_REMOVING_TRIAGE_OPS.has(opUpper)) {
+  if (!knownSpecIds) {
     return [];
   }
-  const missing = namedIds.filter((specId) => !knownSpecIds.has(specId));
-  return missing.length === 0
-    ? []
-    : report(`Existing Spec が存在しない spec を指しています: ${missing.join(", ")}`, missing);
+  const missing = target.ids.filter((specId) => !knownSpecIds.has(specId));
+  if (missing.length === 0) {
+    return [];
+  }
+  if (isSpecRemovingOp(opUpper)) {
+    // Every target gone: the operation has been carried out and the row is
+    // its tombstone. Only some gone: neither state, so the row names a
+    // source that never existed.
+    return missing.length === target.ids.length
+      ? []
+      : report(
+          `Existing Spec の一部の対象だけが存在しません (未実行なら全て存在し、完了済みなら全て消えているはずです): ${missing.join(", ")}`,
+          missing,
+        );
+  }
+  return report(`Existing Spec が存在しない spec を指しています: ${missing.join(", ")}`, missing);
 }
 
 export function validateTriageSection(

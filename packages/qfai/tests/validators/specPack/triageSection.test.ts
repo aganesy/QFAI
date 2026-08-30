@@ -291,6 +291,13 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-008)", () => 
         ),
       ).toEqual([]);
     }
+    // A removal whose every target is gone is complete however many it named.
+    expect(
+      codesFor(
+        [["REQ-1", "collapse both", "spec-0017+spec-0018", "MERGE", "-", "user@host", "why"]],
+        KNOWN,
+      ),
+    ).toEqual([]);
     // The shape is still enforced on those rows.
     expect(
       codesFor(
@@ -307,35 +314,110 @@ describe("validateTriageSection Existing Spec grammar (QFAI-TRIAGE-008)", () => 
     ).toEqual(["QFAI-TRIAGE-008"]);
   });
 
-  it("accepts the `-` the classifier renders for a targetless DELETE proposal", () => {
-    // `classifyTriage` emits `op: "DELETE", existingSpec: null`, which
-    // `renderTriageMarkdown` writes as `TRIAGE_NO_EXISTING_SPEC`.
+  it("checks existence on a removal row that has not been carried out", () => {
+    // A row whose other targets still resolve cannot be the tombstone of a
+    // completed removal, so the unresolvable one is a typo or an invented
+    // source and must not reach the approval stage unchallenged.
+    for (const op of ["MERGE", "SPLIT", "DELETE"]) {
+      const issues = validateTriageSection(
+        buildDelta([["REQ-1", "collapse", "spec-0003+spec-9999", op, "-", "user@host", "why"]]),
+        DELTA_PATH,
+        KNOWN,
+      );
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-TRIAGE-008"]);
+      expect(issues[0]?.refs).toEqual(["spec-9999"]);
+    }
+    // Over-correction pin: a pending removal whose targets all resolve is
+    // clean, and so is the all-gone tombstone above.
     expect(
       codesFor(
-        [
-          [
-            "REQ-1",
-            "retire the subject",
-            TRIAGE_NO_EXISTING_SPEC,
-            "DELETE",
-            "-",
-            "user@host",
-            "why",
-          ],
-        ],
+        [["REQ-1", "collapse", "spec-0003+spec-0004", "MERGE", "-", "user@host", "why"]],
         KNOWN,
       ),
     ).toEqual([]);
-    // An unfilled cell is still a defect, and other ops still require a target.
+  });
+
+  it("rejects a `_policies` target on a spec-scoped operation", () => {
+    // SPLIT / MERGE / SUPERSEDE / DELETE act on a whole spec directory, so a
+    // policy target leaves the approved row with nothing to execute against.
+    for (const op of ["DELETE", "SPLIT", "MERGE", "SUPERSEDE"]) {
+      expect(
+        codesFor([["REQ-1", "policy work", "\\_policies", op, "-", "user@host", "why"]], KNOWN),
+      ).toEqual(["QFAI-TRIAGE-008"]);
+      expect(
+        codesFor(
+          [["REQ-1", "policy work", "`_policies/05_Contracts.md`", op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual(["QFAI-TRIAGE-008"]);
+    }
+    // Over-correction pin: UPDATE rows are how policy-only work is recorded.
+    expect(
+      codesFor([["REQ-1", "policy work", "\\_policies", "UPDATE", "APPEND", "-", "why"]], KNOWN),
+    ).toEqual([]);
+  });
+
+  it("rejects the `-` placeholder the classifier renders for a targetless DELETE", () => {
+    // `classifyTriage` emits `op: "DELETE", existingSpec: null`, which
+    // `renderTriageMarkdown` writes as `TRIAGE_NO_EXISTING_SPEC`. DELETE
+    // removes a whole spec directory, so that proposal is not persistable
+    // until the target is filled in — the approval gate cannot supply one.
+    for (const op of ["DELETE", "SPLIT", "MERGE", "SUPERSEDE"]) {
+      expect(
+        codesFor(
+          [["REQ-1", "retire the subject", TRIAGE_NO_EXISTING_SPEC, op, "-", "user@host", "why"]],
+          KNOWN,
+        ),
+      ).toEqual(["QFAI-TRIAGE-008"]);
+    }
     expect(codesFor([["REQ-1", "retire", "", "DELETE", "-", "user@host", "why"]], KNOWN)).toEqual([
       "QFAI-TRIAGE-008",
     ]);
+    // Over-correction pin: `-` remains the required CREATE spelling, and a
+    // DELETE that names its target is clean.
     expect(
       codesFor(
-        [["REQ-1", "retire", TRIAGE_NO_EXISTING_SPEC, "SUPERSEDE", "-", "user@host", "why"]],
+        [["REQ-1", "new scope", TRIAGE_NO_EXISTING_SPEC, "CREATE", "-", "user@host", "CAP-0001"]],
         KNOWN,
       ),
-    ).toEqual(["QFAI-TRIAGE-008"]);
+    ).toEqual([]);
+    expect(
+      codesFor([["REQ-1", "retire", "spec-0003", "DELETE", "-", "user@host", "why"]], KNOWN),
+    ).toEqual([]);
+  });
+
+  it("matches the whole cell against the grammar, not a token inside it", () => {
+    // Each of these contains a well-formed, existing spec ID; none of them is
+    // a well-formed cell, and reading only the extracted token let them pass.
+    for (const cell of [
+      "spec-0001 trailing prose",
+      "spec-0001+",
+      "+spec-0001",
+      "spec-0001++spec-0003",
+      "spec-0001, ",
+      "spec-0001+_policies",
+      "see spec-0001",
+      "spec-0001 (spec-0003 も)",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual([
+        "QFAI-TRIAGE-008",
+      ]);
+    }
+    // Over-correction pin: the forms the grammar does declare stay clean,
+    // including the backticked / escaped and comma-separated spellings this
+    // repository's own `_policies/10_delta.md` uses.
+    for (const cell of [
+      "spec-0001",
+      "spec-0003+spec-0004",
+      "spec-0003, spec-0004",
+      "`spec-0001`",
+      "\\_policies",
+      "`_policies/03_Capabilities.md`",
+    ]) {
+      expect(codesFor([["REQ-1", "extend", cell, "UPDATE", "APPEND", "-", "why"]], KNOWN)).toEqual(
+        [],
+      );
+    }
   });
 });
 
