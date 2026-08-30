@@ -34,6 +34,16 @@ export type Issue = {
   relatedFiles?: string[];
   refs?: string[];
   rule?: string;
+  /**
+   * The CI job a finding belongs to, when the producer reported one.
+   *
+   * `file` + `rule` alone cannot place a workflow-lane finding: two jobs in one workflow
+   * file break the same rule for different reasons, and a consumer reading only `file`
+   * cannot tell them apart. The reviewer-justification gate ingests findings from the
+   * workflow-set lint lanes verbatim, and this is the third of the three site fields those
+   * lanes report — dropping it forced the job into prose and out of every JSON consumer.
+   */
+  job?: string;
   loc?: IssueLocation;
   dl_id?: string;
 };
