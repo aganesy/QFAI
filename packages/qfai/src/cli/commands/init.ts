@@ -296,8 +296,28 @@ async function ensureAssistantMarker(
   dryRun: boolean,
 ): Promise<string[]> {
   const dest = joinAssistantReadme(destRoot);
-  const current = await safeLstat(dest);
-  if (current === undefined || !current.isFile()) {
+  let current: Stats;
+  try {
+    current = await lstat(dest);
+  } catch (err: unknown) {
+    // Only absence is the template copy's case. Every other failure — an ACL,
+    // a transient `EIO` — used to reach the same silent `return []` through
+    // `safeLstat`, and the copy before this one had already filed the path as
+    // *skipped*, so `qfai init` reported a clean run over a project whose
+    // marker is still missing and whose integration surface still reads as
+    // never initialised. Saying so is the whole difference.
+    if (isEnoent(err)) {
+      return [];
+    }
+    warn(
+      [
+        `WARN: ${dest} の状態を取得できませんでした（${describeError(err)}）。`,
+        `      qfai init のマーカーは書き込まれていないため、QFAI-LINK-001 は引き続き「未初期化」と判定します。パーミッションを確認して qfai init を再実行してください。`,
+      ].join("\n"),
+    );
+    return [];
+  }
+  if (!current.isFile()) {
     return [];
   }
   const previous = await readExistingReadme(dest);
@@ -394,15 +414,28 @@ function isBlankBytes(bytes: Buffer): boolean {
  * so `rename` is the atomic swap and not a copy — and removed again if the
  * swap fails, so a failure leaves the original exactly as it was.
  *
+ * The staging file is written **through the handle `wx` opened**, never re-opened
+ * by name. `wx` proves the sidecar was ours at creation and nothing more: a
+ * process that can write this directory may delete the predictable pathname and
+ * put a symlink or a hard link there, and a second `writeFile(sidecar, …)`
+ * would have followed it and written the template into whatever it resolved to.
+ * The handle is the file itself, so nothing the pathname does afterwards can
+ * redirect the write — and the same handle answers for the mode and for the
+ * inode the swap is about to move.
+ *
  * Two things are carried over from the entry that was read: its **mode**, so a
  * README a project keeps at `0600` does not come back world-readable under the
- * umask `claimSidecar` created the sidecar with; and its **identity**, checked
- * against the pathname immediately before the swap. `rename` replaces
- * unconditionally, so an editor or a concurrent `qfai init` that put a new file
- * there after the read would otherwise have had it deleted and replaced by a
- * merge of content that is no longer at the path. The check does not close the
- * window — that would take an exclusive claim on the pathname the platform does
- * not offer for a replacement — but it turns the common case of it from a
+ * umask the sidecar was created with; and its **content**, re-read and compared
+ * immediately before the swap. `rename` replaces unconditionally, so an editor
+ * or a concurrent `qfai init` that touched the file after the read would
+ * otherwise have had its work deleted and replaced by a merge of content that
+ * is no longer there. Comparing the bytes rather than only `dev`/`ino` is what
+ * catches the ordinary case: an editor that truncates and rewrites **keeps the
+ * inode**, so an identity check alone read it as untouched.
+ *
+ * Neither check closes its window — a replacement of either pathname between
+ * the last check and `rename` would take an exclusive claim the platform does
+ * not offer for a replacement — but each turns the common case of it from a
  * silent overwrite into a declined repair. Returns `false` when it declines.
  */
 async function replaceViaSidecar(
@@ -410,13 +443,29 @@ async function replaceViaSidecar(
   content: Buffer,
   pinned: PinnedFileRead,
 ): Promise<boolean> {
-  const sidecar = await claimSidecar(filePath);
+  const { path: sidecar, handle } = await openSidecar(filePath);
+  let staged: { dev: number; ino: number };
   try {
-    await writeFile(sidecar, content);
-    await chmod(sidecar, pinned.mode);
-    const current = await safeLstat(filePath);
-    if (current === undefined || !current.isFile() || !isSameEntry(current, pinned)) {
-      await rm(sidecar, { force: true }).catch(() => undefined);
+    await handle.writeFile(content);
+    await handle.chmod(pinned.mode);
+    const written = await handle.stat();
+    staged = { dev: written.dev, ino: written.ino };
+  } catch (err: unknown) {
+    await handle.close().catch(() => undefined);
+    await rm(sidecar, { force: true }).catch(() => undefined);
+    throw err;
+  }
+  await handle.close();
+
+  try {
+    if (!(await isUnchanged(filePath, pinned))) {
+      await discardSidecar(sidecar, staged);
+      return false;
+    }
+    if (!(await sidecarStillOurs(sidecar, staged))) {
+      // The staging pathname is somebody else's file now. Renaming it over the
+      // README would install content this repair never wrote, and removing it
+      // would delete a file that is not ours to delete.
       return false;
     }
     await rename(sidecar, filePath);
@@ -425,9 +474,49 @@ async function replaceViaSidecar(
     // Best-effort: the swap already failed, and a sidecar that cannot be
     // removed is a leftover to report through the original error, not a second
     // failure to raise in its place.
-    await rm(sidecar, { force: true }).catch(() => undefined);
+    await discardSidecar(sidecar, staged);
     throw err;
   }
+}
+
+/**
+ * Whether the pathname still holds exactly what {@link readExistingReadme} read.
+ *
+ * Identity first, then the bytes: the inode answers "is this still the same
+ * file", the content answers "has that file been rewritten underneath us". Only
+ * both together mean nothing has happened since the read.
+ */
+async function isUnchanged(filePath: string, pinned: PinnedFileRead): Promise<boolean> {
+  const now = await readExistingReadme(filePath).catch(() => null);
+  if (now === null) {
+    return false;
+  }
+  return isSameEntry(now, pinned) && now.content.equals(pinned.content);
+}
+
+/** Whether the staging pathname still names the inode this run wrote. */
+async function sidecarStillOurs(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<boolean> {
+  const current = await safeLstat(sidecar);
+  if (current === undefined || !current.isFile()) {
+    return false;
+  }
+  return current.ino === 0 || staged.ino === 0
+    ? true
+    : current.dev === staged.dev && current.ino === staged.ino;
+}
+
+/** Remove the staging file, but only while it is still the one this run wrote. */
+async function discardSidecar(
+  sidecar: string,
+  staged: { dev: number; ino: number },
+): Promise<void> {
+  if (!(await sidecarStillOurs(sidecar, staged))) {
+    return;
+  }
+  await rm(sidecar, { force: true }).catch(() => undefined);
 }
 
 /**
@@ -1620,12 +1709,26 @@ const SIDECAR_RE = /\.qfai-repair-\d+(?:-\d+)?$/;
 const SIDECAR_COPY_MAX_BYTES = 4096;
 
 async function claimSidecar(linkPath: string): Promise<string> {
+  const { path: claimed, handle } = await openSidecar(linkPath);
+  await handle.close();
+  return claimed;
+}
+
+/**
+ * The same claim, handing back the **open handle** rather than only the name.
+ *
+ * A caller that goes on to write the staging file must write through this
+ * handle. Closing it and re-opening by pathname gives up everything `wx` bought:
+ * a process that can write the directory may delete the predictable name and
+ * put a symlink or a hard link there between the two, and the re-opened write
+ * follows it out of the project.
+ */
+async function openSidecar(linkPath: string): Promise<{ path: string; handle: FileHandle }> {
   const base = `${linkPath}.qfai-repair-${String(process.pid)}`;
   for (let attempt = 0; attempt < 1000; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${String(attempt)}`;
     try {
-      await writeFile(candidate, "", { flag: "wx" });
-      return candidate;
+      return { path: candidate, handle: await open(candidate, "wx") };
     } catch (err: unknown) {
       if ((err as NodeJS.ErrnoException | null)?.code !== "EEXIST") throw err;
     }
@@ -2020,12 +2123,15 @@ type PinnedFileRead = { content: Buffer; mode: number; dev: number; ino: number 
  * — the check narrows a race where the platform lets it and never blocks a
  * repair where it cannot.
  */
-function isSameEntry(stats: Stats, pinned: PinnedFileRead): boolean {
+function isSameEntry(stats: FileIdentity, pinned: FileIdentity): boolean {
   if (pinned.ino === 0 || stats.ino === 0) {
     return true;
   }
   return stats.dev === pinned.dev && stats.ino === pinned.ino;
 }
+
+/** The two fields an inode is identified by. `Stats` and {@link PinnedFileRead} both carry them. */
+type FileIdentity = { dev: number; ino: number };
 
 /**
  * The same read, returning the bytes.
