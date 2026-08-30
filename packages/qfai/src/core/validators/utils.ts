@@ -27,6 +27,8 @@ export function issue(
     dl_id?: string;
     /** Other files this finding implicates when `file` is a representative. */
     relatedFiles?: string[];
+    /** The CI job the producer reported, for a finding ingested from a lane. */
+    job?: string;
     loc?: IssueLocation;
   },
 ): Issue {
@@ -53,6 +55,9 @@ export function issue(
   }
   if (details?.relatedFiles && details.relatedFiles.length > 0) {
     issue.relatedFiles = details.relatedFiles;
+  }
+  if (details?.job) {
+    issue.job = details.job;
   }
   if (details?.loc) {
     issue.loc = details.loc;
