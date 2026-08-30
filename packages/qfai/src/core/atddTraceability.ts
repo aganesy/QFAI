@@ -1250,6 +1250,10 @@ const TEST_MODIFIER_SEGMENT =
  * the same bytes simply by being renamed. A non-prose carrier therefore counts
  * as a test only when it declares one the way its language does.
  *
+ * These are the *code* forms. Gherkin has its own set — see
+ * {@link GHERKIN_STRUCTURE_PATTERNS} — and the two are never both applied to a
+ * body, because a pattern written for one language reads noise in the other.
+ *
  * Deliberately broad, and deliberately blind to skip state — `describe.skip(`
  * matches. The claim these support is "a test is declared here", not "it is
  * enabled" or "it passes": a disabled skeleton is owned by the scaffold
@@ -1264,10 +1268,6 @@ const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   // Namespaced runners whose entry point is a property, so the call form above
   // rejects them on the `.` before `test`: Deno's built-in runner and QUnit.
   /(?:^|[^\w$.])(?:Deno\s*\.\s*test|QUnit\s*\.\s*(?:test|only|todo|skip))(?:\s*\.\s*(?:only|skip|ignore|each))*\s*\(/,
-  // Gherkin: a `.feature` is executed scenario by scenario. `Background:` is
-  // deliberately absent — it is the shared preamble those scenarios run, not a
-  // scenario a runner collects, so a feature that has only one declares no test.
-  /^\s*(?:Scenario Outline|Scenario|Example)\s*:/m,
   // Attribute / decorator declarations that name a collected unit: JUnit 5's
   // collectable annotations, NUnit / xUnit.net, Rust. Container and lifecycle
   // attributes are excluded on the same terms as the hook chains above — an
@@ -1277,8 +1277,28 @@ const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
   /^\s*(?:@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b|\[\s*(?:Test|TestCase|TestCaseSource|Fact|Theory)\s*[\]([]|#\[\s*(?:\w+::)?test\s*\])/m,
   // Naming conventions that are themselves the declaration: pytest, Go,
   // PHPUnit, minitest. `Example` included because `go test` collects it and
-  // runs it whenever it carries an `// Output:` comment.
-  /^\s*(?:async\s+)?(?:def\s+test\w*\s*\(|func\s+(?:Test|Benchmark|Fuzz|Example)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
+  // runs it whenever it carries an `// Output:` comment. The `def` form stops
+  // at the name rather than requiring `(`, because Ruby's parameter list is
+  // optional and minitest collects `def test_serves_story` as written; Python,
+  // where the parentheses are mandatory, is unaffected by allowing them.
+  /^\s*(?:async\s+)?(?:def\s+test\w*\b|func\s+(?:Test|Benchmark|Fuzz|Example)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
+];
+
+/**
+ * The declarations a Gherkin runner collects — the whole of a `.feature`'s say.
+ *
+ * A feature body is not code, so the code forms above read its prose: an
+ * ordinary step such as `Given test(account) is open` matched the xUnit call
+ * form, which let a feature holding only a `Background:` count as executable
+ * while Cucumber collected nothing from it. A `.feature` is therefore judged on
+ * scenario structure alone.
+ *
+ * `Background:` is deliberately absent — it is the shared preamble those
+ * scenarios run, not a scenario a runner collects, so a feature that has only
+ * one declares no test.
+ */
+const GHERKIN_STRUCTURE_PATTERNS: readonly RegExp[] = [
+  /^\s*(?:Scenario Outline|Scenario|Example)\s*:/m,
 ];
 
 /**
@@ -1430,13 +1450,21 @@ function hasRunnableTestStructure(file: string, text: string): boolean {
   if (PROSE_CARRIER_EXTENSIONS.has(extension)) {
     return false;
   }
-  // Read off the raw body: the header is a `#` comment, which the tokenizer
-  // below blanks along with every other one.
-  if (extension === "feature" && LOCALISED_GHERKIN_RE.test(text)) {
-    return true;
+  if (extension === "feature") {
+    // Read off the raw body: the header is a `#` comment, which the tokenizer
+    // below blanks along with every other one.
+    if (LOCALISED_GHERKIN_RE.test(text)) {
+      return true;
+    }
+    return matchesAny(GHERKIN_STRUCTURE_PATTERNS, text);
   }
+  return matchesAny(RUNNABLE_TEST_STRUCTURE_PATTERNS, text);
+}
+
+/** True when any of `patterns` matches `text` once its non-code spans are gone. */
+function matchesAny(patterns: readonly RegExp[], text: string): boolean {
   const code = stripCommentsAndLiterals(text);
-  return RUNNABLE_TEST_STRUCTURE_PATTERNS.some((pattern) => pattern.test(code));
+  return patterns.some((pattern) => pattern.test(code));
 }
 
 /**

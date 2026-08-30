@@ -496,6 +496,93 @@ describe("an annotation carrier is not an executable test", () => {
     );
   });
 
+  it("judges a .feature on scenarios alone, not on a call form read out of a step", async () => {
+    // Dropping `Background` from the Gherkin pattern was not enough while the
+    // xUnit call form still ran over the feature body: an ordinary step such as
+    // `Given test(account) is open` matched `test(`, so a feature Cucumber
+    // collects nothing from counted as executable.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/us-0001.feature": [
+            "Feature: story",
+            "  # QFAI:SPEC-0001:US-0001",
+            "  Background:",
+            "    Given test(account) is open",
+            "",
+          ].join("\n"),
+          // The over-correction pin: a feature that does declare a scenario is
+          // still executable, steps and all.
+          "tests/e2e/us-0002.feature": [
+            "Feature: other story",
+            "  # QFAI:SPEC-0001:US-0002",
+            "  Background:",
+            "    Given test(account) is open",
+            "  Scenario: it works",
+            "    Then the story is served",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("reads a Ruby test method declared without parentheses, as minitest collects it", async () => {
+    // Ruby's parameter list is optional, so `def test_serves_story` is the
+    // standard minitest form; requiring `(` reported a suite that does run as
+    // unimplemented.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/story_test.rb": [
+            "# QFAI:SPEC-0001:US-0001",
+            "class StoryTest < Minitest::Test",
+            "  def test_serves_story",
+            "    assert true",
+            "  end",
+            "end",
+            "",
+          ].join("\n"),
+          // The over-correction pin: dropping the parentheses must not turn any
+          // `def` into a declaration — a helper-only carrier is still prose.
+          "tests/e2e/other_story_test.rb": [
+            "# QFAI:SPEC-0001:US-0002",
+            "class OtherStoryTest < Minitest::Test",
+            "  def build_account",
+            "    Account.new",
+            "  end",
+            "end",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const config = {
+          ...defaultConfig,
+          validation: {
+            ...defaultConfig.validation,
+            traceability: {
+              ...defaultConfig.validation.traceability,
+              testFileGlobs: ["tests/**/*.rb"],
+            },
+          },
+        };
+        const issues = await validateAtddCodeTraceability(root, config);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0002",
+        ]);
+      },
+    );
+  });
+
   it("reads JUnit 5's other collectable annotations, not only @Test", async () => {
     // A `@ParameterizedTest` method named `shouldServeTheStory` matches no
     // naming convention either, so missing the annotation reported a suite
