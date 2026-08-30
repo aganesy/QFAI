@@ -1184,11 +1184,25 @@ async function syncIntegrationWrappers(
     // it would stop init from provisioning a deliberately shared directory.
     const escapesProject =
       alreadyExists && options.force && (await resolvesOutsideProject(destRoot, dest));
-    if (alreadyExists && (!options.force || escapesProject)) {
+    // A directory sitting where the file belongs is not something `--force`
+    // may clear. `lstat` calls an entry a directory only when it is a real
+    // one — a symlink to a directory reports as a link — so this is user data
+    // with files under it, and removing it to install a template is an
+    // irreversible deletion far outside "refresh the shipped instructions".
+    // Declining leaves the operator to resolve the collision themselves.
+    const isRealDirectory =
+      alreadyExists && options.force && (await safeLstat(dest))?.isDirectory() === true;
+    const refuseOverwrite = escapesProject || isRealDirectory;
+    if (alreadyExists && (!options.force || refuseOverwrite)) {
       if (escapesProject) {
         info(
           `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
             `更新するにはリンク先で直接編集してください。`,
+        );
+      } else if (isRealDirectory) {
+        info(
+          `  skipped: ${dest} はディレクトリです (--force でも削除しません)。` +
+            `配下の内容を退避してディレクトリを削除してから再実行してください。`,
         );
       }
       skipped.push(dest);
@@ -1886,7 +1900,12 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
     return true;
   }
   const relative = path.relative(rootReal, parentReal);
-  return relative.startsWith("..") || path.isAbsolute(relative);
+  // Compare whole path segments. A prefix test on `".."` also matches a
+  // sibling directory whose name merely begins with two dots (`..rules`), and
+  // that one is inside the project: the escape is the `..` *segment*, not the
+  // characters. Getting this wrong skipped a legitimate refresh in silence.
+  const escapes = relative === ".." || relative.startsWith(`..${path.sep}`);
+  return escapes || path.isAbsolute(relative);
 }
 
 /**
@@ -1901,30 +1920,44 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
  * change or a transient I/O fault mid-write leaves the original in place; the
  * earlier remove-then-write order made those failures destroy the existing
  * entry with nothing to put back.
+ *
+ * The staged file is removed on every path that does not consume it, the
+ * initial write included: a `writeFile` that fails after committing some bytes
+ * still leaves a partial `.qfai-init-*` in a tracked directory, and one more
+ * on every retry.
+ *
+ * **A real directory at `dest` is never removed.** `rename` cannot replace
+ * one, and the recovery below is for a *symlink* — including a symlink to a
+ * directory, which `lstat` reports as a link, not as a directory. An entry
+ * `lstat` calls a directory is therefore an actual one holding actual files,
+ * and deleting it is far outside "refresh an instructions file". The caller
+ * declines that entry before staging anything; this stays a second line.
  */
 async function replaceWithRegularFile(dest: string, content: string): Promise<void> {
   const tempPath = `${dest}.qfai-init-${process.pid.toString(36)}-${Date.now().toString(36)}`;
-  await writeFile(tempPath, content, "utf-8");
+  let consumed = false;
   try {
-    await rename(tempPath, dest);
-  } catch (err: unknown) {
-    // `rename` cannot replace a directory entry, which is what `dest` is when
-    // somebody left a directory symlink there. Removing that entry and
-    // retrying is safe in a way the old order was not: the content is already
-    // on disk, so the retry is a metadata operation.
-    const existing = await safeLstat(dest);
-    if (existing?.isSymbolicLink() || existing?.isDirectory()) {
-      await rm(dest, { recursive: true, force: true });
-      try {
-        await rename(tempPath, dest);
-        return;
-      } catch (retryErr: unknown) {
-        await rm(tempPath, { force: true }).catch(() => undefined);
-        throw retryErr;
+    await writeFile(tempPath, content, "utf-8");
+    try {
+      await rename(tempPath, dest);
+      consumed = true;
+    } catch (err: unknown) {
+      const existing = await safeLstat(dest);
+      if (!existing?.isSymbolicLink()) {
+        throw err;
       }
+      // Unlinking a symlink removes the link, never its target, and `rm`
+      // without `recursive` cannot take a populated directory even if the
+      // check above were ever wrong. The content is already on disk, so the
+      // retry is a metadata operation.
+      await rm(dest, { force: true });
+      await rename(tempPath, dest);
+      consumed = true;
     }
-    await rm(tempPath, { force: true }).catch(() => undefined);
-    throw err;
+  } finally {
+    if (!consumed) {
+      await rm(tempPath, { force: true }).catch(() => undefined);
+    }
   }
 }
 

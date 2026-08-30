@@ -19,7 +19,7 @@
   - `--force` なしでは従来どおり create-only なので、ローカル編集が黙って失われることはない
   - 同関数内の `copilot-instructions.md` / 統合 README は既に `--force` で再生成される。同じ配布物カテゴリの契約を揃える
   - 既存エントリが symlink の場合はリンク先ではなくエントリ自体を置換し、祖先 symlink 等でプロジェクト外へ解決する既存エントリは `--force` でも上書きしない（プロジェクト外の破壊を防ぐ）
-- Source: SSOT は `packages/qfai/src/cli/commands/init.ts`（`syncWrapperArtifacts` Step 3.5）
+- Source: SSOT は `packages/qfai/src/cli/commands/init.ts`（`syncIntegrationWrappers` Step 3.5）
 
 ### DR-0003-0003: Codex サブエージェントは静的配置
 

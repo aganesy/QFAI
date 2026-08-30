@@ -905,6 +905,68 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force does not delete a real directory standing where an instructions file goes", async () => {
+    // `rename` cannot replace a populated directory, and the recovery for that
+    // failure is meant for a *symlink* — which `lstat` reports as a link, not
+    // as a directory. Treating a real directory the same way turned "refresh
+    // the shipped instructions" into an unbounded `rm -r` of user data.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      const collision = path.join(instrDir, "code-review.instructions.md");
+      await mkdir(collision, { recursive: true });
+      await writeFile(path.join(collision, "notes.md"), "user-data\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The directory and everything under it survive untouched…
+      expect((await lstat(collision)).isDirectory()).toBe(true);
+      expect(await readFile(path.join(collision, "notes.md"), "utf-8")).toBe("user-data\n");
+      // …no staging file is left behind…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and the sibling file, which has no collision, is still refreshed.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0003
+  it("--force refreshes instructions linked to an in-project dir whose name starts with dots", async () => {
+    // The escape check compared `path.relative(...)` with a `startsWith("..")`
+    // prefix, which also matches a directory merely *named* `..rules`. Link
+    // `.github/instructions` at one and the relative path is `..rules` — a
+    // path that never leaves the project, since the escape is the `..`
+    // segment, not the characters. The prefix test skipped the refresh, and
+    // silently: the "resolves outside" notice is only printed for a real
+    // escape, so nothing said why the file had not changed.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const inProject = path.join(root, "..rules");
+      await mkdir(inProject, { recursive: true });
+      await writeFile(path.join(inProject, "code-review.instructions.md"), "stale-cr\n", "utf-8");
+      await mkdir(path.join(root, ".github"), { recursive: true });
+      try {
+        await symlink(inProject, path.join(root, ".github", "instructions"), "dir");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(
+        await readFile(path.join(inProject, "code-review.instructions.md"), "utf-8"),
+      ).toContain("[BLOCKER]");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0004
   it("Directory auto-creation for instructions", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
