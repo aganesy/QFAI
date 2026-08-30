@@ -1,10 +1,10 @@
 import { execFile } from "node:child_process";
 import { mkdir, mkdtemp, readFile, readdir, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
 import process from "node:process";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import type { Issue } from "../../src/core/types.js";
@@ -205,75 +205,100 @@ const LIMITED_SCOPE: ReadonlyMap<string, LimitedScopeDeclaration> = new Map<
   ],
 ]);
 
-/**
- * Drop `//` and block comments while preserving string / template literals.
- *
- * A bare `text.includes(code)` counts JSDoc, prose comments and dead constants
- * as emitters, so it would pass on a code that is merely *named* in `src/` and
- * would stay green after a real `issue()` call was deleted and its explanatory
- * comment left behind. Comments are skipped whole (from their opening `/`), so
- * an apostrophe inside prose never opens a spurious string.
- */
-export function stripComments(source: string): string {
-  let out = "";
-  let i = 0;
-  while (i < source.length) {
-    const ch = source[i];
-    if (ch === "/" && source[i + 1] === "/") {
-      while (i < source.length && source[i] !== "\n") i += 1;
-      continue;
-    }
-    if (ch === "/" && source[i + 1] === "*") {
-      i += 2;
-      while (i < source.length && !(source[i] === "*" && source[i + 1] === "/")) i += 1;
-      i += 2;
-      continue;
-    }
-    if (ch === '"' || ch === "'" || ch === "`") {
-      out += ch;
-      i += 1;
-      while (i < source.length) {
-        const inner = source[i];
-        if (inner === "\\") {
-          out += source.slice(i, i + 2);
-          i += 2;
-          continue;
-        }
-        out += inner;
-        i += 1;
-        if (inner === ch) break;
-      }
-      continue;
-    }
-    out += ch;
-    i += 1;
+function walk(root: ts.Node, visit: (node: ts.Node) => void): void {
+  const step = (node: ts.Node): void => {
+    visit(node);
+    ts.forEachChild(node, step);
+  };
+  step(root);
+}
+
+/** Peel `(x)`, `x as const` and `x satisfies T` down to the real expression. */
+function unwrap(node: ts.Node): ts.Node {
+  let current = node;
+  while (
+    ts.isParenthesizedExpression(current) ||
+    ts.isAsExpression(current) ||
+    ts.isSatisfiesExpression(current)
+  ) {
+    current = current.expression;
   }
-  return out;
+  return current;
 }
 
-function escapeRegExp(value: string): string {
-  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+/** The literal text of a plain string expression, or `undefined`. */
+function staticStringValue(node: ts.Node): string | undefined {
+  const inner = unwrap(node);
+  if (ts.isStringLiteral(inner) || ts.isNoSubstitutionTemplateLiteral(inner)) return inner.text;
+  return undefined;
+}
+
+/** `issue(…)` and `helpers.issue(…)` — the callee shapes `src/` uses. */
+function isIssueCallee(expression: ts.Expression): boolean {
+  if (ts.isIdentifier(expression)) return expression.text === "issue";
+  if (ts.isPropertyAccessExpression(expression)) return expression.name.text === "issue";
+  return false;
 }
 
 /**
- * True when `source` builds an `Issue` whose finding code is `code`, either
+ * Every finding code `source` really constructs an `Issue` for, either
  * literally (`issue("CODE", …)`) or through a single-file constant binding
  * (`const FINDING_CODE = "CODE"` … `issue(FINDING_CODE, …)`) — the two shapes
  * every catalog emitter in `src/` uses today.
+ *
+ * Parsed, not pattern-matched. Text matching cannot tell a call from the same
+ * characters quoted inside a string: stripping comments still leaves literal
+ * bodies intact, so deleting the real emission and leaving an explanatory
+ * `const example = 'issue("CODE", message)'` (or a `--help` line spelling the
+ * call out) behind would keep a regex probe green and hide the regression this
+ * suite exists to catch. The parser sees a StringLiteral there and no
+ * CallExpression, so lexical context is decided by the grammar rather than
+ * re-implemented here — and comments and dead constants drop out for free.
+ *
+ * Returns the whole set rather than answering one code at a time so a file is
+ * parsed once for all eight catalog codes, not once per code.
  */
-export function emitsIssueCode(source: string, code: string): boolean {
-  const text = stripComments(source);
-  const quoted = `["']${escapeRegExp(code)}["']`;
-  if (new RegExp(`\\bissue\\(\\s*${quoted}`).test(text)) return true;
-  const bindings = text.matchAll(
-    new RegExp(`\\bconst\\s+([A-Za-z_$][\\w$]*)[^=\\n]*=\\s*${quoted}`, "g"),
+export function emittedIssueCodes(source: string): Set<string> {
+  const parsed = ts.createSourceFile(
+    "emitter-probe.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    /* setParentNodes */ false,
+    ts.ScriptKind.TS,
   );
-  for (const binding of bindings) {
-    const name = binding[1];
-    if (name === undefined) continue;
-    if (new RegExp(`\\bissue\\(\\s*${escapeRegExp(name)}\\b`).test(text)) return true;
-  }
-  return false;
+
+  // Two passes so a constant declared after its use still binds.
+  const stringConstants = new Map<string, string>();
+  walk(parsed, (node) => {
+    if (!ts.isVariableDeclaration(node)) return;
+    if (!ts.isIdentifier(node.name)) return;
+    if (node.initializer === undefined) return;
+    const value = staticStringValue(node.initializer);
+    if (value !== undefined) stringConstants.set(node.name.text, value);
+  });
+
+  const codes = new Set<string>();
+  walk(parsed, (node) => {
+    if (!ts.isCallExpression(node)) return;
+    if (!isIssueCallee(node.expression)) return;
+    const first = node.arguments[0];
+    if (first === undefined) return;
+    const literal = staticStringValue(first);
+    if (literal !== undefined) {
+      codes.add(literal);
+      return;
+    }
+    const arg = unwrap(first);
+    if (!ts.isIdentifier(arg)) return;
+    const bound = stringConstants.get(arg.text);
+    if (bound !== undefined) codes.add(bound);
+  });
+  return codes;
+}
+
+/** Single-code view of {@link emittedIssueCodes}. */
+export function emitsIssueCode(source: string, code: string): boolean {
+  return emittedIssueCodes(source).has(code);
 }
 
 async function collectTsFiles(dir: string): Promise<string[]> {
@@ -290,15 +315,35 @@ async function collectTsFiles(dir: string): Promise<string[]> {
   return out;
 }
 
+/**
+ * code -> package-relative files under `src/` that construct an `Issue` for it.
+ *
+ * Built once and shared: parsing the whole of `src/` per catalog code would
+ * repeat the same work eight times over, and every test below asks about a
+ * different code from the same unchanged tree.
+ */
+let srcEmitterIndex: Promise<ReadonlyMap<string, readonly string[]>> | undefined;
+
+function buildSrcEmitterIndex(): Promise<ReadonlyMap<string, readonly string[]>> {
+  return (async (): Promise<ReadonlyMap<string, readonly string[]>> => {
+    const index = new Map<string, string[]>();
+    for (const file of await collectTsFiles(srcRoot)) {
+      const rel = path.relative(packageRoot, file);
+      for (const code of emittedIssueCodes(await readFile(file, "utf8"))) {
+        const hits = index.get(code);
+        if (hits === undefined) index.set(code, [rel]);
+        else hits.push(rel);
+      }
+    }
+    return index;
+  })();
+}
+
 /** Files under `src/` that really construct an `Issue` carrying `code`. */
-async function emittersFor(code: string): Promise<string[]> {
-  const files = await collectTsFiles(srcRoot);
-  const hits: string[] = [];
-  for (const file of files) {
-    const text = await readFile(file, "utf8");
-    if (emitsIssueCode(text, code)) hits.push(path.relative(packageRoot, file));
-  }
-  return hits;
+async function emittersFor(code: string): Promise<readonly string[]> {
+  srcEmitterIndex ??= buildSrcEmitterIndex();
+  const index = await srcEmitterIndex;
+  return index.get(code) ?? [];
 }
 
 const PACKAGE_PREFIX = "packages/qfai/";
@@ -318,6 +363,19 @@ function consumerShapedPaths(rel: string): string[] {
   const out = [rest, `node_modules/qfai/${rest}`];
   if (rest.startsWith(ASSET_PREFIX)) out.push(rest.slice(ASSET_PREFIX.length));
   return out;
+}
+
+/**
+ * Scratch trees go under the repository-root `tmp/`, not `os.tmpdir()`:
+ * `tmp/` is the sole sanctioned staging area in this repository
+ * (`.agents/rules/temporary-files.md`), and deleting the tree afterwards does
+ * not license writing it somewhere the rule forbids in the first place. The
+ * directory is git-ignored and absent from a fresh clone, so create it first.
+ */
+async function makeScratchDir(prefix: string): Promise<string> {
+  const scratchRoot = path.join(repoRoot, "tmp");
+  await mkdir(scratchRoot, { recursive: true });
+  return mkdtemp(path.join(scratchRoot, prefix));
 }
 
 async function writeTree(root: string, files: Iterable<readonly [string, string]>): Promise<void> {
@@ -371,6 +429,56 @@ describe("justification catalog: every code ships with its emitter, or says it d
     ).toBe(true);
   });
 
+  it("does not count call syntax that only appears inside a string literal", () => {
+    const code = "R-PACK-LOCATION-DRIFT";
+    // The emission is gone; only prose that quotes the call is left. A text
+    // probe reads these as call sites, so the regression would hide here.
+    expect(emitsIssueCode(`const example = 'issue("${code}", message)';\n`, code)).toBe(false);
+    expect(emitsIssueCode(`const help = \`  issue("${code}", msg)\`;\n`, code)).toBe(false);
+    expect(
+      emitsIssueCode(
+        `const FINDING_CODE = "${code}";\nconst h = "issue(FINDING_CODE, msg)";\n`,
+        code,
+      ),
+    ).toBe(false);
+    expect(emitsIssueCode(`log("emits issue(\\"${code}\\", msg) when drifted");\n`, code)).toBe(
+      false,
+    );
+  });
+
+  it("still counts a real call whose message text also quotes the code", () => {
+    // Over-correction pin: every emitter in `src/` builds its message from the
+    // code as well (``${FINDING_CODE}: …``), and a multi-line argument list is
+    // the prevailing shape. Neither may be read as "inside a string".
+    const code = "R-PACK-LOCATION-DRIFT";
+    expect(
+      emitsIssueCode(
+        `const FINDING_CODE = "${code}";\n` +
+          "const message = `${FINDING_CODE}: pack directory is out of place.`;\n" +
+          'issues.push(issue(FINDING_CODE, message, "error", rel, "reviewerGate.packLocation"));\n',
+        code,
+      ),
+    ).toBe(true);
+    expect(
+      emitsIssueCode(
+        `issues.push(\n  issue(\n    "${code}",\n    message,\n    "error",\n  ),\n);\n`,
+        code,
+      ),
+    ).toBe(true);
+  });
+
+  it("stages its scratch trees under the repository-root tmp/", async () => {
+    const dir = await makeScratchDir("qfai-scope-scratch-pin-");
+    try {
+      const relative = path.relative(path.join(repoRoot, "tmp"), dir);
+      expect(relative).not.toBe("");
+      expect(relative.startsWith("..")).toBe(false);
+      expect(path.isAbsolute(relative)).toBe(false);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("does not publish `scripts/` — repo-script emitters cannot reach a consumer", async () => {
     const raw = await readFile(path.join(packageRoot, "package.json"), "utf8");
     const parsed: unknown = JSON.parse(raw);
@@ -414,7 +522,7 @@ describe("justification catalog: every code ships with its emitter, or says it d
       expect(hits, `${code} lost its shipped emitter — reclassify it`).not.toHaveLength(0);
 
       const fixture = await declared.driftFixture();
-      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-scope-reach-"));
+      const root = await makeScratchDir("qfai-scope-reach-");
       try {
         // 1. Repo-shaped: the fixture must really drive the detector, or the
         //    consumer-shaped leg below would pass vacuously.
