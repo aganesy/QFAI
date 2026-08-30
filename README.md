@@ -142,7 +142,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills/`) designed to keep the workflow opinionated and repeatable.
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
-  and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
+  and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
@@ -335,19 +335,36 @@ Release gate behavior:
 QFAI generates integration wrappers under `.agents/**`, `.claude/**`,
 `.github/**`, and `.codex/**`.
 
-`npx qfai init` also installs one GitHub Actions workflow,
-`.github/workflows/qfai-validate.yml`. It runs
-`npx qfai validate --profile full --fail-on error` on every push to `main` or
-`master` and on every pull request, installing dependencies from whichever
-lockfile the repository has (pnpm / yarn / npm) and falling back to
-`npm install` when there is none. On a pnpm project it uses the version your
-`package.json#packageManager` declares, and falls back to pnpm 10 only when
-you declare nothing — so pin `"packageManager": "pnpm@X.Y.Z"` if CI should
-match the version you develop against. The `full` profile includes the
-`QFAI-TEST-001` test-todo stub gate, so the job can fail your default branch on
-findings your existing CI never checked. The file is copied create-only —
-`qfai init` never overwrites an existing copy, not even with `--force` — so
-edit it freely, or delete it if you would rather gate validation elsewhere.
+`npx qfai init` also installs two GitHub Actions workflows,
+`.github/workflows/qfai-validate.yml` and `.github/workflows/qfai-tests.yml`.
+Both trigger on every push to `main` or `master` and on every pull request, and
+both run on the runner `vars.QFAI_CI_RUNNER` names (`ubuntu-latest` when you set
+nothing).
+
+- `qfai-validate.yml` runs `npx qfai validate --profile full --fail-on error`.
+  It installs dependencies from whichever lockfile the repository has (pnpm /
+  yarn / npm) and falls back to `npm install` when there is none, and it takes
+  the Node version from your `.nvmrc` or `.node-version`, warning and
+  continuing on Node 20 when you have neither. The pnpm route is the one
+  precondition it stops closed on: the pnpm setup action resolves the pnpm
+  version from `package.json#packageManager` and from nowhere else, so a tree
+  holding a `pnpm-lock.yaml` with no such field fails the job with an
+  annotation naming the field rather than reporting a validation it never ran.
+  Declare `"packageManager": "pnpm@X.Y.Z"` so CI matches the version you
+  develop against. The `full` profile includes the `QFAI-TEST-001` test-todo
+  stub gate, so the job can fail your default branch on findings your existing
+  CI never checked.
+- `qfai-tests.yml` declares one lane per test layer (unit, component,
+  integration, api, e2e) and runs none of them until you opt in: a lane runs
+  only when your `package.json` declares the matching `test:<layer>` script
+  **and** a name-only diff against the base commit selected that lane. On a
+  repository that declares no such script it executes nothing.
+
+Both files are copied create-only — `qfai init` never overwrites an existing
+copy, not even with `--force` — so edit them freely. Deleting one is a choice
+`qfai init` remembers rather than undoes: it records what it installed in
+`.qfai/install-provenance.json` (keep that file committed), and never recreates
+a workflow you removed.
 
 On any other CI platform, configure the job yourself and run:
 
@@ -390,6 +407,7 @@ Typical customizations.
 │           └── SKILL.md
 ├── .github
 │   └── workflows
+│       ├── qfai-tests.yml
 │       └── qfai-validate.yml
 ├── .qfai
 │   ├── assistant

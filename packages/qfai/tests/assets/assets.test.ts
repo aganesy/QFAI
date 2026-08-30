@@ -6,10 +6,11 @@ import path from "node:path";
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
 
-import { runInit } from "../../src/cli/commands/init.js";
+import { runInit, SHIPPED_WORKFLOW_NAMES } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
+import { shapeValueLiterals } from "../integration/shippedWorkflowShape.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const templateRoot = path.join(repoRoot, "packages", "qfai", "assets", "init");
@@ -511,10 +512,19 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const content = await readFile(workflowPath, "utf-8");
 
     expect(content).toContain("name: qfai validate");
-    expect(content).toContain("qfai validate --profile full --fail-on error");
+    // The lane's subcommand / --profile value / --fail-on threshold used to be
+    // asserted here as one ad-hoc string. Subsumed and replaced (DTC-26) by the
+    // declared shape's dimension-5 pins in
+    // tests/integration/shippedWorkflowShapeGate.test.ts, which is now their one
+    // oracle; this it keeps its TC-0003 annotation for the static checks that
+    // remain.
     expect(content).toContain("QFAI-TEST-001");
-    expect(content).toMatch(/actions\/checkout@v4/);
-    expect(content).toMatch(/actions\/setup-node@v4/);
+    // DTC-26 co-change (TC-0003-0030): the shipped set is SHA-pinned, so the
+    // former floating-major expectations are subsumed by pin-form assertions.
+    // The exact-SHA membership oracle lives in the shipped-workflow pins
+    // suite; this static check keeps asserting the two actions are present.
+    expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
+    expect(content).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
 
     // The comment justifying the Node pin must quote the floor the package
     // actually publishes, not one qfai stopped shipping releases ago.
@@ -528,32 +538,25 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(content).not.toContain('">=18.0.0"');
   });
 
-  it("sets pnpm up on a project that declares no packageManager", async () => {
-    // `pnpm/action-setup@v4` resolves its version from
-    // `package.json#packageManager` and fails outright when neither that nor a
-    // `version:` input is present — so a repository holding a `pnpm-lock.yaml`
-    // and nothing else never reached the validate step the workflow exists to
-    // run. A blanket `version:` is not the fix: it would override a project
-    // that did declare one.
+  it("documents the pnpm precondition the validate lane stops closed on", async () => {
+    // The pnpm setup action resolves its version from
+    // `package.json#packageManager` and from nowhere else, so a repository
+    // holding a `pnpm-lock.yaml` and nothing else cannot install. Passing a
+    // `version:` input instead is not the fix — it would override the version
+    // the adopter declared — so the lane stops CLOSED with an annotation
+    // naming the file and the fix rather than reporting a validate result it
+    // never computed. The behavioural oracle is TC-0003-0044 in
+    // tests/integration/shippedWorkflowPortability.test.ts; what is checked
+    // here is that the shipped file and both READMEs agree with it.
     const workflowPath = path.join(templateRootDir, ".github", "workflows", "qfai-validate.yml");
     const content = await readFile(workflowPath, "utf-8");
 
-    // Two setup steps, split on what the project actually declares.
-    expect(content).toContain("Set up pnpm (version from packageManager)");
-    expect(content).toContain("Set up pnpm (no packageManager declared)");
-    expect(content).toMatch(/steps\.pnpm_declared\.outputs\.declared == 'true'/);
-    expect(content).toMatch(/steps\.pnpm_declared\.outputs\.declared != 'true'/);
-    // Exactly one of them pins a version, so a declared packageManager wins.
-    expect([...content.matchAll(/^\s*version: \d/gm)]).toHaveLength(1);
+    expect(content).toContain("Resolve the package manager (pnpm route fails closed)");
+    // No `version:` input anywhere, on any step: a declared packageManager is
+    // the only source, so nothing may override it.
+    expect([...content.matchAll(/^\s*version: \S/gm)]).toHaveLength(0);
 
-    // The detection reads package.json rather than guessing, and treats an
-    // unavailable node as "declared" so the fallback cannot fire on a guess.
-    expect(content).toContain(
-      "node -e 'process.exit(require(\"./package.json\").packageManager ? 0 : 1)'",
-    );
-    expect(content).toContain("declared=true");
-
-    // …and the README does not promise a lockfile alone is enough.
+    // …and neither README may promise a lockfile alone is enough.
     for (const readmePath of [
       path.join(repoRoot, "README.md"),
       path.join(repoRoot, "packages", "qfai", "README.md"),
@@ -564,27 +567,44 @@ describe("assets guardrails", { timeout: 30000 }, () => {
   });
 
   // Both READMEs used to claim qfai generates no GitHub Actions workflow while
-  // `qfai init` copied `root/.github/workflows/qfai-validate.yml` into every
-  // initialized repository.
-  it("documents the CI workflow `qfai init` installs in both READMEs", async () => {
+  // `qfai init` copied `root/.github/workflows/` into every initialized
+  // repository. The set is read from SHIPPED_WORKFLOW_NAMES rather than spelled
+  // out here, so shipping a further workflow fails this test until the prose
+  // names it too — which is how the denial went stale in the first place.
+  it("documents every CI workflow `qfai init` installs in both READMEs", async () => {
     const readmePaths = [
       path.join(repoRoot, "README.md"),
       path.join(repoRoot, "packages", "qfai", "README.md"),
     ];
 
+    expect(SHIPPED_WORKFLOW_NAMES.size).toBeGreaterThan(0);
+    const invocations = shapeValueLiterals();
+    expect(
+      invocations.length,
+      "the declared shape exposes no invocation to check for",
+    ).toBeGreaterThan(0);
+
     for (const readmePath of readmePaths) {
       const readme = await readFile(readmePath, "utf-8");
       const label = path.relative(repoRoot, readmePath);
 
-      expect(readme, `${label} must not deny the shipped workflow`).not.toContain(
+      expect(readme, `${label} must not deny the shipped workflows`).not.toContain(
         "It does not generate GitHub Actions workflows.",
       );
-      expect(readme, `${label} must name the shipped workflow`).toContain(
-        ".github/workflows/qfai-validate.yml",
-      );
-      expect(readme, `${label} must state the gate the workflow runs`).toContain(
-        "qfai validate --profile full --fail-on error",
-      );
+      for (const name of SHIPPED_WORKFLOW_NAMES) {
+        expect(readme, `${label} must name .github/workflows/${name}`).toContain(
+          `.github/workflows/${name}`,
+        );
+      }
+      // Derived, never restated. The declared shape is the one oracle for the
+      // lane's subcommand / profile / threshold (the contract's DTC-5), so
+      // spelling the invocation here would make this a second one — and would
+      // go stale silently the day the shape changed it.
+      for (const invocation of invocations) {
+        expect(readme, `${label} must state the gate a shipped workflow runs`).toContain(
+          invocation,
+        );
+      }
     }
   });
 
@@ -1812,6 +1832,13 @@ function shouldSkipReference(ref: string): boolean {
     return true;
   }
   if (ref.includes(".qfai/report/") || ref.includes(".qfai/evidence/")) {
+    return true;
+  }
+  // Written by `qfai init` into the ADOPTER's tree, so it is nameable in the
+  // README (the reader has to know to commit it) and absent from this one —
+  // the same class as the `.qfai/report/` outputs above, pinned to the single
+  // filename rather than a directory because that is the whole of the class.
+  if (ref === ".qfai/install-provenance.json") {
     return true;
   }
   if (!ref.includes("/") && !ref.includes("\\")) {
