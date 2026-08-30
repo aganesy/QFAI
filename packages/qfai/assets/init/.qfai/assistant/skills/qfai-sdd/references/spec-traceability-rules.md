@@ -251,6 +251,25 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
        ledger allocates from the empty base case at `TDD-0001`. Nothing is
        renumbered — `TDD-NNNN` is spec-scoped, so the successor starting over
        collides with none of the ids rule 4 froze.
+
+     **Both exits assume the ceiling was reached by churn, and one measurement
+     says whether it was**: count the rows that are still live obligations —
+     not retired, not tombstoned by rule 3 — against 9999. Well under it, the
+     maximum is high because ids were spent and released, the successor's
+     ledger reseeds far below the ceiling, and SUPERSEDE is a real rollover.
+     **At or near it, neither exit gains anything**: the successor inherits
+     the same obligations, Phase 2b writes one row per coverage-target TC, and
+     the empty ledger refills to the same ceiling before a single new
+     obligation is added. That is not an allocation problem and must not be
+     answered as one — a spec carrying that many live coverage-target TCs has
+     outgrown what one spec holds. Its exit is upstream: decompose the
+     capability, which both is the honest fix and is what makes SPLIT legal
+     (it is `QFAI-SPLIT-102` / `QFAI-SPLIT-104` refusing a **single**-`CAP`
+     split, not a count). If the capability genuinely does not decompose, then
+     the id format is the thing that is too small, and widening `TDD-NNNN`
+     is a package change decided with the user — never taken inline here, and
+     never worked around by reusing an id rule 4 froze.
+
   2. **Concurrent authoring — reserve first, on the shared branch.** Before
      dispatching authors that will append to one spec's ledger from separate
      worktrees, make one serialized write on the branch they all fork from
@@ -294,7 +313,16 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      row, `TDD-0002`, and the next allocation is handed `TDD-0002` again,
      breaking rule 4 for every reference already written outside the ledger.
      Tombstone it in the same section, one id per bullet, shaped
-     `- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <CR-ID>`.
+     `- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>`.
+     **`<ref>` is whatever authorised the removal on the path it took**, and
+     the two paths record different things: a Drift Protocol removal cites its
+     `CR-*`, while an ordinary `/qfai-sdd` run removing a TC does so through an
+     `UPDATE:REMOVE` Triage row — approval-required, recorded in its
+     `Approved By` column, and raising no Change Request at all. Requiring a
+     `CR-*` on that path leaves it with nothing true to write, and an agent
+     that will not invent one simply skips the tombstone and reissues the id.
+     Cite the Triage row's `Source` (`REQ-XXXX`) there. Either reference is
+     complete; neither may be a placeholder.
      Closing a reservation block does not cover this: a serially allocated row
      never had a bullet to close.
   4. **A written `TDD-ID` is never renumbered.** Once an id appears anywhere
@@ -302,6 +330,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
      `.qfai/evidence/atdd-*.md`, or a `DR-*` cross-reference — a merge does
      not rewrite it, so renumbering at merge time silently breaks those
      references. Reservation is what makes "never renumber" affordable.
+
 - Missing `tdd/test-list.md` is a warning **only when the spec declares no
   coverage-target TC**. If it declares any, the absent file also raises
   `TDDLIST_TC_NOT_COVERED` (error) naming them: the obligations do not

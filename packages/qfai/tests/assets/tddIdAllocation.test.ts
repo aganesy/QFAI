@@ -79,7 +79,7 @@ describe("TDD-ID allocation", () => {
       // `max + 1` walks back onto it.
       expect(rules).toContain("**A deleted row leaves its id behind the same way.**");
       expect(rules).toContain(
-        "- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <CR-ID>",
+        "- ~~TDD-0002~~ — row deleted <YYYY-MM-DD>, obligation removed by <ref>",
       );
       expect(rules).toContain("a serially allocated row never had a bullet to close");
 
@@ -166,6 +166,57 @@ describe("TDD-ID allocation", () => {
       expect(ledger).toContain(
         "SPLIT when it owns more than one `CAP-NNNN` and SUPERSEDE when it owns exactly one",
       );
+    });
+
+    // SUPERSEDE only rolls the ceiling over when it was reached by churn. If
+    // the 9999 rows are live coverage-target TCs, the successor inherits the
+    // same obligations and Phase 2b refills the empty ledger to the same
+    // ceiling before one new obligation is added — so the rule has to separate
+    // the two causes instead of offering an exit that gains nothing.
+    it(`${tree}: the ceiling separates churn from live volume`, async () => {
+      const rules = flat(await read(tree, RULES));
+
+      expect(rules).toContain("Both exits assume the ceiling was reached by churn");
+      // The measurement that tells the two apart, so this is decidable.
+      expect(rules).toContain("count the rows that are still live obligations");
+      expect(rules).toContain("At or near it, neither exit gains anything");
+      expect(rules).toContain("refills to the same ceiling");
+      // The honest exit for the live-volume case, and why SPLIT was refused.
+      expect(rules).toContain("decompose the capability");
+      expect(rules).toContain("refusing a **single**-`CAP` split, not a count");
+      // Widening the format stays a decision with the user, as before.
+      expect(rules).toContain("is a package change decided with the user");
+
+      const ledger = flat(await read(tree, LEDGER));
+      expect(ledger).toContain("Both exits assume the ceiling came from churn");
+      expect(ledger).toContain("the answer is upstream scope, not allocation");
+    });
+
+    // An ordinary `/qfai-sdd` removal goes through an `UPDATE:REMOVE` Triage
+    // row and raises no Change Request, so a mandatory `<CR-ID>` left that path
+    // with nothing true to write — and a tombstone that cannot be written is a
+    // reissued id.
+    it(`${tree}: the tombstone accepts the rationale each removal path produces`, async () => {
+      const rules = flat(await read(tree, RULES));
+
+      expect(rules).toContain("obligation removed by <ref>`");
+      expect(rules).toContain("**`<ref>` is whatever authorised the removal on the path it took**");
+      expect(rules).toContain("raising no Change Request at all");
+      expect(rules).toContain("Cite the Triage row's `Source` (`REQ-XXXX`) there");
+      expect(rules).toContain("neither may be a placeholder");
+      // The old mandatory form is gone from both trees, not merely widened here.
+      expect(rules).not.toContain("obligation removed by <CR-ID>");
+
+      // A rule with no write point on this path binds nothing: the CR path had
+      // one in the Drift Protocol, the ordinary one had none at all.
+      const triage = flat(await read(tree, "assistant/skills/qfai-sdd/references/sdd-triage.md"));
+      expect(triage).toContain("Removing a coverage-target `TC` also retires its ledger row");
+      expect(triage).toContain("citing this row's `Source`");
+      expect(triage).toContain("This path raises no Change Request");
+
+      const ledger = flat(await read(tree, LEDGER));
+      expect(ledger).toContain("`Source` (`REQ-XXXX`) on the ordinary `/qfai-sdd` path");
+      expect(ledger).not.toContain("obligation removed by <CR-ID>");
     });
 
     it(`${tree}: the SKILL points at the allocation rule but claims no ownership`, async () => {
