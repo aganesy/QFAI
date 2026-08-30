@@ -37,8 +37,15 @@ releases completion.
       refactor (gate item 6).
 - [ ] `completion-reviewer` and `implementation-reviewer` returned PASS for every row advanced this
       run, and both verdicts are appended to the evidence file the row's `Layer` owns, leaving 0
-      blocking reviewer issues (gate items 7, 8, 11). Never waived — the verdict is required even on
-      a row whose review produced only advisories (`finding-classification.md`).
+      blocking reviewer issues (gate items 7, 8, 11). **Both responses are also in the round's review
+      pack** — `R0N_completion-reviewer.md` and `R0N_implementation-reviewer.md`, each with its own
+      `reviewers[]` entry in `summary.json`, exactly like the parity verdict below
+      (`review-artifact-layout.md` makes gate items 7-9 alike pack-bearing). The append is the row's
+      copy of a verdict, not the verdict: a pack holding only some third reviewer still seals and
+      recomputes cleanly here, and the `--profile tdd` run this list ends on reports no
+      `QFAI-REVIEW-*` finding, so a review that never reached a pack passes every mechanical check
+      there is. Never waived — the verdict is required even on a row whose review produced only
+      advisories (`finding-classification.md`).
 - [ ] Every UI-affecting row carries a `product-surface-reviewer` prototype-parity PASS, **and that
       reviewer's response is in the round's review pack** — its own `R0N_product-surface-reviewer.md`
       file with a matching `reviewers[]` entry in `summary.json`, like the two verdicts above
@@ -57,14 +64,19 @@ releases completion.
       legacy location; requiring the ATDD file there would leave an already-complete row permanently
       ungateable (gate item 10).
 - [ ] Each row's remaining observations **agree on the revision the row finally landed at** — the
-      GREEN's `Revision`, both reviewers' `Reviewed revision` and the pack's `summary.json.revision`.
-      `RED revision` (or `Falsifiability revision` in its place) is the standing exception and the
-      only one: that observation is taken before the code that makes it pass exists. Nothing else in
-      this sweep compares what the reviewers read with the tree the row ended on — production or test
-      code changed after a PASS leaves anchor, identity copy, pack seal and every
-      `Audited evidence hash` recomputing correctly, and the later checkpoint runs green against the
-      new tree, so the spec completes carrying a change no reviewer ever saw (gate item 10,
-      `evidence-revision.md#what-makes-evidence-stale`).
+      GREEN's `Revision`, the `Reviewed revision` of **every** reviewer response the row required
+      (`completion-reviewer` and `implementation-reviewer`, **plus `product-surface-reviewer` on a
+      UI-affecting row**: the shared reviewer template makes that field required on every response,
+      so the third reviewer is the same rule and not a new one) and the pack's
+      `summary.json.revision`. `RED revision` (or `Falsifiability revision` in its place) is the
+      standing exception and the only one: that observation is taken before the code that makes it
+      pass exists. Nothing else in this sweep compares what the reviewers read with the tree the row
+      ended on — production or test code changed after a PASS leaves anchor, identity copy, pack seal
+      and every `Audited evidence hash` recomputing correctly, and the later checkpoint runs green
+      against the new tree, so the spec completes carrying a change no reviewer ever saw. A UI edited
+      after the parity PASS is that same failure: leave the product response's revision behind and
+      bring the other two into line and the surface that shipped is the one nobody reviewed
+      (gate item 10, `evidence-revision.md#what-makes-evidence-stale`).
 - [ ] Every handed-over `E2E` / `API` / `Integration` row's `Round N: RED test hash` **recomputes**
       here over the manifest recorded beside it, and matches. The other three recomputations above
       address the evidence entry, not the test: a fixture, snapshot or the test body edited after
@@ -86,8 +98,13 @@ releases completion.
       recomputes over the recorded command, result and revision (gate item 12).
 - [ ] Spec-level checkpoint verification ran against the terminal ledger and **passed** — a non-zero
       formatter, linter, type-check or test result fails this box however correctly the record was
-      sealed — and its `Checkpoint verification seal` recomputes. That boundary has no row, so the
-      per-row checkpoint item above never runs for it
+      sealed — its `Checkpoint verification seal` recomputes, **and the state that record names is
+      this ledger's current one**: the recorded revision and result cover the ledger as it stands
+      now, not an earlier terminal state it once reached. A record written before an approved Change
+      Request reset and re-ran a row predates the last ledger change and owes a re-run. Its seal
+      recomputes over the old command, result and revision exactly as cleanly as a current record's
+      would, because the seal addresses the record and never the ledger the record was meant to
+      cover. That boundary has no row, so the per-row checkpoint item above never runs for it
       (`checkpoint-verification.md#spec-level-boundary-on-an-already-complete-ledger`).
 - [ ] No backward transitions occurred — other than an approved Change Request reset, the
       one the lifecycle sanctions (`execution-ledger.md#allowed-transitions`). A resumption, an

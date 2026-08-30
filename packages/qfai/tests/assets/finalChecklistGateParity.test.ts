@@ -73,17 +73,27 @@ function sectionBullets(skill: string, heading: string): string[] {
   return bullets.map((bullet) => bullet.replace(/\s+/g, " "));
 }
 
-/** The numbered items of the 12-point gate, by their own numbering. */
-function gateItemNumbers(skill: string): number[] {
+/** The numbered items of the 12-point gate, each by its own number. */
+function gateItems(skill: string): { number: number; text: string }[] {
   const section = skillSection(skill, GATE_HEADING);
-  const numbers: number[] = [];
+  const items: { number: number; text: string }[] = [];
   for (const line of section.split(/\r?\n/)) {
-    const match = /^(\d+)\.\s/.exec(line);
-    if (match?.[1]) {
-      numbers.push(Number(match[1]));
+    const match = /^(\d+)\.\s(.*)$/.exec(line);
+    if (match?.[1] !== undefined && match[2] !== undefined) {
+      items.push({ number: Number(match[1]), text: match[2].replace(/\s+/g, " ") });
+      continue;
+    }
+    const last = items[items.length - 1];
+    if (last !== undefined && /^\s+\S/.test(line)) {
+      last.text = `${last.text} ${line.trim()}`.replace(/\s+/g, " ");
     }
   }
-  return numbers;
+  return items;
+}
+
+/** The numbered items of the 12-point gate, by their own numbering. */
+function gateItemNumbers(skill: string): number[] {
+  return gateItems(skill).map((item) => item.number);
 }
 
 interface ChecklistBox {
@@ -156,6 +166,127 @@ function withoutBoxesCovering(checklist: string, item: number): string {
   }
   return lines.filter((_, index) => !dropped.has(index)).join("\n");
 }
+
+/**
+ * The numbered half of the derivation rule, contract clause by contract clause.
+ *
+ * `citedGateItems` only sees an item's *number*, so a gate item reworded while
+ * keeping its number — item 7 changed to a different reviewer's gate, say —
+ * leaves `uncovered` empty and every downstream assertion reading the checklist
+ * rather than `SKILL.md` still green, with the box now restating a contract that
+ * no longer exists. These pin the meaning as well: `condition` is a distinctive
+ * substring of the `SKILL.md` item, `box` a substring of a checklist box that
+ * cites that item's number, and the pairing is asserted in both directions.
+ *
+ * One item may have several clauses. Every numbered item needs at least one
+ * entry, so a 13th gate item fails here until it is mapped too.
+ */
+const GATE_ITEM_PARITY: readonly {
+  readonly item: number;
+  readonly condition: string;
+  readonly box: string;
+}[] = [
+  {
+    item: 1,
+    condition: "Corresponding `TDD-ID` has been selected and is in progress",
+    box: "its `TDD-ID` selected and in progress",
+  },
+  {
+    item: 2,
+    condition: "A failing test was added first (test-first)",
+    box: "test was written first and confirmed to fail",
+  },
+  {
+    item: 2,
+    condition: "proven falsifiable by mutation instead of by a natural failure",
+    box: "the falsifiability trio replaces the natural RED",
+  },
+  {
+    item: 3,
+    condition: "RED was observed — `qa-gatekeeper` confirmed an **admissible** failure",
+    box: "`qa-gatekeeper` confirmed the failure is **admissible**",
+  },
+  {
+    item: 4,
+    condition: "Minimal production code was written to make the test pass",
+    box: "minimal code was written",
+  },
+  {
+    item: 4,
+    condition: "**waived** on the _RED not observable_ path",
+    box: "the waiver reaches the **minimal-code clause only** (gate item 4)",
+  },
+  {
+    item: 5,
+    condition:
+      "GREEN was observed — `qa-gatekeeper` confirmed the test passes after implementation",
+    box: "`qa-gatekeeper` confirmed the test passes",
+  },
+  {
+    item: 5,
+    condition: "`Oracle proof` records a production mutation that made the test fail again",
+    box: "`Oracle proof` (or `equivalent-mutant` naming the weaker contract clause) is recorded",
+  },
+  {
+    item: 6,
+    condition: "Refactor was performed and GREEN was re-confirmed after refactor",
+    box: "code improved with tests still passing, and GREEN re-confirmed after the refactor",
+  },
+  {
+    item: 7,
+    condition: "`completion-reviewer` returned PASS (spec / completion review gate)",
+    box: "`completion-reviewer` and `implementation-reviewer` returned PASS",
+  },
+  {
+    item: 8,
+    condition: "`implementation-reviewer` returned PASS (code quality review gate)",
+    box: "`completion-reviewer` and `implementation-reviewer` returned PASS",
+  },
+  {
+    item: 9,
+    condition: "UI-affecting items have prototype parity PASS from `product-surface-reviewer`",
+    box: "`product-surface-reviewer` prototype-parity PASS",
+  },
+  {
+    item: 10,
+    condition:
+      "Evidence cell's anchor resolves to a fresh per-item entry in the evidence file its `Layer` owns",
+    box: "`Evidence` anchor resolves to a fresh entry in the file its `Layer` owns",
+  },
+  {
+    item: 10,
+    condition: "the row carries `Pre-split-evidence: implement` in its `Evidence` cell",
+    box: "`Pre-split-evidence: implement` marker",
+  },
+  {
+    item: 10,
+    condition: "`Review pack seal` is recomputed here",
+    box: "`Review pack seal` and each `Audited evidence hash` recomputed",
+  },
+  {
+    item: 10,
+    condition:
+      "The item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
+    box: "**agree on the revision the row finally landed at**",
+  },
+  {
+    item: 11,
+    condition: "is appended with both reviewer verdicts after items 7-8 returned PASS",
+    box: "both verdicts are appended to the evidence file the row's `Layer` owns",
+  },
+  {
+    item: 12,
+    condition:
+      "`Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision",
+    box: "`Checkpoint verification seal` recomputes over the recorded command, result and revision",
+  },
+  {
+    item: 12,
+    condition:
+      "The **full** suite is required here only when the item sits on a checkpoint boundary",
+    box: "the **full** suite where the row sits on a checkpoint boundary",
+  },
+];
 
 /**
  * The spec-level half of the derivation rule, condition by condition.
@@ -284,6 +415,38 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(numbers).toEqual(numbers.map((_, index) => index + 1));
   });
 
+  it("maps each numbered item's contract text to its box, in both directions", async () => {
+    // Coverage by number is not coverage of meaning: reword item 7 into a
+    // different reviewer's gate and `uncovered` stays empty, while every other
+    // assertion here reads the checklist rather than `SKILL.md` and so cannot
+    // tell that the box now restates a contract nobody wrote. The clause has to
+    // be matched on both sides — as `SPEC_LEVEL_PARITY` already does for the
+    // conditions that carry no number.
+    const items = gateItems(await readSkill(dir));
+    const boxes = checklistBoxes(await readChecklist(dir)).map((box) => ({
+      text: box.text.replace(/\s+/g, " "),
+      cites: citedGateItems(box.text),
+    }));
+    for (const entry of GATE_ITEM_PARITY) {
+      const matched = items.filter((item) => item.text.includes(entry.condition));
+      expect(matched, `"${entry.condition}" names exactly one gate item`).toHaveLength(1);
+      expect(matched[0]?.number, `"${entry.condition}" is gate item ${entry.item}`).toBe(
+        entry.item,
+      );
+      const covering = boxes.filter(
+        (box) => box.cites.has(entry.item) && box.text.includes(entry.box),
+      );
+      expect(
+        covering.length,
+        `gate item ${entry.item}: "${entry.box}" is missing from a box citing it`,
+      ).toBeGreaterThan(0);
+    }
+    const unmapped = items
+      .filter((item) => !GATE_ITEM_PARITY.some((entry) => entry.item === item.number))
+      .map((item) => item.number);
+    expect(unmapped, "every numbered gate item has a mapped contract clause").toEqual([]);
+  });
+
   it("counts a gate item as covered only from a box, never from prose", async () => {
     // Otherwise a number mentioned in narration keeps an item "covered" after
     // its box is deleted — deleting the per-row checkpoint box left item 12
@@ -305,6 +468,19 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     expect(checklist).toContain("appended to the evidence file the row's `Layer` owns");
     expect(checklist).toContain("leaving 0 blocking reviewer issues");
     expect(checklist).toContain("`product-surface-reviewer` prototype-parity PASS");
+  });
+
+  it("requires both core reviewer responses in the pack, not only the evidence append", async () => {
+    // The append is the row's copy of a verdict. Asking for it alone let a pack
+    // that held some third reviewer and neither of these two seal and recompute
+    // cleanly at gate item 10, while `--profile tdd` — the run this list ends on
+    // — reports no `QFAI-REVIEW-*`, so nothing mechanical saw the gap.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("Both responses are also in the round's review pack");
+    expect(checklist).toContain(
+      "`R0N_completion-reviewer.md` and `R0N_implementation-reviewer.md`",
+    );
+    expect(checklist).toContain("each with its own `reviewers[]` entry in `summary.json`");
   });
 
   it("requires the prototype-parity verdict in the review pack, not only in the entry", async () => {
@@ -367,13 +543,26 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     const checklist = await readChecklistProse(dir);
     expect(checklist).toContain("**agree on the revision the row finally landed at**");
     expect(checklist).toContain(
-      "both reviewers' `Reviewed revision` and the pack's `summary.json.revision`",
+      "the `Reviewed revision` of **every** reviewer response the row required",
     );
+    expect(checklist).toContain("and the pack's `summary.json.revision`");
     // Item 3 keeps its own field — demanding one revision across all four is
     // what made every correct handed-over and `falsifiability` row stale.
     expect(checklist).toContain(
       "`RED revision` (or `Falsifiability revision` in its place) is the standing exception",
     );
+  });
+
+  it("compares the product-surface reviewer's revision too, not just the core two", async () => {
+    // Naming "both reviewers" quantified over completion and implementation
+    // only, so a UI edited after the parity PASS cleared this box: bring those
+    // two and `summary.json.revision` to the final revision, leave the product
+    // response at its old one, and the surface that shipped is the one nobody
+    // reviewed. The shared reviewer template requires the field on every
+    // response, so the third reviewer is the same rule, not a new one.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("**plus `product-surface-reviewer` on a UI-affecting row**");
+    expect(checklist).toContain("required on every response");
   });
 
   it("asks for the spec-level checkpoint boundary gate item 12 never reaches", async () => {
@@ -385,6 +574,17 @@ describe.each(SKILL_DIRS)("%s final checklist", (dir) => {
     // A correctly sealed FAIL is still a FAIL: "ran" alone would let a
     // non-zero formatter / linter / type-check result through.
     expect(checklist).toContain("terminal ledger and **passed**");
+  });
+
+  it("makes the spec-level checkpoint cover the ledger's current state, not an older one", async () => {
+    // A seal addresses the record, never the ledger the record was meant to
+    // cover. So a boundary recorded before an approved CR reset and re-ran a row
+    // recomputes exactly as cleanly as a current one, and the spec completes on
+    // a full-suite result taken against a ledger state it has since left —
+    // which is the case `checkpoint-verification.md` sends back for a re-run.
+    const checklist = await readChecklistProse(dir);
+    expect(checklist).toContain("the state that record names is this ledger's current one");
+    expect(checklist).toContain("predates the last ledger change and owes a re-run");
   });
 
   it("scopes each waiver and exception to what its gate item actually grants", async () => {
