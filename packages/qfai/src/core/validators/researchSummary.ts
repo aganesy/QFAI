@@ -41,14 +41,16 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       continue;
     }
 
-    if (!RESEARCH_SUMMARY_HEADING_RE.test(content)) continue;
+    // One extraction decides both presence and content, so the two can never
+    // disagree. It yields nothing when the only heading sits inside a fenced
+    // code block (an example, not the pack's own section) and nothing when the
+    // heading has an empty body (no protocol recorded). Either way the file
+    // stays unregistered, so the pack reports QFAI-RESEARCH-012 rather than the
+    // heading buying silence from every rule below.
+    const section = extractResearchSummarySection(content);
+    if (!section) continue;
 
     const rel = path.relative(root, filePath).replace(/\\/g, "/");
-    const section = extractResearchSummarySection(content);
-    // A heading with an empty body records no protocol, so leave the file
-    // unregistered: the pack reports QFAI-RESEARCH-012 instead of the bare
-    // heading buying silence from every rule below.
-    if (!section) continue;
     filesWithHeading.add(normalize(filePath));
 
     // Validate only entries under sources:, not other lists that may also use "- id:".
@@ -226,9 +228,18 @@ function normalize(filePath: string): string {
   return filePath.replace(/\\/g, "/");
 }
 
+/**
+ * Quoting a scalar is ordinary YAML, so `title: "[Source title]"` is the same
+ * unfilled slot as the bare form. Strip one balanced pair of surrounding
+ * quotes; anything else is returned untouched.
+ */
+function unquoteYamlScalar(value: string): string {
+  return /^(["'])[\s\S]*\1$/.test(value) ? value.slice(1, -1) : value;
+}
+
 /** A required value counts as answered only when it is neither blank nor a template slot. */
 function isFilledValue(value: string | undefined): boolean {
-  const trimmed = (value ?? "").trim();
+  const trimmed = unquoteYamlScalar((value ?? "").trim()).trim();
   return trimmed.length > 0 && !PLACEHOLDER_VALUE_RE.test(trimmed);
 }
 
@@ -274,17 +285,69 @@ async function buildMissingSectionIssue(
   );
 }
 
+/**
+ * A fenced code block is quoted text, not document structure: a pack that shows
+ * the schema in a ```markdown example must not read as owning the section.
+ * Blank every fenced line — including the fences — while preserving each
+ * character offset, so indices taken from the mask still address the original.
+ */
+function maskFencedCodeBlocks(content: string): string {
+  const lines = content.split("\n");
+  let openFence: { marker: string; length: number } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const fence = parseFenceLine(line);
+    const open = openFence;
+
+    if (!open) {
+      if (fence) {
+        openFence = { marker: fence.marker, length: fence.length };
+        lines[i] = " ".repeat(line.length);
+      }
+      continue;
+    }
+
+    // A closing fence is the same marker, at least as long as the opener, and
+    // carries no info string.
+    if (
+      fence &&
+      fence.marker === open.marker &&
+      fence.length >= open.length &&
+      !fence.info.trim()
+    ) {
+      openFence = null;
+    }
+    lines[i] = " ".repeat(line.length);
+  }
+
+  return lines.join("\n");
+}
+
+function parseFenceLine(line: string): { marker: string; length: number; info: string } | null {
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  const run = match?.[1];
+  if (!run) {
+    return null;
+  }
+  return { marker: run.startsWith("`") ? "`" : "~", length: run.length, info: match[2] ?? "" };
+}
+
 function extractResearchSummarySection(content: string): string | null {
-  const heading = RESEARCH_SUMMARY_HEADING_RE.exec(content);
+  // Locate the heading — and the heading that ends the section — on the masked
+  // copy, so fenced examples neither impersonate the section nor truncate it.
+  // The body itself comes from the original: the shipped template writes its
+  // schema inside a ```yaml fence, and that fence is the section's content.
+  const masked = maskFencedCodeBlocks(content);
+  const heading = RESEARCH_SUMMARY_HEADING_RE.exec(masked);
   if (!heading) {
     return null;
   }
 
   const start = heading.index + heading[0].length;
-  const remainder = content.slice(start);
-  const nextHeadingOffset = remainder.search(/^#{1,3}\s+/m);
-  const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
-  return section.trim();
+  const nextHeadingOffset = masked.slice(start).search(/^#{1,3}\s+/m);
+  const end = nextHeadingOffset === -1 ? content.length : start + nextHeadingOffset;
+  return content.slice(start, end).trim();
 }
 
 function extractSourceEntries(section: string): Array<{ id: string; block: string }> {
