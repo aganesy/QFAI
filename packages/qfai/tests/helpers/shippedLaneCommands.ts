@@ -1259,7 +1259,12 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
   ],
-  [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
+  // Re-pinned when `Phase: Skeleton` added `!.qfai/evidence/skeleton.md` to
+  // `QFAI_GITIGNORE_GOVERNANCE_NEGATIONS`: the shipped `.gitignore` IS the generated managed block,
+  // so a governance negation moves this digest by construction. Re-derived from
+  // `QFAI_GITIGNORE_BLOCK`, not re-typed from a failure message, and the predecessor
+  // (`96abd2e4…`) is the same block without that one line — which is the whole delta.
+  [".gitignore", "ab5a7c032953af6db5b678554c54abe31db610d949da0f4b9b434708d1981764"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
