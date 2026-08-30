@@ -190,8 +190,27 @@ describe("reviewer finding provenance", () => {
     // Owner: the orchestrator that dispatched the review, not the reviewer.
     expect(drift).toMatch(/The \*\*orchestrator\*\* that dispatched the review appends it/);
     // Drain: consumed at the spec boundary, and completion is gated on it.
-    expect(drift).toMatch(/repaired in place[\s\S]{0,400}converted to a validator bug report/);
-    expect(drift).toMatch(/Completion is not\s*\n?\s*declared while an entry is open/);
+    // Repair is the only close. A validator bug report is what a
+    // `record:unchecked` entry additionally owes for the missing check — closing
+    // on the report alone would leave the wrong record wrong with the round that
+    // found it already spent.
+    expect(drift).toMatch(/\*\*repaired in place\*\*[\s\S]{0,120}Repair is the only close/);
+    expect(drift).toMatch(/\*\*also\*\* produces a validator bug report/);
+    expect(drift).toMatch(/does not stand in for the repair/);
+    expect(drift).not.toMatch(/converted to a validator bug report/);
+    expect(classification).toMatch(/never closes the entry on its own/);
+    // And the one honest way out when repair is impossible: it is an integrity
+    // failure, not a record defect, so it goes back to blocking.
+    for (const doc of [drift, classification]) {
+      expect(doc).toMatch(/cannot be repaired honestly|repaired honestly/);
+      expect(doc).toMatch(/`defect:code-quality`/);
+    }
+    expect(drift).toMatch(
+      /an entry closes on a corrected record or on a blocking finding|closes on a corrected record or on a blocking finding/,
+    );
+    expect(drift.replace(/\s+/g, " ")).toContain(
+      "Completion is not declared while an entry is open",
+    );
     expect(skill).toMatch(
       /0 blocking reviewer issues remain, and this spec's `## Record defects` queue is drained/,
     );
@@ -199,6 +218,54 @@ describe("reviewer finding provenance", () => {
     for (const doc of [drift, classification]) {
       expect(doc).toMatch(/never holds an\s*\n?\s*individual row out of `done`/);
     }
+  });
+
+  it("re-attests a repaired entry instead of re-running or silently restamping it", async () => {
+    // A record defect inside a `Satisfied-by` or a round block sits in the exact
+    // bytes a reviewer's `Audited evidence hash` covers, and completion gate
+    // item 10 recomputes that hash. Repair in place and a correct PASS reads as
+    // stale; skip the recomputation and un-reviewed evidence is accepted. The
+    // way out is an evidence-only re-attestation, which runs no code.
+    const [baseline, drift, classification] = await Promise.all([
+      readFile(DELEGATION_BASELINE, "utf-8"),
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+      readFile(FINDING_CLASSIFICATION, "utf-8"),
+    ]);
+    for (const doc of [drift, classification]) {
+      expect(doc).toMatch(/record re-attestation/i);
+      expect(doc).toMatch(/Audited evidence hash/);
+      // Same verdict, same revision — the repair is not a new review.
+      expect(doc.replace(/\s+/g, " ")).toContain("same `Reviewed revision`");
+      // …and a "repair" that moves the revision is a code change, not a repair.
+      expect(doc.replace(/\s+/g, " ")).toContain("is not a record repair");
+    }
+    expect(drift).toMatch(/of the role that issued the verdict/);
+    expect(drift).toMatch(/spends no round|costs no round/);
+    expect(baseline).toMatch(/re-attested where a reviewer hashed it/);
+  });
+
+  it("withholds the record class from a stage with nowhere to drain it", async () => {
+    // The baseline is read by every shared stage, but the queue is defined by a
+    // spec-scoped evidence file and a completion boundary. A stage with neither
+    // would file entries nothing consumes — the round dropped AND the defect
+    // dropped, which is the outcome the queue exists to prevent.
+    const [baseline, drift] = await Promise.all([
+      readFile(DELEGATION_BASELINE, "utf-8"),
+      readFile(DRIFT_PROTOCOL, "utf-8"),
+    ]);
+    for (const doc of [baseline, drift]) {
+      expect(doc).toMatch(/The class needs a queue/);
+      expect(doc).toMatch(/web-research/);
+    }
+    // The queue's home is the stage's evidence file, so each stage can find it.
+    expect(drift).toContain(".qfai/evidence/<stage>-<spec-id>.md");
+    expect(baseline).toContain(".qfai/evidence/<stage>-<spec-id>.md");
+    expect(drift).toContain("configure-<spec-id>.md");
+    expect(drift).toContain("sdd-<spec-id>.md");
+    // A stage without a queue does not lose the finding — it keeps the class it
+    // would otherwise have had.
+    expect(baseline).toMatch(/keeps the class the finding would otherwise have had/);
+    expect(drift).toMatch(/blocking under the rule it names/);
   });
 
   it("keeps an evidence-integrity violation blocking instead of record class", async () => {

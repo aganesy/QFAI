@@ -234,9 +234,9 @@ in/out split is not re-derived per run.
     (see `drift-protocol.md#defect-or-new-scope-decide-this-first`). A reviewer who can show the deliverable is wrong on its own terms does not need an `AC-*` to say so;
   - `record:<CODE>` — a defect in the run's own record rather than in the product: a ledger cell, a round block, an evidence anchor, the provenance prose. `<CODE>` names the record rule;
   - `none` — reviewer-originated scope, i.e. a new product obligation upstream never asked for.
-- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the spec's
-  record-defect queue and it is drained there before spec completion (`drift-protocol.md#the-record-defect-queue`). `record:unchecked` is a bug report against `validateTddList`, not
-  against the item: a record rule worth a round is worth a validator code.
+- `record:*` and `none` MUST be recorded as `advisory`; neither can be `blocking` or gate `DONE`. A `record:*` finding never re-runs the row: the orchestrator files it in the reviewing stage's
+  record-defect queue — `.qfai/evidence/<stage>-<spec-id>.md` — and it is drained at that stage's completion boundary (`drift-protocol.md#the-record-defect-queue`). **The class needs a queue: a stage with no spec-scoped evidence file and no completion boundary to drain one at — `/web-research` — MUST NOT use it, and keeps the class the finding would otherwise have had.** An entry closes only on a repaired record, re-attested where a reviewer hashed it; `record:unchecked` is a bug report against `validateTddList` and never a substitute for the repair —
+  a record rule worth a round is worth a validator code.
 - **Integrity is not record class.** Evidence copied from another round or a sibling row, an anchor resolving to a run other than the one it names, and a false
   `Authored/edited under review` attestation claim work that was not done or independence the reviewer lacked. `agents/qa-gatekeeper.md` and the response rules below refuse a `PASS`
   built on them, so they stay `blocking` as `defect:code-quality` and are never filed as `record:*` — which covers an honestly produced record that is merely wrong.

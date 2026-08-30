@@ -44,14 +44,32 @@ record it in the reviewer response under `Advisory / Change Request proposals`.
 
 Route a `record:*` advisory to the queue instead
 (`drift-protocol.md#the-record-defect-queue`): the reviewer records it in its
-response, and the orchestrator appends it to `## Record defects` in the spec's
+response, and the orchestrator appends it to `## Record defects` in this stage's
 evidence file — `.qfai/evidence/implement-<spec-id>.md`, or
 `.qfai/evidence/atdd-<spec-id>.md` when that file is the one the spec has. Each
 entry names the `<CODE>`, the row it is against, what the record says against
-what the run did, and the round. Before spec-level completion is declared, every
-open entry is repaired in place or converted to a `validateTddList` bug report.
-That drain gates the **spec** boundary only — a `record:*` finding never holds an
-individual row out of `done`.
+what the run did, and the round. That drain gates the **spec** boundary only —
+a `record:*` finding never holds an individual row out of `done`.
+
+Before spec-level completion is declared, every open entry is **repaired in
+place**. A `validateTddList` bug report is what a `record:unchecked` entry owes
+_in addition_, for the check nobody wrote; it never closes the entry on its own,
+because a report against the validator leaves the wrong record wrong and the
+round that found it already spent. Where the round's artifacts no longer say
+what the run did, the record cannot be repaired honestly — that is the integrity
+case above, so the finding becomes `defect:code-quality` and blocks. An entry
+closes on a corrected record or on a blocking finding, never on neither.
+
+**Repairing a hashed entry needs a re-attestation, not a re-run.** A
+`Satisfied-by`, a round block and every other phase-authored field are inside
+the bytes a reviewer's `Audited evidence hash` covers, and completion gate item
+10 recomputes it — so an in-place repair makes a correct PASS read as stale.
+After repairing, a reviewer of the role that issued the verdict re-reads the
+entry and emits a record re-attestation — same `Reviewed revision`, same
+`Result`, recomputed `Audited evidence hash`, and the entry's `<CODE>` — which
+replaces that line in the verdict. No code runs and no round is spent. A repair
+that would move the revision is not a record repair; it is a change to the
+deliverable.
 
 Do **not** edit `08_Open-questions.md` here. It is upstream SSOT under the Drift
 Protocol, and creating spec artifacts is a non-goal of this skill; the owner

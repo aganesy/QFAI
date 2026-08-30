@@ -333,11 +333,22 @@ Making `record:*` advisory removes the round it used to force. It does not remov
 the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
 one queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
 
-- **Where.** A `## Record defects` section in the spec's evidence file:
+- **Where.** A `## Record defects` section in the evidence file of the stage whose review raised
+  it: `.qfai/evidence/<stage>-<spec-id>.md`, so `/qfai-sdd` files in `sdd-<spec-id>.md` and
+  `/qfai-configure` in `configure-<spec-id>.md`. For a `/qfai-implement` review that is
   `.qfai/evidence/implement-<spec-id>.md` when that file exists, otherwise
   `.qfai/evidence/atdd-<spec-id>.md` — the same file rule the spec-level checkpoint boundary uses,
-  so a spec never has this queue in two places. Never `08_Open-questions.md`: that file is upstream
-  SSOT owned by `/qfai-sdd` (see `#core-rule`), and a record defect is not a product obligation.
+  so a spec never has this queue in two places.
+  Never `08_Open-questions.md`: that file is upstream SSOT owned by `/qfai-sdd` (see
+  `#core-rule`), and a record defect is not a product obligation.
+- **The class needs a queue, so a stage without one does not use it.** Every stage sharing
+  `shared-skill-delegation-baseline.md` reads the provenance rules, but the queue above is defined
+  by a spec-scoped evidence file and a stage completion boundary to drain it at. A stage that has
+  neither — `/web-research`, which is not spec-scoped — has nowhere to file an entry and nothing
+  that would consume it, so its reviewers MUST NOT classify a finding `record:*`; it keeps the
+  class it would have had, blocking under the rule it names. A class whose entries are written
+  where nothing drains them is the round-dropped-and-defect-dropped outcome this queue exists to
+  prevent, and it is worse in the stages that never gained the queue than the round ever was.
 - **Who.** The reviewer records the finding in its response as an advisory, as for any advisory.
   The **orchestrator** that dispatched the review appends it to the queue when the round closes —
   the same role that owns the ledger. A finding that stays in the reviewer response and never
@@ -346,11 +357,33 @@ one queue per spec, and it is defined by a destination, an owner, an entry shape
   says against what the run actually did, and the round it came from. That is what makes it
   repairable later by someone who did not watch the round.
 - **Drain, at the spec boundary.** Before spec-level completion is declared, every open entry is
-  resolved one of two ways: **repaired in place** — the record is corrected to what the run did, no
-  row re-run and no status change — or **converted to a validator bug report** when the rule it
-  names is one no validator checks, per the `record:unchecked` ratchet above. Completion is not
-  declared while an entry is open. This gates the **spec** boundary only: a `record:*` finding
-  still never holds an individual row out of `done`, which is the whole point of the class.
+  **repaired in place**: the record is corrected to what the run did, with no row re-run and no
+  status change. Repair is the only close. When the rule the entry names is one no validator
+  checks, the entry **also** produces a validator bug report per the `record:unchecked` ratchet
+  above — that report tracks the missing check and does not stand in for the repair. Closing an
+  entry on the report alone leaves the wrong record exactly as wrong as it was, with the round
+  that found it already spent: a missing tier stays missing, and the item stays complete. The two
+  are different obligations against different backlogs. Completion is not declared while an entry
+  is open. This gates the **spec** boundary only: a `record:*` finding still never holds an
+  individual row out of `done`, which is the whole point of the class.
+- **When the record cannot be repaired honestly.** Repair means writing what the run actually did,
+  which needs the round's artifacts to still say what that was. Where they do not — nothing
+  reconciles the entry with any run — the finding was never a record defect: what is missing is
+  not a correct record of the work but any evidence the work happened, which is the integrity case
+  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path.
+  There is no third exit: an entry closes on a corrected record or on a blocking finding.
+- **Re-attest a repair; never re-run it.** A defect inside a `Satisfied-by`, a round block or any
+  other phase-authored field sits inside the exact bytes a reviewer's `Audited evidence hash`
+  covers, and the completion gate recomputes that hash — so repairing in place makes a correct
+  PASS read as stale, and skipping the recomputation would accept evidence nobody read. Repair the
+  record, then have a reviewer **of the role that issued the verdict** re-read the repaired entry
+  and emit a **record re-attestation**: the `TDD-ID`, the same `Reviewed revision`, the same
+  `Result`, a recomputed `Audited evidence hash`, and the queue entry's `<CODE>`. It replaces the
+  `Audited evidence hash` line of the verdict it re-attests. No code runs, no row changes status,
+  and it spends no round — `Reviewed revision` excludes `.qfai/evidence/**`, so by construction
+  nothing outside the record moved. **A repair that would move the revision is not a record
+  repair**: it is a change to the deliverable and takes the ordinary path. A repaired entry whose
+  verdict carries no re-attestation is still an open entry.
 
 An unconsumed queue would make the class worse than what it replaced: the round is gone and the
 defect is gone with it. The drain is what pays for dropping the round.
