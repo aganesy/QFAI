@@ -95,7 +95,7 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## Inputs Priority
 
-1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
+1. **The pack Stage 0 selected** — the `selectedInputPath` its result names (`summary:` in the text view, `selectedInputPath` in `--format json`, and the `Selected Discussion Pack` line of `preflight_summary.md`). Never re-derive it: `npx qfai discussion use <id>` can point `.qfai/state.json#discussion.currentId` at a pack that is not the lexicographically largest, and Stage 0 honours that pointer. Re-deriving here would gate one pack and then build the spec from another — the requirements the operator selected checked, and a different pack's requirements imported. With no pointer set, Stage 0 falls back to the lexicographically largest pack and names that one; it is still the answer this step reads, not one this step recomputes.
 2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
 3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)

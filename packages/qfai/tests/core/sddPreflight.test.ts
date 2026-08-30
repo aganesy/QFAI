@@ -87,6 +87,58 @@ describe("runSddPreflight", () => {
     }
   });
 
+  it("blocks when 03_Story-Workshop.md carries no Mermaid diagram", async () => {
+    // `QFAI-DPACK-008` reports this at `error`, but `validate --profile sdd`
+    // does not run the discussion validator — so Stage 0 is the only gate
+    // standing between a pack with no flow and Stage 1, and prose of the right
+    // length used to clear it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203031", {
+        "03_Story-Workshop.md": [
+          "# 03 Story Workshop",
+          "",
+          "ユーザーはダッシュボードを開き、当日の予定を確認してから詳細画面へ遷移する。",
+          "この節は最小文字数を満たすが、フローを図として持っていない。",
+        ].join("\n"),
+      });
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(true);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not report the Mermaid blocker twice for an absent Story Workshop", async () => {
+    // A missing file is the missing-files blocker's finding. Naming it here as
+    // well would report one defect under two headings.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
+    try {
+      await seedDiscussionPack(root, "20260216010203032");
+      await rm(
+        path.join(
+          root,
+          ".qfai",
+          "discussion",
+          "discussion-20260216010203032",
+          "03_Story-Workshop.md",
+        ),
+        { force: true },
+      );
+
+      const result = await runSddPreflight(root, defaultConfig);
+
+      expect(result.status).toBe("blocked");
+      expect(result.blockers.some((item) => item.includes("必須ファイル不足"))).toBe(true);
+      expect(result.blockers.some((item) => item.includes("Mermaid"))).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("blocks when a deferred OQ has no entry in 13_Deferred.md", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-preflight-"));
     try {

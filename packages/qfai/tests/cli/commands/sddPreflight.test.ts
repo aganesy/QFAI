@@ -169,6 +169,37 @@ describe("qfai sdd preflight", () => {
     expect(textSinks.out.join("\n")).not.toContain("/qfai-discussion");
   });
 
+  it("sends the downstream stages to the pack Stage 0 selected", async () => {
+    // Stage 0 honours `.qfai/state.json#discussion.currentId`, so telling the
+    // Inputs Priority to take the lexicographically largest pack gated one pack
+    // and built the spec from another: the operator's requirements checked, a
+    // different pack's requirements imported.
+    const { readFile: read } = await import("node:fs/promises");
+    const pathMod = await import("node:path");
+    const url = await import("node:url");
+    const repoRoot = pathMod.default.resolve(
+      pathMod.default.dirname(url.fileURLToPath(import.meta.url)),
+      "..",
+      "..",
+      "..",
+      "..",
+      "..",
+    );
+    for (const tree of ["packages/qfai/assets/init/.qfai", ".qfai"]) {
+      const skill = await read(
+        pathMod.default.join(tree, "assistant/skills/qfai-sdd/SKILL.md"),
+        "utf-8",
+      ).catch(() =>
+        read(pathMod.default.join(repoRoot, tree, "assistant/skills/qfai-sdd/SKILL.md"), "utf-8"),
+      );
+      expect(skill, tree).toContain("**The pack Stage 0 selected**");
+      expect(skill, tree).toContain("`selectedInputPath`");
+      expect(skill, tree).toContain("Never re-derive it");
+      // The instruction that caused it must be gone.
+      expect(skill, tree).not.toContain("(lexicographically largest), validated by Stage 0");
+    }
+  });
+
   it("gates the pack the active pointer selects, not the newest one", async () => {
     const root = await newTempRoot();
     await seedDiscussionPack(root, "20260216010102003");

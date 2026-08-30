@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import { containsMermaidBlock } from "../validators/discussionPack.js";
 
 const REQ_ID_RE = /\bREQ-\d{4}\b/g;
 
@@ -49,6 +50,7 @@ export async function runSddPreflight(
   const nextCommands = ["/qfai-discussion"];
   const carryOverOpenQuestions = normalizeTextList(options.assumptions);
   const blockers = resolvePreflightBlockers(readiness);
+  blockers.push(...(await resolveStoryWorkshopBlockers(readiness.latestPackDir)));
 
   if (blockers.length > 0) {
     await writeFile(
@@ -158,6 +160,31 @@ function resolvePreflightBlockers(readiness: {
   }
 
   return blockers;
+}
+
+/**
+ * The preflight side of `QFAI-DPACK-008`.
+ *
+ * `03_Story-Workshop.md` owes a mermaid diagram, and the discussion validator
+ * reports its absence at `error`. Stage 0 did not, and `validate --profile sdd`
+ * does not run that validator — so prose of the right length cleared the one
+ * gate standing between a pack with no flow and Stage 1. Read by the same
+ * predicate as the validator, so the two cannot drift into two readings of
+ * "has a diagram".
+ */
+async function resolveStoryWorkshopBlockers(packDir: string | null): Promise<string[]> {
+  if (packDir === null) {
+    // No pack at all is already a blocker, and there is nothing to read.
+    return [];
+  }
+  const text = await readSafe(path.join(packDir, "03_Story-Workshop.md"));
+  // An absent, unreadable or empty file is the missing-files / incomplete-files
+  // blocker's finding — `readSafe` here returns `""` for all three. Reporting
+  // it again would name one defect twice.
+  if (text.length === 0 || containsMermaidBlock(text)) {
+    return [];
+  }
+  return ["03_Story-Workshop.md に Mermaid diagram が見つかりません。"];
 }
 
 /**
