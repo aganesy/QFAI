@@ -263,7 +263,7 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("(the blocker cleared **with this row's obligation intact**)");
     expect(ledger).toContain("**An approved Change Request is not this edge.**");
-    expect(ledger).toContain("rejected, withdrawn or superseded");
+    expect(ledger).toContain("that CR resolved **without moving what the row owes**");
     expect(ledger).toContain(
       "**When the CR is approved and changes the obligation the row leaves `blocked` by the upstream reset below**",
     );
@@ -282,10 +282,10 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
       await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
     );
     expect(rounds).toContain("- `Round N: Resumed-from-blocked`");
-    expect(rounds).toContain("copied out of `Blocked-By` before that transition clears it");
+    expect(rounds).toContain("**copied whole out of `Blocked-By`** before that transition clears");
     // The field list declares itself complete, so the new field has to be in it.
     expect(rounds).toContain(
-      "the reviewer verdict, and `Resumed-from-blocked` on a round a resumption wrote into",
+      "the reviewer verdict, `Resumed-from-blocked` on a round a resumption wrote into",
     );
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("records `Resumed-from-blocked` on the round it writes into");
@@ -304,7 +304,9 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
     expect(rounds).toContain("The resumed cycle is the **next round**");
     expect(rounds).toContain("**Blocked at `todo`**");
     const ledger = flat(await read(tree, LEDGER));
-    expect(ledger).toContain("**Which round it writes into depends on where the block happened**");
+    expect(ledger).toContain(
+      "**Which round it writes into depends on whether the block left a round open**",
+    );
   });
 
   it("gates the self-reference on the resumption record, not on a retained GREEN", async () => {
@@ -329,15 +331,142 @@ describe.each(TREES)("%s (resuming a blocked row is auditable and narrow)", (tre
     // skipped steps 4 and 5 — the row reached `red` on a RED observed before
     // the blocker moved the tree and never took the fresh one it owes.
     const skill = flat(await read(tree, SKILL));
-    expect(skill).toContain("**Neither does a row resumed from `blocked`**");
+    expect(skill).toContain(
+      "**Neither does a row resumed from a block taken at `red`, `green`, `refactor` or `review-fix`**",
+    );
     expect(skill).toContain("steps 4 and 5 apply to it as they do to a `Unit` row");
     // Step 2 hands that row its transition instead, since 3b no longer will.
-    expect(skill).toContain("**Unless that row was resumed from `blocked`**");
+    expect(skill).toContain(
+      "**Unless that row was resumed from a block taken after its handover was consumed**",
+    );
     const reference = flat(
       await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
     );
     expect(reference).toContain(
       "**On an `E2E` / `API` / `Integration` row the resumption reaches this procedure through steps 4 and 5, not through the handover.**",
     );
+  });
+});
+
+describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) => {
+  it("writes the departure status at the block, not at the resumption", async () => {
+    // `Resumed-from-blocked` was specified to carry "the status the row was
+    // blocked at" but was only written by `blocked` -> `todo`. A row parked at
+    // `blocked` across a session boundary persists nothing but `Status` and
+    // `Blocked-By`, so by the time that field was written the departure status
+    // was already gone and the next session had to guess it — which is also
+    // what decides whether the resumption continues a round or opens one.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "| Blocked-By | What a `blocked` row is waiting on, and the status it was blocked at.",
+    );
+    expect(ledger).toContain("**followed by the status the row was blocked at**");
+    expect(ledger).toContain(
+      "**Both halves are written by the `Any active status -> blocked` transition itself**",
+    );
+    // The inbound edge itself has to ask for it, not only the column contract.
+    expect(ledger).toContain(
+      "Name the blocker **and the status the row is leaving** in `Blocked-By`",
+    );
+
+    // Which makes the round field a copy rather than a reconstruction.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain("**copied whole out of `Blocked-By`**");
+    expect(rounds).toContain("this field a copy rather than a reconstruction");
+
+    // And the one-line summary an agent reads before the reference.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain(
+      "a `blocked` row requires a `Blocked-By` naming the blocker **and the status it was blocked at**",
+    );
+  });
+
+  it("gives a row blocked at `review-fix` a round to resume into", async () => {
+    // `review-fix` is an active status, so the widened inbound edge admits it,
+    // but the round-selection list named only `todo` / `red` / `green` /
+    // `refactor`. `review-fix` does not change across the rework
+    // (`#where-the-rounds-happen`), so the status alone cannot say whether a
+    // rework round was left open — the round has to decide it.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain("**Blocked at `review-fix`**");
+    expect(rounds).toContain("the **round** decides which of the two cases above applies");
+    expect(rounds).toContain("**The `REVISE` is not discharged by the resumption**");
+    // The list has to be exhaustive over the statuses the edge admits, or a
+    // departure it skipped is a row with no legal way to reach `done`.
+    expect(rounds).toContain("Every status the widened edge admits has a case here");
+
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("or at `review-fix` after the rework had taken its RED");
+    expect(ledger).toContain(
+      "**A row blocked at `review-fix` still owes its reviewer the rework**",
+    );
+  });
+
+  it("names only Change Request statuses a CR can actually hold", async () => {
+    // `withdrawn` is not in the template's set, and
+    // `change-request-reset.md` reads only `approved` / `rejected` /
+    // `superseded` as resolved — so a CR parked at `withdrawn` on this
+    // guidance would resume the row while the mandatory preflight kept
+    // counting the CR as unresolved and spec completion stayed shut.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).not.toContain("rejected, withdrawn or superseded");
+    expect(ledger).toContain("`open` / `approved` / `rejected` / `superseded`");
+    expect(ledger).toContain("There is no `withdrawn`");
+    // And a canonical landing for the case the word was reaching for.
+    expect(ledger).toContain("Retire a CR nobody will apply as `rejected`");
+  });
+
+  it("still verifies the ATDD handover for a row blocked at `todo`", async () => {
+    // `todo` -> `blocked` predates the widened edge and fires before
+    // `/qfai-atdd` has written the test or the entry. The carve-out that sends
+    // a resumed row past step 3b was written for a consumed handover and
+    // applied to every `Resumed-from-blocked` row, so a row blocked at `todo`
+    // reached `red` with no RED behind it — which `red-provenance.md` forbids
+    // — and that stage lost the `todo` row it was going to hand over to.
+    const skill = flat(await read(tree, SKILL));
+    expect(skill).toContain("**A row whose `Resumed-from-blocked` names `todo` is not that row**");
+    expect(skill).toContain("**A row whose `Resumed-from-blocked` names `todo` does come here**");
+    // The unconditional wording is gone from both sites.
+    expect(skill).not.toContain("**Unless that row was resumed from `blocked`**");
+    expect(skill).not.toContain("**Neither does a row resumed from `blocked`**");
+
+    const reference = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/red-not-observable.md"),
+    );
+    expect(reference).toContain("names a departure status **other than `todo`**");
+    expect(reference).toContain("**A row blocked at `todo` is excluded from that exclusion**");
+    // And such a row cannot claim the self-reference either: it wrote no round.
+    expect(reference).toContain(
+      "**naming a departure status whose round was closed by a GREEN pair**",
+    );
+  });
+
+  it("retains the interrupted RED run instead of re-observing over it", async () => {
+    // Continuing the unfinished round re-took the RED into the same three
+    // fields, so the pre-block run — already executed and already judged by
+    // `qa-gatekeeper` — disappeared. "Evidence hard rules" requires every run
+    // of the same gate to be reported in order, which that overwrite breaks.
+    const rounds = flat(
+      await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
+    );
+    expect(rounds).toContain(
+      "- `Round N: Interrupted RED revision` / `Round N: Interrupted RED command` / `Round N: Interrupted RED result`",
+    );
+    expect(rounds).toContain("requires every run of the same gate to be reported in order");
+    expect(rounds).toContain("it moves the interrupted run into that round's `Interrupted RED`");
+    expect(rounds).toContain("**retained beside** the fresh one rather than replaced");
+    // The complete field list has to admit it, or the round block rejects it.
+    expect(rounds).toContain(
+      "the `Interrupted RED` trio on a round a resumption re-observed the RED into",
+    );
+    // The claim it replaced said the overwritten address was simply stale.
+    expect(rounds).not.toContain("described a tree the blocker has since moved");
+
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**retaining the interrupted RED run** rather than overwriting it");
   });
 });

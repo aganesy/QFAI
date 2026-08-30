@@ -24,8 +24,11 @@ run.
   have no legal way back to `done`. Same procedure, and `Satisfied-by` takes
   this row's own row id and the round that satisfied it (step 1). **Only a row
   whose resumed round carries `Resumed-from-blocked`** (`round-evidence.md`)
-  qualifies — a row that reached `todo` by an approved upstream reset has its
-  retained GREEN withdrawn, not resumed, and takes the ordinary classification.
+  **naming a departure status whose round was closed by a GREEN pair** — that
+  is, `green` or `refactor` — qualifies. A row that reached `todo` by an
+  approved upstream reset has its retained GREEN withdrawn, not resumed; a row
+  blocked at `todo` or `red` never wrote the GREEN this form points at. Both
+  take the ordinary classification.
 - **Anything else** — the test is wrong, the SUT is wrong, or the cause is
   unknown. Transition to `exception` and record the anomaly.
 
@@ -80,8 +83,12 @@ for the natural RED and let the row proceed to `green` and `done`:
    `qfai-implement/SKILL.md` Phase Red step 3b consumes the `/qfai-atdd`
    provenance of a `todo` row and skips steps 4 and 5 — replaying it here would
    re-assert a RED observed on the pre-block tree and never take the fresh one
-   the resumption owes, so 3b excludes a row carrying
-   `Resumed-from-blocked` and sends it down the ordinary path.
+   the resumption owes, so 3b excludes a row whose `Resumed-from-blocked` names
+   a departure status **other than `todo`** and sends it down the ordinary path.
+   **A row blocked at `todo` is excluded from that exclusion**: `todo` is where
+   the row waits for the handover, so a block taken there consumed nothing and
+   3b verifies the entry as it does for any other `todo` row. Such a row wrote
+   no round, so this procedure's self-reference is closed to it regardless.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

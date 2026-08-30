@@ -48,15 +48,25 @@ A row's obligation lives in the column its `Layer` selects. `TC-Refs` is the one
 every row has; the other two are optional columns that become required when the
 row's layer cannot host a `TC-*`.
 
-| Column       | Description                                                                       |
-| ------------ | --------------------------------------------------------------------------------- |
-| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows      |
-| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows |
-| Blocked-By   | What a `blocked` row is waiting on. Required on `blocked` rows, blank otherwise   |
+| Column       | Description                                                                                                       |
+| ------------ | ----------------------------------------------------------------------------------------------------------------- |
+| US-Refs      | `US-*` obligations this row implements. Legal **only** on `Layer = E2E` rows                                      |
+| CON-API-Refs | `CON-API-*` obligations this row implements. Legal **only** on `Layer = API` rows                                 |
+| Blocked-By   | What a `blocked` row is waiting on, and the status it was blocked at. Required on `blocked` rows, blank otherwise |
 
 `Blocked-By` takes a Change Request ID (`CR-YYYYMMDD-NNNN`), a contract path
 with line (`.qfai/contracts/db/CON-DB-0005.sql:2715`), or a cross-spec row
-(`spec-0006:TDD-0034`). `DR-ID` is **not** widened to carry it: that column is
+(`spec-0006:TDD-0034`), **followed by the status the row was blocked at**
+(`CR-20260421-0004 — blocked at green`). **Both halves are written by the
+`Any active status -> blocked` transition itself**, because that transition is
+the last moment the departure status is observable: a row parked at `blocked`
+across a session boundary persists nothing but its `Status` and this cell, and
+the resumption needs the departure status both to pick the round it writes into
+(`round-evidence.md#what-opens-a-round`) and to compose
+`Round N: Resumed-from-blocked`. Writing it only at the resumption asked for
+information the block had already destroyed.
+
+`DR-ID` is **not** widened to carry it: that column is
 what distinguishes a parked `exception` from a row that never started, and
 overloading it would merge the two states the `blocked` status exists to
 separate.
@@ -184,7 +194,11 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
 
 - Any active status -> `blocked` (the row cannot proceed: an upstream defect, an
   unresolved Change Request, or an unfinished row in another spec). Name the
-  blocker in `Blocked-By`; `TDDLIST_BLOCKED_MISSING_REF` errors without it.
+  blocker **and the status the row is leaving** in `Blocked-By`
+  (`CR-20260421-0004 — blocked at green`) — that cell is the only place the
+  departure status survives the session, and every later read of it depends on
+  it being written here rather than reconstructed;
+  `TDDLIST_BLOCKED_MISSING_REF` errors when the blocker is absent.
   **The source is not restricted to `todo`**, and mirrors the `exception` edge
   below for the same reason: all three blockers named here surface when the work
   reaches them — an upstream defect when the GREEN implementation hits it, a
@@ -200,9 +214,17 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   intact**). This is a **resumption, not a backward transition**: nothing
   upstream changed, so nothing is being undone. **An approved Change Request is
   not this edge.** A row blocked on an unresolved `CR-*` may take it only when
-  that CR resolved **without moving what the row owes** — rejected, withdrawn or
-  superseded, an upstream defect fixed inside the same obligation, a cross-spec
-  row finished. **When the CR is approved and changes the obligation the row
+  that CR resolved **without moving what the row owes** — `rejected` or
+  `superseded`, an upstream defect fixed inside the same obligation, a
+  cross-spec row finished. **Those are status values a Change Request can
+  actually hold**: the template and `constitution/drift-protocol.md` step 2
+  define the set as `open` / `approved` / `rejected` / `superseded`, and
+  `change-request-reset.md` reads exactly `approved`, `rejected` and
+  `superseded` as resolved. There is no `withdrawn`; naming it here told an
+  operator to park a CR in a status the mandatory preflight still counts as
+  unresolved, so the row resumed while spec completion stayed shut. Retire a CR
+  nobody will apply as `rejected` — `superseded` when another CR replaced it.
+  **When the CR is approved and changes the obligation the row
   leaves `blocked` by the upstream reset below**, not here: `any status` ->
   `todo` with the approving `CR-*`/`DR-*` recorded in `DR-ID` and cited in
   `Evidence`, and the downstream sweep `constitution/drift-protocol.md` step 5
@@ -217,11 +239,18 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   records `Resumed-from-blocked` on the round it writes into
   (`round-evidence.md`) — the blocker copied out of `Blocked-By`, which this
   transition clears, plus the status the row was blocked at. **Which round it
-  writes into depends on where the block happened**: a block taken at `red`
-  interrupted a round that never got its GREEN pair, so the resumed cycle
-  **continues that round**; a block taken at `green` or `refactor` left a closed
-  round behind, so the resumed cycle opens **the next round** under
-  `round-evidence.md`'s numbering. **When the block
+  writes into depends on whether the block left a round open**, and the
+  departure status `Blocked-By` recorded is what says: a block taken at `red`,
+  or at `review-fix` after the rework had taken its RED, interrupted a round
+  that never got its GREEN pair, so the resumed cycle **continues that round**
+  — **retaining the interrupted RED run** rather than overwriting it, per
+  `round-evidence.md`; a block taken at `green`, at `refactor`, or at
+  `review-fix` before the rework opened a round (or on the rework path that
+  opens none) left every round closed, so the resumed cycle opens **the next
+  round** under `round-evidence.md`'s numbering. **A row blocked at
+  `review-fix` still owes its reviewer the rework**: the resumption does not
+  discharge the `REVISE`, and the restarted cycle re-submits at `refactor`
+  exactly as the ordinary `review-fix` -> `refactor` return does. **When the block
   happened at `green` or `refactor` this row's own implementation is still
   there, so that fresh RED passes on its first run — that is the
   falsifiability path of `red-not-observable.md`, not `exception`.**

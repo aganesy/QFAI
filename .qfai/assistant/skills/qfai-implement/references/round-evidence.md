@@ -23,15 +23,32 @@ reviewer `REVISE` that requires new production behaviour adds a round.
   RED observation, so it sits where the RED pair sits and takes the same prefix;
   writing it unprefixed left the completion gate unable to find the round it
   belongs to
+- `Round N: Interrupted RED revision` / `Round N: Interrupted RED command` /
+  `Round N: Interrupted RED result` — **only on a round a resumption re-observed
+  the RED into** (`#what-opens-a-round`): the RED run the block interrupted,
+  moved here verbatim **before** the fresh run is written over the round's own
+  RED fields. That interrupted run was a real execution of this row's RED gate,
+  already submitted to `qa-gatekeeper`, and `qfai-implement/SKILL.md`
+  "Evidence hard rules" requires every run of the same gate to be reported in
+  order — so re-observing into the same three fields with nothing moved aside
+  deletes an audited observation and reports the second run as if it were the
+  only one. Repeat the trio, oldest first, when a row was blocked at `red` more
+  than once
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
   `REVISE` plus the finding, and which rework path it took). Absent on round 1
   when no review has run yet.
 - `Round N: Resumed-from-blocked` — **only on a round a `blocked` -> `todo`
-  resumption wrote into**: the blocker, copied out of `Blocked-By` before that
-  transition clears it, and the status the row was blocked at
-  (`CR-0004 — blocked at green`). `Blocked-By` is a ledger column the row holds
+  resumption wrote into**: the blocker and the status the row was blocked at
+  (`CR-20260421-0004 — blocked at green`), **copied whole out of `Blocked-By`**
+  before that transition clears it. Both halves are already in that cell: the
+  `Any active status -> blocked` transition writes them together
+  (`execution-ledger.md#obligation-columns-optional-required-by-layer`), which
+  is what makes this field a copy rather than a reconstruction — the departure
+  status stops being observable the moment the row sits at `blocked`, so a
+  resumption in a later session has nothing to derive it from.
+  `Blocked-By` is a ledger column the row holds
   only while it is `blocked`, so without this field a resumption leaves no
   trace once the row moves on, and the two ways a row arrives at `todo`
   carrying a retained GREEN — this resumption and an approved upstream reset —
@@ -48,24 +65,41 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 as free prose.
 
 **A row resumed from `blocked` writes into a round too — which one depends on
-where the block happened.** `blocked` is reachable from any active status
-(`execution-ledger.md#allowed-transitions`), so a row can be stopped either
-before or after a round was closed by its GREEN pair, and `blocked -> todo`
-restarts its cycle.
+whether the block left a round open.** `blocked` is reachable from any active
+status (`execution-ledger.md#allowed-transitions`), so a row can be stopped
+either before or after a round was closed by its GREEN pair, and
+`blocked -> todo` restarts its cycle. **The departure status is what names the
+case**, read from `Round N: Resumed-from-blocked` once the resumption has
+copied it out of `Blocked-By`. Every status the widened edge admits has a case
+here; a departure this list did not cover would leave the resumed cycle with no
+round to write into, which is a row that cannot legally reach `done`.
 
 - **Blocked at `green` or `refactor`** — the round it was in holds both pairs
   and is closed. The resumed cycle is the **next round**, not a second round 1:
   overwriting the earlier pair would erase the only record of what was observed
   before the blocker.
 - **Blocked at `red`** — the round it was in holds a RED pair and no GREEN
-  pair. The resumed cycle **continues that unfinished round**: it re-observes
-  the RED into that round's own RED fields and closes it with the GREEN pair.
+  pair. The resumed cycle **continues that unfinished round**: it moves the
+  interrupted run into that round's `Interrupted RED` trio, re-observes the RED
+  into the round's own RED fields, and closes it with the GREEN pair.
   Opening the next round instead would strand the interrupted one without the
   GREEN pair "one block per RED/GREEN cycle" requires, and no gate can read a
   round in that state. Re-observing over its RED pair is not the problem the
   field list names of one address held by two rounds: there is still exactly one
-  round, and the address it recorded described a tree the blocker has since
-  moved.
+  round, and the address it recorded is **retained beside** the fresh one rather
+  than replaced.
+- **Blocked at `review-fix`** — the status alone does not say how far the
+  rework got, because it does not change across the rework
+  (`#where-the-rounds-happen`), so the **round** decides which of the two cases
+  above applies. A rework round that had taken its RED and not its GREEN is the
+  `red` case: continue it, `Interrupted RED` trio included. A highest round
+  already closed by its GREEN pair is the `green` / `refactor` case: the rework
+  had not opened a round yet, or it was on the path that opens none
+  (`#a-revise-that-needs-no-new-production-behaviour`), so the resumed cycle
+  opens the next round. **The `REVISE` is not discharged by the resumption**
+  either way: the restarted cycle re-submits at `refactor` as the ordinary
+  `review-fix` -> `refactor` return does, and the reviewer verdict on the round
+  that `REVISE` closed still names the finding the rework owes.
 - **Blocked at `todo`** — no round was open, so the resumed cycle is round 1 as
   usual.
 
@@ -74,8 +108,9 @@ resumption writes into carries `Round N: Resumed-from-blocked`.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
 is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
-its place), the GREEN pair, the reviewer verdict, and `Resumed-from-blocked` on
-a round a resumption wrote into. Row-level fields are not round
+its place), the GREEN pair, the reviewer verdict, `Resumed-from-blocked` on
+a round a resumption wrote into, and the `Interrupted RED` trio on a round a
+resumption re-observed the RED into. Row-level fields are not round
 fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
 `Selector`, `Layer`, and the refactor-verify pair. `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a
