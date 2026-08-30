@@ -1361,14 +1361,18 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     const captured = source.indexOf(
       "const workflowAncestorsBefore = await workflowAncestorIdentity(destRoot)",
     );
-    const copied = source.indexOf("const rootResult = await copyTemplateTree(");
+    // The copy that writes the WORKFLOWS, which review finding [123] separated from the copy of
+    // the rest of the root — so this row names that one and not `rootResult`.
+    const copied = source.indexOf(
+      "const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths",
+    );
     const compared = source.indexOf(
-      "workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore)",
+      "await settleWorkflowAncestors(destRoot, workflowAncestorsBefore)",
     );
 
     expect(captured, "the identity must be captured").toBeGreaterThan(-1);
     expect(copied, "before the copy that writes the workflows").toBeGreaterThan(captured);
-    expect(compared, "and compared after it").toBeGreaterThan(copied);
+    expect(compared, "and settled after it").toBeGreaterThan(copied);
   });
 
   it("reports a swap and records nothing, rather than deleting through the new parent", async () => {
@@ -1377,13 +1381,15 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     // whose other contents are not ours. This repository already ruled on that when the
     // retired-name prune was found enumerating a linked workflows directory.
     const source = await readInitSource();
-    const start = source.indexOf("workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore)");
+    const start = source.indexOf(
+      "await settleWorkflowAncestors(destRoot, workflowAncestorsBefore)",
+    );
     expect(start, "the comparison must exist to be checked").toBeGreaterThan(-1);
     const block = source.slice(start, source.indexOf("recordInstalledWorkflows(", start));
 
     expect(block, "a detected swap must be reported to the operator").toMatch(/error\(/);
     expect(block, "and the written workflows dropped before anything records them").toMatch(
-      /rootResult\.copied = rootResult\.copied\.filter/,
+      /workflowResult\.copied = \[\]/,
     );
     expect(
       block,
@@ -1445,6 +1451,77 @@ describe("the workflows parent is pinned across the copy, not only before it", (
     const gate = source.slice(pruneAt, source.indexOf("resolvePrunableRetiredWorkflows", pruneAt));
     expect(gate, "the prune must be gated on the swap as well as on owning the directory").toMatch(
       /workflowsDirIsOwn\s*&&\s*!workflowsSwapped/,
+    );
+  });
+  it("pins the identity of a directory the copy itself created", async () => {
+    // Review finding [121]. A component absent before the copy had no identity to compare
+    // against, and the comparison returned `true` for it and stopped looking — so on a first
+    // `init`, where `.github` and `.github/workflows` are both created by the copy, ANY real
+    // directory standing there afterwards was accepted. The record then named workflows that are
+    // not where the record says they are, and the next run reads those names as `declined` and
+    // never writes them again.
+    //
+    // Asserted on the SOURCE, for the reason the rows above give: the swap is between two
+    // processes and there is no in-process seam to drive it from a fixture. What a row can pin is
+    // that the absent case SETTLES on the reading it takes rather than waiving the question, and
+    // that the settled value is what the record is checked against.
+    const source = await readInitSource();
+
+    const settle = source.indexOf("async function settleWorkflowAncestors(");
+    expect(settle, "the settle function must exist").toBeGreaterThan(-1);
+    const body = source.slice(settle, source.indexOf("\n}", settle));
+    expect(
+      body,
+      "a component absent before the copy must take this reading as its identity",
+    ).toMatch(/settled\.push\(observed\)/);
+    expect(body, "and must not be waived — returning early for it is the defect").not.toMatch(
+      /if \(identity === null\) (?:return|continue);/,
+    );
+
+    // …and the record compares against the settled value, not merely `a real directory`, which
+    // every swapped-in real directory also satisfies.
+    const record = source.indexOf("async function recordInstalledWorkflows(");
+    const recordBody = source.slice(
+      record,
+      source.indexOf("const workflowsDir = path.join(destRoot", record),
+    );
+    expect(
+      recordBody,
+      "the record must check the settled identity before claiming ownership",
+    ).toMatch(/workflowAncestorsMatch\(destRoot, settled\)/);
+  });
+
+  it("copies the workflows and records them before the rest of the root is touched", async () => {
+    // Review finding [123]. The workflows rode along in the root copy and the record followed
+    // it, so a permission, I/O or disk error anywhere else in that copy — `DESIGN.md`,
+    // `qfai.config.yaml`, any of it — threw before the record ran and left the workflows on disk
+    // with no entry. That state is permanent: an unrecorded shipped workflow reads as
+    // `adopter-owned` on every later run, so it is never recorded, never drift-checked, and never
+    // prunable.
+    const source = await readInitSource();
+
+    const workflowCopy = source.indexOf("const workflowResult = await copyTemplatePaths(");
+    const record = source.indexOf("await recordInstalledWorkflows(");
+    const rootCopy = source.indexOf("const rootResult = await copyTemplateTree(rootAssets");
+
+    expect(workflowCopy, "the workflows must be copied on their own").toBeGreaterThan(-1);
+    expect(record, `and recorded after that copy`).toBeGreaterThan(workflowCopy);
+    expect(
+      rootCopy,
+      "and the rest of the root copied only once the record is written",
+    ).toBeGreaterThan(record);
+  });
+
+  it("excludes every shipped workflow name from the copy of the rest of the root", async () => {
+    // The other half of the split, and the one that would fail silently: if the root copy still
+    // carried the workflows, a name this run DECLINED would arrive by that route — written
+    // without a record, which is the state the row above is about.
+    const source = await readInitSource();
+    const rootCopy = source.indexOf("const rootResult = await copyTemplateTree(rootAssets");
+    expect(rootCopy, "the root copy must exist").toBeGreaterThan(-1);
+    const call = source.slice(rootCopy, source.indexOf("});", rootCopy));
+    expect(call, "every shipped name must be excluded, whatever this run decided about it").toMatch(
+      /exclude: \[\.\.\.SHIPPED_WORKFLOW_NAMES\]/,
     );
   });
 });

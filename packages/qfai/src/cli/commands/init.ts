@@ -167,25 +167,32 @@ export async function runInit(options: InitOptions): Promise<void> {
       ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
     );
   }
-  const workflowCopyExcludes = [...SHIPPED_WORKFLOW_NAMES]
-    .filter((name) => !workflowsDirIsOwn || !workflowCopySet.has(name))
+  // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
+  //
+  // Review finding [123]: they used to ride along in the root copy, and the record followed it.
+  // A permission, I/O or disk error anywhere else in that copy — `DESIGN.md`, `qfai.config.yaml`,
+  // any of it — throws out of `copyTemplateTree` before the record runs, and the workflows are
+  // already on disk. An unrecorded shipped workflow reads as `adopter-owned` on every later run:
+  // never recorded again, invisible to doctor's drift detection, and outside the retired prune.
+  // The comment below the record already said nothing unrelated may run in between; the copy
+  // itself was the unrelated thing.
+  //
+  // Rolling back on failure was the alternative and is the wrong one here for the reason the swap
+  // branch gives: this command does not delete what it cannot verify it owns.
+  const workflowCopyPaths = [...SHIPPED_WORKFLOW_NAMES]
+    .filter((name) => workflowsDirIsOwn && workflowCopySet.has(name))
     .map((name) => path.join(".github", "workflows", name));
-
-  // root/ と .qfai/ は create-only（既存は skip）
-  // STANDARD_ASSET_PATHS のみ --force で上書きする
-  const rootResult = await copyTemplateTree(rootAssets, destRoot, {
+  const workflowResult = await copyTemplatePaths(rootAssets, destRoot, workflowCopyPaths, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["DESIGN.md"],
-    exclude: workflowCopyExcludes,
   });
 
   // The ancestors are still the directories that were inspected. Review finding [109]: the
-  // check above ran once and the copy that follows performs many asynchronous operations, so a
-  // concurrent swap of `.github` or `.github/workflows` for a link had the shipped workflow
-  // created outside the repository, and the later re-check stopped the provenance record without
-  // unwriting anything.
+  // check above ran once and the copy performs many asynchronous operations, so a concurrent
+  // swap of `.github` or `.github/workflows` for a link had the shipped workflow created outside
+  // the repository, and the later re-check stopped the provenance record without unwriting
+  // anything.
   //
   // REPORTED and unrecorded, not deleted. A rollback would have to remove those files THROUGH
   // the parent that was just found untrustworthy — following the link this command refused to
@@ -196,35 +203,46 @@ export async function runInit(options: InitOptions): Promise<void> {
   // So the operator is told, precisely, and nothing records the write. Leaving the entries out
   // of the record is what keeps the next run honest: an unrecorded file reads as adopter-owned
   // rather than as ours to overwrite.
+  const settled =
+    workflowAncestorsBefore === undefined || options.dryRun
+      ? undefined
+      : await settleWorkflowAncestors(destRoot, workflowAncestorsBefore);
   const workflowsSwapped =
-    workflowAncestorsBefore !== undefined &&
-    !options.dryRun &&
-    !(await workflowAncestorsUnchanged(destRoot, workflowAncestorsBefore));
+    workflowAncestorsBefore !== undefined && !options.dryRun && settled === undefined;
   if (workflowsSwapped) {
     error(
       ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
     );
-    rootResult.copied = rootResult.copied.filter(
-      (destination) => !isWorkflowDestination(destination, destRoot),
-    );
+    workflowResult.copied = [];
   }
 
-  // Record provenance for the shipped workflow files this copy actually
-  // wrote, IMMEDIATELY after the copy that wrote them (no-op on dry-run and
-  // when nothing new was written). Nothing unrelated may run in between: a
-  // permission or disk error in the `.qfai` or skills copy below would
-  // otherwise leave the workflow on disk with no entry, which the next run
-  // reads as `adopter-owned` — unrecordable forever, and invisible to
-  // doctor's drift detection from then on.
+  // Record provenance for the shipped workflow files this copy actually wrote (no-op on
+  // dry-run and when nothing new was written). Nothing runs between the copy and the record.
   await recordInstalledWorkflows(
     destRoot,
     rootAssets,
     workflowPreInit,
-    rootResult.copied,
+    workflowResult.copied,
     toolVersion,
     options.dryRun,
+    settled,
   );
 
+  // root/ と .qfai/ は create-only（既存は skip）
+  // STANDARD_ASSET_PATHS のみ --force で上書きする
+  //
+  // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
+  // it writes were written above, and the ones it declined must not arrive by another route.
+  const rootResult = await copyTemplateTree(rootAssets, destRoot, {
+    force: false,
+    dryRun: options.dryRun,
+    conflictPolicy: "skip",
+    protect: ["DESIGN.md"],
+    exclude: [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
+  });
+  // …and the summary counts them together, as one copy, which is what an operator sees.
+  rootResult.copied = [...workflowResult.copied, ...rootResult.copied];
+  rootResult.skipped = [...workflowResult.skipped, ...rootResult.skipped];
   const qfaiResult = await copyTemplateTree(qfaiAssets, destQfai, {
     force: false,
     dryRun: options.dryRun,
@@ -2248,18 +2266,57 @@ async function workflowAncestorIdentity(
  * One that was absent and has since been created is the copy's own work. One that changed
  * identity is the swap this comparison exists to catch.
  */
-async function workflowAncestorsUnchanged(
+async function settleWorkflowAncestors(
   destRoot: string,
   before: Array<{ dev: number; ino: number } | null>,
-): Promise<boolean> {
+): Promise<Array<{ dev: number; ino: number } | null> | undefined> {
   const after = await workflowAncestorIdentity(destRoot);
-  if (after === undefined) return false;
-  return before.every((identity, index) => {
-    if (identity === null) return true;
-    const now = after[index];
-    return (
-      now !== undefined && now !== null && now.dev === identity.dev && now.ino === identity.ino
-    );
+  if (after === undefined) return undefined;
+  const settled: Array<{ dev: number; ino: number } | null> = [];
+  for (const [index, identity] of before.entries()) {
+    const observed = after[index] ?? null;
+    if (identity === null) {
+      // Absent before the copy, so there is nothing to compare it against — this reading IS the
+      // identity, and from here on it is pinned. Review finding [121]: this branch used to
+      // return `true` and stop, so a directory the copy had just created could be moved aside
+      // and replaced with any other real directory, and the swap was never detected. The record
+      // then named workflows that are not where the record says they are, and the next run reads
+      // those names as `declined` and never writes them again.
+      settled.push(observed);
+      continue;
+    }
+    if (observed === null || observed.dev !== identity.dev || observed.ino !== identity.ino) {
+      return undefined;
+    }
+    settled.push(identity);
+  }
+  return settled;
+}
+
+/**
+ * Are the workflow directory's ancestors still the ones this run settled on?
+ *
+ * Asked again at the moment of RECORDING, because that is the moment the claim is made. An
+ * entry is a claim of ownership over a file at a path, and it outlives the run: recording
+ * nothing is recoverable, recording a file that is not there is not.
+ *
+ * Exact equality, `null` included. A component that was absent when the identity settled and
+ * exists now was created by something other than this copy, which is the same event as a swap.
+ *
+ * @param destRoot the project root
+ * @param expected the identity settled after the copy
+ * @returns whether every component is still exactly what it was
+ */
+async function workflowAncestorsMatch(
+  destRoot: string,
+  expected: Array<{ dev: number; ino: number } | null>,
+): Promise<boolean> {
+  const now = await workflowAncestorIdentity(destRoot);
+  if (now === undefined) return false;
+  return expected.every((identity, index) => {
+    const observed = now[index] ?? null;
+    if (identity === null || observed === null) return identity === observed;
+    return observed.dev === identity.dev && observed.ino === identity.ino;
   });
 }
 
@@ -2352,8 +2409,18 @@ async function recordInstalledWorkflows(
   copiedPaths: readonly string[],
   toolVersion: string,
   dryRun: boolean,
+  settled: Array<{ dev: number; ino: number } | null> | undefined,
 ): Promise<void> {
   if (dryRun) {
+    return;
+  }
+  if (settled === undefined) {
+    return; // the copy did not settle on an identity, so there is nothing to claim ownership of
+  }
+  // The identity this run settled on, not merely `a real directory`. Review finding [121]:
+  // the check below asks whether the ancestors are real directories, which every swapped-in
+  // real directory also satisfies.
+  if (!(await workflowAncestorsMatch(destRoot, settled))) {
     return;
   }
   // Asked again, here, and not only before the copy. Review finding [35]: the check that

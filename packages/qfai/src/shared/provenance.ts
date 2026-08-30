@@ -551,10 +551,74 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   }, LOCK_HEARTBEAT_MS);
   heartbeat.unref();
 
+  /**
+   * Give the lock up, removing an object this holder can still identify as its own.
+   *
+   * Review finding [122]: this was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+   * resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
+   * can move the acquired directory aside and leave a symlink to somewhere else in its place —
+   * and the marker's name is readable out of the acquired directory, so an external file can be
+   * waiting under exactly that name. The unlink then followed the link and deleted it.
+   * `refuseLinkedLockPath` cannot help: it runs once, before acquisition.
+   *
+   * So release does what `clearAbandonedLock` does. `rename` the lock name onto a private one:
+   * whatever the name refers to now, the object moves and the NAME is free for the next holder,
+   * which is the release. Then ask, of the private object, whether it is the one this holder
+   * published — and only then remove it. A `rename` that moved somebody else's lock puts it
+   * back.
+   *
+   * A symlink under the lock name is moved and then left alone, not unlinked. Removing a link
+   * somebody else put there is the same class of act this is guarding against, and the next run
+   * stops on it with a message naming the path.
+   */
+  /**
+   * Give the lock up, removing an object this holder can still identify as its own.
+   *
+   * Review finding [122]: this was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+   * resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
+   * can move the acquired directory aside and leave a symlink to somewhere else in its place —
+   * and the marker's name is readable out of the acquired directory, so an external file can be
+   * waiting under exactly that name. The unlink then followed the link and deleted it.
+   * `refuseLinkedLockPath` cannot help: it runs once, before acquisition.
+   *
+   * So release does what `clearAbandonedLock` does. `rename` the lock name onto a private one:
+   * whatever the name refers to now, the object moves and the NAME is free for the next holder,
+   * which is the release. Then ask, of the private object, whether it is the one this holder
+   * published — and only then remove it. A `rename` that moved somebody else's lock puts it
+   * back.
+   *
+   * A symlink under the lock name is moved and then left alone, not unlinked. Removing a link
+   * somebody else put there is the same class of act this is guarding against, and the next run
+   * stops on it with a message naming the path.
+   */
   const release = async (): Promise<void> => {
     clearInterval(heartbeat);
-    await unlink(path.join(lockDir, marker)).catch(() => undefined);
-    await rmdir(lockDir).catch(() => undefined);
+    const quarantine = path.join(recordDir, `${LOCK_DIR_NAME}.released-${randomUUID()}`);
+    try {
+      await rename(lockDir, quarantine);
+    } catch {
+      // Gone, or reclaimed by somebody else. Nothing under that name is this holder's to
+      // remove, which is exactly the outcome the old `ENOENT` / `ENOTEMPTY` pair produced.
+      return;
+    }
+
+    const moved = await lstat(quarantine).catch(() => undefined);
+    if (moved === undefined) return;
+    if (moved.isSymbolicLink() || !moved.isDirectory()) {
+      // Not a lock at all. Left where it is, under a name nothing will acquire.
+      return;
+    }
+
+    const held = await readdir(quarantine).catch(() => undefined);
+    if (held === undefined) return;
+    if (held.length !== 1 || held[0] !== marker) {
+      // Somebody else's lock, moved by a `rename` that could not ask first. Put it back.
+      await restoreLockDirectory(quarantine, lockDir);
+      return;
+    }
+
+    await unlink(path.join(quarantine, marker)).catch(() => undefined);
+    await rmdir(quarantine).catch(() => undefined);
   };
 
   // The lock path itself, before anything is created or removed under it.

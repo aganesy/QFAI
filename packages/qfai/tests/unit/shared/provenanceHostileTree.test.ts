@@ -8,7 +8,16 @@
  */
 
 import { createHash } from "node:crypto";
-import { readdirSync, rmSync, utimesSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  rmSync,
+  symlinkSync,
+  utimesSync,
+  writeFileSync,
+} from "node:fs";
 import {
   mkdir,
   mkdtemp,
@@ -954,5 +963,92 @@ describe("the record writer pins the directory it verified", () => {
     expect(code, "a directory that changed under the write is a refusal, not a warning").toMatch(
       /sameDirectory\(await lstat\(recordDir\), observed\)\)[\s\S]{0,80}?throw/,
     );
+  });
+});
+
+describe("releasing a lock does not follow a name that was swapped under it", () => {
+  it("leaves an outside file named like its marker exactly where it was", async () => {
+    // Review finding [122]. Release was `unlink(lockDir/marker)` then `rmdir(lockDir)`, both
+    // resolved through the lock NAME at the moment of the call. Anything that can write `.qfai/`
+    // can move the acquired directory aside and leave a symlink to somewhere else in its place —
+    // and the marker's name is readable out of the acquired directory, so an external file can be
+    // waiting under exactly that name. The unlink then followed the link and deleted it.
+    // `refuseLinkedLockPath` cannot help: it runs once, before acquisition.
+    //
+    // Driven from INSIDE the section, which is the only place the marker's name is known and the
+    // only moment the swap has an effect. The mutator runs under the lock.
+    const dir = await mkdtemp(path.join(os.tmpdir(), "qfai-lockswap-"));
+    dirs.push(dir);
+    const root = path.join(dir, "repo");
+    const outside = path.join(dir, "elsewhere");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await mkdir(outside, { recursive: true });
+    await writeInstallProvenance(root, { workflows: {} });
+
+    const lockDir = path.join(root, ".qfai", ".install-provenance.lock.d");
+    let swapped = false;
+    let hostage = "";
+
+    await updateInstallProvenance(root, (current) => {
+      // Inside the section: the lock is held and its marker names this holder.
+      const markers = readdirSync(lockDir);
+      if (markers.length === 1) {
+        hostage = path.join(outside, markers[0] ?? "");
+        writeFileSync(hostage, "not yours to delete", "utf-8");
+        const aside = `${lockDir}.moved`;
+        try {
+          renameSync(lockDir, aside);
+          symlinkSync(outside, lockDir, "junction");
+          swapped = true;
+        } catch {
+          // Windows without developer mode, or a platform refusing the link type. The guard is
+          // platform-independent; the fixture is not.
+          try {
+            renameSync(aside, lockDir);
+          } catch {
+            // already back, or never moved
+          }
+        }
+      }
+      return { ...current, workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() } };
+    });
+
+    if (!swapped) {
+      return; // the fixture could not be built here
+    }
+
+    expect(
+      existsSync(hostage),
+      "the release followed the swapped lock name and deleted a file outside the tree",
+    ).toBe(true);
+    expect(readFileSync(hostage, "utf-8"), "and it must be exactly as it was").toBe(
+      "not yours to delete",
+    );
+  });
+
+  it("still removes its own lock when nothing interferes", async () => {
+    // The other direction, and the one that would fail silently: a release that removes nothing
+    // leaves the lock standing, and the next writer waits out its whole patience.
+    const root = await tempRoot();
+    await writeInstallProvenance(root, { workflows: {} });
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-tests.yml": entryTyped() },
+    }));
+
+    expect(
+      existsSync(path.join(root, ".qfai", ".install-provenance.lock.d")),
+      "the lock must be gone, or the next writer waits out its whole patience",
+    ).toBe(false);
+
+    // …and a second writer goes straight through it.
+    await updateInstallProvenance(root, (current) => ({
+      ...current,
+      workflows: { ...current.workflows, "qfai-validate.yml": entryTyped() },
+    }));
+    expect(Object.keys((await readInstallProvenance(root)).workflows).sort()).toEqual([
+      "qfai-tests.yml",
+      "qfai-validate.yml",
+    ]);
   });
 });
