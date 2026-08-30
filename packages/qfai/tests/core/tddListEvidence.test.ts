@@ -23,6 +23,8 @@ import { defaultConfig } from "../../src/core/config.js";
 import {
   EVIDENCE_CELL_MALFORMED_RULE_ID,
   EVIDENCE_CELL_OVERSIZE_RULE_ID,
+  EVIDENCE_RED_PROVENANCE_RULE_ID,
+  ROW_EXTRA_CELLS_RULE_ID,
   validateTddList,
 } from "../../src/core/validators/tddList.js";
 
@@ -294,27 +296,29 @@ describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
     });
   }
 
-  for (const evidence of [
-    POINTER,
+  for (const [evidence, layer] of [
+    [POINTER, "Unit"],
     // `TIER:` is optional: the Tier obligation is owned elsewhere, so the
     // grammar reserves it a slot without demanding it yet.
-    `RED:n-a GREEN:pass ORACLE:equivalent-mutant TIER:T2 REV:9f3c1de -> ${ANCHOR}`,
-    `RED:falsifiability GREEN:pass ORACLE:proved TIER:T3 REV:0ab12cd -> ${ANCHOR}`,
+    [`RED:n-a GREEN:pass ORACLE:equivalent-mutant TIER:T2 REV:9f3c1de -> ${ANCHOR}`, "Unit"],
+    [`RED:falsifiability GREEN:pass ORACLE:proved TIER:T3 REV:0ab12cd -> ${ANCHOR}`, "Unit"],
     // An observation taken against an uncommitted tree. `evidence-revision.md`
     // defines this spelling and the reviewer-response gate accepts it, so a
     // grammar that forbade `+` made the one legal form of a legitimate
     // observation permanently malformed.
-    `RED:fail GREEN:pass ORACLE:proved REV:working-tree+${CONTENT_HASH} -> ${ANCHOR}`,
+    [`RED:fail GREEN:pass ORACLE:proved REV:working-tree+${CONTENT_HASH} -> ${ANCHOR}`, "Unit"],
     // The compatibility marker completion item 10 requires on an E2E/API row
     // that finished before the ATDD evidence split. Such a row cannot
     // re-observe a RED, so a grammar ending at the anchor left it no exit but
-    // a standing waiver.
-    `${POINTER} Pre-split-evidence: implement`,
-  ]) {
-    it(`accepts "${evidence.slice(0, 48)}"`, async () => {
+    // a standing waiver. `E2E`, because that is the only class the marker
+    // means anything on.
+    [`${POINTER} Pre-split-evidence: implement`, "E2E"],
+  ] as const) {
+    it(`accepts "${evidence.slice(0, 48)}" on a Layer=${layer} row`, async () => {
       await withProject(async (root) => {
-        const codes = await runOn(root, ledger([{ status: "done", evidence }]));
+        const codes = await runOn(root, ledger([{ status: "done", evidence, layer }]));
         expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_RED_PROVENANCE");
         expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
       });
     });
@@ -336,14 +340,18 @@ describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
           },
         ]),
       );
-      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(codes).toContain("TDDLIST_EVIDENCE_RED_PROVENANCE");
       // One defect, one finding: the cell is still shaped like a pointer, so
       // the status-only rule must not also read its `GREEN:pass` as prose.
       expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
     });
   });
 
-  it("names the provenance as the cause on an ATDD-owned row", async () => {
+  // "There is no waiver here" has one spelling in this package: a waiver may
+  // only target `warning` / `info`, so the provenance breach ships as its own
+  // `error` code. Reported as a `TDDLIST-007` warning it shared a rule id with
+  // every legacy prose cell, and the migration's own waiver silenced it.
+  it("reports the provenance breach as an unwaivable error of its own", async () => {
     await withProject(async (root) => {
       await runOn(
         root,
@@ -352,14 +360,18 @@ describe("TDDLIST_EVIDENCE_CELL_MALFORMED", () => {
             status: "done",
             layer: "Integration",
             tddId: "TDD-0042",
-            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/atdd-spec-0001.md#tdd-0001\``,
+            evidence: `RED:n-a GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/atdd-spec-0001.md#tdd-0042\``,
           },
         ]),
       );
       const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_RED_PROVENANCE");
+      expect(found?.severity).toBe("error");
+      expect(found?.rule).toBe(EVIDENCE_RED_PROVENANCE_RULE_ID);
+      expect(found?.rule).not.toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
       expect(found?.message).toContain("RED:n-a");
       expect(found?.message).toContain("TDD-0042");
+      expect(issues.some((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED")).toBe(false);
     });
   });
 
@@ -495,7 +507,7 @@ describe("TDDLIST_EVIDENCE_CELL_OVERSIZE", () => {
         ]),
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
-      expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(codes).toContain("TDDLIST_EVIDENCE_RED_PROVENANCE");
     });
   });
 
@@ -582,7 +594,9 @@ describe("Evidence anchor binding", () => {
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
       expect(found?.rule).toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
-      expect(found?.message).toContain(".qfai/evidence/atdd-spec-0001.md#<heading>");
+      // The row's own section, not a `<heading>` placeholder: the anchor is
+      // bound to the id as well as to the file.
+      expect(found?.message).toContain(".qfai/evidence/atdd-spec-0001.md#tdd-0001");
     });
   });
 
@@ -639,6 +653,163 @@ describe("Evidence anchor binding", () => {
         ),
       );
       expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+});
+
+/**
+ * The fragment is the row's own `### TDD-NNNN` section.
+ *
+ * Both skills write "one `### TDD-NNNN` section per row" and say the ledger
+ * cell anchors there. Left free, a `TDD-0002` row could anchor at `#tdd-0001` —
+ * its neighbour's proof — or at `#garbage`, and reach `done` on evidence that
+ * was never taken for it.
+ */
+describe("Evidence fragment binding", () => {
+  const row = (tddId: string, fragment: string) => [
+    {
+      status: "done",
+      tddId,
+      evidence: `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/implement-spec-0001.md#${fragment}\``,
+    },
+  ];
+
+  it("accepts the row's own section", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger(row("TDD-0007", "tdd-0007")));
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+
+  for (const [label, fragment] of [
+    ["another row's section", "tdd-0001"],
+    ["a fragment that names no section", "garbage"],
+  ] as const) {
+    it(`reports ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger(row("TDD-0007", fragment)));
+        expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+        // Still shaped like a pointer, so the status-only rule stays quiet.
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_STATUS_ONLY");
+      });
+    });
+  }
+
+  it("names the fragment the row owes", async () => {
+    await withProject(async (root) => {
+      await runOn(root, ledger(row("TDD-0007", "tdd-0001")));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(found?.rule).toBe(EVIDENCE_CELL_MALFORMED_RULE_ID);
+      expect(found?.message).toContain("### TDD-0007");
+      expect(found?.message).toContain("#tdd-0007");
+    });
+  });
+
+  // `TDDLIST_MISSING` / `TDDLIST_INVALID_ID` already name a row with no usable
+  // id. Deriving an anchor from an id the ledger does not have would report a
+  // second defect the author cannot act on.
+  it("leaves the fragment free when the row has no well-formed id", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger(row("TDD-42", "anything")));
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+    });
+  });
+});
+
+/**
+ * The compatibility marker means one thing: this pre-split `E2E` / `API` row
+ * may keep its `implement-` anchor. Anywhere else it is decoration — and
+ * completion item 10 reads it to tell a legacy row from a current one, so a row
+ * that can carry it for no reason is a row that can claim to be legacy.
+ */
+describe("Evidence compatibility marker scope", () => {
+  const withMarker = (layer: string, stage: string) => [
+    {
+      status: "done",
+      layer,
+      evidence: `RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> \`.qfai/evidence/${stage}-spec-0001.md#tdd-0001\` Pre-split-evidence: implement`,
+    },
+  ];
+
+  for (const [layer, stage] of [
+    // An implement-owned row's anchor needs no licensing.
+    ["Unit", "implement"],
+    ["Component", "implement"],
+    // A pre-split row already pointing at the file it owns needs none either.
+    ["E2E", "atdd"],
+    ["API", "atdd"],
+  ] as const) {
+    it(`reports the marker on a Layer=${layer} row anchored at ${stage}-`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger(withMarker(layer, stage)));
+        expect(codes).toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+
+  it("names the marker as the cause", async () => {
+    await withProject(async (root) => {
+      await runOn(root, ledger(withMarker("Unit", "implement")));
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(found?.message).toContain("Pre-split-evidence: implement");
+      expect(found?.message).toContain("cannot be pre-split");
+    });
+  });
+
+  for (const layer of ["E2E", "API"] as const) {
+    it(`accepts the marker licensing an implement anchor on a Layer=${layer} row`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger(withMarker(layer, "implement")));
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      });
+    });
+  }
+});
+
+/**
+ * A row may not carry cells the header does not declare.
+ *
+ * Every rule reads cells by header index, so content parked past the last
+ * column is read by nothing — including the Evidence grammar and its cap.
+ */
+describe("TDDLIST_ROW_EXTRA_CELLS", () => {
+  const conforming =
+    "RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0001`";
+
+  it("reports a surplus cell holding the payload the cap forbids", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        `${ledger([{ status: "done", evidence: conforming }]).trimEnd()} ${"x".repeat(1000)} |\n`,
+      );
+      expect(codes).toContain("TDDLIST_ROW_EXTRA_CELLS");
+      // The declared Evidence cell is conforming: without this rule the row
+      // drew no finding at all.
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_MALFORMED");
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_CELL_OVERSIZE");
+    });
+  });
+
+  it("stays quiet on a row whose cells match the header", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(root, ledger([{ status: "done", evidence: conforming }]));
+      expect(codes).not.toContain("TDDLIST_ROW_EXTRA_CELLS");
+    });
+  });
+
+  it("names the counts and its waiver rule id", async () => {
+    await withProject(async (root) => {
+      await runOn(
+        root,
+        `${ledger([{ status: "done", evidence: conforming }]).trimEnd()} surplus |\n`,
+      );
+      const issues = await validateTddList(root, defaultConfig);
+      const found = issues.find((i) => i.code === "TDDLIST_ROW_EXTRA_CELLS");
+      expect(found?.rule).toBe(ROW_EXTRA_CELLS_RULE_ID);
+      expect(found?.message).toContain("9 cells");
+      expect(found?.message).toContain("8 columns");
     });
   });
 });

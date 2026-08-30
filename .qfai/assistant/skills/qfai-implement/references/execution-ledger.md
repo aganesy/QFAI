@@ -123,16 +123,21 @@ RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-
   `working-tree+<sha256>` for an observation taken against an uncommitted
   tree. The reviewer-response gate reads the same two, so one value serves
   both.
-- `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<heading>`:
-  the evidence file this row's `Layer` owns, and the heading of **this item's**
-  entry in it. Both halves are checked **against the row**, not merely for
-  shape: the stage is the one the `Layer` assigns (`implement` for the rows
-  this skill runs itself, `atdd` for `E2E` / `API` / `Integration`), and
-  `<spec-id>` is **this** spec's. An anchor into another spec's file, or into
-  the file of the stage that did not author the test, is
+- `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`:
+  the evidence file this row's `Layer` owns, and **this row's own**
+  `### TDD-NNNN` section in it. All three halves are checked **against the
+  row**, not merely for shape: the stage is the one the `Layer` assigns
+  (`implement` for the rows this skill runs itself, `atdd` for `E2E` / `API` /
+  `Integration`), `<spec-id>` is **this** spec's, and the fragment is this
+  row's `TDD-ID` lowercased — the slug of the section both skills require per
+  row. An anchor into another spec's file, into the file of the stage that did
+  not author the test, or at another row's section, is
   `TDDLIST_EVIDENCE_CELL_MALFORMED` — it names proof that was never taken for
   this row. The fragment is required — a pointer to the file alone does not
-  say which item's proof to read. Backticks around the anchor are allowed.
+  say which item's proof to read. A row whose `TDD-ID` is missing or malformed
+  has no fragment to bind to, so only the file is checked there;
+  `TDDLIST_MISSING` / `TDDLIST_INVALID_ID` name that defect. Backticks around
+  the anchor are allowed.
 
 Nothing follows the anchor, with **one** exception: an `E2E` / `API` row that
 completed before the ATDD evidence split carries the compatibility marker
@@ -142,9 +147,15 @@ reason — a `done` row cannot re-observe a RED, so it can neither drop the
 marker nor earn a new anchor. The marker is what **licenses** the `implement-`
 anchor there: item 10 judges an unmarked row by the current rule whatever its
 status, so an `E2E` / `API` row naming the implement file **without** the
-marker is the row that never produced its ATDD handoff, and is malformed. Item
-10 scopes the marker pass to `E2E` / `API` rows, so the marker licenses nothing
-on an `Integration` row — that layer has no pre-split form to grandfather.
+marker is the row that never produced its ATDD handoff, and is malformed.
+
+The marker is legal in **exactly one** place: after an `implement-` anchor on
+an `E2E` / `API` row. Item 10 scopes the marker pass to those two layers, so it
+licenses nothing on an `Integration` row — that layer has no pre-split form to
+grandfather — and it licenses nothing on a row already pointing at the file it
+owns. Anywhere else it is `TDDLIST_EVIDENCE_CELL_MALFORMED`: item 10 reads the
+marker to tell a legacy row from a current one, so a row that may carry it for
+no reason is a row that may claim to be legacy.
 
 Everything else the cell used to carry belongs in the evidence file the anchor
 names. This is a move, not a deletion.
@@ -197,6 +208,13 @@ assert a cycle has run:
 | `TDDLIST_EVIDENCE_STATUS_ONLY`    | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
 | `TDDLIST_EVIDENCE_CELL_MALFORMED` | the cell does not match the grammar above                           | warning  |
 | `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning  |
+| `TDDLIST_EVIDENCE_RED_PROVENANCE` | `RED:n-a` on an `E2E` / `API` / `Integration` row                   | error    |
+
+One more rule reads the row rather than a cell:
+
+| Finding                   | Fires when                                              | Severity |
+| ------------------------- | ------------------------------------------------------- | -------- |
+| `TDDLIST_ROW_EXTRA_CELLS` | the row has more cells than the table's header declares | warning  |
 
 A command is recognised by shape, not from a list of known runners, so the rule
 holds on any stack: a program name followed by an argument carrying a flag, a
@@ -213,11 +231,24 @@ The two grammar findings are warnings for the same reason, waivable under
 only other fault is prose is reported **once**, as the cap breach: every cell
 that outgrew the cap did so by holding prose, so the two are one defect to fix.
 A cell that is a well-formed pointer but breaks a **binding** — the RED
-provenance its `Layer` owes, or the evidence file its `Layer` and spec own — is
-reported as `TDDLIST_EVIDENCE_CELL_MALFORMED` whatever its length. Those ask
-for a different fix from a cap breach, and folding them into it would let
-`TDDLIST-008` waive a violation of which "ATDD-owned rows" says "There is no
-waiver here".
+provenance its `Layer` owes, the evidence file its `Layer` and spec own, the
+section its `TDD-ID` names, or a compatibility marker where none is licensed —
+is reported whatever its length. Those ask for a different fix from a cap
+breach, and folding them into it would let `TDDLIST-008` waive a violation of
+which "ATDD-owned rows" says "There is no waiver here".
+
+`RED:n-a` on an ATDD-owned row is the one that carries no waiver at all. It is
+its own code, `TDDLIST_EVIDENCE_RED_PROVENANCE`, at `error` — a waiver may only
+target `warning` / `info`, so that is how "There is no waiver here" is spelled.
+Reported as a `TDDLIST-007` warning it shared a rule id with every legacy prose
+cell, and waiving the migration silenced it. The other bindings stay warnings:
+they are the migration, and a row that never obtained RED provenance is not a
+formatting defect the grammar introduced.
+
+`TDDLIST_ROW_EXTRA_CELLS` is a warning under `TDDLIST-010`. Cells are read by
+header index, so anything parked past the last declared column is read by
+nothing — a conforming `Evidence` cell followed by a surplus column holding the
+payload passed both the grammar and the cap with no finding at all.
 
 Rows at `todo`, `red` and `exception` are not checked — the first two have
 nothing to show yet, and a parked row records its reason in `DR-ID`, which
