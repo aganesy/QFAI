@@ -88,7 +88,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream. A row whose own test asserts over the CONTENT of an artifact this skill may not write is not implementable here at all, and the three moves available to it all lose: `references/upstream-artifact-ordering.md`.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there, and the RED provenance those rows carry is defined in `../qfai-atdd/references/red-provenance.md` — this skill writes their `Status` / `DR-ID` / `Evidence` from the evidence that stage produced.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by `## Parallelization Policy` below.)
@@ -163,7 +163,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Completion
 
-1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads.
+1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers unconditionally, and the ones gate item 10 reads. `Test file` and `Selector` are covered too, but only while their stated condition still holds, so fill a placeholder or repair an unresolvable selector when you reach it rather than at the end.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
@@ -333,7 +333,7 @@ Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a revi
 conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
 `<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
-Each review round creates a new pack. Full schema and the `REVISE` -> `status: "REVISE"` mapping:
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
 `references/review-artifact-layout.md`.
 
 ### Spec completion conditions
@@ -341,10 +341,10 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
-- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared
-  `US-*` and `CON-API-*` is referenced from the test tree. **Not** "every `US-*`
-  has an `E2E` row": those rows have no producer, so requiring them made a correct
-  spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
+- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared `US-*` and
+  `CON-API-*` is traced by an annotation in the test tree, and where `06_Test-Cases.md` declares an
+  E2E coverage-target TC, by a `Layer = E2E` row naming it. **Not** "every `US-*` has an `E2E` row":
+  those rows have no producer (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
@@ -372,7 +372,7 @@ Completion MUST NOT be declared when any of the following are true:
   waiver** (a `TDDLIST-001` entry in `.qfai/waivers.yml`). An `exception` whose
   DR only describes the anomaly is a parked defect, not a completed item.
 - Parallel slices were used but integration verify has not been run post-merge
-- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a step 1 command exited 0 with neither a test named in its recorded output nor — on a runner with no option that prints names — a positive selected/run count recorded in its place (a run that selected zero tests exits 0 too, so the exit code alone never settles step 1; the count is the same alternative `references/checkpoint-verification.md` decision **d** allows, so a supported nameless runner is not blocked here) — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
+- A checkpoint boundary was reached (see `#checkpoint-verification`) but the verification command set was not executed, or any command in it exited non-zero, or a narrowed step 1 command exited 0 with neither a test named in its recorded output nor — on a runner with no option that prints names — a positive selected/run count recorded in its place (a narrowed run that selected zero tests exits 0 too, so the exit code alone never settles it; the count is the same alternative `references/checkpoint-verification.md` allows under **The option that makes the run visible**, so a supported nameless runner is not blocked here) — the last row a run completes is always a boundary, not the physical last row of the file, which is often already `done` and skipped, so every spec runs the full suite at least once
 - `it.todo(...)` / `test.todo(...)` / `describe.todo(...)` stubs remain in any file covered by `validation.traceability.testFileGlobs` (`QFAI-TEST-001`). Implement the body or delete the stub — an opt-out via `validation.testStrategy.forbidTestTodoStubs: false` is permitted only with an accompanying waiver DR-ID.
 
 ## Evidence (MANDATORY)
@@ -421,8 +421,8 @@ review is requested.
 - `Spec review` — completion-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash` (`references/evidence-revision.md`)
 - `Code quality review` — implementation-reviewer result (PASS or REVISE) with its `Reviewed revision` and `Audited evidence hash`
 - `Prototype parity` — product-surface-reviewer result for UI-affecting items (PASS or REVISE)
-- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary, step 1 included in full: one command per `Selector` entry, each recorded literally
-- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0 **and** every step 1 run's recorded output names the `Selector` entry it ran — or, on a runner with no option that prints names, records a positive selected/run count in its place; an exit 0 with neither selected nothing and is a FAIL) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
+- `Checkpoint verification command` — the exact command set executed at the checkpoint boundary, step 1 included in full — file-scoped, or where it was narrowed one command per `Selector` entry, each recorded literally
+- `Checkpoint verification result` — the outcome of that command set (PASS only when every command exits 0 **and**, where step 1 was narrowed, every step 1 run's recorded output names the `Selector` entry it ran — or, on a runner with no option that prints names, records a positive selected/run count in its place; an exit 0 with neither selected nothing and is a FAIL) — and `Checkpoint verification seal`, the audit hash over these two fields together with the `Revision` the checkpoint ran against, taken by whoever ran it the moment the run ends. The three are appended after every reviewer has hashed, so they are in no audit subject by construction; the revision excludes `.qfai/evidence/**`, and the review pack seal covers only the pack. Without a seal of their own, a row already at `done` could have its checkpoint result edited from FAIL to PASS with no revision, no `Audited evidence hash` and no pack seal moving, and item 12 would accept it
 
 These record verdicts that do not exist until the reviews have run. A reviewer MUST NOT treat their
 absence as a blocking gap during review — an evidence file complete in its phase-authored part and
@@ -444,7 +444,7 @@ reached **per item** (after all routed blocking reviewers return PASS, before `r
 and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
 
 It PASSES only when **every** command in the verification command set exits 0; a partial run is not
-a pass — and **step 1 is not settled by its exit code**: it is emitted one command per `Selector` entry, and each run passes only when its recorded output names the entry it ran — or, where the runner has no option that prints names, reports a positive selected/run count instead — because a run that selected zero tests exits 0 as well. The boundary definition, command set, pass criteria and evidence
+a pass — and once narrowed **step 1 is not settled by its exit code**: it is then emitted one command per `Selector` entry, and each run passes only when its recorded output names the entry it ran — or, where the runner has no option that prints names, reports a positive selected/run count instead — because a run that selected zero tests exits 0 as well. The boundary definition, command set, pass criteria and evidence
 fields are in `references/checkpoint-verification.md`.
 
 ## FINAL CHECKLIST (Check Last)

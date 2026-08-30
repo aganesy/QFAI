@@ -81,48 +81,68 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
-  // The ledger's `Selector` is a test NAME. Every common runner takes a name via
-  // a flag; a positional argument is a file filter, so `vitest '<Selector>'`
-  // exits 1 with "No test files found" and no item could ever leave `refactor`.
-  it("passes the selector through the runner's test-name option", async () => {
+  // The per-item command is FILE-SCOPED, and the earlier prescription it replaces
+  // is the reason: `-t` / `-k` hand the ledger's `Selector` to a REGEX matcher, so
+  // a selector in the common `TC-NNNN-NNNN (TDD-NNNN): title` shape has its
+  // parentheses read as a capture group, matches nothing, reports `1 skipped` — and
+  // EXITS 0. Exit code is what the surrounding procedure reads, so that failure is
+  // invisible exactly where it is consumed. Hence both halves are pinned here: the
+  // prescribed form is present AND the defective one is gone.
+  it("prescribes the file-scoped run and demotes the name option behind its regex caveat", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("<test runner> <Test file> -t '<Selector>'");
-      expect(reference).toContain('exits 1 with "No test files');
+      expect(reference).toContain("run **file-scoped, with no test-name option**");
+      // The fenced command itself, EOL-agnostic so a CRLF checkout reads the same.
+      expect(reference).toMatch(/```bash\r?\n\s*<test runner> <Test file>\r?\n\s*```/);
+      expect(reference).not.toContain("<test runner> <Test file> -t '<Selector>'");
+
+      // The caveat must name the MECHANISM and the SILENCE, not merely counsel
+      // care: a reader told only "mind the quoting" reproduces the exit-0 skip.
+      expect(reference).toContain("reads as a capture group, not as characters");
+      expect(reference).toContain("**exits 0**");
+      // Narrowing survives as an OPTION, with the check that makes it safe.
+      expect(reference).toContain("**If you do narrow**");
+      expect(reference).toContain("A skipped count is not a pass.");
     }
   });
 
   // `go test` selects by package, not by file: handing it a lone `*_test.go`
   // switches it into file mode and drops the rest of the package from the
-  // build, so the item's test normally fails on undefined symbols.
+  // build, so the item's test normally fails on undefined symbols. This guidance
+  // SURVIVES the file-scoped prescription — only its `-run` flag left with `-t`,
+  // which is why the last assertion pins the flag's absence separately.
   it("derives a package, not a file, for package-selecting runners", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("**b. The unit of selection.**");
-      expect(reference).toContain("**Package-selecting runners** (`go test`) take a package");
-      expect(reference).toContain("go test ./<dir of Test file> -run '<Selector>'");
+      expect(reference).toContain("**The unit of selection is not always a file.**");
+      expect(reference).toContain("Package-selecting runners (`go test`) take a");
+      expect(reference).toMatch(/```bash\r?\n\s*go test \.\/<dir of Test file>\r?\n\s*```/);
       expect(reference).toContain("drops the rest of the package from the build");
       expect(reference).toContain("Derive the package from the `Test file`'s directory");
+      expect(reference).not.toContain("-run '<Selector>'");
     }
   });
 
   // A `Selector` may legally hold several entries. The name options take a
   // substring, an expression or a regex — never a list, never a shell glob — so
   // interpolating the whole cell once selects zero tests and still exits 0: the
-  // checkpoint would pass having run none of the row's tests.
+  // checkpoint would pass having run none of the row's tests. Step 1's default is
+  // file-scoped, which cannot hit that; this rule governs the narrowing the
+  // file-scoped prescription keeps as an explicit option, so it is pinned inside
+  // that branch and not as a lettered decision of a mandatory name option.
   it("emits one step 1 command per selector entry", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("**c. One command per `Selector` entry.**");
+      expect(reference).toContain("**One command per `Selector` entry.**");
       expect(reference).toContain("emit one command per entry");
       expect(reference).toContain("Checkpoint verification command");
       // The silent form, which the flag shape turns into a no-op rather than an error.
@@ -130,10 +150,10 @@ describe("qfai-implement checkpoint verification contract", () => {
       // A glob is not a shell glob to any of these runners.
       expect(reference).toContain("translated into the runner's own name language");
       expect(reference).toContain("-run '^test_rejects_expired_token_'");
-      // The added decisions are announced where the earlier ones are counted.
-      expect(reference).not.toContain("Two runner-specific decisions");
-      expect(reference).not.toContain("Three runner-specific decisions");
-      expect(reference).toContain("Four runner-specific decisions");
+      // It hangs off "If you do narrow", so it must not re-announce a mandatory
+      // name option — no count of lettered decisions may survive anywhere.
+      expect(reference).toContain("**If you do narrow**");
+      expect(reference).not.toContain("runner-specific decisions");
     }
   });
 
@@ -185,9 +205,11 @@ describe("qfai-implement checkpoint verification contract", () => {
         "every step 1 run's recorded output names the `Selector` entry it ran",
       );
       expect(skill).toContain("**step 1 is not settled by its exit code**");
-      // Completion prohibition: a nameless exit 0 blocks completion as a non-zero exit does.
+      // Completion prohibition: a nameless exit 0 blocks completion as a non-zero
+      // exit does — scoped to the narrowed form, because the file-scoped default
+      // cannot select nothing and its default reporter names no test either.
       expect(skill).toContain(
-        "or a step 1 command exited 0 with neither a test named in its recorded output",
+        "or a narrowed step 1 command exited 0 with neither a test named in its recorded output",
       );
       // The bare exit-code definitions must not survive anywhere unqualified.
       expect(skill).not.toContain("(PASS only when every command exits 0)");
@@ -198,16 +220,19 @@ describe("qfai-implement checkpoint verification contract", () => {
   });
 
   // pytest and `go test` print no test name by default, so the criterion above
-  // would FAIL every correct run unless the command asks for the names.
+  // would FAIL every correct run unless the command asks for the names. The
+  // examples interpolate an ENTRY, not the whole `Selector` cell: a multi-entry
+  // cell handed to one name option matches nothing, and the file-scoped
+  // prescription pins the absence of the raw `-run '<Selector>'` form separately.
   it("makes step 1's command print the names it ran", async () => {
     for (const dir of SKILL_DIRS) {
       const reference = await readFile(
         path.join(dir, "references", "checkpoint-verification.md"),
         "utf-8",
       );
-      expect(reference).toContain("**d. The option that makes the run visible.**");
-      expect(reference).toContain("pytest <Test file> --verbosity=1 -k '<Selector>'");
-      expect(reference).toContain("go test ./<dir of Test file> -v -run '<Selector>'");
+      expect(reference).toContain("**The option that makes the run visible.**");
+      expect(reference).toContain("pytest <Test file> --verbosity=1 -k '<entry>'");
+      expect(reference).toContain("go test ./<dir of Test file> -v -run '^<entry>$'");
       expect(reference).toContain("--reporter=verbose");
       expect(reference).toContain("--verbose");
       // The fallback for a runner with no such option.
