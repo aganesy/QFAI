@@ -251,6 +251,14 @@ async function collectReachable(): Promise<Set<string>> {
   return reachable;
 }
 
+/**
+ * Deliberately an unanchored substring match, not an exact one. The findings
+ * array is written `Issue[]`, `readonly Issue[]` and `Promise<readonly
+ * Issue[]>` across the validators — `validateDesignMdPatchZone`,
+ * `detectEvidenceMutationUnlogged` and `detectSkillManifestDrift` all use the
+ * readonly form — so anchoring this would silently exempt that whole family
+ * from the dispatch assertion below. `readonlyFindingsShapes` pins it.
+ */
 const FINDINGS_ARRAY = /\bIssue\[\]/;
 
 /**
@@ -603,6 +611,28 @@ describe("reachability walkers", () => {
       "validateArrow",
       "validateDeclared",
       "validateExpression",
+    ]);
+  });
+
+  // Pin, not a regression test: every shape below is enumerated today. It
+  // exists because `FINDINGS_ARRAY` reads as if it only matched a bare
+  // `Issue[]`, so a later "tightening" to an anchored match would look like a
+  // cleanup while quietly dropping the readonly-returning validators — the
+  // largest family in `src/core/validators` — out of the dispatch assertion.
+  it("treats readonly findings arrays as findings, bare and inside a Promise", () => {
+    const sourceFile = parseLiteral(
+      [
+        "export async function validateReadonlyAwaited(root: string): Promise<readonly Issue[]> { return []; }",
+        "export function validateReadonlyDirect(root: string): readonly Issue[] { return []; }",
+        "export const validateReadonlyArrow = async (root: string): Promise<readonly Issue[]> => [];",
+        "export function notAValidator(root: string): readonly string[] { return []; }",
+      ].join("\n"),
+    );
+
+    expect(findingsEntries(sourceFile, findingsTypes).sort()).toEqual([
+      "validateReadonlyArrow",
+      "validateReadonlyAwaited",
+      "validateReadonlyDirect",
     ]);
   });
 
