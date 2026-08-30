@@ -244,8 +244,27 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // guard fires only on the phrase plus an id.
     const assistantDir = path.join(templateQfaiDir, "assistant");
     const files = await fg(["**/*.{md,yml,yaml}"], { cwd: assistantDir, absolute: true });
-    const attribution =
-      /this repository(?:'s)?[^.\n]{0,80}`?(?:spec-\d{4}|(?:TC|AC|BR|US|CON)-\d{4}-\d{4})/i;
+    const ID = String.raw`\`?(?:spec-\d{4}|(?:TC|AC|BR|US|CON)-\d{4}-\d{4})\`?`;
+    // Both orders. The attribution is the same claim whichever half comes
+    // first — "`spec-0006` in this repository" reads exactly as
+    // "this repository's `spec-0006`" — and checking only one of them let the
+    // other spelling through the guard that promises "never attributes".
+    const attributions = [
+      new RegExp(String.raw`this repository(?:'s)?[^.\n]{0,80}${ID}`, "i"),
+      new RegExp(String.raw`${ID}[^.\n]{0,80}this repository`, "i"),
+    ];
+
+    const attributes = (text: string): boolean =>
+      attributions.some((pattern) => pattern.test(text));
+
+    // A guard nothing can trip proves nothing about the tree it scans.
+    expect(attributes("this repository's `spec-0006` covers it")).toBe(true);
+    expect(attributes("see `spec-0006` in this repository")).toBe(true);
+    expect(attributes("`TC-0006-0001` belongs to this repository")).toBe(true);
+    // The bare phrase stays legitimate — qfai-atdd / qfai-configure /
+    // qfai-verify all use it correctly.
+    expect(attributes("run the relevant test suite for this repository")).toBe(false);
+    expect(attributes("`spec-0006` covers the parser")).toBe(false);
 
     const offenders = (
       await Promise.all(
@@ -253,11 +272,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
           // Collapse soft wraps: the phrase and the id routinely straddle a
           // markdown line break.
           const content = (await readFile(filePath, "utf-8")).replace(/\s*\n\s*/g, " ");
-          const found = attribution.exec(content);
-          if (found === null) {
-            return null;
+          for (const attribution of attributions) {
+            const found = attribution.exec(content);
+            if (found !== null) {
+              return `${path.relative(repoRoot, filePath)}: ${found[0]}`;
+            }
           }
-          return `${path.relative(repoRoot, filePath)}: ${found[0]}`;
+          return null;
         }),
       )
     ).filter((result): result is string => result !== null);
