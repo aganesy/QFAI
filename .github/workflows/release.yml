@@ -429,6 +429,9 @@ jobs:
         run: |
           set -euo pipefail
           list=".ci-actions/.github/actions/setup/dependency-builds.txt"
+          # Where each permitted package comes from, before any of it runs. A name on the list
+          # is a permission for that package, not for whatever the lockfile points the name at.
+          node ".ci-actions/.github/actions/setup/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
           if [ ! -f "${list}" ]; then
             echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
             exit 1

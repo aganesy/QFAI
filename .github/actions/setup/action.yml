@@ -295,6 +295,12 @@ runs:
         # current revision, so a list at the repository root was simply absent and the refusal
         # below stopped a documented re-publish route.
         list="${{ github.action_path }}/dependency-builds.txt"
+        # Being on the list permits the package of that NAME to run its install scripts. It does
+        # not permit the name to be pointed somewhere else: a pull request that resolves
+        # `esbuild` to a local `.tgz`, a directory or a git checkout keeps the name and replaces
+        # the code, and the rebuild below runs it. So where each permitted package comes from is
+        # read out of the lockfile first.
+        node "${{ github.action_path }}/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
         if [ ! -f "${list}" ]; then
           echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
           exit 1

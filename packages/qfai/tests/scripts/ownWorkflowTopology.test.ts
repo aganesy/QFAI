@@ -2434,3 +2434,126 @@ describe("the rebuild allow-list is reachable on a tag that predates it", () => 
     }
   });
 });
+
+describe("a permitted rebuild is verified against where the package comes from", () => {
+  // Review finding [135]. Installation runs with `--ignore-scripts` and the step beside it then
+  // rebuilds exactly the packages the allow-list names — which runs their `postinstall`. The
+  // list names `esbuild`, so it permits *the package called esbuild*, whatever that turns out
+  // to be. A pull request that resolves that name to a local `.tgz`, a directory or a git
+  // checkout keeps the name and replaces the code, and the rebuild executes it in the job every
+  // later verification depends on.
+  //
+  // Executed against synthetic lockfiles, because the property is what the guard DOES with a
+  // resolution — not something reading the YAML can see.
+
+  const VERIFIER = path.join(
+    REPO_ROOT,
+    ".github",
+    "actions",
+    "setup",
+    "verify-rebuild-sources.mjs",
+  );
+
+  it("accepts a registry tarball and refuses every other source", () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-rebuild-src-"));
+    try {
+      const list = path.join(dir, "dependency-builds.txt");
+      writeFileSync(list, `# probe\nesbuild\n`, "utf-8");
+
+      const verify = (lock: string): number => {
+        const lockPath = path.join(dir, "pnpm-lock.yaml");
+        writeFileSync(lockPath, lock, "utf-8");
+        const run = spawnSync("node", [VERIFIER, lockPath, list], { encoding: "utf-8" });
+        if (run.error !== undefined) throw run.error;
+        return run.status ?? -1;
+      };
+
+      const registry = [
+        "lockfileVersion: '9.0'",
+        "",
+        "packages:",
+        "",
+        "  esbuild@0.21.5:",
+        "    resolution: {integrity: sha512-deadbeef}",
+        "",
+        "snapshots:",
+        "",
+        // The same key appears again here with no resolution; reading the snapshot section as
+        // unresolved packages reported a finding against an ordinary lockfile, and did until it
+        // was measured.
+        "  esbuild@0.21.5:",
+        "    optionalDependencies:",
+        "      '@esbuild/aix-ppc64': 0.21.5",
+        "",
+      ].join("\n");
+
+      expect
+        .soft(verify(registry), "a content-addressed registry tarball must be accepted")
+        .toBe(0);
+
+      for (const [resolution, why] of [
+        ["{tarball: file:vendor/esbuild-0.21.5.tgz}", "the reviewer's local .tgz"],
+        ["{directory: vendor/esbuild, type: directory}", "a workspace directory"],
+        ["{repo: git@github.com:someone/esbuild.git, commit: deadbeef}", "a git checkout"],
+      ] as Array<[string, string]>) {
+        const swapped = [
+          "lockfileVersion: '9.0'",
+          "",
+          "packages:",
+          "",
+          "  esbuild@0.21.5:",
+          `    resolution: ${resolution}`,
+          "",
+        ].join("\n");
+        expect.soft(verify(swapped), `${why} keeps the name and replaces the code`).toBe(1);
+      }
+
+      // And a permitted name the lockfile does not resolve at all: a permission with no
+      // subject, which is not a pass either.
+      const absent = [
+        "lockfileVersion: '9.0'",
+        "",
+        "packages:",
+        "",
+        "  vite@5.0.0:",
+        "    resolution: {integrity: sha512-deadbeef}",
+        "",
+      ].join("\n");
+      expect
+        .soft(verify(absent), "a permitted name the lockfile never resolves must be reported")
+        .toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("runs that verification before the rebuild, in every reader", () => {
+    // Ordering, not presence: verifying after the rebuild verifies nothing.
+    const action = readFileSync(
+      path.join(REPO_ROOT, ".github", "actions", "setup", "action.yml"),
+      "utf-8",
+    );
+    const verifyAt = action.indexOf("verify-rebuild-sources.mjs");
+    const rebuildAt = action.indexOf("pnpm rebuild");
+    expect(verifyAt, "the action must verify the sources").toBeGreaterThan(-1);
+    expect(rebuildAt, "and must rebuild something").toBeGreaterThan(-1);
+    expect(verifyAt, "the source check must precede the rebuild it authorises").toBeLessThan(
+      rebuildAt,
+    );
+
+    const release = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "release.yml"),
+      "utf-8",
+    );
+    if (release.includes("pnpm rebuild")) {
+      expect(
+        release.indexOf("verify-rebuild-sources.mjs"),
+        "release.yml rebuilds without checking where the package comes from",
+      ).toBeGreaterThan(-1);
+      expect(
+        release.indexOf("verify-rebuild-sources.mjs"),
+        "and must check before it rebuilds",
+      ).toBeLessThan(release.indexOf("pnpm rebuild"));
+    }
+  });
+});
