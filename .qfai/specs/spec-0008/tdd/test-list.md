@@ -26,3 +26,17 @@ CHG-006 notes:
 
 - TDD-0013..0014 cover REQ-0157 (atdd scaffold bulk skeleton generation + 3-cycle escalation). Cross-spec decision cited from `_policies/08_Decisions.md`: DR-0272 (escalate-after-3 default with `atdd.scaffoldEscalateCycles` config override).
 - Ledger sync follow-up: the spec-0008 CHG-006 SDD wave omitted `UPDATE:APPEND tdd/test-list.md` from its triage table. This section reconciles the ledger before `/qfai-implement` proceeds.
+
+## CHG-007 — worker-scoped credential-reuse guidance (2026-08-05)
+
+| TDD-ID   | TC-Refs      | Layer       | Test file | Selector                                                                           | Status | DR-ID | Evidence |
+| -------- | ------------ | ----------- | --------- | ---------------------------------------------------------------------------------- | ------ | ----- | -------- |
+| TDD-0015 | TC-0008-0015 | Integration | —         | TC-0008-0015: seven rules + companion rule stated and cross-linked from the skill  | todo   | —     | —        |
+| TDD-0016 | TC-0008-0016 | Integration | —         | TC-0008-0016: backend deny-list scan returns zero; planted-name fixture returns >0 | todo   | —     | —        |
+| TDD-0017 | TC-0008-0017 | Integration | —         | TC-0008-0017: layer tokens, annotation forms and finding-code set unchanged        | todo   | —     | —        |
+| TDD-0018 | TC-0008-0018 | Integration | —         | TC-0008-0018: script-naming rule adopter-only; scope excludes unit/component       | todo   | —     | —        |
+
+CHG-007 notes:
+
+- TDD-0015..0018 cover REQ-0024. The deliverable is prose, so every row's oracle reads a shipped artifact; there is no validator, finding code or annotation token to test.
+- `Layer` uses the word form per the layer crosswalk in `catalog/test-layers.md`; `06_Test-Cases.md#Level` carries the word form (`integration`) matching the sibling ATDD-family specs, since this pack had no prior `Level` field to inherit a spelling from.
