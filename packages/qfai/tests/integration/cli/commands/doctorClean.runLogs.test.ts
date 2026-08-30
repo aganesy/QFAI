@@ -181,7 +181,7 @@ describe("doctor --clean prunes stale validate run logs", () => {
     for (const [app, outDir] of [
       ["app-a", "../shared-report"],
       ["app-b", "../linked-report"],
-    ]) {
+    ] as const) {
       await mkdir(path.join(mono, app), { recursive: true });
       await writeFile(
         path.join(mono, app, "qfai.config.yaml"),
