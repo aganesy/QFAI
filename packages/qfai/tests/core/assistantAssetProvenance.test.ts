@@ -1,5 +1,16 @@
 import { execFile } from "node:child_process";
-import { cp, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
+import { randomUUID } from "node:crypto";
+import {
+  cp,
+  mkdir,
+  mkdtemp,
+  readFile,
+  readdir,
+  rename,
+  rm,
+  symlink,
+  writeFile,
+} from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -10,6 +21,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { defaultConfig } from "../../src/core/config.js";
 import {
   ASSISTANT_ASSETS_LOCK_BASENAME,
+  ASSISTANT_STAGING_PREFIX,
   buildShippedAssistantHashes,
   hashAssistantAssetFile,
   hashAssistantAssetText,
@@ -521,4 +533,112 @@ describe("assistant asset provenance", () => {
     expect(refreshed?.files["catalog/test-layers.md"]).toBeUndefined();
     expect(refreshed?.files["catalog/withdrawn.md"]).toBeUndefined();
   }, 120000);
+
+  // The containment walk started at the assistant root, and `lstat` declines to
+  // resolve only the *last* component it is given: with `.qfai` itself a link
+  // out of the repository, `lstat(.qfai/assistant)` reported the external
+  // directory as real and every write and retire went through it.
+  it("never writes or retires through a .qfai that leaves the project", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const outsideQfai = path.join(root, "outside-qfai");
+
+    // Move the whole governed tree out of the project, then link `.qfai` at it.
+    const lock = await readAssistantAssetsLock(assistantDir);
+    await rename(path.join(root, ".qfai"), outsideQfai);
+    await symlink(outsideQfai, path.join(root, ".qfai"), "junction");
+
+    const outsideAssistant = path.join(outsideQfai, "assistant");
+    const refreshVictim = path.join(outsideAssistant, "catalog", "test-layers.md");
+    const refreshVictimBody = "# an older release wrote this, outside the project\n";
+    await writeFile(refreshVictim, refreshVictimBody, "utf-8");
+    const retireVictim = path.join(outsideAssistant, "catalog", "withdrawn.md");
+    const retireVictimBody = "# also not qfai's to delete\n";
+    await writeFile(retireVictim, retireVictimBody, "utf-8");
+    // Recorded as qfai's own writes, which is what makes `--force` willing to
+    // refresh the first and retire the second.
+    await writeAssistantAssetsLock(outsideAssistant, {
+      files: {
+        ...(lock?.files ?? {}),
+        "catalog/test-layers.md": hashAssistantAssetText(refreshVictimBody),
+        "catalog/withdrawn.md": hashAssistantAssetText(retireVictimBody),
+      },
+    });
+
+    await captureStdout(() => runInit({ dir: root, force: true, dryRun: false, yes: true }));
+
+    expect(await readFile(refreshVictim, "utf-8")).toBe(refreshVictimBody);
+    expect(await readFile(retireVictim, "utf-8")).toBe(retireVictimBody);
+    // The record is a governed write too, so it is left exactly as planted.
+    const after = await readAssistantAssetsLock(outsideAssistant);
+    expect(after?.files["catalog/test-layers.md"]).toBe(hashAssistantAssetText(refreshVictimBody));
+    expect(after?.files["catalog/withdrawn.md"]).toBe(hashAssistantAssetText(retireVictimBody));
+  }, 120000);
+
+  // `runUpgradeAssistantTree` deliberately leaves the legacy file in place, so
+  // a part-way-through-the-recut project has both layouts at once. The
+  // existence probe was then satisfied by the legacy copy while the exclusion
+  // below silenced the provenance check — deleting a normative rule was
+  // reportable in every layout except the one the upgrade path creates.
+  it("reports a deleted canonical rule when the legacy fallback still stands", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    await mkdir(path.join(assistantDir, "instructions"), { recursive: true });
+    await cp(
+      path.join(assistantDir, "constitution", "drift-protocol.md"),
+      path.join(assistantDir, "instructions", "drift-protocol.md"),
+    );
+    await rm(path.join(assistantDir, "constitution", "drift-protocol.md"));
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    // The probe found the legacy copy, so it says nothing — and that is exactly
+    // why the absence has to be reported here.
+    expect(codesOf(issues)).not.toContain("QFAI-ASSETS-001");
+    const missing = issues.filter((found) => found.code === "QFAI-ASSETS-006");
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.file).toContain(path.join("constitution", "drift-protocol.md"));
+  });
+
+  // `readdir` resolves a symlinked scan root like any other path, so `validate`
+  // walked and hashed whatever was on the other side — passing in silence when
+  // the external tree happened to match the release.
+  it("refuses to walk a governed layer that is a symlink, and says so", async () => {
+    const root = await makeProject();
+    const assistantDir = path.join(root, ".qfai", "assistant");
+    const outside = path.join(root, "outside-catalog");
+    // Identical content, so a validator that followed the link found nothing to
+    // report and the escape stayed invisible.
+    await cp(path.join(shippedAssistantDir, "catalog"), outside, { recursive: true });
+    await rm(path.join(assistantDir, "catalog"), { recursive: true, force: true });
+    await symlink(outside, path.join(assistantDir, "catalog"), "junction");
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const unverifiable = issues.filter((found) => found.code === "QFAI-ASSETS-007");
+    expect(unverifiable).toHaveLength(1);
+    expect(unverifiable[0]?.severity).toBe("warning");
+    // Silence was the bug: an inability to compare is not a clean tree.
+    expect(issues.length).toBeGreaterThan(0);
+  });
+
+  // Matching the staging prefix alone let any name that merely starts with it
+  // pass as qfai's own scaffolding — a normative addition the record never saw.
+  it("excludes only a real staging file, not every name that opens with the prefix", async () => {
+    const root = await makeProject();
+    const constitutionDir = path.join(root, ".qfai", "assistant", "constitution");
+    await writeFile(
+      path.join(constitutionDir, `${ASSISTANT_STAGING_PREFIX}project-rule.md`),
+      "# a rule wearing qfai's scaffolding\n",
+      "utf-8",
+    );
+    await writeFile(
+      path.join(constitutionDir, `${ASSISTANT_STAGING_PREFIX}${randomUUID()}.tmp`),
+      "# a genuine in-flight staging file\n",
+      "utf-8",
+    );
+
+    const issues = await validateAssistantAssets(root, defaultConfig);
+    const unshipped = issues.filter((found) => found.code === "QFAI-ASSETS-005");
+    expect(unshipped).toHaveLength(1);
+    expect(unshipped[0]?.file).toContain(`${ASSISTANT_STAGING_PREFIX}project-rule.md`);
+  });
 });

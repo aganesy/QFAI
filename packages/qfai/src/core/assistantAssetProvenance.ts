@@ -6,6 +6,7 @@ import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 import { isEnoent } from "./fs/errno.js";
+import { escapeRegExp } from "./regex.js";
 
 /**
  * Provenance record for the vendored halves of the assistant tree.
@@ -91,9 +92,25 @@ const UNGOVERNED_MANAGEMENT_BASENAMES = new Set([
   ASSISTANT_ASSETS_LOCK_BASENAME,
 ]);
 
+/**
+ * The exact shape `replaceGovernedAsset` stages: the prefix, the v4 UUID that
+ * makes it unique, and the `.tmp` suffix.
+ *
+ * Matching the prefix alone excluded any name that merely begins with it, so
+ * `constitution/.qfai-staging-project-rule.md` was a normative file the record
+ * never saw and `QFAI-ASSETS-005` never reported — an addition dressed as
+ * qfai's own scaffolding. Only a name qfai could actually have produced is
+ * treated as scaffolding.
+ */
+const ASSISTANT_STAGING_BASENAME_PATTERN = new RegExp(
+  `^${escapeRegExp(ASSISTANT_STAGING_PREFIX)}[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\\.tmp$`,
+  "i",
+);
+
 function isUngovernedManagementFile(basename: string): boolean {
   return (
-    UNGOVERNED_MANAGEMENT_BASENAMES.has(basename) || basename.startsWith(ASSISTANT_STAGING_PREFIX)
+    UNGOVERNED_MANAGEMENT_BASENAMES.has(basename) ||
+    ASSISTANT_STAGING_BASENAME_PATTERN.test(basename)
   );
 }
 
@@ -166,8 +183,8 @@ export function aliasesShippedGovernedAsset(
 }
 
 /**
- * True when every directory from `assistantRoot` down to the parent of
- * `relative` is a real directory in the project — never a symlink, junction or
+ * True when every directory below `projectRoot`, down to the parent of
+ * `relative`, is a real directory in the project — never a symlink, junction or
  * other reparse point.
  *
  * Only the final entry of a governed path was checked before, so a checkout
@@ -177,21 +194,30 @@ export function aliasesShippedGovernedAsset(
  * already out of the tree. Each parent is therefore inspected with `lstat`,
  * which reports a link as a link instead of resolving through it.
  *
+ * The walk starts at the **project** root, and `relative` is relative to it —
+ * `.qfai/assistant/constitution/quality.md`, not `constitution/quality.md`.
+ * Starting at the assistant root left the components above it unchecked, and
+ * `lstat` only declines to resolve the *final* component: with `.qfai` a
+ * symlink out of the repository, `lstat(.qfai/assistant)` resolved through it
+ * and reported the external directory as real, which is the whole answer this
+ * function exists to refuse.
+ *
+ * `projectRoot` itself is not inspected. It is the path the caller was pointed
+ * at, so reaching it through a symlink is how the user addressed their own
+ * project, not an escape from it.
+ *
  * An absent directory answers true: `init` creates the governed layers itself,
  * and creating one is not a way out of the tree. A parent that cannot be
  * inspected at all answers false — what cannot be checked must not be written
  * into.
  */
 export async function hasRealGovernedAssistantParents(
-  assistantRoot: string,
+  projectRoot: string,
   relative: string,
 ): Promise<boolean> {
   const segments = relative.split("/");
   segments.pop();
-  let current = assistantRoot;
-  if (!(await isRealDirectoryOrAbsent(current))) {
-    return false;
-  }
+  let current = projectRoot;
   for (const segment of segments) {
     current = path.join(current, segment);
     if (!(await isRealDirectoryOrAbsent(current))) {
@@ -336,7 +362,13 @@ const OPEN_READ_FLAGS =
  * all it took to add an unreported rule beside the ones qfai owns.
  *
  * Only real directories are descended into. A symlinked directory is not part
- * of the governed tree, and following one would walk out of the project.
+ * of the governed tree, and following one would walk out of the project. That
+ * holds for the layer roots themselves, which `readdir` resolved like any other
+ * path: a checkout that left `constitution/` pointing outside the repository
+ * had `qfai validate` walk and hash whatever was there, pass in silence if it
+ * happened to match the release, and take as long as that tree was big. A layer
+ * root that is not a real directory throws rather than reading — the caller
+ * reports that the layers cannot be compared, which is the honest answer.
  */
 export async function collectGovernedAssistantFiles(
   assistantRoot: string,
@@ -349,6 +381,7 @@ export async function collectGovernedAssistantFiles(
       layer,
       options.requireLayers === true,
       found,
+      true,
     );
   }
   return found;
@@ -359,7 +392,15 @@ async function collectGovernedFilesUnder(
   prefix: string,
   required: boolean,
   found: string[],
+  isLayerRoot = false,
 ): Promise<void> {
+  // Nested entries were classified by `readdir` itself, which does not resolve
+  // links — only a scan root arrives here unexamined.
+  if (isLayerRoot && !(await isRealDirectoryOrAbsent(directory))) {
+    throw new Error(
+      `${directory} は実ディレクトリではないため、governed layer として走査できません（symlink / junction 等の可能性があります）。`,
+    );
+  }
   let entries: Dirent[];
   try {
     entries = await readdir(directory, { withFileTypes: true });

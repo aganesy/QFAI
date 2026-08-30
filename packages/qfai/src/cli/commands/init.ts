@@ -320,7 +320,7 @@ async function syncGovernedAssistantAssets(
 
   const previous = (await readAssistantAssetsLock(destAssistant))?.files ?? {};
   const recorded: Record<string, string> = {};
-  const isContained = makeGovernedContainmentGuard(destAssistant);
+  const isContained = makeGovernedContainmentGuard(destRoot);
 
   for (const [relative, shippedHash] of Object.entries(shipped)) {
     const source = path.join(assistantAssets, ...relative.split("/"));
@@ -399,10 +399,15 @@ async function syncGovernedAssistantAssets(
  * outside the repository pointed every governed write and every `--force`
  * retire into that directory instead. The answer is cached because both passes
  * walk the same handful of directories for every file in them.
+ *
+ * The walk starts at the **project** root and the path handed to it carries the
+ * assistant segments. Starting at the assistant root left `.qfai` and
+ * `assistant` themselves unchecked, and `lstat` declines to resolve only the
+ * last component it is given — so a `.qfai` symlinked out of the repository
+ * made `lstat(.qfai/assistant)` report the external directory as real, and the
+ * guard waved through every write and retire inside it.
  */
-function makeGovernedContainmentGuard(
-  destAssistant: string,
-): (relative: string) => Promise<boolean> {
+function makeGovernedContainmentGuard(destRoot: string): (relative: string) => Promise<boolean> {
   const answers = new Map<string, Promise<boolean>>();
   return (relative: string) => {
     const container = relative.slice(0, relative.lastIndexOf("/") + 1);
@@ -410,7 +415,7 @@ function makeGovernedContainmentGuard(
     if (cached !== undefined) {
       return cached;
     }
-    const answer = hasRealGovernedAssistantParents(destAssistant, relative);
+    const answer = hasRealGovernedAssistantParents(destRoot, `${ASSISTANT_DIR}/${relative}`);
     answers.set(container, answer);
     return answer;
   };

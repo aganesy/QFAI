@@ -355,8 +355,11 @@ approved` that **names the changed path** silences it; an `open` CR does not,
   local fork, left untouched by `--force` and reported for a human merge. An
   added file that is not a `*.local.md` overlay is `QFAI-ASSETS-005`, and a
   shipped rule the project deleted is `QFAI-ASSETS-006` — restore it with
-  `npx qfai init`. All four are `warning`, not `error`: a project may have a
-  standing reason to diverge, and what this replaces is not the reason but its
+  `npx qfai init`. When the comparison cannot be made at all — an incomplete
+  install, or a governed layer that is not a real directory — that is
+  `QFAI-ASSETS-007`, reported in its own right: an unverifiable tree is not a
+  clean one. All five are `warning`, not `error`: a project may have a standing
+  reason to diverge, and what this replaces is not the reason but its
   invisibility.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
 - If approval is not available, stay in STOP state **for that CR's blocked set**

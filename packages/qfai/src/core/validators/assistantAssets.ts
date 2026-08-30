@@ -148,11 +148,14 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     shipped = await buildShippedAssistantHashes(
       path.join(getInitAssetsDir(), ...ASSISTANT_DIR.split("/")),
     );
-  } catch {
-    // No readable template tree (an unusual installation, or a library
-    // consumer without the package assets). Provenance is unknowable rather
-    // than violated, so report nothing.
-    return [];
+  } catch (error: unknown) {
+    // Not "nothing to report": the comparison could not be made at all. An
+    // install missing a governed layer, an unreadable shipped file, or a
+    // library consumer without the package assets all land here, and returning
+    // no findings let every such tree pass `validate` with its provenance
+    // unchecked — `init` already fails closed on the same condition, so only
+    // this side accepted it. The inability is itself the finding.
+    return [unverifiableProvenanceIssue(assistantDir, "shipped", error)];
   }
 
   const lock = await readAssistantAssetsLock(assistantDir);
@@ -160,8 +163,10 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
   let vendored: string[];
   try {
     vendored = await collectGovernedAssistantFiles(assistantDir);
-  } catch {
-    return [];
+  } catch (error: unknown) {
+    // Same reasoning on the project's own side. A layer root that is not a real
+    // directory reaches here rather than being walked.
+    return [unverifiableProvenanceIssue(assistantDir, "vendored", error)];
   }
 
   // The union of both key sets, not just what is on disk. Walking only the
@@ -194,11 +199,10 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
     if (status === "missing" && !presentLayers.has(relative.split("/")[0] ?? "")) {
       continue;
     }
-    if (status === "missing" && EXISTENCE_CHECKED_ELSEWHERE.has(relative)) {
-      // QFAI-ASSETS-001/002 already own these two, and they own the legacy
-      // pre-recut fallback with them: reporting the absence again here would
-      // both duplicate the finding and penalise every project still on
-      // `instructions/` or `steering/`.
+    if (status === "missing" && (await coveredByExistenceProbe(assistantDir, relative))) {
+      // QFAI-ASSETS-001/002 already own these two: reporting the absence again
+      // here would duplicate the finding. They only cover it while the legacy
+      // fallback is *also* absent, though — see `coveredByExistenceProbe`.
       continue;
     }
     const finding = provenanceIssue(status, relative, filePath);
@@ -211,13 +215,60 @@ async function validateAssistantAssetProvenance(assistantDir: string): Promise<I
 }
 
 /**
- * Governed paths whose absence is already reported, with a legacy fallback, by
- * the existence probes above.
+ * Governed paths the existence probes above also check, mapped to the legacy
+ * pre-recut path each one falls back to.
  */
-const EXISTENCE_CHECKED_ELSEWHERE = new Set([
-  "constitution/drift-protocol.md",
-  "catalog/test-layers.md",
+const EXISTENCE_CHECKED_ELSEWHERE = new Map([
+  ["constitution/drift-protocol.md", path.join("instructions", "drift-protocol.md")],
+  ["catalog/test-layers.md", path.join("steering", "test-layers.md")],
 ]);
+
+/**
+ * True when QFAI-ASSETS-001/002 would report this absence itself.
+ *
+ * Those probes accept the legacy pre-recut path, so they report the canonical
+ * file's absence only when the legacy one is missing too. A project part-way
+ * through the recut — which `runUpgradeAssistantTree` produces deliberately,
+ * since it leaves the legacy file behind — has both layouts at once, and
+ * deleting the canonical rule there satisfied the probe from the legacy copy
+ * while this exclusion silenced the provenance check. Removing a normative rule
+ * was reportable in every layout but the one the upgrade path creates.
+ */
+async function coveredByExistenceProbe(assistantDir: string, relative: string): Promise<boolean> {
+  const legacy = EXISTENCE_CHECKED_ELSEWHERE.get(relative);
+  if (legacy === undefined) {
+    return false;
+  }
+  return !(await exists(path.join(assistantDir, legacy)));
+}
+
+/**
+ * The governed layers could not be compared at all — so say so, rather than
+ * reporting a clean tree.
+ */
+function unverifiableProvenanceIssue(
+  assistantDir: string,
+  side: "shipped" | "vendored",
+  error: unknown,
+): Issue {
+  const detail = error instanceof Error ? error.message : String(error);
+  const subject =
+    side === "shipped"
+      ? "インストール済み qfai リリースの配布アセット"
+      : `プロジェクトの ${ASSISTANT_DIR}/ 配下の governed layer`;
+  return issue(
+    "QFAI-ASSETS-007",
+    `${subject}を読み取れなかったため、${GOVERNED_ASSISTANT_LAYERS.map((layer) => `${layer}/`).join(
+      " / ",
+    )} の provenance を検証できませんでした（${detail}）。`,
+    "warning",
+    assistantDir,
+    "assistantAssets.unverifiableProvenance",
+    undefined,
+    "canonical",
+    "qfai を再インストールし、governed layer が実ディレクトリとして存在すること（symlink / junction ではないこと）を確認してから再実行してください。",
+  );
+}
 
 function provenanceIssue(
   status: ReturnType<typeof classifyAssistantAsset>,
