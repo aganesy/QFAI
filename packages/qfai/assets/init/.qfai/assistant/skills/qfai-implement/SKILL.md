@@ -88,7 +88,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream. A row whose own test asserts over the CONTENT of an artifact this skill may not write is not implementable here at all, and the three moves available to it all lose: `references/upstream-artifact-ordering.md`.
 - Writing acceptance tests (use `/qfai-atdd`). **The ATDD-owned layers are `E2E`, `API` and `Integration`** — the set every rule below names, defined here because this is the passage the other documents cite for it (`references/execution-ledger.md#atdd-owned-rows`, `../qfai-atdd/SKILL.md`). `Integration` is among them because `QFAI-ATDD-112` puts every `L3` and undeclared-`Level` TC in `tests/integration/**` and that stage's P4 writes those tests. `Layer = E2E` / `Layer = API` / `Layer = Integration` ledger rows are tracked here but their tests are authored there, and the RED provenance those rows carry is defined in `../qfai-atdd/references/red-provenance.md` — this skill writes their `Status` / `DR-ID` / `Evidence` from the evidence that stage produced. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels, so `/qfai-atdd` authors no test for that row and requires no annotation for it (`../qfai-atdd/SKILL.md`), while the validator reports the `Layer` / `Level` contradiction as a **warning** only (`TDDLIST_COVERAGE_LAYER_MISMATCH`) — such a ledger passes `--fail-on error`, so the row exists today. It stays owned here: this skill writes its test in Phase Red steps 3-5 as it would a `Unit` row, and its evidence, anchor, checkpoint and cross-spec entries live in `implement-<spec-id>.md`. Handing it over instead left it refused by both skills — neither stage will author its test — and stranded at `todo` with no way forward. Correcting the row's `Layer`, or the TC's `Level`, upstream is the durable fix; until that happens the row runs here. **Every rule below that names the ATDD-owned set excludes it**, without restating this carve-out at each site.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by `## Parallelization Policy` below.)
@@ -163,7 +163,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Completion
 
-1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads.
+1. After processing all items, update `test-list.md` with final Status, DR-ID and Evidence values — the three cells the Drift Protocol carve-out covers unconditionally, and the ones gate item 10 reads. `Test file` and `Selector` are covered too, but only while their stated condition still holds, so fill a placeholder or repair an unresolvable selector when you reach it rather than at the end.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
@@ -333,7 +333,7 @@ Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a revi
 conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
 `<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
-Each review round creates a new pack. Full schema and the `REVISE` -> `status: "REVISE"` mapping:
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
 `references/review-artifact-layout.md`.
 
 ### Spec completion conditions
@@ -341,10 +341,10 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
-- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared
-  `US-*` and `CON-API-*` is referenced from the test tree. **Not** "every `US-*`
-  has an `E2E` row": those rows have no producer, so requiring them made a correct
-  spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
+- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared `US-*` and
+  `CON-API-*` is traced by an annotation in the test tree, and where `06_Test-Cases.md` declares an
+  E2E coverage-target TC, by a `Layer = E2E` row naming it. **Not** "every `US-*` has an `E2E` row":
+  those rows have no producer (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
