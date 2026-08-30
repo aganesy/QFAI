@@ -127,14 +127,24 @@ union of the open CRs' blocked sets.
      `.qfai/evidence/implement-<spec-id>.md` (`atdd-<spec-id>.md` for an
      `Integration` / `API` / `E2E` row), which the managed `.gitignore` block
      excludes, so without the body this CR records a reference a clean checkout
-     cannot resolve. A retired `TDD-ID` is never reused.
+     cannot resolve. A row retired before it ever ran anchors nothing — `todo`,
+     `blocked`, `red` and `exception` owe no `Evidence` — so write
+     `no evidence — retired at Status = <status>, never executed` in place of
+     the cell value and paste no body. A retired `TDD-ID` is never reused.
      Name the test's disposition here too — `<delete tests/x.test.ts "selector">`
      or `<re-point at spec-id/TDD-NNNN>` — because deleting the row leaves the
      test itself untouched and unowned.
      A retirement carried out by `/qfai-sdd` under an approved `UPDATE:REMOVE`
      Triage row belongs in that row's `09_delta.md` instead (an `UPDATE:MODIFY`
-     row's, when the TC survives a `Level` change out of coverage); do not open
-     a CR to re-approve it.
+     row's, when the TC survives a `Level` change out of coverage **and that row
+     records an approver for the deletion**); do not open a CR to re-approve it.
+     An `UPDATE:MODIFY` row carrying no such approval authorises no deletion,
+     and that retirement comes back here.
+     On the cross-spec path the approving Triage row sits in
+     `_policies/10_delta.md`, which may not carry spec-local `US` / `AC` / `BR` /
+     `EX` / `TC` IDs outside the `## Triage` table's own cells: put the evidence
+     body in the retiring spec's `09_delta.md` and cite it from that row's
+     `Rationale` cell.
 
 ## Resolution
 

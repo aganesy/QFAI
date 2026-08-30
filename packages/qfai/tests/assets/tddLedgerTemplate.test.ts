@@ -10,6 +10,7 @@ import {
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
 import { isCoverageTargetLevel, NON_COVERAGE_LAYERS } from "../../src/core/tddHelpers.js";
+import { validateLayeredTraceability } from "../../src/core/validators/layeredTraceability.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -81,6 +82,81 @@ const seedSpec = async (ledger: string): Promise<string> => {
   await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASES, "utf-8");
   await writeFile(path.join(specDir, "tdd", "test-list.md"), ledger, "utf-8");
   return root;
+};
+
+/**
+ * The canonical `## Triage` table `sdd-triage.md` persists cross-spec rows into.
+ *
+ * Header membership matters: `maskTriageSection` exempts a table's cells only
+ * when it carries every column of `TRIAGE_TABLE_HEADER`.
+ */
+const CROSS_SPEC_TRIAGE = [
+  "# 10 delta",
+  "",
+  "## Triage",
+  "",
+  "| Source | Subject | Existing Spec | Operation | Sub-op | Approved By | Rationale |",
+  "| ------ | ------- | ------------- | --------- | ------ | ----------- | --------- |",
+  "| REQ-0001 | retire a row | spec-0001 | UPDATE | REMOVE | owner | body in 09_delta.md |",
+  "",
+].join("\n");
+
+/**
+ * A transcribed `### TDD-NNNN` evidence body. `qfai-implement/SKILL.md` makes
+ * exactly one obligation reference (`TC-ref` / `US-ref` / `CON-API-ref`)
+ * mandatory in it, which is why such a body can never be legal in `_policies`.
+ */
+const EVIDENCE_BODY = [
+  "### TDD-0001",
+  "",
+  "- TC-ref: TC-0001",
+  "- RED command: `npx vitest run tests/x.test.ts`",
+  "- RED result: 1 failed",
+  "- GREEN command: `npx vitest run tests/x.test.ts`",
+  "- GREEN result: 1 passed",
+  "",
+].join("\n");
+
+/**
+ * Runs `validateLayeredTraceability` over a throwaway v1421 project holding one
+ * spec and `_policies/10_delta.md`, and reports the codes it raised.
+ */
+const layeredCodesFor = async (policies: string, specDelta: string | null): Promise<string[]> => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ledger-policies-"));
+  try {
+    const specsRoot = path.join(root, ".qfai", "specs");
+    const specDir = path.join(specsRoot, "spec-0001");
+    await mkdir(specDir, { recursive: true });
+    await mkdir(path.join(specsRoot, "_policies"), { recursive: true });
+    // `06_Test-Cases.md` is the case-exact marker that makes this a v1421
+    // layered spec, which is what puts `_policies` under the shared-scope scan.
+    await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+    await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
+    await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASES, "utf-8");
+    if (specDelta !== null) {
+      await writeFile(path.join(specDir, "09_delta.md"), specDelta, "utf-8");
+    }
+    await writeFile(path.join(specsRoot, "_policies", "10_delta.md"), policies, "utf-8");
+    const issues = await validateLayeredTraceability(root, defaultConfig);
+    return issues.map((entry) => entry.code);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+};
+
+/** The distinct `UPDATE:*` Triage operations a passage names. */
+const triageOps = (text: string): string[] => [
+  ...new Set([...text.matchAll(/UPDATE:[A-Z]+/g)].map((match) => match[0])),
+];
+
+/** The slice of `text` from `from` up to (not including) `to`. */
+const between = (text: string, from: string, to: string): string => {
+  const start = text.indexOf(from);
+  const end = text.indexOf(to, start + from.length);
+  if (start < 0 || end < 0) {
+    throw new Error(`the shipped surface no longer carries the passage "${from}" … "${to}"`);
+  }
+  return text.slice(start, end);
 };
 
 /** Runs `validateTddList` over a throwaway project and cleans it up. */
@@ -352,7 +428,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         tree,
         "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
       );
-      expect(rules).toContain("`Level` leaves coverage and no `UPDATE:REMOVE` row was raised");
+      expect(rules).toContain("`Level` leaves coverage, no `UPDATE:REMOVE` row was raised");
     });
 
     it(`${tree}: the retirement record carries the evidence body, not just the anchor`, async () => {
@@ -362,9 +438,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       // unresolvable reference in the tracked record, so the `### TDD-NNNN`
       // body has to come with it.
       const template = await read(tree, TEMPLATE);
-      expect(template).toContain(
-        "**and with it\nthe body of the `### TDD-NNNN` section that cell anchors to**",
-      );
+      expect(template).toContain("the body of the `### TDD-NNNN` section it points at");
       expect(template).toContain("the RED/GREEN commands and their output");
 
       const checklists = await read(
@@ -378,6 +452,128 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
       expect(cr).toContain("paste the body of the `### TDD-NNNN`");
       expect(cr).toContain("the\ntranscribed `### TDD-NNNN` evidence body");
+    });
+
+    it(`${tree}: a cross-spec retirement keeps the evidence body out of _policies`, async () => {
+      // `sdd-triage.md` persists a cross-spec row to `_policies/10_delta.md`,
+      // but `maskTriageSection` exempts only the canonical `## Triage` table's
+      // cells there. A `### TDD-NNNN` body pasted under it stays visible to the
+      // shared-scope scan — and it always carries an obligation reference,
+      // because the evidence contract makes `TC-ref` / `US-ref` /
+      // `CON-API-ref` mandatory. So the unconditional "transcribe the body into
+      // that record" was unsatisfiable on exactly this path.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**The body never goes into `_policies/10_delta.md`.**");
+      expect(template).toContain("`QFAI-LAYER-100`");
+      expect(template).toContain("`TRACE_SHARED_SCOPE_VIOLATION`");
+      expect(template).toContain("Put the body in the retiring spec's own `09_delta.md`");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Never put the body in `_policies/10_delta.md`");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("the body never goes into\n  `_policies/10_delta.md`");
+
+      const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
+      expect(cr).toContain("put the evidence\n     body in the retiring spec's `09_delta.md`");
+
+      // Both halves of the claim, against the validator rather than restated.
+      const inPolicies = await layeredCodesFor(`${CROSS_SPEC_TRIAGE}\n${EVIDENCE_BODY}`, null);
+      expect(inPolicies).toContain("TRACE_SHARED_SCOPE_VIOLATION");
+
+      const inSpecDelta = await layeredCodesFor(CROSS_SPEC_TRIAGE, EVIDENCE_BODY);
+      expect(inSpecDelta).not.toContain("TRACE_SHARED_SCOPE_VIOLATION");
+      expect(inSpecDelta).not.toContain("QFAI-LAYER-100");
+    });
+
+    it(`${tree}: every Triage row the guidance retires under is one Triage approves`, async () => {
+      // The ownership split makes a row deletion an upstream change and grants
+      // one exception: a Triage row carrying the operator's approval. Naming
+      // `UPDATE:MODIFY` as a retirement record while the carve-out covered only
+      // `UPDATE:REMOVE` — and while `sdd-triage.md`'s approval pass collected an
+      // approver for neither — left that path deleting rows on no authority.
+      const template = await read(tree, TEMPLATE);
+      const retirement = between(
+        template,
+        "Record the removal where the authorisation for it already lives.",
+        "Record it as `<spec-id>/TDD-NNNN`",
+      );
+      const ops = triageOps(retirement);
+      expect(ops).toContain("UPDATE:REMOVE");
+      expect(ops).toContain("UPDATE:MODIFY");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      const carveOut = between(rules, "- **Ownership split.**", "\n- `Evidence` is a **pointer**");
+
+      const triage = await read(tree, "assistant/skills/qfai-sdd/references/sdd-triage.md");
+      const approvalPass = between(triage, "5. **Approval pass.**", "\n6. **Persist.**");
+
+      for (const op of ops) {
+        expect(carveOut, `${op} retires rows but the ownership split does not exempt it`).toContain(
+          op,
+        );
+        // The approval pass names an operation either whole (`UPDATE:MODIFY`)
+        // or split across the two Triage columns it is stored in ("Sub-op is
+        // REMOVE"), so accept both spellings — what must not happen is a sub-op
+        // that retires rows appearing nowhere in it.
+        const subOp = op.slice(op.indexOf(":") + 1);
+        expect(
+          approvalPass.includes(op) || approvalPass.includes(`Sub-op is ${subOp}`),
+          `${op} retires rows but the approval pass collects no approver for it`,
+        ).toBe(true);
+      }
+      // The approval is for the deletion, not for the `Level` edit that caused it.
+      expect(approvalPass).toContain("deleting\n   a ledger row is operator-approved");
+      expect(template).toContain("record the approver in that row's `Approved By`");
+    });
+
+    it(`${tree}: a row retired before it ran records "no evidence" instead of inventing one`, async () => {
+      // `EVIDENCE_CHECK_STATUSES` asks for a command and its result only from
+      // `green` / `refactor` / `review-fix` / `done`, so a row deleted while
+      // still `todo` has an empty `Evidence` cell and no `### TDD-NNNN` section
+      // to transcribe. The unconditional requirement left the agent inventing a
+      // section or refusing to retire the row.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toContain("**A row retired before it ever ran has no such section.**");
+      expect(template).toContain("no evidence — retired at Status = <status>, never\nexecuted");
+      expect(template).toContain("Transcribe a body only when the cell names\none");
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain("Transcribe a body only when the cell anchors one");
+
+      const rules = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/spec-traceability-rules.md",
+      );
+      expect(rules).toContain("when that cell holds an anchor");
+
+      const cr = await read(tree, "assistant/skills/qfai-sdd/templates/change-request.md");
+      expect(cr).toContain("`no evidence — retired at Status = <status>, never executed`");
+
+      // The premise: these statuses legitimately hold no evidence…
+      for (const status of ["todo", "blocked", "red", "exception"]) {
+        const codes = await codesFor(withLedgerRow(template, deletedTcRow("TDD-0001", status)));
+        expect(
+          codes.map((entry) => entry.code),
+          `\`${status}\` is documented as owing no evidence but the validator demands it`,
+        ).not.toContain("TDDLIST_EVIDENCE_EMPTY");
+      }
+      // …and the over-correction pin: a row that did run still owes it, so the
+      // branch cannot widen into "transcription is optional".
+      const done = await codesFor(withLedgerRow(template, deletedTcRow("TDD-0001", "done")));
+      expect(done.map((entry) => entry.code)).toContain("TDDLIST_EVIDENCE_EMPTY");
     });
 
     it(`${tree}: the encodings the guidance rules out are the ones validateTddList rejects`, async () => {

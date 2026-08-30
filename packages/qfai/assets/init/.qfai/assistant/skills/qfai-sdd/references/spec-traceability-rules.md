@@ -153,8 +153,14 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
   This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
   removing or re-scoping a row is an upstream change and takes the Change Request path —
-  except when `/qfai-sdd` is reseeding under an approved `UPDATE:REMOVE` Triage row, which
-  already carries the same operator approval and is itself the record.
+  except when `/qfai-sdd` is reseeding under a Triage row that carries the operator's
+  approval for the removal in its `Approved By` cell, which is then the same approval a
+  Change Request would have collected and is itself the record. Two rows qualify: the
+  approved `UPDATE:REMOVE` row, whose approval `sdd-triage.md` takes by operation; and the
+  `UPDATE:MODIFY` row that drops a TC out of the coverage-target set, whose operation is
+  approval-free but whose row deletion is not, so `sdd-triage.md` takes an approval for
+  that deletion specifically. An `UPDATE:MODIFY` row with no approver recorded authorises
+  no deletion and leaves the row on the Change Request path.
 - `Evidence` is a **pointer**: the one-word RED/GREEN outcome plus an anchor into
   `.qfai/evidence/implement-<spec-id>.md`. A GFM cell is one physical line and ends at
   every unescaped `|`, so it cannot hold command output. Encoding rules and the cell
@@ -218,15 +224,26 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   uniqueness is per spec, the record that authorised a retirement — the approved
   `UPDATE:REMOVE` Triage row's `09_delta.md` / `_policies/10_delta.md` on a normal
   `/qfai-sdd` reseed, that spec's `UPDATE:MODIFY` row when the TC survives but its
-  `Level` leaves coverage and no `UPDATE:REMOVE` row was raised, the driving `CR-*`
+  `Level` leaves coverage, no `UPDATE:REMOVE` row was raised and the deletion is
+  approved on that row, the driving `CR-*`
   on a Drift Protocol owner rerun — names
   the row as `<spec-id>/TDD-NNNN`: a bare `TDD-0001` cannot be told from another
   spec's once both rows are deleted. That record also carries the deleted row's
-  `Evidence` cell verbatim **and the body of the `### TDD-NNNN` section it
-  anchors to**, because the evidence file it pointed at falls under
+  `Evidence` cell verbatim **and, when that cell holds an anchor, the body of the
+  `### TDD-NNNN` section it anchors to**, because the evidence file it pointed at
+  falls under
   the `.qfai/evidence/*` line of the QFAI-managed `.gitignore` block and is not
   re-included — a transcribed pointer with no transcribed body resolves to
-  nothing in a clean checkout. The same record names what happens to the deleted
+  nothing in a clean checkout. Two branches on that body. A row retired at
+  `todo`, `blocked`, `red` or `exception` owes no `Evidence` and so anchors
+  nothing: record `no evidence — retired at Status = <status>, never executed`
+  rather than composing a section to copy. And the body never goes into
+  `_policies/10_delta.md`, whose spec-local `US`/`AC`/`BR`/`EX`/`TC` ban is
+  lifted only for the cells of the canonical `## Triage` table — a `### TDD-NNNN`
+  body, which owes a `TC-ref` / `US-ref` / `CON-API-ref` by contract, raises
+  `QFAI-LAYER-100` / `TRACE_SHARED_SCOPE_VIOLATION` there. On that cross-spec
+  path the body belongs in the retiring spec's own `09_delta.md`, cited from the
+  Triage row's `Rationale` cell. The same record names what happens to the deleted
   row's test, which no skill removes on its own. A retired `TDD-ID` is **never reused**: allocate the next one
   above the highest the spec has ever issued, counting the ones those records
   retired, so a new row's `Evidence` anchor cannot land on a retired cycle's

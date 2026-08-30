@@ -114,7 +114,14 @@ and that none were added or dropped — in the `Rationale` column of the
 5. **Approval pass.** For every row whose Operation requires approval
    (CREATE, DELETE, SPLIT, MERGE, SUPERSEDE) or whose Sub-op is REMOVE,
    present an AskUserQuestion with the proposed operation. Record the
-   approver in the `Approved By` column.
+   approver in the `Approved By` column. One MODIFY row needs it too: an
+   `UPDATE:MODIFY` that moves a TC's `Level` out of the coverage-target
+   set deletes that TC's `tdd/test-list.md` row at Phase 2b, and deleting
+   a ledger row is operator-approved on every other path
+   (`spec-traceability-rules.md`, Ownership split). Ask for the deletion
+   itself, not for the `Level` change, and record the approver on that
+   row. Without it Phase 2b has no authorisation and the removal takes
+   the Change Request path instead.
 6. **Persist.** Write the Triage table into:
    - `<spec>/09_delta.md` for rows that touch a single spec, and
    - `_policies/10_delta.md` for cross-spec rows (SPLIT / MERGE /

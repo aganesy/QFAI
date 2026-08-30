@@ -60,9 +60,14 @@ that is depends on how the reseed was reached:
   survives with a changed `Level`, so Triage emits `UPDATE:MODIFY` for it and no
   `UPDATE:REMOVE` row exists to point at. That `UPDATE:MODIFY` row is the
   record: name the retired `<spec-id>/TDD-NNNN` in it, together with the
-  coverage change that dropped the row. `UPDATE:MODIFY` is approval-free as an
-  operation, so this path opens no `CR-*` either — do not attach the deletion to
-  an `UPDATE:REMOVE` row that was never raised.
+  coverage change that dropped the row. `UPDATE:MODIFY` is approval-free **as an
+  operation** — deleting a ledger row never is, so take the operator's approval
+  for the deletion itself and record the approver in that row's `Approved By`
+  cell, exactly as an `UPDATE:REMOVE` row carries one. Approved there, the row
+  is the record and this path opens no `CR-*` either — do not attach the
+  deletion to an `UPDATE:REMOVE` row that was never raised. Left unapproved it
+  carries no authorisation for the deletion at all, and the row falls back to
+  the Change Request path below.
 - **Drift Protocol owner rerun.** No Triage ran, so the driving `CR-*` is the
   record: outside a `/qfai-sdd` reseed, removing a row is an upstream change
   and takes the Change Request path.
@@ -75,8 +80,9 @@ issued, counting the ones those retirement records name, so a new row's
 `Evidence` anchor cannot land on a retired cycle's `### TDD-NNNN` section
 (`.qfai/assistant/skills/qfai-sdd/references/spec-traceability-rules.md`).
 
-Copy the deleted row's `Evidence` cell into that record verbatim — **and with it
-the body of the `### TDD-NNNN` section that cell anchors to**. `Evidence` is
+Copy the deleted row's `Evidence` cell into that record verbatim — **and, when
+that cell holds an anchor, the body of the `### TDD-NNNN` section it points at
+along with it**. `Evidence` is
 only a pointer into the evidence file this row's `Layer` owns —
 `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md`
 for an `Integration`, `API` or `E2E` row — and the QFAI-managed `.gitignore`
@@ -88,6 +94,28 @@ resolve: the RED/GREEN commands and their output, and the reviewer verdicts,
 have to come across as well or the cycle's audit record dies with the row. A
 project that does track those evidence files may cite the section instead of
 transcribing it, since the pointer still resolves there.
+
+**A row retired before it ever ran has no such section.** `todo`, `blocked`,
+`red` and `exception` owe no evidence — only `green`, `refactor`, `review-fix`
+and `done` are asked for a command and its result — so the cell is empty or a
+bare dash and the `### TDD-NNNN` it would anchor to does not exist. Write that
+down as what it is, `no evidence — retired at Status = <status>, never
+executed`, and delete the row on it. Transcribe a body only when the cell names
+one: never compose a section so the rule has something to copy, and never hold
+a retirement open waiting on evidence a `todo` row was never going to produce.
+
+**The body never goes into `_policies/10_delta.md`.** When the approving Triage
+row is the cross-spec one persisted there, that file is still barred from
+carrying spec-local `US` / `AC` / `BR` / `EX` / `TC` IDs, and the
+layered-traceability scan exempts only the cells of the canonical `## Triage`
+table — anything written beneath or beside that table stays visible to it and
+raises `QFAI-LAYER-100` / `TRACE_SHARED_SCOPE_VIOLATION` at `error`. An
+evidence body always trips it, because the `### TDD-NNNN` contract requires the
+row's own `TC-ref` / `US-ref` / `CON-API-ref`; and it would not survive a table
+cell in any case, since a GFM cell is one physical line and ends at every
+unescaped `|`. Put the body in the retiring spec's own `09_delta.md` — tracked
+under `.qfai/specs/`, and under no such ban — and have the Triage row cite it
+as `<spec-id>/09_delta.md` in its `Rationale` cell, which the scan does exempt.
 
 ## Ledger
 
