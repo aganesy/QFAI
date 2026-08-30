@@ -204,7 +204,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   if (command === "guardrails") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       const action = normalizeGuardrailsAction(candidate);
       if (action) {
         options.guardrailsAction = action;
@@ -219,7 +219,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // flag loop.
   if (command === "prototyping") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (
         candidate === "preflight" ||
         candidate === "iterate" ||
@@ -237,7 +237,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai audit <subcommand>` — currently only `log` is supported.
   if (command === "audit") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "log") {
         options.auditAction = candidate;
       } else {
@@ -250,7 +250,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai handoff <subcommand> [<legacy-file>]` — currently only `upgrade`.
   if (command === "handoff") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "upgrade") {
         options.handoffAction = candidate;
       } else {
@@ -259,7 +259,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.handoffAction === "upgrade") {
         const fileCandidate = args[0];
-        if (fileCandidate && !fileCandidate.startsWith("--")) {
+        if (isSubcommandToken(fileCandidate)) {
           options.handoffLegacyFile = fileCandidate;
           args.shift();
         }
@@ -270,7 +270,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // `qfai atdd <subcommand>` — currently only `scaffold` is supported.
   if (command === "atdd") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "scaffold") {
         options.atddAction = candidate;
       } else {
@@ -284,7 +284,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   // positional <id> for `use`) before the flag loop.
   if (command === "discussion") {
     const candidate = args[0];
-    if (candidate && !candidate.startsWith("--")) {
+    if (isSubcommandToken(candidate)) {
       if (candidate === "list" || candidate === "use") {
         options.discussionAction = candidate;
       } else {
@@ -293,7 +293,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.discussionAction === "use") {
         const idCandidate = args[0];
-        if (idCandidate && !idCandidate.startsWith("--")) {
+        if (isSubcommandToken(idCandidate)) {
           options.discussionId = idCandidate;
           args.shift();
         }
@@ -781,6 +781,21 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
     markInvalid();
   }
   return { command, invalid, options };
+}
+
+/**
+ * Whether a token is a subcommand name or the positional that follows one.
+ *
+ * Neither ever starts with `-`, and the subcommand scan runs *before* the flag
+ * loop — so testing only for a `--` prefix let the short forms through as
+ * candidates. `qfai prototyping -V` had `-V` taken as an unknown action and
+ * shifted away, which both raised a usage error and stopped the flag loop from
+ * ever setting `options.version`, while the long `--version` was skipped here
+ * and worked. The same swallow reached the positionals: `qfai handoff upgrade
+ * -V` read `-V` as the legacy file to convert.
+ */
+function isSubcommandToken(token: string | undefined): token is string {
+  return token !== undefined && token.length > 0 && !token.startsWith("-");
 }
 
 function readOptionValue(args: string[], index: number): string | null {

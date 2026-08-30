@@ -348,4 +348,50 @@ describe("parseArgs --version", () => {
     const parsed = parseArgs(["validate"], cwd);
     expect(parsed.options.version).toBe(false);
   });
+
+  // The subcommand scan runs before the flag loop and only skipped `--`
+  // tokens, so a short flag was shifted away as an unknown action: the long
+  // form worked on these commands and the short one printed help.
+  for (const command of [
+    "prototyping",
+    "guardrails",
+    "audit",
+    "handoff",
+    "atdd",
+    "discussion",
+  ] as const) {
+    for (const flag of ["--version", "-V"] as const) {
+      it(`sets version for \`qfai ${command} ${flag}\``, () => {
+        const parsed = parseArgs([command, flag], process.cwd());
+        expect(parsed.options.version).toBe(true);
+      });
+    }
+  }
+
+  it("does not read a short flag as the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-V"], process.cwd());
+    expect(parsed.options.handoffAction).toBe("upgrade");
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("does not read a short flag as the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "-V"], process.cwd());
+    expect(parsed.options.discussionAction).toBe("use");
+    expect(parsed.options.discussionId).toBeUndefined();
+    expect(parsed.options.version).toBe(true);
+  });
+
+  it("still rejects an unknown subcommand name", () => {
+    // Skipping dash-prefixed tokens must not skip a real typo: the post-loop
+    // "action required" guard still has to fire.
+    const parsed = parseArgs(["prototyping", "itrate"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.prototypingAction).toBeUndefined();
+  });
+
+  it("still requires a subcommand when only flags follow", () => {
+    const parsed = parseArgs(["prototyping", "--root", "."], process.cwd());
+    expect(parsed.invalid).toBe(true);
+  });
 });
