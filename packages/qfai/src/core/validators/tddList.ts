@@ -488,8 +488,18 @@ const SHA256_VALUE = /^(?:sha256:)?[a-f0-9]{64}$/i;
  * checkpoint seal recomputed over them, and a `done` row shipped evidence that
  * names no tree anyone can identify. Freshness cannot be judged against a value
  * that addresses nothing, so the form is checked where the value is committed.
+ *
+ * **Both object formats.** `git rev-parse HEAD` prints 40 hex digits in a
+ * SHA-1 repository and 64 in one initialised with
+ * `git init --object-format=sha256`; an abbreviation of either is shorter
+ * still. Capping the form at SHA-1's length made every revision recorded by
+ * contract in a SHA-256 repository — `Revision`, `RED revision`,
+ * `Falsifiability revision` and both `reviewed revision` fields — fail the
+ * shape check, so a correct project could not close a row at all. The upper
+ * bound is the longer object id; a length in between is a valid abbreviation of
+ * one format or the other, and the form check does not adjudicate which.
  */
-const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,40}|working-tree\+[0-9a-f]{64})$/i;
+const EVIDENCE_REVISION_FORM = /^(?:[0-9a-f]{7,64}|working-tree\+[0-9a-f]{64})$/i;
 
 const REVISION_FORM_HINT = "a git rev or working-tree+<sha256>";
 
@@ -925,6 +935,82 @@ function reviewPackSeal(files: ReadonlyArray<{ relativePath: string; content: st
   return sha256(records.join("\n"));
 }
 
+interface ReviewPackFile {
+  relativePath: string;
+  content: string;
+}
+
+/** The named artifact of a review pack, or `null` when the pack omits it. */
+function reviewPackArtifact(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  name: string,
+): string | null {
+  return files.find(({ relativePath }) => relativePath === `${packPath}/${name}`)?.content ?? null;
+}
+
+/**
+ * The response `role` wrote into a review pack, or `null` when that reviewer
+ * answered nowhere in it.
+ *
+ * The layout numbers responses per reviewer (`R01_`, `R02_`, ...), so the role
+ * is what identifies the answer, not the position.
+ */
+function reviewPackResponse(files: ReadonlyArray<ReviewPackFile>, role: string): string | null {
+  const named = new RegExp(`^R\\d{2}_${role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`);
+  return (
+    files.find(({ relativePath }) => named.test(path.posix.basename(relativePath)))?.content ?? null
+  );
+}
+
+/** A parsed JSON object, or `null` for any other JSON value. */
+function jsonRecord(value: unknown): Record<string, unknown> | null {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) return null;
+  return Object.fromEntries(Object.entries(value));
+}
+
+/**
+ * True when a pack's `summary.json` records the whole round as PASS, for
+ * `role`, over that spec, at `revision`.
+ *
+ * Both the item gate and the stage gate read this, and they read it the same
+ * way on purpose: a pack answers "which reviewer passed what, and against which
+ * tree", and a caller that checked only some of that accepted a pack written
+ * about a different subject. `target` is what binds a pack to a spec at all —
+ * the layout keeps the scope inside the artifacts, never in the directory name,
+ * so without it any canonical `review-<timestamp>/` in the repository was
+ * interchangeable with any other.
+ */
+function summaryRecordsReviewerPass(
+  content: string,
+  role: string,
+  specNumber: string,
+  revision: string,
+): boolean {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(content);
+  } catch {
+    return false;
+  }
+  const record = jsonRecord(parsed);
+  if (record === null) return false;
+  const target = jsonRecord(record["target"]);
+  const reviewers = record["reviewers"];
+  return (
+    target !== null &&
+    record["overall_status"] === "PASS" &&
+    record["revision"] === revision &&
+    target["kind"] === "spec" &&
+    target["path"] === `.qfai/specs/spec-${specNumber}` &&
+    Array.isArray(reviewers) &&
+    reviewers.some((reviewer: unknown) => {
+      const entry = jsonRecord(reviewer);
+      return entry !== null && entry["reviewer"] === role && entry["status"] === "PASS";
+    })
+  );
+}
+
 interface CompletedEvidenceExpectation {
   specNumber: string;
   tddId: string;
@@ -1101,8 +1187,32 @@ async function isAuditedCompletedEntry(
  * where it cannot be recomputed, the block is not readable evidence. The
  * editing-row home stays portable, and closing the stage gap for a fresh clone
  * needs committed stage provenance the contract does not define yet.
+ *
+ * **A seal that recomputes is not a verdict.** The seal says the named
+ * directory has not been edited since it was recorded; it says nothing about
+ * what that directory is *about*. So any unmodified canonical pack in the
+ * repository — the `Spec review pack` of some finished row, or a directory
+ * holding one `summary.json` that says `overall_status: PASS` and nothing else
+ * — could be named here, and a stale RED manifest was cleared by a hand-written
+ * re-verify block plus somebody else's digest. `qfai-atdd/SKILL.md` asks the
+ * completion gate to "check that `## Final status` says what that pack says",
+ * so the pack is read as well: its `summary.json` must bind it to this stage's
+ * own spec and record the stage reviewer's PASS at a revision, and that
+ * reviewer's response must state the same PASS, the same revision and an
+ * `Audited evidence hash` — visibly, and each exactly once, the way every other
+ * verdict in this module is read.
+ *
+ * The request is required to name **no** `TDD-ID`. A pack for one row names it
+ * there (`qfai-implement/references/review-artifact-layout.md`, and the item
+ * gate below requires the match), and a stage that owns no row has none to
+ * name — so that is what separates this stage's own pack from a row pack of the
+ * same spec, which target and role alone cannot.
  */
-async function hasSealedStageStatus(root: string, content: string): Promise<boolean> {
+async function hasSealedStageStatus(
+  root: string,
+  specNumber: string,
+  content: string,
+): Promise<boolean> {
   const section = markdownEvidenceIndex(content).sections.get("final-status");
   if (section === undefined) return false;
   const pack = rowEvidenceFieldValue(section, "Review pack");
@@ -1123,7 +1233,43 @@ async function hasSealedStageStatus(root: string, content: string): Promise<bool
     return false;
   }
   const files = await collectReviewPackFiles(root, pack);
-  return files !== null && reviewPackSeal(files) === bareSha256(seal);
+  if (files === null || reviewPackSeal(files) !== bareSha256(seal)) return false;
+  return stagePackRecordsPass(files, pack, specNumber);
+}
+
+/** The reviewer whose PASS closes a stage rather than a row. */
+const STAGE_REVIEWER_ROLE = "completion-reviewer";
+
+/**
+ * True when a stage's review pack carries the P8 provenance its
+ * `## Final status` claims: a request that is not a row's, and a
+ * `completion-reviewer` PASS over this spec at one revision, agreed on by the
+ * response and `summary.json`.
+ */
+function stagePackRecordsPass(
+  files: ReadonlyArray<ReviewPackFile>,
+  packPath: string,
+  specNumber: string,
+): boolean {
+  const request = reviewPackArtifact(files, packPath, "review_request.md");
+  const summary = reviewPackArtifact(files, packPath, "summary.json");
+  const response = reviewPackResponse(files, STAGE_REVIEWER_ROLE);
+  if (request === null || summary === null || response === null) return false;
+  if (visibleLineFieldValues(request, "TDD-ID").length > 0) return false;
+  const revisions = visibleLineFieldValues(response, "Reviewed revision");
+  const auditedHashes = visibleLineFieldValues(response, "Audited evidence hash");
+  const revision = revisions[0];
+  const auditedHash = auditedHashes[0];
+  return (
+    revisions.length === 1 &&
+    auditedHashes.length === 1 &&
+    revision !== undefined &&
+    auditedHash !== undefined &&
+    EVIDENCE_REVISION_FORM.test(revision) &&
+    SHA256_VALUE.test(auditedHash) &&
+    exactLineField(response, "Result", "PASS") &&
+    summaryRecordsReviewerPass(summary, STAGE_REVIEWER_ROLE, specNumber, revision)
+  );
 }
 
 /** One `Shared-artifact re-verify` subsection, judged on its own fields. */
@@ -1193,8 +1339,10 @@ async function isCurrentReverifyRecord(
  *   item (`isAuditedCompletedEntry`). An item cannot re-verify itself: the
  *   consumer is `done` and has no edge on which to observe anything.
  * - **a zero-row stage's `coverage-depth-spec-NNNN.md`**, which owns no item
- *   entry, where `## Final status` must carry the stage `Review pack` and a
- *   `Review pack seal` that still recomputes from it.
+ *   entry, where `## Final status` must carry the stage `Review pack`, a
+ *   `Review pack seal` that still recomputes from it, and a pack whose request,
+ *   response and `summary.json` record the stage reviewer's PASS over that
+ *   stage's own spec (`hasSealedStageStatus`).
  */
 async function hasCurrentSharedArtifactReverify(
   context: CompletedEvidenceContext,
@@ -1221,7 +1369,12 @@ async function hasCurrentSharedArtifactReverify(
       continue;
     }
     if (isStageFile) {
-      if (!(await hasSealedStageStatus(root, content))) continue;
+      // The stage's own spec, not the consumer's: a stage of `spec-0002` may
+      // edit a fixture a `done` row of `spec-0001` reads, and its pack is
+      // scoped to the spec that opened it.
+      const stageSpecNumber = /-spec-(\d{4})\.md$/i.exec(entry.name)?.[1];
+      if (stageSpecNumber === undefined) continue;
+      if (!(await hasSealedStageStatus(root, stageSpecNumber, content))) continue;
       for (const section of sharedArtifactReverifySections(content, target)) {
         if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
       }
@@ -1260,8 +1413,29 @@ async function hasCurrentSharedArtifactReverify(
  * The command/output pair is checked with the same two predicates every other
  * recorded run uses, over the whole value — the field is normally a fenced
  * block holding the mutation, its command and its output together.
+ *
+ * **A generic shape is not the proof.** A known runner plus a failure word is
+ * satisfied by a run of something else: `deleted export; npm test -- unrelated
+ * → 1 failed` cleared the field while proving nothing about this row's test.
+ * `oracle-strength.md`'s own rejection list is what the row is measured
+ * against, so the three items on it that have a machine form are checked here
+ * against the row's ledger identity and its GREEN run:
+ *
+ * - **another selector** — the proof must name the `Selector` the row owns;
+ * - **another command** — it must contain the row's `GREEN command`; proving a
+ *   different test discriminates says nothing about this one;
+ * - **a load failure** — a syntax error, a deleted export or a thrown "not
+ *   implemented" is the same non-observation `red-admissibility.md` refuses for
+ *   RED: it shows the seam is absent, not that the assertions discriminate.
+ *
+ * Whitespace is collapsed on both sides of the two containment checks, so a
+ * fenced command that wrapped still matches the single-line field it came from.
  */
-function oracleProofDefects(value: string | null): string[] {
+function oracleProofDefects(
+  value: string | null,
+  selector: string,
+  greenCommand: string | null,
+): string[] {
   if (value === null) return ["Oracle proof"];
   const equivalentMutant = /^equivalent-mutant\b(.*)$/is.exec(value.trim());
   if (equivalentMutant !== null) {
@@ -1276,7 +1450,38 @@ function oracleProofDefects(value: string | null): string[] {
   if (!isFailingEvidenceResult(value)) {
     defects.push("Oracle proof: the failing output that mutation produced");
   }
+  if (ORACLE_PROOF_LOAD_FAILURE.test(value)) {
+    defects.push("Oracle proof: an assertion failure rather than a load failure");
+  }
+  if (!statesEvidenceFragment(value, selector)) {
+    defects.push(`Oracle proof: the row's own Selector "${selector}"`);
+  }
+  if (greenCommand !== null && !statesEvidenceFragment(value, greenCommand)) {
+    defects.push("Oracle proof: the row's GREEN command, not another test's");
+  }
   return defects;
+}
+
+/**
+ * The load failures `oracle-strength.md` and `red-admissibility.md` both
+ * refuse: the mutation stopped the module from loading, so the run says the
+ * seam is missing and nothing about whether the assertions discriminate.
+ */
+const ORACLE_PROOF_LOAD_FAILURE =
+  /\b(?:syntax\s*error|syntaxerror|referenceerror|importerror|modulenotfounderror|err_module_not_found|module\s+not\s+found|unresolved\s+import|error\s+collecting)\b|\bnot[\s-]*implemented\b|\bcannot\s+find\s+(?:module|package|name)\b|\b(?:delet|remov|dropp|comment)ed\s+(?:out\s+)?(?:the\s+)?(?:export|import|module|symbol|declaration)\b|\bfailed\s+to\s+(?:load|import|resolve|parse|transform|compile)\b|\b(?:load|import|collection|module[\s-]resolution)\s+(?:error|failure|failed)\b/i;
+
+/**
+ * True when a recorded run states `fragment` — a selector or a command copied
+ * from the ledger or from another evidence field.
+ *
+ * Compared with whitespace collapsed, because a fenced block wraps a command
+ * that the field it is compared against holds on one line. An empty or
+ * placeholder fragment claims nothing, so it is not held against the value.
+ */
+function statesEvidenceFragment(value: string, fragment: string): boolean {
+  const needle = fragment.replace(/\s+/g, " ").trim();
+  if (needle.length === 0 || EVIDENCE_PLACEHOLDER.test(fragment)) return true;
+  return value.replace(/\s+/g, " ").includes(needle);
 }
 
 /**
@@ -1397,6 +1602,7 @@ function missingCompletedEvidenceFields(
 
   const failureMode = rowEvidenceFieldValue(section, "RED failure mode")?.toLowerCase();
   let latestRevision: string | null = null;
+  let latestGreenCommand: string | null = null;
   let oracleProofOwed = false;
   for (const round of rounds) {
     const revision = roundEvidenceFieldValue(section, round, "Revision");
@@ -1506,9 +1712,19 @@ function missingCompletedEvidenceFields(
       }
     }
     latestRevision = revision;
+    latestGreenCommand = greenCommand;
   }
-  if (oracleProofOwed)
-    missing.push(...oracleProofDefects(rowEvidenceFieldValue(section, "Oracle proof")));
+  if (oracleProofOwed) {
+    // The proof is taken at the last GREEN, so the run it has to agree with is
+    // the latest round's — an earlier round's command was superseded.
+    missing.push(
+      ...oracleProofDefects(
+        rowEvidenceFieldValue(section, "Oracle proof"),
+        expected.selector,
+        latestGreenCommand,
+      ),
+    );
+  }
 
   const refactorCommand = rowEvidenceFieldValue(section, "Refactor verify command");
   const refactorResult = rowEvidenceFieldValue(section, "Refactor verify result");
@@ -1645,53 +1861,20 @@ async function invalidCompletedEvidenceArtifacts(
       invalid.push(`${prefix} review pack seal matching pack contents`);
     }
     const recordedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
-    const request = packFiles.find(
-      ({ relativePath }) => relativePath === `${packPath}/review_request.md`,
-    );
-    const summary = packFiles.find(
-      ({ relativePath }) => relativePath === `${packPath}/summary.json`,
-    );
-    const response = packFiles.find(({ relativePath }) => {
-      const name = path.posix.basename(relativePath);
-      return new RegExp(
-        `^R\\d{2}_${expectedRole.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\.md$`,
-      ).test(name);
-    });
-    const responseBody = response?.content ?? "";
-    let summaryMatches = false;
-    if (summary !== undefined && recordedRevision !== null) {
-      try {
-        const parsed = JSON.parse(summary.content) as Record<string, unknown>;
-        summaryMatches =
-          parsed["overall_status"] === "PASS" &&
-          parsed["revision"] === recordedRevision &&
-          typeof parsed["target"] === "object" &&
-          parsed["target"] !== null &&
-          (parsed["target"] as Record<string, unknown>)["kind"] === "spec" &&
-          (parsed["target"] as Record<string, unknown>)["path"] ===
-            `.qfai/specs/spec-${expected.specNumber}` &&
-          Array.isArray(parsed["reviewers"]) &&
-          parsed["reviewers"].some(
-            (reviewer) =>
-              typeof reviewer === "object" &&
-              reviewer !== null &&
-              (reviewer as Record<string, unknown>)["reviewer"] === expectedRole &&
-              (reviewer as Record<string, unknown>)["status"] === "PASS",
-          );
-      } catch {
-        summaryMatches = false;
-      }
-    }
+    const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
+    const summary = reviewPackArtifact(packFiles, packPath, "summary.json");
+    const response = reviewPackResponse(packFiles, expectedRole);
     if (
-      request === undefined ||
-      !exactLineField(request.content, "TDD-ID", expected.tddId) ||
-      response === undefined ||
-      !summaryMatches ||
-      !exactLineField(responseBody, "Result", "PASS") ||
+      request === null ||
+      !exactLineField(request, "TDD-ID", expected.tddId) ||
+      response === null ||
+      summary === null ||
       recordedRevision === null ||
-      !exactLineField(responseBody, "Reviewed revision", recordedRevision) ||
+      !summaryRecordsReviewerPass(summary, expectedRole, expected.specNumber, recordedRevision) ||
+      !exactLineField(response, "Result", "PASS") ||
+      !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
-      !exactLineField(responseBody, "Audited evidence hash", auditedHash)
+      !exactLineField(response, "Audited evidence hash", auditedHash)
     ) {
       invalid.push(
         `${prefix} review pack carrying request, summary, and named reviewer PASS provenance`,

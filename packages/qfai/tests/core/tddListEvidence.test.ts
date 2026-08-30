@@ -186,9 +186,85 @@ interface EvidenceOptions {
    * shape, where nothing in the repository can contradict the recorded digest.
    */
   stagePack?: "present" | "absent";
+  /**
+   * How the stage pack fails to be this stage's own P8 verdict. Each shape
+   * still seals: the recorded digest recomputes over the directory exactly as
+   * written, which is why the seal alone never settled the question.
+   */
+  stagePackDefect?:
+    | "summary-only"
+    | "other-spec"
+    | "row-pack"
+    | "revise"
+    | "no-audited-hash"
+    | "reviewer-revise";
 }
 
 const STAGE_PACK_PATH = ".qfai/review/review-20260811000000005";
+
+/**
+ * The P8 pack a zero-row stage's `## Final status` names.
+ *
+ * The stage reviewer is `completion-reviewer` judging a stage rather than a
+ * row, so the pack is the ordinary layout — request, one response per reviewer,
+ * `summary.json` — scoped to the stage's own spec and naming no `TDD-ID`.
+ * `stagePackDefect` writes the shapes that seal perfectly well and are still
+ * not this stage's verdict.
+ */
+async function writeStagePack(root: string, options: EvidenceOptions): Promise<void> {
+  const packDir = path.join(root, STAGE_PACK_PATH);
+  await mkdir(packDir, { recursive: true });
+  const revision = options.revision ?? DEFAULT_REVISION;
+  if (options.stagePackDefect === "summary-only") {
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      `${JSON.stringify({ overall_status: "PASS" }, null, 2)}\n`,
+      "utf-8",
+    );
+    return;
+  }
+  await writeFile(
+    path.join(packDir, "review_request.md"),
+    options.stagePackDefect === "row-pack"
+      ? "# Stage review request\n\nTDD-ID: TDD-0001\n"
+      : "# Stage review request\n\nScope: spec-0001 completion\n",
+    "utf-8",
+  );
+  const auditedHash =
+    options.stagePackDefect === "no-audited-hash"
+      ? ""
+      : `Audited evidence hash: ${"c".repeat(64)}\n`;
+  await writeFile(
+    path.join(packDir, `R01_completion-reviewer.md`),
+    `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
+    "utf-8",
+  );
+  await writeFile(
+    path.join(packDir, "summary.json"),
+    `${JSON.stringify(
+      {
+        overall_status: "PASS",
+        revision,
+        target: {
+          kind: "spec",
+          path:
+            options.stagePackDefect === "other-spec"
+              ? ".qfai/specs/spec-0002"
+              : ".qfai/specs/spec-0001",
+        },
+        reviewers: [
+          {
+            reviewer: "completion-reviewer",
+            status: options.stagePackDefect === "reviewer-revise" ? "FAIL" : "PASS",
+          },
+        ],
+      },
+      null,
+      2,
+    )}\n`,
+    "utf-8",
+  );
+}
 
 /**
  * A reviewer response body.
@@ -354,14 +430,7 @@ async function runIssuesOn(
   const testPath = path.join(root, TEST_FILE);
   await mkdir(path.dirname(testPath), { recursive: true });
   await writeFile(testPath, "// test\n", "utf-8");
-  if (options.stagePack !== undefined) {
-    await mkdir(path.join(root, STAGE_PACK_PATH), { recursive: true });
-    await writeFile(
-      path.join(root, STAGE_PACK_PATH, "summary.json"),
-      `${JSON.stringify({ overall_status: "PASS" }, null, 2)}\n`,
-      "utf-8",
-    );
-  }
+  if (options.stagePack !== undefined) await writeStagePack(root, options);
   for (const [relativePath, content] of Object.entries(evidenceFiles)) {
     const evidencePath = path.join(root, relativePath);
     await mkdir(path.dirname(evidencePath), { recursive: true });
@@ -1280,6 +1349,36 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
     });
   });
 
+  // A seal says the named directory has not been edited since it was recorded.
+  // It says nothing about what the directory is about — so any unmodified
+  // canonical pack in the repository was interchangeable with this stage's own
+  // P8 verdict, and a hand-written re-verify block plus somebody else's digest
+  // cleared a stale RED manifest. `qfai-atdd/SKILL.md` asks the gate to check
+  // that `## Final status` says what that pack says.
+  for (const [label, defect] of [
+    ["a bare overall_status with no request or response", "summary-only"],
+    ["a target naming another spec", "other-spec"],
+    ["a row pack, whose request names a TDD-ID", "row-pack"],
+    ["a stage reviewer who answered REVISE", "revise"],
+    ["a response carrying no Audited evidence hash", "no-audited-hash"],
+    ["a summary recording the stage reviewer as FAIL", "reviewer-revise"],
+  ] as const) {
+    it(`rejects a stage re-verify sealed against ${label}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+          {
+            [COVERAGE_DEPTH_PATH]: stageEvidence(),
+            ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+          },
+          { stagePack: "present", stagePackDefect: defect },
+        );
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
   const MATRIX = `# Coverage Depth Matrix
 
 | US/TC ID | Normal path | Oracle strength | Status |
@@ -1361,6 +1460,70 @@ result, so the assertion cannot be tightened without drift.
       const evidence = completeEntry("Unit").replace(
         /- Oracle proof: .*/,
         "- Oracle proof: returned null from parseSample; npm test -- sample → 1 failed; reverted",
+      );
+      const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+        ".qfai/evidence/implement-spec-0001.md": evidence,
+      });
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // A known runner plus a failure word is a shape, not a proof: the run it
+  // describes may be of another selector, under another command, or a load
+  // failure — the three rejections `oracle-strength.md` lists that have a
+  // machine form. Each of these values cleared the field while proving nothing
+  // about this row's test.
+  for (const [label, proof] of [
+    [
+      "a run of a different selector",
+      "returned null from parseSample; npm test -- unrelated → 1 failed; reverted",
+    ],
+    [
+      "a run under a command that is not the row's GREEN command",
+      "returned null from parseSample; pytest -k sample → 1 failed; reverted",
+    ],
+    ["a deleted export, which is a load failure", "deleted export; npm test -- sample → 1 failed"],
+    [
+      "a syntax error, which is a load failure",
+      "introduced a syntax error in parseSample; npm test -- sample → 1 failed",
+    ],
+    [
+      "a thrown not-implemented, which is a load failure",
+      "made parseSample throw not implemented; npm test -- sample → 1 failed",
+    ],
+  ] as const) {
+    it(`rejects an Oracle proof that is ${label}`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replace(
+          /- Oracle proof: .*/,
+          `- Oracle proof: ${proof}`,
+        );
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": evidence,
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  // The over-correction pin: a proof whose command wraps across a fenced block
+  // still names the row's selector and contains its GREEN command, and the
+  // mutation it describes is a behaviour change, not a missing seam.
+  it("accepts an Oracle proof whose fenced run names the row's selector and GREEN command", async () => {
+    await withProject(async (root) => {
+      const evidence = completeEntry("Unit").replace(
+        "- Oracle proof: equivalent-mutant — TC-0001 permits any non-empty result\n",
+        `- Oracle proof:
+
+  \`\`\`
+  mutation: parseSample returns the input unchanged
+  npm
+    test -- sample
+  1 failed — expected "ok", received "raw"
+  reverted
+  \`\`\`
+
+`,
       );
       const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
         ".qfai/evidence/implement-spec-0001.md": evidence,
@@ -1827,6 +1990,32 @@ result, so the assertion cannot be tightened without drift.
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
+
+  // `git rev-parse HEAD` prints 64 hex digits in a repository initialised with
+  // `git init --object-format=sha256`, and an abbreviation of one is longer
+  // than a full SHA-1 too. Capping the form at 40 made every revision such a
+  // project records by contract — `Revision`, `RED revision` and both
+  // `reviewed revision` fields — fail the shape check, so a correct row could
+  // not be closed at all.
+  for (const [label, revision] of [
+    ["a full SHA-256 object id", `${"a".repeat(63)}9`],
+    ["a SHA-256 abbreviation longer than a full SHA-1", `${"b".repeat(47)}1`],
+  ] as const) {
+    it(`accepts ${label} as a git rev`, async () => {
+      await withProject(async (root) => {
+        const evidence = completeEntry("Unit").replaceAll(DEFAULT_REVISION, revision);
+        const issues = await runIssuesOn(
+          root,
+          ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+          { ".qfai/evidence/implement-spec-0001.md": evidence },
+          { revision },
+        );
+        expect(issues.filter(({ message }) => message.includes("naming a git rev"))).toHaveLength(
+          0,
+        );
+      });
+    });
+  }
 
   it("does not also report a missing anchor when the pointer resolves", async () => {
     await withProject(async (root) => {
