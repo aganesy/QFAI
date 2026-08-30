@@ -154,6 +154,15 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     );
   });
 
+  it("ignores a lifecycle written without a space after the bullet marker", async () => {
+    // `-Status:` is not a list marker, so this renders as a paragraph and no
+    // `QFAI-STATUS-*` rule looks at it — prose alone must not take the ledger
+    // out of the gate.
+    await withSpecStatus(["-Status: deprecated", "-Deprecated-at: 2026-01-01"], (issues) => {
+      expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+    });
+  });
+
   it("takes the top-level Status when a nested one precedes it", async () => {
     // The nested declaration is complete and comes first, so a first-match
     // extraction adopts it and the real `- Status: active` below never runs.

@@ -5,6 +5,7 @@ import { loadConfig, resolvePath, type ConfigLoadResult } from "./config.js";
 import { collectSpecEntries, type SpecEntry } from "./specLayout.js";
 import { collectTddCoverage } from "./reportTddCoverage.js";
 import {
+  activeScenarioFiles,
   collectDeltaFiles as collectSpecDeltaFiles,
   collectContractFiles,
   collectScenarioFiles,
@@ -389,7 +390,9 @@ export async function createReportData(
   // inside `collectTestStrategy` alone left `summary.scenarios` counting a
   // retired spec's feature that `testStrategy.totalScenarios` had already
   // dropped — the same report stating two different scenario totals, one of
-  // them history.
+  // them history. `validateProject` applies the same filter for the SC coverage
+  // it hands back below, so the two halves of this report agree on which
+  // scenarios exist.
   const scenarioFiles = activeScenarioFiles(await collectScenarioFiles(specsRoot), specEntries);
   const scenarioCount = await countScenarios(scenarioFiles);
   const testStrategy = await collectTestStrategy(
@@ -2131,33 +2134,6 @@ async function collectLedgerLayerCounts(specsRoot: string): Promise<{
   }
 
   return { total, counts };
-}
-
-/**
- * The scenario files of the specs that are still current.
- *
- * `collectScenarioFiles` maps every spec's `05_Examples`, retired ones
- * included, and the strategy mix is a statement about the tests the repository
- * is held to now. Filtering only the ledger fallback was not enough: a retired
- * spec's scenarios were counted into the layer, size and E2E-ratio figures
- * first, and — because one readable scenario is all it takes — kept the
- * fallback from ever running, so the active layered specs' `Layer` columns went
- * unread as well.
- */
-function activeScenarioFiles(
-  scenarioFiles: readonly string[],
-  specEntries: readonly SpecEntry[],
-): string[] {
-  const retired = new Set<string>();
-  for (const entry of specEntries) {
-    if (entry.status !== undefined && entry.status !== "active") {
-      retired.add(path.resolve(entry.examplesPath));
-    }
-  }
-  if (retired.size === 0) {
-    return [...scenarioFiles];
-  }
-  return scenarioFiles.filter((file) => !retired.has(path.resolve(file)));
 }
 
 async function collectTestStrategy(

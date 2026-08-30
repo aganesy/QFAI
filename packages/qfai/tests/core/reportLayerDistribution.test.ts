@@ -182,6 +182,60 @@ describe("the layer distribution reads the artifact the templates produce", () =
     );
   });
 
+  it("leaves a retired spec's SC IDs out of SC Coverage as well", async () => {
+    // SC coverage is computed inside `validateProject` and only carried into
+    // the report, so filtering the report's own list left one report saying two
+    // things: `summary.scenarios` 0 beside an SC Coverage total of 1 whose
+    // `missingIds` demanded tests for a retired obligation — and `scSources`,
+    // built from the active list, could name no file those IDs came from.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.summary.scenarios).toBe(0);
+        expect(data.traceability.sc.total).toBe(0);
+        expect(data.traceability.sc.missingIds).toEqual([]);
+        expect(Object.keys(data.traceability.scSources)).toEqual([]);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: deprecated\n- Deprecated-at: 2026-01-01\n",
+        examples: [
+          "Feature: retired",
+          "",
+          "  @layer-e2e @size-s @SC-0001-0001",
+          "  Scenario: history",
+          "    Given a retired spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
+  it("still reports an active spec's SC IDs as coverage", async () => {
+    // The over-correction pin: SC Coverage must keep gating on the specs that
+    // are still current, so an uncovered SC ID stays in `missingIds`.
+    await withProject(
+      async (root) => {
+        const data = await createReportData(root);
+        expect(data.summary.scenarios).toBe(1);
+        expect(data.traceability.sc.total).toBe(1);
+        expect(data.traceability.sc.missingIds).toEqual(["SC-0001-0001"]);
+      },
+      {
+        ledger: LEDGER,
+        spec: "# Spec\n\n- Status: active\n",
+        examples: [
+          "Feature: current",
+          "",
+          "  @layer-e2e @size-s @SC-0001-0001",
+          "  Scenario: live",
+          "    Given an active spec",
+          "",
+        ].join("\n"),
+      },
+    );
+  });
+
   it("says so when nothing could be read, instead of reporting zeros silently", async () => {
     await withProject(async (root) => {
       const data = await createReportData(root);

@@ -67,6 +67,24 @@ describe("extractBulletField", () => {
     const md = ["- Notes:", "    - Status: deprecated", ""].join("\n");
     expect(extractBulletField(md, "Status")).toBeUndefined();
   });
+
+  it("requires a space after the bullet marker", () => {
+    // `-Status: deprecated` is not a list item at all — CommonMark needs a
+    // space after the marker, so this renders as literal paragraph text. Read
+    // as metadata it was a complete retirement, and prose alone took a whole
+    // ledger out of the gate with no status rule able to report it.
+    expect(extractBulletField("-Status: deprecated\n", "Status")).toBeUndefined();
+    expect(extractBulletField("-Deprecated-at: 2026-01-01\n", "Deprecated-at")).toBeUndefined();
+    expect(extractBulletField("-Superseded-by: spec-0002\n", "Superseded-by")).toBeUndefined();
+  });
+
+  it("still reads a real bullet, whatever the spacing after the marker", () => {
+    // The guard above must reject the missing space only — a tab or extra
+    // spaces are still a list marker.
+    expect(extractBulletField("- Status: active\n", "Status")).toBe("active");
+    expect(extractBulletField("-\tStatus: active\n", "Status")).toBe("active");
+    expect(extractBulletField("-   Status: active\n", "Status")).toBe("active");
+  });
 });
 
 describe("parseSpec status fields", () => {

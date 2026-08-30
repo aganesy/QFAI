@@ -98,10 +98,16 @@ const H_SPACE = "[^\\S\\r\\n]";
  * keeps list continuations on purpose so nothing else removes it. Requiring
  * column 0 fails closed: an indented declaration is not seen, the spec stays
  * current, and `QFAI-STATUS-001` reports the missing bullet.
+ *
+ * The `-` must be followed by at least one horizontal space, as CommonMark
+ * requires of a list marker. Without that, `-Status: deprecated` — an ordinary
+ * paragraph line, rendered as literal text and reported by no status rule —
+ * read as a complete lifecycle declaration and retired the spec, dropping its
+ * whole ledger out of the gate on prose.
  */
 export function extractBulletField(md: string, name: string): string | undefined {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`^-${H_SPACE}*${escaped}${H_SPACE}*:([^\\r\\n]*)$`, "im");
+  const re = new RegExp(`^-${H_SPACE}+${escaped}${H_SPACE}*:([^\\r\\n]*)$`, "im");
   const match = re.exec(md);
   if (match === null) {
     return undefined;
