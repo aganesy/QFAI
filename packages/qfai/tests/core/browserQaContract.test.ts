@@ -178,14 +178,18 @@ describe("browser QA bundle contract", () => {
     expect(summaryCodes).toContain(BROWSER_QA_ISSUE_CODES.summary);
     expect(findingsCodes).toContain(BROWSER_QA_ISSUE_CODES.findings);
 
-    // No code reuse between categories
-    const allCodes = new Set([
-      BROWSER_QA_ISSUE_CODES.missing,
-      BROWSER_QA_ISSUE_CODES.schema,
-      BROWSER_QA_ISSUE_CODES.contradiction,
-      BROWSER_QA_ISSUE_CODES.summary,
-      BROWSER_QA_ISSUE_CODES.findings,
+    // No code reuse between categories, and no reserved code without a call
+    // site: every member of the map has to turn up in one of the emissions
+    // above. A code parked in the map with no emitter is the defect that left
+    // a dead entry in the validate.ts issue catalog.
+    const allCodes = new Set<string>(Object.values(BROWSER_QA_ISSUE_CODES));
+    expect(allCodes.size).toBe(4);
+    const emitted = new Set([
+      ...schemaCodes,
+      ...contradictionCodes,
+      ...summaryCodes,
+      ...findingsCodes,
     ]);
-    expect(allCodes.size).toBe(5);
+    expect([...allCodes].filter((code) => !emitted.has(code))).toEqual([]);
   });
 });

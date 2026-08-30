@@ -767,27 +767,18 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-VIS-001": "`02_Inception-Deck.md` should include at least one Mermaid diagram.",
   "QFAI-VIS-002":
     "HTML+CSS visual mock is an optional fallback aid and should only be referenced when intentionally selected. Sidecar artifacts (uiux/) are the primary UI definition.",
-  "QFAI-PROT-101":
-    "Both prototyping evidence files exist and prototyping.json follows the required schema.",
-  "QFAI-PROT-174": "required browser QA bundle is missing.",
   "QFAI-PROT-244": "captured render artifacts must be path-only and referenced files must exist.",
-  "QFAI-PROT-245":
-    "render coverage is incomplete for required default viewports or all renders are skipped.",
   "QFAI-PROT-251":
     "render evidence path field contains inline payload (data URI, base64, inline HTML, or oversized content). Path-only required.",
   "QFAI-PROT-252":
     "render evidence status requires accompanying field (skippedReason for skipped, error for failed, imagePath/htmlPath for captured).",
   "QFAI-PROT-253":
     "render evidence top-level status contradicts screen-level statuses (e.g. status=captured but no captured screens).",
-  "QFAI-PROT-254": "render bundle contradicts non-UI prototyping surface / mode expectation.",
   "QFAI-PROT-273": "browser QA bundle schema is invalid (missing or malformed browserQa block).",
   "QFAI-PROT-274":
     "browser QA executed/status contradiction (e.g. executed=true but status!=completed).",
   "QFAI-PROT-275": "browser QA summary is malformed (non-object or invalid bucket counts).",
   "QFAI-PROT-276": "browser QA findings are malformed (non-array or invalid finding structure).",
-  "QFAI-PROT-271": "uiFidelity.mode='skeleton' is not allowed in full-harness UI prototyping.",
-  "QFAI-PROT-272":
-    "uiFidelity screen is missing required fields (uiContractId, route, expected, observed).",
   "QFAI-PROT-311":
     "delegationMap entry assigns a category to a role outside the SKILL.md Delegation Scope Table.",
   "QFAI-PROT-335":
