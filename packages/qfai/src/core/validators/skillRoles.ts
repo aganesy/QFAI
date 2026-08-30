@@ -32,6 +32,14 @@ export type SkillRouting = {
    * not on the header.
    */
   phases: number;
+  /**
+   * Two `- skill:` blocks that named this skill but different review profiles.
+   *
+   * Recorded during the manifest walk and reported here rather than there:
+   * `QFAI-AGENT-018` is this module's code, and one rule code emitted from two
+   * modules cannot be grepped, filtered or waived apart.
+   */
+  reviewProfileConflict?: { first: string; second: string };
 };
 
 /** Every reviewer a review profile can select, with how firmly it binds. */
@@ -59,23 +67,41 @@ export function emptySkillRouting(): SkillRouting {
  * Fold one routing field into a skill's collected agent set. `required` wins
  * over a `conditional` recorded earlier for the same id — an agent listed in
  * both `conditional_agents` and `blocking_agents` is still a gate.
+ *
+ * `known`, when given, is the agent catalog. An id outside it is counted as a
+ * dispatch attempt but never collected: `QFAI-AGENT-008` already reports the
+ * dangling reference, and collecting it here would make `QFAI-AGENT-014` tell
+ * the operator to add that same non-existent id to the skill's `roles:`.
+ *
+ * Returns how many syntactically usable ids the field held — non-empty strings
+ * in a list — which is what decides whether the phase dispatches anything.
+ * Catalog membership is deliberately not part of that count: a phase naming
+ * only unknown agents is a broken reference (`QFAI-AGENT-008`), not an
+ * unrouted skill (`QFAI-AGENT-017`).
  */
 export function recordRoutedAgents(
   entry: SkillRouting,
   value: unknown,
   binding: RoutingBinding,
-): void {
+  known?: ReadonlySet<string>,
+): number {
   if (!Array.isArray(value)) {
-    return;
+    return 0;
   }
+  let usable = 0;
   for (const agent of value) {
     if (typeof agent !== "string" || agent.length === 0) {
+      continue;
+    }
+    usable += 1;
+    if (known && !known.has(agent)) {
       continue;
     }
     if (binding === "required" || !entry.agents.has(agent)) {
       entry.agents.set(agent, binding);
     }
   }
+  return usable;
 }
 
 /**
@@ -92,6 +118,20 @@ export async function validateSkillRoles(
 ): Promise<void> {
   const skillsDir = resolvePath(root, config, "skillsDir");
   for (const [skill, entry] of routing) {
+    const skillPath = path.join(skillsDir, skill, "SKILL.md");
+    const rel = path.relative(root, skillPath).replace(/\\/g, "/");
+    if (entry.reviewProfileConflict) {
+      const { first, second } = entry.reviewProfileConflict;
+      issues.push(
+        issue(
+          "QFAI-AGENT-018",
+          `agent-routing.yml routes "${skill}" through two different review profiles ("${first}" and "${second}"); one skill has one review gate`,
+          "error",
+          rel,
+          "agentDefinition.conflictingReviewProfile",
+        ),
+      );
+    }
     // A header with no usable phase list dispatches nothing, so neither
     // direction of the cross-check can say anything true about it —
     // `reportUnroutedSkills` reports the header itself as `QFAI-AGENT-017`
@@ -99,12 +139,17 @@ export async function validateSkillRoles(
     if (entry.phases === 0) {
       continue;
     }
-    const skillPath = path.join(skillsDir, skill, "SKILL.md");
     const frontmatter = await readSkillFrontmatter(skillPath);
     if (!frontmatter) {
       continue;
     }
-    const rel = path.relative(root, skillPath).replace(/\\/g, "/");
+    if (frontmatter.parseError) {
+      // A routed skill whose frontmatter cannot be read is not "makes no
+      // claim": the assistant cannot load it either, so reporting nothing let
+      // one indentation slip pass the whole family as success.
+      issues.push(unreadableFrontmatter(rel, skill, frontmatter.parseError));
+      continue;
+    }
     // Ahead of the `roles:` guards below: which review gate the skill and the
     // manifest each name is a divergence in its own right, and a skill that
     // declares no `roles:` still has to agree about its profile.
@@ -131,6 +176,17 @@ export async function validateSkillRoles(
     reportUnselectableRoles(skill, selected, frontmatter.roles, entry.reviewProfile, rel, issues);
   }
   await reportUnroutedSkills(root, skillsDir, routing, issues);
+}
+
+/** `QFAI-AGENT-016` for a `SKILL.md` whose frontmatter block cannot be read. */
+function unreadableFrontmatter(rel: string, skill: string, reason: string): Issue {
+  return issue(
+    "QFAI-AGENT-016",
+    `${rel} carries an unreadable frontmatter block (${reason}); the ${skill} routing cross-check cannot run`,
+    "error",
+    rel,
+    "agentDefinition.unreadableSkillFrontmatter",
+  );
 }
 
 /**
@@ -169,9 +225,14 @@ async function readSkillFrontmatter(skillPath: string): Promise<SkillFrontmatter
  * `qfai-prototyping` (`ui-surface-aware` against `ui-bearing`) was in exactly
  * that state.
  *
- * Checked only when the skill declares `routing-profile:`, the same binding
- * signal `QFAI-AGENT-017` reads: a skill that declares none holds the manifest
- * to nothing, exactly as an absent `roles:` does.
+ * The *agreement* half is checked only when the skill declares
+ * `routing-profile:`, the same binding signal `QFAI-AGENT-017` reads: a skill
+ * that declares none holds the manifest to nothing, exactly as an absent
+ * `roles:` does. The *existence* half is not conditional on that — a route
+ * pointing at a profile `review-profiles.yml` never defines is broken whoever
+ * declared what, and `collectSelections` silently reads an unknown profile as
+ * an empty reviewer set, so leaving it unreported also loses every mandatory
+ * reviewer that gate was supposed to bind.
  */
 function reportProfileDisagreement(
   skill: string,
@@ -181,10 +242,21 @@ function reportProfileDisagreement(
   rel: string,
   issues: Issue[],
 ): void {
+  const routed = entry.reviewProfile;
+  if (routed !== undefined && !profiles.has(routed)) {
+    issues.push(
+      issue(
+        "QFAI-AGENT-018",
+        `agent-routing.yml routes "${skill}" through review profile "${routed}", which review-profiles.yml does not define`,
+        "error",
+        rel,
+        "agentDefinition.unknownReviewProfile",
+      ),
+    );
+  }
   if (declared === undefined) {
     return;
   }
-  const routed = entry.reviewProfile;
   if (routed !== declared) {
     const found = routed === undefined ? "declares no review_profile" : `declares ${routed}`;
     issues.push(
@@ -198,17 +270,9 @@ function reportProfileDisagreement(
     );
     return;
   }
-  if (!profiles.has(declared)) {
-    issues.push(
-      issue(
-        "QFAI-AGENT-018",
-        `${rel} and agent-routing.yml both name review profile "${declared}", which review-profiles.yml does not define`,
-        "error",
-        rel,
-        "agentDefinition.unknownReviewProfile",
-      ),
-    );
-  }
+  // Both name the same profile. If it does not exist, the manifest-side check
+  // above already said so once — a second finding for the same missing
+  // definition would only double the work list.
 }
 
 /**
@@ -334,11 +398,17 @@ async function reportUnroutedSkills(
     }
     const skillPath = path.join(skillsDir, name, "SKILL.md");
     const frontmatter = await readSkillFrontmatter(skillPath);
+    const rel = path.relative(root, skillPath).replace(/\\/g, "/");
+    if (frontmatter?.parseError) {
+      // The routed loop reports its own; this covers every other skill dir, so
+      // an unloadable `SKILL.md` is named exactly once wherever it sits.
+      issues.push(unreadableFrontmatter(rel, name, frontmatter.parseError));
+      continue;
+    }
     const profile = frontmatter?.routingProfile;
     if (!profile) {
       continue;
     }
-    const rel = path.relative(root, skillPath).replace(/\\/g, "/");
     issues.push(
       issue(
         "QFAI-AGENT-017",

@@ -96,6 +96,16 @@ export type SkillFrontmatter = {
   roles?: string[];
   rolesError?: string;
   routingProfile?: string;
+  /**
+   * Set when a frontmatter block IS present but cannot be read as a mapping —
+   * a YAML syntax error, or a block that parses to a scalar or a list.
+   *
+   * Folding this into "no declaration" made a plain indentation slip silently
+   * disable every check in this family: the assistant cannot load such a
+   * `SKILL.md` at all, yet agent-definition validation passed. Absence of a
+   * frontmatter block stays `undefined` — that file makes no claim to check.
+   */
+  parseError?: string;
 };
 
 /**
@@ -106,9 +116,10 @@ export type SkillFrontmatter = {
  * them here rather than in the validator keeps the frontmatter delimiter a
  * single expression, shared with `parseAgentFrontmatter`.
  *
- * `undefined` — no frontmatter block, unparseable frontmatter, or frontmatter
- * that is not a mapping — means the file makes no declaration this rule can
- * adjudicate at all.
+ * `undefined` — no frontmatter block at all — means the file makes no
+ * declaration this rule can adjudicate. A block that IS present but cannot be
+ * read comes back with {@link SkillFrontmatter.parseError} set instead, so the
+ * caller reports it rather than treating a broken file as a silent pass.
  */
 export function parseSkillFrontmatter(content: string): SkillFrontmatter | undefined {
   const match = content.match(FRONTMATTER_PATTERN);
@@ -121,11 +132,11 @@ export function parseSkillFrontmatter(content: string): SkillFrontmatter | undef
   try {
     parsed = parseYaml(rawFrontmatter);
   } catch {
-    return undefined;
+    return { parseError: "frontmatter could not be parsed as YAML" };
   }
 
   if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-    return undefined;
+    return { parseError: "frontmatter must parse to an object" };
   }
 
   const root: Record<string, unknown> = { ...parsed };

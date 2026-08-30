@@ -416,8 +416,18 @@ async function validateRouting(
             );
           }
         }
+        // A field that is present but is not a list is dropped by both
+        // `validateAgentRefs` and `recordRoutedAgents`, so `mandatory_agents:
+        // completion-reviewer` used to route nobody and say nothing.
+        validateAgentFieldShapes(
+          rel,
+          phaseObj,
+          issues,
+          formatSkillLabel(routeObj.skill, routeIndex),
+          phaseIndex,
+        );
         if (routedEntry) {
-          collectPhaseAgents(routedEntry, phaseObj);
+          collectPhaseAgents(routedEntry, phaseObj, catalogIds);
         }
       }
     }
@@ -436,10 +446,24 @@ async function validateRouting(
   return routed;
 }
 
+/** The phase fields that name agents directly, in binding order. */
+const PHASE_AGENT_FIELDS = [
+  ["mandatory_agents", "required"],
+  ["blocking_agents", "required"],
+  ["conditional_agents", "conditional"],
+] as const;
+
 /**
  * Register a routing entry under its skill name and remember the review
  * profile it declares. Unnamed routes are skipped: there is no skill whose
  * `roles:` they could be held against.
+ *
+ * Two `- skill:` blocks with the same name accumulate their phases and agents,
+ * but they cannot both own the review gate. Overwriting silently let the skill
+ * satisfy `QFAI-AGENT-014` / `-018` against the last block's profile alone
+ * while the first block's reviewers went unlisted, so a conflicting second
+ * declaration is recorded for `validateSkillRoles` to report and the first one
+ * stands.
  */
 function collectRouteHeader(
   routeObj: Record<string, unknown>,
@@ -450,24 +474,90 @@ function collectRouteHeader(
   }
   const entry = routed.get(routeObj.skill) ?? emptySkillRouting();
   if (typeof routeObj.review_profile === "string") {
-    entry.reviewProfile = routeObj.review_profile;
+    if (entry.reviewProfile === undefined) {
+      entry.reviewProfile = routeObj.review_profile;
+    } else if (entry.reviewProfile !== routeObj.review_profile) {
+      entry.reviewProfileConflict ??= {
+        first: entry.reviewProfile,
+        second: routeObj.review_profile,
+      };
+    }
   }
   routed.set(routeObj.skill, entry);
   return entry;
 }
 
-/** Fold one phase's four agent fields into the skill's collected routed set. */
-function collectPhaseAgents(entry: SkillRouting, phase: RoutingPhase): void {
-  // Counted here rather than from `phases.length`, so only phases this walk
-  // could actually read count: `QFAI-AGENT-017` asks whether the manifest can
-  // dispatch anything inside the skill, and a list of non-objects cannot.
-  entry.phases += 1;
-  recordRoutedAgents(entry, phase.mandatory_agents, "required");
-  recordRoutedAgents(entry, phase.blocking_agents, "required");
-  recordRoutedAgents(entry, phase.conditional_agents, "conditional");
+/**
+ * Fold one phase's four agent fields into the skill's collected routed set.
+ *
+ * The phase counts toward `entry.phases` only when at least one usable agent
+ * id came out of it. `QFAI-AGENT-017` asks whether the manifest can dispatch
+ * anything inside the skill, and `- id: only` with no agent field — or one
+ * whose fields are all scalars — dispatches nobody however well-formed the
+ * phase object is.
+ */
+function collectPhaseAgents(
+  entry: SkillRouting,
+  phase: RoutingPhase,
+  catalogIds: Set<string>,
+): void {
+  let dispatchable = 0;
+  for (const [field, binding] of PHASE_AGENT_FIELDS) {
+    dispatchable += recordRoutedAgents(entry, phase[field], binding, catalogIds);
+  }
   if (Array.isArray(phase.parallel_groups)) {
     for (const group of phase.parallel_groups) {
-      recordRoutedAgents(entry, group, "conditional");
+      dispatchable += recordRoutedAgents(entry, group, "conditional", catalogIds);
+    }
+  }
+  if (dispatchable > 0) {
+    entry.phases += 1;
+  }
+}
+
+/**
+ * Report a phase's agent field that is present but is not a list.
+ *
+ * Every reader of these fields — `validateAgentRefs`, `recordRoutedAgents` —
+ * starts with an `Array.isArray` guard and returns quietly, so a scalar
+ * (`mandatory_agents: completion-reviewer`) produced no finding anywhere while
+ * silently emptying the gate it was meant to declare.
+ */
+function validateAgentFieldShapes(
+  rel: string,
+  phase: RoutingPhase,
+  issues: Issue[],
+  skill: string,
+  phaseIndex: number,
+): void {
+  const report = (field: string, value: unknown): void => {
+    issues.push(
+      issue(
+        "QFAI-AGENT-013",
+        `${skill} phase[${phaseIndex}] declares ${field} ${JSON.stringify(value)}; expected a list of agent ids`,
+        "error",
+        rel,
+        "agentDefinition.routingAgentFieldShape",
+      ),
+    );
+  };
+  for (const [field] of PHASE_AGENT_FIELDS) {
+    const value = phase[field];
+    if (value !== undefined && !Array.isArray(value)) {
+      report(field, value);
+    }
+  }
+  const groups = phase.parallel_groups;
+  if (groups === undefined) {
+    return;
+  }
+  if (!Array.isArray(groups)) {
+    report("parallel_groups", groups);
+    return;
+  }
+  for (const group of groups) {
+    if (!Array.isArray(group)) {
+      report("parallel_groups entry", group);
     }
   }
 }
@@ -555,9 +645,17 @@ async function validateProfiles(
         continue;
       }
       const profileObj = profile as Record<string, unknown>;
+      // Before collecting: both readers below guard on `Array.isArray`, so
+      // `always_required: completion-reviewer` produced an empty selection set
+      // and no finding — a broken mandatory review gate that passed silently.
+      validateReviewerFieldShapes(profileObj, issues, profileName, rel);
       selections.set(
         profileName,
-        collectProfileReviewers(profileObj.always_required, profileObj.conditional_required),
+        collectProfileReviewers(
+          profileObj.always_required,
+          profileObj.conditional_required,
+          reviewerIds,
+        ),
       );
       validateReviewerRefs(
         profileObj.always_required,
@@ -595,8 +693,16 @@ async function validateProfiles(
  * Every reviewer a profile can select, each kept with how firmly it binds:
  * `always_required` is dispatched on every run, so omitting it from a skill's
  * `roles:` is an error, while `conditional_required` is a warning.
+ *
+ * An id that is not a catalogued reviewer is left out: `QFAI-AGENT-010`
+ * already reports it, and keeping it would make `QFAI-AGENT-014` demand that
+ * every skill on the profile add the invalid id to its `roles:`.
  */
-function collectProfileReviewers(always: unknown, conditional: unknown): ProfileSelection {
+function collectProfileReviewers(
+  always: unknown,
+  conditional: unknown,
+  reviewerIds: Set<string>,
+): ProfileSelection {
   const reviewers: ProfileSelection = new Map();
   for (const [value, binding] of [
     [conditional, "conditional"],
@@ -606,12 +712,36 @@ function collectProfileReviewers(always: unknown, conditional: unknown): Profile
       continue;
     }
     for (const entry of value) {
-      if (typeof entry === "string" && entry.length > 0) {
+      if (typeof entry === "string" && entry.length > 0 && reviewerIds.has(entry)) {
         reviewers.set(entry, binding);
       }
     }
   }
   return reviewers;
+}
+
+/** Report an `always_required` / `conditional_required` that is not a list. */
+function validateReviewerFieldShapes(
+  profileObj: Record<string, unknown>,
+  issues: Issue[],
+  profileName: string,
+  profilesPathRel: string,
+): void {
+  for (const field of ["always_required", "conditional_required"] as const) {
+    const value = profileObj[field];
+    if (value === undefined || Array.isArray(value)) {
+      continue;
+    }
+    issues.push(
+      issue(
+        "QFAI-AGENT-009",
+        `review-profiles.yml profile "${profileName}" declares ${field} ${JSON.stringify(value)}; expected a list of reviewer ids`,
+        "error",
+        profilesPathRel,
+        "agentDefinition.invalidProfilesShape",
+      ),
+    );
+  }
 }
 
 function formatSkillLabel(skill: unknown, routeIndex: number): string {

@@ -84,7 +84,13 @@ type Fixture = {
   /** The manifest's `review_profile:` for demo-skill; `null` omits the key. */
   reviewProfile?: string | null;
   /** Replace demo-skill's phase list with one that dispatches nothing. */
-  phases?: "empty" | "absent" | "not-a-list";
+  phases?: "empty" | "absent" | "not-a-list" | "no-agents";
+  /** The literal `mandatory_agents:` line, for values that are not a list. */
+  mandatoryLine?: string;
+  /** Replace `review-profiles.yml` wholesale. */
+  profilesYaml?: string;
+  /** demo-skill's whole `SKILL.md`, for frontmatter the parser cannot read. */
+  rawSkillDoc?: string;
   /** The whole routing manifest, for shapes the walk cannot use at all. */
   brokenRouting?: string;
   /** Replace demo-skill's `SKILL.md` with a FIFO (POSIX only). */
@@ -100,11 +106,15 @@ function phaseLines(fixture: Fixture): string[] {
       return ["    phases: []"];
     case "not-a-list":
       return ["    phases: none"];
+    case "no-agents":
+      // A well-formed phase object that names no agent field at all.
+      return ["    phases:", "      - id: only"];
     default:
       return [
         "    phases:",
         "      - id: only",
-        `        mandatory_agents: [${(fixture.mandatory ?? []).join(", ")}]`,
+        fixture.mandatoryLine ??
+          `        mandatory_agents: [${(fixture.mandatory ?? []).join(", ")}]`,
         `        conditional_agents: [${(fixture.conditional ?? []).join(", ")}]`,
         "        parallel_groups: []",
         `        blocking_agents: [${(fixture.blocking ?? []).join(", ")}]`,
@@ -112,7 +122,7 @@ function phaseLines(fixture: Fixture): string[] {
   }
 }
 
-async function runFixture(fixture: Fixture): Promise<Issue[]> {
+async function collectIssues(fixture: Fixture): Promise<Issue[]> {
   const root = path.join(
     os.tmpdir(),
     `qfai-skill-roles-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -122,7 +132,11 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
   await mkdir(path.join(root, ".qfai", "assistant", "agents"), { recursive: true });
   try {
     await writeFile(path.join(manifest, "agent-catalog.yml"), CATALOG, "utf-8");
-    await writeFile(path.join(manifest, "review-profiles.yml"), PROFILES, "utf-8");
+    await writeFile(
+      path.join(manifest, "review-profiles.yml"),
+      fixture.profilesYaml ?? PROFILES,
+      "utf-8",
+    );
     const reviewProfile =
       fixture.reviewProfile === undefined ? "demo-profile" : fixture.reviewProfile;
     await writeFile(
@@ -139,7 +153,11 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
     );
     const rolesLine =
       fixture.rolesLine ?? (fixture.roles && `roles: [${fixture.roles.join(", ")}]`);
-    if (rolesLine ?? fixture.skillRoutingProfile) {
+    if (fixture.rawSkillDoc !== undefined) {
+      const skillDir = path.join(root, ".qfai", "assistant", "skills", "demo-skill");
+      await mkdir(skillDir, { recursive: true });
+      await writeFile(path.join(skillDir, "SKILL.md"), fixture.rawSkillDoc, "utf-8");
+    } else if (rolesLine ?? fixture.skillRoutingProfile) {
       await writeSkill(root, "demo-skill", [
         ...(rolesLine ? [rolesLine] : []),
         ...(fixture.skillRoutingProfile ? [`routing-profile: ${fixture.skillRoutingProfile}`] : []),
@@ -159,11 +177,36 @@ async function runFixture(fixture: Fixture): Promise<Issue[]> {
           : [],
       );
     }
-    const issues = await validateAgentDefinition(root, defaultConfig);
-    return issues.filter((entry) => ROLES_ROUTING_CODES.has(entry.code));
+    return await validateAgentDefinition(root, defaultConfig);
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+}
+
+/** {@link collectIssues} narrowed to the roles/routing cross-check family. */
+async function runFixture(fixture: Fixture): Promise<Issue[]> {
+  const issues = await collectIssues(fixture);
+  return issues.filter((entry) => ROLES_ROUTING_CODES.has(entry.code));
+}
+
+/**
+ * The cross-check family plus the manifest-shape and dangling-reference codes
+ * it has to stay out of the way of. `QFAI-AGENT-004` — no definition file for
+ * a catalogued agent — is the fixture's own noise: it writes a catalog but no
+ * `agents/*.md`, and every case here would carry four copies of it.
+ */
+const MANIFEST_CODES = new Set([
+  ...ROLES_ROUTING_CODES,
+  "QFAI-AGENT-008",
+  "QFAI-AGENT-009",
+  "QFAI-AGENT-010",
+  "QFAI-AGENT-013",
+]);
+
+/** {@link collectIssues} narrowed to {@link MANIFEST_CODES}. */
+async function runManifestFixture(fixture: Fixture): Promise<Issue[]> {
+  const issues = await collectIssues(fixture);
+  return issues.filter((entry) => MANIFEST_CODES.has(entry.code));
 }
 
 describe("QFAI-AGENT-014 — routed agents must be declared in the skill's roles:", () => {
@@ -433,6 +476,190 @@ describe("an unusable routing manifest stops the cross-check", () => {
       expect(issues).toEqual([]);
     });
   }
+});
+
+describe("a phase that dispatches nobody is not a routed phase", () => {
+  // `entry.phases` counted every well-formed phase object, so a phase with no
+  // agent field — or one whose fields are scalars both readers drop — left the
+  // skill looking routed while the manifest could dispatch no one inside it.
+  it("reports a phase object that names no agent field at all", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      phases: "no-agents",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-017"]);
+  });
+
+  it("reports a scalar mandatory_agents and does not count its phase", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      mandatoryLine: "        mandatory_agents: completion-reviewer",
+    });
+    const codes = issues.map((entry) => entry.code).sort();
+    // The shape finding names the slip; 017 says the route dispatches nobody.
+    expect(codes).toEqual(["QFAI-AGENT-013", "QFAI-AGENT-017"]);
+    const shape = issues.find((entry) => entry.code === "QFAI-AGENT-013");
+    expect(shape?.severity).toBe("error");
+    expect(shape?.message).toContain("mandatory_agents");
+    expect(shape?.message).toContain("expected a list of agent ids");
+  });
+
+  it("still counts a phase whose only agents come from parallel_groups", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      skillRoutingProfile: "demo-profile",
+      brokenRouting: `routing:
+  - skill: demo-skill
+    review_profile: demo-profile
+    phases:
+      - id: only
+        parallel_groups: [[delivery-planner]]
+`,
+    });
+    expect(issues).toEqual([]);
+  });
+
+  it("reports a parallel_groups entry that is not a list", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      skillRoutingProfile: "demo-profile",
+      brokenRouting: `routing:
+  - skill: demo-skill
+    review_profile: demo-profile
+    phases:
+      - id: only
+        mandatory_agents: [delivery-planner]
+        parallel_groups: [delivery-planner]
+`,
+    });
+    const shape = issues.filter((entry) => entry.code === "QFAI-AGENT-013");
+    expect(shape).toHaveLength(1);
+    expect(shape[0]?.message).toContain("parallel_groups entry");
+  });
+});
+
+describe("a broken manifest reference is never pushed onto the skill", () => {
+  it("does not ask a skill to declare an agent the catalog does not define", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner", "ghost-agent"],
+      skillRoutingProfile: "demo-profile",
+    });
+    // QFAI-AGENT-008 owns the dangling reference. QFAI-AGENT-014 must not
+    // also tell the operator to add "ghost-agent" to roles:.
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-008"]);
+  });
+
+  it("does not ask a skill to declare a non-reviewer the profile names", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      profilesYaml: `profiles:
+  demo-profile:
+    always_required: [completion-reviewer]
+    conditional_required: [delivery-planner, qa-strategist]
+`,
+    });
+    // `delivery-planner` / `qa-strategist` are workers, not reviewers.
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-010", "QFAI-AGENT-010"]);
+  });
+
+  it("reports a reviewer field that is not a list", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      profilesYaml: `profiles:
+  demo-profile:
+    always_required: completion-reviewer
+`,
+    });
+    const shape = issues.filter((entry) => entry.code === "QFAI-AGENT-009");
+    expect(shape).toHaveLength(1);
+    expect(shape[0]?.severity).toBe("error");
+    expect(shape[0]?.message).toContain("always_required");
+    expect(shape[0]?.message).toContain("expected a list of reviewer ids");
+  });
+});
+
+describe("QFAI-AGENT-016 — an unreadable SKILL.md frontmatter is reported", () => {
+  for (const [label, rawSkillDoc] of [
+    ["a YAML syntax error", "---\nname: demo-skill\n roles: [\n---\n\n# Demo\n"],
+    ["a frontmatter block that is not a mapping", "---\n- just\n- a list\n---\n\n# Demo\n"],
+  ] as const) {
+    it(`reports ${label} instead of skipping every check`, async () => {
+      const issues = await runFixture({
+        mandatory: ["delivery-planner"],
+        rawSkillDoc,
+      });
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
+    });
+  }
+
+  it("still treats a SKILL.md with no frontmatter block as no declaration", async () => {
+    const issues = await runFixture({
+      mandatory: ["delivery-planner"],
+      rawSkillDoc: "# Demo\n\nNo frontmatter at all.\n",
+    });
+    expect(issues).toEqual([]);
+  });
+});
+
+describe("QFAI-AGENT-018 — manifest-side profile defects do not need a skill declaration", () => {
+  it("reports a route pointing at an undefined profile when the skill declares none", async () => {
+    // The existence check used to sit behind `routing-profile:`, so a route
+    // through `ghost-profile` was invisible — and `collectSelections` reads an
+    // unknown profile as an empty reviewer set, losing the gate silently.
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      reviewProfile: "ghost-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.message).toContain("ghost-profile");
+    expect(issues[0]?.message).toContain("review-profiles.yml does not define");
+  });
+
+  it("reports an undefined profile once when both sides name it", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "ghost-profile",
+      reviewProfile: "ghost-profile",
+    });
+    expect(issues).toHaveLength(1);
+  });
+
+  it("reports two route blocks that give one skill different review gates", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      skillRoutingProfile: "demo-profile",
+      brokenRouting: `routing:
+  - skill: demo-skill
+    review_profile: demo-profile
+    phases:
+      - id: first
+        mandatory_agents: [delivery-planner]
+  - skill: demo-skill
+    review_profile: other-profile
+    phases:
+      - id: second
+        mandatory_agents: [delivery-planner]
+`,
+    });
+    const conflict = issues.filter(
+      (entry) => entry.code === "QFAI-AGENT-018" && entry.message.includes("two different"),
+    );
+    expect(conflict).toHaveLength(1);
+    expect(conflict[0]?.severity).toBe("error");
+    expect(conflict[0]?.message).toContain("demo-profile");
+    expect(conflict[0]?.message).toContain("other-profile");
+  });
 });
 
 describe("shipped manifests and skills agree", () => {
