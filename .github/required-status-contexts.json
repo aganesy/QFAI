@@ -182,7 +182,8 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "7952e55c83a08e1b473acdce06dcdf2afbfb0fc305609febde71c42f6ba2af7e",
+        ".github/actions/setup/action.yml": "b828f795451e296c022b2ca21ccbd119199c1b033ee88595c35e777dce28a07c",
+        ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         "scripts/check-atdd-annotation-ledger.mjs": "f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be",
         "scripts/check-bidi.mjs": "4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
@@ -197,7 +198,7 @@
         "scripts/check-types-future.mjs": "c5db610e56abad0fe7962384460760915ae1f084936a3c9684656364beb50203",
         "scripts/check-workflow-hygiene.mjs": "88301295913cd60d28b7ee21243e0b0e4f4d53ae0c0282b2902885de2f2001eb",
         "scripts/lib/bounded-read.mjs": "1ca91026cd7016db2ed89d31b397985d5e18fe00a3d018b7cc0cedbbb2578444",
-        "scripts/pin-guard-bytes.mjs": "fd189b32d698d68eea5e81387e46e44ccb75386902a6ddcecf96ed257c209645",
+        "scripts/pin-guard-bytes.mjs": "2dc3370e9ec27ca6a7e4f42bb667ec26ceb767f3ed93c4862aba88b9dcbadc97",
         "scripts/pin-verification-bodies.mjs": "7f2d8bd1254344e69c5367fed6b5a424c3ef40e64aa293f6c4435912d4b8ed2d",
         "scripts/sync-init-to-root.mjs": "f25f4410273d41085119c50cf0f439564e300ae25fb8f83bae869c763be29e6c",
         "scripts/verify-pack.mjs": "e7f5001d1665fd380214d4beccd08005ca17688c21a0771213bda33d90d66c74"
@@ -349,7 +350,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "5cc167f71ae02233",
+        "Verify the toolchain action before running it": "4e4ab69e920ab633",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9a546eaa55780192",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "45f5cf9890903b57",

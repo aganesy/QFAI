@@ -290,7 +290,11 @@ runs:
     - name: Build the dependencies permitted to run install scripts
       run: |
         set -euo pipefail
-        list=".github/dependency-builds.txt"
+        # From the ACTION's own directory, not the working tree. Review finding [131]: a
+        # re-published tag checks out that tag and fetches only `.github/actions` from the
+        # current revision, so a list at the repository root was simply absent and the refusal
+        # below stopped a documented re-publish route.
+        list="${{ github.action_path }}/dependency-builds.txt"
         if [ ! -f "${list}" ]; then
           echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
           exit 1

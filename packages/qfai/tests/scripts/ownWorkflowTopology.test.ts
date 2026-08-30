@@ -70,7 +70,15 @@
 // QFAI:SPEC-0017:TC-0017-0040
 
 import { execFileSync, spawnSync } from "node:child_process";
-import { mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import {
+  existsSync,
+  mkdirSync,
+  mkdtempSync,
+  readFileSync,
+  readdirSync,
+  rmSync,
+  writeFileSync,
+} from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -2351,5 +2359,78 @@ describe("the release job installs no floating version of anything", () => {
       "the trusted-publishing floor must survive the pin: it is the assertion that what is " +
         "pinned still clears the bar",
     ).toMatch(/need="11\.5\.1"/);
+  });
+});
+
+describe("the rebuild allow-list is reachable on a tag that predates it", () => {
+  // Review finding [131]. `release.yml` re-publishes an existing tag by checking out the TAG's
+  // tree and then fetching only `.github/actions` from the current revision — a tag cut before
+  // the composite action existed has no action in its tree, which is why that second checkout
+  // is there at all.
+  //
+  // With the allow-list at the repository root it was NOT part of that fetch. An older tag saw
+  // it missing, the refusal fired, and both `gate` and `gate-floor` stopped: a re-publish route
+  // the workflow documents, broken by a guard added to protect it.
+  //
+  // It now lives beside the action, so it travels with every fetch of it — and
+  // `.github/pinned-bytes.txt` covers everything under `.github/actions`, so the pre-flight
+  // verifies its bytes and refuses a file that tree holds and the list does not name. It is
+  // pinned MORE tightly there than it was at the root, not less.
+
+  it("keeps the list inside the action directory the gate jobs fetch", () => {
+    const listed = readFileSync(path.join(REPO_ROOT, ".github", "pinned-bytes.txt"), "utf-8");
+    expect(
+      existsSync(path.join(REPO_ROOT, ".github", "actions", "setup", "dependency-builds.txt")),
+      "the allow-list must sit beside the action, or a re-published tag cannot see it",
+    ).toBe(true);
+    expect(
+      existsSync(path.join(REPO_ROOT, ".github", "dependency-builds.txt")),
+      "and must not also sit at the root, where two copies could disagree",
+    ).toBe(false);
+    expect(
+      listed,
+      "and its bytes must be pinned, which `.github/actions/**` already gives it",
+    ).toMatch(/\.github\/actions\/setup\/dependency-builds\.txt/);
+  });
+
+  it("has every reader fetch it from the current revision, not from the tag", () => {
+    const release = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+
+    for (const [jobId, job] of Object.entries(release.jobs ?? {})) {
+      const steps = job.steps ?? [];
+      const readsList = steps.some((step) =>
+        String(step["run"] ?? "").includes("dependency-builds.txt"),
+      );
+      if (!readsList) continue;
+
+      // Whatever path it reads must come from the second checkout — the one pinned to
+      // `github.sha` — rather than from the tag's own tree.
+      const fetchesActions = steps.some((step) => {
+        const uses = String(step["uses"] ?? "");
+        if (!uses.startsWith("actions/checkout")) return false;
+        const withBlock = step["with"];
+        if (withBlock === null || typeof withBlock !== "object") return false;
+        const inputs = withBlock as Record<string, unknown>;
+        return String(inputs["ref"] ?? "").includes("github.sha");
+      });
+      expect(
+        fetchesActions,
+        `${jobId} reads the rebuild allow-list but never fetches it from the current ` +
+          "revision, so re-publishing a tag that predates the list stops there",
+      ).toBe(true);
+
+      const readers = steps.filter((step) =>
+        String(step["run"] ?? "").includes("dependency-builds.txt"),
+      );
+      for (const step of readers) {
+        expect(
+          String(step["run"] ?? ""),
+          `${jobId}: ${String(step["name"] ?? "(unnamed)")} reads the list out of the tag's ` +
+            "tree, which a tag cut before the list does not carry",
+        ).toMatch(/\.ci-actions\/\.github\/actions\/setup\/dependency-builds\.txt/);
+      }
+    }
   });
 });

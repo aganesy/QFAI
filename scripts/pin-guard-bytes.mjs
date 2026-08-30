@@ -54,7 +54,6 @@ const WORKFLOW_PINNED = [
   LIST_REL,
   ".github/lifecycle-manifests.txt",
   ".github/command-files.txt",
-  ".github/dependency-builds.txt",
 ];
 
 /** Every file under `rel`, repo-relative and POSIX-separated, in a stable order. */

@@ -7,9 +7,18 @@
 # pull request adding a local `.tgz` under `packages/qfai/` and referencing it from the manifest and
 # lockfile therefore executed arbitrary code with every guard still ahead of it.
 #
+# It lives BESIDE the action that reads it, and that is review finding [131] rather than tidiness.
+# `release.yml` re-publishes an existing tag by checking out the TAG's tree and then fetching only
+# `.github/actions` from the current revision — a tag cut before this action existed has no action
+# in its tree. With the list at the repository root it was not part of that fetch, so an older tag
+# saw it missing, the refusal below fired, and both `gate` and `gate-floor` stopped: a documented
+# re-publish route broken by a guard meant to protect it. Here it travels with the action, and
+# `.github/pinned-bytes.txt` covers every file under `.github/actions`, so the pre-flight verifies
+# its bytes and refuses a file that tree holds and the list does not name.
+#
 # Named here, a dependency is rebuilt explicitly AFTER the install, in a step whose body is pinned
-# by `verificationBodies` — and this file's own digest is pinned in the pre-flight step in
-# `.github/workflows/ci.yml`. Adding a name is a visible edit to a pinned file, which is the whole
+# by `verificationBodies` — and its bytes are pinned through `.github/pinned-bytes.txt`, which the
+# pre-flight verifies. Adding a name is a visible edit to a pinned file, which is the whole
 # point: the question stops being "did anyone notice this package runs code" and becomes "did a
 # reviewer agree that it may".
 #
