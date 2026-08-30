@@ -376,8 +376,20 @@ async function runSddValidators(
     // The scope is passed, not left to the run-level `--spec` filter: every
     // `/qfai-sdd` slice gate is a `--spec` run, so an unscoped walk would read
     // and `stat` every sibling ledger once per slice.
+    //
+    // That same equivalence places the gate: a `--spec` run of this profile IS
+    // the Phase 2 slice gate, and the Required Process runs Phase 2b — the
+    // phase that writes the ledger — only after it. Reconciling the ledger
+    // against `06_Test-Cases.md` there asks the writing stage for a file it
+    // has not reached yet, and a new spec declaring a Unit or Component TC got
+    // `TDDLIST_TC_NOT_COVERED` (error) on the very gate that has to pass
+    // before Phase 2b can run. The unscoped stop gate is the post-Phase-2b
+    // one, and it still evaluates the whole seed-shape set.
     ...(includeTddListSeedShape
-      ? await validateTddListSeedShape(root, config, specScope ? { specScope } : {})
+      ? await validateTddListSeedShape(root, config, {
+          ...(specScope ? { specScope } : {}),
+          beforeLedgerSeed: specScope !== undefined,
+        })
       : []),
     ...(await validateMermaidEnforcement(root)),
     ...(await validateSpecPacks(root, config)),

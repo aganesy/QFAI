@@ -78,12 +78,35 @@ async function codesFor(
   }
 }
 
-async function partialProfileNotice(profile: "sdd" | "tdd"): Promise<string> {
+/** A `--spec` run: `/qfai-sdd`'s Phase 2 slice gate, which precedes Phase 2b. */
+const SLICE_GATE_REL = ".qfai/report/validate.spec-0001.json";
+
+type ReportedIssue = { code: string; message: string; severity: string };
+
+async function sliceGateIssues(testList: string | undefined): Promise<ReportedIssue[]> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-slice-gate-"));
+  try {
+    await seedSpec(root, testList);
+    await runValidate({ root, strict: false, profile: "sdd", specIds: ["spec-0001"] });
+    const body = JSON.parse(await readFile(path.join(root, SLICE_GATE_REL), "utf-8")) as {
+      issues: ReportedIssue[];
+    };
+    return body.issues;
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+async function partialProfileNotice(
+  profile: "sdd" | "tdd",
+  specIds?: readonly string[],
+): Promise<string> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-sdd-ledger-notice-"));
   try {
     await seedSpec(root);
-    await runValidate({ root, strict: false, profile });
-    const body = JSON.parse(await readFile(path.join(root, CANONICAL_REL), "utf-8")) as {
+    await runValidate({ root, strict: false, profile, ...(specIds ? { specIds } : {}) });
+    const reportRel = specIds ? SLICE_GATE_REL : CANONICAL_REL;
+    const body = JSON.parse(await readFile(path.join(root, reportRel), "utf-8")) as {
       issues: Array<{ code: string; message: string }>;
     };
     return body.issues.find((entry) => entry.code === "QFAI-PROFILE-001")?.message ?? "";
@@ -122,6 +145,39 @@ describe("--profile sdd observes the ledger seed shape it wrote", () => {
     expect(await codesFor("sdd", seam)).toContain("TDDLIST_OWNING_MODULE_NOT_SINGULAR");
   });
 
+  it("raises TDDLIST_INVALID_OBLIGATION_REF on a malformed seed-authored obligation", async () => {
+    // `US-Refs` is authored with the row, and the drift protocol lets the
+    // reader change only Status / DR-ID / Evidence — so a malformed obligation
+    // ID it may not repair must fail the stage that wrote it.
+    const rows = [
+      "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | todo | - | - | - |",
+      "| TDD-0002 | - | E2E | tests/e2e/a.spec.ts | a | todo | - | - | US-1 |",
+    ];
+    const withUsRefs = [
+      "# TDD Execution Ledger",
+      "",
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs |",
+      "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- |",
+      ...rows,
+      "",
+    ].join("\n");
+    expect(await codesFor("sdd", withUsRefs)).toContain("TDDLIST_INVALID_OBLIGATION_REF");
+  });
+
+  it("raises TDDLIST_OBLIGATION_LAYER_MISMATCH on an obligation the row's Layer cannot carry", async () => {
+    // Which obligations a row carries and the Layer they are legal on are both
+    // the seed's, so a `US-*` recorded on a Unit row is seed damage too.
+    const mismatched = [
+      "# TDD Execution Ledger",
+      "",
+      "| TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence | US-Refs |",
+      "| ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- | ------- |",
+      "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | todo | - | - | US-0001 |",
+      "",
+    ].join("\n");
+    expect(await codesFor("sdd", mismatched)).toContain("TDDLIST_OBLIGATION_LAYER_MISMATCH");
+  });
+
   it("leaves the execution-state codes to --profile tdd", async () => {
     const done = ledger([
       "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | done | - | - |",
@@ -136,6 +192,44 @@ describe("--profile sdd observes the ledger seed shape it wrote", () => {
   it("does not double-report the seed codes under the full profile", async () => {
     const codes = await codesFor(undefined, undefined);
     expect(codes.filter((code) => code === "TDDLIST_TC_NOT_COVERED")).toHaveLength(1);
+  });
+});
+
+describe("the slice gate runs before the ledger is seeded", () => {
+  /**
+   * `/qfai-sdd`'s Required Process gates each Phase 2 slice with
+   * `validate --profile sdd --fail-on error --spec <spec-id>` and seeds
+   * `tdd/test-list.md` only in the next step, Phase 2b. Reconciling the ledger
+   * against `06_Test-Cases.md` at that gate therefore fails by construction on
+   * a spec that declares a Unit or Component TC — and it is the gate that has
+   * to pass before Phase 2b can run, so the workflow could never reach the
+   * phase that would have created the ledger.
+   */
+  it("does not demand a ledger the next phase has yet to write", async () => {
+    const issues = await sliceGateIssues(undefined);
+    expect(issues.map((entry) => entry.code)).not.toContain("TDDLIST_TC_NOT_COVERED");
+    // `--fail-on error` is what the gate runs with, so nothing about the
+    // not-yet-written ledger may reach that severity.
+    expect(
+      issues.filter((entry) => entry.code.startsWith("TDDLIST_") && entry.severity === "error"),
+    ).toEqual([]);
+  });
+
+  it("still holds an existing ledger to its shape", async () => {
+    // The over-correction pin: only the ledger-vs-test-cases reconciliation is
+    // deferred. Everything the ledger text answers on its own still gates the
+    // slice, so a slice gate is not a way to smuggle a malformed seed through.
+    const row = "| TDD-0001 | TC-0001 | Unit | tests/unit/a.test.ts | a | todo | - | - |";
+    const codes = (await sliceGateIssues(ledger([row, row]))).map((entry) => entry.code);
+    expect(codes).toContain("TDDLIST_DUPLICATE_ID");
+  });
+
+  it("names the deferred code in the partial-profile notice", async () => {
+    // Silence here would claim the slice gate evaluated a code it skipped.
+    const scoped = await partialProfileNotice("sdd", ["spec-0001"]);
+    expect(scoped).toContain("TDDLIST_TC_NOT_COVERED");
+    // …and the unscoped stop gate, which follows Phase 2b, does evaluate it.
+    expect(await partialProfileNotice("sdd")).not.toContain("TDDLIST_TC_NOT_COVERED");
   });
 });
 
@@ -177,6 +271,8 @@ describe("the partial-profile notice tracks the split", () => {
       "TDDLIST_TC_NOT_COVERED",
       "TDDLIST_DUPLICATE_ID",
       "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+      "TDDLIST_INVALID_OBLIGATION_REF",
+      "TDDLIST_OBLIGATION_LAYER_MISMATCH",
     ]) {
       expect(message).not.toContain(code);
     }

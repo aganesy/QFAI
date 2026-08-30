@@ -14,7 +14,10 @@ import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
 } from "../../core/validators/layerCoverage.js";
-import { TDD_LIST_SEED_SHAPE_CODES } from "../../core/validators/tddList.js";
+import {
+  TDD_LIST_SEED_RECONCILIATION_CODES,
+  TDD_LIST_SEED_SHAPE_CODES,
+} from "../../core/validators/tddList.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
@@ -163,7 +166,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
-  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
+  const partialProfileNotice = buildPartialProfileNotice(
+    normalized.profile,
+    scopedSpecIds.length > 0,
+  );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
     normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
@@ -465,8 +471,13 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
   return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
 }
 
-/** Deduped, order-preserving families for the groups a profile does not run. */
-function unevaluatedFamilies(profile: string): string[] {
+/**
+ * Deduped, order-preserving families for the groups a profile does not run.
+ *
+ * `scoped` is whether the run carried `--spec`, which narrows what the `sdd`
+ * profile evaluates: see the branch below.
+ */
+function unevaluatedFamilies(profile: string, scoped: boolean): string[] {
   if (!isKnownProfile(profile)) {
     return [];
   }
@@ -478,6 +489,14 @@ function unevaluatedFamilies(profile: string): string[] {
   for (const group of Object.keys(GATE_GROUP_FAMILIES) as GateGroup[]) {
     if (evaluated.has(group)) continue;
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
+  }
+  if (profile === "sdd" && scoped) {
+    // A `--spec` run of this profile is the per-spec slice gate, which the
+    // skill's Required Process places before the phase that seeds the ledger —
+    // so `runSddValidators` drops the codes that reconcile the two. Read from
+    // the same constant it filters on, so the notice cannot claim a gate the
+    // run skipped.
+    for (const family of TDD_LIST_SEED_RECONCILIATION_CODES) push(family);
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -499,13 +518,13 @@ function unevaluatedFamilies(profile: string): string[] {
  * the normal per-profile wording would then imply the requested profile's own
  * gates had been observed, so that case gets its own message.
  */
-function buildPartialProfileNotice(profile: string | undefined): Issue | null {
+function buildPartialProfileNotice(profile: string | undefined, scoped: boolean): Issue | null {
   if (!profile) {
     return null;
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile);
+  const unevaluated = unevaluatedFamilies(profile, scoped);
   if (unevaluated.length === 0) {
     return null;
   }

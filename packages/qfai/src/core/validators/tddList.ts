@@ -600,7 +600,53 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
   // passed its own gate and the reader inherited an `error` it is forbidden to
   // fix by restructuring the ledger.
   "TDDLIST_OWNING_MODULE_NOT_SINGULAR",
+  // `US-Refs` / `CON-API-Refs` and the `Layer` they have to agree with are all
+  // authored by the same phase: the traceability rules give the SDD stage "the
+  // rows — which obligations exist and what each covers" and leave the
+  // implementing stage `Status`, `DR-ID` and `Evidence` alone. A malformed
+  // obligation ID, or one recorded on a Layer that cannot legally carry it, is
+  // therefore seed damage; and re-scoping a row to repair it is an upstream
+  // change the reader is forbidden to make.
+  "TDDLIST_INVALID_OBLIGATION_REF",
+  "TDDLIST_OBLIGATION_LAYER_MISMATCH",
 ]);
+
+/**
+ * The seed-shape codes that read `06_Test-Cases.md` **against** the ledger
+ * instead of reading the ledger alone.
+ *
+ * The two sides are written by different phases of the same run: the Slice
+ * phase produces the test cases, and only the phase after it seeds a ledger
+ * row per coverage-target TC. A gate placed between them therefore sees TCs
+ * with no row *by construction*, so this is the one part of the seed shape
+ * that only a post-seed gate can answer. Everything else in
+ * {@link TDD_LIST_SEED_SHAPE_CODES} is a property of the ledger text itself —
+ * an absent ledger raises none of them.
+ */
+export const TDD_LIST_SEED_RECONCILIATION_CODES: ReadonlySet<string> = new Set([
+  "TDDLIST_TC_NOT_COVERED",
+]);
+
+/** {@link TDD_LIST_SEED_SHAPE_CODES} minus the codes a pre-seed gate cannot answer. */
+const TDD_LIST_PRE_SEED_SHAPE_CODES: ReadonlySet<string> = new Set(
+  [...TDD_LIST_SEED_SHAPE_CODES].filter((code) => !TDD_LIST_SEED_RECONCILIATION_CODES.has(code)),
+);
+
+/** Options for {@link validateTddListSeedShape}. */
+export type TddListSeedShapeOptions = TddListValidateOptions & {
+  /**
+   * Set on a gate that runs **before** the ledger has been seeded, which drops
+   * {@link TDD_LIST_SEED_RECONCILIATION_CODES}.
+   *
+   * Without it the SDD profile's own per-spec slice gate — which the skill's
+   * Required Process places one step ahead of the phase that writes
+   * `tdd/test-list.md` — failed with `TDDLIST_TC_NOT_COVERED` (`error`) on
+   * every newly sliced spec that declares a unit or component test case. That
+   * gate has to pass before the seeding phase runs, so the workflow could
+   * never reach the phase that would have cleared it.
+   */
+  beforeLedgerSeed?: boolean;
+};
 
 /**
  * `validateTddList` restricted to {@link TDD_LIST_SEED_SHAPE_CODES}.
@@ -614,14 +660,20 @@ export const TDD_LIST_SEED_SHAPE_CODES: ReadonlySet<string> = new Set([
  * the ledger. The whole validator cannot run there — most of it reports
  * execution state the SDD stage has not reached yet — so the writing stage is
  * held to the shape it wrote, and nothing more.
+ *
+ * `beforeLedgerSeed` narrows that further for a gate the workflow reaches
+ * before the seed exists; see {@link TddListSeedShapeOptions}.
  */
 export async function validateTddListSeedShape(
   root: string,
   config: QfaiConfig,
-  options: TddListValidateOptions = {},
+  options: TddListSeedShapeOptions = {},
 ): Promise<Issue[]> {
   const issues = await validateTddList(root, config, options);
-  return issues.filter((entry) => TDD_LIST_SEED_SHAPE_CODES.has(entry.code));
+  const reportable = options.beforeLedgerSeed
+    ? TDD_LIST_PRE_SEED_SHAPE_CODES
+    : TDD_LIST_SEED_SHAPE_CODES;
+  return issues.filter((entry) => reportable.has(entry.code));
 }
 
 async function validateSpecTddList(
