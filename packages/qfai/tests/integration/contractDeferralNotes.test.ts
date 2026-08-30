@@ -2,6 +2,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -19,11 +20,30 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.resolve(__dirname, "../../../..");
 const CONTRACTS_DIR = path.join(ROOT, ".qfai", "contracts");
 
-/** Deferral markers that pin a promise to a release rather than to an issue. */
-const DEFERRAL_MARKERS: readonly RegExp[] = [
-  /NOT YET IMPLEMENTED/i,
-  /scheduled for v\d+\.\d+\.\d+/i,
-];
+/** A note that defers behaviour rather than describing today's. */
+const DEFERRAL_RE = /NOT YET IMPLEMENTED|scheduled for\b/i;
+
+/** The thing that must not be the tracking mechanism. */
+const VERSION_PIN_RE = /\bv\d+\.\d+\.\d+/i;
+
+/** A tracking issue, which is what a deferral is allowed to point at instead. */
+const TRACKING_ISSUE_RE = /(?:#\d+|issues\/\d+)/;
+
+/**
+ * Whether one line defers behaviour to a **version number**.
+ *
+ * `NOT YET IMPLEMENTED` alone is not the defect. The defect is using a release
+ * as the tracking mechanism, because nothing notices when that release ships:
+ * `--allow-dirty` and exit 65 were both promised "in v1.10.0" and both arrived
+ * with the version and without the behaviour. A deferral that names an issue
+ * has an owner and a place to be closed, so it is allowed — rejecting it too
+ * would ban the very form this file's own docstring recommends.
+ */
+function isVersionPinnedDeferral(line: string): boolean {
+  if (!DEFERRAL_RE.test(line)) return false;
+  if (!VERSION_PIN_RE.test(line)) return false;
+  return !TRACKING_ISSUE_RE.test(line);
+}
 
 async function collectFiles(dir: string, extension: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
@@ -49,13 +69,33 @@ describe("CLI contracts do not defer behaviour to a version number", () => {
       const text = await readFile(file, "utf-8");
       const lines = text.split(/\r?\n/);
       lines.forEach((line, index) => {
-        if (DEFERRAL_MARKERS.some((marker) => marker.test(line))) {
+        if (isVersionPinnedDeferral(line)) {
           offenders.push(`${path.relative(ROOT, file).replace(/\\/g, "/")}:${index + 1}`);
         }
       });
     }
 
     expect(offenders).toEqual([]);
+  });
+
+  it("rejects a version pin and accepts a deferral that names its owner", () => {
+    // The two notes this guard was written for.
+    expect(
+      isVersionPinnedDeferral(
+        "**`--allow-dirty` NOT YET IMPLEMENTED in v1.9.0** — scheduled for v1.10.0+.",
+      ),
+    ).toBe(true);
+    expect(isVersionPinnedDeferral("Reserved; scheduled for v1.11.0.")).toBe(true);
+
+    // A deferral with an owner and a place to be closed is the form this file
+    // recommends, and must not be banned along with the version pins.
+    expect(isVersionPinnedDeferral("NOT YET IMPLEMENTED — tracked by #123.")).toBe(false);
+    expect(
+      isVersionPinnedDeferral("NOT YET IMPLEMENTED — tracked by #123, targeting v1.11.0."),
+    ).toBe(false);
+
+    // A version mentioned by a line that defers nothing is not a deferral.
+    expect(isVersionPinnedDeferral("The recut landed in v1.10.0.")).toBe(false);
   });
 });
 
@@ -165,30 +205,228 @@ describe("qfai-init.md matches what --upgrade-assistant-tree actually does", () 
 
 const SRC_DIR = path.join(ROOT, "packages", "qfai", "src");
 
-/**
- * Drop whole-line comments and trailing `//` comments so a code mentioned in
- * prose cannot pass for behaviour. Line-oriented on purpose (same technique,
- * and same known limitation, as `scripts/lint-shipping.ts`): it can never eat
- * a statement, so a false pass is possible but a false failure is not.
- */
-function stripComments(source: string): string {
-  return source
-    .split(/\r?\n/)
-    .filter((line) => {
-      const trimmed = line.trimStart();
-      return !(trimmed.startsWith("//") || trimmed.startsWith("/*") || trimmed.startsWith("*"));
-    })
-    .map((line) => line.replace(/(^|[^:"'`\\])\/\/.*$/, "$1"))
-    .join("\n");
+/** The shipped `Issue` factory, seeded so the scan is never silently empty. */
+const SHARED_ISSUE_FACTORY = "issue";
+
+/** How a code reaches a finding, for the failure message. */
+type EmissionShape = "issue-argument" | "issue-literal" | "gate-set" | "cli-note";
+
+interface ModuleSource {
+  readonly rel: string;
+  readonly file: ts.SourceFile;
 }
 
-/** The code sitting inside a string literal — the only form an emitter can use. */
-function literalRe(code: string): RegExp {
-  return new RegExp(`["'\`]\\s*${code}\\b`);
+async function parseSourceModules(): Promise<ModuleSource[]> {
+  const files = await collectFiles(SRC_DIR, ".ts");
+  return Promise.all(
+    files.map(async (file) => ({
+      rel: path.relative(SRC_DIR, file).replace(/\\/g, "/"),
+      file: ts.createSourceFile(
+        file,
+        await readFile(file, "utf-8"),
+        ts.ScriptTarget.Latest,
+        /* setParentNodes */ true,
+      ),
+    })),
+  );
+}
+
+function forEachNode(root: ts.Node, visit: (node: ts.Node) => void): void {
+  const walk = (node: ts.Node): void => {
+    visit(node);
+    ts.forEachChild(node, walk);
+  };
+  walk(root);
+}
+
+/**
+ * Every function that turns a code into an `Issue`: the shared helper plus each
+ * local factory taking the code as its first parameter. Discovered rather than
+ * listed, so a new one is covered the day it is written.
+ */
+function collectIssueFactories(modules: readonly ModuleSource[]): Set<string> {
+  const factories = new Set<string>([SHARED_ISSUE_FACTORY]);
+  for (const { file } of modules) {
+    forEachNode(file, (node) => {
+      if (!ts.isFunctionDeclaration(node) || node.name === undefined) return;
+      if (node.type === undefined || !/\bIssue\b/.test(node.type.getText(file))) return;
+      if (node.parameters[0]?.name.getText(file) !== "code") return;
+      factories.add(node.name.text);
+    });
+  }
+  return factories;
+}
+
+/** `const NAME = "value"` bindings in one module, for resolving an identifier. */
+function stringConstants(module: ModuleSource): Map<string, string> {
+  const constants = new Map<string, string>();
+  forEachNode(module.file, (node) => {
+    if (!ts.isVariableDeclaration(node) || !ts.isIdentifier(node.name)) return;
+    const initializer = node.initializer;
+    if (initializer !== undefined && ts.isStringLiteral(initializer)) {
+      constants.set(node.name.text, initializer.text);
+    }
+  });
+  return constants;
+}
+
+/** Does this expression evaluate to `code`, directly or through a constant? */
+function resolvesToCode(
+  expression: ts.Expression | undefined,
+  code: string,
+  constants: ReadonlyMap<string, string>,
+): boolean {
+  if (expression === undefined) return false;
+  if (ts.isStringLiteral(expression)) return expression.text === code;
+  if (ts.isIdentifier(expression)) return constants.get(expression.text) === code;
+  if (ts.isConditionalExpression(expression)) {
+    return (
+      resolvesToCode(expression.whenTrue, code, constants) ||
+      resolvesToCode(expression.whenFalse, code, constants)
+    );
+  }
+  return false;
+}
+
+/**
+ * Shape 1 — the code is the first argument of a finding factory, or the `code`
+ * of an object literal that is `Issue`-shaped.
+ *
+ * `severity` is what makes the second half a finding rather than metadata:
+ * `Issue.severity` is required, so `{ code: "X" }` on its own is a note to
+ * nobody. Dropping that qualifier is how a dead `const planned = { code: … }`
+ * used to read as an emitter.
+ */
+function emitsDirectly(
+  module: ModuleSource,
+  code: string,
+  factories: ReadonlySet<string>,
+  constants: ReadonlyMap<string, string>,
+): EmissionShape | null {
+  let shape: EmissionShape | null = null;
+  forEachNode(module.file, (node) => {
+    if (shape !== null) return;
+    if (ts.isCallExpression(node) && ts.isIdentifier(node.expression)) {
+      if (
+        factories.has(node.expression.text) &&
+        resolvesToCode(node.arguments[0], code, constants)
+      ) {
+        shape = "issue-argument";
+      }
+      return;
+    }
+    if (!ts.isObjectLiteralExpression(node)) return;
+    const named = (key: string): ts.PropertyAssignment | undefined =>
+      node.properties.find(
+        (property): property is ts.PropertyAssignment =>
+          ts.isPropertyAssignment(property) && property.name.getText(module.file) === key,
+      );
+    const codeProperty = named("code");
+    if (codeProperty === undefined || named("severity") === undefined) return;
+    if (resolvesToCode(codeProperty.initializer, code, constants)) shape = "issue-literal";
+  });
+  return shape;
+}
+
+/**
+ * Shape 2 — the code is a member of a gate the module tests findings against.
+ *
+ * `reviewerJustification.ts` reads codes off a review report and raises the
+ * ones on `ADVISORY_FAILING_CODES`, so the literal is the gate rather than the
+ * source. It counts only when that same binding is actually asked
+ * (`NAME.has(x)` / `NAME.includes(x)`) **and** the module hands a non-literal
+ * to a factory — an array nobody consults proves nothing, which is exactly how
+ * a dead constant used to pass.
+ */
+function emitsThroughGate(
+  module: ModuleSource,
+  code: string,
+  factories: ReadonlySet<string>,
+): EmissionShape | null {
+  const gates = new Set<string>();
+  let variableEmission = false;
+  forEachNode(module.file, (node) => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name)) {
+      if (holdsCode(node.initializer, code, module.file)) gates.add(node.name.text);
+      return;
+    }
+    if (!ts.isCallExpression(node)) return;
+    if (ts.isIdentifier(node.expression) && factories.has(node.expression.text)) {
+      const first = node.arguments[0];
+      if (first !== undefined && ts.isIdentifier(first)) variableEmission = true;
+      return;
+    }
+    if (!ts.isPropertyAccessExpression(node.expression)) return;
+    const member = node.expression.name.text;
+    if (member !== "has" && member !== "includes") return;
+    const target = node.expression.expression;
+    if (ts.isIdentifier(target) && gates.has(target.text)) gates.add(`asked:${target.text}`);
+  });
+  const asked = [...gates].some((name) => name.startsWith("asked:"));
+  return asked && variableEmission ? "gate-set" : null;
+}
+
+/** Is `code` a literal element of this array / `new Set([...])` initializer? */
+function holdsCode(
+  initializer: ts.Expression | undefined,
+  code: string,
+  file: ts.SourceFile,
+): boolean {
+  if (initializer === undefined) return false;
+  const elements = ts.isArrayLiteralExpression(initializer)
+    ? initializer.elements
+    : ts.isNewExpression(initializer) &&
+        /^(?:Set|Map)$/.test(initializer.expression.getText(file)) &&
+        initializer.arguments?.[0] !== undefined &&
+        ts.isArrayLiteralExpression(initializer.arguments[0])
+      ? initializer.arguments[0].elements
+      : undefined;
+  if (elements === undefined) return false;
+  return elements.some((element) => ts.isStringLiteral(element) && element.text === code);
+}
+
+/**
+ * Shape 3 — a note a CLI command prints. It is not an `Issue`, but the contract
+ * documents it as a code the operator sees, so the string carrying it has to be
+ * an argument to a printer or an element of a list that is printed.
+ */
+function emitsAsCliNote(module: ModuleSource, code: string): EmissionShape | null {
+  const printers = new Set(["info", "warn", "error", "log", "push"]);
+  let shape: EmissionShape | null = null;
+  forEachNode(module.file, (node) => {
+    if (shape !== null || !ts.isCallExpression(node)) return;
+    const callee = node.expression;
+    const name = ts.isIdentifier(callee)
+      ? callee.text
+      : ts.isPropertyAccessExpression(callee)
+        ? callee.name.text
+        : "";
+    if (!printers.has(name)) return;
+    for (const argument of node.arguments) {
+      if (carriesCode(argument, code)) shape = "cli-note";
+    }
+  });
+  return shape;
+}
+
+/** Does this argument carry `code` inside a string it will print? */
+function carriesCode(node: ts.Node, code: string): boolean {
+  let found = false;
+  forEachNode(node, (inner) => {
+    if (found) return;
+    if (ts.isStringLiteral(inner) || ts.isNoSubstitutionTemplateLiteral(inner)) {
+      found = inner.text.includes(code);
+    } else if (ts.isTemplateExpression(inner)) {
+      found =
+        inner.head.text.includes(code) ||
+        inner.templateSpans.some((span) => span.literal.text.includes(code));
+    }
+  });
+  return found;
 }
 
 describe("qfai-validate.md documents only finding codes the source can emit", () => {
-  it("every code in the delta table is emitted by a validator the runner invokes", async () => {
+  it("every code in the delta table is emitted by a module the runner invokes", async () => {
     const contract = await readFile(path.join(CONTRACTS_DIR, "cli", "qfai-validate.md"), "utf-8");
     const section = contract.split("## New finding codes (this delta)")[1] ?? "";
     const table = section.split(/^## /m)[0] ?? "";
@@ -198,64 +436,53 @@ describe("qfai-validate.md documents only finding codes the source can emit", ()
       .filter((code) => code.length > 0);
     expect(codes.length).toBeGreaterThan(5);
 
-    const sourceFiles = await collectFiles(SRC_DIR, ".ts");
-    const sources = new Map<string, string>();
-    await Promise.all(
-      sourceFiles.map(async (file) => {
-        const rel = path.relative(SRC_DIR, file).replace(/\\/g, "/");
-        sources.set(rel, stripComments(await readFile(file, "utf-8")));
-      }),
-    );
+    const modules = await parseSourceModules();
+    const factories = collectIssueFactories(modules);
+    expect(factories.size).toBeGreaterThan(1);
 
-    const runner = sources.get("core/validate.ts") ?? "";
-    const cliEntry = sources.get("cli/main.ts") ?? "";
-    expect(runner).not.toBe("");
-    expect(cliEntry).not.toBe("");
+    const runner = modules.find((module) => module.rel === "core/validate.ts");
+    const cliEntry = modules.find((module) => module.rel === "cli/main.ts");
+    expect(runner).toBeDefined();
+    expect(cliEntry).toBeDefined();
+    const runnerText = runner?.file.getFullText() ?? "";
+    const cliEntryText = cliEntry?.file.getFullText() ?? "";
 
     /** A validator module counts only if `core/validate.ts` calls one of its exports. */
-    const runnerInvokes = (rel: string, body: string): boolean => {
-      if (rel === "core/validate.ts") return true;
-      const exported = [...body.matchAll(/export\s+(?:async\s+)?function\s+(\w+)/g)].map(
-        (match) => match[1] ?? "",
-      );
-      return exported.some((name) => name.length > 0 && runner.includes(`${name}(root`));
+    const runnerInvokes = (module: ModuleSource): boolean => {
+      if (module.rel === "core/validate.ts") return true;
+      let called = false;
+      forEachNode(module.file, (node) => {
+        if (called) return;
+        if (!ts.isFunctionDeclaration(node) || node.name === undefined) return;
+        const exported = ts
+          .getModifiers(node)
+          ?.some((modifier) => modifier.kind === ts.SyntaxKind.ExportKeyword);
+        if (exported === true && runnerText.includes(`${node.name.text}(root`)) called = true;
+      });
+      return called;
     };
 
     /** A CLI module counts only if `cli/main.ts` imports it. */
-    const cliDispatches = (rel: string): boolean => {
-      if (!rel.startsWith("cli/commands/")) return false;
-      const specifier = `./${rel.slice("cli/".length).replace(/\.ts$/, ".js")}`;
-      return cliEntry.includes(specifier);
+    const cliDispatches = (module: ModuleSource): boolean => {
+      if (!module.rel.startsWith("cli/commands/")) return false;
+      const specifier = `./${module.rel.slice("cli/".length).replace(/\.ts$/, ".js")}`;
+      return cliEntryText.includes(specifier);
     };
 
     const emitters = new Map<string, string[]>();
     for (const code of codes) {
       const found: string[] = [];
-      const literal = literalRe(code);
-      for (const [rel, body] of sources) {
-        if (!literal.test(body)) continue;
-
-        // Shape 1 — the literal is the code argument of a finding.
-        const direct =
-          new RegExp(`issue\\(\\s*"${code}"`).test(body) ||
-          new RegExp(`code:\\s*"${code}"`).test(body);
-        // Shape 2 — the literal sits in a registered code table that the same
-        // module feeds to `issue(code, …)` (e.g. ADVISORY_FAILING_CODES).
-        const tableDriven = /issue\(\s*code[,\s)]/.test(body);
-        if ((direct || tableDriven) && runnerInvokes(rel, body)) {
-          found.push(`${rel} (${direct ? "issue-literal" : "issue-table"})`);
+      for (const module of modules) {
+        const constants = stringConstants(module);
+        const reachable =
+          emitsDirectly(module, code, factories, constants) ??
+          emitsThroughGate(module, code, factories);
+        if (reachable !== null && runnerInvokes(module)) {
+          found.push(`${module.rel} (${reachable})`);
           continue;
         }
-
-        // Shape 3 — a note the CLI command prints or collects for printing.
-        if (cliDispatches(rel)) {
-          const lines = body.split("\n");
-          const printed = lines.some((line, index) => {
-            if (!literal.test(line)) return false;
-            const window = lines.slice(Math.max(0, index - 3), index + 1).join("\n");
-            return /(?:push|info|warn|error|log)\(|=\s*[`"']/.test(window);
-          });
-          if (printed) found.push(`${rel} (cli-note)`);
+        if (cliDispatches(module) && emitsAsCliNote(module, code) !== null) {
+          found.push(`${module.rel} (cli-note)`);
         }
       }
       emitters.set(code, found);
@@ -265,17 +492,46 @@ describe("qfai-validate.md documents only finding codes the source can emit", ()
     expect(orphans).toEqual([]);
   });
 
-  it("rejects a code that only appears in a comment or a dead constant", async () => {
-    // Guards the check above against regressing to `haystack.includes(code)`:
-    // both of these are how `E-WORKLOG-SECRET` could have been smuggled back in.
-    const mention = stripComments(
-      ["// E-WORKLOG-SECRET is planned.", "/** E-WORKLOG-SECRET */", "const x = 1;"].join("\n"),
-    );
-    expect(literalRe("E-WORKLOG-SECRET").test(mention)).toBe(false);
+  it("rejects a mention that never reaches a finding", async () => {
+    // The three ways `E-WORKLOG-SECRET` could be smuggled back in. Each is
+    // parsed the way the check parses `src/`, so a regression to a substring
+    // scan fails here rather than in six months.
+    const modules = await parseSourceModules();
+    const factories = collectIssueFactories(modules);
+    const probe = (source: string): ModuleSource => ({
+      rel: "core/validators/probe.ts",
+      file: ts.createSourceFile("probe.ts", source, ts.ScriptTarget.Latest, true),
+    });
 
-    const deadConstant = stripComments('const PLANNED = ["E-WORKLOG-SECRET"];');
-    expect(literalRe("E-WORKLOG-SECRET").test(deadConstant)).toBe(true);
-    expect(/issue\(\s*"E-WORKLOG-SECRET"/.test(deadConstant)).toBe(false);
-    expect(/issue\(\s*code[,\s)]/.test(deadConstant)).toBe(false);
+    const inComment = probe("// E-WORKLOG-SECRET is planned.\n/** E-WORKLOG-SECRET */\n");
+    expect(emitsDirectly(inComment, "E-WORKLOG-SECRET", factories, new Map())).toBeNull();
+
+    // The reviewer's case: a `code:` field on something that is not an Issue.
+    const metadataOnly = probe('const planned = { code: "E-WORKLOG-SECRET" };\nvoid planned;\n');
+    expect(emitsDirectly(metadataOnly, "E-WORKLOG-SECRET", factories, new Map())).toBeNull();
+
+    // A dead table in a module that does emit findings from a variable.
+    const deadTable = probe(
+      [
+        'const PLANNED = ["E-WORKLOG-SECRET"];',
+        'const GATE = new Set(["R-WORKLOG-DRIFT"]);',
+        "for (const code of codes) {",
+        "  if (!GATE.has(code)) continue;",
+        '  issue(code, "msg", "error");',
+        "}",
+        "void PLANNED;",
+      ].join("\n"),
+    );
+    expect(emitsThroughGate(deadTable, "E-WORKLOG-SECRET", factories)).toBeNull();
+    // The gate that *is* consulted still counts.
+    expect(emitsThroughGate(deadTable, "R-WORKLOG-DRIFT", factories)).toBe("gate-set");
+
+    // And the shapes that must keep passing.
+    const real = probe('issue("W-SKILL-PROJECT-MEMORY", "msg", "warning");');
+    expect(emitsDirectly(real, "W-SKILL-PROJECT-MEMORY", factories, new Map())).toBe(
+      "issue-argument",
+    );
+    const shaped = probe('const f = { code: "W-WORKLOG-STALE", severity: "warning" };\nvoid f;\n');
+    expect(emitsDirectly(shaped, "W-WORKLOG-STALE", factories, new Map())).toBe("issue-literal");
   });
 });

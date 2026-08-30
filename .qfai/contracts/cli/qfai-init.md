@@ -76,7 +76,14 @@ There is no "cannot resolve relocation" exit code. Within the two surfaces the h
 
 The run does not tell the operator which paths those were: the summary counts copies (`created: N`) and enumerates paths only for `skipped` and `removed` (`report` in `packages/qfai/src/cli/commands/init.ts`). Because the helper never overwrites and never deletes, every copy is a new file, so on a tree that was clean before the invocation the listing has to be reconstructed from Git — with `git status --short --untracked-files=all .qfai/assistant/`. The `--untracked-files=all` mode is load-bearing, not cosmetic: the default `normal` mode collapses a wholly-new directory into a single `?? .qfai/assistant/catalog/` entry that names no file at all, and acting on that entry means deleting the directory rather than the copies.
 
-That listing is the **invocation's** addition set, not the migration step's. The ordinary `qfai init` flow the flag falls through into seeds its own files into the same four layers, and nothing in the output distinguishes a relocated document from a freshly seeded one — so a directory-wide `rm` takes both. Roll back by deleting the individual file paths the `--untracked-files=all` listing names, never the enclosing directory, and read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
+That listing is the **invocation's**, not the migration step's, and only its `??` rows are additions. The ordinary `qfai init` flow the flag falls through into seeds its own files into the same four layers, and nothing in the output distinguishes a relocated document from a freshly seeded one — so a directory-wide `rm` takes both. With `--force` the same flow also **regenerates** `assistant/skills/**` and `assistant/agents/**`, so the listing carries `M` and `D` rows for files that were already tracked; deleting those would take assets the invocation never added.
+
+Roll back in two moves, by status:
+
+- `??` rows — files this invocation created. Delete the individual paths, never the enclosing directory.
+- `M` / `D` rows — files that existed before. Restore them with Git (`git restore -- <path>`); they are not the addition set.
+
+Then read `git diff` separately for the in-place edits the flow makes outside `.qfai/assistant/` (the managed `.gitignore` block, the integration wrappers). The `W-USER-EDIT-PRESERVED` notes printed by the run name the destinations that were left alone.
 
 ## Path SSOT enforcement
 
