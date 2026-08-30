@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T18:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "7fbac2d3",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 8 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 13 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 10 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B1+M3+m3+A1 = 8, B6+M2+m3+A2 = 13 and B3+M3+m3+A1 = 10",
+  "notes": "The round's first attempt died: all three reviewers hit a session limit mid-work, nothing of theirs survived in the tree, and the completion reviewer left a 40-line partial containing a real finding — that pinning the record's pack and response counts to the subject makes three guards fail for a reason that is not a defect, because opening a pack is what moves them. The brief was amended to pin CODE to 7fbac2d3 and measure the record's counts at 19b751ca, the partial was kept in the pack, and all three were relaunched. Round 19's blocker in the lexer is round 18's own repair: codeMask marked a here-document's data non-code and kept WALKING it, so one quote character in that data disarmed refusals() for the rest of the body — the two walks disagreeing again inside the reader they had just been given to share. qa-gatekeeper beat the init surface a fourth time with three bytes, a UTF-8 BOM in front of a shebang, and shipped an executable payload into an adopter tree with the e2e leg green; it also showed that the executable-bit question cannot fire on Windows and that round 18's evidence it worked was Git Bash's ls inferring the x column from the shebang. completion-reviewer broke all four record guards for the fourth consecutive round with 36 plants, and every one of its findings is a NEEDLE defect over a region that is now correct — the inverse of round 18, and the reason lesson 3 was rewritten: naming the region as the cause is how a fifth attempt reproduces a fourth's failures. It also found that the record attributed the integration+unit move wholly to another session when one of the three callsites was this stage's own differential test, and that three of round 18's findings were never applied."
+}
