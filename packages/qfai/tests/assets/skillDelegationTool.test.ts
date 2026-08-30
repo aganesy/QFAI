@@ -32,11 +32,11 @@ async function skillFiles(tree: string): Promise<string[]> {
 
 /** Returns the `allowed-tools` entries declared in the frontmatter. */
 function allowedTools(content: string): string[] {
-  const match = /^allowed-tools:\s*\[([^\]]*)\]\s*$/m.exec(content);
-  if (match === null) {
+  const declared = /^allowed-tools:\s*\[([^\]]*)\]\s*$/m.exec(content)?.[1];
+  if (declared === undefined) {
     return [];
   }
-  return match[1]
+  return declared
     .split(",")
     .map((entry) => entry.trim())
     .filter((entry) => entry.length > 0);
