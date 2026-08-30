@@ -1316,7 +1316,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       // 開示は処理開始前に出す — 中断・失敗した実行でも対象が残る。
       expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
