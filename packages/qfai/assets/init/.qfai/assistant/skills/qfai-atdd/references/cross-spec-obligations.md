@@ -62,16 +62,33 @@ on the spec side, which the Read Set Contract's Default Mode does not cover, so
 resolve it in this order and say in the row's `Why not this stage's work` which
 source answered.
 
-1. **The generated Contract → Spec map.** `npx qfai report --run-validate`, or
-   `npx qfai report --in <report>/validate.spec-<id>.json` pointed at the
-   artifact the scoped gate just wrote. Not a bare `npx qfai report`: with
-   neither flag it reads the configured `validate.json`, which a `--spec` run
-   never writes, so it exits 2 in a fresh environment and reports a stale
-   unscoped run in an older one. Either form writes `<report>/report.md` — where
-   `<report>` is `paths.outDir` from `qfai.config.yaml`, `.qfai/report` only by
-   default, and `--out` overrides even that — with a
+1. **The generated Contract → Spec map.** `npx qfai report --in <scoped-json>`,
+   pointed at the artifact the scoped gate just wrote. **Derive `<scoped-json>`
+   from `output.validateJsonPath`, not from `paths.outDir`**: the scoped run
+   writes its result beside the configured validate JSON, inserting
+   `.spec-<id>` before that path's extension — so it is
+   `.qfai/report/validate.spec-<id>.json` only while that key is still its
+   `.qfai/report/validate.json` default. A repository that sets
+   `output.validateJsonPath` and `paths.outDir` to different places gets an
+   ENOENT from a path built out of the latter, which leaves this step with no
+   input at all.
+   **Not `--run-validate`, and not a bare `npx qfai report`.** `--run-validate`
+   is not a report-only flag: with no `--profile` it re-runs the full profile
+   **unscoped**, which re-runs the ATDD validators over every spec, and the
+   scaffold-placeholder rule advances a persistent per-`TC` validate-cycle
+   counter on each one. Resolving an owner would then escalate this spec's and
+   its siblings' scaffold placeholders from warning to error ahead of their
+   grace window — a read that changes the verdict it is being consulted for.
+   A bare `npx qfai report` reads the configured `validate.json`, which a
+   `--spec` run never writes, so it exits 2 in a fresh environment and reports a
+   stale unscoped run in an older one. `--in` reads the JSON it is given and
+   runs no validator, so it moves no counter.
+   The run writes `<report>/report.md` — where `<report>` is `paths.outDir`
+   from `qfai.config.yaml`, `.qfai/report` only by default, and `--out`
+   overrides even that — with a
    `### Contract → Spec` section — one line per contract ID listing every spec
-   that declares it — and `--format json` puts the same map at
+   that declares it — a `### Spec → Contracts` table beside it, and
+   `--format json` puts the same maps at
    `traceability.contracts.idToSpecs`. Open the path the run just printed as
    `wrote report: <path>`; do not read a fixed `.qfai/report/…` on the
    assumption it is still the configured one. On a repository that points
@@ -80,15 +97,29 @@ source answered.
    still sitting at the former default and names the owner it recorded then,
    which is a wrong owner in the one field that has to be right. It is a
    generated report artifact, not a
-   sibling spec pack, so reading it widens no read set. It is built from the
-   `QFAI-CONTRACT-REF:` lines in each spec's `01_Spec.md`, so a spec that binds
-   its contracts only in the rule table is missing from that ID's line. The map
-   is therefore incomplete per ID, not merely empty per ID — which is why step 2
-   is not a fallback.
+   sibling spec pack, so reading it widens no read set.
+   Two things drop a real owner off that ID's line, and both of them look
+   exactly like `(none)`. It is built from the `QFAI-CONTRACT-REF:` lines in
+   each spec's `01_Spec.md`, so a spec that binds its contracts only in the rule
+   table is missing from that line — that is what step 2 recovers. And the line
+   is keyed by the **full** declared `CON-API-NNNN` / `CON-DB-NNNN` while a
+   `QFAI-CONTRACT-REF:` may legally be written in the short `API-NNNN` /
+   `DB-NNNN` / `UI-NNNN` form; the short ref is matched verbatim against those
+   keys, matches none, and is silently dropped. **Normalize the short form
+   before you read an owner off that line** — `API-NNNN` _is_ `CON-API-NNNN`,
+   `DB-NNNN` _is_ `CON-DB-NNNN`, the same contract — and read the
+   `### Spec → Contracts` table beside it, which prints each spec's refs as
+   written and is therefore where a short ref survives: merge in every spec
+   whose row names this contract in **either** form. Skipping that reads a
+   declared contract as an orphan, and FAILs a run whose residue was
+   attributable all along. The map is therefore incomplete per ID, not merely
+   empty per ID — which is why step 2 is not a fallback.
 2. **The rule tables' `Contract-Refs` column — always, not only when step 1 is
    unavailable or answers `(none)`.** Read the `Contract-Refs` column of
    `.qfai/specs/*/04_Business-Rules.md` — the documented per-spec contract
-   binding — and **merge** its owners into the map's answer for that ID. A
+   binding — and **merge** its owners into the map's answer for that ID. That
+   column takes the short form too, so normalize it the same way before you
+   compare: a row reading `API-0001` binds `CON-API-0001`. A
    non-empty map line proves one owner; it never proves it found them all, so a
    partly-filled map is exactly the case this step exists for. **Your own
    spec's rule table is inside that merge**: if it binds the ID, the contract is
@@ -109,9 +140,12 @@ What the answer means:
   it as another's. This spec being one of the several is the same FAIL as above:
   a co-owner discharges its own contracts, it does not hand them to a co-owner.
 - **No spec** — the contract is an orphan, declared under `.qfai/contracts/**`
-  and referenced by no spec. That is not attributable residue: it is this run's
-  finding to carry, it FAILs, and the fix is a `/qfai-sdd` triage of the orphan,
-  not a row here.
+  and referenced by no spec. Only after the normalization and the merge above:
+  a real owner that declared the contract in the short form reaches this branch
+  otherwise, and a permanent FAIL against a run whose residue was attributable
+  is the most expensive way to be wrong here. A true orphan is not attributable
+  residue: it is this run's finding to carry, it FAILs, and the fix is a
+  `/qfai-sdd` triage of the orphan, not a row here.
 
 ## The evidence entry
 
@@ -160,3 +194,14 @@ spec's ledger names in `Test file`, changed by this spec's work. That kind
 left another spec's assertion unverified. This kind does not, because this run
 changed nothing and the obligation was never its own. Keep the two kinds' rows
 apart, and label them.
+
+The distinction has to hold in `/qfai-implement`, not only here. That skill is
+the normal next stage, its `E2E` / `API` / `Integration` rows keep their
+evidence in this same `.qfai/evidence/atdd-<spec-id>.md`, and its completion
+prohibition reads an open `## Cross-spec obligations` entry as a blocker. Left
+undifferentiated, it would re-block on the rows this run recorded, and
+`PASS with cross-spec obligations` would move the deadlock one stage down
+instead of ending it — so `../../qfai-implement/SKILL.md` narrows that condition
+to the code-ownership kind. What keeps that carve-out honest is the same floor
+as here: a row naming no owning spec, or naming the spec whose run is reading
+it, is not attributed residue and blocks on both sides.

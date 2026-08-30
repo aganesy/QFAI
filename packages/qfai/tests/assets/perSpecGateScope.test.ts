@@ -316,13 +316,130 @@ describe.each(TREES)("%s", (tree) => {
     // scoped gate's artifact. A bare `npx qfai report` reads the configured
     // `validate.json` (`src/cli/commands/report.ts`), which a `--spec` run
     // never writes — exit 2 on a fresh repo, a stale unscoped run otherwise.
-    expect(obligations).toContain("`npx qfai report --run-validate`");
-    expect(obligations).toContain("`npx qfai report --in <report>/validate.spec-<id>.json`");
+    expect(obligations).toContain("`npx qfai report --in <scoped-json>`");
     expect(obligations).toContain(
-      "with neither flag it reads the configured `validate.json`, which a `--spec` run never writes",
+      "A bare `npx qfai report` reads the configured `validate.json`, which a `--spec` run never writes",
     );
+    expect(atdd).toContain("`npx qfai report --in` the scoped gate's `validate.spec-<id>.json`");
+  });
+
+  it("resolves the owner without re-running a validator", async () => {
+    // `--run-validate` is not a report-only flag. `runReport` calls
+    // `validateProject` with no `specScope` and, absent `--profile`, the
+    // default `full` profile (`src/core/validate.ts`), whose
+    // `runFullValidators` runs `runAtddValidators` over every spec. The
+    // scaffold-placeholder rule inside it calls `recordValidateCycle` per
+    // (spec, TC), which increments PERSISTED state
+    // (`src/core/atdd/scaffoldEscalation.ts`) and escalates the placeholder
+    // from warning to error once the threshold is crossed. Looking up an owner
+    // would therefore move the verdict it is being consulted for, on this spec
+    // and on its siblings alike. `--in` parses a JSON file and runs nothing.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("**Not `--run-validate`, and not a bare `npx qfai report`.**");
+    expect(obligations).toContain(
+      "with no `--profile` it re-runs the full profile **unscoped**, which re-runs the ATDD validators over every spec",
+    );
+    expect(obligations).toContain(
+      "scaffold-placeholder rule advances a persistent per-`TC` validate-cycle counter",
+    );
+    expect(obligations).toContain("`--in` reads the JSON it is given and runs no validator");
+    // The skill body offers the same choice, so it drifts back on its own.
+    const atdd = flat(await read(tree, ATDD));
     expect(atdd).toContain(
-      "`npx qfai report --run-validate`, or `--in` the scoped gate's `validate.spec-<id>.json`",
+      "never `--run-validate`, which re-runs the full profile unscoped and advances every spec's scaffold-placeholder counters",
+    );
+    // Neither file may offer the mutating form for this read any more.
+    for (const text of [obligations, atdd]) {
+      expect(text).not.toContain("`npx qfai report --run-validate`");
+    }
+  });
+
+  it("derives the scoped `--in` path from `output.validateJsonPath`", async () => {
+    // `scopedReportPath` splits the CONFIGURED `output.validateJsonPath` and
+    // inserts `.spec-<ids>` before its extension
+    // (`src/cli/commands/validate.ts`), so the scoped artifact lands beside
+    // that file — not inside `paths.outDir`, which is a separate config key
+    // that only happens to share the `.qfai/report` default. A repository that
+    // sets them apart gets an ENOENT from an `--in` built out of `outDir`.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain(
+      "**Derive `<scoped-json>` from `output.validateJsonPath`, not from `paths.outDir`**",
+    );
+    expect(obligations).toContain("inserting `.spec-<id>` before that path's extension");
+    expect(obligations).toContain(
+      "sets `output.validateJsonPath` and `paths.outDir` to different places gets an ENOENT",
+    );
+    expect(obligations).not.toContain("`npx qfai report --in <report>/validate.spec-<id>.json`");
+    expect(flat(await read(tree, ATDD))).toContain(
+      "whose path is derived from `output.validateJsonPath` and not from `paths.outDir`",
+    );
+  });
+
+  it("normalizes the short contract-ref form before calling a contract an orphan", async () => {
+    // `parseContractRefs` accepts `API-0001` / `DB-0001` / `UI-0001` as well as
+    // the full `CON-API-0001` (`src/core/parse/contractRefs.ts`), but
+    // `collectSpecContractRefs` seeds `idToSpecs` from the contract index —
+    // always full IDs (`src/core/contractsDecl.ts`) — and then looks each ref
+    // up verbatim (`src/core/report.ts`), so a short ref matches no key and is
+    // dropped. The owning spec then reads as `(none)` on that line, and a run
+    // following the unnormalized procedure FAILs a residue that was
+    // attributable all along. The short form does survive in
+    // `### Spec → Contracts`, which prints each spec's refs as written.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain(
+      "**Normalize the short form before you read an owner off that line**",
+    );
+    expect(obligations).toContain("`API-NNNN` _is_ `CON-API-NNNN`");
+    expect(obligations).toContain("the short ref is matched verbatim against those keys");
+    expect(obligations).toContain(
+      "read the `### Spec → Contracts` table beside it, which prints each spec's refs as written",
+    );
+    expect(obligations).toContain("names this contract in **either** form");
+    // Step 2's column takes the short form too, so it needs the same rule.
+    expect(obligations).toContain("a row reading `API-0001` binds `CON-API-0001`");
+    // The orphan branch is the one that has to wait for the normalization.
+    expect(obligations).toContain(
+      "**No spec** — the contract is an orphan, declared under `.qfai/contracts/**` and referenced by no spec. Only after the normalization and the merge above",
+    );
+    expect(flat(await read(tree, ATDD))).toContain(
+      "misses the ones that write the short `API-NNNN` / `DB-NNNN` form its keys never match",
+    );
+  });
+
+  it("keeps the contract residue non-blocking in `/qfai-implement` too", async () => {
+    // The next stage keeps its `E2E` / `API` / `Integration` evidence in the
+    // same `atdd-<spec-id>.md`, and its completion prohibition read ANY open
+    // `## Cross-spec obligations` entry as a blocker — so the rows this
+    // terminal state exists to record blocked completion one stage later
+    // instead. Narrow it to the code-ownership kind, keeping the floor.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).not.toContain(
+      "- A `## Cross-spec obligations` entry in this spec's evidence file is still open",
+    );
+    expect(implement).toContain(
+      "A `## Cross-spec obligations` entry of the **code-ownership** kind in this spec's evidence file is still open",
+    );
+    expect(implement).toContain("**Not the contract-residue kind.**");
+    expect(implement).toContain(
+      "a `/qfai-atdd` run that ended `PASS with cross-spec obligations` leaves rows in this very section",
+    );
+    expect(implement).toContain("`../qfai-atdd/references/cross-spec-obligations.md`");
+    // Told apart by fields, not by trust — and with the same floor as the
+    // stage that wrote them, or the carve-out is a way out of both gates.
+    expect(implement).toContain(
+      "a code-ownership row names a `Test file` and a blocked `TDD-ID`, a contract-residue row names a `Contract ID` and an `Owning spec`",
+    );
+    expect(implement).toContain(
+      "naming **this** spec as the owner, or omitting the contract ID is not attributed residue and is still this condition",
+    );
+    // Over-correction pin: the code-ownership kind still blocks, on both sides.
+    expect(implement).toContain(
+      "A clean completion here would certify an obligation this run knowingly left unmet (`references/cross-spec-ownership.md`)",
+    );
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).toContain("That kind **blocks** completion while it is open");
+    expect(obligations).toContain(
+      "`../../qfai-implement/SKILL.md` narrows that condition to the code-ownership kind",
     );
   });
 
@@ -403,12 +520,13 @@ describe.each(TREES)("%s", (tree) => {
     // and fills the load-bearing `Owning spec` field from it.
     const obligations = flat(await read(tree, OBLIGATIONS));
     expect(obligations).not.toContain("`.qfai/report/report.md`");
-    expect(obligations).toContain("Either form writes `<report>/report.md`");
+    expect(obligations).toContain("The run writes `<report>/report.md`");
     expect(obligations).toContain("`<report>` is `paths.outDir` from `qfai.config.yaml`");
     expect(obligations).toContain("Open the path the run just printed as `wrote report: <path>`");
-    // Over-correction pin: `<report>` stays the same placeholder the sibling
-    // artifact already uses, so the two reads in this step name one directory.
-    expect(obligations).toContain("`npx qfai report --in <report>/validate.spec-<id>.json`");
+    // Over-correction pin: the report OUTPUT still comes from `paths.outDir`.
+    // Only the `--in` input moved to `output.validateJsonPath`; collapsing both
+    // onto one key would break the other read the same way round.
+    expect(obligations).toContain("and `--out` overrides even that");
   });
 
   it("limits the repo-wide TRACE claim to the findings that have no spec owner", async () => {
