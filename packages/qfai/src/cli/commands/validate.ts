@@ -593,7 +593,16 @@ function emitGitHub(issue: Issue): void {
       : issue.severity === "warning"
         ? "warning"
         : "notice";
-  const file = issue.file ? `file=${issue.file}` : "";
+  // The location metadata is ESCAPED, and by the property rules rather than the message
+  // ones. Review finding [40]: `issue.file` can come from a finding the reviewer gate
+  // ingested out of `.qfai/review/**`, which is a directory a pull request writes — so a
+  // `file` of `x\n::stop-commands::token` split this line in two and let a fork's pull
+  // request inject a workflow command, suppressing or forging every annotation after it.
+  //
+  // A property value needs `:` and `,` escaped as well as `%` and the newlines: they are the
+  // separators GitHub parses the metadata block with, so a `file` containing either changes
+  // which properties this command appears to set.
+  const file = issue.file ? `file=${escapeGitHubCommandProperty(issue.file)}` : "";
   const line = issue.loc?.line ? `,line=${issue.loc.line}` : "";
   const column = issue.loc?.column ? `,col=${issue.loc.column}` : "";
   const location = file ? ` ${file}${line}${column}` : "";
@@ -979,4 +988,14 @@ function emitTextField(label: string, value: string): void {
 
 function escapeGitHubCommandValue(value: string): string {
   return value.replace(/%/g, "%25").replace(/\r/g, "%0D").replace(/\n/g, "%0A");
+}
+
+/**
+ * One workflow-command PROPERTY value.
+ *
+ * The message escapes above plus `:` and `,`, which are the separators GitHub parses the
+ * metadata block with — `%` first, or it would re-encode the escapes that follow it.
+ */
+function escapeGitHubCommandProperty(value: string): string {
+  return escapeGitHubCommandValue(value).replace(/:/g, "%3A").replace(/,/g, "%2C");
 }
