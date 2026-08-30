@@ -8,7 +8,7 @@ must be written to a review pack, not left in conversation. There is exactly **o
 ```text
 .qfai/review/review-<YYYYMMDDhhmmssSSS>/     # 17-digit timestamp; no other directory shape is recognized
 ├── review_request.md                        # required
-├── R01_<reviewer-id>.md                     # required, at least one; R02_, R03_, ... per reviewer
+├── R01_<reviewer-id>.md                     # one per reviewer that responded; see the zero-response note
 └── summary.json                             # required
 ```
 
@@ -21,6 +21,7 @@ must be written to a review pack, not left in conversation. There is exactly **o
 - Minimum `summary.json` shape (`version: "2.0"`):
   `version`, `created_at`, `target.{kind,path}`, `routing_profile`, `overall_status` (`PASS|FAIL`),
   `reviewers[]` where each entry is `{ reviewer, status: PASS|FAIL|NA, feedback_count }`,
+  **and may be empty** — see the zero-response note below,
   **`revision_form: "content-hash"`** and **`revision`** — the state these verdicts describe, as a
   git rev or `working-tree+<content hash>` by the procedure in
   `evidence-revision.md`. Both are required, and **omitting either is a current-contract violation**, not a way to be read as
@@ -29,6 +30,12 @@ must be written to a review pack, not left in conversation. There is exactly **o
   `.qfai/review/.legacy-packs`, marks a pack as predating the form.
   A `REVISE` verdict during iteration is written as `status: "FAIL"` here — see
   `shared-skill-delegation-baseline.md#verdict-vocabulary`.
+- **A round that produced no responses is written down, not left as an absence.** When the routed
+  reviewers die before writing anything, the pack still gets its `summary.json`, declaring
+  `reviewers: []` and `overall_status: FAIL` — a round that returned no verdict returned no
+  passing one. That declaration is what stands `QFAI-REVIEW-005` down; the summary must be present
+  and schema-valid, which is what separates a statement from a pack somebody forgot to seal. The
+  check runs both ways: a pack declaring `reviewers: []` with report files beside it fails too.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
 - Review artifacts are checked only by the full-scan profiles. Neither `--profile tdd` nor
