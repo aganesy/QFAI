@@ -73,5 +73,5 @@
 
 ## Entry points
 
-- US range in this spec: US-0015-0001..US-0015-0015
+- US range in this spec: US-0015-0001..US-0015-0016
 - Primary actors: QFAI maintainer, orchestrator, reviewer agents
