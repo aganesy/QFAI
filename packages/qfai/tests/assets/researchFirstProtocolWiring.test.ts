@@ -552,4 +552,77 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
   });
+
+  it("rejects a non-scalar value in a required field", async () => {
+    // The Output Schema types these fields as strings. Falling back to the raw
+    // text for a value YAML reads as a sequence or a mapping let `title: []`
+    // and `description: {}` count as filled in — and making `sources[].id` and
+    // every `source_id` `[]` even satisfied the reference check, so a summary
+    // whose only real values were the date and `action: apply` cleared the gate.
+    const filled = fillEveryPlaceholder(await readShippedTemplate())
+      .replace(/^([ \t]+)title: Recorded by the research-first protocol run$/m, "$1title: []")
+      .replace(
+        /^([ \t]+)description: Recorded by the research-first protocol run$/m,
+        "$1description: {}",
+      )
+      .replaceAll("id: SRC-0001", "id: []");
+    const codes = (await validateResearchSummary(await seedPack(filled), defaultConfig)).map(
+      (item) => item.code,
+    );
+
+    expect(codes).toContain("QFAI-RESEARCH-004"); // sources[].title
+    expect(codes).toContain("QFAI-RESEARCH-015"); // sources[].id
+    expect(codes).toContain("QFAI-RESEARCH-016"); // best_practices[].description
+  });
+
+  it("does not read a source_id reference out of a block scalar body", async () => {
+    // A multi-line `description` is valid input, and quoting a legacy config
+    // inside one is ordinary prose. Scanning the whole section for
+    // `source_id:` lines collected that quotation as a real reference and
+    // reported QFAI-RESEARCH-013 against a complete summary.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      /^([ \t]+)description: Recorded by the research-first protocol run$/m,
+      [
+        "$1description: |-",
+        "$1  Never copy the deprecated block, which reads:",
+        "$1  source_id: legacy-source",
+      ].join("\n"),
+    );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+
+    // Also the over-correction pin: the entry around that body is complete, so
+    // narrowing the scan must not start reporting it as unfinished either.
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
+
+  it("resolves the current pack under the discussionDir the caller passed", async () => {
+    // `validateProject` may hand this validator a config that differs from the
+    // `qfai.config.yaml` on disk. Re-reading that file to resolve the active
+    // pointer looked for the pack under a different discussion root, so a
+    // present current pack was reported as an unresolvable pointer.
+    const root = await newTempDir();
+    const packName = "discussion-20260101000000000";
+    const packDir = path.join(root, "docs", "discussion", packName);
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      fillEveryPlaceholder(await readShippedTemplate()),
+      "utf-8",
+    );
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await usePack(root, packName);
+    // The on-disk config still names the default location, which holds no pack.
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "paths:\n  discussionDir: .qfai/discussion\n",
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, discussionDir: "docs/discussion" },
+    });
+
+    expect(issues.map((item) => `${item.code} ${item.message}`)).toEqual([]);
+  });
 });

@@ -47,8 +47,8 @@ const SCALAR_SCHEMA_FIELDS = new Set([
 ]);
 /** `|`, `>` with optional chomping and indentation indicators. */
 const BLOCK_SCALAR_HEADER_RE = /^[|>][+-]?\d*$/;
-/** `source_id:` reference carried by best_practices / anti_patterns / reflection entries. */
-const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(.*)$/gm;
+/** A `key: value` line of a list entry, with or without the leading `- `. */
+const ENTRY_FIELD_LINE_RE = /^[ \t]*(?:-[ \t]+)?([A-Za-z0-9_-]+):[ \t]*(.*)$/;
 /** The decisions `reflection[].action` is allowed to record. */
 const REFLECTION_ACTIONS = new Set(["apply", "reject", "defer"]);
 /** The required pack file that holds the `## Research Summary` storage slot. */
@@ -89,6 +89,9 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     const sourceIds = sourceEntries
       .map((entry) => readScalarField(entry, "id") ?? "")
       .filter((id) => id.length > 0);
+    const bestPractices = splitYamlListEntries(yaml, "best_practices");
+    const antiPatterns = splitYamlListEntries(yaml, "anti_patterns");
+    const reflectionEntries = splitYamlListEntries(yaml, "reflection");
     if (sourceEntries.length === 0) {
       issues.push(
         issue(
@@ -188,7 +191,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    for (const unresolved of collectUnresolvedSourceIds(yaml, sourceIds)) {
+    const referencingEntries = [...bestPractices, ...antiPatterns, ...reflectionEntries];
+    for (const unresolved of collectUnresolvedSourceIds(referencingEntries, sourceIds)) {
       issues.push(
         issue(
           "QFAI-RESEARCH-013",
@@ -200,7 +204,6 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    const bestPractices = splitYamlListEntries(yaml, "best_practices");
     if (bestPractices.length === 0) {
       issues.push(
         issue(
@@ -214,7 +217,6 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     }
     issues.push(...checkPracticeEntries(rel, "best_practices", bestPractices));
 
-    const antiPatterns = splitYamlListEntries(yaml, "anti_patterns");
     if (antiPatterns.length === 0) {
       issues.push(
         issue(
@@ -231,7 +233,6 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     // Check reflection.apply presence — inside the reflection list only, and
     // entry by entry: a single complete entry must not satisfy the required
     // fields on behalf of its siblings.
-    const reflectionEntries = splitYamlListEntries(yaml, "reflection");
     const hasApply = reflectionEntries.some((entry) => readReflectionAction(entry) === "apply");
     if (reflectionEntries.length === 0) {
       issues.push(
@@ -386,7 +387,9 @@ async function resolveResearchSummaryScanTarget(
 
   if (currentId !== null) {
     try {
-      const active = await resolveActiveDiscussionPack(root);
+      // The already-resolved root, so the pointer is resolved against the
+      // config this validator was handed rather than the one on disk.
+      const active = await resolveActiveDiscussionPack(root, discussionRoot);
       return {
         ...base,
         files: [storageFileOf(active)],
@@ -566,10 +569,11 @@ function collectPlaceholderKeys(yaml: string): string[] {
 /** Whether a raw value text is the template's `[...]` placeholder. */
 function isPlaceholderValue(raw: string): boolean {
   const text = raw.trim();
-  if (text.length === 0) {
-    return false;
-  }
-  const parsed = parseScalarText(text);
+  return text.length > 0 && isPlaceholderParsed(parseScalarText(text));
+}
+
+/** The same judgement on a value that has already been parsed. */
+function isPlaceholderParsed(parsed: unknown): boolean {
   // Unquoted, `[fill me in]` is a one-element flow sequence; quoted, it is the
   // string `[fill me in]`. Both spellings are the same unreplaced placeholder.
   if (Array.isArray(parsed)) {
@@ -578,22 +582,32 @@ function isPlaceholderValue(raw: string): boolean {
   return typeof parsed === "string" && PLACEHOLDER_TEXT_RE.test(parsed.trim());
 }
 
-/** `source_id` values that no `sources[].id` in the same summary resolves. */
-function collectUnresolvedSourceIds(yaml: string, sourceIds: readonly string[]): string[] {
+/**
+ * `source_id` values that no `sources[].id` in the same summary resolves.
+ *
+ * Read off the entries that the Output Schema says carry a reference, not off
+ * the whole section: a `source_id:` line quoted inside a `description: |-`
+ * body is prose, and scanning for it reported QFAI-RESEARCH-013 against a
+ * summary whose real references all resolved.
+ */
+function collectUnresolvedSourceIds(
+  referencingEntries: readonly string[],
+  sourceIds: readonly string[],
+): string[] {
   if (sourceIds.length === 0) {
     return [];
   }
 
+  // Compare the parsed scalar, not the literal text: a serializer that quotes
+  // `id: "SRC-0001"` but leaves `source_id: SRC-0001` bare writes the same
+  // value twice, and the reference must still resolve.
   const known = new Set(sourceIds);
   const unresolved = new Set<string>();
-  for (const match of yaml.matchAll(SOURCE_ID_REF_RE)) {
-    // Compare the parsed scalar, not the literal text: a serializer that
-    // quotes `id: "SRC-0001"` but leaves `source_id: SRC-0001` bare writes the
-    // same value twice, and the reference must still resolve.
-    const value = normalizeScalar(match[1] ?? "");
-    // A placeholder value is already reported as QFAI-RESEARCH-012; an empty
-    // one is reported as a missing required field.
-    if (!value || value.startsWith("[") || known.has(value)) {
+  for (const entry of referencingEntries) {
+    const value = readScalarField(entry, "source_id") ?? "";
+    // A placeholder value is already reported as QFAI-RESEARCH-012; an absent
+    // or empty one is reported as a missing required field.
+    if (!value || PLACEHOLDER_TEXT_RE.test(value) || known.has(value)) {
       continue;
     }
     unresolved.add(value);
@@ -617,27 +631,59 @@ function extractResearchSummarySection(content: string): string | null {
 
 /**
  * The scalar written after `field:` inside the entry, or `null` when the key
- * is absent. The key is anchored to the start of a line (with an optional list
- * marker) so `source_id:` is never mistaken for `id:`.
+ * is absent.
  */
 function readScalarField(entry: string, field: string): string | null {
+  return readEntryFields(entry).get(field.toLowerCase()) ?? null;
+}
+
+/**
+ * The fields of one list entry, keyed by lowercased name.
+ *
+ * Only lines at the entry's own field column are fields; a block scalar's body
+ * is folded into the value of the key that opened it instead of being read as
+ * fields of its own. Scanning every `key:`-shaped line let a `source_id:` line
+ * quoted inside a multi-line `description` stand in for the entry's own
+ * reference — and, through the whole-section scan this replaces, be reported as
+ * an unresolved one.
+ */
+function readEntryFields(entry: string): Map<string, string> {
+  const fields = new Map<string, string>();
   const lines = entry.split(/\r?\n/);
-  const re = new RegExp(`^([ \\t]*)(?:-[ \\t]*)?${field}:[ \\t]*(.*)$`, "i");
+  const first = lines.find((line) => line.trim().length > 0);
+  if (first === undefined) {
+    return fields;
+  }
+  const fieldColumn = contentColumnOf(first);
+
   for (let index = 0; index < lines.length; index += 1) {
-    const match = re.exec(lines[index] ?? "");
-    if (match === null) {
+    const line = lines[index] ?? "";
+    if (line.trim().length === 0 || contentColumnOf(line) !== fieldColumn) {
       continue;
     }
-    const inline = (match[2] ?? "").trim();
-    if (!BLOCK_SCALAR_HEADER_RE.test(inline)) {
-      return normalizeScalar(inline);
+    const match = ENTRY_FIELD_LINE_RE.exec(line);
+    const key = match?.[1]?.toLowerCase();
+    if (key === undefined || fields.has(key)) {
+      continue;
     }
+    const inline = (match?.[2] ?? "").trim();
     // A block scalar's value is the more-indented lines under its header, so
     // reading the header line alone returned `|-` — a non-empty string that
     // passed every required-field check while the field held nothing.
-    return readBlockScalar(lines, index, (match[1] ?? "").length);
+    fields.set(
+      key,
+      BLOCK_SCALAR_HEADER_RE.test(inline)
+        ? readBlockScalar(lines, index, fieldColumn)
+        : normalizeScalar(inline),
+    );
   }
-  return null;
+  return fields;
+}
+
+/** The column an entry line's content starts at, counting a `- ` list marker. */
+function contentColumnOf(line: string): number {
+  const match = /^([ \t]*)(-[ \t]+)?/.exec(line);
+  return (match?.[1] ?? "").length + (match?.[2] ?? "").length;
 }
 
 /** The body of a block scalar whose header sits at `lines[headerIndex]`. */
@@ -683,10 +729,14 @@ function normalizeScalar(raw: string): string {
   if (typeof parsed === "number" || typeof parsed === "boolean") {
     return String(parsed);
   }
-  // Not a scalar at all — a flow sequence or mapping. Keep the text so the
-  // placeholder check can still see `[fill me in]` rather than reading it as a
-  // one-element list and calling the field answered.
-  return text;
+  // Not a scalar at all — a flow sequence or mapping. Every field read through
+  // here is a string in the Output Schema, so `title: []` and `description: {}`
+  // hold no value: returning their text let them pass as filled in, and made
+  // `id: []` resolve `source_id: []` on top of that. The template's own
+  // unreplaced `[fill me in]` is the one sequence that keeps its text, so
+  // QFAI-RESEARCH-012 names the key instead of the required-field checks
+  // reporting the same placeholder a second time.
+  return isPlaceholderParsed(parsed) ? text : "";
 }
 
 /** `parse` the value on its own, or `undefined` when it is not valid YAML. */
