@@ -361,36 +361,32 @@ describe("validateReviewArtifacts — a --spec run judges only its own packs", (
 });
 
 describe("validateReviewArtifacts — a stage profile judges only the packs it owns", () => {
-  const kindScope = (root: string, ...kinds: string[]) => ({
+  const stageScope = (root: string, ...producers: string[]) => ({
     specScope: undefined,
     specsRoot: path.join(root, ".qfai", "specs"),
     discussionRoot: path.join(root, ".qfai", "discussion"),
-    targetKinds: new Set(kinds),
+    producers: new Set(producers),
   });
 
-  async function seedIncompletePack(root: string, targetKind: string): Promise<void> {
+  async function seedIncompletePack(root: string, summary: Record<string, unknown>): Promise<void> {
     await scaffoldRoot(root);
     const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
     await mkdir(packDir, { recursive: true });
     await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "summary.json"),
-      JSON.stringify({ version: "2.0", target: { kind: targetKind, path: "x" } }, null, 2),
-      "utf-8",
-    );
+    await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
   }
 
   it("does not fail a discussion cycle on a broken spec pack", async () => {
     const root = await newTempDir();
-    await seedIncompletePack(root, "spec");
+    await seedIncompletePack(root, { version: "2.0", target: { kind: "spec", path: "x" } });
 
     const discussionCodes = (
-      await validateReviewArtifacts(root, kindScope(root, "discussion"))
+      await validateReviewArtifacts(root, stageScope(root, "discussion"))
     ).map((entry) => entry.code);
     expect(discussionCodes).not.toContain("QFAI-REVIEW-005");
     expect(discussionCodes).not.toContain("QFAI-REVIEW-007");
 
-    const sddCodes = (await validateReviewArtifacts(root, kindScope(root, "spec"))).map(
+    const sddCodes = (await validateReviewArtifacts(root, stageScope(root, "sdd"))).map(
       (entry) => entry.code,
     );
     expect(sddCodes).toContain("QFAI-REVIEW-005");
@@ -398,15 +394,15 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
 
   it("does not fail an sdd cycle on a broken discussion pack", async () => {
     const root = await newTempDir();
-    await seedIncompletePack(root, "discussion");
+    await seedIncompletePack(root, { version: "2.0", target: { kind: "discussion", path: "x" } });
 
-    const sddCodes = (await validateReviewArtifacts(root, kindScope(root, "spec"))).map(
+    const sddCodes = (await validateReviewArtifacts(root, stageScope(root, "sdd"))).map(
       (entry) => entry.code,
     );
     expect(sddCodes).not.toContain("QFAI-REVIEW-005");
 
     const discussionCodes = (
-      await validateReviewArtifacts(root, kindScope(root, "discussion"))
+      await validateReviewArtifacts(root, stageScope(root, "discussion"))
     ).map((entry) => entry.code);
     expect(discussionCodes).toContain("QFAI-REVIEW-005");
   });
@@ -422,13 +418,13 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
       "utf-8",
     );
 
-    const sddCodes = (await validateReviewArtifacts(root, kindScope(root, "spec"))).map(
+    const sddCodes = (await validateReviewArtifacts(root, stageScope(root, "sdd"))).map(
       (entry) => entry.code,
     );
     expect(sddCodes).not.toContain("QFAI-REVIEW-004");
 
     const discussionCodes = (
-      await validateReviewArtifacts(root, kindScope(root, "discussion"))
+      await validateReviewArtifacts(root, stageScope(root, "discussion"))
     ).map((entry) => entry.code);
     expect(discussionCodes).toContain("QFAI-REVIEW-004");
   });
@@ -440,12 +436,230 @@ describe("validateReviewArtifacts — a stage profile judges only the packs it o
       recursive: true,
     });
 
-    for (const kind of ["spec", "discussion"]) {
-      const codes = (await validateReviewArtifacts(root, kindScope(root, kind))).map(
+    for (const producer of ["sdd", "discussion"]) {
+      const codes = (await validateReviewArtifacts(root, stageScope(root, producer))).map(
         (entry) => entry.code,
       );
       expect(codes).toContain("QFAI-REVIEW-003");
       expect(codes).toContain("QFAI-REVIEW-004");
     }
+  });
+
+  // `qfai-implement` mandates a review pack of its own and writes
+  // `target.kind: "spec"` for it, exactly as an SDD pack does. Selecting the
+  // SDD gate's packs by kind therefore made an implementation worker's
+  // half-written pack fail `--profile sdd --fail-on error` on a downstream pack
+  // the SDD cycle does not own.
+  it("keeps an implementation pack out of both stage gates", async () => {
+    const root = await newTempDir();
+    await seedIncompletePack(root, {
+      version: "2.0",
+      producer: "implement",
+      target: { kind: "spec", path: "x" },
+    });
+
+    for (const producer of ["sdd", "discussion"]) {
+      const codes = (await validateReviewArtifacts(root, stageScope(root, producer))).map(
+        (entry) => entry.code,
+      );
+      expect(codes).not.toContain("QFAI-REVIEW-005");
+    }
+    // The full scan owns every pack, so nothing escapes review entirely.
+    const full = (await validateReviewArtifacts(root)).map((entry) => entry.code);
+    expect(full).toContain("QFAI-REVIEW-005");
+  });
+
+  it("keeps an in-flight implementation pack out of the sdd gate before summary.json exists", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    // The in-flight shape: `review_request.md` written, reviewer files and
+    // `summary.json` still to come. Its `Producer:` line is the only thing that
+    // can say which stage owns it at this point.
+    await writeFile(
+      path.join(packDir, "review_request.md"),
+      "# Review Request\n\n- Producer: `implement`\n- target: `.qfai/specs/spec-0001`\n",
+      "utf-8",
+    );
+
+    const sddCodes = (await validateReviewArtifacts(root, stageScope(root, "sdd"))).map(
+      (entry) => entry.code,
+    );
+    expect(sddCodes).not.toContain("QFAI-REVIEW-004");
+    expect(sddCodes).not.toContain("QFAI-REVIEW-005");
+  });
+
+  // Over-correction pin: the packs the SDD gate is FOR must keep failing it,
+  // whether they name their producer or predate the field.
+  it("still gates the sdd cycle's own packs, declared or legacy", async () => {
+    for (const summary of [
+      { version: "2.0", producer: "sdd", target: { kind: "spec", path: "x" } },
+      { version: "2.0", target: { kind: "spec", path: "x" } },
+    ]) {
+      const root = await newTempDir();
+      await seedIncompletePack(root, summary);
+      const codes = (await validateReviewArtifacts(root, stageScope(root, "sdd"))).map(
+        (entry) => entry.code,
+      );
+      expect(codes).toContain("QFAI-REVIEW-005");
+    }
+  });
+});
+
+describe("validateReviewArtifacts — a target the pack's own path contradicts", () => {
+  const sddSliceScope = (root: string) => ({
+    specScope: new Set(["0001"]),
+    specsRoot: path.join(root, ".qfai", "specs"),
+    discussionRoot: path.join(root, ".qfai", "discussion"),
+    producers: new Set(["sdd"]),
+  });
+
+  async function seedPack(root: string, target: Record<string, unknown>): Promise<void> {
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify(makeV2Summary({ target }), null, 2),
+      "utf-8",
+    );
+  }
+
+  it("does not let a foreign kind buy a spec pack out of the spec gate", async () => {
+    const root = await newTempDir();
+    // `kind` says discussion, `path` says spec-0001. Honouring the kind let the
+    // pack skip `--profile sdd --spec 0001` — the hard gate its own path puts
+    // it in — while the schema check saw two individually valid fields.
+    await seedPack(root, { kind: "discussion", path: ".qfai/specs/spec-0001" });
+
+    const codes = (await validateReviewArtifacts(root, sddSliceScope(root))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).toContain("QFAI-REVIEW-005");
+  });
+
+  it("reports the contradiction rather than re-filing the pack in silence", async () => {
+    const root = await newTempDir();
+    await seedPack(root, { kind: "discussion", path: ".qfai/specs/spec-0001" });
+
+    const schema = (await validateReviewArtifacts(root, sddSliceScope(root))).filter(
+      (entry) => entry.code === "QFAI-REVIEW-007",
+    );
+    expect(schema).toHaveLength(1);
+    expect(schema[0]?.message).toContain("target.kind");
+    expect(schema[0]?.message).toContain(".qfai/specs/spec-0001");
+  });
+
+  it("reports a producer its own path contradicts", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
+    await writeFile(path.join(packDir, "R01_completion-reviewer.md"), "# R01\n", "utf-8");
+    await writeFile(
+      path.join(packDir, "summary.json"),
+      JSON.stringify(
+        makeV2Summary({
+          producer: "discussion",
+          target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+        }),
+        null,
+        2,
+      ),
+      "utf-8",
+    );
+
+    const schema = (await validateReviewArtifacts(root, sddSliceScope(root))).filter(
+      (entry) => entry.code === "QFAI-REVIEW-007",
+    );
+    expect(schema[0]?.message).toContain("`producer` (discussion)");
+  });
+
+  // Over-correction pins: a target that agrees with its path, and one that
+  // names neither root, are both clean.
+  it("accepts a target that agrees with its path", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({
+        producer: "sdd",
+        target: { kind: "spec", path: ".qfai/specs/spec-0001" },
+      }),
+    );
+
+    const issues = await validateReviewArtifacts(root, sddSliceScope(root));
+    expect(issues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+  });
+
+  it("says nothing about a target outside both configured roots", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    // What an implementation pack points at: a source file, under neither
+    // `specsDir` nor `discussionDir`, so the path proves nothing to contradict.
+    await writeReviewPack(
+      root,
+      "review-20260401000000000",
+      makeV2Summary({ producer: "implement", target: { kind: "spec", path: "src/core/x.ts" } }),
+    );
+
+    const issues = await validateReviewArtifacts(root, {
+      specScope: undefined,
+      specsRoot: path.join(root, ".qfai", "specs"),
+      discussionRoot: path.join(root, ".qfai", "discussion"),
+    });
+    expect(issues.filter((entry) => entry.severity === "error")).toHaveLength(0);
+  });
+});
+
+describe("validateReviewArtifacts — a scoped full run keeps repo-level packs", () => {
+  const scopedFullScan = (root: string) => ({
+    specScope: new Set(["0001"]),
+    specsRoot: path.join(root, ".qfai", "specs"),
+    discussionRoot: path.join(root, ".qfai", "discussion"),
+  });
+
+  it("judges a discussion pack that no spec could own", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "review_request.md"),
+      "# Review Request\n\n- target: `.qfai/discussion/discussion-20260401000000000`\n",
+      "utf-8",
+    );
+
+    // A discussion target yields no spec number by construction, so narrowing
+    // by spec alone dropped every discussion pack — hard errors included — from
+    // a scoped full scan, against the scope contract that keeps repo-level
+    // findings in every slice.
+    const codes = (await validateReviewArtifacts(root, scopedFullScan(root))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).toContain("QFAI-REVIEW-004");
+    expect(codes).toContain("QFAI-REVIEW-005");
+  });
+
+  // Over-correction pin: the sibling-spec isolation the scope exists for.
+  it("still drops a sibling spec's pack", async () => {
+    const root = await newTempDir();
+    await scaffoldRoot(root);
+    const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "review_request.md"),
+      "# Review Request\n\n- target: `.qfai/specs/spec-0002`\n",
+      "utf-8",
+    );
+
+    const codes = (await validateReviewArtifacts(root, scopedFullScan(root))).map(
+      (entry) => entry.code,
+    );
+    expect(codes).not.toContain("QFAI-REVIEW-004");
   });
 });

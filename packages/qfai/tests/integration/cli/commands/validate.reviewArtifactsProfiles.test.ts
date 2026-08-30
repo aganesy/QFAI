@@ -164,23 +164,24 @@ describe("a --spec slice gate does not import a sibling worker's in-flight pack"
 });
 
 describe("each stage profile gates only the review packs it owns", () => {
-  async function seedPack(root: string, targetKind: string): Promise<void> {
+  async function seedPack(root: string, summary: Record<string, unknown>): Promise<void> {
     await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
     const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
     await mkdir(packDir, { recursive: true });
     await writeFile(path.join(packDir, "review_request.md"), "# Review Request\n", "utf-8");
-    await writeFile(
-      path.join(packDir, "summary.json"),
-      JSON.stringify({ version: "2.0", target: { kind: targetKind, path: "x" } }, null, 2),
-      "utf-8",
-    );
+    await writeFile(path.join(packDir, "summary.json"), JSON.stringify(summary, null, 2), "utf-8");
   }
+
+  const packOf = (targetKind: string, producer?: string): Record<string, unknown> =>
+    producer === undefined
+      ? { version: "2.0", target: { kind: targetKind, path: "x" } }
+      : { version: "2.0", producer, target: { kind: targetKind, path: "x" } };
 
   it("keeps an incomplete spec pack out of the discussion gate and in the sdd one", async () => {
     await withoutCiEnv(async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-"));
       try {
-        await seedPack(root, "spec");
+        await seedPack(root, packOf("spec"));
 
         await runValidate({ root, strict: false, profile: "discussion" });
         expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-REVIEW-005");
@@ -197,7 +198,7 @@ describe("each stage profile gates only the review packs it owns", () => {
     await withoutCiEnv(async () => {
       const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-"));
       try {
-        await seedPack(root, "discussion");
+        await seedPack(root, packOf("discussion"));
 
         await runValidate({ root, strict: false, profile: "sdd" });
         expect((await findings(root)).map((entry) => entry.code)).not.toContain("QFAI-REVIEW-005");
@@ -210,13 +211,88 @@ describe("each stage profile gates only the review packs it owns", () => {
     });
   });
 
+  // `qfai-implement` writes `target.kind: "spec"` for its own packs, so kind
+  // alone put a downstream worker's in-flight pack in the SDD cycle's gate.
+  it("keeps an implementation pack out of both stage gates and in the full scan", async () => {
+    await withoutCiEnv(async () => {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-producer-"));
+      try {
+        await seedPack(root, packOf("spec", "implement"));
+
+        for (const profile of ["sdd", "discussion"] as const) {
+          await runValidate({ root, strict: false, profile });
+          expect((await findings(root)).map((entry) => entry.code)).not.toContain(
+            "QFAI-REVIEW-005",
+          );
+        }
+
+        await runValidate({ root, strict: false });
+        expect((await findings(root)).map((entry) => entry.code)).toContain("QFAI-REVIEW-005");
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    });
+  });
+
   it("the full scan still judges both", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-kind-full-"));
     try {
-      await seedPack(root, "spec");
+      await seedPack(root, packOf("spec"));
       await runValidate({ root, strict: false });
       const all = await findings(root);
       expect(all.filter((entry) => entry.code === "QFAI-REVIEW-005")).toHaveLength(1);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not let a foreign target.kind dodge the spec slice's gate", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-contradiction-"));
+    try {
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      // `kind` says discussion, `path` says spec-0001: the pack's own path puts
+      // it in this gate, so the kind must not buy it out.
+      await seedPack(root, {
+        version: "2.0",
+        target: { kind: "discussion", path: ".qfai/specs/spec-0001" },
+      });
+
+      await runValidate({ root, strict: false, profile: "sdd", specIds: ["0001"] });
+      const body = JSON.parse(
+        await readFile(path.join(root, ".qfai", "report", "validate.spec-0001.json"), "utf-8"),
+      ) as { issues: Finding[] };
+      const codes = body.issues.map((entry) => entry.code);
+      expect(codes).toContain("QFAI-REVIEW-005");
+      expect(codes).toContain("QFAI-REVIEW-007");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+});
+
+describe("a scoped full run keeps the packs no spec owns", () => {
+  it("still reports a discussion pack under --spec", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-review-scoped-full-"));
+    try {
+      await writeFile(path.join(root, ".gitignore"), QFAI_GITIGNORE_BLOCK, "utf-8");
+      await mkdir(path.join(root, ".qfai", "specs", "spec-0001"), { recursive: true });
+      const packDir = path.join(root, ".qfai", "review", "review-20260401000000000");
+      await mkdir(packDir, { recursive: true });
+      await writeFile(
+        path.join(packDir, "review_request.md"),
+        "# Review Request\n\n- Producer: `discussion`\n- target: `.qfai/discussion/discussion-20260401000000000`\n",
+        "utf-8",
+      );
+
+      await runValidate({ root, strict: false, specIds: ["0001"] });
+      const body = JSON.parse(
+        await readFile(path.join(root, ".qfai", "report", "validate.spec-0001.json"), "utf-8"),
+      ) as { issues: Finding[] };
+      const codes = body.issues.map((entry) => entry.code);
+      // A discussion pack belongs to no spec, so narrowing by spec number alone
+      // dropped it — and its hard errors — from every scoped full scan.
+      expect(codes).toContain("QFAI-REVIEW-004");
+      expect(codes).toContain("QFAI-REVIEW-005");
     } finally {
       await rm(root, { recursive: true, force: true });
     }

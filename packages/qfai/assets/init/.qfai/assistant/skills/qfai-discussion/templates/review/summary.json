@@ -3,6 +3,7 @@
   "revision_form": "content-hash",
   "revision": "<git rev, or working-tree+<content hash>>",
   "created_at": "YYYY-MM-DDThh:mm:ssZ",
+  "producer": "discussion",
   "target": {
     "kind": "discussion",
     "path": ".qfai/discussion/discussion-YYYYMMDDhhmmssSSS"

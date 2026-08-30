@@ -26,8 +26,8 @@ import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
 import {
-  DISCUSSION_PACK_KINDS,
-  SPEC_PACK_KINDS,
+  DISCUSSION_PACK_PRODUCERS,
+  SDD_PACK_PRODUCERS,
   validateReviewArtifacts,
   type ReviewArtifactsScope,
 } from "./validators/reviewArtifacts.js";
@@ -354,7 +354,7 @@ async function runDiscussionValidators(
   // Which review packs this run owns. The discussion profile is the gate for
   // its own cycle only; `full` composes this runner and passes `"all"` so the
   // repo-wide scan keeps judging every pack.
-  reviewPackKinds: ReviewPackKinds = DISCUSSION_PACK_KINDS,
+  reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
     ...(await validateDiscussionMermaid(root)),
@@ -368,13 +368,13 @@ async function runDiscussionValidators(
     // artifacts it prescribes, so an incomplete pack passed the gate silently.
     ...(await validateReviewArtifacts(
       root,
-      reviewArtifactsScope(root, config, specScope, reviewPackKinds),
+      reviewArtifactsScope(root, config, specScope, reviewPackProducers),
     )),
   ];
 }
 
 /** Which review packs a profile is the gate for, or `"all"` for a full scan. */
-type ReviewPackKinds = ReadonlySet<string> | "all";
+type ReviewPackProducers = ReadonlySet<string> | "all";
 
 /**
  * Scope handed to `validateReviewArtifacts`.
@@ -382,21 +382,23 @@ type ReviewPackKinds = ReadonlySet<string> | "all";
  * Two narrowings, both so that one owner's in-flight pack cannot fail another
  * owner's gate. A review-pack finding names no spec, so `isFindingInSpecScope`
  * keeps it in every `--spec` run — the validator narrows itself instead, by the
- * target each pack records. And `sdd` / `discussion` are each the hard gate for
- * their own review cycle, so each judges only the `target.kind` it owns; a pack
- * that names no owner at all is still judged by both, since no one else would.
+ * target each pack records (a discussion pack, which no spec owns, stays in:
+ * the scope contract keeps repo-level findings in every slice). And `sdd` /
+ * `discussion` are each the hard gate for their own review cycle, so each
+ * judges only the packs their own stage produced; a pack that names no owner at
+ * all is still judged by both, since no one else would.
  */
 function reviewArtifactsScope(
   root: string,
   config: ConfigLoadResult["config"],
   specScope: SpecScope | undefined,
-  reviewPackKinds: ReviewPackKinds,
+  reviewPackProducers: ReviewPackProducers,
 ): ReviewArtifactsScope {
   return {
     specScope,
     specsRoot: resolvePath(root, config, "specsDir"),
     discussionRoot: resolvePath(root, config, "discussionDir"),
-    targetKinds: reviewPackKinds === "all" ? undefined : reviewPackKinds,
+    producers: reviewPackProducers === "all" ? undefined : reviewPackProducers,
   };
 }
 
@@ -461,7 +463,7 @@ async function runSddValidators(
     ...(includeReviewArtifacts
       ? await validateReviewArtifacts(
           root,
-          reviewArtifactsScope(root, config, specScope, SPEC_PACK_KINDS),
+          reviewArtifactsScope(root, config, specScope, SDD_PACK_PRODUCERS),
         )
       : []),
   ];

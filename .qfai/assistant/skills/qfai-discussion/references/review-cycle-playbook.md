@@ -18,10 +18,16 @@ Use this file for detailed review-pack handling in `/qfai-discussion`.
 
 ## summary.json
 
-- `target.kind` must be `"discussion"`. It is also what makes this stage's gate yours: that gate
-  judges `target.kind: "discussion"` packs only, so an SDD worker's in-flight spec pack never fails
-  a discussion cycle. A pack that declares no target at all is judged by both stages, since no other
-  gate would see it.
+- `target.kind` must be `"discussion"` and `target.path` must be the discussion pack it names — a
+  `kind` the path contradicts raises `QFAI-REVIEW-007` and is ignored when deciding which gate the
+  pack faces.
+- `producer` must be `"discussion"`, and `review_request.md` carries a matching
+  `Producer: discussion` line so the pack is placed before `summary.json` exists. That is what
+  makes this stage's gate yours: it judges `producer: "discussion"` packs only, so neither an SDD
+  worker's in-flight spec pack nor an implementation one ever fails a discussion cycle. A pack that
+  declares no owner at all is judged by both stages, since no other gate would see it.
+- A discussion pack belongs to no spec, so a `--spec` run keeps it: it is a repo-level finding, and
+  those stay in every slice.
 - `revision_form: "content-hash"` and `revision` are written here too — the state these verdicts
   describe, as a git rev or `working-tree+<content hash>`
   (`../../qfai-implement/references/evidence-revision.md`). A pack without them raises
