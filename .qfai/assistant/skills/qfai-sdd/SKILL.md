@@ -249,7 +249,12 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
 6. `05_Examples.md` must include `EX-ID` and `BR-Ref` mappings.
 7. `06_Test-Cases.md` must include `TC-ID`, `Level`, `EX-Ref`, `AC-Refs`, and `Type`, with normal-path plus error/boundary coverage. `Level` gates `TDDLIST_TC_NOT_COVERED` at `error`, so it is required, not optional.
-8. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
+8. A `TC` whose assertion reads the **content** of an upstream artifact — a decision record in
+   `07_Decisions.md`, a contract, another spec file — must not be written before that artifact
+   exists. `/qfai-implement` may not write upstream SSOT, so a row routed to it first has no
+   lawful move, and the agent that meets it must choose between three prohibited things. Produce
+   the artifact in this stage, or do not write the case yet.
+9. Stop only when `npx qfai validate --profile sdd --fail-on error --format github` exits with `error=0`.
 
 ## Required Process
 
