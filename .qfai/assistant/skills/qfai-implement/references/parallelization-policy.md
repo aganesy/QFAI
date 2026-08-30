@@ -209,12 +209,24 @@ unchanged. Two consequences are specific to dispatch:
     it: its observation is the mutation run that Phase Red step 3c reverts. An
     `observed-red` row has no such field, so requiring it there sends back a row
     that is already complete.
-  - `Oracle proof` is a production mutation run, and the orchestrator may not
-    write code, so it cannot be re-taken from the trunk once the slice's
-    worktree is gone. The exception is the same one the contract states: a row
-    on the _RED not observable_ path satisfies `Oracle proof` with its
-    falsifiability fields, so no separate entry is owed there
-    (`oracle-strength.md`).
+  - A row whose proof was re-taken after a **test-only replacement** returns
+    `Replacement proof revision` too — _beside_ its `RED revision`, not instead
+    of it. It names the temporary tree the replacement test's mutation proof ran
+    against, which is why the contract gives it a field of its own rather than
+    letting it overwrite the original RED's address
+    (`../SKILL.md#per-item-evidence-contract-fresh-evidence-required`). That
+    tree is no more reconstructible from the merged trunk than the other two,
+    so a rework row is un-recoverable in the same way — and only a rework row
+    is: a row with no replacement owes nothing here.
+
+  `Oracle proof` is **not** in this class, though the orchestrator cannot
+  produce it alone either, since it may not write code. The contract gives it no
+  revision field of its own, so it rides the row's final `Revision` together
+  with the GREEN and the two reviews, and step 2 below re-takes it on the
+  integrated tree by **re-delegating** the mutation. The one row that owes no
+  separate entry is the one the contract already exempts: a row on the _RED not
+  observable_ path satisfies `Oracle proof` with its falsifiability fields
+  (`oracle-strength.md`).
 
   A block missing the field **its own branch** requires goes back to the worker
   that produced it, not to the orchestrator's recovery path — and that return
@@ -228,32 +240,70 @@ merged row can never reach `done`:
 
 1. **Before the merge, and before any slice worktree is removed**, the
    orchestrator validates every returned block against the field list the row's
-   own branch selects. A short block goes back to its worker **there**, while
-   the tree its missing field names still stands. Afterwards no one can re-take
-   `RED revision`, `Falsifiability revision` or `Oracle proof`: the tree each
-   named is not reconstructible from the trunk, and the orchestrator may not
-   write code. So an incomplete block blocks the **merge**, which is
-   recoverable, rather than the row, which by then is not.
+   own branch selects — including `Replacement proof revision` where the row
+   took a test-only replacement. A short block goes back to its worker
+   **there**, while the tree its missing field names still stands. Afterwards no
+   one can re-take `RED revision`, `Falsifiability revision` or
+   `Replacement proof revision`: the tree each named is not reconstructible from
+   the trunk, and the orchestrator may not write code. So an incomplete block
+   blocks the **merge**, which is recoverable, rather than the row, which by
+   then is not.
 2. **After the merge**, the trunk is a different revision from every slice
-   worktree — the sibling slices landed in it. The fields that must name the
-   state the item finally landed at are therefore stale on arrival however
-   complete the block is: the GREEN `Revision`, each reviewer's
-   `Reviewed revision` and `Audited evidence hash`, and the `Review pack seal`.
-   Gate item 10 requires items 5, 7 and 8 to agree on one revision, so applying
-   the worker's payload verbatim leaves every merged row unable to reach `done`
+   worktree — the sibling slices landed in it. Every field that must name the
+   state the item finally landed at is therefore stale on arrival however
+   complete the block is: the GREEN `Revision` and the `Oracle proof` bound to
+   it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the
+   `Round N: Review pack` and its `Round N: Review pack seal`, and all three
+   checkpoint verification fields. Gate item 10 requires items 5, 7 and 8 to
+   agree on one revision, so applying the worker's payload verbatim leaves every
+   merged row unable to reach `done`
    (`evidence-revision.md#what-makes-evidence-stale`). **Re-take those
-   observations on the integrated tree** — re-run the GREEN and dispatch both
-   reviewers against the merged trunk — and write the refreshed values into the
-   row. That is a re-observation, not new code, so it stays inside the
+   observations on the integrated tree** and write the refreshed values into the
+   row:
+   - **The GREEN and the `Oracle proof` together.** Item 5 is one observation of
+     one tree, and `Oracle proof` has no revision field of its own, so keeping
+     the slice's mutation result beside a re-run GREEN either backdates it to a
+     tree the row never landed at or leaves item 5 stale. Re-delegate the
+     mutation and its immediate revert to the implementation agent in the
+     integrated worktree, and have `qa-gatekeeper` confirm both. A _RED not
+     observable_ row owes nothing here: its falsifiability fields already
+     satisfy item 5, and those are step 1's to preserve.
+   - **Both reviewers, and the pack each round writes.** A re-dispatch is a new
+     review round, so it produces a new `review-<timestamp>/`
+     (`review-artifact-layout.md`). Replace `Round N: Review pack` **and**
+     `Round N: Review pack seal` as a pair: a new seal under the old path makes
+     gate item 10 recompute over a different directory and mismatch, and the old
+     seal under the new path leaves the fresh verdict unprotected
+     (`evidence-revision.md`).
+   - **The checkpoint verification, re-run.** Its seal is an audit hash over the
+     recorded command and result _together with_ the `Revision` the checkpoint
+     ran against, so refreshing `Revision` alone breaks the seal, and refreshing
+     neither leaves item 12 ruling on the worker's private tree. Re-run the
+     per-item command set on the integrated tree and replace
+     `Checkpoint verification command`, `Checkpoint verification result` and
+     `Checkpoint verification seal` (`checkpoint-verification.md`).
+
+   All of it is re-observation, not new code, so it stays inside the
    orchestrator's delegation. Post-merge integration verify does not cover it:
    it rules on the merged suite, not on each row's audit trail.
 
-`RED revision`, `Falsifiability revision` and `Oracle proof` are exempt from
-step 2 and carry over unchanged — they are transient observations that name
-their own tree by design
+3. **After the last integration-verify remedy, run step 2 again — over every
+   merged item, not only the slice that was faulted.** Any remedy under
+   `#failed-integration-verify` edits code or tests, and a revision addresses
+   the whole tree, so the observations step 2 just took are stale again by the
+   rule that made the slice payloads stale. "The change was unrelated" is not an
+   exemption — whether it was unrelated is the judgement the field exists to
+   remove (`evidence-revision.md#what-makes-evidence-stale`). Order it so the
+   re-take is the **last** thing before the rows go to `done`: a verify that
+   passes first time costs one pass, and each further remedy round costs
+   another.
+
+`RED revision`, `Falsifiability revision` and `Replacement proof revision` are
+exempt from steps 2 and 3 and carry over unchanged — they are transient
+observations that name their own tree by design
 (`evidence-revision.md#a-transient-observation-names-its-own-revision`). That
-exemption is exactly why step 1 has a deadline: they are the only fields step 2
-cannot regenerate.
+exemption is exactly why step 1 has a deadline: they are the only fields the
+later steps cannot regenerate.
 
 ## Failed integration verify
 

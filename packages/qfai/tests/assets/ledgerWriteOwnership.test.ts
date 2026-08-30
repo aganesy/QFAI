@@ -136,16 +136,118 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // arrival at gate item 10 however complete the returned block is.
     const policy = await read(tree, POLICY);
     expect(policy).toContain("the trunk is a different revision from every slice worktree");
+    // Every field bound to the final `Revision` is listed, not just the GREEN
+    // and the reviewer verdicts: `Oracle proof` rides item 5's revision, the
+    // pack path travels with its seal, and the checkpoint seal hashes the
+    // revision it ran against.
     expect(policy).toContain(
-      "the GREEN `Revision`, each reviewer's `Reviewed revision` and `Audited evidence hash`, and the `Review pack seal`",
+      "the GREEN `Revision` and the `Oracle proof` bound to it, each reviewer's `Reviewed revision` and `Audited evidence hash`, the `Round N: Review pack` and its `Round N: Review pack seal`, and all three checkpoint verification fields",
     );
     expect(policy).toContain("**Re-take those observations on the integrated tree**");
     expect(policy).toContain("Post-merge integration verify does not cover it");
     // And the fields that cannot be re-taken are named as exempt, so step 1's
-    // deadline does not read as redundant with step 2.
+    // deadline does not read as redundant with step 2. `Oracle proof` is not
+    // one of them — it has no revision field of its own, so exempting it left
+    // item 5 stale on every merged row.
     expect(policy).toContain(
-      "`RED revision`, `Falsifiability revision` and `Oracle proof` are exempt from step 2",
+      "`RED revision`, `Falsifiability revision` and `Replacement proof revision` are exempt from steps 2 and 3",
     );
+    expect(policy).not.toContain("`Oracle proof` are exempt from step 2");
+  });
+
+  it("re-takes the `Oracle proof` with the GREEN, by re-delegating the mutation", async () => {
+    // `Oracle proof` has no revision field of its own, so it is bound to the
+    // same final `Revision` as the GREEN. Carrying the slice's mutation result
+    // over unchanged either backdates it to a tree the row never landed at or
+    // leaves gate item 5 stale.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("`Oracle proof` is **not** in this class");
+    expect(policy).toContain("`Oracle proof` has no revision field of its own");
+    expect(policy).toContain(
+      "Re-delegate the mutation and its immediate revert to the implementation agent in the integrated worktree, and have `qa-gatekeeper` confirm both",
+    );
+    // The one branch that owes nothing survives the change: a _RED not
+    // observable_ row satisfies item 5 with its (preserved) falsifiability
+    // fields, so demanding a fresh mutation there rejects a complete row.
+    expect(policy).toContain(
+      "A _RED not observable_ row owes nothing here: its falsifiability fields already satisfy item 5",
+    );
+  });
+
+  it("replaces the review pack path together with its seal", async () => {
+    // Each re-dispatch is a new review round and so writes a new pack. A new
+    // seal under the old path makes gate item 10 recompute over a different
+    // directory; the old seal under the new path protects nothing.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain(
+      "Replace `Round N: Review pack` **and** `Round N: Review pack seal` as a pair",
+    );
+    expect(policy).toContain("a new seal under the old path makes gate item 10 recompute over");
+  });
+
+  it("re-runs the checkpoint verification, seal included, on the merged tree", async () => {
+    // The seal hashes command + result together with the `Revision` the
+    // checkpoint ran against, so refreshing `Revision` alone breaks it and
+    // refreshing neither leaves item 12 ruling on the worker's private tree.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain("refreshing `Revision` alone breaks the seal");
+    expect(policy).toContain(
+      "replace `Checkpoint verification command`, `Checkpoint verification result` and `Checkpoint verification seal`",
+    );
+  });
+
+  it("re-takes the observations again after the last integration-verify remedy", async () => {
+    // A revision addresses the whole tree, so a remedy anywhere — inside one
+    // slice or outside every slice — re-stales the observations step 2 took,
+    // for every merged row and not only the faulted one.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain(
+      "**After the last integration-verify remedy, run step 2 again — over every merged item, not only the slice that was faulted.**",
+    );
+    expect(policy).toContain('"The change was unrelated" is not an exemption');
+    expect(policy).toContain("the re-take is the **last** thing before the rows go to `done`");
+  });
+
+  it("treats `Replacement proof revision` as un-recoverable too", async () => {
+    // A test-only replacement's proof ran against its own temporary tree, and
+    // that tree is no more reconstructible after the merge than the RED's. It
+    // must therefore be checked in step 1 and preserved, not re-taken, in
+    // step 2 — but only on the rework rows that carry one.
+    const policy = await read(tree, POLICY);
+    expect(policy).toContain(
+      "`Replacement proof revision` too — _beside_ its `RED revision`, not instead of it",
+    );
+    expect(policy).toContain("a row with no replacement owes nothing here");
+    expect(policy).toContain(
+      "own branch selects — including `Replacement proof revision` where the row took a test-only replacement",
+    );
+    expect(policy).toContain(
+      "one can re-take `RED revision`, `Falsifiability revision` or `Replacement proof revision`",
+    );
+  });
+
+  it("names only fields the contract actually defines", async () => {
+    // The policy points at the contract instead of restating it, so every
+    // field name it does spell out has to exist there — a step that says
+    // "replace `Review pack seal`" when the contract calls it
+    // `Round N: Review pack seal` sends the orchestrator after a field no row
+    // carries.
+    const policy = await read(tree, POLICY);
+    const contract = (await read(tree, SKILL)) + (await read(tree, REVISION));
+    for (const field of [
+      "Replacement proof revision",
+      "Round N: Review pack",
+      "Round N: Review pack seal",
+      "Checkpoint verification command",
+      "Checkpoint verification result",
+      "Checkpoint verification seal",
+      "Audited evidence hash",
+      "Reviewed revision",
+      "Oracle proof",
+    ]) {
+      expect(policy, `${field} is named by the policy`).toContain(`\`${field}\``);
+      expect(contract, `${field} is defined by the contract`).toContain(`\`${field}\``);
+    }
   });
 
   it("cites anchors that resolve to real `evidence-revision.md` headings", async () => {
