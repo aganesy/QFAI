@@ -605,19 +605,66 @@ async function readTestFileContent(root: string, testFile: string): Promise<stri
  * would silently swallow.
  */
 function selectorResolves(selector: string, content: string): boolean {
-  const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
-  if (trimmed.length === 0) {
+  const withoutPath = normalizeSelector(selector);
+  if (withoutPath === null) {
     return false;
   }
-  const withoutPath = trimmed.includes("::")
-    ? trimmed.split("::").slice(1).join("::").trim() || trimmed
-    : trimmed;
   if (withoutPath.length >= 3 && content.includes(withoutPath)) {
     return true;
   }
   const tokens = withoutPath.match(/[A-Za-z_][A-Za-z0-9_]{2,}/g);
   const last = tokens?.[tokens.length - 1];
   return last !== undefined && content.includes(last);
+}
+
+/** The selector reduced to what both checks compare: quotes off, `path::` prefix off. */
+function normalizeSelector(selector: string): string | null {
+  const trimmed = selector.replace(/^[`"']+|[`"']+$/g, "").trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+  return trimmed.includes("::")
+    ? trimmed.split("::").slice(1).join("::").trim() || trimmed
+    : trimmed;
+}
+
+/**
+ * The same containment check WITHOUT the last-identifier fallback.
+ *
+ * `CR-20260818-0001`, approved 2026-08-23, option A. `selectorResolves` is deliberately lenient
+ * because its other consumer treats a match as evidence *for* a test's presence, where a false
+ * negative costs a warning and a false positive would swallow one. `TDDLIST_STALE_STATUS` reads it
+ * in the opposite direction — a match is evidence the row's `todo` is STALE — so the same leniency
+ * inverts: the last identifier of "renders the header" is `header`, which appears in almost any test
+ * file, and the rule fires on rows whose test genuinely does not exist.
+ *
+ * A rule whose entire value is being trusted cannot afford that. The carve-out is here rather than in
+ * `selectorResolves` so the other consumer keeps the leniency `drift-protocol.md` chose on purpose,
+ * and the trade is stated: a row whose test exists under a slightly reworded title stops being
+ * reported as stale — a false negative replacing a false positive, on a `warning` with no error-level
+ * consequence.
+ *
+ * **Each `::` segment is required separately, not the joined string**, and that is a deliberate
+ * departure from the option's literal wording ("verbatim containment of the selector"). A pytest
+ * selector normalises to `TestX::test_reconcile_head`, and no Python file contains that text — the
+ * class and the method are on different lines. Requiring the joined form turned a shape the suite
+ * already covers into a false negative, which is the same defect this is repairing, pointed the other
+ * way. Requiring every segment keeps the strictness where it matters: a one-segment selector like
+ * `validates the header` must still appear in full, so the `header` fallback stays dead.
+ */
+function selectorResolvesVerbatim(selector: string, content: string): boolean {
+  const withoutPath = normalizeSelector(selector);
+  if (withoutPath === null) {
+    return false;
+  }
+  const segments = withoutPath
+    .split("::")
+    .map((segment) => segment.trim())
+    .filter((segment) => segment.length > 0);
+  if (segments.length === 0) {
+    return false;
+  }
+  return segments.every((segment) => segment.length >= 3 && content.includes(segment));
 }
 
 /** Repo-relative, posix-slashed path used for the `file` field of an issue. */
@@ -1401,7 +1448,7 @@ async function validateSpecTddList(
     const testFileContent = await readTestFileContent(root, cell(ref, "Test file"));
     if (testFileContent === null) continue;
     const selector = cell(ref, "Selector");
-    if (!selectorResolves(selector, testFileContent)) continue;
+    if (!selectorResolvesVerbatim(selector, testFileContent)) continue;
     issues.push(
       issue(
         "TDDLIST_STALE_STATUS",
