@@ -11,7 +11,7 @@
  */
 
 import { execFile as execFileCb } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -25,6 +25,7 @@ import {
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
 } from "../../src/core/gitignore.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFile = promisify(execFileCb);
 
@@ -45,7 +46,10 @@ async function withGitignore(
     await writeFile(path.join(root, ".gitignore"), content, "utf-8");
     assertion(await validateReviewArtifacts(root));
   } finally {
-    await rm(root, { recursive: true, force: true });
+    // `validateReviewArtifacts` spawns synchronous `git` processes, so the tree
+    // may still be held when it returns; `removeTempTree` is the one copy of
+    // that rule.
+    await removeTempTree(root);
   }
 }
 
@@ -102,7 +106,7 @@ describe("git honours the entry the block writes", () => {
       // swallowed — Article XI only claims the repository root.
       expect(await isIgnored(root, "src/tmp/fixture.ts")).toBe(false);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 });
