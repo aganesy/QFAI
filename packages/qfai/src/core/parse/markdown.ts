@@ -7,7 +7,13 @@ export type H2Section = {
   body: string;
 };
 
-const HEADING_RE = /^(#{1,6})\s+(.+?)\s*$/;
+/**
+ * ATX heading, with the up-to-three leading spaces CommonMark allows. A
+ * document that indents a heading — the third space is still a heading, the
+ * fourth makes it an indented code block — was read as ordinary prose, so a
+ * required-heading gate reported a section the author had written as missing.
+ */
+const HEADING_RE = /^ {0,3}(#{1,6})\s+(.+?)\s*$/;
 
 export function parseHeadings(md: string): Heading[] {
   const lines = md.split(/\r?\n/);

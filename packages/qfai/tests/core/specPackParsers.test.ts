@@ -79,12 +79,36 @@ describe("maskNonSpecRegions", () => {
 
   it("leaves a blank-line-terminated HTML block's Markdown alone", () => {
     // `<div>` is not a type-1 block: the blank line ends it and Markdown
-    // resumes, so blanking `## Scope` here would hide a real heading.
-    expect(visible(["<div>", "", "## Scope", "", "</div>"].join("\n"))).toEqual([
-      "<div>",
+    // resumes, so blanking `## Scope` here would hide a real heading. The tag
+    // lines are one-line type-6 blocks in their own right and are raw HTML, so
+    // they are blanked — what must survive is the heading between them.
+    expect(visible(["<div>", "", "## Scope", "", "</div>"].join("\n"))).toEqual(["## Scope"]);
+  });
+
+  it("masks a type-6 HTML block up to its terminating blank line", () => {
+    // Type 1 covers only `<pre>`, `<script>`, `<style>` and `<textarea>`.
+    // `<div>` and the rest run to the next blank line, and until then their
+    // contents are just as raw: a `## Risks` with no blank line above it is
+    // markup, not a section, and counting it satisfied a required-heading gate
+    // with a heading the author never wrote.
+    expect(visible(["<div>", "## Risks", "</div>", "", "## Scope"].join("\n"))).toEqual([
       "## Scope",
-      "</div>",
     ]);
+  });
+
+  it("resumes Markdown after the blank line that ends a type-6 block", () => {
+    expect(visible(["<table>", "| a |", "", "## Risks"].join("\n"))).toEqual(["## Risks"]);
+  });
+
+  it("does not open a type-6 block on prose that merely mentions the tag", () => {
+    expect(visible(["A `<div>` wrapper is fine.", "## Scope"].join("\n"))).toEqual([
+      "A `<div>` wrapper is fine.",
+      "## Scope",
+    ]);
+  });
+
+  it("reads a type-6 tag inside a fenced sample as sample text", () => {
+    expect(visible(["```html", "<div>", "```", "## Scope"].join("\n"))).toEqual(["## Scope"]);
   });
 
   it("does not open a raw HTML block on prose that merely mentions the tag", () => {

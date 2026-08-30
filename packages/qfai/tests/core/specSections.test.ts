@@ -226,6 +226,53 @@ describe("validateSpecSections", () => {
     });
   });
 
+  // CommonMark allows up to three spaces before the `#`; the fourth makes it an
+  // indented code block. A spec that indents a heading had it read as prose, so
+  // the gate reported a section the author had written as missing.
+  it("accepts a heading indented by up to three spaces", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n   ## Scope\n\nBody.\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["Scope"]));
+
+      expect(issues).toEqual([]);
+    });
+  });
+
+  it("still rejects a heading indented into a code block", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n    ## Scope\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["Scope"]));
+
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-SPECSECTION-001"]);
+    });
+  });
+
+  // Masking covered only the type-1 blocks (`<pre>` and friends). `<div>`,
+  // `<table>` and the rest end at a blank line, and until they do their
+  // contents are raw HTML — so a `## Scope` inside one is markup, not a
+  // section, and counting it satisfied the gate with a heading nobody wrote.
+  it("does not count a heading inside a blank-line-terminated HTML block", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n<div>\n## Scope\n</div>\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["Scope"]));
+
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-SPECSECTION-001"]);
+    });
+  });
+
+  it("counts a heading that follows the blank line ending such a block", async () => {
+    await withProject(async (root, specsRoot) => {
+      await seedSpec(specsRoot, "0001", "# spec-0001\n\n<div>\nraw\n\n## Scope\n\nBody.\n");
+
+      const issues = await validateSpecSections(root, configRequiring(["Scope"]));
+
+      expect(issues).toEqual([]);
+    });
+  });
+
   it("surfaces the finding through the sdd profile", async () => {
     await withProject(async (root, specsRoot) => {
       await seedSpec(specsRoot, "0001", "# spec-0001\n");
