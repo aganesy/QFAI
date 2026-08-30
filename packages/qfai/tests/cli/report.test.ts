@@ -500,6 +500,59 @@ describe("report exit code", { timeout: 15000 }, () => {
       /validate\.json の形式が不正です/,
     );
   });
+
+  it("rejects an input whose suppressed flag is not a boolean", async () => {
+    // `countIssues` tests `suppressed` for truthiness, so the string "false"
+    // suppresses. An error carrying one drops out of the recount and takes the
+    // gate's only reason to fail with it — a bypass spelled in the very field
+    // that is supposed to be an explicit, auditable decision.
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    const bogus = {
+      code: "QFAI-SEED-ERROR",
+      severity: "error",
+      category: "canonical",
+      message: "should gate",
+      suppressed: "false",
+    };
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [bogus] }, null, 2)}\n`,
+      "utf-8",
+    );
+
+    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
+      /validate\.json の形式が不正です/,
+    );
+  });
+
+  it("keeps an honest boolean suppression working", async () => {
+    // The rejection above must not cost the field its actual purpose: a real
+    // `suppressed: true` still keeps its issue out of the gate.
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    const issue = (suppressed: boolean): Record<string, unknown> => ({
+      code: "QFAI-SEED-ERROR",
+      severity: "error",
+      category: "canonical",
+      message: "waived",
+      suppressed,
+    });
+
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [issue(true)] }, null, 2)}\n`,
+      "utf-8",
+    );
+    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
+
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [issue(false)] }, null, 2)}\n`,
+      "utf-8",
+    );
+    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
+  });
 });
 
 describe("report --run-validate shares the validate migration gate", { timeout: 30000 }, () => {

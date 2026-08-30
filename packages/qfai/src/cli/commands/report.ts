@@ -199,12 +199,27 @@ function reconcileCounts(result: ValidationResult, inputPath: string): Validatio
   return { ...result, counts: recounted };
 }
 
-function hasKnownSeverity(issue: unknown): boolean {
+/**
+ * The two fields the recount reads off an `--in` issue.
+ *
+ * `severity` picks the bucket, and `suppressed` decides whether the issue is
+ * counted at all. `countIssues` tests `suppressed` for truthiness, so a
+ * hand-written or externally generated `"suppressed": "false"` is a
+ * *suppression* — an error carrying one drops out of the recount and takes the
+ * gate's only reason to fail with it, on the very input the gate was just
+ * taught to trust. Neither field may arrive as anything but what its type
+ * allows: `severity` one of the three names, `suppressed` absent or a boolean.
+ */
+function isGateReadableIssue(issue: unknown): boolean {
   if (!issue || typeof issue !== "object") {
     return false;
   }
   const severity: unknown = Reflect.get(issue, "severity");
-  return severity === "info" || severity === "warning" || severity === "error";
+  if (severity !== "info" && severity !== "warning" && severity !== "error") {
+    return false;
+  }
+  const suppressed: unknown = Reflect.get(issue, "suppressed");
+  return suppressed === undefined || typeof suppressed === "boolean";
 }
 
 function isValidationResult(value: unknown): value is ValidationResult {
@@ -229,9 +244,10 @@ function isValidationResult(value: unknown): value is ValidationResult {
   ) {
     return false;
   }
-  // `severity` is load-bearing: the gate counts by it, so an unknown value
-  // would silently drop out of the recount instead of failing loudly.
-  if (!Array.isArray(record.issues) || !record.issues.every(hasKnownSeverity)) {
+  // `severity` and `suppressed` are load-bearing: the gate counts by the first
+  // and skips on the second, so a value of the wrong type would silently drop
+  // out of the recount instead of failing loudly.
+  if (!Array.isArray(record.issues) || !record.issues.every(isGateReadableIssue)) {
     return false;
   }
   const counts = record.counts as Record<string, unknown> | undefined;
