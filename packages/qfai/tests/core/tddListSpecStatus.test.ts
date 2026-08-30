@@ -141,6 +141,35 @@ describe("ledger findings follow the spec's lifecycle Status", () => {
     );
   });
 
+  it("ignores a nested bullet quoting a retirement", async () => {
+    // Inside the header block, indented under `- Notes:`, so neither the
+    // `## heading` boundary nor `maskNonSpecRegions` removes it — list
+    // continuations are kept on purpose. Read as this spec's metadata it
+    // retires it; read as what it is, a child bullet, it says nothing.
+    await withSpecStatus(
+      ["- Notes:", "    - Status: deprecated", "    - Deprecated-at: 2026-01-01"],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
+  it("takes the top-level Status when a nested one precedes it", async () => {
+    // The nested declaration is complete and comes first, so a first-match
+    // extraction adopts it and the real `- Status: active` below never runs.
+    await withSpecStatus(
+      [
+        "- Notes:",
+        "    - Status: superseded",
+        "    - Superseded-by: spec-0002",
+        "- Status: active",
+      ],
+      (issues) => {
+        expect(severityOf(issues, "TDDLIST_EVIDENCE_EMPTY")).toBe("error");
+      },
+    );
+  });
+
   it("does not retire a spec whose retirement declaration is incomplete", async () => {
     // `--profile tdd` never runs `validateSpecPacks`, so a `superseded` bullet
     // with no `Superseded-by` would demote the whole ledger with nothing

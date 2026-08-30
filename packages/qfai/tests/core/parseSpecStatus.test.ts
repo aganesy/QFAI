@@ -40,8 +40,32 @@ describe("extractBulletField", () => {
   });
 
   it("still reads a value written on the bullet's own line", () => {
-    expect(extractBulletField("  -  Status  :  superseded  \n", "Status")).toBe("superseded");
+    expect(extractBulletField("-  Status  :  superseded  \n", "Status")).toBe("superseded");
     expect(extractBulletField("- Status: active\r\n", "Status")).toBe("active");
+  });
+
+  it("ignores a nested bullet and takes the document's own metadata", () => {
+    // A quoted retirement under `- Notes:` is a child bullet, not this
+    // document's lifecycle — but read as metadata it retires the spec, and
+    // `maskNonSpecRegions` keeps list continuations on purpose, so nothing
+    // else would remove it. The real `- Status: active` below must win.
+    const md = [
+      "- Notes:",
+      "    - Status: deprecated",
+      "    - Deprecated-at: 2026-01-01",
+      "- Status: active",
+      "",
+    ].join("\n");
+    expect(extractBulletField(md, "Status")).toBe("active");
+    expect(extractBulletField(md, "Deprecated-at")).toBeUndefined();
+  });
+
+  it("fails closed when only a nested declaration exists", () => {
+    // No top-level bullet at all: the spec stays current and the missing
+    // declaration is QFAI-STATUS-001's to report, rather than an indented
+    // quotation silently retiring it.
+    const md = ["- Notes:", "    - Status: deprecated", ""].join("\n");
+    expect(extractBulletField(md, "Status")).toBeUndefined();
   });
 });
 

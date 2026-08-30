@@ -47,7 +47,7 @@ When unsure, read inputs in this order:
 
 - P1: `.qfai/assistant/constitution/*`
 - P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`
-- P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View)
+- P3: `.qfai/specs/<spec-id>/01_Spec.md` (Primary SSOT / Consumer View). **Read its lifecycle before anything else and stop on a retired spec.** A spec is retired by a **complete** declaration in that header block: a top-level `Status: superseded` whose `Superseded-by:` names a spec that exists and itself declares `Status: active`, or `Status: deprecated` / `Status: removed` with a `Deprecated-at:` that is a real calendar date — the same resolution `validate` performs. Its `test-list.md` rows below are history, not obligations: `npx qfai validate` and `npx qfai report` have already dropped them, and `/qfai-implement` refuses the handoff for a retired spec, so writing acceptance tests from them produces work nobody owes and a handoff nobody will take. Report the declared `Status:` (and, for `superseded`, its successor) and ask for a row in the inheritor's ledger instead. An **incomplete** declaration is not a retirement and does not stop this run: the ledger still gates, so proceed and report the incomplete declaration
 - P4: specs/contracts obligations
   - `.qfai/specs/<spec-id>/02_User-stories.md` (US)
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md` (AC)

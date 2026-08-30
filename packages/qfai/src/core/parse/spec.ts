@@ -90,10 +90,18 @@ const H_SPACE = "[^\\S\\r\\n]";
  * accepting it would retire the spec on a declaration no validator could
  * report. An empty or wrapped bullet therefore fails closed, leaving the spec
  * current and its missing value to `QFAI-STATUS-001`.
+ *
+ * The bullet must also start at **column 0**. These are the document's own
+ * metadata, and an indented `- Status:` is a child of the bullet above it —
+ * `- Notes:` with a quoted retirement under it says nothing about this spec's
+ * lifecycle, but read as metadata it retires the spec, and `maskNonSpecRegions`
+ * keeps list continuations on purpose so nothing else removes it. Requiring
+ * column 0 fails closed: an indented declaration is not seen, the spec stays
+ * current, and `QFAI-STATUS-001` reports the missing bullet.
  */
 export function extractBulletField(md: string, name: string): string | undefined {
   const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`^${H_SPACE}*-${H_SPACE}*${escaped}${H_SPACE}*:([^\\r\\n]*)$`, "im");
+  const re = new RegExp(`^-${H_SPACE}*${escaped}${H_SPACE}*:([^\\r\\n]*)$`, "im");
   const match = re.exec(md);
   if (match === null) {
     return undefined;

@@ -57,4 +57,39 @@ describe("qfai-implement selects rows only from an active spec", () => {
       expect(skill).toContain("Superseded-by");
     });
   }
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: retires on the resolved lifecycle, not on the raw Status bullet`, async () => {
+      // `collectSpecEntries` retires a spec only on a complete declaration: the
+      // companion field present and well-formed, and for `superseded` a
+      // successor that exists and is itself active. A skill that stopped on the
+      // bare `Status:` disagreed with the validator in the worst direction —
+      // `Status: superseded` with no `Superseded-by` still gates the ledger at
+      // full severity while the skill refuses to work it and points at a
+      // successor that does not exist.
+      const skill = unwrap(await read(tree, SKILL));
+      expect(skill).toContain("A spec is retired only by a **complete** declaration");
+      expect(skill).toContain("itself declares `Status: active`");
+      expect(skill).toContain("real calendar date");
+      expect(skill).toContain("An **incomplete** declaration retires nothing");
+      expect(skill).toContain("still gates at full severity");
+    });
+  }
+
+  for (const tree of QFAI_TREES) {
+    it(`${tree}: qfai-atdd stops on a retired spec too`, async () => {
+      // `/qfai-atdd` enumerates the ledger's E2E/API/Integration rows and writes
+      // acceptance tests for them. With no lifecycle check it does that for a
+      // retired spec — building tests for obligations `validate` and `report`
+      // have already dropped, and a handoff `/qfai-implement` now refuses.
+      const atdd = unwrap(await read(tree, "assistant/skills/qfai-atdd/SKILL.md"));
+      expect(atdd).toContain("Read its lifecycle before anything else and stop on a retired spec");
+      // Same resolution as the implement skill and the validator, not the raw bullet.
+      expect(atdd).toContain("retired by a **complete** declaration");
+      expect(atdd).toContain("itself declares `Status: active`");
+      expect(atdd).toContain("An **incomplete** declaration is not a retirement");
+      // …and the reason, so the rule is not just an assertion.
+      expect(atdd).toContain("history, not obligations");
+    });
+  }
 });

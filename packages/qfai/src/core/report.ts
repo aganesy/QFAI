@@ -385,7 +385,12 @@ export async function createReportData(
 
   const specEntries = await collectSpecEntries(specsRoot);
   const specFiles = await collectSpecFiles(specsRoot);
-  const scenarioFiles = await collectScenarioFiles(specsRoot);
+  // One active list, shared by every scenario aggregate in this report. Filtering
+  // inside `collectTestStrategy` alone left `summary.scenarios` counting a
+  // retired spec's feature that `testStrategy.totalScenarios` had already
+  // dropped — the same report stating two different scenario totals, one of
+  // them history.
+  const scenarioFiles = activeScenarioFiles(await collectScenarioFiles(specsRoot), specEntries);
   const scenarioCount = await countScenarios(scenarioFiles);
   const testStrategy = await collectTestStrategy(
     scenarioFiles,
@@ -2139,12 +2144,12 @@ async function collectLedgerLayerCounts(specsRoot: string): Promise<{
  * fallback from ever running, so the active layered specs' `Layer` columns went
  * unread as well.
  */
-async function activeScenarioFiles(
+function activeScenarioFiles(
   scenarioFiles: readonly string[],
-  specsRoot: string,
-): Promise<string[]> {
+  specEntries: readonly SpecEntry[],
+): string[] {
   const retired = new Set<string>();
-  for (const entry of await collectSpecEntries(specsRoot)) {
+  for (const entry of specEntries) {
     if (entry.status !== undefined && entry.status !== "active") {
       retired.add(path.resolve(entry.examplesPath));
     }
@@ -2184,7 +2189,7 @@ async function collectTestStrategy(
   let totalScenarios = 0;
   let e2eCount = 0;
 
-  for (const file of await activeScenarioFiles(scenarioFiles, specsRoot)) {
+  for (const file of scenarioFiles) {
     const text = await readFile(file, "utf-8");
     const { document, errors } = parseScenarioDocument(text, file);
     if (!document || errors.length > 0) {

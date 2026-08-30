@@ -136,6 +136,11 @@ describe("the layer distribution reads the artifact the templates produce", () =
         expect(data.testStrategy.totalScenarios).toBe(0);
         expect(data.testStrategy.layer.e2e).toBe(0);
         expect(data.testStrategy.layerSource).toBe("none");
+        // The headline count reads the same list. Filtering only inside
+        // `collectTestStrategy` left one report stating two scenario totals —
+        // `totalScenarios` 0 beside `summary.scenarios` 1, the second of them
+        // a retired spec's history counted as current work.
+        expect(data.summary.scenarios).toBe(0);
       },
       {
         ledger: LEDGER,
@@ -160,6 +165,7 @@ describe("the layer distribution reads the artifact the templates produce", () =
         expect(data.testStrategy.totalScenarios).toBe(1);
         expect(data.testStrategy.layer.e2e).toBe(1);
         expect(data.testStrategy.layerSource).toBe("scenario-tags");
+        expect(data.summary.scenarios).toBe(1);
       },
       {
         ledger: LEDGER,
