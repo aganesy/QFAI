@@ -6,16 +6,12 @@
  *   both defaults to `convergence`. `prototyping.json#mode` records
  *   the per-iteration mode. Under exploration `QFAI-CRIT-008` and the
  *   design-compliance error downgrade error → warning while schema /
- *   path / license (exit 66) gates stay hard error (DR-0263 medium).
+ *   path / license (exit 66) gates stay hard error (medium relaxation).
  *
  * The discriminator lives in `core/prototyping/mode.ts`
  * (`resolvePrototypingMode` + `relaxIssuesForMode`).
  */
 // QFAI:SPEC-0012:TC-0012-0475
-
-import { readFile, readdir } from "node:fs/promises";
-import path from "node:path";
-import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -26,157 +22,40 @@ import {
   resolvePrototypingMode,
 } from "../../../../src/core/prototyping/mode.js";
 import type { Issue } from "../../../../src/core/types.js";
-
-// Anchored to this file, not to `process.cwd()`: a runner launched from the
-// repo root would resolve `src/core/validators` to a path that does not exist
-// and the emitter scan below would then pass vacuously.
-// tests/unit/cli/commands/<this file> -> packages/qfai
-const packageRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  "..",
-  "..",
-  "..",
-  "..",
-);
-const validatorsRoot = path.join(packageRoot, "src", "core", "validators");
+import {
+  codesEmittedAtError,
+  collectPrototypingGateSurface,
+  reachesFunction,
+  type GateSurface,
+} from "../../../helpers/prototypingGateSurface.js";
 
 /**
- * The prototyping structural-validator family: the exact source surface
- * `EXPLORATION_HARD_ERROR_CODES` claims to enumerate. Keep in sync with the
- * JSDoc on that constant.
+ * The gate surface is derived by walking the whole validator call graph, which
+ * costs a few seconds; every assertion below reads the same snapshot.
  */
-const PROTOTYPING_FAMILY = [
-  path.join(validatorsRoot, "prototypingEvidence.ts"),
-  path.join(validatorsRoot, "prototyping"),
-];
-
-/** Shape of a rule code, used to ignore non-code string literals. */
-const RULE_CODE = /^[A-Z][A-Z0-9_]*(?:-[A-Z0-9]+)+$/;
-
-/** `const NAME = "literal";` — so `issue(FINDING_CODE, ...)` resolves too. */
-const CONST_STRING = /\bconst\s+([A-Za-z_$][\w$]*)\s*(?::[^=\n]*)?=\s*(["'])([^"'\n]*)\2\s*;/g;
-
-const SEVERITIES = new Set(["error", "warning", "info"]);
-
-/** code -> every severity it is emitted at across the scanned sources. */
-type Emissions = ReadonlyMap<string, ReadonlySet<string>>;
-
-async function walkTsFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir, { withFileTypes: true });
-  const files: string[] = [];
-  for (const entry of entries) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) {
-      files.push(...(await walkTsFiles(full)));
-    } else if (entry.name.endsWith(".ts") && !entry.name.endsWith(".d.ts")) {
-      files.push(full);
-    }
-  }
-  return files;
-}
-
-/** Expand a mixed list of `.ts` files and directories into a file list. */
-async function expandTsTargets(targets: readonly string[]): Promise<string[]> {
-  const files: string[] = [];
-  for (const target of targets) {
-    files.push(...(target.endsWith(".ts") ? [target] : await walkTsFiles(target)));
-  }
-  return files;
-}
+let cached: Promise<GateSurface> | undefined;
+const gateSurface = (): Promise<GateSurface> => (cached ??= collectPrototypingGateSurface());
 
 /**
- * Split the top-level, comma-separated arguments of the call whose `(` sits at
- * `open`. Quote/template/bracket aware, so a message containing `, "error",`
- * or a `${JSON.stringify(x)}` hole cannot be mistaken for an argument break.
+ * `issue()` call sites in the reachable graph whose code argument is computed
+ * at run time, so no static scan can attribute it. Pinned by module,
+ * expression and count: a NEW blind spot fails here instead of silently
+ * shrinking the derived gate set. The same three sites are pinned, for the
+ * same reason, by `tests/validators/ruleCodeUniqueness.test.ts`.
  */
-function splitCallArgs(source: string, open: number): string[] {
-  const args: string[] = [];
-  let current = "";
-  let depth = 0;
-  let quote: string | null = null;
-  for (let i = open; i < source.length; i += 1) {
-    const ch = source[i] ?? "";
-    if (quote !== null) {
-      current += ch;
-      if (ch === "\\") {
-        current += source[i + 1] ?? "";
-        i += 1;
-      } else if (ch === quote) {
-        quote = null;
-      }
-      continue;
-    }
-    if (ch === '"' || ch === "'" || ch === "`") {
-      quote = ch;
-      current += ch;
-    } else if (ch === "(" || ch === "[" || ch === "{") {
-      depth += 1;
-      if (depth > 1) current += ch;
-    } else if (ch === ")" || ch === "]" || ch === "}") {
-      depth -= 1;
-      if (depth === 0) {
-        args.push(current);
-        return args;
-      }
-      current += ch;
-    } else if (ch === "," && depth === 1) {
-      args.push(current);
-      current = "";
-    } else {
-      current += ch;
-    }
-  }
-  return args;
-}
+const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
+  ["core/validators/agentDefinition.ts", new Map([["code", 1]])],
+  ["core/validators/designAudit.ts", new Map([["finding.ruleId", 1]])],
+  ["core/validators/designFidelity.ts", new Map([["issueCode", 1]])],
+]);
 
-/** Resolve an argument expression to a string literal, following `const` aliases. */
-function resolveLiteral(expr: string | undefined, consts: ReadonlyMap<string, string>): string {
-  const trimmed = (expr ?? "").trim();
-  const quoted = /^(["'])([^"'\n]*)\1$/.exec(trimmed);
-  return quoted?.[2] ?? consts.get(trimmed) ?? "";
-}
-
-/** Comments blanked out, so a code merely NAMED in prose never counts as emitted. */
-function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:"'`\\])\/\/[^\n]*/gm, "$1");
-}
-
-/**
- * Every `issue(<code>, <message>, <severity>, ...)` emission in the given
- * validator sources, keyed by code. Reading the SEVERITY (not merely the
- * presence of the string) is what lets the hard-error list be checked for
- * completeness instead of for plausibility. `mode.ts` is deliberately outside
- * every scanned tree: it is the declaration under test, and letting it back its
- * own entries is exactly the vacuity this guards against.
- */
-async function collectIssueEmissions(targets: readonly string[]): Promise<Emissions> {
-  const files = await expandTsTargets(targets);
-  expect(files.length).toBeGreaterThan(0);
-  const emissions = new Map<string, Set<string>>();
-  for (const file of files) {
-    const source = stripComments(await readFile(file, "utf-8"));
-    const consts = new Map<string, string>(
-      [...source.matchAll(CONST_STRING)].map((m) => [m[1] ?? "", m[3] ?? ""]),
-    );
-    for (const call of source.matchAll(/\bissue\s*\(/g)) {
-      const args = splitCallArgs(source, call.index + call[0].length - 1);
-      const code = resolveLiteral(args[0], consts);
-      const severity = resolveLiteral(args[2], consts);
-      if (!RULE_CODE.test(code) || !SEVERITIES.has(severity)) continue;
-      const seen = emissions.get(code) ?? new Set<string>();
-      seen.add(severity);
-      emissions.set(code, seen);
-    }
-  }
-  return emissions;
-}
-
-function codesEmittedAtError(emissions: Emissions): string[] {
-  return [...emissions.entries()]
-    .filter(([, severities]) => severities.has("error"))
-    .map(([code]) => code)
-    .sort();
-}
+/** `file: expr x N, expr x N` — the count pins the number of call sites. */
+const describeSites = (sites: ReadonlyMap<string, ReadonlyMap<string, number>>): string[] =>
+  [...sites.keys()].sort().map((file) => {
+    const counts = sites.get(file) ?? new Map<string, number>();
+    const parts = [...counts.keys()].sort().map((expr) => `${expr} x ${counts.get(expr) ?? 0}`);
+    return `${file}: ${parts.join(", ")}`;
+  });
 
 describe("TC-0012-0475: prototyping mode discriminator + CLI override", () => {
   it("defaults to convergence when neither CLI nor config is set", () => {
@@ -252,34 +131,96 @@ describe("TC-0012-0475: exploration medium gate-relaxation downgrades soft gates
       expect(relaxable.has(hard)).toBe(false);
     }
   });
+});
 
-  // Set EQUALITY, not membership. Membership alone leaves the disjointness
-  // check above vacuous: a subset list lets a real hard gate (say
-  // QFAI-PROT-001) be moved into EXPLORATION_RELAXABLE_CODES with every test
-  // still green, because the code it would have collided with was never
-  // listed. Equality closes both directions — an unlisted error emitter fails
-  // here, and a listed one cannot be quietly dropped to make room for a
-  // relaxation.
-  it("EXPLORATION_HARD_ERROR_CODES is exactly the prototyping family's error emitters", async () => {
-    const derived = codesEmittedAtError(await collectIssueEmissions(PROTOTYPING_FAMILY));
+describe("TC-0012-0475: the hard-error allowlist is the pipeline's real gate set", () => {
+  // Set EQUALITY against the WHOLE post-filter input, not a directory sample.
+  // A scan scoped to the prototyping validator files left every other gate the
+  // same pipeline runs — the evidence-artifact and config-link path gates, the
+  // UI/UX and discussion-pack families — outside the audit, so any of them
+  // could be moved into EXPLORATION_RELAXABLE_CODES with the whole suite still
+  // green. Equality against the reachable set closes that: relaxing a gate now
+  // fails here until it is removed from the hard list as well.
+  it("is exactly the error codes reaching the post-filter, minus the relaxable ones", async () => {
+    const surface = await gateSurface();
+    const relaxable = new Set(EXPLORATION_RELAXABLE_CODES);
+    const derived = codesEmittedAtError(surface).filter((code) => !relaxable.has(code));
     expect(derived).toEqual([...EXPLORATION_HARD_ERROR_CODES].sort());
   });
 
+  it("reaches the validators the prototyping profile runs, not just the prototyping files", async () => {
+    const surface = await gateSurface();
+    // Sanity: a resolver regression that silently shrank the graph would make
+    // the equality above assert against a truncated set.
+    for (const validator of [
+      "validatePrototypingEvidence",
+      "validateUiEvidenceArtifacts",
+      "validateConfigReferenceIntegrity",
+      "runCanonicalUixValidators",
+    ]) {
+      expect(reachesFunction(surface, validator), `${validator} must be reachable`).toBe(true);
+    }
+  });
+
+  it("excludes codes whose emitter the pipeline never reaches", async () => {
+    const surface = await gateSurface();
+    // QFAI-PROT-311's validator is exported and re-exported but never called,
+    // and R-EXPLORATION-CERTIFY-ATTEMPT is raised by the certify command,
+    // which does not run this post-filter. Listing either would put a gate in
+    // the audit that cannot fire. When the delegation-map validator is wired,
+    // this flips and the equality test above demands the code be listed.
+    expect(reachesFunction(surface, "validateDelegationMapIssues")).toBe(false);
+    expect(reachesFunction(surface, "detectExplorationCertifyAttempt")).toBe(false);
+    expect(EXPLORATION_HARD_ERROR_CODES).not.toContain("QFAI-PROT-311");
+    expect(EXPLORATION_HARD_ERROR_CODES).not.toContain("R-EXPLORATION-CERTIFY-ATTEMPT");
+  });
+
+  it("does not let the declaration back its own entries", async () => {
+    const surface = await gateSurface();
+    // `mode.ts` reaches the pipeline only through a dynamic import, which the
+    // walker does not follow, so the constants under test are outside the
+    // scanned graph.
+    expect(reachesFunction(surface, "relaxIssuesForMode")).toBe(false);
+    expect([...surface.reached].some((key) => key.includes("core/prototyping/mode.ts"))).toBe(
+      false,
+    );
+  });
+
   it("QFAI-PROT-010 stays out of the hard list because it is emitted as a warning", async () => {
-    const emissions = await collectIssueEmissions(PROTOTYPING_FAMILY);
-    expect([...(emissions.get("QFAI-PROT-010") ?? [])]).toEqual(["warning"]);
+    const surface = await gateSurface();
+    expect([...(surface.emissions.get("QFAI-PROT-010") ?? [])]).toEqual(["warning"]);
     expect(EXPLORATION_HARD_ERROR_CODES).not.toContain("QFAI-PROT-010");
   });
 
   it("every EXPLORATION_RELAXABLE_CODES entry is emitted at error severity", async () => {
-    // A code no validator emits as an error has nothing to downgrade: the
-    // relaxation would be a no-op dressed up as a policy.
-    const emissions = await collectIssueEmissions([validatorsRoot]);
+    // A code no reachable validator emits as an error has nothing to
+    // downgrade: the relaxation would be a no-op dressed up as a policy.
+    const surface = await gateSurface();
     for (const code of EXPLORATION_RELAXABLE_CODES) {
       expect(
-        emissions.get(code)?.has("error") ?? false,
-        `${code} is in the relaxable allowlist but no validator emits it as an error`,
+        surface.emissions.get(code)?.has("error") ?? false,
+        `${code} is in the relaxable allowlist but no reachable validator emits it as an error`,
       ).toBe(true);
+    }
+  });
+
+  it("has no unaccounted-for dynamic code argument", async () => {
+    const surface = await gateSurface();
+    expect(
+      describeSites(surface.dynamicSites),
+      "a computed rule code cannot be attributed to the hard list; emit a literal or a module-level constant, or pin the new site with a reason",
+    ).toEqual(describeSites(DYNAMIC_CODE_SITES));
+  });
+
+  it("keeps every code behind a dynamic site out of the relaxable list", async () => {
+    // Those codes are invisible to the equality check above, so without this
+    // the blind spot would be a way to relax a gate unnoticed — the exact hole
+    // the completeness rework closes everywhere else.
+    const surface = await gateSurface();
+    const relaxable = new Set(EXPLORATION_RELAXABLE_CODES);
+    for (const [module, codes] of surface.dynamicSiteCodes) {
+      const relaxed = codes.filter((code) => relaxable.has(code));
+      expect(relaxed, `${module} emits ${relaxed.join(", ")} through a computed code`).toEqual([]);
     }
   });
 });

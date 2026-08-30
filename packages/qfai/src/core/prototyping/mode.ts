@@ -46,42 +46,59 @@ export const EXPLORATION_RELAXABLE_CODES: readonly string[] = [
  * runtime relaxation does not consult this list (anything not in
  * `RELAXABLE` is left alone).
  *
- * This is NOT a hand-picked sample. It is the COMPLETE set of codes
- * the prototyping structural-validator family emits at `error`
- * severity, where "family" means exactly two source locations:
+ * This is NOT a hand-picked sample, and it is not scoped to a source
+ * directory. It is the COMPLETE set of codes that can reach
+ * `relaxIssuesForMode` at `error` severity, minus the relaxable ones —
+ * that is, every gate that survives exploration.
  *
- *   - `core/validators/prototypingEvidence.ts`
- *   - `core/validators/prototyping/**`
+ * "Can reach" is decidable because the relaxation has exactly one
+ * production call site: `runPrototypingValidators` applies it to the
+ * combined issues of every validator it runs. The unit test derives
+ * the set by walking that function's call graph, reading the `code`
+ * and `severity` of each emission, and asserting SET EQUALITY with
+ * this list.
  *
- * The unit test derives that set from the sources and asserts SET
- * EQUALITY with this list, in both directions. Completeness is what
- * makes the list an audit surface rather than an anecdote, and it is
- * what makes the disjointness assertion bite: moving any of these
- * gates into `EXPLORATION_RELAXABLE_CODES` fails disjointness, and
- * deleting it from here to dodge that fails the equality check while
- * its emitter still exists. A newly added structural gate likewise
- * fails equality until it is listed, forcing the hard-vs-relaxable
- * call to be made explicitly.
+ * Reachability, not file location, is what makes an entry real. A
+ * validator whose source sits beside the prototyping ones but which
+ * the pipeline never calls emits nothing at run time, so listing its
+ * codes would describe a gate that does not exist. Conversely the
+ * UI/UX and discussion-pack validators do run in this profile, so
+ * their errors are real gates and are listed here.
  *
- * Two structural non-entries, both by construction rather than by
+ * Equality is what makes the list bite in both directions: moving a
+ * gate into `EXPLORATION_RELAXABLE_CODES` drops it from the derived
+ * set and fails equality until it is removed from here too, so a
+ * relaxation cannot be introduced silently — it costs a deliberate
+ * edit in two places, in one diff. A newly added gate likewise fails
+ * equality until it is listed, forcing the hard-vs-relaxable call to
+ * be made explicitly.
+ *
+ * Structural non-entries, each by construction rather than by
  * omission:
  *
  *   - `QFAI-PROT-010` (screen-id casing) is emitted at `warning`, so
- *     it is not a hard-error gate and there is nothing for the
- *     relaxation to downgrade.
- *   - The license gate has no code at all. `licenseVerify` produces no
+ *     there is nothing for the relaxation to downgrade.
+ *   - `QFAI-PROT-311` (delegation map integrity) has an emitter that
+ *     nothing invokes: `validateDelegationMapIssues` is only
+ *     re-exported from the validators barrel, never called from the
+ *     pipeline, so the error cannot occur and listing it would restore
+ *     the vacuity this list exists to remove. It belongs here once the
+ *     validator is wired, and the unit test fails the moment it is.
+ *   - `R-EXPLORATION-CERTIFY-ATTEMPT` is raised by the certify
+ *     command, which does not run this post-filter at all.
+ *   - The license gate has no code. `licenseVerify` produces no
  *     `Issue`: its failure is an exit-66 hard stop raised in
  *     `cli/commands/prototypingIterate.ts` before any `Issue[]`
- *     exists, so it is out of reach of this post-filter and cannot be
- *     expressed as an allowlist entry.
+ *     exists, so it is out of reach of a code allowlist.
  *
- * Gates outside the family (e.g. `QFAI-DCON-0xx` reviewer gates other
- * than the relaxable drift codes) also stay hard error at runtime —
- * the post-filter only ever touches `RELAXABLE`. They are simply not
- * part of this enumerated surface, which is scoped to the structural /
- * schema / path family the spec names.
+ * Codes emitted through a computed expression (a parameter or a
+ * property read) cannot be attributed by a static scan and so cannot
+ * be listed. The unit test pins those call sites and asserts that none
+ * of the codes behind them appears in `EXPLORATION_RELAXABLE_CODES`,
+ * which is the property this list exists to protect.
  */
 export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
+  // validators/prototypingEvidence.ts — prototyping.json structure
   "QFAI-PROT-001", // prototyping.json missing / unparseable / not an object
   "QFAI-PROT-002", // schema / required-field gate
   "QFAI-PROT-003", // iterations[] must exist and contain at least iter-00
@@ -89,12 +106,118 @@ export const EXPLORATION_HARD_ERROR_CODES: readonly string[] = [
   "QFAI-PROT-005", // stopReason presence / enum / consistency
   "QFAI-PROT-006", // iterations.length exceeds MAX_ITERATIONS
   "QFAI-PROT-007", // acceptedIterationIndex === iterations.length - 1
-  "QFAI-PROT-008", // specsCovered[] spec-id format / missing spec
+  // validators/prototyping/** — linkage, paths, completion certificate
+  "QFAI-PROT-008", // specsCovered[] id format / missing spec
   "QFAI-PROT-009", // artifact path integrity (empty / outside-root / missing ref)
-  "QFAI-PROT-311", // prototyping delegation map integrity
   "QFAI-PROT-335", // completion certificate: required evidence
   "QFAI-PROT-336", // completion certificate: completion claimed without seal
-  "R-EXPLORATION-CERTIFY-ATTEMPT", // certify refuses a loop containing exploration iters
+  // validators/uiEvidenceArtifacts.ts — evidence artifact presence / naming
+  "QFAI-UIE-001",
+  "QFAI-UIE-002",
+  "QFAI-UIE-003",
+  // validators/configReferenceIntegrity.ts — config path references
+  "QFAI-CFG-LINK-001",
+  "QFAI-CFG-LINK-003",
+  // validators/reviewerGate.ts + evidenceMutationUnlogged.ts
+  "R-MOCK-HREF-DRIFT",
+  "R-EVIDENCE-MUTATION-UNLOGGED",
+  // validators/renderCritique.ts — critique record structure
+  "QFAI-CRIT-001",
+  "QFAI-CRIT-002",
+  "QFAI-CRIT-003",
+  "QFAI-CRIT-004",
+  "QFAI-CRIT-005",
+  "QFAI-CRIT-006",
+  "QFAI-CRIT-009",
+  "QFAI-CRIT-010",
+  // validators/designContractReadiness.ts — non-drift readiness gates
+  "QFAI-DCON-001",
+  "QFAI-DCON-005",
+  "QFAI-DCON-009",
+  "QFAI-DCON-012",
+  "QFAI-DCON-013",
+  "QFAI-DCON-033",
+  // validators/designFidelity.ts — statically attributable fidelity gates
+  "QFAI-FID-001",
+  "QFAI-FID-002",
+  "QFAI-FID-003",
+  "QFAI-FID-004",
+  "QFAI-FID-005",
+  "QFAI-FID-006",
+  "QFAI-FID-007",
+  "QFAI-FID-008",
+  "QFAI-FID-009",
+  // validators/designToken.ts
+  "QFAI-DT-001",
+  "QFAI-DT-002",
+  "QFAI-DT-004",
+  "QFAI-DT-007",
+  "QFAI-DT-008",
+  "QFAI-DT-009",
+  "QFAI-DT-010",
+  // validators/htmlMock.ts
+  "QFAI-MOCK-001",
+  "QFAI-MOCK-002",
+  "QFAI-MOCK-003",
+  "QFAI-MOCK-004",
+  "QFAI-MOCK-010",
+  "QFAI-MOCK-011",
+  "QFAI-MOCK-012",
+  // validators/agentDefinition.ts — statically attributable agent gates
+  "QFAI-AGENT-004",
+  "QFAI-AGENT-005",
+  "QFAI-AGENT-006",
+  "QFAI-AGENT-007",
+  "QFAI-AGENT-008",
+  "QFAI-AGENT-009",
+  "QFAI-AGENT-010",
+  "QFAI-AGENT-011",
+  "QFAI-AGENT-012",
+  "QFAI-AGENT-013",
+  // validators/bpApDb.ts
+  "QFAI-BPAP-001",
+  "QFAI-BPAP-002",
+  "QFAI-BPAP-003",
+  "QFAI-BPAP-004",
+  "QFAI-BPAP-005",
+  "QFAI-BPAP-006",
+  "QFAI-BPAP-007",
+  "QFAI-BPAP-008",
+  "QFAI-BPAP-009",
+  "QFAI-BPAP-010",
+  "QFAI-BPAP-011",
+  // validators/researchSummary.ts
+  "QFAI-RESEARCH-001",
+  "QFAI-RESEARCH-003",
+  "QFAI-RESEARCH-004",
+  "QFAI-RESEARCH-005",
+  "QFAI-RESEARCH-006",
+  "QFAI-RESEARCH-007",
+  "QFAI-RESEARCH-008",
+  "QFAI-RESEARCH-009",
+  "QFAI-RESEARCH-010",
+  "QFAI-RESEARCH-011",
+  // validators/uix/** — canonical discussion-pack gates
+  "UIX-VAL-3LAYER-FORBIDDEN-FILE",
+  "UIX-VAL-3LAYER-INCOMPLETE-FAMILY",
+  "UIX-VAL-3LAYER-LEGACY-FORMAT",
+  "UIX-VAL-3LAYER-MIXED-FORMAT",
+  "UIX-VAL-CLASSIFICATION-CONTRADICTION",
+  "UIX-VAL-CLASSIFICATION-DUPLICATE-SECONDARY-SURFACE",
+  "UIX-VAL-CLASSIFICATION-INVALID-BOOLEAN",
+  "UIX-VAL-CLASSIFICATION-INVALID-SECONDARY-SURFACE",
+  "UIX-VAL-CLASSIFICATION-INVALID-SURFACE",
+  "UIX-VAL-CLASSIFICATION-MISSING",
+  "UIX-VAL-CLASSIFICATION-RATIONALE-PLACEHOLDER",
+  "UIX-VAL-CLASSIFICATION-REQUIRED-FIELD",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-ARRAY",
+  "UIX-VAL-CLASSIFICATION-SECONDARY-DUPLICATE",
+  "UIX-VAL-OQ-OPEN-CRITICAL",
+  "UIX-VAL-SCREEN-CONTRACT-DUPLICATE-ID",
+  "UIX-VAL-SCREEN-CONTRACT-LEGACY-FORMAT",
+  "UIX-VAL-SCREEN-CONTRACT-SCHEMA-INCOMPLETE",
+  "UIX-VAL-SCREEN-CONTRACT-STATE-COVERAGE",
+  "UIX-VAL-SIDECAR-MISSING",
 ] as const;
 
 /**
