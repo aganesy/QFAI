@@ -221,13 +221,16 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    under the upstream-reset rule (`references/sdd-phase-checklists.md`). Fill each
    row's optional `Owning module` from the TC's parent `BR` — reached through the
    TC's `EX-Ref` and that example's `BR-Ref`, falling back to the TC's `AC-Refs`
-   when `EX-Ref` is `—`, since no `TC` column names a `BR` directly — and leave
+   whenever the `EX-Ref` cell names no `EX` — an empty cell as much as `—` — since
+   no `TC` column names a `BR` directly, and leave
    `-` only when no single module owns the row. It is the one pre-RED input to
    `delivery-planner`'s parallel gate, not the whole gate: the other conditions in
    `qfai-implement/references/parallelization-policy.md` still apply. A ledger
-   whose header predates the column is migrated here rather than left alone:
-   append the column to every ledger table in the file, including each
-   `## CHG-*` one, and fill every row (`references/sdd-phase-checklists.md`).
+   whose header predates the column is migrated here rather than left alone,
+   table by table: every ledger table in the file, each `## CHG-*` one included,
+   gains the column only where its own header lacks it and is otherwise filled in
+   place — never given a duplicate, which the validator would shadow
+   (`references/sdd-phase-checklists.md`).
 8. Phase 2c: Obligation reconciliation (per spec). Re-read `.qfai/contracts/**`
    against the `BR` / `AC` Phase 2 produced: name the realizing contract for
    each, and resolve every persisted attribute it names to a column, field or

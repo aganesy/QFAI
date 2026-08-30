@@ -161,15 +161,18 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   are forbidden in `tests/e2e/**` and `tests/api/**`.
 - Optional columns detail: `Owning module` — the production module the row will write,
   one per row, `-` when not declared. `/qfai-sdd` seeds it at Phase 2b from the TC's
-  parent `BR`, reached by `EX-Ref` -> `05_Examples.md#BR-Ref` and, only when `EX-Ref`
-  is `—`, by the TC's `AC-Refs`. It is the only evidence of a row's production write
+  parent `BR`, reached by `EX-Ref` -> `05_Examples.md#BR-Ref` and, whenever the
+  `EX-Ref` cell names no `EX` — an empty cell as much as `—` — by the TC's
+  `AC-Refs`. It is the only evidence of a row's production write
   set that exists before RED, since RED-first guarantees the module does not exist
   yet — necessary for parallel dispatch, never sufficient: every other condition in
   `qfai-implement/references/parallelization-policy.md` still has to hold. A ledger
   without the column leaves parallel dispatch unevaluable, so a ledger authored before
-  the column existed gains it at the next Phase 2b — appended to the header of every
-  ledger table in the file, `## CHG-*` tables included, and backfilled on every row.
-  Column order is free; the validator resolves it by name.
+  the column existed gains it at the next Phase 2b — added to the header of each
+  ledger table that lacks it, `## CHG-*` tables included, and backfilled on every row.
+  A table already carrying the column is filled in place, never given a second one:
+  column order is free because the validator resolves the column by name, but it
+  resolves the **first** column of that name, so a duplicate shadows the new values.
 - TC coverage reads **`TC-*` tokens only**. `US-*` and `CON-API-*` IDs are
   explicitly inert to it — recording one does not raise or lower TC coverage.
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.

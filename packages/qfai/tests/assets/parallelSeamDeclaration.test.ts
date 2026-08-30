@@ -152,9 +152,9 @@ describe("declared seam has a producer", () => {
     // "The TC's parent BR" is not a lookup any single table answers, and the
     // two routes are not interchangeable: a normal-case TC names an `EX`, and
     // `05_Examples.md` pins `EX -> BR` 1:1, so that route is exact. `AC-Refs`
-    // is the fallback for the error / boundary rows carrying `—`, and it is
-    // ambiguous whenever one AC decomposes into several BRs. Naming only the
-    // fallback would strand exactly resolvable rows at `-`.
+    // is the fallback, and it is ambiguous whenever one AC decomposes into
+    // several BRs. Naming only the fallback would strand exactly resolvable
+    // rows at `-`.
     it(`${tree}: the route from a TC to its parent BR prefers EX-Ref`, async () => {
       const checklists = flat(await read(tree, SDD_CHECKLISTS));
       const template = flat(await read(tree, SDD_TEMPLATE));
@@ -165,10 +165,34 @@ describe("declared seam has a producer", () => {
         expect(text).toContain("`BR-Ref`");
         expect(text).toContain("05_Examples.md");
         expect(text).toMatch(/`EX-Ref` first/);
-        expect(text).toMatch(/only when `EX-Ref` is `—`/);
         // The claim this replaces: EX-Ref does select the parent, exactly.
         expect(text).not.toContain("`EX-Ref` never selects it");
       }
+    });
+
+    // The fallback condition is "no `EX` is named", not "the cell holds one
+    // specific dash". `layerCoverage.ts` reports a TC (`QFAI-COV-206`) only
+    // when `AC-Refs` and `EX-Ref` are *both* empty, so a blank `EX-Ref` beside
+    // a filled `AC-Refs` is valid spec that reaches its parent through `AC`.
+    // Keying on `—` alone drops that TC out of the AC route and parks a
+    // resolvable row at `-`, making it needlessly serial.
+    it(`${tree}: an EX-Ref naming no EX falls back, blank as well as em-dash`, async () => {
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+      const template = flat(await read(tree, SDD_TEMPLATE));
+      const skill = flat(await read(tree, SDD_SKILL));
+      const rules = flat(await read(tree, SDD_RULES));
+
+      for (const text of [checklists, template, skill, rules]) {
+        expect(text).toContain("whenever the `EX-Ref` cell names no `EX`");
+        expect(text).toMatch(/empty cell/);
+        // The narrow condition this replaces, in either file's wording.
+        expect(text).not.toMatch(/only when `EX-Ref` is `—`/);
+        expect(text).not.toMatch(/only when `EX-Ref`\s*is `—`/);
+      }
+      for (const text of [checklists, template]) {
+        expect(text).toContain('`—` and `-` all mean "none"');
+      }
+      expect(checklists).toContain("QFAI-COV-206");
     });
 
     // Phase 2b copies the template only when the ledger is absent and is a
@@ -183,14 +207,45 @@ describe("declared seam has a producer", () => {
       const rules = flat(await read(tree, SDD_RULES));
 
       expect(checklists).toContain("Migrate a pre-existing ledger in place");
-      expect(checklists).toContain(
-        "append the column to **every** schema-shaped ledger table in the file",
-      );
+      expect(checklists).toContain("**every** schema-shaped ledger table in the file");
       expect(checklists).toContain("each `## CHG-*` table");
       expect(skill).toContain("A ledger whose header predates the column is migrated here");
-      expect(skill).toContain("append the column to every ledger table in the file");
+      expect(skill).toContain("every ledger table in the file, each `## CHG-*` one included");
       expect(rules).toContain("gains it at the next Phase 2b");
       expect(rules).toContain("`## CHG-*` tables included");
+    });
+
+    // A ledger can be mixed: the leading table predating the column while a
+    // later `## CHG-*` table already carries it. An unconditional "append to
+    // every table" hands that second table a duplicate header cell, and
+    // `cell()` in `src/core/validators/tddList.ts` resolves a column with
+    // `headers.indexOf` — the FIRST match. The stale `-` stays authoritative
+    // and the freshly written module name is never read, so the very row the
+    // migration was for remains ineligible for parallel dispatch.
+    it(`${tree}: migration is per table — add where missing, fill in place`, async () => {
+      const checklists = flat(await read(tree, SDD_CHECKLISTS));
+      const skill = flat(await read(tree, SDD_SKILL));
+      const rules = flat(await read(tree, SDD_RULES));
+
+      expect(checklists).toContain("deciding per table");
+      expect(checklists).toContain("A table whose own header lacks `Owning module` gains it");
+      expect(checklists).toContain(
+        "A table that already carries the column is filled in place with its header untouched",
+      );
+      expect(checklists).toContain("never append a second `Owning module`");
+      // The reason, so the rule survives a rewrite that keeps only the prose.
+      expect(checklists).toContain("`headers.indexOf`");
+      expect(checklists).toMatch(/reads the \*\*first\*\* column of that name/);
+      expect(checklists).toContain("Mixed files are the normal case");
+
+      expect(skill).toContain("gains the column only where its own header lacks it");
+      expect(skill).toContain("never given a duplicate");
+
+      expect(rules).toContain("added to the header of each ledger table that lacks it");
+      expect(rules).toContain(
+        "A table already carrying the column is filled in place, never given a second one",
+      );
+      expect(rules).toMatch(/resolves the \*\*first\*\* column of that name/);
     });
 
     // The column answers one question — what will this row write in
