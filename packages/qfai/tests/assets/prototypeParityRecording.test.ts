@@ -33,6 +33,18 @@
  * `Audited evidence hash` both unmoved, and item 10 still passing. The manifest
  * is now a required phase-authored field, named once and read by the reviewer
  * and the gate alike, and an entry without it is refused at the gate.
+ *
+ * A fifth followed from admitting those artifacts: step 2 of the audit-hash
+ * procedure normalized every record in the subject — LF line endings, trailing
+ * whitespace stripped — and the manifest names runtime screenshots, which
+ * `qfai-prototyping` writes as `.png`. A PNG is an arbitrary byte string with
+ * no lines and no trailing whitespace, so that step is not a normalization of
+ * it but a rewrite: the reviewer and gate item 10 got different digests for one
+ * unchanged image depending on what each used to read it, and two images
+ * differing only in the rewritten bytes collapsed onto one digest — the
+ * replacement the verdict exists to catch. Step 2 is now scoped to Markdown and
+ * HTML, every other record hashes the raw bytes, and the class is the record's
+ * extension so neither party has to sniff content to agree.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -218,6 +230,53 @@ describe("prototype parity is recorded, not merely required", () => {
       // over them would stale this verdict on an unrelated prototype edit.
       expect(delegation).toContain("contribute no record");
       expect(delegation).toContain("`.qfai/contracts/design/prototype-handoff.yaml`");
+    });
+
+    it(`${tree}: a binary surface artifact is hashed raw, not text-normalized`, async () => {
+      // Step 2 applied to every record in the subject, and the record class
+      // added above carries `.png` screenshots. LF conversion and the
+      // trailing-whitespace strip have no meaning over arbitrary bytes: they
+      // rewrite whatever happens to look like a line ending inside a
+      // compressed stream, so one unchanged image hashed differently for the
+      // reviewer and for gate item 10.
+      const delegation = flat(await readAsset(tree, DELEGATION_REL));
+
+      expect(delegation).not.toContain("**Normalize.** LF line endings");
+      expect(delegation).toContain("**Normalize — a Markdown or HTML record only.**");
+      expect(delegation).toContain("skips this step and hashes the artifact's raw bytes");
+      // The format the parity capture actually writes is named, not implied.
+      expect(delegation).toContain("`.png`");
+    });
+
+    it(`${tree}: the record's class is its extension, not sniffed content`, async () => {
+      // Structural half: one rule both parties apply without reading the
+      // bytes. "Binary if it looks binary" is two readings again, which is the
+      // same failure the named subject was introduced to end.
+      const delegation = flat(await readAsset(tree, DELEGATION_REL));
+
+      expect(delegation).toContain("The class is the record's extension, never sniffed content");
+      expect(delegation).toContain("`.md` and `.html` normalize");
+      // The serialize step hashed "that artifact's normalized bytes" for every
+      // record; left as it was, a reader arriving at step 3 first would
+      // normalize the screenshot anyway and the carve-out would not hold.
+      expect(delegation).not.toContain("SHA-256 of that artifact's normalized bytes");
+      expect(delegation).toContain("normalized where that step applies and raw where it does not");
+    });
+
+    it(`${tree}: text records still normalize (over-correction pin)`, async () => {
+      // Hashing everything raw is the opposite defect: a CRLF checkout of the
+      // same evidence file would take a different digest from an LF one and
+      // every verdict would go stale on a line-ending change. This case passes
+      // before the fix as well — it exists to hold the text half in place.
+      const delegation = flat(await readAsset(tree, DELEGATION_REL));
+
+      expect(delegation).toContain(
+        "LF line endings; strip trailing whitespace from every line; " +
+          "drop leading and trailing blank lines; end with exactly one newline.",
+      );
+      // The two subjects that delegate their normalization to step 2.
+      expect(delegation).toContain("step 2 normalizes it");
+      expect(delegation).toContain("normalized by step 2 as well");
     });
 
     it(`${tree}: the gate item the recording serves is still there`, async () => {

@@ -405,10 +405,10 @@ post-escalation verification review of a user-named fix.
      the revision and the pack seal both miss — so it carries a seal of its own,
      taken as it is written and recomputed by the gate that reads it.
 
-  2. **Normalize.** LF line endings; strip trailing whitespace from every line;
-     drop leading and trailing blank lines; end with exactly one newline.
+  2. **Normalize — a Markdown or HTML record only.** LF line endings; strip trailing whitespace from every line; drop leading and trailing blank lines; end with exactly one newline. **Every other record skips this step and hashes the artifact's raw bytes as they sit on disk.** A `product-surface-reviewer`'s runtime screenshot is a `.png` (`../skills/qfai-prototyping/SKILL.md` names the path the capture writes) — an arbitrary byte string with no lines to re-end and no trailing whitespace to strip, where "LF line endings" rewrites whatever `0x0D 0x0A` fell inside the compressed stream and the strip eats the `0x20` / `0x09` before it. Normalizing it made the digest a property of whichever decoder each side reached for, so the reviewer and gate item 10 computed different values for one unchanged image and a correct UI row could not reach `done`; and it mapped two images differing only in those bytes onto one digest, which is the replacement this verdict exists to catch.
+     **The class is the record's extension, never sniffed content**: `.md` and `.html` normalize — the extracted entry and `coverage-depth-<spec-id>.md` are recorded under their `.md` paths, a `DR-*` artifact is one too, and an HTML capture is text — every other extension is raw, so reviewer and gate cannot classify one artifact two ways.
   3. **Serialize.** One record per artifact — the repo-relative path, a NUL
-     byte, then the SHA-256 of that artifact's normalized bytes — sorted by
+     byte, then the SHA-256 of that artifact's bytes as step 2 leaves them, normalized where that step applies and raw where it does not — sorted by
      path, joined with newlines. **This is the audit hash, not the working-tree
      revision**: that one has its own four steps, including the untracked
      record's `kind` and `mode`, in
