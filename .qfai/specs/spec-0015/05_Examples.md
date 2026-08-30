@@ -120,3 +120,11 @@
 - Given a `references/handoff.md` still describing pre-CLI-HANDOFF ad-hoc files after the implementation PR
 - When `qfai validate --report` runs during the deprecation window
 - Then the stale reference surfaces as a warning; after sunset the same stale reference at HEAD fails (zero-stale-reference obligation); a doc rewritten in the same atomic PR as the implementation reports zero stale references
+
+## EX-0015-0018: Hygiene-lane drift reaches review without a justification demand
+
+- BR-Ref: BR-0015-0017
+- Given a pull request in which one shipped workflow file loses its `permissions:` block,
+- When the workflow-hygiene lane runs and reports the violation with its file, job and rule name,
+- Then the Reviewer Gate surfaces `R-WORKFLOW-HYGIENE-DRIFT` carrying those three fields unchanged, and does not fail the finding for a missing `justification:`.
+- Contrast: `R-PACK-LOCATION-DRIFT` is emitted only by a repository lint script too, is error class, and **is** a catalog member — so it is rejected outright when its `justification:` is empty. The two codes differ today only because this one's catalog registration is deferred (OQ-0015-0001), not because a script emits it.
