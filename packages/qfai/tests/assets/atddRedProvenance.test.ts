@@ -2639,4 +2639,55 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
       "puts the open obligation in a file neither item 10 nor the completion prohibition reads for it",
     );
   });
+
+  it("carves the L1/L2-only Integration row out of the producer side too", async () => {
+    // The consumer side (`qfai-implement` Non-goals) leaves that row owned
+    // there, but the producer still listed every `Integration` row as one it
+    // owes evidence for and P1b demanded a branch for each — so a run against
+    // this warning-only ledger was asked for a branch and a handoff covering a
+    // test `QFAI-ATDD-112` forbids this stage to write, and the ATDD stage
+    // could not complete. The carve-out has to hold at both ends.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).toContain(
+      "**One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.**",
+    );
+    expect(atdd).toContain("(`TDDLIST_COVERAGE_LAYER_MISMATCH`)");
+    // Stated once here, and inherited by every rule that names the set — the
+    // same shape `qfai-implement/SKILL.md` uses, and both files are at the
+    // 500-line ceiling.
+    expect(atdd).toContain(
+      "**Every rule in this file and its references that names the ATDD-owned set excludes it**",
+    );
+    // The two enumeration sites and the gate that reads them.
+    expect(atdd).toContain("is outside the ATDD-owned set and is not enumerated");
+    expect(atdd).toContain("step 3b never receives it");
+    expect(atdd).toContain("**A branch is chosen for every row this stage owns**");
+    expect(atdd).toContain("gets no branch and no handoff here");
+    // The reference P1b sends the reader to for branch selection.
+    const provenance = flat(await read(tree, PROVENANCE));
+    expect(provenance).toContain("that row has no branch, no evidence entry and no handoff here");
+  });
+
+  it("keeps a marked legacy row's phase evidence where item 10 reads it", async () => {
+    // Checkpoint and cross-spec already read the marker before the `Layer`.
+    // The Orchestrator Protocol is the writer of the ordinary per-phase
+    // evidence and anchor, and it branched on `Layer` alone — so a legacy
+    // `Integration` row resumed from `red` / `green` / `refactor` had its
+    // remaining phases written to the ATDD file while item 10 went on reading
+    // the implement entry, which then lacked the GREEN and reviewer evidence.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain(
+      "**A row carrying `Pre-split-evidence: implement` keeps `implement-<spec-id>.md`**",
+    );
+    expect(implement).toContain("read the marker first, then the `Layer`");
+    expect(implement).toContain(
+      "the implement entry item 10 selects is left without the GREEN, refactor and reviewer evidence",
+    );
+    // Over-correction pin: the marker is the only exception. An unmarked
+    // ATDD-owned row still goes to the ATDD file, which is the whole point of
+    // the split this PR completes.
+    expect(implement).toContain(
+      "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
+    );
+  });
 });
