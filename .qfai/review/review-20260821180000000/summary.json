@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-21T18:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "45e6f041",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 16 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 26 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 14 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B2+M6+m7+A1 = 16, B6+M9+m8+A3 = 26 and B6+A8 = 14",
+  "notes": "A first launch of all three roles died within seconds on a transient network error and produced nothing; these are the relaunched runs. Plants were partitioned by role after round 11's collision, and no reviewer-vs-reviewer collision occurred — but the STAGE edited the subject while R01 was still measuring, which R01 reports as its A1, and two of its findings did not reproduce against the finished tree. Both are recorded in the stage evidence with the measurement that refutes them."
+}
