@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-21T16:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "4b58eadd",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 16 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 17 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 15 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B4+M5+m7 = 16, B6+M7+m4 = 17 and B8+A7 = 15",
+  "notes": "The completion-reviewer's report was interrupted by a spend limit after its majors and resumed to completion; the seam is recorded in its own sign-off. Two reviewers planted into the shipped asset tree concurrently, which the qa-gatekeeper detected and re-measured around (its A5); its affected findings are the re-run ones."
+}
