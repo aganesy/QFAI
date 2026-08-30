@@ -17,6 +17,14 @@ const read = (tree: string, rel: string): Promise<string> =>
 /** Wrap-tolerant containment: the sentence is the rule, its wrap column is not. */
 const flat = (s: string): string => s.replace(/\s*\n\s*/g, " ");
 
+/**
+ * Padding-tolerant containment for a markdown table row. Prettier re-pads every
+ * cell in a table whenever any one cell's width changes, so pinning a row with
+ * its alignment spaces makes an unrelated row edit look like a rule change.
+ * Collapse whitespace runs on both sides and compare the cells.
+ */
+const cells = (s: string): string => s.replace(/\s+/g, " ");
+
 const TEMPLATE = "assistant/skills/qfai-sdd/templates/change-request.md";
 
 describe("a Change Request is a defined artifact", () => {
@@ -221,13 +229,17 @@ describe("a Change Request is a defined artifact", () => {
       expect(drift).toContain(
         "That rerun is what records the CR reference, in the destination this table names",
       );
-      expect(drift).toContain(
-        "| `spec-*/**` files    | `/qfai-sdd <spec-id>`           | " +
-          "`spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`",
+      expect(cells(drift)).toContain(
+        cells(
+          "| `spec-*/**` files | `/qfai-sdd <spec-id>` | " +
+            "`spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`",
+        ),
       );
-      expect(drift).toContain(
-        "| `_policies/**`       | `/qfai-sdd` (no argument)       | " +
-          "`_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`",
+      expect(cells(drift)).toContain(
+        cells(
+          "| `_policies/**` | `/qfai-sdd` (no argument) | " +
+            "`_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`",
+        ),
       );
       // step 2 — the same destinations, stated as upstream SSOT.
       expect(drift).toContain(
@@ -263,14 +275,65 @@ describe("a Change Request is a defined artifact", () => {
       // class, so an enumeration that branches only spec / policy leaves a
       // contract-only CR with nowhere to record the approval.
       const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
-      expect(drift).toContain(
-        "| `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | " +
-          "the `09_delta.md` of every spec that references the contract; " +
-          "`_policies/10_delta.md` when the change is cross-spec, and also when " +
-          "no spec references the contract at all |",
+      expect(cells(drift)).toContain(
+        cells(
+          "| `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID-or-path>` | " +
+            "the `09_delta.md` of every spec that references the contract; " +
+            "`_policies/10_delta.md` when the change is cross-spec, and also when " +
+            "no spec references the contract at all |",
+        ),
       );
       expect(drift).toContain("**A contract CR records in the delta only.**");
       expect(drift).toContain("`--contract` runs Stage 0 + Phase 0 + Phase 4");
+    });
+
+    it(`${tree}: the mandated delta write has a field to land in`, async () => {
+      // Step 4 makes the delta write unconditional, but neither delta template
+      // defined a CR-reference field: `_policies/10_delta.md` carried only a
+      // REQ/NFR Triage table plus an empty state, and `spec/09_delta.md` none
+      // at all. `qfai-sdd`'s Critical Constraints forbid authoring a layout the
+      // template does not define, so the only ways to obey step 4 were to
+      // repurpose a Triage row, invent a section, or skip the reference.
+      const drift = flat(await read(tree, "assistant/constitution/drift-protocol.md"));
+      expect(drift).toContain("**The delta write has a defined shape.**");
+      expect(drift).toContain(
+        "It is one row in the `## Change Requests` table both delta templates carry — " +
+          "`CR ID`, `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — never a " +
+          "repurposed `## Triage` row and never a section invented for the occasion.",
+      );
+
+      // Both templates define the same section, with the same columns.
+      const header = "| CR ID | Upstream artifact | Mode | Approved by | Applied at |";
+      for (const template of [
+        "assistant/skills/qfai-sdd/templates/specs/spec/09_delta.md",
+        "assistant/skills/qfai-sdd/templates/specs/_policies/10_delta.md",
+      ]) {
+        const delta = flat(await read(tree, template));
+        expect(delta, `${template} defines no CR-reference section`).toContain(
+          "## Change Requests",
+        );
+        expect(cells(delta), `${template} CR table columns`).toContain(header);
+        expect(delta).toContain(
+          "The canonical CR-reference record required by " +
+            "`constitution/drift-protocol.md#when-drift-is-detected` step 4.",
+        );
+        // The Triage table must not become the fallback the constraint forced.
+        expect(delta).toContain("Do not record a CR as a `## Triage` row");
+      }
+
+      // Phase 4 is the step that performs the write, so it has to name the
+      // destination — the protocol delegates the "where" to the owner skill.
+      const skill = flat(await read(tree, "assistant/skills/qfai-sdd/SKILL.md"));
+      expect(skill).toContain(
+        "record it as one row in the `## Change Requests` table of the delta",
+      );
+      const checklists = flat(
+        await read(tree, "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md"),
+      );
+      expect(checklists).toContain(
+        "add one row to that delta's `## Change Requests` table — `CR ID`, " +
+          "`Upstream artifact`, `Mode`, `Approved by`, `Applied at`",
+      );
     });
 
     it(`${tree}: a contract decision is minted at the layer its blast radius reaches`, async () => {

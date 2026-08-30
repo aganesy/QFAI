@@ -192,13 +192,23 @@ ratifies a comparison the author knew was fabricated.
 
    Invocation and CR-reference destination by artifact class:
 
-   | Upstream artifact    | Invocation                      | CR reference lands in                                                                                                                                                     |
-   | -------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-   | `spec-*/**` files    | `/qfai-sdd <spec-id>`           | `spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`                                                                                  |
-   | `_policies/**`       | `/qfai-sdd` (no argument)       | `_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`                                                                            |
-   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` | the `09_delta.md` of every spec that references the contract; `_policies/10_delta.md` when the change is cross-spec, and also when no spec references the contract at all |
+   | Upstream artifact    | Invocation                              | CR reference lands in                                                                                                                                                     |
+   | -------------------- | --------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+   | `spec-*/**` files    | `/qfai-sdd <spec-id>`                   | `spec-*/09_delta.md`, plus `spec-*/07_Decisions.md` when the CR mints or amends a `DR-*`                                                                                  |
+   | `_policies/**`       | `/qfai-sdd` (no argument)               | `_policies/10_delta.md`, plus `_policies/08_Decisions.md` when the CR mints or amends a `DR-*`                                                                            |
+   | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID-or-path>` | the `09_delta.md` of every spec that references the contract; `_policies/10_delta.md` when the change is cross-spec, and also when no spec references the contract at all |
 
-   Two consequences of that table are load-bearing:
+   Four consequences of that table are load-bearing:
+   - **The contract selector is an ID _or_ a path.** `.qfai/contracts/design/**`
+     files declare no `QFAI-CONTRACT-ID` at all
+     (`skills/qfai-sdd/references/contract-artifact-rules.md`), and a defect CR
+     whose subject _is_ a missing or wrong ID has none to cite either — so for
+     those the ID form of the invocation cannot be assembled. Name the artifact
+     by its repo-relative path instead
+     (`/qfai-sdd --contract .qfai/contracts/design/DESIGN.md.lock.yaml`); it
+     selects the same contract and the same referencing specs. Prefer the ID
+     wherever one exists. The path form is what keeps "every upstream class has
+     an owner rerun" true for the contract kinds that have no ID to name.
    - **The delta write is unconditional; the Decisions write is not.** The CR ID
      is recorded in a Decision Record's `Related` field, which both Decisions
      templates accept, so a CR that mints no `DR-*` writes the delta only.
@@ -206,6 +216,14 @@ ratifies a comparison the author knew was fabricated.
      `_policies/08_Decisions.md`, or minting a throwaway `DR-*` to have
      somewhere to put the reference, both breach `qfai-sdd`'s constraint against
      authoring a layout the template does not define.
+   - **The delta write has a defined shape.** It is one row in the
+     `## Change Requests` table both delta templates carry — `CR ID`,
+     `Upstream artifact`, `Mode`, `Approved by`, `Applied at` — never a
+     repurposed `## Triage` row and never a section invented for the occasion.
+     The same constraint that forbids a record-less Decisions entry forbids
+     those too, so without a defined field the mandated delta write had no legal
+     destination. Phase 4 is where it is written; see
+     `skills/qfai-sdd/references/sdd-phase-checklists.md#phase-4-delta-update`.
    - **A contract CR records in the delta only.** `--contract` runs Stage 0 +
      Phase 0 + Phase 4, and no Decisions file is in that scope. If the contract
      change also forces a decision, mint the `DR-*` where its blast radius

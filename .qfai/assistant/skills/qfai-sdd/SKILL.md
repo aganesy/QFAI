@@ -2,7 +2,7 @@
 name: qfai-sdd
 title: QFAI SDD Unified (Triage/Outline/Slice/Plan/Delta)
 description: "Triage incoming requirements against existing specs, then create or update layered SDD artifacts (_policies + spec-*) in one workflow."
-argument-hint: "[<spec-id-or-name>] [--contract <CON-ID>] [--auto]"
+argument-hint: "[<spec-id-or-name>] [--contract <CON-ID-or-path>] [--auto]"
 allowed-tools: [Read, Glob, Write, TodoWrite, Task, Bash]
 roles:
   [
@@ -187,7 +187,9 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID-or-path>`): run Stage 0 + Phase 0 (Contracts-first) + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec.
+  - The argument is a `CON-*` ID **or** a repo-relative path under `.qfai/contracts/`; both select the same contract and the same referencing specs. The path form is not a convenience: `.qfai/contracts/design/**` files declare no `QFAI-CONTRACT-ID` (`references/contract-artifact-rules.md`), and a defect CR whose subject is a missing or wrong ID has none to cite, so an ID-only selector left those reruns unaddressable. Prefer the ID wherever one exists.
+  - A path that names no file under `.qfai/contracts/`, or an ID no contract declares, is an unknown target: stop and report it rather than widening to the whole spec set.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints
@@ -229,7 +231,14 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    Fix the contract or the obligation here; both are owned by this skill, and a
    mismatch carried downstream reaches an implementer who can fix neither.
 9. Phase 3: Plan finalize (after at least one slice gate passes).
-10. Phase 4: Delta update.
+10. Phase 4: Delta update. When an approved Change Request ordered this rerun,
+    record it as one row in the `## Change Requests` table of the delta the
+    destination table in `constitution/drift-protocol.md#when-drift-is-detected`
+    step 4 names — `CR ID`, `Upstream artifact`, `Mode`, `Approved by`,
+    `Applied at`. Both `templates/specs/spec/09_delta.md` and
+    `templates/specs/_policies/10_delta.md` define that table, so the mandated
+    CR reference never needs a layout invented for it, and never borrows a
+    `## Triage` row.
 11. Run validate; fix source-layer artifacts and rerun until `error=0`.
 12. Triage density-smell warnings in `.qfai/report/specs-coverage/spec-*.md`.
 
