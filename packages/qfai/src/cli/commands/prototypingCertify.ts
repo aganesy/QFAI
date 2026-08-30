@@ -9,18 +9,23 @@
  *   - prototyping.json.reviewerGate.result === "PASS"
  *   - root DESIGN.md parses, and the latest iteration HTML contains zero
  *     DESIGN.md violations (color / font / radius / shadow drift)
- *   - on the per-spec layout, every `<screen>.review.json` required by
- *     the frozen set EXISTS, parses against the shipped reviewer
- *     payload schema (closed schema), carries the `(specId, screenId,
- *     cycle)` of the pair and accepted iteration it is stored under,
- *     and is itself converged (4 axes `exceptional`, no layout
- *     anti-patterns, no DESIGN.md violations). All four failures are
- *     the same coverage rejection (exit 64) as a missing payload.
+ *   - every `<screen>.review.json` required by the frozen set EXISTS,
+ *     parses against the shipped reviewer payload schema (closed
+ *     schema), carries the `(specId, screenId, cycle)` of the pair and
+ *     accepted iteration it is stored under, and is itself converged
+ *     (4 axes `exceptional`, no layout anti-patterns, no DESIGN.md
+ *     violations). All four failures are the same coverage rejection
+ *     (exit 64) as a missing payload. The gate applies to single-spec
+ *     and multi-spec frozen sets alike.
  *
  * `certify --check` re-computes evidence digests against the stored
  * certificate and exits non-zero on drift. The check ALSO re-hashes the
  * root DESIGN.md when the certificate carries `designMd`, so editing
- * the brand SSOT after certification fails the check.
+ * the brand SSOT after certification fails the check, and re-audits the
+ * review payloads the certificate sealed for the accepted iteration
+ * against the current schema / identity / convergence rules, so a
+ * certificate sealed by an older, presence-only gate cannot keep
+ * reporting DONE on unparsable or non-converged evidence.
  *
  * `show-spec` prints the resolved primary prototyping spec (config or
  * marker-scan based) so AI consumers do not hardcode a specific spec id.
@@ -210,12 +215,25 @@ export async function runPrototypingCertify(
   const toolVersion = await resolveToolVersion();
   if (options.check) {
     const result = await checkCompletionCertificate(options.root);
-    if (result.ok) {
-      info("completion-certificate: OK (digests match, gates valid)");
+    // Digest equality only proves the sealed bytes are unchanged — it
+    // says nothing about whether those bytes are valid review evidence.
+    // A certificate sealed by a build whose gate was presence-only can
+    // carry `{}` / `{"ok":true}` payloads, and re-checking it after a
+    // package upgrade would keep reporting OK forever (the shipped
+    // SKILL.md defines DONE as `certify --check` exit 0). Re-audit the
+    // sealed payloads against the CURRENT schema / identity /
+    // convergence rules, so the rules a fresh seal must satisfy are the
+    // same rules an existing certificate is held to.
+    const sealed = await loadCompletionCertificate(options.root);
+    const payloadReasons =
+      sealed === null ? [] : await auditSealedReviewPayloads(options.root, sealed);
+    const reasons = [...(result.ok ? [] : result.reasons), ...payloadReasons];
+    if (reasons.length === 0) {
+      info("completion-certificate: OK (digests match, gates valid, review payloads audited)");
       return 0;
     }
     error("completion-certificate: MISMATCH");
-    for (const reason of result.reasons) {
+    for (const reason of reasons) {
       error(`  - ${reason}`);
     }
     return 2;
@@ -623,50 +641,56 @@ export async function runPrototypingCertify(
       );
       return 2;
     }
-    // The per-(spec × screen) gate ONLY runs when the accepted iter
-    // actually contains per-spec subdirs (`iter-NN/spec-*/`). The
-    // shipped iterate driver + SKILL.md still emit the legacy flat
-    // layout (`iter-NN/index.html` / `iter-NN/review.json`), so
-    // without this guard the gate would fail every (spec, screen)
-    // pair on a normal run that follows the documented plan. The
-    // flat-iter migration to per-spec layout is deferred; until then,
-    // flat-iter projects skip the gate with a one-line stderr info
-    // note so the deferred migration stays visible to operators.
+    // The per-(spec × screen) gate runs for EVERY frozen set whose
+    // project declares UI screens — single-spec included.
+    //
+    // It used to be opt-in on the accepted iter actually holding
+    // per-spec subdirs (`iter-NN/spec-*/`), on the grounds that the
+    // shipped iterate driver + SKILL.md still told the loop to emit
+    // only the flat `iter-NN/review.json` summary. That justification
+    // is gone: the shipped skill now instructs the reviewer to write
+    // `iter-NN/<spec-id>/<screen>.review.json` at cycle 0 and at every
+    // later cycle (`assistant/skills/qfai-prototyping/SKILL.md`
+    // Step 2-C, `references/reviewer-prompt.md`,
+    // `references/iteration-loop.md`). Keeping the skip meant any
+    // single-spec run could opt out of the whole payload gate — schema,
+    // identity AND convergence — simply by never writing a payload,
+    // which is precisely the evidence gap this gate exists to close.
+    // A run that has no payloads now gets the missing-pair diagnostic
+    // below (exit 64), which names every expected path.
     const acceptedIterAbs = path.join(options.root, PROTOTYPING_EVIDENCE_REL, acceptedIterDir);
     const hasPerSpecLayout = await hasPerSpecSubdir(acceptedIterAbs);
-    if (!hasPerSpecLayout) {
-      // codex review r3264798065 (P1): the flat-iter skip is only valid
-      // for SINGLE-spec frozen sets. When the frozen set carries
-      // multiple specs but the accepted iter has no per-spec subdir,
-      // the legacy flat layout is structurally incompatible — there is
-      // no place to host the per-spec `<screen>.review.json` files for
-      // the secondary spec(s), and silently skipping the gate would
-      // re-open the TDD-0387 vulnerability (a frozen secondary spec
-      // ships a sealed certificate with zero review.json evidence).
-      // Fail-fast with a hard error in the multi-spec case; preserve
-      // the info-skip for the single-spec legacy path.
-      if (frozenSpecsPreview.length > 1) {
-        error(
-          `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
-            `multi-spec frozen set (frozenSpecsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
-            "but no per-spec iter-NN/spec-NNNN/<screen>.review.json layout is present. " +
-            "Multi-spec frozen set requires per-spec iter-NN/spec-NNNN/<screen>.review.json layout; " +
-            "the flat-iter layout migration is deferred and is incompatible with multi-spec runs. " +
-            "Re-run prototyping with the per-spec layout or restrict the frozen set to a single spec.",
-        );
-        // Exit 64 matches the prototyping CLI contract's coverage class
-        // ("at least one spec lacks a review.json for a declared
-        // screen"). Returning 2 (input error) here would split the same
-        // coverage rejection across two exit codes and break operator
-        // workflows that key on 64 for missing review.json gaps.
-        return 64;
-      }
-      info(
-        `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
-          "skipping per-(spec x screen) review.json presence gate; running with legacy flat layout " +
-          "(per-spec layout migration pending, single-spec frozen set).",
+    if (!hasPerSpecLayout && frozenSpecsPreview.length > 1) {
+      // codex review r3264798065 (P1): a multi-spec frozen set on a
+      // flat iter is reported as a STRUCTURAL incompatibility rather
+      // than as N missing pairs — there is no place at all to host the
+      // per-spec `<screen>.review.json` files for the secondary
+      // spec(s), so naming the layout is the actionable diagnostic.
+      error(
+        `qfai prototyping certify: accepted iteration ${acceptedIterDir} carries a ` +
+          `multi-spec frozen set (frozenSpecsCovered=${JSON.stringify(frozenSpecsPreview)}) ` +
+          "but no per-spec iter-NN/spec-NNNN/<screen>.review.json layout is present. " +
+          "Multi-spec frozen set requires per-spec iter-NN/spec-NNNN/<screen>.review.json layout; " +
+          "the flat-iter layout migration is deferred and is incompatible with multi-spec runs. " +
+          "Re-run prototyping with the per-spec layout or restrict the frozen set to a single spec.",
       );
+      // Exit 64 matches the prototyping CLI contract's coverage class
+      // ("at least one spec lacks a review.json for a declared
+      // screen"). Returning 2 (input error) here would split the same
+      // coverage rejection across two exit codes and break operator
+      // workflows that key on 64 for missing review.json gaps.
+      return 64;
     } else {
+      if (!hasPerSpecLayout) {
+        // Single-spec run on the flat layout: the gate is NOT skipped
+        // any more, so say what will happen instead of leaving the
+        // operator to read the missing-pair list cold.
+        info(
+          `qfai prototyping certify: per-spec ${acceptedIterDir}/spec-NNNN layout not detected — ` +
+            "the per-(spec x screen) review.json gate still applies to single-spec runs; every " +
+            "declared screen needs its payload under the per-spec directory.",
+        );
+      }
       const missingPairs: Array<{ spec: string; screen: string; expectedPath: string }> = [];
       const invalidPayloads: PayloadFailure[] = [];
       // A payload can be schema-perfect and still not be evidence for
@@ -789,6 +813,31 @@ export async function runPrototypingCertify(
           skipScreens: new Set<string>(),
           sink,
         });
+      }
+      // Finally, payloads that live under NO canonical per-spec
+      // directory at all — a flat `iter-NN/<screen>.review.json`, or one
+      // parked under a non-`spec-NNNN` sibling folder. The certificate's
+      // digest walk is recursive over the whole evidence root, so these
+      // ship sealed as well; audit what can be audited (schema +
+      // convergence + the screen / cycle their own path claims). Their
+      // `specId` is not anchored by a directory, so identity is checked
+      // on the two discriminators the path does carry.
+      for (const rel of await listStrayIterationPayloads(acceptedIterAbs)) {
+        const payloadRel = `${PROTOTYPING_EVIDENCE_REL}/${acceptedIterDir}/${rel}`;
+        const audit = await auditReviewPayload(
+          path.join(acceptedIterAbs, rel),
+          payloadExpectationFromRel(rel, acceptedIterationIndex),
+        );
+        if (audit.schemaErrors.length > 0) {
+          invalidPayloads.push({ expectedPath: payloadRel, errors: audit.schemaErrors });
+          continue;
+        }
+        if (audit.identityErrors.length > 0) {
+          mismatchedPayloads.push({ expectedPath: payloadRel, errors: audit.identityErrors });
+        }
+        if (audit.convergenceErrors.length > 0) {
+          unconvergedPayloads.push({ expectedPath: payloadRel, errors: audit.convergenceErrors });
+        }
       }
       if (missingPairs.length > 0) {
         error(
@@ -2019,9 +2068,18 @@ async function loadJson(filePath: string): Promise<unknown> {
 /** One rejected `<screen>.review.json` and why it was rejected. */
 type PayloadFailure = { readonly expectedPath: string; readonly errors: readonly string[] };
 
-/** The (spec, screen, cycle) triple a payload is filed under. */
+/**
+ * The (spec, screen, cycle) triple a payload is filed under.
+ *
+ * `specDirName` is `null` for a payload that sits under no canonical
+ * `spec-NNNN` directory (a flat `iter-NN/<screen>.review.json`, or one
+ * parked in a non-canonical sibling folder). Nothing on such a path
+ * asserts which spec the file belongs to, so the identity check holds
+ * it to the two discriminators the path does carry (screen, cycle)
+ * rather than inventing a spec to compare against.
+ */
 type ReviewPayloadExpectation = {
-  readonly specDirName: string;
+  readonly specDirName: string | null;
   readonly screenId: string;
   readonly cycle: number;
 };
@@ -2109,10 +2167,15 @@ async function auditStrayPayloads(args: {
   skipScreens: ReadonlySet<string>;
   sink: PayloadFailureSink;
 }): Promise<void> {
-  for (const fileName of await listReviewPayloadFiles(path.join(args.root, args.specDirRel))) {
-    const screenId = fileName.slice(0, -REVIEW_PAYLOAD_SUFFIX.length);
-    if (args.skipScreens.has(screenId)) continue;
-    const rel = `${args.specDirRel}/${fileName}`;
+  for (const relName of await listReviewPayloadFiles(path.join(args.root, args.specDirRel))) {
+    const screenId = payloadScreenId(relName);
+    // `skipScreens` names the payloads the declared-pair sweep already
+    // opened, and those live directly in the per-spec directory. A
+    // NESTED file of the same name (`archive/home.review.json`) is a
+    // different file that sweep never touched, so the skip must not
+    // extend to it.
+    if (!relName.includes("/") && args.skipScreens.has(screenId)) continue;
+    const rel = `${args.specDirRel}/${relName}`;
     const audit = await auditReviewPayload(path.join(args.root, rel), {
       specDirName: args.specDirName,
       screenId,
@@ -2150,19 +2213,181 @@ async function listSpecDirs(iterDirAbs: string): Promise<string[]> {
 }
 
 /**
- * Every `<screen>.review.json` file that actually exists in one
- * accepted-iteration per-spec directory, sorted for deterministic
- * operator output. A missing / unreadable directory yields `[]`: the
- * per-pair presence sweep already reports that as missing pairs.
+ * Every `<screen>.review.json` file that actually exists under one
+ * directory AT ANY DEPTH, as POSIX paths relative to `dirAbs`, sorted
+ * for deterministic operator output. A missing / unreadable directory
+ * yields `[]`: the per-pair presence sweep already reports that as
+ * missing pairs.
+ *
+ * The walk is recursive on purpose. `buildCompletionCertificate`
+ * digests the evidence root recursively, so a payload one level down
+ * (`spec-NNNN/archive/old.review.json`) is sealed into the certificate
+ * exactly like a top-level sibling. A shallow `readdir` here would let
+ * that nested file ship without ever being parsed — the audited set
+ * must be at least as wide as the digested set.
  */
 async function listReviewPayloadFiles(dirAbs: string): Promise<string[]> {
+  const out: string[] = [];
+  await collectReviewPayloadFiles(dirAbs, "", out);
+  return out.sort();
+}
+
+/**
+ * Depth-first accumulator behind {@link listReviewPayloadFiles}.
+ *
+ * Uses `readdir` + `stat` (not `withFileTypes`) so symlinks resolve the
+ * same way the certificate's own evidence walker resolves them; a file
+ * the digest tree follows must be a file this sweep follows too.
+ * Per-entry `stat` failures are skipped rather than thrown: one
+ * vanished entry must not abort the audit of its siblings.
+ */
+async function collectReviewPayloadFiles(
+  dirAbs: string,
+  prefix: string,
+  out: string[],
+): Promise<void> {
   let entries: string[];
   try {
     entries = await readdir(dirAbs);
   } catch {
-    return [];
+    return;
   }
-  return entries.filter((name) => name.endsWith(REVIEW_PAYLOAD_SUFFIX)).sort();
+  for (const name of entries) {
+    const rel = prefix === "" ? name : `${prefix}/${name}`;
+    const abs = path.join(dirAbs, name);
+    let s: Awaited<ReturnType<typeof stat>>;
+    try {
+      s = await stat(abs);
+    } catch {
+      continue;
+    }
+    if (s.isDirectory()) {
+      await collectReviewPayloadFiles(abs, rel, out);
+    } else if (s.isFile() && name.endsWith(REVIEW_PAYLOAD_SUFFIX)) {
+      out.push(rel);
+    }
+  }
+}
+
+/**
+ * Every `*.review.json` under an accepted-iteration directory that does
+ * NOT sit inside a canonical `spec-NNNN` subtree — the per-spec sweeps
+ * cover those. Paths are relative to the iteration directory.
+ */
+async function listStrayIterationPayloads(iterDirAbs: string): Promise<string[]> {
+  const all = await listReviewPayloadFiles(iterDirAbs);
+  return all.filter((rel) => {
+    const first = rel.split("/")[0];
+    return !(rel.includes("/") && first !== undefined && CANONICAL_SPEC_DIR.test(first));
+  });
+}
+
+/** The screen id a payload path claims: its basename minus the suffix. */
+function payloadScreenId(rel: string): string {
+  const fileName = rel.slice(rel.lastIndexOf("/") + 1);
+  return fileName.slice(0, -REVIEW_PAYLOAD_SUFFIX.length);
+}
+
+/**
+ * Derive the `(spec, screen, cycle)` a payload path claims, given the
+ * path relative to its iteration directory. The spec is anchored only
+ * when the first segment is a canonical `spec-NNNN` directory; see
+ * {@link ReviewPayloadExpectation}.
+ */
+function payloadExpectationFromRel(rel: string, cycle: number): ReviewPayloadExpectation {
+  const first = rel.split("/")[0];
+  const specDirName =
+    rel.includes("/") && first !== undefined && CANONICAL_SPEC_DIR.test(first) ? first : null;
+  return { specDirName, screenId: payloadScreenId(rel), cycle };
+}
+
+/**
+ * A reviewer payload as it appears in `evidenceDigests[].path`, i.e.
+ * relative to the evidence root: `iter-NN/<anything>/<screen>.review.json`.
+ */
+const SEALED_REVIEW_PAYLOAD_RE = /^iter-(\d{2,})\/(.+\.review\.json)$/u;
+
+/** Bound on the payload reasons `--check` renders, as elsewhere. */
+const SEALED_AUDIT_REASON_CAP = 20;
+
+/**
+ * Re-audit the review payloads a certificate already sealed against the
+ * CURRENT schema / identity / convergence rules, and return one reason
+ * per violation.
+ *
+ * `checkCompletionCertificate` proves only that the sealed bytes are
+ * unchanged. A certificate written by a build whose gate checked
+ * presence alone therefore keeps passing `--check` forever, even after
+ * the package is upgraded, with `{}` or `{"ok":true}` standing in for
+ * review evidence — and the shipped skill defines DONE as `--check`
+ * exit 0. Holding the sealed set to the same rules a fresh seal must
+ * satisfy closes that gap without re-running any gate that needs the
+ * project's live configuration.
+ *
+ * Only the ACCEPTED iteration's payloads are audited. Earlier cycles
+ * are legitimately non-converged — that is why the loop ran again — so
+ * applying the convergence rule to them would reject every honest
+ * multi-cycle certificate.
+ */
+async function auditSealedReviewPayloads(
+  root: string,
+  cert: CompletionCertificate,
+): Promise<string[]> {
+  const sealed: Array<{ iterIndex: number; relUnderIter: string; evidenceRel: string }> = [];
+  for (const entry of cert.evidenceDigests) {
+    const evidenceRel = entry.path.replace(/\\/g, "/");
+    const match = SEALED_REVIEW_PAYLOAD_RE.exec(evidenceRel);
+    if (!match) continue;
+    const idxRaw = match[1];
+    const relUnderIter = match[2];
+    if (idxRaw === undefined || relUnderIter === undefined) continue;
+    const iterIndex = Number.parseInt(idxRaw, 10);
+    if (!Number.isInteger(iterIndex)) continue;
+    sealed.push({ iterIndex, relUnderIter, evidenceRel });
+  }
+  if (sealed.length === 0) return [];
+
+  const acceptedIterationIndex = await resolveSealedAcceptedIterationIndex(root);
+  if (acceptedIterationIndex === null) {
+    // Fail closed: payloads are sealed but the record that says which
+    // iteration was accepted is gone, so nothing can be re-audited.
+    return [
+      `${PROTOTYPING_JSON_REL} is missing or carries no iterations, so the ${sealed.length} ` +
+        "sealed review payload(s) cannot be re-audited against the accepted iteration.",
+    ];
+  }
+
+  const reasons: string[] = [];
+  for (const payload of sealed) {
+    if (payload.iterIndex !== acceptedIterationIndex) continue;
+    if (reasons.length >= SEALED_AUDIT_REASON_CAP) break;
+    const audit = await auditReviewPayload(
+      path.join(root, PROTOTYPING_EVIDENCE_REL, payload.evidenceRel),
+      payloadExpectationFromRel(payload.relUnderIter, acceptedIterationIndex),
+    );
+    const details = [...audit.schemaErrors, ...audit.identityErrors, ...audit.convergenceErrors];
+    for (const detail of details) {
+      if (reasons.length >= SEALED_AUDIT_REASON_CAP) break;
+      reasons.push(
+        `sealed review payload ${PROTOTYPING_EVIDENCE_REL}/${payload.evidenceRel}: ${detail}`,
+      );
+    }
+  }
+  return reasons;
+}
+
+/**
+ * The accepted iteration index as recorded in `prototyping.json`,
+ * resolved exactly the way the generate path resolves it. `null` when
+ * the record is unreadable or holds no iterations.
+ */
+async function resolveSealedAcceptedIterationIndex(root: string): Promise<number | null> {
+  const protoJson = await loadJson(path.join(root, PROTOTYPING_JSON_REL));
+  if (protoJson === null) return null;
+  const resolved = resolveCertifyAcceptedIterationIndex(extractIterationViewsForCertify(protoJson));
+  if (resolved !== null) return resolved;
+  const iterationCount = countIterations(protoJson);
+  return iterationCount > 0 ? iterationCount - 1 : null;
 }
 
 /**
@@ -2176,7 +2401,10 @@ function collectIdentityMismatches(
   expected: ReviewPayloadExpectation,
 ): string[] {
   const errors: string[] = [];
-  if (normalizeSpecDirName(review.specId) !== expected.specDirName) {
+  if (
+    expected.specDirName !== null &&
+    normalizeSpecDirName(review.specId) !== expected.specDirName
+  ) {
     errors.push(`specId "${review.specId}" does not identify ${expected.specDirName}`);
   }
   if (review.screenId !== expected.screenId) {

@@ -17,6 +17,7 @@
  * set. Per-spec screen contracts (a per-(spec × screen) declaration
  * surface) are deferred to Wave 1's reviewerDispatch work.
  */
+import { createHash } from "node:crypto";
 import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -199,6 +200,48 @@ async function seedReviewJson(
   );
   await mkdir(dir, { recursive: true });
   await writeFile(path.join(dir, `${screenId}.review.json`), body, "utf-8");
+}
+
+/**
+ * Write a payload at an arbitrary path under one iteration directory —
+ * the nested / non-per-spec shapes the declared-pair sweep never names
+ * but the certificate's recursive digest walk still seals.
+ */
+async function seedPayloadAt(
+  root: string,
+  relUnderIter: string,
+  body: string,
+  iterIndex = 1,
+): Promise<void> {
+  const abs = path.join(
+    root,
+    `.qfai/evidence/prototyping/iter-${String(iterIndex).padStart(2, "0")}`,
+    relUnderIter,
+  );
+  await mkdir(path.dirname(abs), { recursive: true });
+  await writeFile(abs, body, "utf-8");
+}
+
+/**
+ * Rewrite one evidence file and re-stamp its digest inside an already
+ * sealed certificate — the shape a certificate written by a
+ * presence-only gate has on disk today: digests that match, contents
+ * that are not review evidence.
+ */
+async function reseal(root: string, evidenceRel: string, body: string): Promise<void> {
+  const abs = path.join(root, ".qfai/evidence/prototyping", evidenceRel);
+  await writeFile(abs, body, "utf-8");
+  const certPath = path.join(root, ".qfai/evidence/prototyping/completion-certificate.json");
+  const cert = JSON.parse(await readFile(certPath, "utf-8")) as {
+    evidenceDigests: Array<{ path: string; sha256: string }>;
+  };
+  const sha256 = createHash("sha256")
+    .update(await readFile(abs))
+    .digest("hex");
+  for (const entry of cert.evidenceDigests) {
+    if (entry.path === evidenceRel) entry.sha256 = sha256;
+  }
+  await writeFile(certPath, `${JSON.stringify(cert, null, 2)}\n`, "utf-8");
 }
 
 describe("qfai prototyping certify (TC-0012-0381: per-(spec × screen) review.json presence)", () => {
@@ -615,6 +658,139 @@ describe("qfai prototyping certify (per-screen payload identity + convergence)",
   });
 });
 
+describe("qfai prototyping certify (recursive payload sweep + --check re-audit)", () => {
+  it("exits 64 when a NESTED payload under the per-spec directory is unparsable", async () => {
+    // The certificate's evidence walk is recursive, so
+    // `spec-0012/archive/old.review.json` is digested and sealed. A
+    // shallow `readdir` in the audit sweep left it unread — a corrupt
+    // Reviewer artifact shipped inside a certificate at exit 0.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedPayloadAt(root, "spec-0012/archive/old.review.json", "{ truncated");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-0012/archive/old.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("exits 64 when a payload parked outside any per-spec directory contradicts convergence", async () => {
+    // Same digest reasoning one level out: a payload under a
+    // non-`spec-NNNN` folder is sealed too. Its spec cannot be read off
+    // the path, so it is held to the screen / cycle its path claims plus
+    // schema and convergence.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedPayloadAt(
+      root,
+      "misc/old.review.json",
+      reviewPayload("spec-0012", "old", { axis: "weak" }),
+    );
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      const exit = await runPrototypingCertify({ root, check: false });
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("misc/old.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  // Over-correction pin: a nested payload is AUDITED, not banned. A
+  // schema-valid, converged leftover is not an evidence gap.
+  it("still seals the certificate when the nested payload is valid and converged", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedPayloadAt(
+      root,
+      "spec-0012/archive/old.review.json",
+      reviewPayload("spec-0012", "old"),
+    );
+
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  it("--check re-audits the sealed payloads and exits 2 when one no longer satisfies the schema", async () => {
+    // A certificate sealed by a presence-only gate carries `{}` where
+    // review evidence should be. Its digests still match, so the old
+    // `--check` reported OK forever — and the shipped skill reads
+    // `--check` exit 0 as DONE.
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    await reseal(root, "iter-01/spec-0012/home.review.json", "{}\n");
+
+    const logger = await import("../../../src/cli/lib/logger.js");
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
+    try {
+      expect(await runPrototypingCertify({ root, check: true })).toBe(2);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("iter-01/spec-0012/home.review.json"))).toBe(true);
+    } finally {
+      errorSpy.mockRestore();
+    }
+  });
+
+  it("--check exits 2 when a sealed payload was re-stamped with another pair's review", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    await reseal(
+      root,
+      "iter-01/spec-0012/home.review.json",
+      `${reviewPayload("spec-0012", "settings")}\n`,
+    );
+
+    expect(await runPrototypingCertify({ root, check: true })).toBe(2);
+  });
+
+  // Over-correction pin: the re-audit must not reject a certificate
+  // whose payloads are exactly what certify sealed, and must not hold
+  // EARLIER cycles to the convergence rule — those are legitimately
+  // non-converged, which is why the loop ran again.
+  it("--check still exits 0 on an untampered certificate whose earlier cycle was not converged", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, { specsCovered: ["0012"] });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+    await seedReviewJson(
+      root,
+      "spec-0012",
+      "home",
+      0,
+      reviewPayload("spec-0012", "home", { cycle: 0, axis: "weak" }),
+    );
+
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+    expect(await runPrototypingCertify({ root, check: true })).toBe(0);
+  });
+});
+
 describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred over legacy specsCovered)", () => {
   // QFAI:SPEC-0012:TC-0012-0399
   it("iterates the cycle-0-frozen multi-spec set (frozenSpecsCovered) — not the legacy single-spec specsCovered — when both fields are present", async () => {
@@ -672,57 +848,74 @@ describe("qfai prototyping certify (TC-0012-0399: frozenSpecsCovered preferred o
   });
 });
 
-// Regression for codex review r3264630513 (P1): the per-(spec × screen)
-// review.json presence gate is opt-in based on actual per-spec layout
-// presence at the accepted iter. Flat-iter projects (the legacy
-// `iter-NN/index.html` shape that prototypingIterate + SKILL.md still
-// emit) must NOT have the gate enforced for SINGLE-spec frozen sets;
-// pre-fix the gate ran unconditionally and would fail every (spec,
-// screen) pair on a normal run that followed the shipped plan. The
-// per-spec layout migration is tracked under OQ-0012-0006 / TDD-0384.
-//
-// Tightened in the 6th late-review wave (codex r3264798065, P1): the
-// flat-iter skip is now CONDITIONAL on `frozenSpecsCovered.length <= 1`.
-// Multi-spec frozen sets on a flat iter ERROR (see TC-0012-0403 below) —
-// the legacy flat layout structurally cannot host per-spec review.json
-// files for secondary specs and the skip would re-open the TDD-0387
-// vulnerability.
-describe("qfai prototyping certify (codex r3264630513: flat-iter layout skips the per-(spec × screen) gate)", () => {
+// The per-(spec × screen) review.json gate used to be opt-in on the
+// accepted iter actually holding per-spec subdirs, because the shipped
+// iterate driver + SKILL.md still told the loop to write only the flat
+// `iter-NN/review.json` summary. That is no longer what the shipped
+// skill says — cycle 0 and every later cycle now instruct the reviewer
+// to write `iter-NN/<spec-id>/<screen>.review.json` — so the skip had
+// become a way for ANY single-spec run to opt out of the presence,
+// schema, identity and convergence audits by simply never writing a
+// payload. Single-spec now goes through the same gate; multi-spec keeps
+// its dedicated structural diagnostic (TC-0012-0403 below).
+describe("qfai prototyping certify (single-spec flat-iter no longer skips the per-(spec × screen) gate)", () => {
   // QFAI:SPEC-0012:TC-0012-0402
-  it("exits 0 on a single-spec flat-iter project (no per-spec subdirs at the accepted iter)", async () => {
+  it("exits 64 on a single-spec flat-iter project (no per-spec subdirs at the accepted iter)", async () => {
     const root = await newTempDir();
     await seedMinimalProject(root);
     // Single-spec frozen set on a flat iter — only `iter-01/index.html`
-    // exists, no `iter-01/spec-*/` subdirs. The gate must skip with an
-    // info note and let the run succeed. Multi-spec flat-iter is
-    // covered separately by TC-0012-0403.
+    // exists, no `iter-01/spec-*/` subdirs.
     await seedAllGatesPass(root, {
       specsCovered: ["0012"],
       frozenSpecsCovered: ["0012"],
     });
-    // Seed a single UI screen contract so the gate would otherwise
-    // trigger (`screenContracts.length > 0`).
+    // A UI screen contract, so the gate applies (`screenContracts.length > 0`).
     await seedUiScreens(root, ["home"]);
-    // Crucially: NO `seedReviewJson` calls. The flat iter has just
-    // `index.html` (seeded by seedAllGatesPass) + `home.html` (seeded
-    // by seedUiScreens). No per-spec subdir exists, so the gate skips.
+    // Crucially: NO `seedReviewJson` calls. Pre-fix this sealed a
+    // certificate with zero per-screen review evidence.
 
     const logger = await import("../../../src/cli/lib/logger.js");
-    const infoSpy = vi.spyOn(logger, "info").mockImplementation(() => {});
+    const errorSpy = vi.spyOn(logger, "error").mockImplementation(() => {});
     try {
       const exit = await runPrototypingCertify({ root, check: false });
-      expect(exit).toBe(0);
-      // The skip path must surface an operator-facing info note so the
-      // deferred migration stays visible. Match on the canonical tokens
-      // (`per-spec`, `layout not detected`, `skipping`).
-      const infoMessages = infoSpy.mock.calls.map((c) => String(c[0]));
-      const noteEmitted = infoMessages.some(
-        (m) => /per-spec/i.test(m) && /not detected/i.test(m) && /skipping/i.test(m),
+      expect(exit).toBe(64);
+      const messages = errorSpy.mock.calls.map((c) => String(c[0]));
+      expect(messages.some((m) => m.includes("spec-0012") && m.includes("home.review.json"))).toBe(
+        true,
       );
-      expect(noteEmitted).toBe(true);
     } finally {
-      infoSpy.mockRestore();
+      errorSpy.mockRestore();
     }
+  });
+
+  // Over-correction pin: the gate is keyed on DECLARED SCREENS, not on
+  // the layout. A project that declares no UI screens has no per-screen
+  // artifacts to require and must still seal on the flat layout.
+  it("exits 0 on a flat-iter project that declares no UI screens at all", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, {
+      specsCovered: ["0012"],
+      frozenSpecsCovered: ["0012"],
+    });
+    // No `seedUiScreens` call: `.qfai/contracts/ui/` is absent.
+
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
+  });
+
+  // Over-correction pin: a single-spec run that DOES write its payloads
+  // under the per-spec directory still seals.
+  it("exits 0 on a single-spec run whose declared screen has its per-spec payload", async () => {
+    const root = await newTempDir();
+    await seedMinimalProject(root);
+    await seedAllGatesPass(root, {
+      specsCovered: ["0012"],
+      frozenSpecsCovered: ["0012"],
+    });
+    await seedUiScreens(root, ["home"]);
+    await seedReviewJson(root, "spec-0012", "home");
+
+    expect(await runPrototypingCertify({ root, check: false })).toBe(0);
   });
 
   // QFAI:SPEC-0012:TC-0012-0403

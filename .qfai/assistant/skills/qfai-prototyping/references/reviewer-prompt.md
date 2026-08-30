@@ -25,8 +25,9 @@ write them exactly there, or the CLI will not find them.
 1. **Per-spec / per-screen payload** —
    `.qfai/evidence/prototyping/iter-NN/<spec-id>/<screen>.review.json`,
    one per screen. `<spec-id>` is the spec directory name
-   (`spec-NNNN`); the per-spec subdirectory is mandatory, and a
-   multi-spec run is rejected without it. This is the file the
+   (`spec-NNNN`); the per-spec subdirectory is mandatory for every run
+   that declares UI screens — single-spec runs included, and a
+   multi-spec run is rejected outright without it. This is the file the
    prototyping CLI parses and certify requires. Its schema is closed
    (11 required top-level fields, unknown keys rejected) and lives in
    `references/review-payload-schema.md`. Write it from that

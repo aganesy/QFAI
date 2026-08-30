@@ -15,6 +15,7 @@ const ASSISTANT_ROOTS = [
 
 const SCHEMA_REL = "skills/qfai-prototyping/references/review-payload-schema.md";
 const PROMPT_REL = "skills/qfai-prototyping/references/reviewer-prompt.md";
+const SKILL_REL = "skills/qfai-prototyping/SKILL.md";
 
 /**
  * The prototyping sources that cite a shipped document as the authority
@@ -101,6 +102,20 @@ describe("shipped reviewer payload schema", () => {
       // summary the orchestrator folds into `prototyping.json`.
       expect(prompt).toContain("Per-cycle summary (`iter-NN/review.json`)");
       expect(prompt).not.toContain("## Output (`iter-NN/review.json`)");
+    }
+  });
+
+  // A cycle-0 review can itself converge. When the C0 row asks only for
+  // the flat `iter-00/review.json`, that run reaches certify with no
+  // per-screen payload at all and is rejected (exit 64) — a loop that
+  // succeeded cannot be sealed. Both outputs have to be named in the row
+  // that actually performs the capture + review, not only in C1..9.
+  it("makes cycle 0 emit the per-screen payloads, not only the flat summary", async () => {
+    for (const skill of await readShipped(SKILL_REL)) {
+      const c0Row = skill.split("\n").find((line) => line.startsWith("| C0"));
+      expect(c0Row, "SKILL.md has no C0 loop row").toBeDefined();
+      expect(c0Row).toContain("iter-00/<spec-id>/<screen>.review.json");
+      expect(c0Row).toContain("iter-00/review.json");
     }
   });
 });

@@ -153,6 +153,17 @@ not evidence.
    already `PASS` — the payloads are the evidence behind that summary,
    and certify refuses to seal a certificate over the contradiction.
 
+Checks 1 to 4 apply to every run that declares UI screens, whether the
+frozen set holds one spec or several: a single-spec run does not get a
+pass for writing no payload at all.
+
+`npx qfai prototyping certify --check` re-runs checks 2 to 4 over the
+payloads the certificate already sealed for the accepted iteration, so
+an old certificate cannot keep reporting DONE on evidence this schema
+rejects. A failing re-audit exits `2` (`completion-certificate:
+MISMATCH`) and names each payload and reason; re-run the cycle that
+produced it, then `npx qfai prototyping certify` again.
+
 `impressions.*` prose is not deterministic and MUST NOT be asserted for
 exact equality. The stable surfaces are `ordinalAxes.*`,
 `layoutAntiPatternsDetected`, `designMdViolations`, and the existence
