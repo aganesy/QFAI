@@ -470,6 +470,191 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("rejects a catalogue that spells one canonical column name twice", async () => {
+    const cases: Array<{ header: string; separator: string; row: string; duplicate: string }> = [
+      {
+        header: "| CAP ID   | Statement  | Spec      | Spec      |",
+        separator: "| -------- | ---------- | --------- | --------- |",
+        row: "| CAP-0001 | capability | spec-0001 | spec-9999 |",
+        duplicate: "Spec",
+      },
+      {
+        header: "| CAP ID   | CAP ID     | Statement  | Spec      |",
+        separator: "| -------- | ---------- | ---------- | --------- |",
+        row: "| CAP-0001 | CAP-0001   | capability | spec-9999 |",
+        duplicate: "CAP ID",
+      },
+    ];
+    for (const { header, separator, row, duplicate } of cases) {
+      const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+      try {
+        // Resolving the exact match with `findIndex` took whichever column came
+        // first, so the second one was never read and the catalogue passed on
+        // the value it liked. Neither column may stand in for the other.
+        await seedPolicies(root, ["CAP-0001"], undefined, undefined, { catalogHeading: true });
+        await writeFile(
+          path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+          ["# 03 Capabilities", "", "## CAP Catalog", "", header, separator, row, ""].join("\n"),
+          "utf-8",
+        );
+        await seedSpec(root, "0001", "CAP-0001");
+
+        const issues = await validateSpecSplitByCapability(root, defaultConfig);
+        const duplicates = issues.filter((item) => item.code === "QFAI-SPLIT-109");
+        expect(duplicates).toHaveLength(1);
+        expect(duplicates[0]?.refs).toEqual([duplicate]);
+        expect(duplicates[0]?.file).toBe(
+          path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        );
+        // The ambiguous column resolves to none, so no row is validated against
+        // an arbitrary one of the two.
+        expect(issues.some((item) => item.code === "QFAI-SPLIT-106")).toBe(false);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("keeps resolving a canonical column that is spelled once", async () => {
+    // Over-correction pin for the duplicate-header rejection above: one exact
+    // `Spec` beside a loose companion still resolves and still validates.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"], undefined, undefined, { catalogHeading: true });
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| CAP ID   | Previous Spec | Statement  | Spec      |",
+          "| -------- | ------------- | ---------- | --------- |",
+          "| CAP-0001 | spec-0004     | capability | spec-0001 |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("reports every ambiguous row even when no row survives the numbering", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // A catalogue made only of multi-ID rows numbers nothing, and returning
+      // on that first reduced the whole diagnosis to a bare "no CAP ID found"
+      // — the rows that caused it went unreported.
+      await seedPolicies(root, ["CAP-0002"], undefined, undefined, { catalogHeading: true });
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "## CAP Catalog",
+          "",
+          "| CAP ID              | Statement  |",
+          "| ------------------- | ---------- |",
+          "| CAP-0002 / CAP-0003 | capability |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((item) => item.code)).toEqual(["QFAI-SPLIT-108", "QFAI-SPLIT-101"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0002", "CAP-0003"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("keeps an approved DELETE's numbering gap when the row stays as a tombstone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The slice policy leaves the number of a DELETEd spec unused, but row
+      // position is the mapping: keeping a plain row demanded a directory that
+      // is gone (103) and inflated the count (102), while dropping the row
+      // renumbered every capability below it. A tombstone holds the position.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002", "CAP-0003": "spec-0003" },
+        undefined,
+        { capCells: { "CAP-0002": "CAP-0002 (deleted)" } },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("still reports a spec directory that outlived its tombstone", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // Over-correction pin: a tombstone excuses the gap, not a directory the
+      // DELETE was supposed to remove.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002", "CAP-0003"],
+        { "CAP-0001": "spec-0001", "CAP-0002": "spec-0002", "CAP-0003": "spec-0003" },
+        undefined,
+        { capCells: { "CAP-0002": "CAP-0002 (deleted)" } },
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((item) => item.code)).toEqual(["QFAI-SPLIT-102", "QFAI-SPLIT-104"]);
+      expect(issues[1]?.refs).toEqual(["spec-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects a capability that reuses a retired CAP ID", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // Over-correction pin: a tombstone is kept out of the live count, so the
+      // duplicate check has to keep reading it or a retired ID could be handed
+      // to a new capability without a word.
+      await seedPolicies(root, ["CAP-0001"]);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "| CAP ID              | Statement  | Spec      |",
+          "| ------------------- | ---------- | --------- |",
+          "| CAP-0001            | capability | spec-0001 |",
+          "| CAP-0002 (deleted)  | capability | spec-0002 |",
+          "| CAP-0002            | capability | spec-0003 |",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0003", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues.map((item) => item.code)).toEqual(["QFAI-SPLIT-107"]);
+      expect(issues[0]?.refs).toEqual(["CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("fails layered traceability when Parent is missing or down-ref exists", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {

@@ -31,6 +31,20 @@ const ATX_HEADING_RE = /^ {0,3}(#{1,6})\s+/;
  */
 const CAP_CATALOG_HEADING_RE = /^ {0,3}(#{1,6})\s+cap\s+catalog(?:\s+#+)?\s*$/i;
 
+/**
+ * Marks a catalogue row as a tombstone for an approved DELETE.
+ *
+ * The slice policy leaves the number of a deleted spec unused, but row position
+ * is the mapping, so a gap had no representation that validated: keeping the
+ * row demanded a directory that is gone, and dropping the row pulled every
+ * capability below it up one slot. A tombstone row keeps its position and maps
+ * to no spec — its directory must be absent and its ID is never reused.
+ *
+ * Read from the CAP cell rather than from the `Spec` cell so a catalogue
+ * without the optional `Spec` column can record a gap too.
+ */
+const RETIRED_CAP_CELL_RE = /\(\s*deleted\s*\)/i;
+
 /** Stands in for the declared value in QFAI-SPLIT-106 when the cell is blank. */
 const UNDECLARED_SPEC_CELL = "(未宣言)";
 
@@ -46,7 +60,15 @@ type CapCatalogueRow = {
   capId: string;
   /** The raw `Spec` cell on that row, blank and malformed included. */
   specCell: string;
+  /**
+   * The row is a tombstone: an approved DELETE removed the spec and the row
+   * stays only to hold the number, so the capabilities below keep theirs.
+   */
+  retired: boolean;
 };
+
+/** A catalogue row with the spec ID its position in the table derives. */
+type NumberedCapRow = CapCatalogueRow & { specId: string };
 
 type CapCatalogue = {
   /**
@@ -63,6 +85,13 @@ type CapCatalogue = {
   rows: CapCatalogueRow[];
   /** CAP cells naming several IDs, so no single row position can be attributed. */
   ambiguousRows: string[][];
+  /**
+   * Header spellings that named more than one column of the same table.
+   *
+   * Taking the first of them would validate an arbitrary column, so the column
+   * resolves to none and the catalogue is reported instead.
+   */
+  duplicateHeaders: string[];
 };
 
 /**
@@ -105,8 +134,8 @@ function findCatalogueWindow(lines: string[]): { start: number; end: number } {
  * exactly and exactly one column is a candidate; an ambiguous header declares
  * no column at all rather than guessing one.
  */
-function findSpecColumn(header: string[]): number {
-  return findColumn(header, SPEC_HEADER_EXACT_RE, HEADER_SPEC_CELL_RE);
+function resolveSpecColumn(header: string[]): ColumnResolution {
+  return resolveColumn(header, SPEC_HEADER_EXACT_RE, HEADER_SPEC_CELL_RE);
 }
 
 /**
@@ -117,23 +146,39 @@ function findSpecColumn(header: string[]): number {
  * fell through to the document-wide scan and validated a catalogue whose `Spec`
  * cells were never read.
  */
-function findCapColumn(header: string[]): number {
-  return findColumn(header, CAP_HEADER_EXACT_RE, HEADER_CAP_CELL_RE);
+function resolveCapColumn(header: string[]): ColumnResolution {
+  return resolveColumn(header, CAP_HEADER_EXACT_RE, HEADER_CAP_CELL_RE);
 }
+
+type ColumnResolution = {
+  /** The resolved column index, or -1 when no single column resolves. */
+  index: number;
+  /** The header spelling that named more than one column, else null. */
+  duplicateHeader: string | null;
+};
 
 /**
  * An exact header spelling wins outright; the loose one is honoured only when
  * nothing matches exactly and exactly one column is a candidate. An ambiguous
  * header declares no column at all rather than guessing one.
+ *
+ * Uniqueness is required of the exact match too. Taking the first hit let a
+ * table repeat a canonical name (`| CAP ID | Spec | Spec |`) and be validated
+ * against whichever column came first, so a second column holding a different
+ * value was never read at all. Such a header resolves to no column and is
+ * handed back for reporting rather than guessed at.
  */
-function findColumn(header: string[], exactRe: RegExp, looseRe: RegExp): number {
+function resolveColumn(header: string[], exactRe: RegExp, looseRe: RegExp): ColumnResolution {
   const normalized = header.map((cell) => cell.replace(/[`*_]/g, "").trim());
-  const exact = normalized.findIndex((cell) => exactRe.test(cell));
-  if (exact >= 0) {
-    return exact;
+  const exact = normalized.flatMap((cell, index) => (exactRe.test(cell) ? [index] : []));
+  if (exact.length === 1) {
+    return { index: exact[0] ?? -1, duplicateHeader: null };
+  }
+  if (exact.length > 1) {
+    return { index: -1, duplicateHeader: normalized[exact[0] ?? 0] ?? "" };
   }
   const loose = normalized.flatMap((cell, index) => (looseRe.test(cell) ? [index] : []));
-  return loose.length === 1 ? (loose[0] ?? -1) : -1;
+  return { index: loose.length === 1 ? (loose[0] ?? -1) : -1, duplicateHeader: null };
 }
 
 /**
@@ -157,7 +202,8 @@ function readCatalogueRows(
       continue;
     }
     const cells = splitMarkdownRow(line);
-    const [capId, ...extraCapIds] = uniqueMatches(cells[capColumn] ?? "", CAP_ID_RE);
+    const capCell = cells[capColumn] ?? "";
+    const [capId, ...extraCapIds] = uniqueMatches(capCell, CAP_ID_RE);
     if (extraCapIds.length > 0) {
       // Several IDs on one row: the row claims one position for two
       // capabilities, so it is kept out of the numbering below and reported
@@ -171,7 +217,11 @@ function readCatalogueRows(
       // the numbering of the rows that do name exactly one CAP intact.
       continue;
     }
-    rows.push({ capId, specCell: specColumn >= 0 ? (cells[specColumn] ?? "") : "" });
+    rows.push({
+      capId,
+      specCell: specColumn >= 0 ? (cells[specColumn] ?? "") : "",
+      retired: RETIRED_CAP_CELL_RE.test(capCell),
+    });
   }
   return { rows, ambiguousRows };
 }
@@ -205,6 +255,7 @@ function readCatalogueRows(
 function parseCapCatalogue(markdown: string): CapCatalogue {
   const lines = maskNonSpecRegions(markdown).split("\n");
   const window = findCatalogueWindow(lines);
+  const duplicateHeaders: string[] = [];
 
   for (let index = window.start; index < window.end; index += 1) {
     const line = lines[index] ?? "";
@@ -215,19 +266,31 @@ function parseCapCatalogue(markdown: string): CapCatalogue {
       continue;
     }
     const header = splitMarkdownRow(line);
-    const capColumn = findCapColumn(header);
-    if (capColumn < 0) {
+    const capColumn = resolveCapColumn(header);
+    if (capColumn.duplicateHeader !== null) {
+      duplicateHeaders.push(capColumn.duplicateHeader);
+    }
+    if (capColumn.index < 0) {
       continue;
     }
-    const specColumn = findSpecColumn(header);
+    const specColumn = resolveSpecColumn(header);
+    if (specColumn.duplicateHeader !== null) {
+      duplicateHeaders.push(specColumn.duplicateHeader);
+    }
     return {
       confirmed: true,
-      hasSpecColumn: specColumn >= 0,
-      ...readCatalogueRows(lines, { start: index + 2, end: window.end }, capColumn, specColumn),
+      hasSpecColumn: specColumn.index >= 0,
+      duplicateHeaders,
+      ...readCatalogueRows(
+        lines,
+        { start: index + 2, end: window.end },
+        capColumn.index,
+        specColumn.index,
+      ),
     };
   }
 
-  return { confirmed: false, hasSpecColumn: false, rows: [], ambiguousRows: [] };
+  return { confirmed: false, hasSpecColumn: false, rows: [], ambiguousRows: [], duplicateHeaders };
 }
 
 function normalizeDeclaredSpecCell(cell: string): string {
@@ -237,24 +300,30 @@ function normalizeDeclaredSpecCell(cell: string): string {
   return cell.length === 0 ? UNDECLARED_SPEC_CELL : cell;
 }
 
-function collectCapSpecMismatches(catalogue: CapCatalogue): CapSpecMismatch[] {
-  if (!catalogue.hasSpecColumn) {
+/**
+ * A tombstone row declares the position it holds like any other row, so the
+ * gap stays visible and diffable in the `Spec` column.
+ */
+function collectCapSpecMismatches(
+  hasSpecColumn: boolean,
+  rows: NumberedCapRow[],
+): CapSpecMismatch[] {
+  if (!hasSpecColumn) {
     return [];
   }
 
   const mismatches: CapSpecMismatch[] = [];
-  catalogue.rows.forEach((row, index) => {
-    const derivedSpecId = `spec-${to4(index + 1)}`;
+  for (const row of rows) {
     const declaredSpecId = normalizeDeclaredSpecCell(row.specCell);
-    if (declaredSpecId !== derivedSpecId) {
+    if (declaredSpecId !== row.specId) {
       mismatches.push({
         capId: row.capId,
         declaredSpecId,
-        derivedSpecId,
+        derivedSpecId: row.specId,
         declaredIsSpecId: SPEC_CELL_RE.test(row.specCell),
       });
     }
-  });
+  }
   return mismatches;
 }
 
@@ -300,26 +369,30 @@ export async function validateSpecSplitByCapability(
   // catalogue table exists does the document-wide scan stand in, so a catalogue
   // that lists its CAPs in prose still reports 101 / 102 as before.
   const catalogue = parseCapCatalogue(capabilityText);
-  const capIds = catalogue.confirmed
-    ? catalogue.rows.map((row) => row.capId)
-    : uniqueMatches(capabilityText, CAP_ID_RE);
-  if (capIds.length === 0) {
+
+  // A repeated canonical header used to resolve to whichever column came
+  // first, so the columns after it were never read and the catalogue passed
+  // whatever they held.
+  for (const header of Array.from(new Set(catalogue.duplicateHeaders))) {
     issues.push(
       issue(
-        "QFAI-SPLIT-101",
-        "_policies/03_Capabilities.md に CAP ID が見つかりません。",
+        "QFAI-SPLIT-109",
+        `_policies/03_Capabilities.md のカタログ表に同名の列が複数あります: ${header}`,
         "error",
         capabilitiesPath,
-        "specSplitByCapability.capabilitiesIds",
+        "specSplitByCapability.duplicateHeader",
+        [header],
       ),
     );
-    return issues;
   }
 
   // A row whose CAP cell names several IDs was left out of the numbering, so
   // without this its capabilities map to no spec at all while the count, the
   // Spec column and every Parent still balance — and `validateOrphanProhibition`
   // collects both IDs from the document, so a US parented on one is accepted too.
+  // Reported ahead of the zero-row check below: a catalogue whose rows are *all*
+  // ambiguous has no numbered row, and returning on that first would reduce the
+  // whole diagnosis to a bare "no CAP ID found".
   for (const ambiguousRow of catalogue.ambiguousRows) {
     issues.push(
       issue(
@@ -333,13 +406,44 @@ export async function validateSpecSplitByCapability(
     );
   }
 
+  const rows: CapCatalogueRow[] = catalogue.confirmed
+    ? catalogue.rows
+    : uniqueMatches(capabilityText, CAP_ID_RE).map((capId) => ({
+        capId,
+        specCell: "",
+        retired: false,
+      }));
+  if (rows.length === 0) {
+    issues.push(
+      issue(
+        "QFAI-SPLIT-101",
+        "_policies/03_Capabilities.md に CAP ID が見つかりません。",
+        "error",
+        capabilitiesPath,
+        "specSplitByCapability.capabilitiesIds",
+      ),
+    );
+    return issues;
+  }
+
+  // Every row holds a position, tombstones included — that is what keeps an
+  // approved DELETE's gap from pulling the capabilities below it up one slot.
+  // Only the live rows claim a spec directory.
+  const numberedRows: NumberedCapRow[] = rows.map((row, index) => ({
+    ...row,
+    specId: `spec-${to4(index + 1)}`,
+  }));
+  const liveRows = numberedRows.filter((row) => !row.retired);
+
   // Row order is the mapping, so a CAP repeated on two rows claims two spec
   // directories at once. The count check below would then be satisfied by the
   // duplicate itself, and `validateDefinedIds` records a defining file as a set
   // so it cannot see a repeat inside one file either — the pair would pass in
   // silence. Reject it here, where the row positions are still in hand.
+  // Tombstones count: a retired ID handed to a new capability is the same fault.
+  const rowCapIds = numberedRows.map((row) => row.capId);
   const duplicateCapIds = Array.from(
-    new Set(capIds.filter((capId, index) => capIds.indexOf(capId) !== index)),
+    new Set(rowCapIds.filter((capId, index) => rowCapIds.indexOf(capId) !== index)),
   );
   if (duplicateCapIds.length > 0) {
     issues.push(
@@ -354,11 +458,11 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  if (capIds.length !== layeredEntries.length) {
+  if (liveRows.length !== layeredEntries.length) {
     issues.push(
       issue(
         "QFAI-SPLIT-102",
-        `CAP件数と spec件数が一致しません (CAP=${capIds.length}, spec=${layeredEntries.length})`,
+        `CAP件数と spec件数が一致しません (CAP=${liveRows.length}, spec=${layeredEntries.length})`,
         "error",
         specsRoot,
         "specSplitByCapability.count",
@@ -366,7 +470,7 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  const mismatches = collectCapSpecMismatches(catalogue);
+  const mismatches = collectCapSpecMismatches(catalogue.hasSpecColumn, numberedRows);
   for (const mismatch of mismatches) {
     issues.push(
       issue(
@@ -394,7 +498,9 @@ export async function validateSpecSplitByCapability(
   const actualSpecIds = new Set(
     layeredEntries.map((entry) => path.basename(entry.dir).toLowerCase()),
   );
-  const expectedSpecIds = capIds.map((_, index) => `spec-${to4(index + 1)}`);
+  // A tombstone's number is deliberately unused, so it is neither expected to
+  // exist (103) nor tolerated if it survived the DELETE (104).
+  const expectedSpecIds = liveRows.map((row) => row.specId);
 
   const missingSpecIds = expectedSpecIds.filter((specId) => !actualSpecIds.has(specId));
   if (missingSpecIds.length > 0) {
@@ -426,30 +532,27 @@ export async function validateSpecSplitByCapability(
     );
   }
 
-  for (let index = 0; index < capIds.length; index += 1) {
-    const capId = capIds[index];
-    if (!capId) {
+  for (const row of liveRows) {
+    if (suppressedCapIds.has(row.capId)) {
       continue;
     }
-    if (suppressedCapIds.has(capId)) {
-      continue;
-    }
-    const specId = `spec-${to4(index + 1)}`;
-    const entry = layeredEntries.find((value) => path.basename(value.dir).toLowerCase() === specId);
+    const entry = layeredEntries.find(
+      (value) => path.basename(value.dir).toLowerCase() === row.specId,
+    );
     if (!entry) {
       continue;
     }
     const specFilePath = path.join(entry.dir, "01_Spec.md");
     const specText = await readSafe(specFilePath);
-    if (specText.trim().length === 0 || !specText.includes(capId)) {
+    if (specText.trim().length === 0 || !specText.includes(row.capId)) {
       issues.push(
         issue(
           "QFAI-SPLIT-105",
-          `01_Spec.md が CAP を参照していません: ${specId} -> ${capId}`,
+          `01_Spec.md が CAP を参照していません: ${row.specId} -> ${row.capId}`,
           "error",
           specFilePath,
           "specSplitByCapability.specParent",
-          [specId, capId],
+          [row.specId, row.capId],
         ),
       );
     }

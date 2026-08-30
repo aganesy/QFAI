@@ -20,6 +20,14 @@
   capability.
 - `Parent: CAP-*` travels with its capability, so it stays as written — rewriting it
   during a reorder re-attaches the spec to a different capability.
+- An approved DELETE (`11_Slice-Policy.md`) removes the spec directory and leaves its
+  number unused. Keep the row and mark its CAP cell `CAP-0002 (deleted)`: the tombstone
+  goes on holding that position, so no capability below it is renumbered, and its `Spec`
+  cell still restates the position so the gap is visible and diffable. Dropping the row
+  instead pulls every later capability up one slot — that is a renumber, not a delete.
+- A tombstone maps to no spec: its directory must be gone (one left behind is reported
+  as unmapped), it is not counted against the spec total, and its CAP ID is retired for
+  good — never reuse it for a new capability.
 - Keep IDs stable once published.
 
 ## CAP Catalog

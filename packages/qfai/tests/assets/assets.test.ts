@@ -1505,6 +1505,30 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // template routes a late capability to the end of the catalogue — gated on
     // an observable criterion (the directory exists), not on "published".
     expect(content).toMatch(/no spec directory exists at or below the row/i);
+    // An approved DELETE leaves the number unused; row position is the mapping,
+    // so the gap needs a row of its own or every capability below it renumbers.
+    expect(content).toMatch(/\(deleted\)/);
+    expect(content).toMatch(/tombstone/i);
+  });
+
+  it("routes the slice policy's deletion gap through a catalogue tombstone row", async () => {
+    const slicePolicyPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "11_Slice-Policy.md",
+    );
+    const content = await readFile(slicePolicyPath, "utf-8");
+
+    // "Leave gaps after deletions" had no representation the mapping accepted,
+    // so the two policies pointed operators at incompatible outcomes.
+    expect(content).toMatch(/Leave gaps after deletions/);
+    expect(content).toMatch(/tombstone row/i);
+    expect(content).toContain("_policies/03_Capabilities.md");
   });
 
   it("ensures solution-architect agent contains required contract constraints", async () => {
