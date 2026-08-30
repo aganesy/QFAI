@@ -401,3 +401,33 @@ export function resolveParentTcId(tcRef: string): string | undefined {
   const parent = tcRef.replace(/-\d{4}$/, "");
   return parent !== tcRef ? parent : undefined;
 }
+
+/**
+ * The declared TC a ledger `TC-Refs` token speaks for, or `undefined` when it
+ * speaks for none.
+ *
+ * A ledger may decompose one declared TC into several rows and cite the parts
+ * as `TC-NNNN-NNNN`; only the parent is written in `06_Test-Cases.md`. Every
+ * rule that pairs a row with the spec therefore has to answer "which declared
+ * TC is this token about" the same way, and they did not: the unknown-reference
+ * check resolved the parent while the `Level`-migration check compared the
+ * token directly, so a row citing `TC-0001-0001` was accepted as a known
+ * reference *and* escaped the migration warning its parent had earned. One
+ * resolver, so the two cannot drift again.
+ *
+ * The token's own declaration wins over its parent's: a spec may declare a
+ * sub-ID in its own right, and that row's `Level` is then the one in force.
+ * A token of the wrong shape resolves to nothing — `resolveParentTcId` strips
+ * the last segment, so an over-long `TC-0001-0001-0001` would otherwise speak
+ * for a real `TC-0001-0001` on the strength of a typo.
+ */
+export function resolveDeclaredTcId(
+  ref: string,
+  declaredTcIds: ReadonlySet<string>,
+): string | undefined {
+  const normalized = ref.trim().toUpperCase();
+  if (!isWellFormedTcRef(normalized)) return undefined;
+  if (declaredTcIds.has(normalized)) return normalized;
+  const parent = resolveParentTcId(normalized);
+  return parent !== undefined && declaredTcIds.has(parent) ? parent : undefined;
+}

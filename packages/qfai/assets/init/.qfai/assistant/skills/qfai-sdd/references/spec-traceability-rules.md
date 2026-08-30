@@ -181,7 +181,11 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - A ledger seeded before that rule may still carry such a row.
   `TDDLIST_TC_LEVEL_UNDECLARED` (`warning`) reports every coverage row whose
   `TC-Refs` names a `Level`-less TC; clear it by declaring the TC's `Level` in
-  `06_Test-Cases.md` (`L1`/`L2` to keep it here) or by removing the row. Do not
+  `06_Test-Cases.md` (`L1`/`L2` to keep it here) or by removing the row. A
+  decomposition reference names the TC it belongs to, so a row citing
+  `TC-NNNN-NNNN` is reported against `TC-NNNN` — the id to declare is the one
+  the file actually lists — unless the sub-ID is itself a declared row with its
+  own `Level`, which then speaks for it. Do not
   silence it by moving the row to `Layer=Integration` unless `/qfai-atdd`
   really owns the test that row points at.
 - `Status=exception` requires a non-empty DR-ID. An `exception` row is not a

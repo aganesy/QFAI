@@ -64,6 +64,9 @@ reports each one, because the row keeps the TC on this ledger while
 `QFAI-ATDD-112` holds the same TC. Do not implement it: either declare the TC's
 `Level` or retire the row through `/qfai-sdd`. A row whose `Layer` is
 `Integration` is not reported — that one already agrees with the TC's ATDD home.
+A decomposition reference counts as naming the TC it belongs to: a row citing
+`TC-NNNN-NNNN` is reported against the `TC-NNNN` written in `06_Test-Cases.md`,
+unless the sub-ID is declared there in its own right with a `Level` of its own.
 
 ### The `Layer` a seeded row carries
 

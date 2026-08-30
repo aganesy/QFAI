@@ -19,6 +19,7 @@ import {
   isWellFormedTcRef,
   isCoverageBearingRow,
   splitTcRefs,
+  resolveDeclaredTcId,
   resolveParentTcId,
   TC_FORBIDDEN_LAYERS,
   TDD_LEDGER_REQUIRED_COLUMNS,
@@ -796,9 +797,11 @@ async function validateSpecTddList(
       if (tcRefsCell.length === 0) continue;
       for (const ref of splitTcRefs(tcRefsCell)) {
         const normalized = ref.toUpperCase();
-        const parent = resolveParentTcId(normalized) ?? normalized;
         if (!TC_ID_TOKEN.test(normalized)) continue;
-        if (knownTcIds.has(normalized) || knownTcIds.has(parent)) continue;
+        // The shared resolver, so "which declared TC does this token speak
+        // for" has one answer across every rule that asks it — Check 5d
+        // below reads the same function.
+        if (resolveDeclaredTcId(normalized, knownTcIds) !== undefined) continue;
         issues.push(
           issue(
             "TDDLIST_UNKNOWN_REF",
@@ -843,11 +846,29 @@ async function validateSpecTddList(
       const claimsLedgerCoverage =
         rawLayer.length === 0 || rawLayer === "-" || UNIT_COMPONENT_LAYERS.has(rawLayer);
       if (!claimsLedgerCoverage) continue;
-      const stale = splitTcRefs(cell(entry, "TC-Refs"))
-        .map((ref) => ref.toUpperCase())
-        .filter((ref) => isWellFormedTcRef(ref))
-        .filter((ref) => undeclaredLevelTcIds.has(ref))
-        .sort((left, right) => left.localeCompare(right));
+      // Resolved through `resolveDeclaredTcId`, not compared directly. A
+      // ledger may decompose one declared TC into several rows and cite the
+      // parts as `TC-NNNN-NNNN`, a form Check 5 accepts and `qfai report`
+      // credits to the parent — so a row citing `TC-0001-0001` while
+      // `TC-0001` declares no `Level` is exactly the leftover this rule
+      // exists to name, and a direct comparison let it through. The reported
+      // id is the resolved one: the TC that declares no `Level` is the parent
+      // written in `06_Test-Cases.md`, and naming the sub-ID would point the
+      // reader at a row that file does not contain. De-duplicated, since two
+      // sub-IDs of one parent resolve to the same TC.
+      //
+      // Resolved against `knownTcIds` and *then* tested for an undeclared
+      // `Level`, not resolved against the undeclared set directly: a spec may
+      // declare a sub-ID in its own right, and when it does, that `Level` is
+      // the one in force — a `TC-0001-0001` declaring `L1` under a
+      // `Level`-less `TC-0001` is a legitimate coverage row, not a leftover.
+      const stale = [
+        ...new Set(
+          splitTcRefs(cell(entry, "TC-Refs"))
+            .map((ref) => resolveDeclaredTcId(ref, knownTcIds))
+            .filter((tcId): tcId is string => tcId !== undefined && undeclaredLevelTcIds.has(tcId)),
+        ),
+      ].sort((left, right) => left.localeCompare(right));
       if (stale.length === 0) continue;
       issues.push(
         issue(

@@ -82,6 +82,25 @@ async function findingsFor(testCases: string, rows: string[]): Promise<Issue[]> 
 const codesFor = async (testCases: string, rows: string[]): Promise<string[]> =>
   (await findingsFor(testCases, rows)).map((entry) => entry.code);
 
+/**
+ * A parent TC with no `Level`, and a sub-ID declared in its own right with one.
+ *
+ * The shape that separates "the row is a leftover" from "the row is what the
+ * spec asked for": the sub-ID's own declaration is the one in force, so a row
+ * citing it is a legitimate coverage row however its parent was written.
+ */
+const TABLE_WITH_LEVELLED_SUB_ID = [
+  "# 06 Test Cases",
+  "",
+  "## Test Case Table",
+  "",
+  "| TC-ID        | Level | AC-Refs | EX-Ref  | Steps  | Expected   |",
+  "| ------------ | ----- | ------- | ------- | ------ | ---------- |",
+  "| TC-0001      |       | AC-0001 | EX-0001 | step-1 | expected-1 |",
+  "| TC-0001-0001 | L1    | AC-0001 | EX-0001 | step-2 | expected-2 |",
+  "",
+].join("\n");
+
 const UNIT_ROW = "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | sel | todo | | - |";
 
 describe("a coverage row for a TC that declares no Level", () => {
@@ -114,6 +133,39 @@ describe("a coverage row for a TC that declares no Level", () => {
     ]);
 
     expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+  });
+
+  it("is reported when the row cites a decomposition sub-ID of the TC", async () => {
+    // The shape an upgraded ledger most often has: Phase 2b seeded one row per
+    // target, and `/qfai-implement` then split the work and cited the parts.
+    // Check 5 accepts `TC-0001-0001` because it resolves to a declared parent,
+    // and `qfai report` credits the parent's coverage from it — so comparing
+    // the token directly here let the very rows this rule exists to name
+    // escape it.
+    const findings = await findingsFor(tableWithLevel(""), [
+      "| TDD-0001 | TC-0001-0001 | Unit  | tests/a.test.ts | sel | todo | | - |",
+    ]);
+    const codes = findings.map((entry) => entry.code);
+
+    expect(codes).toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+    // The sub-ID resolves to a declared TC, so it is not an unknown reference.
+    expect(codes).not.toContain("TDDLIST_UNKNOWN_REF");
+    // The TC that declares no `Level` is the parent, and it is the one written
+    // in `06_Test-Cases.md`; naming the sub-ID would point at a row that file
+    // does not contain.
+    expect(findings.find((entry) => entry.code === "TDDLIST_TC_LEVEL_UNDECLARED")?.refs).toEqual([
+      "TC-0001",
+    ]);
+  });
+
+  it("names the parent once when a row cites two of its sub-IDs", async () => {
+    const findings = await findingsFor(tableWithLevel(""), [
+      "| TDD-0001 | TC-0001-0001, TC-0001-0002 | Unit | tests/a.test.ts | sel | todo | | - |",
+    ]);
+
+    const reported = findings.filter((entry) => entry.code === "TDDLIST_TC_LEVEL_UNDECLARED");
+    expect(reported).toHaveLength(1);
+    expect(reported[0]?.refs).toEqual(["TC-0001"]);
   });
 
   it("names the TC and points at the file that can clear it", async () => {
@@ -159,6 +211,47 @@ describe("what the migration check leaves alone", () => {
   it("says nothing about a row that cites no TC", async () => {
     const codes = await codesFor(tableWithLevel(""), [
       "| TDD-0001 | -       | Unit  | tests/a.test.ts | sel | todo | | - |",
+    ]);
+
+    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+  });
+
+  it("says nothing about a sub-ID whose parent declares a Level", async () => {
+    // Resolving to the parent must not turn every decomposition row into a
+    // migration warning: `TC-0001` declares `L1`, so its parts are ledger-owned
+    // and the rows citing them are exactly what Phase 2b asked for.
+    const codes = await codesFor(tableWithLevel("L1"), [
+      "| TDD-0001 | TC-0001-0001 | Unit  | tests/a.test.ts | sel | todo | | - |",
+    ]);
+
+    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+  });
+
+  it("says nothing about a sub-ID that declares its own Level", async () => {
+    // The token's own declaration outranks its parent's silence, so the lookup
+    // resolves against the declared TCs first and only then asks about `Level`.
+    const codes = await codesFor(TABLE_WITH_LEVELLED_SUB_ID, [
+      "| TDD-0001 | TC-0001-0001 | Unit  | tests/a.test.ts | sel | todo | | - |",
+    ]);
+
+    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+  });
+
+  it("says nothing about a malformed over-long reference", async () => {
+    // `resolveParentTcId` strips one segment, so `TC-0001-0001-0001` would
+    // resolve to `TC-0001-0001` and, hop by hop, look like the parent's
+    // business. A typo must not raise a migration warning any more than it may
+    // discharge a coverage obligation.
+    const codes = await codesFor(tableWithLevel(""), [
+      "| TDD-0001 | TC-0001-0001-0001 | Unit | tests/a.test.ts | sel | todo | | - |",
+    ]);
+
+    expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
+  });
+
+  it("says nothing about an Integration row citing a sub-ID", async () => {
+    const codes = await codesFor(tableWithLevel(""), [
+      "| TDD-0001 | TC-0001-0001 | Integration | tests/a.test.ts | sel | todo | | - |",
     ]);
 
     expect(codes).not.toContain("TDDLIST_TC_LEVEL_UNDECLARED");
