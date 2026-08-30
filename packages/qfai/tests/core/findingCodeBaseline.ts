@@ -14,7 +14,8 @@
  * baseline to be measured against. This is that baseline: every code `src/`
  * emitted at the moment the policy landed — reached through a literal
  * `issue("CODE", …)`, through the `const FINDING_CODE = "CODE"` alias that half
- * the validators use, or, where the call site is data-driven, as a code-shaped
+ * the validators use, through a `code:` property on an `Issue` written out as an
+ * object literal, or, where the call site is data-driven, as a code-shaped
  * literal in a file the extractor reads as opaque.
  * `TDDLIST_EVIDENCE_EMPTY` is deliberately absent — it is the first code to run
  * a promotion window, so it must pass through `RULE_PROMOTIONS`, not through
@@ -23,10 +24,13 @@
  * **This list is frozen.** A code missing from it is a code introduced after
  * P7, and the remedy is a `RULE_PROMOTIONS` entry naming it — never a new line
  * here. Removing a retired code is fine; the list is only ever read as an
- * allowlist. The one exception, spent once already: widening the extractor
+ * allowlist. The one exception, spent twice already — once for constant-borne
+ * codes, once for the object-literal emission shape: widening the extractor
  * reveals codes that predate P7 and were merely invisible to the narrower
  * version, and those belong here. Adding a line is only legitimate when the
- * code demonstrably shipped before the policy did.
+ * code demonstrably shipped before the policy did — for the 28 the
+ * object-literal widening surfaced, `git show <base>:… | grep "CODE"` at the
+ * branch point is the receipt.
  */
 export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "D-DEPRECATED-PATH",
@@ -47,6 +51,8 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "E_SPEC_MISSING_FILESET",
   "E_TC_ORPHAN",
   "E_UPWARD_REF_FORBIDDEN",
+  "HANDOFF-SCHEMA-FIELD-TYPE",
+  "HANDOFF-SCHEMA-NOT-OBJECT",
   "I-ASSISTANT-LAYER-UNSEEDED",
   "QFAI-AC-001",
   "QFAI-AGENT-001",
@@ -152,6 +158,10 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-DENSITY-003",
   "QFAI-DENSITY-004",
   "QFAI-DENSITY-005",
+  "QFAI-DOC-CONVERGENCE-INCOMPLETE",
+  "QFAI-DOC-CONVERGENCE-MISSING",
+  "QFAI-DOC-VOCABULARY-CONTRADICTION",
+  "QFAI-DOC-VOCABULARY-PROHIBITED",
   "QFAI-DPACK-001",
   "QFAI-DPACK-002",
   "QFAI-DPACK-003",
@@ -194,6 +204,14 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-FLOW-001",
   "QFAI-FLOW-002",
   "QFAI-FLOW-004",
+  "QFAI-GR-001",
+  "QFAI-GR-002",
+  "QFAI-GR-003",
+  "QFAI-GR-004",
+  "QFAI-GR-005",
+  "QFAI-GR-006",
+  "QFAI-GR-007",
+  "QFAI-GR-008",
   "QFAI-HYG-001",
   "QFAI-HYG-002",
   "QFAI-ID-001",
@@ -236,9 +254,13 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-ORPHAN-106",
   "QFAI-ORPHAN-107",
   "QFAI-PLAN-001",
+  "QFAI-PLAN-002",
+  "QFAI-PLAN-003",
+  "QFAI-PLAN-004",
   "QFAI-PLAN-005",
   "QFAI-PLATFORM-001",
   "QFAI-PLATFORM-002",
+  "QFAI-PROFILE-001",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -249,6 +271,8 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-PROT-008",
   "QFAI-PROT-009",
   "QFAI-PROT-010",
+  "QFAI-PROT-251",
+  "QFAI-PROT-252",
   "QFAI-PROT-311",
   "QFAI-PROT-335",
   "QFAI-PROT-336",
@@ -284,6 +308,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-REVIEW-009",
   "QFAI-SCOPE-001",
   "QFAI-SCOPE-002",
+  "QFAI-SKILLS-001",
   "QFAI-SKILLS-010",
   "QFAI-SKILLS-011",
   "QFAI-SKILLS-012",
@@ -346,6 +371,8 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-UIE-001",
   "QFAI-UIE-002",
   "QFAI-UIE-003",
+  "QFAI-UIUX-PERF",
+  "QFAI-VALIDATE-017",
   "QFAI-VIS-001",
   "QFAI-VIS-002",
   "QFAI-WAIVER-001",
@@ -353,6 +380,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "QFAI-WAIVER-003",
   "QFAI-WAIVER-004",
   "QFAI-WAIVER-005",
+  "QFAI_CONFIG_INVALID",
   "R-AUTOPILOT-POLICY-MISSING",
   "R-AUTOPILOT-POLICY-WIDENED",
   "R-CERTIFY-VERIFY-CIRCULAR",
@@ -362,6 +390,7 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "R-HANDOFF-INCOMPLETE",
   "R-HANDOFF-SCHEMA-DRIFT",
   "R-MOCK-HREF-DRIFT",
+  "R-PACK-LOCATION-DRIFT",
   "R-PROMPT-SCANNER-DRIFT",
   "R-REJECTED-READOPT",
   "R-SKILL-MANIFEST-DRIFT",
@@ -394,6 +423,9 @@ export const FINDING_CODES_BEFORE_PROMOTION_POLICY: readonly string[] = [
   "TDDLIST_UNKNOWN_REF",
   "TRACE_DOWNSTREAM_REF",
   "TRACE_SHARED_SCOPE_VIOLATION",
+  "UIX-VAL-DS-READ-ERROR",
+  "UIX-VAL-DS01",
+  "UIX-VAL-DS02",
   "W-ASSISTANT-LAYOUT",
   "W-PENDING-PROMOTION",
   "W-SKILL-DOC-BROKEN-REF",

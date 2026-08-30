@@ -65,11 +65,20 @@ const HEADER = `# TDD Execution Ledger
 | TDD-ID | TC-Refs | Layer | Test file | Selector | Status | DR-ID | Evidence |
 | ------ | ------- | ----- | --------- | -------- | ------ | ----- | -------- |`;
 
-function ledger(rows: Array<{ status: string; evidence: string; tddId?: string }>): string {
+type Row = {
+  status: string;
+  evidence: string;
+  tddId?: string;
+  /** Defaults to `Unit`; the ATDD-owned layers pick a different evidence file. */
+  layer?: string;
+  testFile?: string;
+};
+
+function ledger(rows: Row[]): string {
   const body = rows
     .map(
       (r, i) =>
-        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | Unit | ${TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
+        `| ${r.tddId ?? `TDD-000${i + 1}`} | TC-0001 | ${r.layer ?? "Unit"} | ${r.testFile ?? TEST_FILE} | sample | ${r.status} | - | ${r.evidence} |`,
     )
     .join("\n");
   return `${HEADER}\n${body}\n`;
@@ -88,7 +97,11 @@ async function withProject(fn: (root: string) => Promise<void>): Promise<void> {
   }
 }
 
-async function runOn(root: string, testList: string): Promise<string[]> {
+async function seedProject(
+  root: string,
+  testList: string,
+  extraTestFiles: string[] = [],
+): Promise<void> {
   const specDir = path.join(root, ".qfai", "specs", "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
   await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
@@ -101,12 +114,31 @@ async function runOn(root: string, testList: string): Promise<string[]> {
     await writeFile(path.join(specDir, name), body, "utf-8");
   }
   await writeFile(path.join(specDir, "tdd", "test-list.md"), testList, "utf-8");
-  const testPath = path.join(root, TEST_FILE);
-  await mkdir(path.dirname(testPath), { recursive: true });
-  await writeFile(testPath, "// test\n", "utf-8");
+  for (const rel of [TEST_FILE, ...extraTestFiles]) {
+    const testPath = path.join(root, rel);
+    await mkdir(path.dirname(testPath), { recursive: true });
+    await writeFile(testPath, "// test\n", "utf-8");
+  }
+}
 
+async function runOn(
+  root: string,
+  testList: string,
+  extraTestFiles: string[] = [],
+): Promise<string[]> {
+  await seedProject(root, testList, extraTestFiles);
   const issues = await validateTddList(root, defaultConfig);
   return issues.map((i) => i.code);
+}
+
+/** The one `TDDLIST_EVIDENCE_EMPTY` a single-row ledger produces. */
+async function remediationFor(root: string, row: Row): Promise<string> {
+  const testFile = row.testFile;
+  await seedProject(root, ledger([row]), testFile === undefined ? [] : [testFile]);
+  const issues = await validateTddList(root, defaultConfig);
+  const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
+  expect(found, "TDDLIST_EVIDENCE_EMPTY did not fire on the fixture row").toBeDefined();
+  return found?.suggested_action ?? "";
 }
 
 describe("TDDLIST_EVIDENCE_EMPTY", () => {
@@ -162,9 +194,7 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
 
   it("reports the TDD-ID so the offending row is identifiable", async () => {
     await withProject(async (root) => {
-      const specDir = path.join(root, ".qfai", "specs", "spec-0001");
-      await mkdir(path.join(specDir, "tdd"), { recursive: true });
-      await runOn(root, ledger([{ status: "done", evidence: "-", tddId: "TDD-0042" }]));
+      await seedProject(root, ledger([{ status: "done", evidence: "-", tddId: "TDD-0042" }]));
       const issues = await validateTddList(root, defaultConfig);
       const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
       expect(found?.message).toContain("TDD-0042");
@@ -176,10 +206,8 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
     // The advice has to name the in-place backfill or the only reading left is
     // an out-of-lifecycle status edit.
     await withProject(async (root) => {
-      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
-      const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
-      expect(found?.suggested_action).toContain("Status を変えずに Evidence セルだけを追記");
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("Status を変えずに Evidence セルだけを追記");
     });
   });
 
@@ -190,14 +218,125 @@ describe("TDDLIST_EVIDENCE_EMPTY", () => {
     // "write the command and its result here" would reintroduce exactly the
     // corruption `references/execution-ledger.md` documents.
     await withProject(async (root) => {
-      await runOn(root, ledger([{ status: "done", evidence: "-" }]));
-      const issues = await validateTddList(root, defaultConfig);
-      const found = issues.find((i) => i.code === "TDDLIST_EVIDENCE_EMPTY");
-      expect(found?.suggested_action).toContain("evidence ファイルに記録");
-      expect(found?.suggested_action).toContain("pointer");
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("evidence ファイルに記録");
+      expect(action).toContain("pointer");
       // The terminal-row remedy is a backfill entry in that file, anchored
       // from the cell — not prose about the missing run written into the row.
-      expect(found?.suggested_action).toContain("backfill entry");
+      expect(action).toContain("backfill entry");
+    });
+  });
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY remediation — the pointer it hands back", () => {
+  // The example used to be a constant, `implement-spec-<n>.md#tdd-0042`. Two
+  // things were wrong with it at once: the anchor named an entry that exists
+  // for exactly one row in the world, and the file named the implement stage
+  // for every row including the ones `/qfai-atdd` runs, whose evidence lives in
+  // `atdd-<spec-id>.md` and whose completion gate reads that split. Following
+  // the advice on any other row produced a pointer that resolves to nothing.
+  it("anchors the example at the row's own TDD-ID", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, {
+        status: "done",
+        evidence: "-",
+        tddId: "TDD-0007",
+      });
+      expect(action).toContain(".qfai/evidence/implement-spec-0001.md#tdd-0007");
+      expect(action).not.toContain("#tdd-0042");
+    });
+  });
+
+  for (const [layer, testFile] of [
+    ["Integration", "tests/integration/sample.test.ts"],
+    ["API", "tests/api/sample.test.ts"],
+    ["E2E", "tests/e2e/sample.test.ts"],
+  ] as const) {
+    it(`sends a ${layer} row at the ATDD evidence file`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, {
+          status: "done",
+          evidence: "-",
+          tddId: "TDD-0007",
+          layer,
+          testFile,
+        });
+        expect(action).toContain(".qfai/evidence/atdd-spec-0001.md#tdd-0007");
+        expect(action).not.toContain("implement-spec-0001.md");
+      });
+    });
+  }
+
+  // The over-correction pin: every non-ATDD layer keeps the implement file.
+  for (const [layer, testFile] of [
+    ["Unit", "tests/unit/sample.test.ts"],
+    ["Component", "tests/unit/sample.test.ts"],
+  ] as const) {
+    it(`keeps a ${layer} row on the implement evidence file`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, {
+          status: "done",
+          evidence: "-",
+          tddId: "TDD-0007",
+          layer,
+          testFile,
+        });
+        expect(action).toContain(".qfai/evidence/implement-spec-0001.md#tdd-0007");
+        expect(action).not.toContain("atdd-spec-0001.md");
+      });
+    });
+  }
+});
+
+describe("TDDLIST_EVIDENCE_EMPTY remediation — the recovery it names", () => {
+  // The finding fires only at `green`, `refactor`, `review-fix` and `done`, and
+  // the advice closed with "if you have not run it yet, put the row back to
+  // todo / red" on all four. `references/execution-ledger.md` prohibits that on
+  // three of them: `green -> red` is the transition table's own example of a
+  // prohibited backward edge, `refactor -> red` needs a routed `qa-gatekeeper`
+  // REVISE, and **any status** -> `todo` is the upstream reset, which needs an
+  // approved `CR-*` in `DR-ID`. An operator with no run to show was being told
+  // to commit a second lifecycle violation to clear the first.
+  for (const status of ["green", "refactor", "review-fix", "done"]) {
+    it(`does not tell a ${status} row to move back to todo / red`, async () => {
+      await withProject(async (root) => {
+        const action = await remediationFor(root, { status, evidence: "-" });
+        expect(action).not.toContain("Status を todo / red に戻して");
+      });
+    });
+  }
+
+  it("routes a green row through exception, the only edge it has", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "green", evidence: "-" });
+      expect(action).toContain("`green -> red` は禁止");
+      expect(action).toContain("exception");
+    });
+  });
+
+  it("gates a refactor row's return to red on a qa-gatekeeper REVISE", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "refactor", evidence: "-" });
+      expect(action).toContain("qa-gatekeeper");
+      expect(action).toContain("`refactor -> red`");
+    });
+  });
+
+  it("tells a review-fix row it can re-run without changing status", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "review-fix", evidence: "-" });
+      expect(action).toContain("Status を変えないまま RED/GREEN サイクルを再実行");
+    });
+  });
+
+  it("leaves a done row only the approved upstream reset", async () => {
+    await withProject(async (root) => {
+      const action = await remediationFor(root, { status: "done", evidence: "-" });
+      expect(action).toContain("upstream reset");
+      expect(action).toContain("CR-*");
+      // The pin that must keep working: the in-place backfill is still the
+      // remedy a terminal row reaches for first.
+      expect(action).toContain("Status を変えずに Evidence セルだけを追記");
     });
   });
 });
