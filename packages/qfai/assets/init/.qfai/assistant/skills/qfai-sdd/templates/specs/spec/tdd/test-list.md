@@ -65,7 +65,7 @@ Required columns, in the order used above:
 row never has to add one — and added to an already-seeded eight-column ledger by
 Phase 2b's column migration, which runs whether or not this template was copied:
 `/qfai-implement` may write the `Status`, `DR-ID`,
-`Evidence` and `Blocked-By` cells and nothing else, and a `Status = blocked` row
+`Evidence` and `Blocked-By` cells unconditionally and never a row, and a `Status = blocked` row
 with no blocker named raises `TDDLIST_BLOCKED_MISSING_REF`. It takes a Change
 Request ID (`CR-YYYYMMDD-NNNN`), a contract path with line, or a cross-spec row
 (`spec-0006:TDD-0034`); leave it blank on every other row. `blocked` and

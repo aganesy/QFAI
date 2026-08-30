@@ -81,8 +81,12 @@ describe.each(TREES)("%s", (tree) => {
 
     expect(phase2b).toContain("only one that may add, remove or re-scope a row");
     expect(phase2b).toContain(
-      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells and nothing else",
+      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells unconditionally",
     );
+    // The exclusion is the load-bearing half: the Drift Protocol also carves
+    // out `Test file` / `Selector` conditionally, so "cells, never rows" is
+    // what actually keeps the split upstream.
+    expect(phase2b).toContain("and no rows at all");
   });
 
   it("seeds the split criterion on the two surfaces Phase 2b actually follows", async () => {
@@ -285,10 +289,15 @@ describe.each(TREES)("%s", (tree) => {
     // the seeded ledger carried no `Blocked-By` column, so the residual path
     // asked for a write no shipped rule allowed.
     const drift = await read(tree, DRIFT);
-    expect(drift).toContain("`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells only");
-    expect(await read(tree, TRACE)).toContain(
-      "`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells and nothing else",
+    expect(drift).toContain("`Status`, `DR-ID`, `Evidence` and `Blocked-By` cells unconditionally");
+    const trace = await read(tree, TRACE);
+    expect(trace).toContain(
+      "owns the `Status`, `DR-ID`, `Evidence` and `Blocked-By` cells unconditionally",
     );
+    // `Test file` / `Selector` are separately carved out, but only while their
+    // stated condition holds; the exclusion sentence is what still keeps rows
+    // out of the owned set.
+    expect(trace).toContain("It owns nothing else");
 
     const template = await read(tree, TEMPLATE);
     // Seeded by the row owner, so blocking a row fills a cell, never adds a column.

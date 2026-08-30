@@ -1,6 +1,6 @@
 {
   "name": "qfai",
-  "version": "1.10.0",
+  "version": "1.10.1",
   "description": "Quality-first AI-driven development toolkit (SDD × ATDD × TDD).",
   "license": "MIT",
   "repository": {
@@ -38,6 +38,8 @@
     "lint": "eslint src",
     "lint:branch-version": "bash scripts/check-branch-version-pin.sh",
     "lint:shipping": "vitest run tests/scripts/lintShipping.test.ts",
+    "lint:workflow-shape": "vitest run tests/integration/shippedWorkflowShapeGate.test.ts",
+    "lint:mirror-surface": "vitest run tests/integration/agentsRulesSurface.test.ts tests/integration/skillLinkSurface.test.ts tests/core/integrationSurface.test.ts tests/core/integrationSurfaceReadErrors.test.ts tests/assets/reviewerVerdictVocabulary.test.ts tests/codex/agents.test.ts tests/core/prFixMonitor.test.ts tests/core/prMergePlan.test.ts",
     "check-types": "tsc --noEmit",
     "test": "vitest run",
     "test:coverage": "vitest run --coverage tests/unit/core/prototyping tests/core/prototyping",
@@ -46,6 +48,8 @@
     "test:integration": "vitest run --project integration",
     "test:e2e": "vitest run --project e2e",
     "test:cli": "vitest run --project cli",
+    "test:unit": "vitest run --project unit",
+    "test:scripts": "vitest run --project scripts",
     "test:assets": "vitest run tests/assets",
     "self-validate": "node dist/cli/index.mjs validate --profile tdd --fail-on error --root ../.."
   },
