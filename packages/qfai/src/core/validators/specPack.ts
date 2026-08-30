@@ -1526,7 +1526,7 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
   const issues: Issue[] = [
     ...readopted,
     ...validateUniqueDecisionIds(records, context),
-    ...(await validatePolicyDecisionIds(specsRoot, reOpens)),
+    ...(await validateReferencedDecisionOwnership(specsRoot, records, reOpens, context)),
   ];
   for (const record of reOpens) {
     issues.push(...validateReOpenRecord(record, context));
@@ -1628,30 +1628,92 @@ function validateReadoptedCandidates(
   return issues;
 }
 
+/** A bullet list item: its indent, its marker, and the gap before its content. */
+const BULLET_ITEM_LINE = /^( *)([-*+]|\d+[.)])( +)/;
+
+/** Columns past a block's content indent at which an indented code block opens. */
+const CODE_BLOCK_INDENT = 4;
+
 /**
- * The lines of every section named `heading`, joined.
+ * Blank the lines a list in these sections holds as an indented code sample.
  *
- * All of them, not the first: a second `## Rejected` is where a candidate hides
- * from a reader that stops at the first one.
+ * {@link maskNonSpecRegions} stops recognising indented code while a list is
+ * open, on purpose: under a list item four spaces are continuation rather than
+ * code, and telling the two apart needs the list's content column. In these
+ * sections that column is knowable — every field is a bullet — so it is
+ * computed here. Without it a `- Re-opened by: DR-*` written as an indented
+ * sample under a `- Candidate:` bullet was read as that candidate's live
+ * back-reference, which cleared `QFAI-DECISION-004` and `-006` while the
+ * candidate that was actually re-adopted carried none.
+ *
+ * The threshold is CommonMark's: code starts four columns past the content
+ * indent of the block containing it, which for a list item is the column its
+ * marker's text begins at. A field nested one list level deeper therefore stays
+ * a field, and only an indentation no list level explains is dropped.
  */
+function maskListIndentedCode(lines: string[]): string[] {
+  let contentIndent = 0;
+  return lines.map((raw) => {
+    const line = raw.replace(/\t/g, " ".repeat(CODE_BLOCK_INDENT));
+    if (line.trim().length === 0) {
+      return line;
+    }
+    const indent = line.length - line.trimStart().length;
+    if (indent >= contentIndent + CODE_BLOCK_INDENT) {
+      return "";
+    }
+    const bullet = BULLET_ITEM_LINE.exec(line);
+    if (bullet) {
+      contentIndent =
+        (bullet[1] ?? "").length + (bullet[2] ?? "").length + (bullet[3] ?? "").length;
+    } else if (indent < contentIndent) {
+      // A block that left the item's content closes the list levels above it.
+      contentIndent = indent;
+    }
+    return line;
+  });
+}
+
+/**
+ * The lines of every section named `heading`, one group per section.
+ *
+ * Every section, not the first: a second `## Rejected` is where a candidate
+ * hides from a reader that stops at the first one. Grouped rather than joined,
+ * because a per-candidate scan has to start each section clean — see
+ * {@link collectRejectedCandidates}.
+ */
+function sectionLineGroups(text: string, heading: string): string[][] {
+  return extractMarkdownSections(text, heading).map((section) =>
+    maskListIndentedCode(section.replace(/\r\n/g, "\n").split("\n")),
+  );
+}
+
+/** Those lines flattened, for the readers that need no section boundary. */
 function sectionLines(text: string, heading: string): string[] {
-  return extractMarkdownSections(text, heading).join("\n").replace(/\r\n/g, "\n").split("\n");
+  return sectionLineGroups(text, heading).flat();
 }
 
 /** The `- Candidate:` blocks of a delta's `## Rejected`, in document order. */
 function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
   const candidates: RejectedCandidate[] = [];
-  let current: RejectedCandidate | null = null;
-  for (const line of sectionLines(deltaText, "Rejected")) {
-    const candidate = CANDIDATE_LINE.exec(line);
-    if (candidate) {
-      current = { name: cleanFieldValue(candidate[1] ?? ""), reOpenedBy: [] };
-      candidates.push(current);
-      continue;
-    }
-    const reOpenedBy = RE_OPENED_BY_LINE.exec(line);
-    if (reOpenedBy && current) {
-      current.reOpenedBy.push(...splitReOpenedByRefs(reOpenedBy[1] ?? ""));
+  for (const lines of sectionLineGroups(deltaText, "Rejected")) {
+    // Reset per section: a `- Re-opened by:` that opens a second `## Rejected`
+    // sits under no candidate at all. Scanning the sections joined kept the
+    // first section's last candidate current across the boundary and handed it
+    // that back-reference, so a candidate whose own block carried none passed
+    // `QFAI-DECISION-006` — and `-004` resolved on the stray reference.
+    let current: RejectedCandidate | null = null;
+    for (const line of lines) {
+      const candidate = CANDIDATE_LINE.exec(line);
+      if (candidate) {
+        current = { name: cleanFieldValue(candidate[1] ?? ""), reOpenedBy: [] };
+        candidates.push(current);
+        continue;
+      }
+      const reOpenedBy = RE_OPENED_BY_LINE.exec(line);
+      if (reOpenedBy && current) {
+        current.reOpenedBy.push(...splitReOpenedByRefs(reOpenedBy[1] ?? ""));
+      }
     }
   }
   return candidates;
@@ -1703,69 +1765,105 @@ function validateUniqueDecisionIds(
   return issues;
 }
 
-/** The ids a Decisions file declares more than once, with their count. */
-function duplicateDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
+/** How many `### DR-*` headings declare each id in one file. */
+function countDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
   const counts = new Map<string, number>();
   for (const record of records) {
     counts.set(record.id, (counts.get(record.id) ?? 0) + 1);
   }
+  return counts;
+}
+
+/** The ids a Decisions file declares more than once, with their count. */
+function duplicateDecisionIds(records: DecisionRecordEntry[]): Map<string, number> {
+  const counts = countDecisionIds(records);
   for (const [id, count] of counts) {
     if (count < 2) counts.delete(id);
   }
   return counts;
 }
 
-/** How `_policies/08_Decisions.md` is written in a message, on every platform. */
-const POLICY_DECISIONS_LABEL = "_policies/08_Decisions.md";
-
-/**
- * The shared policy file declares a `DR-*` this spec's re-opens reconsider more
- * than once.
- *
- * The spec-local uniqueness check cannot see it: it reads the spec's own
- * Decisions file, while `collectDeclaredDrHeadingIds` folds every declaration —
- * policy ones included — into a `Set`. A `DR-NNNN` declared twice in
- * `_policies/08_Decisions.md` therefore resolves a `Re-opens:` successfully and
- * `QFAI-DECISION-007` stayed silent, leaving no answer to which of the two
- * policy decisions was reconsidered.
- *
- * Only the ids the current re-opens actually name are reported, so an unrelated
- * duplicate elsewhere in the policy file is not this spec's failure.
- */
-async function validatePolicyDecisionIds(
-  specsRoot: string,
-  reOpens: DecisionRecordEntry[],
-): Promise<Issue[]> {
+/** The prior ids the re-opens name in `Re-opens:`, upper-cased. */
+function referencedPriorIds(reOpens: DecisionRecordEntry[]): Set<string> {
   const referenced = new Set<string>();
   for (const record of reOpens) {
     const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
     if (prior.length > 0) referenced.add(prior.toUpperCase());
   }
+  return referenced;
+}
+
+/** How `_policies/08_Decisions.md` is written in a message, on every platform. */
+const POLICY_DECISIONS_LABEL = "_policies/08_Decisions.md";
+
+/**
+ * A `DR-*` a re-open reconsiders is owned by exactly one block across the files
+ * this spec can reach.
+ *
+ * The spec-local uniqueness check cannot see this: it counts one file, while
+ * `collectDeclaredDrHeadingIds` folds every declaration — the spec's own and
+ * `_policies/08_Decisions.md` — into a `Set`, so any number of owners resolves a
+ * `Re-opens:` and leaves no answer to which decision was reconsidered. Both
+ * spreads are that same ambiguity: the policy file declaring the id twice, and
+ * the spec declaring a copy of a policy id beside it. The second slipped past
+ * every other check because {@link validateReOpenIdScheme} only reads records
+ * that are themselves `Status: re-open`, and the colliding local block is the
+ * ordinary prior record.
+ *
+ * Only the ids the current re-opens actually name are reported, so an unrelated
+ * collision elsewhere is not this spec's failure — and a local duplicate is left
+ * to {@link validateUniqueDecisionIds}, which already reports it.
+ */
+async function validateReferencedDecisionOwnership(
+  specsRoot: string,
+  localRecords: DecisionRecordEntry[],
+  reOpens: DecisionRecordEntry[],
+  context: ReOpenContext,
+): Promise<Issue[]> {
+  const referenced = referencedPriorIds(reOpens);
   if (referenced.size === 0) {
     return [];
   }
   const policyPath = path.join(specsRoot, DR_POLICY_DECLARATION_FILE);
-  const policyText = await readSafe(policyPath);
-  if (policyText.length === 0) {
-    return [];
-  }
+  const policyCounts = countDecisionIds(parseDecisionRecordEntries(await readSafe(policyPath)));
+  const localCounts = countDecisionIds(localRecords);
+
   const issues: Issue[] = [];
-  for (const [id, count] of duplicateDecisionIds(parseDecisionRecordEntries(policyText))) {
-    if (!referenced.has(id)) continue;
-    issues.push(
-      issue(
-        "QFAI-DECISION-007",
-        `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${count} 件あります。この spec の \`Re-opens: ${id}\` がどちらの決定を再考したのか一意に定まりません。`,
-        "error",
-        policyPath,
-        RE_OPEN_RULE,
-        [id],
-        "canonical",
-        `${POLICY_DECISIONS_LABEL} の重複した Decision Record のいずれかに別の \`DR-NNNN\` を割り当てるか、1 件に統合してください。`,
-      ),
-    );
+  for (const id of referenced) {
+    const local = localCounts.get(id) ?? 0;
+    const policy = policyCounts.get(id) ?? 0;
+    if (local >= 2 || local + policy < 2) {
+      continue;
+    }
+    issues.push(ambiguousOwnerIssue(id, local, policy, policyPath, context));
   }
   return issues;
+}
+
+/** `QFAI-DECISION-007` for a prior `DR-*` that more than one block declares. */
+function ambiguousOwnerIssue(
+  id: string,
+  local: number,
+  policy: number,
+  policyPath: string,
+  context: ReOpenContext,
+): Issue {
+  const spread = local > 0;
+  const where = spread
+    ? `${context.decisionsName} と ${POLICY_DECISIONS_LABEL} の両方に \`### ${id}\` の Decision Record があります`
+    : `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${policy} 件あります`;
+  return issue(
+    "QFAI-DECISION-007",
+    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。`,
+    "error",
+    spread ? context.decisionsPath : policyPath,
+    RE_OPEN_RULE,
+    [id],
+    "canonical",
+    spread
+      ? `spec 側の \`### ${id}\` に spec スコープの \`DR-NNNN-MMMM\` を割り当てるか、${POLICY_DECISIONS_LABEL} 側と 1 件に統合してください。`
+      : `${POLICY_DECISIONS_LABEL} の重複した Decision Record のいずれかに別の \`DR-NNNN\` を割り当てるか、1 件に統合してください。`,
+  );
 }
 
 /** What the per-record checks need beyond the record itself. */

@@ -653,3 +653,137 @@ describe("the ways past the gate the second review found", () => {
     }
   });
 });
+
+describe("the ways past the gate the third review found", () => {
+  /** `DELTA_BASE` with the rejected candidate re-adopted under `## Adopted`. */
+  const READOPTING = DELTA_BASE.replace(
+    "## Adopted\n",
+    "## Adopted\n\n- Adopted: in-process cache\n- Why: the size bound landed\n",
+  );
+
+  /** A policy file declaring `DR-0001` once per entry of `titles`. */
+  function policyDeclaring(...titles: string[]): string {
+    return [
+      "# 08 Decisions",
+      "",
+      ...titles.flatMap((title) => [`### DR-0001: ${title}`, "", "- Status: rejected", ""]),
+    ].join("\n");
+  }
+
+  /** A spec Decisions file whose re-open cites `DR-0001`, plus `extra` blocks. */
+  function decisionsCiting(...extra: string[]): string {
+    return [
+      "# 07 Decisions",
+      "",
+      "## Decisions",
+      "",
+      ...extra,
+      `### ${RE_OPEN_ID}: re-adopt the in-process cache`,
+      "",
+      "- Status: re-open",
+      "- Decision: the size bound landed, so the growth objection no longer holds",
+      "- Re-opens: DR-0001",
+      APPROVED,
+      "",
+    ].join("\n");
+  }
+
+  it("reports a prior DR the spec and the policy file each declare once", async () => {
+    // Neither file holds a duplicate, so the two per-file counts stayed silent,
+    // and the colliding local block is an ordinary `Status: rejected` record —
+    // which `validateReOpenIdScheme` never reads. `Re-opens: DR-0001` then had
+    // two owners and every gate passed.
+    await withSpec(
+      {
+        decisions: decisionsCiting(
+          "### DR-0001: cache policy, copied into the spec",
+          "",
+          "- Status: rejected",
+          "",
+        ),
+        delta: deltaFor(RE_OPEN_ID),
+        policy: policyDeclaring("cache policy"),
+      },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-007");
+      },
+    );
+  });
+
+  it("leaves a prior DR only the policy file declares alone", async () => {
+    // The sanctioned shape: a policy-level decision cited from a spec re-open.
+    await withSpec(
+      {
+        decisions: decisionsCiting(),
+        delta: deltaFor(RE_OPEN_ID),
+        policy: policyDeclaring("cache policy"),
+      },
+      async (root) => {
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
+  });
+
+  it("does not read an indented code sample as a candidate's back-reference", async () => {
+    const delta = [READOPTING, "", `        - Re-opened by: ${RE_OPEN_ID}`, ""].join("\n");
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        // Eight spaces under a top-level bullet is an indented code block, not
+        // the candidate's field: the re-adopted candidate carries no
+        // back-reference and the record none points at.
+        const found = await codes(root);
+        expect(found).toContain("QFAI-DECISION-006");
+        expect(found).toContain("QFAI-DECISION-004");
+      },
+    );
+  });
+
+  it("still reads a `Re-opened by:` nested one list level under its candidate", async () => {
+    const delta = [READOPTING, `    - Re-opened by: ${RE_OPEN_ID}`, ""].join("\n");
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        // Four spaces is still the bullet's own content — CommonMark opens code
+        // four columns past the content indent, which is six here.
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
+  });
+
+  it("does not carry a candidate across a `## Rejected` section boundary", async () => {
+    const delta = [READOPTING, "", "## Rejected", "", `- Re-opened by: ${RE_OPEN_ID}`, ""].join(
+      "\n",
+    );
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        // The second section's back-reference sits under no candidate at all;
+        // scanning the sections joined handed it to the first section's last
+        // candidate, and the re-adoption passed unreferenced.
+        expect(await codes(root)).toContain("QFAI-DECISION-006");
+      },
+    );
+  });
+
+  it("binds a back-reference to the candidate of its own section", async () => {
+    const delta = [
+      READOPTING.replace("- Candidate: in-process cache", "- Candidate: a bounded LRU"),
+      "",
+      "## Rejected",
+      "",
+      "- Candidate: in-process cache",
+      `- Re-opened by: ${RE_OPEN_ID}`,
+      "",
+    ].join("\n");
+    await withSpec(
+      { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
+  });
+});
