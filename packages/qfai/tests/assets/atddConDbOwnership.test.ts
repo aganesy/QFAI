@@ -62,6 +62,32 @@ describe.each(TREES)("%s", (tree) => {
     expect(checks).toContain("`-- x-qfai-status: planned`");
   });
 
+  it("keeps the reviewer gate's planned deferral inside the spec that owns the contract", async () => {
+    // `QFAI-ATDD-115` is filed against `.qfai/contracts/**`, so a *sibling*
+    // spec's uncovered `CON-DB` reaches a `--spec` run's gate. A reviewer check
+    // that accepted `-- x-qfai-status: planned` for "a contract outside the
+    // slice" pointed that escape at contracts this stage does not own, which
+    // the CRITICAL CONSTRAINTS cross-spec rule forbids: the deferral would
+    // defer the owning spec's DB test and hide a genuinely uncovered contract.
+    const atdd = flat(await read(tree, ATDD));
+    const checks = atdd.slice(
+      atdd.indexOf("ATDD-specific reviewer checks:"),
+      atdd.indexOf("Coverage Depth Matrix is reviewed"),
+    );
+    expect(checks).toContain("a contract **this spec owns** but outside the current slice");
+    expect(checks).toContain("A **sibling spec's** uncovered `CON-DB` is not that case");
+    expect(checks).toContain(
+      "record it as a cross-spec obligation and leave the contract file alone",
+    );
+    // Over-correction pin: the deferral itself stays available for a contract
+    // this spec does own. Success Criteria still offers it, and the gate must
+    // not have been rewritten into a blanket ban on `planned`.
+    expect(checks).toContain("`-- x-qfai-status: planned`");
+    expect(atdd).toContain(
+      "a contract outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered",
+    );
+  });
+
   it("stops the Read Set Contract from contradicting Inputs Priority P4", async () => {
     // Two Mandatory lists in one file disagreed about the contracts
     // directories. Default Mode now carries both and says it is a floor.
