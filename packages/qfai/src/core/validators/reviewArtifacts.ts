@@ -263,11 +263,37 @@ async function validateReviewPack(
   }
 
   const reviewerFiles = await listReviewerFiles(reviewPackDir);
-  if (reviewerFiles.length === 0) {
+  // A summary declaring `reviewers: []` says the round produced nothing, deliberately. Both directions
+  // are checked, because a one-way rule only moves the hole: a pack that forgot to seal still fails,
+  // and a pack whose declaration disagrees with the files beside it fails too.
+  //
+  // Two questions, and they are NOT the same one. `declaresZeroReviewers` asks whether the pack
+  // makes a valid zero-response declaration — v2, empty list, `FAIL` — and it is the right test
+  // for excusing a missing report set. It is the WRONG test for the contradiction: review finding
+  // [27] showed a v2 pack declaring `reviewers: []` with `overall_status: "PASS"` beside a full
+  // set of `Rxx_*.md` answering `false` here, so neither branch fired and the pack was accepted.
+  // The contradiction only needs the empty list, whatever else the summary says.
+  const summary = await readSummaryRecord(summaryPath);
+  const declaredZero = declaresZeroReviewers(summary);
+  const declaredEmptyReviewerList = declaresEmptyReviewerList(summary);
+  if (reviewerFiles.length === 0 && !declaredZero) {
     issues.push(
       issue(
         "QFAI-REVIEW-005",
-        "review pack に `Rxx_*.md` が1件もありません。",
+        "review pack に `Rxx_*.md` が1件もありません。応答ゼロで終わった回なら " +
+          "`summary.json` に `reviewers: []` を宣言してください。",
+        "error",
+        reviewPackDir,
+        "reviewArtifacts.reviewerFiles",
+      ),
+    );
+  }
+  if (reviewerFiles.length > 0 && declaredEmptyReviewerList) {
+    issues.push(
+      issue(
+        "QFAI-REVIEW-005",
+        "`summary.json` は `reviewers: []`（応答ゼロ）を宣言していますが `Rxx_*.md` が " +
+          `${String(reviewerFiles.length)} 件存在します。`,
         "error",
         reviewPackDir,
         "reviewArtifacts.reviewerFiles",
@@ -280,6 +306,63 @@ async function validateReviewPack(
   }
 
   return issues;
+}
+
+/**
+ * Whether the pack's summary declares, in as many words, that the round produced no responses.
+ *
+ * Read separately from the schema pass because `QFAI-REVIEW-005` runs whether or not the summary is
+ * well-formed, and a malformed summary must not silently excuse a missing report set: anything that is
+ * not a present, parseable summary making the whole declaration answers `false`, so the default is the
+ * strict one. The schema pass reports the malformedness on its own code.
+ *
+ * **All three parts are required**, and the first version required only the middle one. Review finding
+ * [22] on PR #794 named both holes it left:
+ *
+ * - a `version: "1.0"` pack, whose reviewer list is `roster`, could carry an unrelated empty
+ *   `reviewers` array beside a full roster and skip `QFAI-REVIEW-005` with no report files at all;
+ * - a v2 pack could declare zero reviewers and still say `overall_status: "PASS"`, recording a round
+ *   nobody answered as a round that succeeded.
+ *
+ * `references/review-artifact-layout.md` defines the state as `reviewers: []` **and**
+ * `overall_status: "FAIL"`, so that is what is read here. A round that returned no verdict returned no
+ * passing one.
+ */
+function declaresZeroReviewers(summary: Record<string, unknown> | undefined): boolean {
+  if (summary === undefined) return false;
+  if (readString(summary.version) !== "2.0") return false;
+  if (!declaresEmptyReviewerList(summary)) return false;
+  return readString(summary.overall_status) === "FAIL";
+}
+
+/**
+ * Whether the summary's `reviewers` field is present and empty — nothing more.
+ *
+ * This is the contradiction test, and it deliberately ignores `version` and `overall_status`.
+ * `references/review-artifact-layout.md` makes `reviewers: []` beside a report file a failure
+ * unconditionally, and asking the narrower question here let a pack escape by being invalid in a
+ * SECOND way (`PASS` alongside the empty list) — the two defects cancelled and the pack was
+ * accepted. A v1 pack lists its reviewers under `roster`, so an empty `reviewers` there is not an
+ * unrelated field to be tolerated: it is a v1 pack carrying a v2 key, and the report files beside
+ * it are what make that worth reporting rather than guessing about.
+ */
+function declaresEmptyReviewerList(summary: Record<string, unknown> | undefined): boolean {
+  if (summary === undefined) return false;
+  return Array.isArray(summary.reviewers) && summary.reviewers.length === 0;
+}
+
+/** The summary as a record, or `undefined` when it is absent, unreadable, or not an object. */
+async function readSummaryRecord(
+  summaryPath: string,
+): Promise<Record<string, unknown> | undefined> {
+  if (!(await isFile(summaryPath))) return undefined;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(summaryPath, "utf-8"));
+  } catch {
+    return undefined;
+  }
+  return isRecord(parsed) ? parsed : undefined;
 }
 
 async function validateSummarySchema(
@@ -563,9 +646,14 @@ function validateV2Reviewers(parsed: Record<string, unknown>, violations: string
     violations.push("`routing_profile` は非空文字列が必須です");
   }
 
+  // An EMPTY array is legal, and it is a statement rather than an omission: "this round was opened and
+  // produced no responses". A round whose reviewers die before writing anything is a real state, and
+  // before this the accurate record of it was unrepresentable — the pack could only be a pack somebody
+  // forgot to seal. The summary still has to be present and schema-valid, which is what separates the
+  // declaration from the absence. `QFAI-REVIEW-005` reads the same field and stands down for it.
   const reviewers = Array.isArray(parsed.reviewers) ? parsed.reviewers : null;
-  if (!reviewers || reviewers.length === 0) {
-    violations.push("`reviewers` は1件以上の配列が必須です");
+  if (!reviewers) {
+    violations.push("`reviewers` は配列が必須です（応答ゼロの回は空配列で宣言する）");
     return;
   }
   for (const [index, item] of reviewers.entries()) {
