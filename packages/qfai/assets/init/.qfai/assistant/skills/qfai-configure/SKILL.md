@@ -223,7 +223,7 @@ Evidence must include:
 
 ## Non-Negotiable Principles (QFAI Articles)
 
-These principles are inspired by "constitution / articles" patterns used by other agent frameworks, but tailored to QFAI.
+These principles are inspired by "constitution / articles" patterns used by other agent frameworks, but adapted to QFAI.
 
 1. **SDD First (Specification is the source of truth)**  
    If there is a conflict between code and spec, treat the spec as authoritative and either (a) fix code or (b) raise an explicit Open Question to change the spec.
