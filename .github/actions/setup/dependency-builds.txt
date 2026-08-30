@@ -1,0 +1,31 @@
+# Dependencies permitted to run their own install scripts.
+#
+# `pnpm install` in this repository runs with `--ignore-scripts`, so by default NOTHING a
+# dependency ships executes during installation. Review finding [127]: the pre-flight walks the
+# manifests in this tree and a dependency's manifest is not in this tree — it arrives inside a
+# tarball, is extracted by pnpm, and its `postinstall` ran before any verification in the job. A
+# pull request adding a local `.tgz` under `packages/qfai/` and referencing it from the manifest and
+# lockfile therefore executed arbitrary code with every guard still ahead of it.
+#
+# It lives BESIDE the action that reads it, and that is review finding [131] rather than tidiness.
+# `release.yml` re-publishes an existing tag by checking out the TAG's tree and then fetching only
+# `.github/actions` from the current revision — a tag cut before this action existed has no action
+# in its tree. With the list at the repository root it was not part of that fetch, so an older tag
+# saw it missing, the refusal below fired, and both `gate` and `gate-floor` stopped: a documented
+# re-publish route broken by a guard meant to protect it. Here it travels with the action, and
+# `.github/pinned-bytes.txt` covers every file under `.github/actions`, so the pre-flight verifies
+# its bytes and refuses a file that tree holds and the list does not name.
+#
+# Named here, a dependency is rebuilt explicitly AFTER the install, in a step whose body is pinned
+# by `verificationBodies` — and its bytes are pinned through `.github/pinned-bytes.txt`, which the
+# pre-flight verifies. Adding a name is a visible edit to a pinned file, which is the whole
+# point: the question stops being "did anyone notice this package runs code" and becomes "did a
+# reviewer agree that it may".
+#
+# Measured rather than guessed. Scanning the installed store for install-time hooks finds 35
+# packages, but 34 of them declare only `prepare` — which pnpm runs for git and directory sources
+# and NOT for a registry tarball, so none of those ever executed here. `esbuild` is the one with a
+# real `postinstall`, and it links the platform binary that vite and vitest need.
+#
+# One name per line, matched against the package name pnpm knows it by.
+esbuild
