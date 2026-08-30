@@ -621,6 +621,170 @@ describe("an annotation carrier is not an executable test", () => {
     }
   });
 
+  it("reads a carrier with its own language's forms, not with every language's", async () => {
+    // One pattern set for every extension let PHPUnit's `test*` method
+    // convention match a plain TypeScript helper named `testData`: a `.test.ts`
+    // Vitest collects nothing from counted as executable and took its
+    // obligation out of the partition.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "function testData() {",
+            "  return { id: 1 };",
+            "}",
+            "",
+          ].join("\n"),
+          // The over-correction pin: the same convention, in the language that
+          // owns it, still declares a test.
+          "tests/e2e/StoryTest.php": [
+            "<?php",
+            "// QFAI:SPEC-0001:US-0002",
+            "class StoryTest extends TestCase {",
+            "  public function testServesTheStory() {}",
+            "}",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const config = {
+          ...defaultConfig,
+          validation: {
+            ...defaultConfig.validation,
+            traceability: {
+              ...defaultConfig.validation.traceability,
+              testFileGlobs: ["tests/**/*.ts", "tests/**/*.php"],
+            },
+          },
+        };
+        const issues = await validateAtddCodeTraceability(root, config);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("counts a Go example only when an output comment makes it run", async () => {
+    // `go doc testing`: an example with no output comment is compiled and never
+    // executed, so the function on its own declares nothing a runner collects.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/story_test.go": [
+            "// QFAI:SPEC-0001:US-0001",
+            "func ExampleStory() {",
+            '\tfmt.Println("ok")',
+            "}",
+            "",
+          ].join("\n"),
+          // The over-correction pin: the same example, with the comment
+          // `go test` needs before it runs one, is still executable.
+          "tests/e2e/other_story_test.go": [
+            "// QFAI:SPEC-0001:US-0002",
+            "func ExampleOtherStory() {",
+            '\tfmt.Println("ok")',
+            "\t// Unordered output: ok",
+            "}",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const config = {
+          ...defaultConfig,
+          validation: {
+            ...defaultConfig.validation,
+            traceability: {
+              ...defaultConfig.validation.traceability,
+              testFileGlobs: ["tests/**/*.go"],
+            },
+          },
+        };
+        const issues = await validateAtddCodeTraceability(root, config);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0001",
+        ]);
+      },
+    );
+  });
+
+  it("reads a regex after a control statement's header as a literal, not as division", async () => {
+    // A control header ends in `)`, which the character test read as the end of
+    // a value — so the literal after it stayed unparsed and the backtick inside
+    // opened a template that blanked the real declaration below.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/us-0001.test.ts": [
+            "// QFAI:SPEC-0001:US-0001",
+            "function fence(enabled, value) {",
+            "  if (enabled) /^\\s*```/.test(value);",
+            "}",
+            'it("serves the story", () => {',
+            '  expect(fence(true, "x")).toBeUndefined();',
+            "});",
+            "",
+          ].join("\n"),
+          // The over-correction pin: a `)` that really does end a value still
+          // divides, so the declaration beside it is not swallowed as a literal.
+          "tests/e2e/us-0002.test.ts": [
+            "// QFAI:SPEC-0001:US-0002",
+            'const half = size(box) / 2; it("serves the other story", () => {}); const third = 9 / 3;',
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        expect(codes(await validateAtddCodeTraceability(root, defaultConfig))).not.toContain(
+          "QFAI-ATDD-118",
+        );
+      },
+    );
+  });
+
+  it("reads Scenario Template as the Scenario Outline alias it is", async () => {
+    // English Gherkin accepts `Scenario Template:` wherever it accepts
+    // `Scenario Outline:`, and Cucumber collects the same scenarios from it.
+    await withProject(
+      {
+        us: ["US-0001", "US-0002"],
+        files: {
+          "tests/e2e/us-0001.feature": [
+            "Feature: story",
+            "  # QFAI:SPEC-0001:US-0001",
+            "  Scenario Template: it works for <role>",
+            "    Then the story is served",
+            "    Examples:",
+            "      | role |",
+            "      | user |",
+            "",
+          ].join("\n"),
+          // The over-correction pin: a step that merely says the words is still
+          // not a scenario declaration.
+          "tests/e2e/us-0002.feature": [
+            "Feature: other story",
+            "  # QFAI:SPEC-0001:US-0002",
+            "  Background:",
+            "    Given a scenario template is on file",
+            "",
+          ].join("\n"),
+        },
+      },
+      async (root) => {
+        const issues = await validateAtddCodeTraceability(root, defaultConfig);
+        expect(issues.find((entry) => entry.code === "QFAI-ATDD-118")?.refs).toEqual([
+          "SPEC-0001:US-0002",
+        ]);
+      },
+    );
+  });
+
   it("covers TC and CON-API on the same terms as US", async () => {
     await withProject(
       {

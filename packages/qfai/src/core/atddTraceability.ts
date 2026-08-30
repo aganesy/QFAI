@@ -1242,47 +1242,141 @@ const TEST_MODIFIER_SEGMENT =
   "skip|only|todo|fails|failing|concurrent|sequential|serial|parallel|each|for|runIf|skipIf|describe";
 
 /**
- * Declarations a runner actually collects, in the ecosystems the scan can meet.
+ * xUnit / BDD call form with the modifier chains the frameworks allow:
+ * `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
+ */
+const CALL_FORM_PATTERN = new RegExp(
+  `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
+);
+
+/**
+ * Runners whose entry point is a property, so {@link CALL_FORM_PATTERN} rejects
+ * them on the `.` before `test`: Deno's built-in runner and QUnit.
+ */
+const NAMESPACED_CALL_PATTERN =
+  /(?:^|[^\w$.])(?:Deno\s*\.\s*test|QUnit\s*\.\s*(?:test|only|todo|skip))(?:\s*\.\s*(?:only|skip|ignore|each))*\s*\(/;
+
+/**
+ * JUnit 5's collectable annotations, listed rather than matched by prefix so a
+ * lifecycle or container annotation is not read as a declaration.
+ */
+const JVM_ANNOTATION_PATTERN =
+  /^\s*@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b/m;
+
+/**
+ * NUnit / xUnit.net attributes that name a collected case.
  *
- * An extension is not executability: a `.test.ts` whose whole body is an
+ * `[TestFixture]` is deliberately absent: it marks the class, and a fixture
+ * holding no case declares nothing a runner collects.
+ */
+const DOTNET_ATTRIBUTE_PATTERN = /^\s*\[\s*(?:Test|TestCase|TestCaseSource|Fact|Theory)\s*[\]([]/m;
+
+/** Rust's `#[test]`, including the framework-qualified `#[tokio::test]` form. */
+const RUST_ATTRIBUTE_PATTERN = /^\s*#\[\s*(?:\w+::)?test\s*\]/m;
+
+/**
+ * The `def test...` convention pytest and minitest both collect on.
+ *
+ * The form stops at the name rather than requiring `(`, because Ruby's
+ * parameter list is optional and minitest collects `def test_serves_story` as
+ * written; Python, where the parentheses are mandatory, is unaffected.
+ */
+const DEF_NAMING_PATTERN = /^\s*(?:async\s+)?def\s+test\w*\b/m;
+
+/** PHPUnit's `test*` method convention. */
+const PHP_NAMING_PATTERN = /^\s*(?:public\s+)?function\s+test\w*\s*\(/m;
+
+/** The Go names `go test` collects and always runs. */
+const GO_NAMING_PATTERN = /^\s*func\s+(?:Test|Benchmark|Fuzz)\w*\s*\(/m;
+
+/**
+ * Go's `Example` names, kept apart because the form alone settles nothing.
+ *
+ * `go doc testing`: an example without an output comment is compiled and never
+ * run, so the function on its own declares no test — see
+ * {@link GO_OUTPUT_COMMENT_RE}.
+ */
+const GO_EXAMPLE_PATTERN = /^\s*func\s+Example\w*\s*\(/m;
+
+/**
+ * The comment that makes a Go example executable.
+ *
+ * Read off the raw body, because {@link stripCommentsAndLiterals} blanks it
+ * along with every other comment. `go/doc` matches this prefix
+ * case-insensitively, so this does too.
+ */
+const GO_OUTPUT_COMMENT_RE = /^[ \t]*\/\/[ \t]*(?:unordered[ \t]+)?output[ \t]*:/im;
+
+/**
+ * The declaration forms each language's runner collects, keyed by extension.
+ *
+ * An extension is not executability — a `.test.ts` whose whole body is an
  * annotation comment is prose that happens to end in `.ts`, and classifying by
  * extension alone would let a markdown ledger clear the same obligation with
- * the same bytes simply by being renamed. A non-prose carrier therefore counts
- * as a test only when it declares one the way its language does.
+ * the same bytes simply by being renamed. But the extension *is* the language,
+ * and a form written for one language reads noise in another: PHPUnit's
+ * `function test\w*(` convention matched a plain TypeScript helper named
+ * `testData`, which took every obligation in that file out of the partition
+ * with no test collected anywhere. Each carrier is therefore read with its own
+ * language's forms only. Gherkin has its own set again — see
+ * {@link GHERKIN_STRUCTURE_PATTERNS}.
  *
- * These are the *code* forms. Gherkin has its own set — see
- * {@link GHERKIN_STRUCTURE_PATTERNS} — and the two are never both applied to a
- * body, because a pattern written for one language reads noise in the other.
+ * Container and lifecycle forms are excluded throughout on the same terms as
+ * the hook chains above: an `[TestFixture]` on an otherwise empty class and a
+ * `@pytest.mark.integration` on a plain helper declare nothing a runner
+ * collects, and pytest's own collection is the `def test\w*` convention anyway.
  *
- * Deliberately broad, and deliberately blind to skip state — `describe.skip(`
- * matches. The claim these support is "a test is declared here", not "it is
- * enabled" or "it passes": a disabled skeleton is owned by the scaffold
- * placeholder gate, and a green run is owned by the test command itself.
+ * Deliberately blind to skip state — `describe.skip(` matches. The claim these
+ * support is "a test is declared here", not "it is enabled" or "it passes": a
+ * disabled skeleton is owned by the scaffold placeholder gate, and a green run
+ * is owned by the test command itself.
  */
-const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
-  // xUnit / BDD call form with the modifier chains the frameworks allow:
-  // `it(`, `test.each(`, `describe.skip(`, `it.concurrent.each(`.
-  new RegExp(
-    `(?:^|[^\\w$.])(?:it|test|describe|context|specify|suite|scenario)(?:\\s*\\.\\s*(?:${TEST_MODIFIER_SEGMENT}))*\\s*\\(`,
-  ),
-  // Namespaced runners whose entry point is a property, so the call form above
-  // rejects them on the `.` before `test`: Deno's built-in runner and QUnit.
-  /(?:^|[^\w$.])(?:Deno\s*\.\s*test|QUnit\s*\.\s*(?:test|only|todo|skip))(?:\s*\.\s*(?:only|skip|ignore|each))*\s*\(/,
-  // Attribute / decorator declarations that name a collected unit: JUnit 5's
-  // collectable annotations, NUnit / xUnit.net, Rust. Container and lifecycle
-  // attributes are excluded on the same terms as the hook chains above — an
-  // `[TestFixture]` on an otherwise empty class and a `@pytest.mark.integration`
-  // on a plain helper declare nothing a runner collects, and pytest's own
-  // collection is the `def test\w*` convention on the next line anyway.
-  /^\s*(?:@(?:Test|ParameterizedTest|RepeatedTest|TestFactory|TestTemplate)\b|\[\s*(?:Test|TestCase|TestCaseSource|Fact|Theory)\s*[\]([]|#\[\s*(?:\w+::)?test\s*\])/m,
-  // Naming conventions that are themselves the declaration: pytest, Go,
-  // PHPUnit, minitest. `Example` included because `go test` collects it and
-  // runs it whenever it carries an `// Output:` comment. The `def` form stops
-  // at the name rather than requiring `(`, because Ruby's parameter list is
-  // optional and minitest collects `def test_serves_story` as written; Python,
-  // where the parentheses are mandatory, is unaffected by allowing them.
-  /^\s*(?:async\s+)?(?:def\s+test\w*\b|func\s+(?:Test|Benchmark|Fuzz|Example)\w*\s*\(|(?:public\s+)?function\s+test\w*\s*\()/m,
+const TEST_PATTERNS_BY_LANGUAGE: readonly (readonly [readonly string[], readonly RegExp[]])[] = [
+  [
+    ["ts", "tsx", "mts", "cts", "js", "jsx", "mjs", "cjs"],
+    [CALL_FORM_PATTERN, NAMESPACED_CALL_PATTERN],
+  ],
+  [["py"], [DEF_NAMING_PATTERN]],
+  // RSpec declares with the call form, minitest with the naming convention.
+  [["rb"], [CALL_FORM_PATTERN, DEF_NAMING_PATTERN]],
+  [["go"], [GO_NAMING_PATTERN]],
+  // JUnit's annotations, plus the call form Kotest / Spock / ScalaTest use.
+  [
+    ["java", "kt", "kts", "groovy", "scala"],
+    [JVM_ANNOTATION_PATTERN, CALL_FORM_PATTERN],
+  ],
+  [["cs", "fs", "vb"], [DOTNET_ATTRIBUTE_PATTERN]],
+  [["rs"], [RUST_ATTRIBUTE_PATTERN]],
+  [["php"], [PHP_NAMING_PATTERN]],
 ];
+
+const TEST_PATTERNS_BY_EXTENSION: ReadonlyMap<string, readonly RegExp[]> = new Map(
+  TEST_PATTERNS_BY_LANGUAGE.flatMap(([extensions, patterns]) =>
+    extensions.map((extension): readonly [string, readonly RegExp[]] => [extension, patterns]),
+  ),
+);
+
+/**
+ * Every code form, for a carrier whose extension names no language above.
+ *
+ * The pre-split reading, kept for the unrecognised case on purpose: over-
+ * counting a carrier costs a finding that would not have been raised, while
+ * narrowing a language the scan cannot name would report a suite its runner
+ * does execute as unwritten. {@link GO_EXAMPLE_PATTERN} stays out — it is the
+ * one form that needs a second condition before it means anything.
+ */
+const EVERY_TEST_PATTERN: readonly RegExp[] = [
+  ...new Set(TEST_PATTERNS_BY_LANGUAGE.flatMap(([, patterns]) => patterns)),
+];
+
+/** The declaration forms a runner for a carrier of `extension` collects. */
+function runnableTestPatterns(extension: string, text: string): readonly RegExp[] {
+  const patterns = TEST_PATTERNS_BY_EXTENSION.get(extension) ?? EVERY_TEST_PATTERN;
+  if (extension === "go" && GO_OUTPUT_COMMENT_RE.test(text)) {
+    return [...patterns, GO_EXAMPLE_PATTERN];
+  }
+  return patterns;
+}
 
 /**
  * The declarations a Gherkin runner collects — the whole of a `.feature`'s say.
@@ -1296,9 +1390,13 @@ const RUNNABLE_TEST_STRUCTURE_PATTERNS: readonly RegExp[] = [
  * `Background:` is deliberately absent — it is the shared preamble those
  * scenarios run, not a scenario a runner collects, so a feature that has only
  * one declares no test.
+ *
+ * `Scenario Template` is the English dialect's standard alias of
+ * `Scenario Outline`, and `Example` of `Scenario`; a feature written with the
+ * alias collects exactly the same scenarios.
  */
 const GHERKIN_STRUCTURE_PATTERNS: readonly RegExp[] = [
-  /^\s*(?:Scenario Outline|Scenario|Example)\s*:/m,
+  /^\s*(?:Scenario Outline|Scenario Template|Scenario|Example)\s*:/m,
 ];
 
 /**
@@ -1327,7 +1425,7 @@ function blankSpan(span: string): string {
 /**
  * Removes comments and string literals so a declaration is only read from code.
  *
- * Applying {@link RUNNABLE_TEST_STRUCTURE_PATTERNS} to the raw body made an
+ * Applying {@link TEST_PATTERNS_BY_LANGUAGE} to the raw body made an
  * annotation-only file executable as soon as it mentioned the shape it lacks:
  * `// TODO: add test("story", ...)` matched the call form, so a ledger renamed
  * to `.test.ts` cleared the obligation with a comment. Comments and literals
@@ -1402,6 +1500,67 @@ function nonCodeSpanAt(text: string, at: number): string | null {
   return REGEX_LITERAL_RE.exec(text)?.[0] ?? null;
 }
 
+/**
+ * Keywords whose parenthesised header ends a statement rather than a value.
+ *
+ * `if (enabled) /^\s*```/.test(value)` is a legal regex literal, but the `)`
+ * before it reads as the end of a call on the character test alone — which
+ * leaves the backtick inside free to open a template literal and blank the
+ * declaration below it, the failure this branch exists to prevent.
+ */
+const CONTROL_STATEMENT_KEYWORDS: ReadonlySet<string> = new Set([
+  "if",
+  "for",
+  "while",
+  "switch",
+  "catch",
+  "with",
+]);
+
+/**
+ * Characters walked back to pair a `)` with its `(`.
+ *
+ * A control-statement header is short; the budget only stops a pathological
+ * body from making the walk quadratic on a path that reads every annotated
+ * carrier in the project. Exhausting it falls back to "the `)` ended a value",
+ * which is the reading before this branch existed.
+ */
+const PAREN_LOOKBACK_LIMIT = 2000;
+
+/** The identifier ending immediately before `at`, or `""` when none does. */
+function wordBefore(text: string, at: number): string {
+  let end = at - 1;
+  while (end >= 0 && /\s/.test(text.charAt(end))) {
+    end -= 1;
+  }
+  if (end < 0 || !/[\w$]/.test(text.charAt(end))) {
+    return "";
+  }
+  let start = end;
+  while (start > 0 && /[\w$]/.test(text.charAt(start - 1))) {
+    start -= 1;
+  }
+  return text.slice(start, end + 1);
+}
+
+/** True when the `)` at `at` closes a control statement's header. */
+function closesControlHeader(text: string, at: number): boolean {
+  const stop = Math.max(0, at - PAREN_LOOKBACK_LIMIT);
+  let depth = 0;
+  for (let back = at; back >= stop; back -= 1) {
+    const char = text.charAt(back);
+    if (char === ")") {
+      depth += 1;
+    } else if (char === "(") {
+      depth -= 1;
+      if (depth === 0) {
+        return CONTROL_STATEMENT_KEYWORDS.has(wordBefore(text, back));
+      }
+    }
+  }
+  return false;
+}
+
 /** True when the token before `at` ends a value, so a `/` there divides. */
 function endsValueBefore(text: string, at: number): boolean {
   let back = at - 1;
@@ -1415,14 +1574,13 @@ function endsValueBefore(text: string, at: number): boolean {
   if (!VALUE_END_RE.test(char)) {
     return false;
   }
+  if (char === ")") {
+    return !closesControlHeader(text, back);
+  }
   if (!/[\w$]/.test(char)) {
     return true;
   }
-  let wordStart = back;
-  while (wordStart > 0 && /[\w$]/.test(text.charAt(wordStart - 1))) {
-    wordStart -= 1;
-  }
-  return !EXPRESSION_KEYWORDS.has(text.slice(wordStart, back + 1));
+  return !EXPRESSION_KEYWORDS.has(wordBefore(text, back + 1));
 }
 
 function stripCommentsAndLiterals(text: string): string {
@@ -1458,7 +1616,7 @@ function hasRunnableTestStructure(file: string, text: string): boolean {
     }
     return matchesAny(GHERKIN_STRUCTURE_PATTERNS, text);
   }
-  return matchesAny(RUNNABLE_TEST_STRUCTURE_PATTERNS, text);
+  return matchesAny(runnableTestPatterns(extension, text), text);
 }
 
 /** True when any of `patterns` matches `text` once its non-code spans are gone. */
