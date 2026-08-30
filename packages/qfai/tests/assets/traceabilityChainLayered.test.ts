@@ -120,6 +120,32 @@ describe("the traceability chain names only hops the layered layout produces", (
       it(`${tree}: ${rel} repeats the constitution's chain verbatim`, async () => {
         expect(normalizeArrows(await read(tree, rel))).toContain(LAYERED_CHAIN);
       });
+
+      // A restatement is what an agent running that skill actually reads. The
+      // bare chain demands `TC → Tests` for every change, which contradicts the
+      // canonical `US-Refs` / `CON-API-Refs` route and sends a valid E2E or API
+      // test back through a `TC-*` the ledger rejects.
+      it(`${tree}: ${rel} carries the layer branch, not the bare chain`, async () => {
+        const restatement = (await read(tree, rel)).replace(/\s+/g, " ");
+        expect(restatement).toContain("The ");
+        expect(restatement).toMatch(/`(?:->|→) Tests` hop branches by layer/);
+        expect(restatement).toContain("`US-*` from E2E and `CON-API-*` from API");
+        expect(restatement).toContain("`CON-DB-*` from integration");
+        expect(restatement).toContain("not through `TC-*`");
+        expect(restatement).toContain("TDDLIST_OBLIGATION_LAYER_MISMATCH");
+      });
     }
+
+    // `catalog/test-layers.md` moves the whole chain: the TC, its EX, the BR
+    // that EX concretizes and the AC that BR answers. Naming only EX and BR
+    // strands the AC, and `QFAI-COV-201` fires when that TC was its only cover
+    // — the re-filing trades one error for another.
+    it(`${tree}: re-filing carries the parent AC, not only the EX and BR`, async () => {
+      const constitution = (await read(tree, CHAIN_RESTATEMENTS[0] ?? "")).replace(/\s+/g, " ");
+      expect(constitution).toContain("move the whole chain in one change");
+      expect(constitution).toContain("the `AC-*` that BR answers");
+      expect(constitution).toContain("Leaving the `AC-*` behind");
+      expect(constitution).toContain("QFAI-COV-201");
+    });
   }
 });

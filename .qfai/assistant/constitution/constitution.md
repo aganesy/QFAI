@@ -98,8 +98,11 @@ belongs at L1–L3. A test file's `TC-*` annotation is instead routed by the TC'
 own declared `Level`, so a TC still recorded at `L4` / `L5` is answered from
 `tests/api/**` / `tests/e2e/**` and counted there (`QFAI-ATDD-112`). Do not
 strip those annotations to satisfy the ledger rule — that only removes coverage.
-Re-file the obligation upstream as `CON-API-*` or `US-*`, together with the
-`EX-*` / `BR-*` it derives from, the way `catalog/test-layers.md` prescribes.
+Re-file the obligation upstream as `CON-API-*` or `US-*`, and **move the whole
+chain in one change**: the `EX-*` it derives from, the `BR-*` that EX
+concretizes, and the `AC-*` that BR answers, the way `catalog/test-layers.md`
+prescribes. Leaving the `AC-*` behind when that TC was its only cover is
+`QFAI-COV-201` — the re-filing then trades one error for another.
 
 Whenever practical, reference:
 
