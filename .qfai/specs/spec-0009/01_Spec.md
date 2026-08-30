@@ -20,7 +20,7 @@
   - Steering files population/refresh (`product.md`, `tech.md`, `structure.md`, `manifest.md`)
   - Evidence sampling (5-15 matched test files)
   - Minimum runnable path documentation (dev server, DB, env, commands)
-  - Tool selection rationale per test layer
+  - Tool selection rationale per test layer (cross-reference, CHG-007: the layer-to-CI-lane mapping for QFAI's own repository is owned by spec-0017 / `CAP-0017` and authored under `packages/qfai/assets/init/.qfai/assistant/catalog/`. This spec stays scoped to **adopter** repository discovery; the cross-reference adds no layer token, heading or annotation form — the vocabulary is frozen)
 - Out:
   - Test or source code modifications
   - Spec artifact authoring (belongs to `/qfai-sdd`)

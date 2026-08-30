@@ -1,10 +1,11 @@
 import { spawn } from "node:child_process";
 import { existsSync } from "node:fs";
-import { chmod, mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdtemp, mkdir, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const prFixScriptPath = path.join(
@@ -96,7 +97,7 @@ afterEach(async () => {
     if (!dir) {
       continue;
     }
-    await rm(dir, { recursive: true, force: true });
+    await removeTempTree(dir);
   }
 });
 
