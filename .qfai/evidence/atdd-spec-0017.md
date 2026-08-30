@@ -2191,7 +2191,17 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 915
+**And a third time, from a merge rather than a commit.** Bringing `main` into
+`fix/issue-530-atdd-owned-layer-set` (issue #530, "Integration belongs to the ATDD-owned layer set")
+carried that branch's `+17` `it` callsites in `tests/assets/atddRedProvenance.test.ts` into the e2e
+project's globs, taking the count from 915 to 932 — re-derived with the guard's own `CALLSITE` rule at
+each endpoint: 814 at the merge base, 915 at `main`, 831 on the branch, 932 at the merge, and
+`915 + (831 - 814) = 932`. Nothing about `spec-0017` changed here either. The merge is a commit that
+changes a callsite under the two globs, so it owes this line exactly as a direct commit would, and the
+two suite totals above are known-invalid for this tree — not re-run here, because a merge that resolves
+two documentation conflicts cannot certify a suite run it did not take.
+
+e2e callsites at this tree: 932
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
