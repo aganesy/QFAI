@@ -274,6 +274,43 @@ describe("check-no-internal-version-leakage.sh defense branches", () => {
     expect(r.stdout).toMatch(/OK: no internal spec ids/);
   });
 
+  it("scans a files[] entry whose name starts with a hyphen (exit 1)", async () => {
+    // `find -notes-v2.0` reads a leading hyphen as a predicate, not a start
+    // point. With the error suppressed that looked exactly like an empty
+    // tree: the guard skipped the surface, found no names, and exited 0 on a
+    // directory whose own name carries the marker.
+    const tmp = await newTempDir();
+    await writeFile(
+      path.join(tmp, "package.json"),
+      JSON.stringify({ name: "fake", version: "0.0.0", files: ["-notes-v2.0"] }),
+      "utf-8",
+    );
+    await mkdir(path.join(tmp, "-notes-v2.0"), { recursive: true });
+    await writeFile(path.join(tmp, "-notes-v2.0", "clean.md"), "clean body\n", "utf-8");
+
+    const r = runGuard(tmp);
+    expect(r.status).toBe(1);
+    expect(r.stderr).toMatch(/leaked in a FILE NAME/);
+    expect(r.stderr).toMatch(/notes-v2[.]0/);
+  });
+
+  it("enumerates a hyphen-named entry that is itself clean (exit 0)", async () => {
+    // The anchoring must not turn every odd name into a failure: an entry
+    // that starts with a hyphen and carries no marker still passes.
+    const tmp = await newTempDir();
+    await writeFile(
+      path.join(tmp, "package.json"),
+      JSON.stringify({ name: "fake", version: "0.0.0", files: ["-assets"] }),
+      "utf-8",
+    );
+    await mkdir(path.join(tmp, "-assets"), { recursive: true });
+    await writeFile(path.join(tmp, "-assets", "clean.md"), "clean body\n", "utf-8");
+
+    const r = runGuard(tmp);
+    expect(r.status).toBe(0);
+    expect(r.stdout).toMatch(/OK: no internal spec ids/);
+  });
+
   it("warns and passes when every files[] entry is absent on disk (exit 0)", async () => {
     // Lint-only CI passes legitimately have no `dist/` yet. The guard
     // should emit a WARN naming what was skipped and exit 0 — without

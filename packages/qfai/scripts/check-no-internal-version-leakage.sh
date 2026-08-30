@@ -196,7 +196,18 @@ for idx in "${!SCAN_PATHS[@]}"; do
   # project. Run the same regexes over the path list to close that
   # dimension, and report it separately so the operator can tell a name
   # leak from a content leak.
-  target_paths=$(cd "$ROOT" && find "$relative_target" -print 2>/dev/null || true)
+  # `./` prefix: a `package.json#files` entry may legitimately begin with a
+  # hyphen, and `find -notes-v2.0` reads that as a predicate rather than a
+  # starting point. Suppressed, that failure looked exactly like an empty
+  # tree — the guard skipped the surface and still exited 0. Anchor the
+  # start point, and fail loudly when the enumeration itself fails: a name
+  # pass that could not list its target has not cleared it.
+  if ! target_paths=$(cd "$ROOT" && find "./$relative_target" -print 2>&1); then
+    echo "FAIL: could not enumerate $relative_target for the FILE NAME pass:" >&2
+    printf '%s\n' "$target_paths" | head -5 >&2
+    fail=1
+    target_paths=""
+  fi
   name_hits=$(printf '%s\n' "$target_paths" \
     | grep -E "$INTERNAL_SPEC_RE|$INTERNAL_ID_RE" || true)
   version_name_hits=$(printf '%s\n' "$target_paths" \

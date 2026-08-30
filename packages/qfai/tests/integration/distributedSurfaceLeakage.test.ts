@@ -84,14 +84,35 @@ const TEXT_EXTENSIONS = new Set([
   ".txt",
 ]);
 
-async function* walk(dir: string): AsyncGenerator<string> {
+/** One entry of the init output. `isFile` gates the content scan; every
+ *  entry's *name* is scanned regardless of what kind it is. */
+interface WalkEntry {
+  full: string;
+  isFile: boolean;
+}
+
+/**
+ * Every entry `qfai init` writes, not only the regular files.
+ *
+ * Yielding files alone left two kinds of name unscanned. `init` creates the
+ * skill and agent wrappers as **symlinks** (`syncIntegrationWrappers`), which
+ * are neither `isFile()` nor `isDirectory()` to `readdir`, so a marker in one
+ * of those names reached no matcher at all — and they are copied into the
+ * consuming project exactly as named. An **empty** directory was invisible for
+ * the same reason: a directory only ever reached the name pass through the
+ * relative path of a file inside it.
+ *
+ * Recursion still follows `isDirectory()` only, which `withFileTypes` reports
+ * from `lstat` — so a symlinked directory is scanned by name and not walked
+ * through, and the walk cannot cycle.
+ */
+async function* walk(dir: string): AsyncGenerator<WalkEntry> {
   const entries = await readdir(dir, { withFileTypes: true });
   for (const entry of entries) {
     const full = path.join(dir, entry.name);
+    yield { full, isFile: entry.isFile() };
     if (entry.isDirectory()) {
       yield* walk(full);
-    } else if (entry.isFile()) {
-      yield full;
     }
   }
 }
@@ -158,10 +179,12 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     const hits: Hit[] = [];
     const nameHits: Hit[] = [];
     const visitedRelative: string[] = [];
-    for await (const file of walk(tmpDir)) {
+    for await (const { full: file, isFile } of walk(tmpDir)) {
       const relative = path.relative(tmpDir, file);
       visitedRelative.push(relative);
       nameHits.push(...scanPathName(relative));
+      // Name scanned above for every entry; only a regular file has content.
+      if (!isFile) continue;
       const ext = path.extname(file);
       if (!TEXT_EXTENSIONS.has(ext)) continue;
       const stats = await stat(file);
@@ -219,6 +242,20 @@ describe("distributed surface leakage smoke", { timeout: 90000 }, () => {
     // TC-1.5.1: DESIGN.md must be in the walked file list (guard against
     // accidental rename / exclusion of the root brand SSOT).
     expect(visitedRelative).toContain("DESIGN.md");
+
+    // The walk must actually reach the symlinked wrappers, or the name pass
+    // above proves nothing about the names `syncIntegrationWrappers` mints.
+    // Directories have to be in the list too: an empty one is otherwise
+    // reachable by no path at all.
+    const walked = new Set(visitedRelative.map((entry) => entry.split(path.sep).join("/")));
+    expect(walked).toContain(".qfai/assistant/skills");
+    const symlinked = [...walked].filter((entry) =>
+      /^\.(claude|codex|github|agents)\/skills\//.test(entry),
+    );
+    expect(
+      symlinked.length,
+      "the walk must reach the skill wrappers init creates as symlinks",
+    ).toBeGreaterThan(0);
   });
 
   // The walk above only proves that today's tree happens to be clean —
