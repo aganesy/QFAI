@@ -13,12 +13,13 @@
 // QFAI:SPEC-0010:US-0010-0012
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
 
 import { afterEach, beforeEach, describe, it, expect } from "vitest";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
 
@@ -48,7 +49,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await removeTempTree(root);
 });
 
 async function makePack(id: string): Promise<void> {
