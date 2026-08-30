@@ -71,3 +71,27 @@
 - Given a generated `<TC-ID-A>.test.ts` whose TODO has been replaced with a real `expect(...)` assertion, and a sibling `<TC-ID-B>.test.ts` whose `// TODO: implement assertion` marker remains
 - When `qfai atdd scaffold --spec <spec-id>` is re-run, then the filled `<TC-ID-A>` file is left untouched (non-TODO content preserved)
 - And when `qfai validate` is run 3 times with the default `atdd.scaffoldEscalateCycles: 3` and the `<TC-ID-B>` TODO still present, then `D-SCAFFOLD-PLACEHOLDER` is warning on cycles 1–2 and error on cycle 3 (DR-0272)
+
+## EX-0008-0011: Seven Rules Plus Companion Rule Present and Linked
+
+- BR-Ref: BR-0008-0010
+- Given the credential-reuse guidance artifact under the `/qfai-atdd` skill's `references/` directory
+- When a reader scans it for the rule set
+- Then all seven session-reuse rules appear as distinct statements, and the companion rule ("a caller-injected environment identifier forbids the harness from provisioning or tearing that environment down") appears in the same artifact
+- And the skill entry point contains a link to the artifact
+
+## EX-0008-0012: Backend Deny-List Scan Returns Zero and Vocabulary Is Unchanged
+
+- BR-Ref: BR-0008-0011
+- Given the credential-reuse guidance artifact
+- When it is scanned for browser-backend names, install commands and version pins
+- Then the match count is zero, and any worked example carries the "one illustration among possible backends" framing
+- And the layer token set, the allowed annotation forms and the ATDD finding-code set are unchanged from baseline — no new layer, no new annotation token, no new finding code, no validator
+
+## EX-0008-0013: Script-Naming Rule Recorded Without Adoption
+
+- BR-Ref: BR-0008-0012
+- Given the credential-reuse guidance artifact's scope statement
+- When it is read
+- Then the credential-class script-naming rule appears as adopter guidance, and the artifact states that QFAI keeps its own script names and that QFAI's own suite has zero credentials so the rules are not dogfooded here
+- And the scope statement obliges E2E / API / Integration only, with no unit or component obligation

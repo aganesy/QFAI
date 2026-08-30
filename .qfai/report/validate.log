@@ -3,22 +3,22 @@
 This file is written by every `qfai validate` run and always points at the newest
 run-log directory. Do not edit it by hand; do not pipe stdout into it.
 
-- run_id: run-20260804061624484
-- started_at: 2026-08-03T21:16:24.484Z
+- run_id: run-20260824102916641
+- started_at: 2026-08-24T01:29:16.641Z
 - command: /qfai-validate
 - status: pass
 - errors: 0
-- warnings: 367
-- run_log: .qfai/report/run-20260804061624484
+- warnings: 465
+- run_log: .qfai/report/run-20260824102916641
 
 # Validate Run Summary
 
-- run_id: run-20260804061624484
-- started_at: 2026-08-03T21:16:24.484Z
+- run_id: run-20260824102916641
+- started_at: 2026-08-24T01:29:16.641Z
 - status: pass
-- report_dir: .qfai/report/run-20260804061624484
+- report_dir: .qfai/report/run-20260824102916641
 - errors: 0
-- warnings: 367
+- warnings: 465
 
 ## Top Errors
 
@@ -30,4 +30,4 @@ run-log directory. Do not edit it by hand; do not pipe stdout into it.
 - QFAI-TRIAGE-001 (.qfai/specs/spec-0002/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
 - QFAI-EX-105 (.qfai/specs/spec-0004/06_Test-Cases.md): 06_Test-Cases.md の Level が test-layer policy 外です: ssot-guard, validators。policy が許可する層: api, component, e2e, integration, unit
 - QFAI-TRIAGE-001 (.qfai/specs/spec-0005/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
-- QFAI-TRIAGE-001 (.qfai/specs/spec-0006/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
+- QFAI-TRIAGE-001 (.qfai/specs/spec-0007/09_delta.md): delta.md に `## Change Summary` があるが `## Triage` セクションがありません。
