@@ -85,6 +85,7 @@ describe.each(CONSUMER_ROOTS)("%s", (consumerRoot) => {
     const raw = await readFile(path.join(base, AGENT_SELECTION), "utf-8");
     const dangling = [...raw.matchAll(CITED_MARKDOWN_PATH)]
       .map((match) => match[1])
+      .filter((cited): cited is string => cited !== undefined)
       .filter((cited) => !existsSync(path.join(base, cited)));
 
     expect([...new Set(dangling)].sort()).toEqual([]);
