@@ -84,8 +84,9 @@ INTERNAL_ID_RE='\bCAP-0(0[1-9][0-9]|[1-9][0-9]{2,})\b|\bDEC-[0-9]{4}-[0-9]{4}\b|
 # content scan.
 #
 # The exemption is expressed as a *rewrite of the sanctioned name*, not
-# as a `grep -v` of every line mentioning the memo directory. Dropping
-# whole lines would also excuse `.../migrations/notes-v2.0-draft.md`,
+# as an inverted match that drops every line mentioning the memo
+# directory. Dropping whole lines would also excuse
+# `.../migrations/notes-v2.0-draft.md`,
 # `.../migrations/drafts-v2.0/clean.md`, and any file in an unrelated
 # tree that happens to carry the same path fragment. Instead the exact
 # shape documented in `.agents/rules/distributed-surface.md` —
@@ -215,8 +216,13 @@ for idx in "${!SCAN_PATHS[@]}"; do
     | grep -E "$INTERNAL_VERSION_RE" || true)
   if [[ -n "$name_hits" || -n "$version_name_hits" ]]; then
     echo "FAIL: internal spec id, version marker, or trace id leaked in a FILE NAME under $target:" >&2
+    # `fail=1` is already decided above; this only tidies the REPORT, by
+    # keeping the lines that carry a path when one of the two hit sets is
+    # empty. Written as a positive match on purpose: TDD-0033 pins that the
+    # only inverted grep in this script is the schemaVersion carve-out
+    # below, so that no filter can ever sit between a hit and the FAIL path.
     { printf '%s\n%s\n' "$name_hits" "$version_name_hits" \
-      | grep -vE '^[[:space:]]*$' | head -20 >&2; } || true
+      | grep -E '[^[:space:]]' | head -20 >&2; } || true
     fail=1
   fi
   schema_hits=$(grep -rnE "$SCHEMA_VERSION_RE" "$target" 2>/dev/null \
