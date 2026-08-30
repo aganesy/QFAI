@@ -139,6 +139,82 @@ describe.each(TREES)("%s", (tree) => {
     expect(phase2b).toContain("Keep the boundary the predicate its `Satisfied-by` names covers");
   });
 
+  it("carries the unobserved-RED selection rules into project_memory", async () => {
+    // The short form is what a Phase 2b run summarises from, and it demanded
+    // "the boundary its RED observed" unconditionally — which the two normal
+    // cases cannot supply: a `blocked` row was parked at selection ahead of
+    // RED, and a `falsifiability` row records a mutation trio in place of one.
+    const skill = await read(tree, SDD_SKILL);
+    const memory = skill.slice(skill.indexOf("project_memory:"));
+
+    expect(memory).toContain("an observation is never invented");
+    expect(memory).toContain("have no first failing assert at all");
+    // `CR-*` is escaped as `CR-\*` by the markdown formatter here, so pin the
+    // ordering rule around it rather than the literal token.
+    expect(memory).toContain("so the kept boundary is the one the driving CR");
+    expect(memory).toContain("names first, in the order that row's obligation source lists them");
+    expect(memory).toContain("the boundary the predicate its Satisfied-by names covers");
+    // The unconditional form the detailed checklist had already dropped.
+    expect(memory).not.toContain("narrow its Selector to the boundary its RED observed");
+  });
+
+  it("re-scopes a legal non-TC row here too, rather than nowhere", async () => {
+    // Phase Red judges the selector of whatever row it selected, and `E2E` /
+    // `API` rows are legal in this ledger. Scoped to `TC-*`, the owner's split
+    // procedure could not execute the approved `CR-*` those rows arrive on, and
+    // no other actor may: `/qfai-atdd` never writes the ledger and
+    // `/qfai-implement` owns cells, not rows.
+    const phase2b = section(
+      await read(tree, CHECKLISTS),
+      "## Phase 2b: Seed `tdd/test-list.md`",
+      "## Phase 2c",
+    );
+
+    expect(phase2b).toContain("**The shape rule is not `TC-*`-only");
+    expect(phase2b).toContain(
+      "**originating a row and re-scoping one are different writes, and this phase owns both at every `Layer`**",
+    );
+    // The boundaries have to come from the column the row's layer selects.
+    expect(phase2b).toContain("`US-Refs` from that `US-*`'s acceptance criteria");
+    expect(phase2b).toContain("`CON-API-Refs` from the operation its contract declares");
+    // And the split must not move an obligation into a column its layer rejects.
+    expect(phase2b).toContain("`TDDLIST_OBLIGATION_LAYER_MISMATCH`");
+    // Seeding is unchanged: only coverage-target TCs originate rows.
+    expect(phase2b).toContain("Seeding still runs off coverage-target TCs alone");
+    expect(await read(tree, SDD_SKILL)).toContain(
+      "re-scoping is this phase's write at every Layer",
+    );
+  });
+
+  it("names the ledger parking as step 2's one exception in the protocol itself", async () => {
+    // Phase Red places the `todo -> blocked` write at Drift Protocol step 2,
+    // whose own text called creating the CR file "the only write this step
+    // makes". Obeying one left the row looping at `todo` across the approval
+    // wait; obeying the other broke a mandatory protocol.
+    const drift = await read(tree, DRIFT);
+
+    expect(drift).toContain(
+      "Creating this file is the only write this step makes **outside the raiser's own whitelisted cells**",
+    );
+    expect(drift).toContain(
+      "The one exception is **parking this CR's blocked set in the execution ledger**",
+    );
+    // Bounded: the whitelisted cell pair, on the enumerated rows, and nothing else.
+    expect(drift).toContain("writes nothing else: no other cell, no other file, and no row added");
+    expect(drift).toContain("`#allowed-exceptions-minimal-whitelist`");
+    // And placed at step 2 for the reasons Phase Red gives, not by preference.
+    expect(drift).toContain("Step 3's wait for approval spans sessions");
+    expect(drift).toContain("after the owner rerun the write has no correct target");
+
+    // The downstream instruction now points back at that named exception.
+    const red = section(
+      await read(tree, SKILL),
+      "### Phase: Red (Write Failing Test)",
+      "### Phase: Green",
+    );
+    expect(red).toContain("the parking is named there as its single exception");
+  });
+
   it("migrates an existing ledger's columns instead of only seeding new ones", async () => {
     // The template is copied only when the ledger is absent, so an upgraded
     // project keeps its eight-column table and the residual path's

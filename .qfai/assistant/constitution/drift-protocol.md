@@ -158,10 +158,27 @@ ratifies a comparison the author knew was fabricated.
    pattern is `CR-\d{8}-\d{4}` and the file carries `ID`, `Status`
    (`open` / `approved` / `rejected` / `superseded`), `Approved by`,
    `Approved at` and `Approved option` so the approval is a record, not a
-   memory. Creating this file is the only write this step makes: `09_delta.md`
-   and `07_Decisions.md` are upstream SSOT, so the reference to this CR is
-   written there by the owner skill in step 4, never before approval.
-   Contents:
+   memory. Creating this file is the only write this step makes **outside the
+   raiser's own whitelisted cells**: `09_delta.md` and `07_Decisions.md` are
+   upstream SSOT, so the reference to this CR is written there by the owner
+   skill in step 4, never before approval.
+
+   The one exception is **parking this CR's blocked set in the execution
+   ledger**, and it applies only to a raiser that already owns those cells —
+   `/qfai-implement` under `#allowed-exceptions-minimal-whitelist`. Once the
+   file exists, that raiser writes `todo -> blocked` with this CR's ID in
+   `Blocked-By` on each `tdd/test-list.md` row the blocked set below names, and
+   writes nothing else: no other cell, no other file, and no row added, removed
+   or re-scoped. The parking belongs to this step rather than to step 4 for two
+   reasons. Step 3's wait for approval spans sessions, and a dependent row left
+   at `todo` across it is re-selected and its determination re-derived on every
+   pass — the loop `blocked` exists to stop; and after the owner rerun the write
+   has no correct target, because that rerun may have re-scoped the very row it
+   was aimed at. A row whose ledger has no `Blocked-By` column cannot be parked
+   — adding the column is a table-shape write only `/qfai-sdd` Phase 2b may make
+   — so that ledger stops with a handoff note asking for the column migration
+   and leaves its rows at `todo`; blocking a row whose blocker cannot be written
+   is `TDDLIST_BLOCKED_MISSING_REF`. Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
    - context — for intent drift, what conflicts; for defect drift, what the
      artifact declares and how it breaks that declaration
@@ -178,6 +195,7 @@ ratifies a comparison the author knew was fabricated.
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
+
 3. Wait for explicit user approval, then set `Status` and the approval fields.
    A defect-drift CR has no option set, so `Approved option` stays `-`; what is
    approved is the single correct fix under `## Proposed change`. The wait
