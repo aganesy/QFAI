@@ -12,15 +12,24 @@ This directory holds the version-managed artifacts that downstream execution ski
   version-managed and may be consumed directly by `/qfai-prototyping`,
   `/qfai-implement`, and `/qfai-atdd`.
 
-QFAI organizes this directory into four subdirectories:
+QFAI organizes this directory into five subdirectories:
 
 ```text
 .qfai/contracts/
 ├── api/      # OpenAPI YAML (endpoints, request/response)
+├── cli/      # QFAI's own CLI / shipped-surface contracts (Markdown)
 ├── db/       # SQL schema contracts (tables, columns, constraints)
 ├── design/   # Exploration brief / rubric / selected direction / design system YAML
 └── ui/       # UI contract YAML (screens, elements, user actions)
 ```
+
+`cli/` holds the contracts for QFAI's own command surface and for the files
+QFAI writes into a consuming project. Its entries are indexed in
+`_policies/05_Contracts.md` under **CLI Contracts** with `CLI-*` short IDs.
+They are Markdown, carry no `QFAI-CONTRACT-ID`, and are not scanned by the
+`ui/` / `api/` / `db/` contract validators. Subject-named files (rather than
+`qfai-<command>.md`) hold a schema or ownership boundary shared by more than one
+command — `worklog-entry.schema.md`, `shipped-workflows.md`.
 
 > **Note:** Discussion-pack UIUX files are upstream discovery artifacts. `/qfai-sdd` is responsible for normalizing the approved design/system/screen decisions into `.qfai/contracts/**`. Downstream execution skills must read these contracts instead of reading `discussion-*/uiux/*` directly.
 
@@ -37,6 +46,9 @@ QFAI organizes this directory into four subdirectories:
 ├── api/
 │   ├── README.md
 │   └── api-0001-<slug>.yaml
+├── cli/
+│   ├── qfai-<command>.md
+│   └── <subject>.md                 (shared schema / ownership boundary)
 ├── db/
 │   ├── README.md
 │   └── db-0001-<slug>.sql

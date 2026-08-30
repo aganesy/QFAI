@@ -150,13 +150,17 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
   Phase Red. There is no `retired` value: retiring a row is **deleting it from the
   table** under the ownership split below, not parking it at a status.
 - **Ownership split.** `/qfai-sdd` owns the rows — which obligations exist and what each
-  covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells and nothing else.
-  This is the one carve-out in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`; adding,
-  removing or re-scoping a row is an upstream change and takes the Change Request path —
-  except when `/qfai-sdd` is reseeding under a Triage row that carries the operator's
-  approval for the removal in its `Approved By` cell, which is then the same approval a
-  Change Request would have collected and is itself the record. Two rows qualify: the
-  approved `UPDATE:REMOVE` row, whose approval `sdd-triage.md` takes by operation; and the
+  covers. `/qfai-implement` owns the `Status`, `DR-ID` and `Evidence` cells unconditionally,
+  plus two cells only while a stated condition holds: `Test file` while the seeded value is
+  empty or a dash placeholder, and `Selector` while the seeded value does not resolve against
+  the row's named test file. It owns nothing else — `TC-Refs`, `Layer`, `US-Refs` and
+  `CON-API-Refs` carry the row's obligation identity and stay upstream. This is the carve-out
+  in `constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both
+  conditions; adding, removing or re-scoping a row is an upstream change and takes the Change
+  Request path — except when `/qfai-sdd` is reseeding under a Triage row that carries the
+  operator's approval for the removal in its `Approved By` cell, which is then the same
+  approval a Change Request would have collected and is itself the record. Two rows qualify:
+  the approved `UPDATE:REMOVE` row, whose approval `sdd-triage.md` takes by operation; and the
   `UPDATE:MODIFY` row that drops a TC out of the coverage-target set, whose operation is
   approval-free but whose row deletion is not, so `sdd-triage.md` takes an approval for
   that deletion specifically. An `UPDATE:MODIFY` row with no approver recorded authorises
