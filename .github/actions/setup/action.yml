@@ -275,36 +275,45 @@ runs:
     # So installation runs nothing, and what may run is named in a file whose
     # digest the pre-flight pins.
     - name: Install dependencies
-      run: pnpm install --frozen-lockfile --ignore-scripts
-      shell: bash
-
-    # ── 5. Build the dependencies that are allowed to build ───────────────────
-    # Default deny, with the exceptions named in a pinned file rather than in
-    # this body: adding one is then a visible edit a reviewer approves, not a
-    # line in a shell script nobody re-reads.
-    #
-    # A missing or empty list is a REFUSAL, not a skip. An empty allow-list is a
-    # legitimate state — it means nothing may build — but a list this step could
-    # not read is a question that went unanswered, and answering it with silence
-    # is how a guard reports success having done nothing.
-    - name: Build the dependencies permitted to run install scripts
       run: |
         set -euo pipefail
-        # From the ACTION's own directory, not the working tree. Review finding [131]: a
-        # re-published tag checks out that tag and fetches only `.github/actions` from the
-        # current revision, so a list at the repository root was simply absent and the refusal
-        # below stopped a documented re-publish route.
+        # `--ignore-scripts` is review finding [127]. The pre-flight walks the manifests in
+        # THIS tree, and a dependency's manifest is not in this tree: it arrives inside a
+        # tarball, pnpm extracts it, and its `postinstall` ran before any verification in the
+        # job. A pull request adding a local `.tgz` under `packages/qfai/` and referencing it
+        # from the manifest and lockfile therefore executed arbitrary code with every guard
+        # still ahead of it.
+        #
+        # The frozen-lockfile literal, and this is the one place it appears in the own CI tree.
+        pnpm install --frozen-lockfile --ignore-scripts
+
+        # …and then exactly what the allow-list names, in the SAME step.
+        #
+        # One step rather than two, and that is review finding [132] rather than style: the
+        # shared definition is four steps by `TC-0017-0029`, and splitting the rebuild out made
+        # it five — an approved test case quietly violated by an implementation that then
+        # rewrote the test to agree with itself. Installing and authorising what may build are
+        # one unit anyway: the job of this step is to produce a usable `node_modules`, and
+        # nothing may come between an install that deliberately ran nothing and the rebuild
+        # that decides what runs after all.
+        #
+        # A missing or empty list is a REFUSAL, not a skip. An empty allow-list is a legitimate
+        # state — it means nothing may build — but a list this step could not read is a
+        # question that went unanswered, and answering it with silence is how a guard reports
+        # success having done nothing.
         list="${{ github.action_path }}/dependency-builds.txt"
+        if [ ! -f "${list}" ]; then
+          echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
+          exit 1
+        fi
+
         # Being on the list permits the package of that NAME to run its install scripts. It does
         # not permit the name to be pointed somewhere else: a pull request that resolves
         # `esbuild` to a local `.tgz`, a directory or a git checkout keeps the name and replaces
         # the code, and the rebuild below runs it. So where each permitted package comes from is
         # read out of the lockfile first.
         node "${{ github.action_path }}/verify-rebuild-sources.mjs" pnpm-lock.yaml "${list}"
-        if [ ! -f "${list}" ]; then
-          echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
-          exit 1
-        fi
+
         names=0
         while IFS= read -r name || [ -n "${name}" ]; do
           case "${name}" in "" | "#"*) continue ;; esac

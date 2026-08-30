@@ -512,8 +512,8 @@ describe("TC-0017-0028 (TDD-0028): no toolchain job restates a preamble step inl
   });
 });
 
-describe("TC-0017-0029 (TDD-0029): the shared definition keeps its step order and the re-shim", () => {
-  it("runs shim, Node setup with cache and dependency path, re-shim, frozen install, permitted builds — in that order", () => {
+describe("TC-0017-0029 (TDD-0029): the shared definition keeps its four-step order and the re-shim", () => {
+  it("runs shim, Node setup with cache and dependency path, re-shim, frozen install — in that order", () => {
     const steps = setupActionSteps();
 
     // CLAIM 1 — five steps, in order. The ORDER is the assertion, not the
@@ -527,7 +527,7 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its step order an
     // in the job. What may build is named in `.github/dependency-builds.txt`,
     // whose digest the pre-flight pins, and this step rebuilds exactly that set
     // AFTER the install that deliberately ran nothing.
-    expect.soft(steps.length, "the definition has exactly five steps").toBe(5);
+    expect.soft(steps.length, "the definition has exactly four steps").toBe(4);
 
     const runOf = (i: number): string => {
       // Bound to a local first. `typeof steps[i]?.["run"] === "string"` narrows the EXPRESSION,
@@ -551,8 +551,14 @@ describe("TC-0017-0029 (TDD-0029): the shared definition keeps its step order an
       )
       .toContain("--ignore-scripts");
     expect
-      .soft(runOf(4), "step 5 rebuilds only what the pinned allow-list names, after that install")
+      .soft(runOf(3), "and rebuilds only what the pinned allow-list names, in the same step")
       .toContain("dependency-builds.txt");
+    expect
+      .soft(
+        runOf(3).indexOf("--ignore-scripts"),
+        "with the install first: rebuilding before installing rebuilds nothing",
+      )
+      .toBeLessThan(runOf(3).indexOf("pnpm rebuild"));
 
     // CLAIM 2 — the Node step carries the package-manager cache AND an EXPLICIT
     // cache-dependency path. `BR-0017-0026` names both; today's inline preamble

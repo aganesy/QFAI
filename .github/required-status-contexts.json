@@ -182,7 +182,7 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "7a950f0af8f952efa04f9db632bd67e845f8ac2b93343b1c207f2c9ae424569b",
+        ".github/actions/setup/action.yml": "530d55fb684adcc95bb7a0b53a596ae6d7431b888dc00a6baf0b620fa4c284cd",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
         "scripts/check-atdd-annotation-ledger.mjs": "f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be",
@@ -351,7 +351,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "af75c2d656924474",
+        "Verify the toolchain action before running it": "b2cb5da7390b2fb4",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9a546eaa55780192",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "45f5cf9890903b57",
