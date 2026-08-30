@@ -78,7 +78,7 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     // `exception` row's mandatory `DR-*` written by nobody at all.
     const skill = await read(tree, SKILL);
     expect(skill).toContain(
-      "Write `Status`, `DR-ID` and `Evidence` — all three carve-out cells — for every merged item",
+      "Write `Status`, `DR-ID` and `Evidence` — all three unconditional carve-out cells — for every merged item",
     );
     expect(skill).not.toContain("Write Status + Evidence for every merged item");
     expect(skill).toContain("TDDLIST_EXCEPTION_MISSING_DR");
@@ -88,7 +88,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
       "assistant/skills/qfai-implement/references/parallelization-policy.md",
     );
     expect(policy).toContain("the `DR-ID` that status requires");
-    expect(policy).toContain("**all three carve-out cells**, not Status and Evidence alone");
+    // "unconditional" is load-bearing since the carve-out was widened to five
+    // cells: the reconcile owes the three that are always writable, while
+    // `Test file` / `Selector` are owed only while their condition holds.
+    expect(policy).toContain(
+      "**all three unconditional carve-out cells**, not Status and Evidence alone",
+    );
     // Serial mode returns the same three; it has no merge step, not a
     // different contract.
     expect(policy).toContain("returns Status, `DR-ID` and Evidence, the orchestrator writes them");

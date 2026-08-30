@@ -183,12 +183,13 @@ So:
   evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
   `#post-parallel-integration-verify`, before the verify runs — **all three
-  carve-out cells**, not Status and Evidence alone. A worker cannot write the
-  ledger, and `/qfai-implement`'s Completion step reconciles rather than writes,
-  so a `DR-ID` dropped here is written by nobody: an `exception` row lands
-  without the `DR-*` that `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`,
-  and a row reset by an approved Change Request loses the `CR-*` it must retain
-  through its later statuses.
+  unconditional carve-out cells**, not Status and Evidence alone. A worker
+  cannot write the ledger, and `/qfai-implement`'s Completion step reconciles
+  rather than writes, so a `DR-ID` dropped here is written by nobody: an
+  `exception` row lands without the `DR-*` that
+  `TDDLIST_EXCEPTION_MISSING_DR` requires at `error`, and a row reset by an
+  approved Change Request loses the `CR-*` it must retain through its later
+  statuses.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 

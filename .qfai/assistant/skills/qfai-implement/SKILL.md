@@ -88,7 +88,7 @@ Execute the TDD micro-cycle for each pending item in `test-list.md`, transitioni
 
 ## Non-goals
 
-- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are the one carve-out the Drift Protocol grants (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`); its rows are still upstream.
+- Writing spec artifacts other than this skill's own `tdd/test-list.md` ledger (use `/qfai-sdd`). The ledger's `Status` / `DR-ID` / `Evidence` cells are carved out unconditionally by the Drift Protocol, and its `Test file` / `Selector` cells conditionally — a placeholder may be filled, and a selector that does not resolve against the row's named test file may be repaired, but neither may be rewritten once its condition has ceased to hold, i.e. a `Test file` that names a path and a `Selector` that resolves (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`, which states both conditions); its rows, and the columns carrying their obligation identity, are still upstream. A row whose own test asserts over the CONTENT of an artifact this skill may not write is not implementable here at all, and the three moves available to it all lose: `references/upstream-artifact-ordering.md`.
 - Writing acceptance tests (use `/qfai-atdd`). `Layer = E2E` / `Layer = API` ledger rows are tracked here but their tests are authored there, and the RED provenance those rows carry is defined in `../qfai-atdd/references/red-provenance.md` — this skill writes their `Status` / `DR-ID` / `Evidence` from the evidence that stage produced.
 - Running validation gates (use `/qfai-verify`).
 - Parallel execution across multiple **specs** simultaneously. (Item-level parallelism _within_ one spec is a separate question, governed by `## Parallelization Policy` below.)
@@ -163,7 +163,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 ### Completion
 
-1. After processing all items, confirm every row's `Status`, `DR-ID` and `Evidence` match the per-phase writes the Orchestrator Protocol mandates — the three cells the Drift Protocol carve-out covers, and the ones gate item 10 reads. This step reconciles, and is not the ledger's first write: a row is written when its phase completes, so an interrupted run still leaves the recovery passages a current ledger to read.
+1. After processing all items, confirm every row's `Status`, `DR-ID` and `Evidence` match the per-phase writes the Orchestrator Protocol mandates — the three cells the Drift Protocol carve-out covers unconditionally, and the ones gate item 10 reads. This step reconciles, and is not the ledger's first write: a row is written when its phase completes, so an interrupted run still leaves the recovery passages a current ledger to read. `Test file` and `Selector` are covered too, but only while their stated condition still holds, so fill a placeholder or repair an unresolvable selector when you reach it rather than at the end — the conditions are one-way, and by Completion one that has ceased to hold puts the cell back outside the carve-out entirely.
 2. If all items are `done`, report "All items complete".
 3. If some items are `exception`, report them as **blocking output**, not as an
    informational list: for each, the `TDD-ID`, the `DR-ID`, and whether that DR
@@ -182,7 +182,7 @@ Follow `.qfai/assistant/constitution/shared-skill-delegation-baseline.md`.
 - Orchestrator MUST NOT write test or production code directly; delegate every TDD phase to the routed implementation agents.
 - Additional implement-specific overrides:
   - read `test-list.md`, determine the next pending item, and delegate each TDD phase;
-  - update `test-list.md` **Status, DR-ID and Evidence** after each phase completes — never deferred to the end of the run — recording the delegated agent's one-word RED/GREEN outcome plus the anchor into the evidence file the row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row, whose RED was produced by the stage that authored its test (gate item 10) — and that agent's command+result verbatim in the evidence file itself — a GFM cell cannot hold either a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`). A row that transitions to `exception` takes its `DR-ID` in that same write, so no `exception` row is ever observable without the `DR-*` `references/execution-ledger.md` requires of it. Gate item 10 requires `Status` and `Evidence`, the Drift Protocol carve-out permits all three, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
+  - update `test-list.md` **Status, DR-ID and Evidence** after each phase completes — never deferred to the end of the run — recording the delegated agent's one-word RED/GREEN outcome plus the anchor into the evidence file the row's `Layer` owns — `.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row, whose RED was produced by the stage that authored its test (gate item 10) — and that agent's command+result verbatim in the evidence file itself — a GFM cell cannot hold either a newline or a bare `|` (`references/execution-ledger.md#evidence-cell-contract`). A row that transitions to `exception` takes its `DR-ID` in that same write, so no `exception` row is ever observable without the `DR-*` `references/execution-ledger.md` requires of it. Gate item 10 requires `Status` and `Evidence`, the Drift Protocol carve-out permits all three unconditionally, and the orchestrator is the only role permitted to write this file (`references/parallelization-policy.md#ledger-ownership`).
 
 ### Formal Sub-agent Roster
 
@@ -294,7 +294,7 @@ Follow `shared-skill-delegation-baseline.md#finding-provenance-must`.
 
 ### Post-parallel integration verify
 
-- **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write `Status`, `DR-ID` and `Evidence` — all three carve-out cells — for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`). `DR-ID` is not optional here: a worker that returns `exception` cannot write the ledger itself, and Completion now reconciles rather than writing, so a reconcile that copies only Status and Evidence leaves that row's mandatory `DR-*` unwritten by anyone and `TDDLIST_EXCEPTION_MISSING_DR` fails the spec at `error`. The same applies to a `CR-*` carried by an approved upstream reset, which the row retains through every later status.
+- **Reconcile the ledger first.** Under worktree separation each worker holds a private copy of `test-list.md`, so the merged trunk carries none of their transitions. Write `Status`, `DR-ID` and `Evidence` — all three unconditional carve-out cells — for every merged item from the worker reports **before** integration verify, and fail the verify if any merged item's row is still `todo` — an unreconciled ledger reports finished work as unstarted (`references/parallelization-policy.md#ledger-ownership`). `DR-ID` is not optional here: a worker that returns `exception` cannot write the ledger itself, and Completion now reconciles rather than writing, so a reconcile that copies only Status and Evidence leaves that row's mandatory `DR-*` unwritten by anyone and `TDDLIST_EXCEPTION_MISSING_DR` fails the spec at `error`. The same applies to a `CR-*` carried by an approved upstream reset, which the row retains through every later status.
 - After parallel slices complete and merge, run integration verify on the merged result
 - Then reconcile the seams: diff each slice's touched `src/` paths against its declared `Owning module` and report undeclared or overlapping paths as a deny-condition breach — **independently of whether the merged suite is green** (`references/parallelization-policy.md#seam-reconciliation-after-a-parallel-run`)
 - If integration verify fails, re-run it once with no intervening change before acting. A failure that does **not** reproduce is an `environment/tooling` finding (`shared-skill-operating-baseline.md#nondeterministic-gates`), reported with every run — not a rollback trigger. For a reproducible failure, **classify before acting** per `shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`, attributing it to one slice, to the merge resolution, or to code outside every slice. Remedies by class: `references/parallelization-policy.md#failed-integration-verify`. Unconditional rollback is not one of them — the protocol classifies this as a local, non-destructive defect to fix and re-run, and reserves stopping for destructive changes. Only a **reproducible** failure flags all slices for re-examination and rolls back the merge, and only where the classification calls for it
@@ -333,7 +333,7 @@ Gate items 7-9 are evidence-bearing: reviewer verdicts must be written to a revi
 conversation. There is exactly **one** `.qfai/review/**` layout — `review-<17-digit-timestamp>/`
 holding `review_request.md`, `R01_<reviewer-id>.md` (at least one) and `summary.json`. Do not nest
 `<scope>/<layer>/attempt-NN/` directories: packs written there are invisible to `npx qfai validate`.
-Each review round creates a new pack. Full schema and the `REVISE` -> `status: "REVISE"` mapping:
+Each review round creates a new pack. Full schema and the `REVISE` -> `status: "FAIL"` mapping:
 `references/review-artifact-layout.md`.
 
 ### Spec completion conditions
@@ -341,10 +341,10 @@ Each review round creates a new pack. Full schema and the `REVISE` -> `status: "
 The skill may declare "this spec's implementation is complete" only when:
 
 - All TC-\* from `06_Test-Cases.md` with applicable layer are present in `test-list.md`. "Applicable layer" is decided by `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`
-- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared
-  `US-*` and `CON-API-*` is referenced from the test tree. **Not** "every `US-*`
-  has an `E2E` row": those rows have no producer, so requiring them made a correct
-  spec uncompletable (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
+- `QFAI-ATDD-111` and `QFAI-ATDD-113` are clean for this spec — every declared `US-*` and
+  `CON-API-*` is traced by an annotation in the test tree, and where `06_Test-Cases.md` declares an
+  E2E coverage-target TC, by a `Layer = E2E` row naming it. **Not** "every `US-*` has an `E2E` row":
+  those rows have no producer (`../qfai-atdd/references/red-provenance.md#a-spec-with-no-atdd-owned-rows`)
 - Each item reached `done` or valid `exception` (with DR-ID)
 - 0 blocking reviewer issues remain
 - Checkpoint verification passed at the spec-level boundary (see `#checkpoint-verification`), and its `Checkpoint verification seal` is **recomputed** here over the recorded command, result and revision. That boundary has no row, so gate item 12 never runs for it — without this recomputation the full-suite result on a terminal ledger could be edited from FAIL to PASS afterwards with no revision, no `Audited evidence hash` and no pack seal moving
