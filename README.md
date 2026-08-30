@@ -143,7 +143,7 @@ The agent reads QFAI assets under `.qfai/assistant/` and produces or updates SDD
 QFAI includes a small set of custom skills (stored under `.qfai/assistant/skills/`) designed to keep the workflow opinionated and repeatable.
 
 - **qfai-configure**: Analyze the repository (language, frameworks, test layout, directory structure)
-  and tailor `qfai.config.yaml` accordingly (especially `testFileGlobs`).
+  and adjust `qfai.config.yaml` accordingly (especially `testFileGlobs`).
   Run this once right after `npx qfai init`, and re-run it when the repository structure changes.
 - **qfai-discussion**: Run a unified structured discussion that produces and maintains the latest discussion pack
   as 15 required markdown files under `.qfai/discussion/discussion-<ts>/`.
