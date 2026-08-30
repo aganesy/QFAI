@@ -128,18 +128,53 @@ describe("Completion Contract keeps its executable step executable", () => {
 
     it(`${tree}: an override names a target its own legitimate runs can still hit`, async () => {
       // A non-waivable bullet only works if every correct run has something to
-      // execute. Two shipped paths otherwise had none: a re-run of an
-      // already-terminal ledger moves no item to `done`, and configure may not
-      // repair the spec/ATDD/prototyping artifacts a profile-less `validate`
-      // judges. Left as-is, each turns a correct run into a permanent
-      // UNRUN/FAIL, i.e. a completion blocker with no reachable remedy.
+      // execute, and if what it executes returns a verdict that run owns.
+      // Three shipped paths failed one or the other: a re-run of an
+      // already-terminal ledger moves no item to `done`; an ATDD run that
+      // scaffolds nothing — E2E/API work, or a repair of existing tests — has
+      // no "just scaffolded" suite; and configure may not repair the
+      // spec/ATDD/prototyping artifacts a profile-less `validate` judges. Left
+      // as-is, each turns a correct run into a permanent UNRUN/FAIL, i.e. a
+      // completion blocker with no reachable remedy.
       const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
       expect(implement).toContain("A run that moves no item still has a target");
       expect(implement).toContain("A legitimate no-op is never UNRUN for want of a target.");
 
+      const atdd = flat(await read(tree, "assistant/skills/qfai-atdd/SKILL.md"));
+      // `scaffold` emits Integration-owned TCs only, so "the tests you just
+      // scaffolded" was empty on an E2E/API-only run and on any run that only
+      // repaired or re-verified existing acceptance tests.
+      expect(atdd).toContain("the acceptance tests **this run created or changed**");
+      expect(atdd).toContain("A run that wrote no test file still has a target");
+      expect(atdd).toContain("the spec's existing acceptance suite");
+
       const configure = flat(await read(tree, "assistant/skills/qfai-configure/SKILL.md"));
-      expect(configure).toContain("**judged only over the findings this skill owns**");
-      expect(configure).toContain("rather than read as this bullet's FAIL");
+      // The verdict has to be a real command whose exit code no other stage can
+      // decide. Naming the scope in prose narrowed nothing: `shouldFail` trips
+      // on `counts.error` over every finding, whoever owns it.
+      expect(configure).toContain("`npx qfai doctor --fail-on error`");
+      expect(configure).toContain("**That exit code is the verdict**");
+      expect(configure).toContain(
+        "`npx qfai validate --fail-on error` is **not** this bullet's verdict",
+      );
+      expect(configure).not.toContain("**judged only over the findings this skill owns**");
+    });
+
+    it(`${tree}: a reused checkpoint PASS is pinned to the tree it ran against`, async () => {
+      // The no-op branch reused a recorded checkpoint result whenever it
+      // postdated the last ledger change. A terminal ledger stops moving while
+      // the code under it does not, so an all-done re-run could certify a tree
+      // the recorded PASS never executed — and the seal only catches an edited
+      // record, never code that moved underneath an honest one.
+      const implement = flat(await read(tree, "assistant/skills/qfai-implement/SKILL.md"));
+      const checkpoint = flat(
+        await read(tree, "assistant/skills/qfai-implement/references/checkpoint-verification.md"),
+      );
+      const revisionRule = "when the `Revision` recorded beside them is not this tree's";
+
+      expect(implement).toContain(revisionRule);
+      expect(checkpoint).toContain(revisionRule);
+      expect(checkpoint).toContain("**Ledger state is not tree state.**");
     });
 
     it(`${tree}: no two inheritors share the same override`, async () => {
