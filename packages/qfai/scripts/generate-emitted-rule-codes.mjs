@@ -101,12 +101,41 @@ const STRING_CONST_RE = new RegExp(
 );
 
 /**
+ * A `const NAME = <cond> ? "a" : "b"` binding — one name, several codes.
+ *
+ * `designFidelity.ts` picks between `QFAI-FID-010` and `QFAI-FID-011` this way
+ * and hands the result to `issue()`, so an identifier-only resolver saw neither
+ * code and a waiver naming them was dropped on any run where the rule stayed
+ * quiet. Every literal in the initializer counts: `RULE_ID_RE` filters what is
+ * not a rule id, so over-reading a branch costs nothing.
+ */
+const CONDITIONAL_CONST_RE =
+  /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*(?::[^=;\n]+)?=\s*([^;\n]*\?[^;\n]*:[^;\n]*)/g;
+
+/** Every string-literal placeholder inside one expression. */
+const LITERAL_TOKEN_ALL_RE = new RegExp(`${LITERAL_PREFIX}(\\d+)${LITERAL_SUFFIX}`, "g");
+
+/**
  * The shared `issue()` helper: `issue(code, message, severity, …)`.
  *
  * Seeded rather than discovered so the scan does not depend on
  * `src/core/validators/utils.ts` being inside the tree it was pointed at.
  */
 const CORE_ISSUE_FACTORY = ["issue", { severityArg: 2, fixedSeverity: null }];
+
+/**
+ * `issue(code, message, severity, file, rule, …)` — the argument a finding
+ * carries as its `rule`.
+ *
+ * A waiver may name either spelling, and several rules publish an alias no
+ * `code` literal ever yields: `tddList.ts` emits `TDDLIST-003` and
+ * `TDDLIST-004` only here. Collecting them keeps a waiver written against the
+ * documented spelling out of `QFAI-WAIVER-004` on a run where the rule stays
+ * quiet. Only the shared helper is read — a local factory's parameter order is
+ * its own — and `RULE_ID_RE` discards the `category.subcategory` strings this
+ * argument usually carries.
+ */
+const CORE_ISSUE_RULE_ARG = 4;
 
 /**
  * A local factory: `function name(code: …` whose return type is `Issue`.
@@ -393,11 +422,31 @@ function resolveCodeExpression(raw, source, constants) {
     return direct;
   }
   const access = PROPERTY_ACCESS_RE.exec(raw.trim());
-  if (!access) {
-    return [];
+  if (access) {
+    const bound = source.properties.get(access[1]);
+    return bound ? [...bound] : [];
   }
-  const bound = source.properties.get(access[1]);
-  return bound ? [...bound] : [];
+  // A conditional or coalescing expression handed straight to the factory:
+  // take every literal branch. `RULE_ID_RE` discards whatever is not a code.
+  return literalsIn(raw, source.literals);
+}
+
+/**
+ * Every string literal an expression contains, in source order.
+ *
+ * @param {string} raw sanitized expression.
+ * @param {readonly string[]} literals
+ * @returns {string[]}
+ */
+function literalsIn(raw, literals) {
+  const found = [];
+  for (const token of raw.matchAll(LITERAL_TOKEN_ALL_RE)) {
+    const value = literals[Number(token[1])];
+    if (value !== undefined) {
+      found.push(value);
+    }
+  }
+  return found;
 }
 
 /**
@@ -609,6 +658,21 @@ function collectStringConstants(sources) {
       }
       bound.add(value);
     }
+    for (const found of source.sanitized.matchAll(CONDITIONAL_CONST_RE)) {
+      const [, name, initializer] = found;
+      const values = literalsIn(initializer ?? "", source.literals);
+      if (values.length === 0) {
+        continue;
+      }
+      let bound = constants.get(name);
+      if (!bound) {
+        bound = new Set();
+        constants.set(name, bound);
+      }
+      for (const value of values) {
+        bound.add(value);
+      }
+    }
   }
   return constants;
 }
@@ -620,13 +684,15 @@ function collectStringConstants(sources) {
  * @param {string} outputFile skipped while scanning — it holds the codes as
  *   plain array members, but skipping it keeps the generator idempotent no
  *   matter how the module is later reformatted.
- * @returns {Promise<{ codes: string[], errorOnly: string[] }>} sorted, de-duplicated.
+ * @returns {Promise<{ codes: string[], errorOnly: string[], aliases: string[] }>} sorted,
+ *   de-duplicated. `aliases` holds the ids that only ever reach a finding as
+ *   `Issue.rule`, so a code that is also emitted as a `code` never appears there.
  */
 async function collectEmittedRuleCodes(srcDir, outputFile) {
   const skip = path.resolve(outputFile);
   const sources = [];
   for (const file of await listTypeScriptFiles(srcDir)) {
-    if (path.resolve(file) === skip) {
+    if (path.resolve(file) === skip || isPostWaiverSource(file)) {
       continue;
     }
     let raw;
@@ -644,9 +710,11 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
   const downgraded = collectDowngradedCodes(sources);
   /** @type {Map<string, { severities: Set<string | null> }>} */
   const emissions = new Map();
+  /** @type {Set<string>} */
+  const aliasSet = new Set();
   for (const source of sources) {
     const resolvable = { ...source, properties: collectPropertyValues(source, constants) };
-    scanFactoryCalls(resolvable, factories, constants, emissions);
+    scanFactoryCalls(resolvable, factories, constants, emissions, aliasSet);
     scanIssueObjectLiterals(resolvable, constants, emissions);
   }
 
@@ -658,7 +726,26 @@ async function collectEmittedRuleCodes(srcDir, outputFile) {
     const severities = emissions.get(code)?.severities;
     return Boolean(severities && severities.size === 1 && severities.has("error"));
   });
-  return { codes, errorOnly };
+  const aliases = [...aliasSet]
+    .filter((alias) => !emissions.has(alias))
+    .sort((a, b) => a.localeCompare(b, "en"));
+  return { codes, errorOnly, aliases };
+}
+
+/**
+ * True for a file whose findings are appended after `applyWaivers` has run.
+ *
+ * `applyWaivers` is called inside `core/validate.ts`, so anything `src/cli/`
+ * pushes onto the result — `D-DEPRECATED-PATH`, `QFAI-PROFILE-001` — can never
+ * be suppressed by a waiver. Registering them as known let a waiver that
+ * cannot possibly match be reported as `active`, which is the same lie
+ * `QFAI-WAIVER-004` exists to prevent, pointing the other way.
+ *
+ * @param {string} file
+ * @returns {boolean}
+ */
+function isPostWaiverSource(file) {
+  return path.resolve(file).split(path.sep).includes("cli");
 }
 
 /**
@@ -738,21 +825,116 @@ function describeFactory(source, params) {
  * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
  * @param {Map<string, { severities: Set<string | null> }>} emissions
  */
-function scanFactoryCalls(source, factories, constants, emissions) {
+function scanFactoryCalls(source, factories, constants, emissions, aliases) {
   for (const [name, factory] of factories) {
     const pattern = new RegExp(`\\b${name}\\(`, "g");
     let match = pattern.exec(source.sanitized);
     while (match) {
       const call = splitCallArguments(source.sanitized, match.index + match[0].length - 1);
       if (call && call.args.length > 0) {
-        const codes = resolveCodeExpression(call.args[0], source, constants);
-        for (const code of codes) {
-          recordEmission(emissions, code, callSeverity(source, factory, call.args, constants));
+        for (const [code, severity] of callEmissions(source, factory, call.args, constants)) {
+          recordEmission(emissions, code, severity);
+        }
+        if (aliases && name === CORE_ISSUE_FACTORY[0]) {
+          const raw = call.args[CORE_ISSUE_RULE_ARG];
+          if (raw !== undefined) {
+            for (const alias of resolveCodeExpression(raw, source, constants)) {
+              if (RULE_ID_RE.test(alias)) {
+                aliases.add(alias);
+              }
+            }
+          }
         }
       }
       match = pattern.exec(source.sanitized);
     }
   }
+}
+
+/**
+ * Split a top-level `cond ? whenTrue : whenFalse` expression.
+ *
+ * Only the outermost conditional is split, and only where the `?` and its `:`
+ * both sit at bracket depth 0; a nested conditional stays inside the branch
+ * text, which {@link literalsIn} still reads in full. `?.` and `??` are skipped
+ * so an optional chain in the condition does not open a branch.
+ *
+ * @param {string} raw sanitized expression.
+ * @returns {{ condition: string, whenTrue: string, whenFalse: string } | null}
+ */
+function conditionalBranches(raw) {
+  let depth = 0;
+  let question = -1;
+  let nested = 0;
+  for (let index = 0; index < raw.length; index += 1) {
+    const char = raw[index];
+    if (char === "(" || char === "[" || char === "{") {
+      depth += 1;
+    } else if (char === ")" || char === "]" || char === "}") {
+      depth -= 1;
+    } else if (depth !== 0) {
+      continue;
+    } else if (char === "?") {
+      if (raw[index + 1] === "." || raw[index + 1] === "?") {
+        index += 1;
+      } else if (question === -1) {
+        question = index;
+      } else {
+        nested += 1;
+      }
+    } else if (char === ":" && question !== -1) {
+      if (nested > 0) {
+        nested -= 1;
+        continue;
+      }
+      return {
+        condition: raw.slice(0, question).trim(),
+        whenTrue: raw.slice(question + 1, index),
+        whenFalse: raw.slice(index + 1),
+      };
+    }
+  }
+  return null;
+}
+
+/**
+ * Every `(code, severity)` pair one factory call can produce.
+ *
+ * A call that picks both its code and its severity off the same condition —
+ * `issue(declaresForm ? "QFAI-REVIEW-007" : "QFAI-REVIEW-009", …, declaresForm
+ * ? "error" : "warning", …)` in `reviewArtifacts.ts` — is read branch by
+ * branch, so each code keeps the severity it is actually raised at. Pairing
+ * them off the cross-product instead would leave every such code's severity
+ * unknown and drop it from {@link renderEmittedRuleCodesModule}'s error-only
+ * list, weakening `QFAI-WAIVER-002` for a rule that only ever fails hard.
+ *
+ * @param {{ sanitized: string, literals: string[], properties: ReadonlyMap<string, ReadonlySet<string>> }} source
+ * @param {{ severityArg: number | null, fixedSeverity: string | null }} factory
+ * @param {readonly string[]} args
+ * @param {ReadonlyMap<string, ReadonlySet<string>>} constants
+ * @returns {Array<[string, string | null]>}
+ */
+function callEmissions(source, factory, args, constants) {
+  const codeArg = args[0] ?? "";
+  const severityArg = factory.severityArg === null ? undefined : args[factory.severityArg];
+  const codeBranches = severityArg === undefined ? null : conditionalBranches(codeArg);
+  const severityBranches = codeBranches === null ? null : conditionalBranches(severityArg ?? "");
+  if (codeBranches && severityBranches && codeBranches.condition === severityBranches.condition) {
+    /** @type {Array<[string, string | null]>} */
+    const paired = [];
+    for (const side of /** @type {const} */ (["whenTrue", "whenFalse"])) {
+      const resolved = resolveValue(severityBranches[side], source.literals, constants);
+      const severity = resolved.length === 1 ? (resolved[0] ?? null) : null;
+      for (const code of resolveCodeExpression(codeBranches[side], source, constants)) {
+        paired.push([code, severity]);
+      }
+    }
+    if (paired.length > 0) {
+      return paired;
+    }
+  }
+  const severity = callSeverity(source, factory, args, constants);
+  return resolveCodeExpression(codeArg, source, constants).map((code) => [code, severity]);
 }
 
 /**
@@ -848,9 +1030,10 @@ async function listTypeScriptFiles(dir) {
  *
  * @param {readonly string[]} codes
  * @param {readonly string[]} errorOnly
+ * @param {readonly string[]} aliases
  * @returns {string}
  */
-function renderEmittedRuleCodesModule(codes, errorOnly) {
+function renderEmittedRuleCodesModule(codes, errorOnly, aliases) {
   const list = (values) =>
     values.length === 0 ? "" : `\n${values.map((value) => `  "${value}",`).join("\n")}\n`;
   return `/**
@@ -875,6 +1058,17 @@ export const EMITTED_RULE_CODES: readonly string[] = [${list(codes)}];
  * that produces the finding can judge those.
  */
 export const ERROR_ONLY_RULE_CODES: readonly string[] = [${list(errorOnly)}];
+
+/**
+ * Rule ids that only ever reach a finding through \`Issue.rule\`.
+ *
+ * Some emitters key the finding on a broad \`code\` and narrow it with a
+ * per-defect \`rule\` — \`tddList.ts\` raises one code but tags each finding
+ * \`TDDLIST-003\` / \`TDDLIST-004\`. A waiver may name either, so the ids that
+ * never appear as a \`code\` are listed here rather than folded into
+ * {@link EMITTED_RULE_CODES}: they are waivable, but they are not codes.
+ */
+export const RULE_ID_ALIASES: readonly string[] = [${list(aliases)}];
 `;
 }
 
@@ -925,8 +1119,11 @@ async function main() {
     return 2;
   }
 
-  const { codes, errorOnly } = await collectEmittedRuleCodes(parsed.srcDir, parsed.outputFile);
-  const rendered = renderEmittedRuleCodesModule(codes, errorOnly);
+  const { codes, errorOnly, aliases } = await collectEmittedRuleCodes(
+    parsed.srcDir,
+    parsed.outputFile,
+  );
+  const rendered = renderEmittedRuleCodesModule(codes, errorOnly, aliases);
 
   if (parsed.checkOnly) {
     let current;

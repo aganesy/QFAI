@@ -175,6 +175,8 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-FID-007",
   "QFAI-FID-008",
   "QFAI-FID-009",
+  "QFAI-FID-010",
+  "QFAI-FID-011",
   "QFAI-FLOW-001",
   "QFAI-FLOW-002",
   "QFAI-FLOW-004",
@@ -234,7 +236,6 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-PLAN-005",
   "QFAI-PLATFORM-001",
   "QFAI-PLATFORM-002",
-  "QFAI-PROFILE-001",
   "QFAI-PROT-001",
   "QFAI-PROT-002",
   "QFAI-PROT-003",
@@ -809,4 +810,25 @@ export const ERROR_ONLY_RULE_CODES: readonly string[] = [
   "UIX-VAL-TREND-ENTRY-MISSING",
   "UIX-VAL-TREND-FIELD-MISSING",
   "UIX-VAL-TREND-SCAN-MISSING",
+];
+
+/**
+ * Rule ids that only ever reach a finding through `Issue.rule`.
+ *
+ * Some emitters key the finding on a broad `code` and narrow it with a
+ * per-defect `rule` — `tddList.ts` raises one code but tags each finding
+ * `TDDLIST-003` / `TDDLIST-004`. A waiver may name either, so the ids that
+ * never appear as a `code` are listed here rather than folded into
+ * {@link EMITTED_RULE_CODES}: they are waivable, but they are not codes.
+ */
+export const RULE_ID_ALIASES: readonly string[] = [
+  "TDDLIST-001",
+  "TDDLIST-002",
+  "TDDLIST-003",
+  "TDDLIST-004",
+  "WAIVER-001",
+  "WAIVER-002",
+  "WAIVER-003",
+  "WAIVER-004",
+  "WAIVER-005",
 ];

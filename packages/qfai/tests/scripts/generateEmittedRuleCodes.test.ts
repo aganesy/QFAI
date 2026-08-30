@@ -278,6 +278,116 @@ describe("generate-emitted-rule-codes.mjs", () => {
     expect(errorOnly).toContain('"QFAI-EXAMPLE-061"');
   });
 
+  // `designFidelity.ts` picks between `QFAI-FID-010` and `QFAI-FID-011` on a
+  // `const` and hands the result to `issue()`, so an identifier-only resolver
+  // saw neither code and a waiver naming them read as unknown.
+  it("resolves both branches of a conditional constant", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "fidelity.ts"),
+      [
+        'const issueCode = isOverridden ? "QFAI-EXAMPLE-070" : "QFAI-EXAMPLE-071";',
+        'issue(issueCode, "msg", "warning");',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(written).toContain('"QFAI-EXAMPLE-070"');
+    expect(written).toContain('"QFAI-EXAMPLE-071"');
+  });
+
+  // A call that picks its code and its severity off the same condition names a
+  // definite severity per branch; pairing them off the cross-product instead
+  // would leave both codes' severity unknown and withdraw the error-only
+  // classification `QFAI-WAIVER-002` refuses a waiver on.
+  it("pairs a conditional code with the matching severity branch", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "review.ts"),
+      [
+        "issue(",
+        '  declaresForm ? "QFAI-EXAMPLE-080" : "QFAI-EXAMPLE-081",',
+        '  "msg",',
+        '  declaresForm ? "error" : "warning",',
+        ");",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+    const errorOnly = written.slice(written.indexOf("ERROR_ONLY_RULE_CODES"));
+
+    expect(result.status).toBe(0);
+    expect(written).toContain('"QFAI-EXAMPLE-080"');
+    expect(written).toContain('"QFAI-EXAMPLE-081"');
+    expect(errorOnly).toContain('"QFAI-EXAMPLE-080"');
+    expect(errorOnly).not.toContain('"QFAI-EXAMPLE-081"');
+  });
+
+  // `tddList.ts` raises one code and narrows each finding with a per-defect
+  // `rule`. A waiver may name either spelling, so the ids that never appear as
+  // a `code` have to be published — as aliases, not as codes.
+  it("collects a rule-id alias no code literal yields", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await writeFile(
+      path.join(dir, "tddList.ts"),
+      [
+        'const UNRESOLVED_DR_RULE_ID = "EXAMPLELIST-003";',
+        'issue("QFAI-EXAMPLE-090", "msg", "warning", file, UNRESOLVED_DR_RULE_ID);',
+        // A dotted validator path is what this argument usually carries.
+        'issue("QFAI-EXAMPLE-091", "msg", "warning", file, "tddList.evidence");',
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+    const codes = written.slice(0, written.indexOf("ERROR_ONLY_RULE_CODES"));
+    const aliases = written.slice(written.indexOf("RULE_ID_ALIASES"));
+
+    expect(result.status).toBe(0);
+    expect(aliases).toContain('"EXAMPLELIST-003"');
+    // An alias is not a code: it must not join the emitted-code list, and the
+    // code it was carried by must not join the aliases.
+    expect(codes).not.toContain('"EXAMPLELIST-003"');
+    expect(aliases).not.toContain('"QFAI-EXAMPLE-090"');
+    expect(written).not.toContain("tddList.evidence");
+  });
+
+  // `cli/` pushes its findings on after `core/validate.ts` has run
+  // `applyWaivers`, so no waiver can ever suppress them. Registering them as
+  // known would report a waiver that cannot possibly match as `active`.
+  it("skips codes emitted after the waiver pass", async () => {
+    const dir = await newTempDir();
+    const output = path.join(dir, "emittedRuleCodes.ts");
+    await mkdir(path.join(dir, "cli", "commands"), { recursive: true });
+    await writeFile(
+      path.join(dir, "cli", "commands", "validate.ts"),
+      'const profile = { code: "QFAI-EXAMPLE-100", severity: "warning", category: "canonical" };\n',
+      "utf-8",
+    );
+    await writeFile(
+      path.join(dir, "validator.ts"),
+      'issue("QFAI-EXAMPLE-101", "msg", "warning");\n',
+      "utf-8",
+    );
+
+    const result = runGenerator(["--src", dir, "--out", output]);
+    const written = await readFile(output, "utf-8");
+
+    expect(result.status).toBe(0);
+    expect(written).not.toContain("QFAI-EXAMPLE-100");
+    expect(written).toContain('"QFAI-EXAMPLE-101"');
+  });
+
   it("exits 2 on an unknown flag", () => {
     const result = runGenerator(["--nope"]);
 

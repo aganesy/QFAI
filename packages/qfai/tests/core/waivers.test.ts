@@ -743,6 +743,108 @@ describe("applyWaivers", () => {
     },
   );
 
+  // Some emitters key the finding on a broad code and narrow it with a
+  // per-defect `rule`; `tddList.ts` publishes `TDDLIST-003` / `TDDLIST-004`
+  // that way and no `code` literal yields either. The static severity table
+  // does not list them — nothing about their severity is fixed — so a waiver
+  // naming the documented spelling was refused as a rule that does not exist.
+  // `QFAI-FID-010` / `-011` are the other half: one `const` picks between them
+  // before the factory call ever sees a literal.
+  it.each([
+    ["TDDLIST-003", "an alias carried only as Issue.rule"],
+    ["TDDLIST-004", "an alias carried only as Issue.rule"],
+    ["QFAI-FID-010", "a code named through a conditional constant"],
+    ["QFAI-FID-011", "a code named through a conditional constant"],
+  ])("recognises the quiet rule %s (%s)", async (rule) => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-17",
+          `    rule: ${rule}`,
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "root cause fixed; kept on file until expiry"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // `QFAI-PROFILE-001` is appended by `cli/commands/validate.ts` after
+  // `core/validate.ts` has already run `applyWaivers`, so no waiver can ever
+  // suppress it. Reporting such a waiver as `active` is the same lie
+  // `QFAI-WAIVER-004` exists to prevent, pointing the other way.
+  it("still reports a waiver naming a rule emitted after the waiver pass", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-18",
+          "    rule: QFAI-PROFILE-001",
+          "    scope:",
+          '      paths: [".qfai/specs/**"]',
+          '    reason: "partial profile is intentional here"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(true);
+      expect(result.waivers.active).toHaveLength(0);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // The other half of the post-waiver check: `D-DEPRECATED-PATH` is *also*
+  // emitted by `validators/assistantTreeMigration.ts`, which runs inside the
+  // waiver pass. A blanket "the CLI emits it, so drop it" would have taken a
+  // rule that is genuinely waivable with it.
+  it("recognises a rule the CLI re-emits but a validator raises too", async () => {
+    const root = await createRoot();
+    try {
+      await writeWaivers(
+        root,
+        [
+          "version: 1",
+          "waivers:",
+          "  - id: WVR-20260208-19",
+          "    rule: D-DEPRECATED-PATH",
+          "    scope:",
+          '      paths: [".qfai/assistant/**"]',
+          '    reason: "migration scheduled for the next minor"',
+          '    expires: "2099-01-01"',
+          '    evidence: "delta.md#DL-20260208-01"',
+          "",
+        ].join("\n"),
+      );
+
+      const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+      expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   // The code spelling is the one operators are told to write, so it must carry
   // the same `match.dl_ids` requirement as the rule-id spelling.
   it("requires match.dl_ids for a row-scoped rule named by its code", async () => {

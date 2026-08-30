@@ -3,7 +3,7 @@ import path from "node:path";
 
 import { parse as parseYaml } from "yaml";
 
-import { EMITTED_RULE_CODES, ERROR_ONLY_RULE_CODES } from "./emittedRuleCodes.js";
+import { EMITTED_RULE_CODES, ERROR_ONLY_RULE_CODES, RULE_ID_ALIASES } from "./emittedRuleCodes.js";
 import { toRelativePath } from "./paths.js";
 import { escapeRegExp } from "./regex.js";
 import {
@@ -843,9 +843,17 @@ function isKnownRuleId(ruleId: string): boolean {
 
 /**
  * Every id a waiver may name: the generated set of emitted codes, each with its
- * back-compat stripped spelling, plus the static table's rule-id aliases — the
- * spellings ({@link EXCEPTION_PARKED_RULE_ID} and friends) that a finding
- * carries as its `rule` and that no `code` literal would yield.
+ * back-compat stripped spelling, plus the rule-id aliases — the spellings
+ * ({@link EXCEPTION_PARKED_RULE_ID} and friends) that a finding carries as its
+ * `rule` and that no `code` literal would yield.
+ *
+ * The aliases come from the generator ({@link RULE_ID_ALIASES}) as well as the
+ * static table, because the static table only lists the ids whose severity it
+ * has to declare. `tddList.ts`'s `TDDLIST-003` / `TDDLIST-004` are absent from
+ * it — nothing about their severity is fixed — so a waiver naming either was
+ * refused as a rule that does not exist. Reading the generated set instead
+ * keeps a new alias known the moment it is emitted, with no second list to
+ * remember.
  *
  * Built lazily so it does not depend on where {@link STATIC_RULE_SEVERITY} sits
  * in this module.
@@ -854,6 +862,9 @@ function buildKnownRuleIds(): ReadonlySet<string> {
   const known = new Set<string>();
   for (const code of EMITTED_RULE_CODES) {
     addRuleIdSpellings(known, code);
+  }
+  for (const alias of RULE_ID_ALIASES) {
+    addRuleIdSpellings(known, alias, false);
   }
   for (const entry of STATIC_RULE_SEVERITY) {
     for (const key of entry.keys) {
