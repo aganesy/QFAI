@@ -284,9 +284,9 @@ Notes:
   obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is
   done here with no ATDD annotation at all. Duplicating a TC into a second layer
   is a not-done condition, not extra credit.
-- All required `CON-API` are covered by API tests.
-- All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
-  outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
+- All required `CON-API` **this spec owns** are covered by API tests. Ownership is the merge in `references/cross-spec-obligations.md#resolving-the-owning-spec`, not membership in the finding: a contract a named sibling spec declares, recorded one row per ID under `## Cross-spec obligations`, is that spec's to cover and does not hold this bullet open. Residue that is unrecorded, attributable to no named sibling, or attributed to a spec this one co-owns the contract with does hold it open.
+- All required `CON-DB` **this spec owns** are covered by integration tests (`QFAI-ATDD-115`); a contract
+  outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered. Sibling-owned residue is read exactly as in the `CON-API` bullet above — recorded and attributed, it is that spec's; otherwise it is this run's.
 - Validation passes for this spec in the two parts the scope model implies — run `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`, then: (1) **no finding this spec owns remains**, every rule `--spec` narrows reporting clean for `<spec-id>`; and (2) **every residual finding is attributed and recorded**, since `QFAI-ATDD-113` / `-115` are filed against `.qfai/contracts/**`, which no spec owns, so a sibling's uncovered contract holds the command at exit 1 — each such finding names its owning sibling spec under `## Cross-spec obligations` in this stage's evidence, and the completion report says so. Both parts met is **`PASS with cross-spec obligations`**, the terminal state of a run that discharged everything its spec owns; requiring exit 0 outright left that run not-done with no other state to be in, which is the reading that ends in one of the four moves CRITICAL CONSTRAINTS forbids. A residual finding attributable to no named sibling spec is this spec's own and still FAILs (`references/cross-spec-obligations.md`).
 - Repository quality gates (format/lint/type/tests/pack) pass with evidence.
 - Evidence file exists and includes work orders + reviewer notes.
@@ -296,7 +296,7 @@ Notes:
 
 ## Not-done criteria
 
-- Any required `US` / `TC` / `CON-API` remains uncovered.
+- Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does. A residual contract attributed to a named sibling spec and recorded under `## Cross-spec obligations` is **not** this criterion — that is the terminal state, and reading it back as "required and uncovered" restores from this line the deadlock the two-part DoD removes. Unrecorded, unattributable, or self-attributed residue is still this criterion.
 - Forbidden references remain.
 - Tests exist but were never executed.
 - Validation evidence is missing, or failing on a finding this spec owns. **A residual `QFAI-ATDD-113` / `-115` attributed to a named sibling spec and recorded under `## Cross-spec obligations` is not this criterion** — it blocks _that_ spec's completion, not this one, and `/qfai-verify` settles the repo-wide residue at the end of the stage. Unrecorded residue is, and so is an entry that names no owning spec, names **this** spec as the owner, or omits the contract ID the finding cites.
@@ -412,7 +412,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 
 Before declaring completion:
 
-1. Confirm required `US` / `TC` / `CON-API` coverage is complete.
+1. Confirm required `US` / `TC` / `CON-API` coverage is complete for the obligations this spec owns; a sibling-owned `CON-API` / `CON-DB` recorded under `## Cross-spec obligations` is complete here and open there.
 2. Run:
 
    ```bash

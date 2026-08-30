@@ -363,6 +363,54 @@ describe.each(TREES)("%s", (tree) => {
     }
   });
 
+  it("scopes the coverage criteria to the contracts this spec owns", async () => {
+    // The two-part DoD names `PASS with cross-spec obligations`, but the flat
+    // `All required CON-API are covered` bullet above it and the
+    // `Any required US / TC / CON-API remains uncovered` not-done rule below it
+    // still read a recorded sibling contract as required-and-uncovered — so the
+    // compliant run was in its terminal state and not done at the same time,
+    // by two lines of the same section.
+    const atdd = flat(await read(tree, ATDD));
+    expect(atdd).not.toContain("- All required `CON-API` are covered by API tests.");
+    expect(atdd).not.toContain("- Any required `US` / `TC` / `CON-API` remains uncovered.");
+    expect(atdd).toContain("All required `CON-API` **this spec owns** are covered by API tests");
+    expect(atdd).toContain(
+      "All required `CON-DB` **this spec owns** are covered by integration tests",
+    );
+    expect(atdd).toContain(
+      "Any required `US` / `TC` remains uncovered, or any required `CON-API` / `CON-DB` **this spec owns** does",
+    );
+    // Ownership is the resolved merge, not "the finding cites it".
+    expect(atdd).toContain(
+      "Ownership is the merge in `references/cross-spec-obligations.md#resolving-the-owning-spec`, not membership in the finding",
+    );
+    // Same floor as the validation criterion: the carve-out is not a free pass.
+    expect(atdd).toContain(
+      "Unrecorded, unattributable, or self-attributed residue is still this criterion",
+    );
+    // The Final Gate's confirmation step is the same completion prohibition and
+    // drifts back into the deadlock if it keeps the unscoped wording.
+    expect(atdd).not.toContain("1. Confirm required `US` / `TC` / `CON-API` coverage is complete.");
+    expect(atdd).toContain("coverage is complete for the obligations this spec owns");
+  });
+
+  it("reads the Contract → Spec report from the configured out dir", async () => {
+    // `runReport` writes `<paths.outDir>/report.md` (or `--out`) and prints the
+    // resolved path (`src/cli/commands/report.ts`). `paths.outDir` defaults to
+    // `.qfai/report` but is configurable, so a hardcoded `.qfai/report/report.md`
+    // finds no report where it is configured elsewhere — every residual contract
+    // then reads as unattributable — or finds a stale one left at the old default
+    // and fills the load-bearing `Owning spec` field from it.
+    const obligations = flat(await read(tree, OBLIGATIONS));
+    expect(obligations).not.toContain("`.qfai/report/report.md`");
+    expect(obligations).toContain("Either form writes `<report>/report.md`");
+    expect(obligations).toContain("`<report>` is `paths.outDir` from `qfai.config.yaml`");
+    expect(obligations).toContain("Open the path the run just printed as `wrote report: <path>`");
+    // Over-correction pin: `<report>` stays the same placeholder the sibling
+    // artifact already uses, so the two reads in this step name one directory.
+    expect(obligations).toContain("`npx qfai report --in <report>/validate.spec-<id>.json`");
+  });
+
   it("limits the repo-wide TRACE claim to the findings that have no spec owner", async () => {
     // `QFAI-TRACE-104`..`-116` are filed against the spec's own
     // `03_Acceptance-Criteria.md` / `04_Business-Rules.md` / `05_Examples.md` /

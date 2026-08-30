@@ -67,11 +67,19 @@ source answered.
    artifact the scoped gate just wrote. Not a bare `npx qfai report`: with
    neither flag it reads the configured `validate.json`, which a `--spec` run
    never writes, so it exits 2 in a fresh environment and reports a stale
-   unscoped run in an older one. Either form writes `.qfai/report/report.md`
-   with a
+   unscoped run in an older one. Either form writes `<report>/report.md` — where
+   `<report>` is `paths.outDir` from `qfai.config.yaml`, `.qfai/report` only by
+   default, and `--out` overrides even that — with a
    `### Contract → Spec` section — one line per contract ID listing every spec
    that declares it — and `--format json` puts the same map at
-   `traceability.contracts.idToSpecs`. It is a generated report artifact, not a
+   `traceability.contracts.idToSpecs`. Open the path the run just printed as
+   `wrote report: <path>`; do not read a fixed `.qfai/report/…` on the
+   assumption it is still the configured one. On a repository that points
+   `paths.outDir` elsewhere, that assumption reads no report at all — and
+   reports every residual contract as unattributable — or reads an older report
+   still sitting at the former default and names the owner it recorded then,
+   which is a wrong owner in the one field that has to be right. It is a
+   generated report artifact, not a
    sibling spec pack, so reading it widens no read set. It is built from the
    `QFAI-CONTRACT-REF:` lines in each spec's `01_Spec.md`, so a spec that binds
    its contracts only in the rule table is missing from that ID's line. The map
