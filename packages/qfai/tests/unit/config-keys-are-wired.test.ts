@@ -10,18 +10,22 @@
  * `"warning"`. Adding a validation knob without wiring it to a finding MUST
  * fail here.
  *
- * Same shape as `validators-are-wired.test.ts`: a text-level reachability check
- * with an explicit, documented allowlist rather than a type-level one. Unlike a
- * bare substring scan, it matches the qualified property access the config path
- * implies (`.traceability.scMustHaveTest`) over sources with comments, quoted
- * strings and template-literal text blanked out, so a same-named local, an
- * unrelated option field, a diagnostic message or a sentence in a doc comment
- * cannot make an inert key look wired.
+ * Same shape as `validators-are-wired.test.ts`: a reachability check with an
+ * explicit, documented allowlist rather than a type-level one. Reachability is
+ * measured on the TypeScript AST rather than on source text, and only *read*
+ * accesses count. The parser rules out comments, quoted strings and
+ * template-literal prose for free; requiring the qualified access the config
+ * path implies (`.traceability.scMustHaveTest`) rules out a same-named local or
+ * an option field on another object; and the read/write split rules out code
+ * that merely stores into the key — `config.validation.traceability.newKey =
+ * false` writes a value nothing ever consults, which is the shipped-but-inert
+ * defect restated, not a cure for it.
  */
 import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
+import ts from "typescript";
 import { describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
@@ -76,123 +80,88 @@ function collectLeafKeys(value: unknown, prefix: string, acc: LeafKey[] = []): L
   return acc;
 }
 
-/** Index just past the quoted literal opening at `start`. */
-function skipQuoted(source: string, start: number): number {
-  const quote = source[start];
-  let i = start + 1;
-  while (i < source.length) {
-    const ch = source[i];
-    if (ch === "\\") {
-      i += 2;
-      continue;
-    }
-    if (ch === quote || ch === "\n") return i + 1;
-    i += 1;
-  }
-  return i;
-}
-
 /**
- * A template literal's raw text is prose exactly like a quoted string — a
- * diagnostic message may spell out a whole config path — so it is dropped. Only
- * its `${...}` holes are code, and those are kept and stripped in turn.
+ * `"<parent>.<key>"` for a property access qualified by its owning key —
+ * `config.validation.traceability.scMustHaveTest` yields
+ * `"traceability.scMustHaveTest"`. Anything else (a bare identifier, a computed
+ * access with a non-literal key) yields `undefined`, so a same-named local or
+ * an unrelated option field never stands in for a config read.
  */
-function readTemplate(source: string, start: number): { end: number; code: string } {
-  let i = start + 1;
-  let code = "";
-  while (i < source.length) {
-    const ch = source[i];
-    if (ch === "\\") {
-      i += 2;
-      continue;
-    }
-    if (ch === "`") return { end: i + 1, code };
-    if (ch === "$" && source[i + 1] === "{") {
-      const hole = readTemplateHole(source, i + 2);
-      code += ` ${stripCommentsAndStrings(hole.text)} `;
-      i = hole.end;
-      continue;
-    }
-    i += 1;
+function qualifiedAccessOf(node: ts.Node): string | undefined {
+  let key: string | undefined;
+  let owner: ts.Expression | undefined;
+  if (ts.isPropertyAccessExpression(node)) {
+    key = node.name.text;
+    owner = node.expression;
+  } else if (
+    ts.isElementAccessExpression(node) &&
+    ts.isStringLiteralLike(node.argumentExpression)
+  ) {
+    key = node.argumentExpression.text;
+    owner = node.expression;
   }
-  return { end: i, code };
-}
-
-/** Text of a `${...}` hole whose `${` ends at `start`, brace-matched. */
-function readTemplateHole(source: string, start: number): { end: number; text: string } {
-  let depth = 1;
-  let i = start;
-  while (i < source.length) {
-    const ch = source[i];
-    if (ch === "{") depth += 1;
-    else if (ch === "}") {
-      depth -= 1;
-      if (depth === 0) return { end: i + 1, text: source.slice(start, i) };
-    } else if (ch === '"' || ch === "'") {
-      i = skipQuoted(source, i);
-      continue;
-    } else if (ch === "`") {
-      i = readTemplate(source, i).end;
-      continue;
-    }
-    i += 1;
+  if (key === undefined || owner === undefined) {
+    return undefined;
   }
-  return { end: i, text: source.slice(start) };
+  const parent = ts.isPropertyAccessExpression(owner)
+    ? owner.name.text
+    : ts.isIdentifier(owner)
+      ? owner.text
+      : undefined;
+  return parent === undefined ? undefined : `${parent}.${key}`;
 }
 
 /**
- * Blank out line comments, block comments, quoted strings and template-literal
- * text so a key name mentioned in prose or in a diagnostic message cannot stand
- * in for a real read — a `` `${path} は廃止されました` `` message naming a config
- * path is not a consumer of it. A template's `${...}` holes are code and
- * survive.
+ * True when `node` is the target of a write rather than a read: the left-hand
+ * side of an assignment (`=` and every compound form), the operand of `++` /
+ * `--`, or the argument of `delete`.
  *
- * A `/` is only treated as a comment opener when the next character is `/` or
- * `*`, so division survives; a regex literal is copied verbatim like any other
- * operator run.
+ * `x += 1` and `x++` do load the old value, but a knob that is only accumulated
+ * into is still a knob no validator consults, so they are classed as writes —
+ * counting them would leave exactly the hole this split closes.
  */
-function stripCommentsAndStrings(source: string): string {
-  let out = "";
-  let i = 0;
-  while (i < source.length) {
-    const ch = source[i];
-    const next = source[i + 1];
-    if (ch === "/" && next === "/") {
-      while (i < source.length && source[i] !== "\n") i += 1;
-      continue;
-    }
-    if (ch === "/" && next === "*") {
-      i += 2;
-      while (i < source.length && !(source[i] === "*" && source[i + 1] === "/")) i += 1;
-      i += 2;
-      continue;
-    }
-    if (ch === '"' || ch === "'") {
-      i = skipQuoted(source, i);
-      out += " ";
-      continue;
-    }
-    if (ch === "`") {
-      const template = readTemplate(source, i);
-      out += ` ${template.code} `;
-      i = template.end;
-      continue;
-    }
-    out += ch;
-    i += 1;
+function isWriteTarget(node: ts.Node, owner: ts.Node | undefined): boolean {
+  if (owner === undefined) {
+    return false;
   }
-  return out;
+  if (ts.isBinaryExpression(owner) && owner.left === node) {
+    // SyntaxKind orders the 16 assignment operators contiguously from
+    // `FirstAssignment` (`=`) to `LastAssignment` (`^=`), `&&=` / `||=` / `??=`
+    // included.
+    const operator = owner.operatorToken.kind;
+    return operator >= ts.SyntaxKind.FirstAssignment && operator <= ts.SyntaxKind.LastAssignment;
+  }
+  if (ts.isPostfixUnaryExpression(owner) || ts.isPrefixUnaryExpression(owner)) {
+    return (
+      owner.operand === node &&
+      (owner.operator === ts.SyntaxKind.PlusPlusToken ||
+        owner.operator === ts.SyntaxKind.MinusMinusToken)
+    );
+  }
+  return ts.isDeleteExpression(owner) && owner.expression === node;
 }
 
-/**
- * A key counts as read only when the source performs the qualified property
- * access the config path implies — `.traceability.scMustHaveTest`, not a bare
- * `scMustHaveTest` that could be an unrelated local, an option field of the
- * same name, or a word in a sentence.
- */
-function qualifiedAccessPattern({ key, parent }: Pick<LeafKey, "key" | "parent">): RegExp {
-  const escape = (part: string) => part.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  return new RegExp(`\\.\\s*${escape(parent)}\\s*\\.\\s*${escape(key)}\\b`);
+/** Every `"<parent>.<key>"` this source READS. */
+function collectQualifiedReads(source: string): Set<string> {
+  const sourceFile = ts.createSourceFile(
+    "scan.ts",
+    source,
+    ts.ScriptTarget.Latest,
+    false,
+    ts.ScriptKind.TS,
+  );
+  const reads = new Set<string>();
+  const visit = (node: ts.Node, owner: ts.Node | undefined): void => {
+    const access = qualifiedAccessOf(node);
+    if (access !== undefined && !isWriteTarget(node, owner)) {
+      reads.add(access);
+    }
+    ts.forEachChild(node, (child) => {
+      visit(child, node);
+    });
+  };
+  visit(sourceFile, undefined);
+  return reads;
 }
 
 async function collectTsFiles(dir: string, acc: string[] = []): Promise<string[]> {
@@ -214,11 +183,25 @@ describe("validation config keys are wired", () => {
       (file) => path.resolve(file) !== CONFIG_TS,
     );
     const sources = await Promise.all(files.map((file) => readFile(file, "utf-8")));
-    const haystack = sources.map((source) => stripCommentsAndStrings(source)).join("\n");
+    const candidates = collectLeafKeys(defaultConfig.validation, "validation").filter(
+      (leaf) => !KNOWN_UNWIRED.has(leaf.path),
+    );
+    // Parsing the whole tree costs ~3x a text scan, so skip the files that
+    // cannot possibly matter: a source that never spells a key name — in code,
+    // a string or a comment — cannot contain a read of one.
+    const names = Array.from(new Set(candidates.map((leaf) => leaf.key)));
+    const reads = new Set<string>();
+    for (const source of sources) {
+      if (!names.some((name) => source.includes(name))) {
+        continue;
+      }
+      for (const access of collectQualifiedReads(source)) {
+        reads.add(access);
+      }
+    }
 
-    const unwired = collectLeafKeys(defaultConfig.validation, "validation")
-      .filter((leaf) => !KNOWN_UNWIRED.has(leaf.path))
-      .filter((leaf) => !qualifiedAccessPattern(leaf).test(haystack))
+    const unwired = candidates
+      .filter((leaf) => !reads.has(`${leaf.parent}.${leaf.key}`))
       .map((leaf) => leaf.path);
 
     expect(
@@ -235,34 +218,31 @@ describe("validation config keys are wired", () => {
   });
 
   it("does not accept a bare key name in prose, a string or a same-named local", () => {
-    const leaf = { key: "enabled", parent: "validation" } as const;
     const decoys = [
       "// validation の enabled をいつか読む",
       "/* enabled */",
       'issues.push({ rule: "validation.enabled" });',
       "const enabled = options.enabled;",
-      "return other.enabled;",
+      "function read() { return other.enabled; }",
     ].join("\n");
 
-    expect(qualifiedAccessPattern(leaf).test(stripCommentsAndStrings(decoys))).toBe(false);
+    expect(collectQualifiedReads(decoys).has("validation.enabled")).toBe(false);
     expect(
-      qualifiedAccessPattern(leaf).test(
-        stripCommentsAndStrings("if (config.validation.enabled) return;"),
-      ),
+      collectQualifiedReads("if (config.validation.enabled) { stop(); }").has("validation.enabled"),
     ).toBe(true);
   });
 
   it("keeps code that lives next to comments and strings", () => {
-    const source = [
+    const prose = [
       "// config.validation.traceability.scMustHaveTest はコメント",
       'const label = "validation.traceability.scMustHaveTest";',
-      "const on = config.validation.traceability.scMustHaveTest;",
     ].join("\n");
-    const stripped = stripCommentsAndStrings(source);
+    const withCode = [prose, "const on = config.validation.traceability.scMustHaveTest;"].join(
+      "\n",
+    );
 
-    expect(stripped).toContain("const on = config.validation.traceability.scMustHaveTest;");
-    expect(stripped).not.toContain("はコメント");
-    expect(stripped).not.toContain('"validation.traceability.scMustHaveTest"');
+    expect(collectQualifiedReads(prose).has("traceability.scMustHaveTest")).toBe(false);
+    expect(collectQualifiedReads(withCode).has("traceability.scMustHaveTest")).toBe(true);
   });
 
   it("does not let the unwired allowlist grow silently", () => {
@@ -292,19 +272,56 @@ describe("validation config keys are wired", () => {
 
   it("does not accept a config path spelled out in a template literal", () => {
     // A deprecation message naming a key reads exactly like a property access
-    // once the backticks are ignored, so the raw text must be dropped.
-    const leaf = { key: "newKey", parent: "traceability", path: "validation.traceability.newKey" };
+    // once the backticks are ignored, so the raw text must never count.
     const message = [
       "const message = `validation.traceability.newKey は廃止されました`;",
       "const nested = `${label}: `.concat(`.traceability.newKey`);",
     ].join("\n");
 
-    expect(qualifiedAccessPattern(leaf).test(stripCommentsAndStrings(message))).toBe(false);
+    expect(collectQualifiedReads(message).has("traceability.newKey")).toBe(false);
     expect(
-      qualifiedAccessPattern(leaf).test(
-        stripCommentsAndStrings(
-          "const m = `見つかりません: ${config.validation.traceability.newKey}`;",
-        ),
+      collectQualifiedReads(
+        "const m = `見つかりません: ${config.validation.traceability.newKey}`;",
+      ).has("traceability.newKey"),
+    ).toBe(true);
+  });
+
+  it("does not accept a write-only access as a consumer", () => {
+    // Storing into a key is the shipped-but-inert defect restated: the value is
+    // set and never consulted, so none of these may make `newKey` look wired.
+    const writes = [
+      "config.validation.traceability.newKey = false;",
+      "config.validation.traceability.newKey ??= true;",
+      "config.validation.traceability.newKey += 1;",
+      "config.validation.traceability.newKey++;",
+      "--config.validation.traceability.newKey;",
+      "delete config.validation.traceability.newKey;",
+    ];
+
+    for (const write of writes) {
+      expect(collectQualifiedReads(write).has("traceability.newKey"), write).toBe(false);
+    }
+  });
+
+  it("still counts the reads the write-only exclusion must not swallow", () => {
+    const reads = [
+      "if (config.validation.traceability.newKey) { stop(); }",
+      "const on = config.validation.traceability.newKey;",
+      "seen = config.validation.traceability.newKey;",
+      "report(config.validation.traceability.newKey);",
+      'const on = config.validation.traceability["newKey"];',
+      "const on = config.validation.traceability?.newKey;",
+    ];
+
+    for (const read of reads) {
+      expect(collectQualifiedReads(read).has("traceability.newKey"), read).toBe(true);
+    }
+
+    // Writing *through* an object still reads that object: assigning to
+    // `…traceability.newKey` is a read of `validation.traceability`.
+    expect(
+      collectQualifiedReads("config.validation.traceability.newKey = false;").has(
+        "validation.traceability",
       ),
     ).toBe(true);
   });
