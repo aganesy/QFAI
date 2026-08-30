@@ -19,32 +19,38 @@ No other point is a checkpoint boundary. There is no "every N items" rule.
 Run all of the following from the repository root, in order. Substitute the project's own runner for
 the placeholders; record the literal commands actually executed in evidence.
 
-1. The item's own test — the ledger's `Test file` **plus** the runner's test-name option applied to
-   the ledger's `Selector`. Two runner-specific decisions, and both must be made from the ledger row:
+1. The item's own test — the ledger's `Test file`, run **file-scoped, with no test-name option**:
 
-   **a. The name option.** The `Selector` is a test NAME, and every common runner takes a name
-   through a flag, not a positional argument: a positional is a file filter. Vitest and Jest use
-   `-t`, pytest uses `-k`, `go test` uses `-run`. Passing the selector positionally
-   (`<test runner> '<Selector>'`) exits 1 with "No test files found", so the checkpoint would fail
-   on every item and none could leave `refactor`.
+   ```bash
+   <test runner> <Test file>
+   ```
 
-   **b. The unit of selection.** What goes in front of the name option is whatever the runner
-   selects by, which is not always a file:
-   - **File-selecting runners** (vitest, jest, pytest) take the `Test file` itself:
+   **Why the name option is not prescribed here.** Narrowing the run to the ledger's `Selector` is
+   the obvious move and an earlier form of this step required it. Do not, unless you have checked
+   that your runner matches the selector **literally**. Vitest's and Jest's `-t` take a _regular
+   expression_, and a `Selector` written in the common `TC-NNNN-NNNN (TDD-NNNN): title` shape
+   contains `(` and `)` — which the matcher reads as a capture group, not as characters. The pattern
+   then matches nothing, the runner reports `Tests 1 skipped (1)`, and it **exits 0**: a checkpoint
+   that establishes nothing while reporting success. Nothing downstream distinguishes it from a real
+   pass, because the exit code is what the surrounding procedure reads.
 
-     ```bash
-     <test runner> <Test file> -t '<Selector>'
-     ```
+   The file-scoped form cannot fail that way. It over-runs when several rows share one file, which is
+   the safe direction — it can only execute more than the row, never less.
 
-   - **Package-selecting runners** (`go test`) take a package. `go help test` documents the usage
-     as `go test [build/test flags] [packages] [build/test flags & test binary flags]`, and it
-     compiles the package's sources together with the matching `*_test.go` files. Handing it a lone
-     file switches it into file mode and drops the rest of the package from the build, so the item's
-     test normally fails on undefined symbols. Derive the package from the `Test file`'s directory:
+   **If you do narrow**, escape the selector for your runner's matcher, record the literal command,
+   and check that the run actually selected something: `passed >= 1` for a GREEN, `failed >= 1` for a
+   RED. A skipped count is not a pass.
 
-     ```bash
-     go test ./<dir of Test file> -run '<Selector>'
-     ```
+   **The unit of selection is not always a file.** Package-selecting runners (`go test`) take a
+   package, not a path. `go help test` documents the usage as
+   `go test [build/test flags] [packages] [build/test flags & test binary flags]`, and it compiles
+   the package's sources together with the matching `*_test.go` files. Handing it a lone file
+   switches it into file mode and drops the rest of the package from the build, so the item's test
+   normally fails on undefined symbols. Derive the package from the `Test file`'s directory:
+
+   ```bash
+   go test ./<dir of Test file>
+   ```
 
    Record the literal command actually run either way. If a project's runner selects by something
    else again, derive that unit from `Test file` in the same manner and say so in the evidence.
@@ -87,6 +93,52 @@ Checkpoint verification PASSES only when **every** command in the applicable set
 reports zero `QFAI-TEST-001` findings. Any non-zero exit is a FAIL: for a per-item checkpoint the
 item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
 pass.
+
+### The one substitution: a measured delta for step 4
+
+Step 4 alone MAY be judged on a **measured delta** instead of on exit 0, and only when all five of the
+following hold. This exists for the case where the profile already reports findings that no row in the
+slice can discharge — a validate run cannot exit 0 against a standing error, so without this the gate
+would hold every row of every slice hostage to work outside it.
+
+1. The baseline — the counts **and** the finding IDs — was captured before the slice's first code
+   change and recorded in the slice's evidence **before any row started**. A baseline written after the
+   fact is not a baseline.
+2. Step 4 reports zero `QFAI-TEST-001` findings. This clause is never substituted.
+3. The aggregate does not worsen, on **both** measures the baseline records: no severity count
+   **attributable to this slice** is higher than the baseline's, **and no finding ID appears that the
+   baseline did not hold**. The count alone is not the test — resolving one finding while introducing
+   a different one leaves every count unchanged, and clauses 4 and 5 below only ever read baseline
+   findings, so a new ID would reach none of them. A finding this slice introduced is a regression
+   whatever its severity.
+
+   **Attributable** is read the way clause 5 already reads a finding: by the spec and row each finding
+   names, which the validator prints on every line. A count that rose because a sibling spec gained
+   findings, or because a validator's own defect widened what it reports, is not this slice worsening
+   the aggregate — and the raw total made those indistinguishable from a real regression, which is
+   what stalled four rows behind a warning count they did not cause.
+
+   **Record both.** The attributed delta is what the clause is judged on; the raw total is recorded
+   beside it, unjudged, so a cross-spec regression this slice really did cause is still visible rather
+   than attributed away. A boundary that records only the attributed figure has not satisfied this
+   clause.
+
+4. **No row's `TC-*` re-enters the unreferenced-TC list.** Stated as re-entry rather than as departure,
+   because departure is undischargeable for a sibling: when one `TC-*` is split across several rows,
+   the first row to discharge it removes it from the list and every sibling then satisfies a departure
+   clause vacuously. Re-entry is checkable for every row, and it pairs with the row-level obligation the
+   validator already enforces — that a row's `Selector` resolves in its own `Test file`.
+5. **Every finding the baseline holds open is unattributable to the row being closed** — it names an
+   obligation that row does not carry. Read per row, not per spec: a finding naming another row's
+   obligation in the same spec, or an obligation owned by an upstream phase, does not block this row.
+   What it does forbid is the case it exists for — closing a row while a baseline finding names **that
+   row's own** obligation.
+
+Clause 5 is the load-bearing one. It is also the one to state carefully in the evidence: name each
+baseline finding, name whose obligation it is, and say why that is not the row's. A slice that cannot
+answer that per row has not earned the substitution.
+
+The substitution applies to step 4 and nothing else. Every other command in the set still has to exit 0.
 
 **A fix invalidates the reviewer PASS that preceded it.** The per-item boundary sits after
 `completion-reviewer` and `implementation-reviewer` returned PASS (Phase: Refactor, steps 4-5), so
