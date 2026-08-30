@@ -335,6 +335,38 @@ jobs:
       contents: read
       id-token: write # npm provenance
     steps:
+      # FIRST, before a single line of tag-controlled code is fetched or run.
+      #
+      # `environment: release` makes a tag push PROPOSE a publish rather than perform one — but
+      # only when the environment carries required reviewers. Without them GitHub starts this job
+      # immediately, and this check used to sit eight steps down: after `actions/checkout` at the
+      # tag, and after `pnpm install`, which runs the lifecycle scripts of whatever that tag
+      # declares. This job holds `id-token: write`, so that code could mint an OIDC token and
+      # publish on its own before the guard below ever ran and failed.
+      #
+      # An unprotected environment is precisely the case this guard exists to refuse, so it is
+      # answered before anything the tag controls is on disk. It needs nothing from the
+      # repository: `gh api` and `GITHUB_REPOSITORY` are enough.
+      - name: Require an approved environment
+        # The `environment:` key above is what makes a tag push *propose* a
+        # publish rather than perform one — but only when the environment
+        # carries required reviewers. GitHub silently allows an unprotected
+        # environment, which would turn every tag push into an unattended
+        # irreversible upload. Refuse rather than assume.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          rules="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
+            --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo "")"
+          case "$rules" in
+            *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
+            *)
+              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
+              exit 1
+              ;;
+          esac
+        shell: bash
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
@@ -354,7 +386,29 @@ jobs:
       - name: Re-shim pnpm against toolcache Node
         run: corepack prepare pnpm@9.12.3 --activate
         shell: bash
-      - run: pnpm install --frozen-lockfile
+      # `--ignore-scripts` for the reason the toolchain action carries it: a dependency's
+      # manifest is not in this tree, it arrives inside a tarball, and its `postinstall` would
+      # run here — in the job holding `id-token: write`. The guard above means a human approved
+      # this release; it does not mean they reviewed every transitive lifecycle script the tag
+      # resolves to. What may build is named in `.github/dependency-builds.txt`.
+      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Build the dependencies permitted to run install scripts
+        run: |
+          set -euo pipefail
+          list=".github/dependency-builds.txt"
+          if [ ! -f "${list}" ]; then
+            echo "::error::${list} is missing, so which dependencies may run install scripts is decided by nothing. Installation ran with --ignore-scripts; this step refuses rather than guessing."
+            exit 1
+          fi
+          names=0
+          while IFS= read -r name || [ -n "${name}" ]; do
+            case "${name}" in "" | "#"*) continue ;; esac
+            names=$((names + 1))
+            echo "rebuilding ${name}"
+            pnpm rebuild "${name}"
+          done <"${list}"
+          echo "rebuilt ${names} permitted dependency package(s)"
+        shell: bash
       - name: Drop the placeholder auth line so npm reaches the OIDC exchange
         # setup-node writes `//registry.npmjs.org/:_authToken=${NODE_AUTH_TOKEN}`
         # and exports NODE_AUTH_TOKEN as the literal `XXXXX-XXXXX-XXXXX-XXXXX`
@@ -396,26 +450,6 @@ jobs:
             exit 1
           fi
           echo "npm $have"
-        shell: bash
-      - name: Require an approved environment
-        # The `environment:` key above is what makes a tag push *propose* a
-        # publish rather than perform one — but only when the environment
-        # carries required reviewers. GitHub silently allows an unprotected
-        # environment, which would turn every tag push into an unattended
-        # irreversible upload. Refuse rather than assume.
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          rules="$(gh api "repos/${GITHUB_REPOSITORY}/environments/release" \
-            --jq '[.protection_rules[]?.type] | join(",")' 2>/dev/null || echo "")"
-          case "$rules" in
-            *required_reviewers*) echo "release environment requires reviewers: $rules" ;;
-            *)
-              echo "::error::the 'release' environment has no required reviewers (rules: ${rules:-none}). A tag push would publish unattended. Add a required reviewer to the release environment before publishing."
-              exit 1
-              ;;
-          esac
         shell: bash
       - name: Skip if this version is already on npm
         # Re-running a release — a rotated token, a retried upload — must not

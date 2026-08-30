@@ -2130,3 +2130,78 @@ describe("the release tag is exactly vX.Y.Z, and the check is run rather than re
     }
   });
 });
+
+describe("the publish job confirms its environment before it runs anything the tag controls", () => {
+  // `environment: release` makes a tag push PROPOSE a publish rather than perform one — but only
+  // when the environment carries required reviewers. Without them GitHub starts the job at once,
+  // and the guard that refuses exactly that case used to sit eight steps down: after
+  // `actions/checkout` at the tag, and after `pnpm install`, which runs the lifecycle scripts of
+  // whatever that tag declares. The job holds `id-token: write`, so that code could mint an OIDC
+  // token and publish on its own before the guard ever ran and failed.
+
+  const publishSteps = (): Array<Record<string, unknown>> => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const steps = doc.jobs?.["publish"]?.steps ?? [];
+    expect(steps.length, "release.yml has no publish job with steps").toBeGreaterThan(0);
+    return steps;
+  };
+
+  it("asks whether the environment is protected in its very first step", () => {
+    const steps = publishSteps();
+    const first = steps[0] ?? {};
+    expect(
+      String(first["name"] ?? ""),
+      "the protection check must be the first step: an unprotected environment is the case it " +
+        "exists to refuse, so nothing the tag controls may run ahead of it",
+    ).toBe("Require an approved environment");
+    expect(
+      String(first["run"] ?? ""),
+      "and it must actually read the environment protection rules",
+    ).toMatch(/protection_rules/);
+  });
+
+  it("fetches and runs nothing from the tag before that answer", () => {
+    // Stated as a property of the steps BEFORE the guard rather than as a fixed index, so
+    // inserting an unrelated step above it cannot quietly reopen the window.
+    const steps = publishSteps();
+    const guardAt = steps.findIndex(
+      (step) => String(step["name"] ?? "") === "Require an approved environment",
+    );
+    expect(guardAt, "the publish job has no environment guard at all").toBeGreaterThan(-1);
+
+    const before = steps.slice(0, guardAt);
+    const offenders = before.filter((step) => {
+      const uses = String(step["uses"] ?? "");
+      const run = String(step["run"] ?? "");
+      if (uses.startsWith("actions/checkout")) return true;
+      return /\b(pnpm|npm|yarn|npx) (install|ci|rebuild|run)\b/.test(run);
+    });
+    expect(
+      offenders.map((step) => String(step["name"] ?? step["uses"] ?? "(unnamed)")),
+      "these run before the environment is known to be protected, in a job holding " +
+        "id-token: write",
+    ).toEqual([]);
+  });
+
+  it("installs without running the lifecycle scripts the tag resolves to", () => {
+    // Defence in depth, and not the same claim as the ordering. The guard means a human approved
+    // this release; it does not mean they reviewed every transitive lifecycle script the tag
+    // brings in — and a dependency's manifest is not in this tree at all, it arrives in a
+    // tarball.
+    const steps = publishSteps();
+    const installs = steps.filter((step) =>
+      /\b(pnpm|npm|yarn) (install|ci)\b/.test(String(step["run"] ?? "")),
+    );
+    expect(installs.length, "the publish job installs nothing").toBeGreaterThan(0);
+    for (const step of installs) {
+      const run = String(step["run"] ?? "");
+      expect(
+        run,
+        `${String(step["name"] ?? "(unnamed)")} installs without --ignore-scripts, so the tag's ` +
+          "dependency lifecycle runs in a job holding id-token: write",
+      ).toMatch(/--ignore-scripts/);
+    }
+  });
+});
