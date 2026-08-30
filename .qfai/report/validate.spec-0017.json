@@ -1,0 +1,96 @@
+{
+  "toolVersion": "1.10.0",
+  "profile": "atdd",
+  "issues": [
+    {
+      "code": "QFAI-ATDD-112",
+      "severity": "error",
+      "category": "change",
+      "message": "宣言 Level が指すディレクトリで参照されていない TC があります: tests/integration/** -> SPEC-0017:TC-0017-0032",
+      "suggested_action": "各 TC の宣言 Level が指すディレクトリに `QFAI:SPEC-XXXX:TC-YYYY` 注釈を追加してください（L3/Integration -> tests/integration/**、L4/API -> tests/api/**、L5/E2E -> tests/e2e/**、Level 未宣言は tests/integration/**）: tests/integration/**: SPEC-0017:TC-0017-0032",
+      "file": ".qfai/specs/spec-0017",
+      "rule": "atddCodeTraceability.coverage.tcToDeclaredLayer",
+      "refs": [
+        "SPEC-0017:TC-0017-0032"
+      ]
+    },
+    {
+      "code": "QFAI-ATDD-117",
+      "severity": "info",
+      "category": "canonical",
+      "message": "宣言 Level が Unit / Component の TC は ATDD の注釈義務対象外です（11 件）: SPEC-0017:TC-0017-0002, SPEC-0017:TC-0017-0004, SPEC-0017:TC-0017-0005, SPEC-0017:TC-0017-0010, SPEC-0017:TC-0017-0011, SPEC-0017:TC-0017-0015, SPEC-0017:TC-0017-0040, SPEC-0017:TC-0017-0045, SPEC-0017:TC-0017-0049, SPEC-0017:TC-0017-0053 (他 1 件)",
+      "suggested_action": "これらは `/qfai-implement` の担当です。`tdd/test-list.md` に行があること（`TDDLIST_TC_NOT_COVERED` が error で検査）で担保してください。ATDD 側の注釈は不要で、置いても違反にはなりません。",
+      "file": ".qfai/specs/spec-0017",
+      "rule": "atddCodeTraceability.coverage.unitComponentExcluded",
+      "refs": [
+        "SPEC-0017:TC-0017-0002",
+        "SPEC-0017:TC-0017-0004",
+        "SPEC-0017:TC-0017-0005",
+        "SPEC-0017:TC-0017-0010",
+        "SPEC-0017:TC-0017-0011",
+        "SPEC-0017:TC-0017-0015",
+        "SPEC-0017:TC-0017-0040",
+        "SPEC-0017:TC-0017-0045",
+        "SPEC-0017:TC-0017-0049",
+        "SPEC-0017:TC-0017-0053",
+        "SPEC-0017:TC-0017-0080"
+      ]
+    },
+    {
+      "code": "QFAI-PROFILE-001",
+      "severity": "info",
+      "category": "canonical",
+      "message": "profile=\"atdd\" is a partial profile. Hard gates NOT evaluated in this run: QFAI-HYG-*, QFAI-SKILLS-*, QFAI-ASSETS-*, QFAI-DPACK-*, QFAI-VIS-*, QFAI-RESEARCH-*, UIX-VAL-*, QFAI-SPACK-*, QFAI-COV-*, QFAI-ID-*, QFAI-LAYER-*, QFAI-ORPHAN-*, QFAI-CONTRACT-*, QFAI-NAV-*, QFAI-MMD-*, E_*, R-*, QFAI-REVIEW-*, QFAI-PROT-*, QFAI-CRIT-*, QFAI-FID-*, QFAI-UIE-*, QFAI-DCON-*, UIX-VAL-SKILL-*, TDDLIST_*, QFAI-TEST-001, QFAI-TRACE-*. A PASS here is not full-scan coverage — run `qfai validate --fail-on error` (full profile) before declaring completion.",
+      "rule": "validate.partialProfileCoverage"
+    }
+  ],
+  "counts": {
+    "info": 2,
+    "warning": 0,
+    "error": 1
+  },
+  "traceability": {
+    "sc": {
+      "total": 0,
+      "covered": 0,
+      "missing": 0,
+      "missingIds": [],
+      "refs": {}
+    },
+    "testFiles": {
+      "globs": [
+        "tests/**/*.test.ts",
+        "tests/**/*.spec.ts",
+        "packages/*/tests/**/*.test.ts",
+        "packages/*/tests/**/*.spec.ts",
+        "src/**/*.test.ts",
+        "src/**/*.spec.ts",
+        "packages/*/src/**/*.test.ts",
+        "packages/*/src/**/*.spec.ts",
+        "features/**/*.feature",
+        "packages/*/features/**/*.feature"
+      ],
+      "excludeGlobs": [
+        "**/node_modules/**",
+        "**/.git/**",
+        "**/.qfai/**",
+        "**/dist/**",
+        "**/build/**",
+        "**/coverage/**",
+        "**/.next/**",
+        "**/out/**"
+      ],
+      "matchedFileCount": 478,
+      "truncated": false,
+      "limit": 20000
+    }
+  },
+  "waivers": {
+    "active": [],
+    "suppressed": {
+      "total": 0,
+      "byWaiver": {},
+      "byRule": {}
+    }
+  }
+}
