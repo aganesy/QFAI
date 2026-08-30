@@ -43,6 +43,14 @@
 - **`QFAI-ATDD-117` (info)** names the TCs excluded from the annotation
   obligation on every run. A silent exclusion is indistinguishable from a scan
   that matched nothing, which is how the JS-only test glob survived a release.
+- **`qfai --version` / `qfai -V` print the tool version.** Both spellings were
+  unrecognised and fell through to `Unknown command`, and `usage()` advertised
+  no version affordance at all; the only way to read the version was
+  `qfai doctor --format json | jq -r .version`, which appeared in no usage line
+  and no README. The flag is accepted in the command position and as a trailing
+  flag on any command, prints to stdout and exits 0 — including outside a
+  project, where there is no `qfai.config.yaml` to read. `usage()` and both
+  READMEs now list it next to `-h, --help`.
 
 ### Changed
 

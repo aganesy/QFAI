@@ -395,3 +395,62 @@ describe("parseArgs --version", () => {
     expect(parsed.invalid).toBe(true);
   });
 });
+
+describe("parseArgs dash-leading positionals", () => {
+  // A subcommand name is a closed set and never starts with `-`, but the
+  // positional after it is caller data: a relative path may legitimately begin
+  // with a single `-`. Excluding every dash-prefixed token from both positions
+  // stopped `qfai handoff upgrade -legacy.yaml` from converting anything —
+  // the file was left unread and the command died on `<legacy-file> is
+  // required.`
+  it("accepts a legacy file whose name starts with a dash", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-legacy.yaml"], process.cwd());
+    expect(parsed.options.handoffAction).toBe("upgrade");
+    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  it("accepts a legacy file that starts with a dash alongside a trailing flag", () => {
+    const parsed = parseArgs(
+      ["handoff", "upgrade", "-legacy.yaml", "--root", "/tmp/example"],
+      process.cwd(),
+    );
+    expect(parsed.options.handoffLegacyFile).toBe("-legacy.yaml");
+    expect(parsed.options.root).toBe("/tmp/example");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  it("accepts a discussion id that starts with a dash", () => {
+    const parsed = parseArgs(["discussion", "use", "-discussion-0001"], process.cwd());
+    expect(parsed.options.discussionAction).toBe("use");
+    expect(parsed.options.discussionId).toBe("-discussion-0001");
+    expect(parsed.invalid).toBe(false);
+  });
+
+  // Over-correction pins: relaxing the positional must not re-admit the two
+  // short flags the parser reserves, nor any long flag.
+  it("keeps -h out of the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "-h"], process.cwd());
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("keeps a long flag out of the handoff upgrade legacy file", () => {
+    const parsed = parseArgs(["handoff", "upgrade", "--root", "/tmp/example"], process.cwd());
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.options.root).toBe("/tmp/example");
+  });
+
+  it("keeps -h out of the discussion use id", () => {
+    const parsed = parseArgs(["discussion", "use", "-h"], process.cwd());
+    expect(parsed.options.discussionId).toBeUndefined();
+    expect(parsed.options.help).toBe(true);
+  });
+
+  it("still refuses a dash-leading token in the subcommand position", () => {
+    const parsed = parseArgs(["handoff", "-legacy.yaml"], process.cwd());
+    expect(parsed.options.handoffAction).toBeUndefined();
+    expect(parsed.options.handoffLegacyFile).toBeUndefined();
+    expect(parsed.invalid).toBe(true);
+  });
+});

@@ -159,6 +159,21 @@ export type ParsedArgs = {
   };
 };
 
+/** Every spelling of the help flag the parser accepts. */
+const HELP_FLAGS: ReadonlySet<string> = new Set(["--help", "-h"]);
+
+/** Every spelling of the version flag the parser accepts. */
+const VERSION_FLAGS: ReadonlySet<string> = new Set(["--version", "-V"]);
+
+/**
+ * The single-dash flags the parser reserves, derived from the alias sets above
+ * so the flag loop and the positional scan can never disagree about which short
+ * tokens are flags. Every other option is spelled with `--`.
+ */
+const RESERVED_SHORT_FLAGS: ReadonlySet<string> = new Set(
+  [...HELP_FLAGS, ...VERSION_FLAGS].filter((flag) => !flag.startsWith("--")),
+);
+
 export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   const options: ParsedArgs["options"] = {
     root: cwd,
@@ -184,12 +199,12 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
   let command = args.shift() ?? null;
   let invalid = false;
 
-  if (command === "--help" || command === "-h") {
+  if (command !== null && HELP_FLAGS.has(command)) {
     options.help = true;
     command = null;
   }
 
-  if (command === "--version" || command === "-V") {
+  if (command !== null && VERSION_FLAGS.has(command)) {
     options.version = true;
     command = null;
   }
@@ -259,7 +274,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.handoffAction === "upgrade") {
         const fileCandidate = args[0];
-        if (isSubcommandToken(fileCandidate)) {
+        if (isPositionalToken(fileCandidate)) {
           options.handoffLegacyFile = fileCandidate;
           args.shift();
         }
@@ -293,7 +308,7 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
       args.shift();
       if (options.discussionAction === "use") {
         const idCandidate = args[0];
-        if (isSubcommandToken(idCandidate)) {
+        if (isPositionalToken(idCandidate)) {
           options.discussionId = idCandidate;
           args.shift();
         }
@@ -303,6 +318,14 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 
   for (let i = 0; i < args.length; i += 1) {
     const arg = args[i];
+    if (arg !== undefined && HELP_FLAGS.has(arg)) {
+      options.help = true;
+      continue;
+    }
+    if (arg !== undefined && VERSION_FLAGS.has(arg)) {
+      options.version = true;
+      continue;
+    }
     switch (arg) {
       case "--root":
         {
@@ -749,14 +772,6 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         i += 1;
         break;
       }
-      case "--help":
-      case "-h":
-        options.help = true;
-        break;
-      case "--version":
-      case "-V":
-        options.version = true;
-        break;
       default:
         break;
     }
@@ -784,18 +799,38 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
 }
 
 /**
- * Whether a token is a subcommand name or the positional that follows one.
+ * Whether a token can be the subcommand name in `qfai <command> <subcommand>`.
  *
- * Neither ever starts with `-`, and the subcommand scan runs *before* the flag
- * loop — so testing only for a `--` prefix let the short forms through as
- * candidates. `qfai prototyping -V` had `-V` taken as an unknown action and
- * shifted away, which both raised a usage error and stopped the flag loop from
- * ever setting `options.version`, while the long `--version` was skipped here
- * and worked. The same swallow reached the positionals: `qfai handoff upgrade
- * -V` read `-V` as the legacy file to convert.
+ * The scan that pulls it runs *before* the flag loop, so testing only for a
+ * `--` prefix let the short forms through as candidates: `qfai prototyping -V`
+ * had `-V` taken as an unknown action and shifted away, which both raised a
+ * usage error and stopped the flag loop from ever setting `options.version`,
+ * while the long `--version` was skipped here and worked. A subcommand name is
+ * drawn from a closed set and none of them starts with `-`, so this position
+ * excludes every dash-prefixed token.
  */
 function isSubcommandToken(token: string | undefined): token is string {
   return token !== undefined && token.length > 0 && !token.startsWith("-");
+}
+
+/**
+ * Whether a token can be the positional value after a subcommand — the
+ * `<legacy-file>` of `handoff upgrade`, the `<id>` of `discussion use`.
+ *
+ * A positional is caller data rather than a closed set, and a relative path may
+ * legitimately begin with a single `-`: `qfai handoff upgrade -legacy.yaml`
+ * names a file in the working directory and has to keep converting. So this
+ * position excludes only the spellings the parser actually reserves — any `--`
+ * long flag, plus RESERVED_SHORT_FLAGS — which still keeps `-V` and `-h` out
+ * of the positional and lets them reach the flag loop.
+ */
+function isPositionalToken(token: string | undefined): token is string {
+  return (
+    token !== undefined &&
+    token.length > 0 &&
+    !token.startsWith("--") &&
+    !RESERVED_SHORT_FLAGS.has(token)
+  );
 }
 
 function readOptionValue(args: string[], index: number): string | null {
