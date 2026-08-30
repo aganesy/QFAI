@@ -3,7 +3,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
-import { looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import { looksLikeTableRow, maskNonSpecRegions, splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
@@ -52,7 +52,12 @@ function catalogSectionLines(lines: readonly string[]): readonly string[] {
 
 interface CatalogRow {
   readonly capId: string;
-  /** Every spec directory the row's `Spec` cell named, in cell order. */
+  /**
+   * The **distinct** spec directories the row's `Spec` cell named, lower-cased,
+   * in cell order. Distinct is what "exactly one" is measured against: a
+   * markdown link writes the same id twice, once as the label and once as the
+   * target, and that is still a single declaration.
+   */
   readonly specIds: readonly string[];
 }
 
@@ -96,8 +101,12 @@ function readCatalogBody(
       continue;
     }
     const specCell = cells[specColumn] ?? "";
-    const specIds = Array.from(specCell.matchAll(SPEC_ID_CELL_RE), (match) =>
-      match[0].toLowerCase(),
+    // Case-normalise first, then de-duplicate: the cell may spell one directory
+    // several ways — `[spec-0001](../spec-0001)` repeats it, a link label may
+    // capitalise it — and counting raw matches would read that single, valid
+    // declaration as an ambiguous multi-spec one.
+    const specIds = Array.from(
+      new Set(Array.from(specCell.matchAll(SPEC_ID_CELL_RE), (match) => match[0].toLowerCase())),
     );
     rows.push({ capId, specIds });
   }
@@ -113,6 +122,11 @@ function readCatalogBody(
 
 /**
  * Reads the CAP catalog table as a declared CAP -> spec directory mapping.
+ *
+ * `capabilityText` must already be masked (see {@link maskNonSpecRegions}): the
+ * catalog document illustrates its own format, so a commented-out predecessor
+ * table or a fenced example sitting above the live table would otherwise be
+ * returned as the catalog, and the live table's own breaches would go unseen.
  *
  * The search is bounded to the `## CAP Catalog` section, and inside it only
  * the first well-formed markdown table that carries both headers is parsed —
@@ -308,7 +322,12 @@ export async function validateSpecSplitByCapability(
 
   const policiesDir = layeredEntries[0]?.sharedDir ?? path.join(specsRoot, "_policies");
   const capabilitiesPath = path.join(policiesDir, "03_Capabilities.md");
-  const capabilityText = await readSafe(capabilitiesPath);
+  // Fenced examples, HTML-commented predecessors and indented samples are not
+  // the catalog. Masking once — line count preserved — keeps the CAP roll-call
+  // and the declared mapping reading the very same document: were only one of
+  // them masked, a CAP that exists solely in a comment would be demanded of a
+  // catalog that never lists it.
+  const capabilityText = maskNonSpecRegions(await readSafe(capabilitiesPath));
   const issues: Issue[] = [];
 
   if (!(await exists(capabilitiesPath))) {

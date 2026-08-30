@@ -97,6 +97,15 @@ stop at step 2.
    > trigger is capability ownership (line 64 of this file, and
    > `sdd-triage.md`), never a count.
 
+   > An approved SPLIT moves capabilities, so it also rewrites the catalog.
+   > Reassign the `Spec` cell of every moved `CAP-NNNN` row in
+   > `_policies/03_Capabilities.md` to the directory that now owns it; the
+   > original spec keeps only the capability it retains. A moved row still
+   > pointing at the old directory makes two rows claim that directory
+   > (`QFAI-SPLIT-106`), leaves the new one owned by no CAP
+   > (`QFAI-SPLIT-104`), and pairs the CAP with the wrong `01_Spec.md`
+   > back-reference (`QFAI-SPLIT-105`).
+
    > An **obligation-conserving re-granulation** — the same obligations
    > expressed as finer cells, zero added and zero removed — never triggers
    > SPLIT, whatever it does to `acCount` / `tcCount`. To claim it, state in

@@ -192,5 +192,11 @@ ops), `Rationale` (recommended for every row).
   behind makes `validateSpecSplitByCapability` raise `QFAI-SPLIT-103` for the
   deleted directory. Surviving specs keep their IDs — see the gap policy in
   `_policies/11_Slice-Policy.md`.
+- SPLIT reassigns the `Spec` cell of every moved `CAP-NNNN` row in
+  `_policies/03_Capabilities.md` to the new directory that now owns it, and the
+  source spec keeps only the capability it retains. A moved row left on the old
+  directory raises `QFAI-SPLIT-106` (two rows claim it), `QFAI-SPLIT-104` (the
+  new directory is owned by no CAP) and `QFAI-SPLIT-105` (the CAP is paired
+  with the wrong `01_Spec.md`).
 - Deprecated specs require `Deprecated-at: YYYY-MM-DD`.
 - Triage classification ignores non-active specs.

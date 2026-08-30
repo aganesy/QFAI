@@ -286,6 +286,103 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("treats a markdown link in a Spec cell as one declaration, not two", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // `[spec-0001](../spec-0001)` names the id twice — label and target — and
+      // `[Spec-0002](../spec-0002)` a third way, with different case. Counting
+      // raw matches would call each cell ambiguous and stop the final gate on a
+      // QFAI-SPLIT-106 that no legal edit clears.
+      await seedPolicies(
+        root,
+        ["CAP-0001", "CAP-0002"],
+        ["[spec-0001](../spec-0001)", "[Spec-0002](../spec-0002)"],
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a commented-out catalog table above the live one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The retired mapping is inside an HTML comment directly under the
+      // heading. Reading raw markdown adopts it as the catalog, and the live
+      // table's all-blank Spec column then passes unreported.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        sectionPreamble: [
+          "<!--",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | before the migration |",
+          "| CAP-0002 | spec-0002 | before the migration |",
+          "-->",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a fenced catalog example above the live table", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The catalog document illustrates its own format; the sample must not
+      // outrank the table it illustrates.
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], [null, null], {
+        sectionPreamble: [
+          "```markdown",
+          "| CAP ID | Spec | Note |",
+          "| --- | --- | --- |",
+          "| CAP-0001 | spec-0001 | example |",
+          "| CAP-0002 | spec-0002 | example |",
+          "```",
+          "",
+        ].join("\n"),
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      const mapping = issues.filter((issue) => issue.code === "QFAI-SPLIT-106");
+      expect(mapping).toHaveLength(1);
+      expect(mapping[0]?.refs).toEqual(["CAP-0001", "CAP-0002"]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("does not demand a catalog row for a CAP named only inside a comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      // The CAP roll-call and the declared mapping must read the same masked
+      // document. Masking only the table would leave the commented CAP in the
+      // roll-call and demand a row the live catalog rightly does not carry.
+      await seedPolicies(root, ["CAP-0001"], ["spec-0001"], {
+        sectionPreamble: "<!-- CAP-0002 was retired by an approved DELETE -->\n",
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps the positional derivation when the catalog declares no Spec column", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -361,6 +458,8 @@ describe("v1.4.36 layered validators", () => {
 interface SeedPoliciesOptions {
   /** Markdown emitted before the `## CAP Catalog` heading. */
   readonly leadingMarkdown?: string;
+  /** Markdown emitted inside the catalog section, above the catalog table. */
+  readonly sectionPreamble?: string;
   /** Markdown appended after the catalog table. */
   readonly trailingMarkdown?: string;
   /** Set to `false` for a legacy catalog written without the heading. */
@@ -402,6 +501,7 @@ async function seedPolicies(
       "",
       options.leadingMarkdown ?? "",
       ...heading,
+      options.sectionPreamble ?? "",
       ...header,
       capLines,
       "",

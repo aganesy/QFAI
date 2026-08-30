@@ -80,6 +80,19 @@ describe("the CAP catalog declares the spec mapping the gap policy depends on", 
     });
   }
 
+  // Every shipped SPLIT procedure. An approved SPLIT moves capabilities between
+  // directories, so a step that only creates the new spec leaves the moved CAP
+  // row pointing at the old one and strands the run on QFAI-SPLIT-106/104/105.
+  for (const relativePath of [...SLICE_TEMPLATES, ...TRIAGE_REFERENCES]) {
+    it(`${relativePath}: the SPLIT step reassigns each moved CAP row's Spec cell`, async () => {
+      const content = unwrap(await read(relativePath));
+      expect(content).toContain("`Spec` cell of every moved `CAP-NNNN` row");
+      expect(content).toContain("QFAI-SPLIT-104");
+      expect(content).toContain("QFAI-SPLIT-105");
+      expect(content).toContain("QFAI-SPLIT-106");
+    });
+  }
+
   for (const relativePath of TRIAGE_REFERENCES) {
     it(`${relativePath}: the DELETE lifecycle step also drops the CAP row`, async () => {
       const content = unwrap(await read(relativePath));
