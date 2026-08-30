@@ -31,8 +31,17 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 
 const CROSSWALK_HEADING = "### Routing Phase Crosswalk (Normative)";
 const NEXT_HEADING = "### Reviewer Gate (MUST)";
+const FIXED_ORDER_HEADING = "## Stage and Phase Order (Fixed)";
 
-/** The nine entries `## Stage and Phase Order (Fixed)` declares, in order. */
+/**
+ * Pin on the sequence `## Stage and Phase Order (Fixed)` is expected to declare.
+ *
+ * The crosswalk is checked against the order parsed out of that section, never
+ * against this list, so a rename there cannot keep agreeing with a stale table.
+ * This pin exists only so the parser cannot pass vacuously by returning a short
+ * or empty list; editing the fixed order means editing this list and the
+ * crosswalk together.
+ */
 const FIXED_ORDER = [
   "Stage 0 Preflight",
   "Stage 1 Triage",
@@ -83,13 +92,41 @@ const cells = (row: string): string[] =>
     .map((cell) => cell.trim());
 
 /**
- * Every `FIXED_ORDER` entry named in a span cell, ordered by where it appears.
+ * The fixed order as the skill itself declares it: the entries of the fenced
+ * block under `## Stage and Phase Order (Fixed)`, in order, with the `(per spec)`
+ * annotations dropped.
+ *
+ * Parsed rather than transcribed. A constant copied out of the same document
+ * would keep matching a crosswalk that went stale when only that section was
+ * renamed — exactly the drift this suite exists to catch.
+ */
+function fixedOrder(skill: string): string[] {
+  const start = skill.indexOf(FIXED_ORDER_HEADING);
+  expect(start, `heading not found: ${FIXED_ORDER_HEADING}`).toBeGreaterThan(-1);
+  const fenced = /```\r?\n([\s\S]*?)```/.exec(skill.slice(start));
+  expect(fenced?.[1], `no fenced block under ${FIXED_ORDER_HEADING}`).toBeTruthy();
+  const entries = (fenced?.[1] ?? "")
+    .split("->")
+    .map((entry) =>
+      entry
+        .replace(/\(per spec\)/g, "")
+        .replace(/\s+/g, " ")
+        .trim(),
+    )
+    .filter((entry) => entry.length > 0);
+  // Guards the partition assertion below against passing on an empty parse.
+  expect(entries.length, `${FIXED_ORDER_HEADING} parsed to too few entries`).toBeGreaterThan(1);
+  return entries;
+}
+
+/**
+ * Every fixed-order entry named in a span cell, ordered by where it appears.
  * Repeats are all returned, so a duplicated entry fails the partition
  * assertion instead of collapsing into a single hit.
  */
-function spanEntries(cell: string): string[] {
+function spanEntries(cell: string, order: readonly string[]): string[] {
   const hits: { entry: string; at: number }[] = [];
-  for (const entry of FIXED_ORDER) {
+  for (const entry of order) {
     for (let at = cell.indexOf(entry); at !== -1; at = cell.indexOf(entry, at + entry.length)) {
       hits.push({ entry, at });
     }
@@ -128,14 +165,21 @@ describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order
     expect(rows.map((row) => row[0])).toEqual(ids.map((id) => `\`${id}\``));
   });
 
+  it("reads the fixed order from the section the crosswalk cites", async () => {
+    // Fails if `## Stage and Phase Order (Fixed)` is edited on its own: the pin
+    // names what the parse must yield, and the partition below then re-checks the
+    // crosswalk against the parsed sequence rather than against the pin.
+    expect(fixedOrder(await readSddSkill(tree))).toEqual(FIXED_ORDER);
+  });
+
   it("partitions the nine fixed-order entries across the spans, in order", async () => {
-    const spanned = crosswalkRows(await readSddSkill(tree)).flatMap((row) =>
-      spanEntries(row[1] ?? ""),
-    );
+    const skill = await readSddSkill(tree);
+    const order = fixedOrder(skill);
+    const spanned = crosswalkRows(skill).flatMap((row) => spanEntries(row[1] ?? "", order));
     // One assertion covers all three invariants the section states: every entry
     // is spanned, none is spanned twice, and the spans concatenate back into the
     // fixed order, so no span may be reordered or interleaved with another.
-    expect(spanned).toEqual(FIXED_ORDER);
+    expect(spanned).toEqual(order);
   });
 
   it("names each phase's blocking agent in the row that owns it", async () => {
@@ -210,10 +254,29 @@ describe.each(QFAI_TREES)("%s — qfai-sdd routing phases resolve to fixed-order
     const flat = (await readSddSkill(tree)).replace(/\s+/g, " ");
     expect(flat).toContain("neither edits the contract nor weakens the obligation to fit");
     expect(flat).toContain(
-      "the orchestrator suspends the fan-out, applies the contract fix once as shared work",
+      "re-runs Phase 2 Slice through Phase 2c for every spec whose obligations read the amended contract",
+    );
+  });
+
+  it("delegates the shared-contract repair to the role that drafts contracts", async () => {
+    // `Stage minimum roles` reserves contract drafting for one agent and bars the
+    // orchestrator from drafting a primary artifact, so a repair path the
+    // orchestrator applies itself would break the mandatory delegation. The
+    // drafter is read out of that list rather than named here, so renaming the
+    // role there cannot leave this path pointing at an agent that no longer
+    // drafts contracts.
+    const skill = await readSddSkill(tree);
+    const drafter = /- `([a-z-]+)` drafts structural \/ contract \/ architecture sections/.exec(
+      skill,
+    )?.[1];
+    expect(drafter, "`Stage minimum roles` names no contract drafter").toBeTruthy();
+
+    const flat = skill.replace(/\s+/g, " ");
+    expect(flat).toContain(
+      `the orchestrator suspends the fan-out and delegates the contract fix once to \`${drafter ?? ""}\``,
     );
     expect(flat).toContain(
-      "re-runs Phase 2 Slice through Phase 2c for every spec whose obligations read the amended contract",
+      "the orchestrator integrates that output and never drafts the amendment",
     );
   });
 

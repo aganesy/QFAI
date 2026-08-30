@@ -167,8 +167,10 @@ per-phase blocking never reorders the fixed order. Two exceptions bound the tabl
   `_policies` after the fan-out begins. That prohibition is not a licence to carry a mismatch: when
   a worker's Phase 2c finds the correct fix is on the shared-contract side, it neither edits the
   contract nor weakens the obligation to fit — it stops, records the mismatch, and the orchestrator
-  suspends the fan-out, applies the contract fix once as shared work, then re-runs Phase 2 Slice
-  through Phase 2c for every spec whose obligations read the amended contract before resuming.
+  suspends the fan-out and delegates the contract fix once to `solution-architect`, the role
+  `Stage minimum roles` gives contract drafting; the orchestrator integrates that output and never
+  drafts the amendment itself, then re-runs Phase 2 Slice through Phase 2c for every spec whose
+  obligations read the amended contract before resuming.
 
 Span membership partitions the fixed order, not the agent roster. Being mandatory in a span is a
 floor — the agent MUST run inside it — never a ban on running in another span, so a role may be
