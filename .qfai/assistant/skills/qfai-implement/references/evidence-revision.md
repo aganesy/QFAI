@@ -219,6 +219,10 @@ post-merge step re-runs each merged item's relevant suite, refreshes its
 `Refactor verify` fields and re-requests the two reviews before that item goes
 `done`
 (`parallelization-policy.md#re-verify-each-merged-item-on-the-integrated-tree`).
+"Before `done`" is literal: the orchestrator writes a worker's returned `done`
+into the trunk as `refactor` and promotes it only after the re-take passes
+(`parallelization-policy.md#ledger-ownership`), because the reconciliation write
+runs first and `done` has no edge back to `refactor`.
 Same cause as the T1 case: the observations were taken before the tree the item
 ships on existed.
 

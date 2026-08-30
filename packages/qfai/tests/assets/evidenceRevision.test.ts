@@ -25,6 +25,7 @@ const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.md";
 const VOLUME = "assistant/skills/qfai-implement/references/volume-policy.md";
 const PARALLEL = "assistant/skills/qfai-implement/references/parallelization-policy.md";
+const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -209,6 +210,44 @@ describe("evidence and verdicts carry a revision", () => {
       expect(skill).toContain(
         "re-take each item's item 6 on the integrated tree and re-request its items 7-8 reviews there",
       );
+    });
+
+    it(`${tree}: a worker's returned done is held at refactor until the re-take passes`, async () => {
+      // The reconciliation write happens before the integration verify, so a
+      // worker's `done` written verbatim settles completion ahead of the
+      // post-merge re-verify and re-reviews — and settles it irreversibly,
+      // because `done -> refactor` and `done -> review-fix` are not in the
+      // allowed-transition list. The failure remedy would then be unrecordable.
+      const parallel = flat(await read(tree, PARALLEL));
+      const reference = flat(await read(tree, REFERENCE));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(parallel).toContain("**A returned `done` is written as `refactor`, not as `done`.**");
+      expect(parallel).toContain(
+        "The orchestrator writes `refactor -> done` only once the integration verify, that item's re-verify and both of its re-reviews have returned PASS on the merged tree",
+      );
+      expect(skill).toContain("**A worker's returned `done` is written as `refactor`**");
+      expect(reference).toContain(
+        "the orchestrator writes a worker's returned `done` into the trunk as `refactor` and promotes it only after the re-take passes (`parallelization-policy.md#ledger-ownership`)",
+      );
+    });
+
+    it(`${tree}: the failed re-verify remedy names only listed edges`, async () => {
+      // Over-correction pin: the remedy must stay expressible. It has to name
+      // an edge the ledger actually carries (`refactor -> review-fix`), and it
+      // must not reintroduce a move out of `done`.
+      const parallel = flat(await read(tree, PARALLEL));
+      const ledger = flat(await read(tree, LEDGER));
+
+      expect(parallel).toContain(
+        "leave the row at the `refactor` the reconciliation write held it at, or move it `refactor -> review-fix`",
+      );
+      expect(parallel).not.toContain("and return the row to `refactor` or `review-fix`");
+      // The two edges the old remedy needed are still absent upstream, which is
+      // why the hold — and not a new edge — is the fix.
+      expect(ledger).not.toContain("`done` -> `refactor`");
+      expect(ledger).not.toContain("`done` -> `review-fix`");
+      expect(ledger).toContain("`refactor` -> `review-fix`");
     });
 
     it(`${tree}: staleness is defined mechanically`, async () => {

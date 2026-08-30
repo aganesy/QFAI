@@ -161,7 +161,9 @@ stand in for it: it re-runs the suite, not each item's gate, and it writes
 nothing back into the item's evidence.
 
 So after the merge and its integration verify, and **before any merged item goes
-`done`**:
+`done`** — which is reachable only because the reconciliation write holds a
+worker's returned `done` at `refactor` until these steps pass
+(`#ledger-ownership`):
 
 1. Re-run each merged item's relevant test suite once on the integrated tree and
    refresh all three of its `Refactor verify` fields — `command`, `result` and
@@ -174,8 +176,12 @@ So after the merge and its integration verify, and **before any merged item goes
    neither step. Record which check was made; do not assume it.
 4. A re-verify that is not GREEN, or a re-review that returns `REVISE`, keeps
    that item out of `done`: classify it as a failed integration verify
-   (`#failed-integration-verify`) and return the row to `refactor` or
-   `review-fix`. It does not by itself invalidate the other slices.
+   (`#failed-integration-verify`) and leave the row at the `refactor` the
+   reconciliation write held it at, or move it `refactor -> review-fix`. Both
+   are listed edges (`execution-ledger.md#allowed-transitions`) **because the
+   row was never written `done`** — the same remedy applied to a row already at
+   `done` would need `done -> refactor` or `done -> review-fix`, neither of
+   which that list carries. It does not by itself invalidate the other slices.
 
 This is the same re-take a T1 group close performs, for the same reason
 (`volume-policy.md#group-formation-states-and-transitions`): the address was
@@ -216,6 +222,20 @@ So:
   `Evidence` payload in the per-item evidence contract's form.
 - The orchestrator writes those rows into the trunk ledger during
   `#post-parallel-integration-verify`, before the verify runs.
+- **A returned `done` is written as `refactor`, not as `done`.** That write
+  happens _before_ the integration verify and before the post-merge re-take
+  above, so writing the worker's `done` verbatim would settle the completion
+  decision ahead of both gates that still have to pass on the integrated tree —
+  and it would settle it irreversibly: `done -> refactor` and
+  `done -> review-fix` are not in `execution-ledger.md#allowed-transitions`, so
+  a re-verify that then failed could not be recorded at all. `refactor` is the
+  review-ready state a T1 row already parks in, so the hold loses no evidence
+  and adds no status value. Every other returned status is written as returned;
+  a worker that returned `review-fix` or `exception` keeps it.
+- The orchestrator writes `refactor -> done` only once the integration verify,
+  that item's re-verify and both of its re-reviews have returned PASS on the
+  merged tree. That is the ledger write gate item 10 reads, and it is now the
+  first time the row's status asserts anything about the integrated tree.
 - A merged item whose row is still `todo` fails that verify. Silence there is
   indistinguishable from work that was never done.
 
