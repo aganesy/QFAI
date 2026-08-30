@@ -285,7 +285,14 @@ runs:
         # still ahead of it.
         #
         # The frozen-lockfile literal, and this is the one place it appears in the own CI tree.
-        pnpm install --frozen-lockfile --ignore-scripts
+        # `--ignore-pnpmfile` alongside it, because they are different capabilities and only
+        # one of them was closed. Review finding [140]: `--ignore-scripts` stops LIFECYCLE
+        # scripts, and a root `.pnpmfile.cjs` is not one — pnpm evaluates its top-level code
+        # and its hooks during the install regardless. The reviewer measured pnpm 10.28.1
+        # creating a marker from a pnpmfile under `--ignore-scripts`, and pnpm's own help lists
+        # the two flags as separate things. Nothing pinned that file, so it was executable
+        # configuration a pull request could add and have run before any verification here.
+        pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
 
         # …and then exactly what the allow-list names, in the SAME step.
         #

@@ -424,7 +424,7 @@ jobs:
       # run here — in the job holding `id-token: write`. The guard above means a human approved
       # this release; it does not mean they reviewed every transitive lifecycle script the tag
       # resolves to. What may build is named in the allow-list beside the composite action.
-      - run: pnpm install --frozen-lockfile --ignore-scripts
+      - run: pnpm install --frozen-lockfile --ignore-scripts --ignore-pnpmfile
       - name: Build the dependencies permitted to run install scripts
         run: |
           set -euo pipefail

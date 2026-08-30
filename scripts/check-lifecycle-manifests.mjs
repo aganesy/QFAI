@@ -246,7 +246,58 @@ export function lifecycleFindings(root) {
     }
   }
 
+  // A pnpmfile is executable configuration, and `--ignore-scripts` does not stop it.
+  //
+  // Review finding [140]: pnpm evaluates `.pnpmfile.cjs` — its top level and its hooks —
+  // during the install, and the flag that stops that is `--ignore-pnpmfile`, a separate
+  // capability. Both installs now pass it, and this is the other half: a file whose whole
+  // purpose is to run during installation should not be able to appear unremarked. The refusal
+  // is unconditional because this repository has none and wants none; a project that needs one
+  // is asking for a decision, and a failing guard is how a decision gets asked for.
+  for (const rel of pnpmfilesUnder(root)) {
+    findings.push(
+      `${rel} is executable configuration that pnpm evaluates during installation, which --ignore-scripts does not stop. Both installs pass --ignore-pnpmfile, so it would not run today — but nothing should be able to add one unremarked.`,
+    );
+  }
+
   return findings;
+}
+
+/**
+ * Every pnpmfile in the tree, repo-relative and POSIX-separated.
+ *
+ * Both spellings pnpm accepts, in any package as well as at the workspace root.
+ *
+ * @param {string} root repository root
+ * @returns {string[]} the pnpmfiles found
+ */
+function pnpmfilesUnder(root) {
+  /** @type {string[]} */
+  const found = [];
+  /** @param {string} dir @param {string} rel */
+  const walk = (dir, rel) => {
+    /** @type {import("node:fs").Dirent[]} */
+    let entries;
+    try {
+      entries = readdirSync(dir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      if (entry.isSymbolicLink()) continue;
+      const childRel = rel === "" ? entry.name : `${rel}/${entry.name}`;
+      if (entry.isDirectory()) {
+        if (SKIP_DIRS.has(entry.name)) continue;
+        walk(path.join(dir, entry.name), childRel);
+        continue;
+      }
+      if (entry.isFile() && (entry.name === ".pnpmfile.cjs" || entry.name === "pnpmfile.cjs")) {
+        found.push(childRel);
+      }
+    }
+  };
+  walk(root, "");
+  return found;
 }
 
 function main(root) {

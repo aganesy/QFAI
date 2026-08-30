@@ -1994,3 +1994,80 @@ describe("the pre-flight is run against planted trees, not read", () => {
     );
   });
 });
+
+describe("a pnpmfile is executable configuration, and the install does not run it", () => {
+  // Review finding [140]. `--ignore-scripts` stops LIFECYCLE scripts; a root `.pnpmfile.cjs` is
+  // not one. pnpm evaluates its top level and its hooks during the install regardless, and the
+  // flag that stops that is `--ignore-pnpmfile` — pnpm's own help lists them as separate things,
+  // and the reviewer measured pnpm 10.28.1 creating a marker from a pnpmfile under
+  // `--ignore-scripts`.
+  //
+  // Nothing pinned that file: the pre-flight covered manifests and the two program trees. So a
+  // pull request could add one and have it run before any verification in the job.
+
+  // The script alone, given the planted tree as its root — the same shape the describe above
+  // uses, declared here because that one is scoped to it.
+  const runPreflightHere = (dir: string): { status: number; output: string } => {
+    const script = path.join(REPO_ROOT, "scripts", "check-toolchain-action.sh");
+    const run = spawnSync("bash", [script, dir], { encoding: "utf-8" });
+    if (run.error !== undefined) throw run.error;
+    return {
+      status: run.status ?? -1,
+      output: `${run.stdout ?? ""}${run.stderr ?? ""}`,
+    };
+  };
+
+  it("passes both flags wherever it installs", () => {
+    for (const [rel, what] of [
+      [".github/actions/setup/action.yml", "the toolchain action"],
+      [".github/workflows/release.yml", "the release workflow"],
+    ] as Array<[string, string]>) {
+      const text = readFileSync(path.join(REPO_ROOT, rel), "utf-8");
+      const installs = text
+        .split(/\r?\n/)
+        .map((line) => line.trim())
+        .filter((line) => /\bpnpm install\b/.test(line) && !line.startsWith("#"));
+      expect(installs.length, `${what} installs nothing`).toBeGreaterThan(0);
+      for (const install of installs) {
+        expect
+          .soft(install, `${what}: lifecycle scripts must not run`)
+          .toMatch(/--ignore-scripts\b/);
+        expect
+          .soft(
+            install,
+            `${what}: a pnpmfile runs during install and --ignore-scripts does not stop it`,
+          )
+          .toMatch(/--ignore-pnpmfile\b/);
+      }
+    }
+  });
+
+  it("refuses a pnpmfile nobody remarked on, in either spelling", () => {
+    for (const name of [".pnpmfile.cjs", "pnpmfile.cjs"]) {
+      const dir = plantedTree((d) => {
+        writeFileSync(path.join(d, name), "module.exports = {};" + "\n", "utf-8");
+      });
+      try {
+        const run = runPreflightHere(dir);
+        expect.soft(run.status, `${name} must be refused:\n${run.output}`).toBe(1);
+        expect.soft(run.output, `${name} must be named in the finding`).toContain(name);
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    }
+  });
+
+  it("finds one in a nested package, not only at the root", () => {
+    const dir = plantedTree((d) => {
+      const nested = path.join(d, "packages", "planted");
+      mkdirSync(nested, { recursive: true });
+      writeFileSync(path.join(nested, ".pnpmfile.cjs"), "module.exports = {};" + "\n", "utf-8");
+    });
+    try {
+      const run = runPreflightHere(dir);
+      expect.soft(run.status, `a nested pnpmfile must be refused:\n${run.output}`).toBe(1);
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  });
+});

@@ -182,14 +182,14 @@
         "workspace package's lifecycle exactly as it runs the root's."
       ],
       "pinnedBytes": {
-        ".github/actions/setup/action.yml": "530d55fb684adcc95bb7a0b53a596ae6d7431b888dc00a6baf0b620fa4c284cd",
+        ".github/actions/setup/action.yml": "eb86fd8163e77639a4281261c1c3c7a126184e1138dbd30781b90f1c0417c43f",
         ".github/actions/setup/dependency-builds.txt": "0788adad7ac485ca2c340c2c75ed5bf581a1ba3bb17ea6fe0d0994f666dabf2f",
         ".github/actions/setup/verify-rebuild-sources.mjs": "0816918db6c8833c8d1c4f0cc6218b9eeae7b16a718a0b3113898ae026e4127f",
         "scripts/check-atdd-annotation-ledger.mjs": "f38a64a657e3964b893489f0aea4f9ffafb90d35e2eaf742e2f3ed4a5c1506be",
         "scripts/check-bidi.mjs": "4c20a4abb9c2bf998893ebfde696f2c770b2c46952ce33e379fc509151d4c965",
         "scripts/check-build-warnings.mjs": "f07d6df10d28a9ffcb4cdf1130e379c4aadfc2a89329e5f66ae23fd117000077",
         "scripts/check-instructions-size.mjs": "edc55807a4bfdaf48ae985992d2785057ce7cf130afab34ec934cc6f740b46f4",
-        "scripts/check-lifecycle-manifests.mjs": "d24d28e6a2731aca102df92e53a82eee0eab92e668a3ef84894e035d0c325feb",
+        "scripts/check-lifecycle-manifests.mjs": "d1a3354deac4d4e426ce57508f1cbae68c00ec1692a1cedbafd3f0108117dcf7",
         "scripts/check-not-a-dependency.mjs": "ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e",
         "scripts/check-prompt-scanner-pair.mjs": "96d817088b1a648d39bfa34570a32a90659a37ddf7a807fb044fccada3aa49cc",
         "scripts/check-publish-dry-run.mjs": "7c6454a71ce2aacf3a0918b27744c6d85f72e2e0d480f1eecc927e44ba094486",
@@ -351,7 +351,7 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "b2cb5da7390b2fb4",
+        "Verify the toolchain action before running it": "4d03bfb183211102",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "9a546eaa55780192",
         "Sanity grep — no internal spec IDs or version markers leak (post-build)": "45f5cf9890903b57",
