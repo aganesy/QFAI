@@ -126,6 +126,28 @@ items, re-submit each to the routed blocking reviewers it affects, refresh its e
 spec-level completion over code no reviewer judged: the same defect the per-item rule forbids, one
 boundary later.
 
+**A fresh reviewer PASS is not always enough, and a revision is never the repair.** Gate items 3
+and 5 want observations, not addresses: a RED that failed and a GREEN that passed, on this code.
+Re-submitting reviewers and refreshing `Evidence` leaves both untouched, and where the repair
+edited a **test**, the item's RED and its `RED test hash` describe a test that no longer exists.
+So decide by what the repair changed, per affected item:
+
+- **Production code only, tests untouched** — the GREEN is the stale one. Re-run the item's
+  `Selector` on the repaired tree, record that result as the GREEN with its revision, re-submit to
+  the routed blocking reviewers, and carry on. The RED still describes the test it was observed on,
+  which the repair did not move.
+- **The item's test changed** — its RED is unrecoverable in place. The row is `done` and Phase Red
+  does not re-select it, so there is no route that re-observes a RED without moving the row, and
+  writing one from memory is the fabrication the RED exists to prevent. Take the drift path:
+  STOP, raise a Change Request naming those rows, and on approval reset each per
+  `change-request-reset.md` and run its micro-cycle again. That is the only way item 3 gets an
+  observation of the test as it now stands.
+
+Declaring spec-level completion without one of those two is declaring it on evidence for a tree
+that no longer exists — which is what the freshness rules are for. A repair large enough to change
+several items' tests is a signal in itself: it is a change to the deliverable, and the Change
+Request is where a change to the deliverable belongs.
+
 ## Spec-level boundary on an already-complete ledger
 
 A ledger is **terminal** when every row is `done` or a valid `exception` — the same condition the

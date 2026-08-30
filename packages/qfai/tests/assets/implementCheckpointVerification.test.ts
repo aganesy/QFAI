@@ -256,6 +256,49 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  it("names the observation a spec-level repair owes, not just a fresh revision", async () => {
+    // Gate items 3 and 5 want observations, not addresses. Re-submitting
+    // reviewers and bumping `Evidence` leaves the RED and the GREEN untouched,
+    // and where the repair edited a test, the RED and its `RED test hash`
+    // describe a test that no longer exists — on a row that is already `done`
+    // and that Phase Red does not re-select.
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain(
+        "**A fresh reviewer PASS is not always enough, and a revision is never the repair.**",
+      );
+      // Production-only repair: re-observe the GREEN; the RED still stands.
+      expect(reference).toContain("**Production code only, tests untouched**");
+      expect(reference).toContain("record that result as the GREEN with its revision");
+      // A changed test has no in-place route — say so, and name the one it has.
+      expect(reference).toContain("**The item's test changed**");
+      expect(reference).toContain("its RED is unrecoverable in place");
+      expect(reference).toContain("`change-request-reset.md`");
+      expect(reference).toContain("run its micro-cycle again");
+    }
+  });
+
+  it("resumes a review unit with the whole reviewer set it owes", async () => {
+    // A T1 group close takes a `qa-gatekeeper` turn as well as the two review
+    // passes, and item 9 takes a `product-surface-reviewer` PASS on a
+    // UI-affecting row. Naming two reviewers in the resume step sent a resumed
+    // row to the gate missing a verdict it could no longer obtain.
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**A reopened unit owes its whole reviewer set, not a subset.**");
+      expect(skill).toContain("never from a list written here");
+      expect(skill).toContain("`qa-gatekeeper` turn over the members' recorded RED/GREEN evidence");
+      expect(skill).toContain("`references/ui-affecting.md`");
+      // …and the enumeration that caused it is gone.
+      expect(skill).not.toContain(
+        "one `completion-reviewer` pass, one `implementation-reviewer` pass, one checkpoint run",
+      );
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
