@@ -393,7 +393,7 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
       await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
     );
     expect(rounds).toContain("**Blocked at `review-fix`**");
-    expect(rounds).toContain("the **round** decides which of the two cases above applies");
+    expect(rounds).toContain("the **round** decides which of the cases above applies");
     expect(rounds).toContain("**The `REVISE` is not discharged by the resumption**");
     // The list has to be exhaustive over the statuses the edge admits, or a
     // departure it skipped is a row with no legal way to reach `done`.
@@ -454,19 +454,105 @@ describe.each(TREES)("%s (every departure from `blocked` is decidable)", (tree) 
       await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"),
     );
     expect(rounds).toContain(
-      "- `Round N: Interrupted RED revision` / `Round N: Interrupted RED command` / `Round N: Interrupted RED result`",
+      "- `Round N: Interrupted RED revision` / `Round N: Interrupted RED test hash` (with its manifest) / `Round N: Interrupted RED command` / `Round N: Interrupted RED result`",
     );
     expect(rounds).toContain("requires every run of the same gate to be reported in order");
-    expect(rounds).toContain("it moves the interrupted run into that round's `Interrupted RED`");
+    expect(rounds).toContain("move that run into the round's `Interrupted RED` group");
     expect(rounds).toContain("**retained beside** the fresh one rather than replaced");
     // The complete field list has to admit it, or the round block rejects it.
     expect(rounds).toContain(
-      "the `Interrupted RED` trio on a round a resumption re-observed the RED into",
+      "the `Interrupted RED` group on a round a resumption re-observed the RED into",
     );
     // The claim it replaced said the overwritten address was simply stale.
     expect(rounds).not.toContain("described a tree the blocker has since moved");
 
     const ledger = flat(await read(tree, LEDGER));
     expect(ledger).toContain("**retaining the interrupted RED run** rather than overwriting it");
+  });
+});
+
+describe.each(TREES)("%s (the blocked mechanism holds at its edges)", (tree) => {
+  const rounds = async (): Promise<string> =>
+    flat(await read(tree, "assistant/skills/qfai-implement/references/round-evidence.md"));
+
+  it("names the departure statuses a row can be blocked at, and that both halves are enforced", async () => {
+    // `Blocked-By` became the only persisted input to round selection, so a cell
+    // the validator accepts without a departure status is a row no later
+    // session can resume. The reference has to state the vocabulary the check
+    // applies, or the two drift.
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "**The departure status is one of `todo` / `red` / `green` / `refactor` / `review-fix`**",
+    );
+    expect(ledger).toContain("`TDDLIST_BLOCKED_MISSING_REF` **errors on either half**");
+    expect(ledger).toContain(
+      "`TDDLIST_BLOCKED_MISSING_REF` errors when either half is absent, and when the departure status is not one the edge admits",
+    );
+  });
+
+  it("resumes a row blocked at `red` before any RED was observed", async () => {
+    // Phase Red writes `todo -> red` at step 2 and observes the RED at step 4,
+    // so a blocker found while the test is still being authored parks the row at
+    // `red` with an empty round. "Move the interrupted run into `Interrupted
+    // RED`" had nothing to move, which left that round unresumable.
+    const text = await rounds();
+    expect(text).toContain(
+      "**What the continuation does about the RED depends on whether one had been observed**",
+    );
+    expect(text).toContain("**The round holds neither**");
+    expect(text).toContain("**no `Interrupted RED` group is written**");
+    expect(text).toContain("Requiring the move unconditionally left this row with nothing to move");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "or writing the RED as that round's first observation when the block landed before any run existed to retain",
+    );
+  });
+
+  it("returns a behaviour-preserving `review-fix` block to the no-round path", async () => {
+    // `#a-revise-that-needs-no-new-production-behaviour` opens no round and
+    // verifies through a refreshed `Refactor verify` pair. Folding that path
+    // into the next-round case demanded a fresh RED for rework that has no RED
+    // phase, and the self-reference is closed to a `review-fix` departure — so
+    // the row fell to "anything else" and `exception`.
+    const text = await rounds();
+    expect(text).toContain(
+      "**which of the two rework paths it was on is what says whether the resumption opens one**",
+    );
+    expect(text).toContain("**The path that opens none**");
+    expect(text).toContain("the resumption **opens none either**");
+    expect(text).toContain("refresh the `Refactor verify` pair");
+    expect(text).toContain("`Round N: Resumed-from-blocked` goes on the highest existing round");
+    // And the section that owns the path says a block resumes back onto it.
+    expect(text).toContain("**A block taken while on this path resumes on it.**");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain(
+      "the behaviour-preserving path **opens no round on resumption either**",
+    );
+  });
+
+  it("retains the interrupted RED's test hash and manifest, not only its revision", async () => {
+    // The fresh RED overwrites `RED test hash` and its manifest like every other
+    // RED field, so preserving revision / command / result alone left a retained
+    // run with no record of the test content and fixtures it executed.
+    const text = await rounds();
+    expect(text).toContain(
+      "**It mirrors the round's own RED fields one for one, the `RED test hash` and its manifest included**",
+    );
+    expect(text).toContain("preserves a run with no way left to say what it ran");
+  });
+
+  it("resumes a `todo` block at the next round when the row already carries rounds", async () => {
+    // An approved upstream reset and `exception` -> `todo` both return a row to
+    // `todo` with its earlier rounds retained, and it can be blocked again
+    // before taking a fresh RED. Numbering that resumption round 1 wrote over a
+    // `Round 1` describing the pre-reset obligation.
+    const text = await rounds();
+    expect(text).toContain(
+      "the resumed cycle is the row's **next** round: round 1 on a row that carries none, and the number after the highest on a row that already carries rounds",
+    );
+    expect(text).toContain("A row at `todo` is not always one that never ran");
+    expect(text).toContain("either overwriting that record or mixing two cycles under one number");
+    const ledger = flat(await read(tree, LEDGER));
+    expect(ledger).toContain("**round 1 only on a row carrying no rounds**");
   });
 });

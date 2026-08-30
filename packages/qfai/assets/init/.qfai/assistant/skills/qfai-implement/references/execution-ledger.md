@@ -66,6 +66,17 @@ the resumption needs the departure status both to pick the round it writes into
 `Round N: Resumed-from-blocked`. Writing it only at the resumption asked for
 information the block had already destroyed.
 
+**The departure status is one of `todo` / `red` / `green` / `refactor` /
+`review-fix`** — the active statuses the inbound edge admits. `blocked` is the
+destination, and `done` and `exception` are terminal: neither has work in
+flight for a blocker to stop. `TDDLIST_BLOCKED_MISSING_REF` **errors on either
+half**: a missing blocker, a cell that names no departure status, and a
+departure status outside that set are all the same defect — a `blocked` row
+saved in a state no later session can resume from. Enforcing only the blocker
+half let a bare `CR-20260729-0008` through, and the next session then had to
+guess which round the resumption writes into
+(`round-evidence.md#what-opens-a-round`).
+
 `DR-ID` is **not** widened to carry it: that column is
 what distinguishes a parked `exception` from a row that never started, and
 overloading it would merge the two states the `blocked` status exists to
@@ -198,7 +209,8 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   (`CR-20260421-0004 — blocked at green`) — that cell is the only place the
   departure status survives the session, and every later read of it depends on
   it being written here rather than reconstructed;
-  `TDDLIST_BLOCKED_MISSING_REF` errors when the blocker is absent.
+  `TDDLIST_BLOCKED_MISSING_REF` errors when either half is absent, and when
+  the departure status is not one the edge admits.
   **The source is not restricted to `todo`**, and mirrors the `exception` edge
   below for the same reason: all three blockers named here surface when the work
   reaches them — an upstream defect when the GREEN implementation hits it, a
@@ -244,10 +256,17 @@ This list is the complete one. `qfai-implement/SKILL.md` summarises it and
   or at `review-fix` after the rework had taken its RED, interrupted a round
   that never got its GREEN pair, so the resumed cycle **continues that round**
   — **retaining the interrupted RED run** rather than overwriting it, per
-  `round-evidence.md`; a block taken at `green`, at `refactor`, or at
-  `review-fix` before the rework opened a round (or on the rework path that
-  opens none) left every round closed, so the resumed cycle opens **the next
-  round** under `round-evidence.md`'s numbering. **A row blocked at
+  `round-evidence.md`, or writing the RED as that round's first observation
+  when the block landed before any run existed to retain; a block taken at
+  `green` or at `refactor` left every round closed, so the resumed cycle opens
+  **the next round** under `round-evidence.md`'s numbering, and so does a block
+  taken at `todo` — **round 1 only on a row carrying no rounds**, since an
+  approved upstream reset and `exception` -> `todo` both return a row to `todo`
+  with its earlier rounds retained. A block taken at `review-fix` before the
+  rework opened a round follows the path that `REVISE` took, recorded on that
+  round's reviewer verdict: the behaviour-preserving path **opens no round on
+  resumption either** and returns through a refreshed `Refactor verify` pair.
+  **A row blocked at
   `review-fix` still owes its reviewer the rework**: the resumption does not
   discharge the `REVISE`, and the restarted cycle re-submits at `refactor`
   exactly as the ordinary `review-fix` -> `refactor` return does. **When the block
@@ -404,7 +423,10 @@ after its surface passes on the first run. So:
 - It is reachable from **any active status**, not only from `todo`. "Cannot
   proceed" covers "cannot be started" and is not narrower than it: a row whose
   blocker surfaced at `red`, `green` or `refactor` is the common case, and it
-  files the blocker here rather than at `exception`.
+  files the blocker here rather than at `exception`. The transition records
+  **both** the blocker and the status it left in `Blocked-By`, and
+  `TDDLIST_BLOCKED_MISSING_REF` errors on a row missing either — the departure
+  status is what the resumption reads to pick its round.
 - It is **completion-prohibiting**, exactly like `todo`. A spec must not close
   over an unimplemented obligation, and naming the blocker does not discharge it.
 - It is **not** selectable. Phase Red picks the first `todo` row and skips

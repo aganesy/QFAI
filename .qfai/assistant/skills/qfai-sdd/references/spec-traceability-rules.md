@@ -144,7 +144,9 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 
 - Required columns: TDD-ID, TC-Refs, Layer, Test file, Selector, Status, DR-ID, Evidence
 - Optional columns: `US-Refs`, `CON-API-Refs`, `Blocked-By`. `Blocked-By` names what a
-  `blocked` row is waiting on and is required on those rows.
+  `blocked` row is waiting on **and the status the row was blocked at**
+  (`CR-20260421-0004 — blocked at green`), and is required on those rows;
+  `TDDLIST_BLOCKED_MISSING_REF` errors on either half.
 - Legal `Status` values: `todo`, `blocked`, `red`, `green`, `refactor`, `review-fix`,
   `done`, `exception`. `blocked` is completion-prohibiting and is never selected by
   Phase Red.
