@@ -138,9 +138,9 @@ describe("Phase Red row selection states its precedence as an order", () => {
 
       // Pinning the citation string alone let a wrong number of `..` segments
       // pass; the target has to exist relative to the file that names it.
-      const cited = [...reference.matchAll(/`((?:\.\.\/)+[\w./-]+\.md)(?:#[\w-]+)?`/g)].map(
-        (match) => match[1],
-      );
+      const cited = [...reference.matchAll(/`((?:\.\.\/)+[\w./-]+\.md)(?:#[\w-]+)?`/g)]
+        .map((match) => match[1])
+        .filter((target): target is string => target !== undefined);
       expect(cited.length, "no relative citation found").toBeGreaterThan(0);
 
       for (const target of cited) {
