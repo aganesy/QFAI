@@ -85,8 +85,13 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     // The narrowing permission must not be scoped to auto-decide alone.
     expect(block).not.toContain("MAY narrow the auto-decide bucket");
     expect(block).toMatch(/A skill MAY narrow any of the three buckets/);
-    // Widening stays prohibited in every bucket.
-    expect(block).toMatch(/MUST NOT widen one/);
+    // Widening stays prohibited in every bucket. Instantiating the ask-user
+    // category with the skill's own human-authorized operations is not
+    // widening — without that distinction `/qfai-implement` had no legal way
+    // to name the waiver and the Change-Request escalation it does gate on.
+    expect(block).toMatch(/MUST NOT introduce an entry outside the prototype's categories/);
+    expect(block).toMatch(/MAY instantiate a category entry/);
+    expect(block).toMatch(/approval-required governance operations/);
   });
 
   it.each(QFAI_SKILLS)("%s still satisfies the Reviewer-Gate parser", async (skillId) => {

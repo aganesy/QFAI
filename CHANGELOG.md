@@ -46,6 +46,24 @@
 
 ### Changed
 
+- **Every `## Default Autopilot Policy` bucket may now be narrowed, and each
+  skill's policy is tailored to what that skill actually reaches.** The
+  3-bucket policy shipped with a narrowing permission that covered
+  `auto-decide` only, so `ask-user` and `hard-required` were copied verbatim
+  into every skill: `/qfai-implement` advertised `/qfai-sdd`'s triage ops and
+  `qfai init`'s branding inputs, neither of which an implement run can reach,
+  and its own authorizations had nowhere to go. Narrowing now applies to all
+  three buckets, and the `ask-user` bucket's first entry is a **category** —
+  _approval-required governance operations_ — that each skill instantiates
+  with its own human-authorized operations (`/qfai-sdd`: the triage ops;
+  `/qfai-implement`: the `TDDLIST-001` accepted-risk waiver and the
+  Drift-Protocol Change-Request escalation). Widening is still forbidden:
+  a skill may instantiate a category, never introduce one. Only
+  `auto-decide` widening is machine-detectable
+  (`R-AUTOPILOT-POLICY-WIDENED`); the other two buckets remain review-enforced.
+  Routing a ledger row **to** `exception` is not an `ask-user` decision — Red
+  phase steps 3b and 5 decide it deterministically, and only the waiver that
+  follows needs approval.
 - **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
   every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
   report built its own set from the first table alone and skipped the spec
