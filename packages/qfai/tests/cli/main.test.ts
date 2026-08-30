@@ -6,10 +6,43 @@ import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
 
 import { runInit } from "../../src/cli/commands/init.js";
-import { KNOWN_COMMANDS } from "../../src/cli/lib/args.js";
+import { KNOWN_COMMANDS, parseArgs } from "../../src/cli/lib/args.js";
 import { run } from "../../src/cli/main.js";
+import { REVIEWER_SESSION_STATUSES } from "../../src/core/prototyping/evaluatorReview.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+/** Runs `qfai --help` and returns everything it wrote to stdout. */
+async function captureHelp(): Promise<string> {
+  const cwd = process.cwd();
+  const previousExitCode = process.exitCode;
+  const written: string[] = [];
+  const originalWrite = process.stdout.write.bind(process.stdout);
+  process.exitCode = undefined;
+  process.stdout.write = ((chunk: string | Uint8Array): boolean => {
+    written.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+    return true;
+  }) as typeof process.stdout.write;
+  try {
+    await run(["--help"], cwd);
+  } finally {
+    process.stdout.write = originalWrite;
+    process.exitCode = previousExitCode;
+  }
+  return written.join("");
+}
+
+/**
+ * The `Exit codes` block only. Assertions about the exit-code contract have to
+ * land inside it — the Options list above mentions the same words (`収束`,
+ * `--check-convergence`) for unrelated reasons, so a whole-help `toContain`
+ * would pass on text that never reached the table a caller reads.
+ */
+function exitCodesBlock(help: string): string {
+  const start = help.indexOf("Exit codes");
+  expect(start).toBeGreaterThanOrEqual(0);
+  return help.slice(start);
+}
 
 describe("cli root discovery", { timeout: 15000 }, () => {
   it("finds config in parent when --root is omitted", async () => {
@@ -131,23 +164,7 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     // legacy file. A table promising "1 = gate failure" for every command
     // makes automation file those runtime faults as inspection failures — and
     // the two want opposite responses.
-    const cwd = process.cwd();
-    const previousExitCode = process.exitCode;
-    const written: string[] = [];
-    const originalWrite = process.stdout.write.bind(process.stdout);
-    process.exitCode = undefined;
-    process.stdout.write = ((chunk: string | Uint8Array): boolean => {
-      written.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
-      return true;
-    }) as typeof process.stdout.write;
-    try {
-      await run(["--help"], cwd);
-    } finally {
-      process.stdout.write = originalWrite;
-      process.exitCode = previousExitCode;
-    }
-
-    const help = written.join("");
+    const help = await captureHelp();
     expect(help).toContain("Exit codes");
     expect(help).toContain("実行時エラー");
     expect(help).toContain("audit log");
@@ -156,6 +173,61 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     expect(help).toContain("終了コードだけでは区別できない");
     // The unknown-command contract holds with --help too.
     expect(help).toContain("qfai typo --help");
+  });
+
+  it("only cites --format values the parser accepts", async () => {
+    // The machine-readable escape hatch pointed at `validate --format json`.
+    // `applyFormatOption()` takes text|github for validate, so a caller who
+    // followed the help to tell a gate failure from a runtime fault got the
+    // usage exit 2 and no counts at all — the one audience the sentence exists
+    // for is the audience it broke.
+    const help = await captureHelp();
+
+    // Structural, not a string match on the old wording: every literal
+    // `<command> --format <value>` the help spells out as an example has to be
+    // an invocation the parser actually accepts. `<text|github>` placeholders
+    // in the Options list start with `<` and are skipped.
+    const examples = [...help.matchAll(/\b(\w[\w-]*) --format ([a-z][\w-]*)/g)];
+    expect(examples.length).toBeGreaterThan(0);
+    for (const [, command, value] of examples) {
+      const parsed = parseArgs([command, "--format", value], process.cwd());
+      expect(parsed.invalid, `help cites: ${command} --format ${value}`).toBe(false);
+    }
+
+    // …and the replacement names an artifact the reader can actually open.
+    expect(exitCodesBlock(help)).toContain(".qfai/report/validate.json");
+  });
+
+  it("does not sell prototyping's exit 2 as usage errors only", async () => {
+    // `iterate --check-convergence` returns 2 from `runCheckConvergencePeek()`
+    // for a correct invocation whose state is simply not converged yet, and the
+    // canonical matrix files lock drift under 2 as well. A table that reads
+    // "2 = usage error" makes a caller treat "keep iterating" as a typo.
+    const block = exitCodesBlock(await captureHelp());
+    expect(block).toContain("未収束");
+    expect(block).toContain("prototyping.json");
+    expect(block).toContain("lock drift");
+  });
+
+  it("does not sell iterate's exit 64 as convergence only", async () => {
+    // 64 is also the Reviewer-Playwright hard stop (every reviewer on a
+    // spec × screen pair exhausted the retry budget). Both mean "stopped", and
+    // only the review payload separates them — automation that read 64 as
+    // convergence walked a failed run straight into `certify`.
+    const block = exitCodesBlock(await captureHelp());
+    expect(block).toContain("review.json");
+    expect(block).toContain("sessionStatus");
+    // The over-correction pin: 64 still has to carry its convergence meaning.
+    expect(block).toContain("収束して停止");
+
+    // Structural: the statuses the help names are the ones the payload schema
+    // defines, so a rename in `REVIEWER_SESSION_STATUSES` cannot leave the help
+    // telling operators to look for a value that can never appear.
+    for (const status of REVIEWER_SESSION_STATUSES) {
+      // Word-bounded: `ok` is two letters and would otherwise pass on any word
+      // that happens to contain it.
+      expect(block, `sessionStatus: ${status}`).toMatch(new RegExp(`\\b${status}\\b`));
+    }
   });
 
   it("sets exitCode=2 when guardrails args are invalid", async () => {

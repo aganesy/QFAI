@@ -360,14 +360,29 @@ Exit codes（全コマンド共通）:
       (b) 実行時エラー（audit log: decisions/ を読めない、
           handoff upgrade: legacy ファイルが無い・壊れている・書き込めない 等）
       検査不合格かどうかを機械判定する必要がある場合は、終了コードではなく
-      validate --format json の counts / report の JSON を読むこと。
+      validate が書き出す .qfai/report/validate.json（既定パス。config の
+      output.validateJsonPath で変更可）の counts を読むこと。
+      同じ counts は report --format json の出力（既定 .qfai/report/report.json）
+      にも入る。validate --format が受け付けるのは text と github だけで、
+      json という値は存在しない（渡すと usage エラーの 2 になる）。
       report は検査結果を表示するだけで gate ではない（不合格でも 0 を返す）。
       CI gate には validate --fail-on <warning|error> を使うこと。
   2   usage / 入力エラー（未知のコマンド・サブコマンド・不正なオプション値）
       --help / -h を伴っても未知のコマンドは 2（qfai typo --help も 2）。
+      ただし prototyping では 2 は usage エラーだけではない。呼び出しが
+      正しくても、状態が条件を満たさなければ 2 を返す:
+      未収束 / prototyping.json 不在（iterate --check-convergence）、
+      DESIGN.md の lock drift、frozenSurfaceUnion の drift 等。
+      2 を「コマンドの誤記」と決めつけず、診断メッセージを読むこと。
 
   prototyping 系は canonical exit-code matrix に従い、上記に加えて次を返す:
-  64  iterate: 収束して停止（正常終了） / certify: review.json coverage 不足
+  64  iterate: 停止。二つの意味があり、終了コードだけでは区別できない:
+      (a) 収束して停止（正常終了。certify へ進んでよい）
+      (b) Reviewer の Playwright session が対象の全 reviewer で失敗した
+          hard-stop（収束していない。certify へ進んではいけない）
+      区別は iter-NN/<spec>/<screen>.review.json の sessionStatus で行う:
+      ok なら (a)、retryExhausted / launchFailed なら (b)。
+      certify: 64 は review.json の coverage 不足
   65  iterate: 反復上限に到達して停止
   66  iterate: license 検証に失敗して停止
 `;
