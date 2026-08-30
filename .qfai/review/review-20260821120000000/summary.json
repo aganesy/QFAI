@@ -1,0 +1,15 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-21T12:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "05a97202",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 25 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 22 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 17 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every report in this pack is derivable that way, which the three before it were not"
+}
