@@ -437,6 +437,198 @@ describe("validateAssistantAssets — Stage 0 steering placeholders", () => {
     expect(findings[0]?.message).toContain("References (1)");
   });
 
+  it("counts a placeholder keyword left as the heading text itself", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        // The `##` is structure; the value the operator still owes is `TBD`.
+        "## TBD",
+        "",
+        "- Summary: the ledger service",
+        "",
+        "## **TBD**",
+        "",
+        "- Summary: the reporting service",
+        "",
+        "## Milestones",
+        "",
+        "- GA: 2026-09-01",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("TBD (1)");
+    expect(findings[0]?.message).toContain("**TBD** (1)");
+    // A heading that is a real section name is not a placeholder.
+    expect(findings[0]?.message).not.toContain("Milestones");
+  });
+
+  it("does not split a table cell at an escaped pipe", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        "| Step  | Command             |",
+        "| ----- | ------------------- |",
+        // `\|` is the only way to put a pipe inside a GFM cell: one filled
+        // cell, not a `TBD` fragment.
+        "| Smoke | `echo ok \\| TBD`    |",
+        "| Lint  | TBD                 |",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    // Only the genuinely empty `Lint` cell.
+    expect(findings[0]?.message).toContain("Milestones (1)");
+  });
+
+  it("counts a placeholder behind a GFM task-list checkbox", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Open questions",
+        "",
+        "- [ ] TBD",
+        "- [x] TODO",
+        // An answered question is a value, not a slot.
+        "- [ ] Confirm the retention window",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Open questions (2)");
+  });
+
+  it("ends the table at a list that follows it without a blank line", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "product.md",
+      [
+        "# Product Steering",
+        "",
+        "## Milestones",
+        "",
+        "| Milestone | Description |",
+        "| --------- | ----------- |",
+        "| TBD       | TBD         |",
+        // A list is a new block: it ends the table, and its value is read the
+        // way a bullet's value is read.
+        "- Test: TBD",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    // Two table cells (still split per cell) plus the bullet.
+    expect(findings[0]?.message).toContain("Milestones (3)");
+  });
+
+  it("still counts an explicit TBD left in a bracketed link destination", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## References",
+        "",
+        "- 設計書: [設計書](<TBD>)",
+        "- 規約: [規約](<TODO>)",
+        // A real destination that needs the brackets only because of the space.
+        "- ADR: [ADR](<docs/System Design.md>)",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("References (2)");
+  });
+
+  it("counts a placeholder behind a bullet label carrying backticks or a URL", async () => {
+    const root = await newRoot();
+    await writeCatalog(
+      root,
+      "structure.md",
+      [
+        "# Structure Steering",
+        "",
+        "## Quality gates (SSOT)",
+        "",
+        "- Command for `lint`: TBD",
+        "- Evidence URL (https://example.com): TBD",
+        // The same label shapes, filled in.
+        "- Command for `test`: `pnpm test`",
+        "- Evidence URL (https://example.com/docs): docs/evidence.md",
+        "",
+      ].join("\n"),
+    );
+
+    const findings = await steeringFindings(root);
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("Quality gates (SSOT) (2)");
+  });
+
+  it("names the catalog path the project is configured to use", async () => {
+    const root = await newRoot();
+    await mkdir(path.join(root, "assistant-tree", "catalog"), { recursive: true });
+    await writeFile(
+      path.join(root, "assistant-tree", "catalog", "tech.md"),
+      ["# Tech Steering", "", "## Standard commands (copy-paste)", "", "- Test: TBD", ""].join(
+        "\n",
+      ),
+      "utf-8",
+    );
+    const relocated = {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, skillsDir: "assistant-tree/skills" },
+    };
+
+    const issues = await validateAssistantAssets(root, relocated);
+    const findings = issues.filter((found) => found.code === "QFAI-ASSETS-003");
+
+    expect(findings).toHaveLength(1);
+    expect(findings[0]?.message).toContain("assistant-tree/catalog/tech.md");
+    expect(findings[0]?.message).not.toContain(".qfai/assistant/catalog/tech.md");
+  });
+
+  it("still names the default catalog path when the tree is not relocated", async () => {
+    const root = await newRoot();
+    await seedShipped(root, "tech.md");
+
+    const findings = await steeringFindings(root);
+
+    expect(findings[0]?.message).toContain(".qfai/assistant/catalog/tech.md");
+  });
+
   it("does not report a steering file that is absent", async () => {
     const root = await newRoot();
 

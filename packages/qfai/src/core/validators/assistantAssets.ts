@@ -7,6 +7,8 @@ import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectFiles } from "../fs.js";
 import { hasErrnoCode } from "../fs/errno.js";
+import { parseHeadings } from "../parse/markdown.js";
+import { splitMarkdownRow } from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { TODO_PLACEHOLDER_RE } from "./renderCritique.js";
 import { issue } from "./utils.js";
@@ -74,22 +76,29 @@ const EMAIL_AUTOLINK_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
  */
 const LINK_DESTINATION_TAIL_PATTERN = /^\s*(?:"[^"]*"|'[^']*'|\([^()]*\))?\s*\)/;
 
-/** A level-2 heading, which is the unit `/qfai-configure` fills section by section. */
-const SECTION_HEADING_PATTERN = /^##\s+(.*\S)\s*$/;
-
 /** Text before the first `## ` heading — the title and the "replace this" note. */
 const PREAMBLE_SECTION = "(preamble)";
 
 /**
- * `- Key: value` / `- value`, with the bullet and any `Key:` label stripped.
+ * A CommonMark list marker: `-` / `*` / `+`, or `1.` / `2)` for ordered lists.
  *
- * Every CommonMark list marker is accepted, not just `-` and `*`: a catalog
- * written with `+ TBD` or `1. TBD` left the whole line as the candidate value,
- * where the leading marker kept the bare-keyword test from ever matching and
- * an unfinished section passed `--strict`. Ordered markers are 1-9 digits
+ * Every marker is accepted, not just `-` and `*`: a catalog written with
+ * `+ TBD` or `1. TBD` left the whole line as the candidate value, where the
+ * leading marker kept the bare-keyword test from ever matching and an
+ * unfinished section passed `--strict`. Ordered markers are 1-9 digits
  * followed by `.` or `)`, as CommonMark defines them.
  */
-const BULLET_VALUE_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+(?:[^:`]{1,60}:\s*)?(.*)$/;
+const LIST_MARKER_PATTERN = /^\s*(?:[-*+]|\d{1,9}[.)])\s+/;
+
+/**
+ * A GFM task-list checkbox, which is structure rather than the value.
+ *
+ * `- [ ] TBD` is an unanswered open question, but stripping only the list
+ * marker left `[ ] TBD` as the candidate value, which no keyword test can
+ * match. Exactly one space, `x` or `X` between the brackets, as GFM defines
+ * it — so a link label (`- [設計書](...)`) is not mistaken for a checkbox.
+ */
+const TASK_LIST_MARKER_PATTERN = /^\[[ xX]\]\s+/;
 
 /** A markdown table row written with outer pipes: `| a | b |`. */
 const TABLE_ROW_PATTERN = /^\s*\|.*\|\s*$/;
@@ -107,6 +116,27 @@ const TABLE_ROW_PATTERN = /^\s*\|.*\|\s*$/;
  * break out.
  */
 const TABLE_DELIMITER_ROW_PATTERN = /^\s*\|?(?:\s*:?-+:?\s*\|)+\s*:?-+:?\s*\|?\s*$/;
+
+/**
+ * Block-level starts that close a GFM table, besides the blank line and the
+ * heading {@link markTableRows} already stopped at.
+ *
+ * A GFM table runs "until the first empty line or beginning of another
+ * block-level structure", and a list written directly under the last row is
+ * exactly that: `- Test: TBD` under a Milestones table is a new block, but it
+ * was swept into the table's run, split on `|` into a single cell, and its
+ * bullet label never stripped — so the `TBD` went uncounted. Deliberately
+ * short of every CommonMark block start: an HTML-block test would read a
+ * pipe-less row that opens with a slot (`<milestone name> | <what shipped>`)
+ * as a tag and cut the table short, which is the error this rule cares about
+ * more.
+ */
+const BLOCK_START_PATTERNS = [
+  /^ {0,3}(?:[-*+]|\d{1,9}[.)])\s/, // list item
+  /^ {0,3}>/, // block quote
+  /^ {0,3}(?:`{3,}|~{3,})/, // fenced code
+  /^ {0,3}(?:(?:\*\s*){3,}|(?:-\s*){3,}|(?:_\s*){3,})$/, // thematic break
+];
 
 /**
  * Read-only, and non-blocking where the platform defines it.
@@ -183,7 +213,7 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
     );
   }
 
-  issues.push(...(await collectSteeringPlaceholderIssues(assistantDir)));
+  issues.push(...(await collectSteeringPlaceholderIssues(root, assistantDir)));
 
   const skillFiles = await collectSkillFiles([skillsDir]);
   for (const skillFile of skillFiles) {
@@ -251,7 +281,10 @@ export async function validateAssistantAssets(root: string, config: QfaiConfig):
  * A missing file is skipped: this rule is about unfilled content, and the
  * pre-recut `steering/` layout is already reported by `D-DEPRECATED-PATH`.
  */
-async function collectSteeringPlaceholderIssues(assistantDir: string): Promise<Issue[]> {
+async function collectSteeringPlaceholderIssues(
+  root: string,
+  assistantDir: string,
+): Promise<Issue[]> {
   const issues: Issue[] = [];
   for (const fileName of STEERING_CATALOG_FILES) {
     const filePath = path.join(assistantDir, "catalog", fileName);
@@ -268,7 +301,7 @@ async function collectSteeringPlaceholderIssues(assistantDir: string): Promise<I
     issues.push(
       issue(
         "QFAI-ASSETS-003",
-        `Stage 0 steering ファイル .qfai/assistant/catalog/${fileName} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
+        `Stage 0 steering ファイル ${toRepoRelative(root, filePath)} に未置換のテンプレート値が ${total} 件残っています（該当セクション: ${detail}）。`,
         "warning",
         filePath,
         "assistantAssets.steeringPlaceholder",
@@ -280,6 +313,23 @@ async function collectSteeringPlaceholderIssues(assistantDir: string): Promise<I
     );
   }
   return issues;
+}
+
+/**
+ * The catalog path as the operator sees it: repo-relative, POSIX separators.
+ *
+ * The message used to spell `.qfai/assistant/catalog/<file>` literally, which
+ * is only where the file sits when `paths.skillsDir` is the default — a
+ * project that relocated its assistant tree was pointed at a path it does not
+ * have. Falls back to the absolute path when the file is somehow outside the
+ * repo root, since a wrong relative path would be worse than a long one.
+ */
+function toRepoRelative(root: string, filePath: string): string {
+  const relative = path.relative(root, filePath);
+  if (relative.length === 0 || relative.startsWith("..") || path.isAbsolute(relative)) {
+    return filePath;
+  }
+  return relative.split(path.sep).join("/");
 }
 
 /**
@@ -325,13 +375,22 @@ function stripHtmlComments(content: string): string {
   return content.replace(HTML_COMMENT_PATTERN, (span) => span.replace(/[^\n]/g, " "));
 }
 
+/** Whether this line opens a block that ends the table running above it. */
+function endsTableBlock(line: string): boolean {
+  if (line.trim().length === 0 || ANY_MARKDOWN_HEADING_PATTERN.test(line)) {
+    return true;
+  }
+  return BLOCK_START_PATTERNS.some((pattern) => pattern.test(line));
+}
+
 /**
  * Which lines are table rows, including tables written without outer pipes.
  *
  * A delimiter row marks its table: the header row immediately above it and
- * every following line up to the blank line or heading that closes the block.
- * Rows already carrying outer pipes stay rows whether or not a well-formed
- * delimiter row accompanies them, so nothing that was counted before is lost.
+ * every following line up to whatever closes the block — a blank line, a
+ * heading, or any other block start ({@link endsTableBlock}). Rows already
+ * carrying outer pipes stay rows whether or not a well-formed delimiter row
+ * accompanies them, so nothing that was counted before is lost.
  */
 function markTableRows(lines: string[]): boolean[] {
   const rows = lines.map((line) => TABLE_ROW_PATTERN.test(line));
@@ -349,7 +408,7 @@ function markTableRows(lines: string[]): boolean[] {
     rows[index] = true;
     for (let next = index + 1; next < lines.length; next += 1) {
       const body = lines[next] ?? "";
-      if (body.trim().length === 0 || ANY_MARKDOWN_HEADING_PATTERN.test(body)) {
+      if (endsTableBlock(body)) {
         break;
       }
       rows[next] = true;
@@ -362,18 +421,24 @@ function markTableRows(lines: string[]): boolean[] {
 function collectSteeringPlaceholders(content: string): SteeringPlaceholderSection[] {
   const bySection = new Map<string, { count: number; firstLine: number }>();
   let section = PREAMBLE_SECTION;
-  const lines = stripHtmlComments(content).split(/\r?\n/);
+  const stripped = stripHtmlComments(content);
+  const lines = stripped.split(/\r?\n/);
   const tableRows = markTableRows(lines);
+  // The repo's own heading parser, rather than a second regex for the same
+  // shape: it hands back the heading *text*, which is what a heading left as
+  // `## TBD` or `## **TBD**` needs scanned. Passing the raw line kept the
+  // `##` glued to the value, and the anchored keyword test never matched.
+  const headings = new Map(parseHeadings(stripped).map((entry) => [entry.line - 1, entry]));
   for (const [index, line] of lines.entries()) {
-    const heading = SECTION_HEADING_PATTERN.exec(line);
-    if (heading?.[1] !== undefined) {
+    const heading = headings.get(index);
+    if (heading?.level === 2) {
       // The heading names the section from here on — and is scanned too. A
       // `## <product area>` left unreplaced is exactly the work `/qfai-configure`
       // still owes, and skipping the line hid it whenever the body beneath it
       // had been filled in.
-      section = heading[1];
+      section = heading.title;
     }
-    const count = countUnfilledMarkers(line, tableRows[index] === true);
+    const count = countUnfilledMarkers(heading?.title ?? line, tableRows[index] === true);
     if (count === 0) {
       continue;
     }
@@ -408,7 +473,7 @@ function countUnfilledMarkers(line: string, isTableRow: boolean): number {
       const at = typeof offset === "number" ? offset : -1;
       if (
         typeof inner === "string" &&
-        !isLinkDestination(line, at, match.length) &&
+        !isFilledLinkDestination(line, at, match.length, inner) &&
         isPlaceholderToken(inner)
       ) {
         count += 1;
@@ -421,14 +486,26 @@ function countUnfilledMarkers(line: string, isTableRow: boolean): number {
 }
 
 /**
- * Whether this `<...>` token is the destination half of `[text](<dest>)`.
+ * Whether this `<...>` token is a **written** destination in `[text](<dest>)`.
  *
  * Read off the surrounding line rather than the token, because the token is
  * identical either way: `<docs/System Design.md>` is a filled-in destination
  * only when a `](` opens it and a `)` — optionally after a link title —
  * closes it.
+ *
+ * A destination that spells a placeholder keyword is not written, though:
+ * `[設計書](<TBD>)` is a broken link and the very work the rule reports, so
+ * the link context alone stopped being enough to excuse a token.
  */
-function isLinkDestination(line: string, offset: number, length: number): boolean {
+function isFilledLinkDestination(
+  line: string,
+  offset: number,
+  length: number,
+  inner: string,
+): boolean {
+  if (isUnfilledValue(inner)) {
+    return false;
+  }
   if (offset < 2 || line.slice(offset - 2, offset) !== "](") {
     return false;
   }
@@ -473,12 +550,40 @@ function isPlaceholderToken(inner: string): boolean {
  */
 function countBareTodoValues(line: string, isTableRow: boolean): number {
   if (isTableRow) {
-    // `| a | b |` splits to a leading and a trailing empty string; both are
-    // whitespace-only and are declined by the length check below.
-    return line.split("|").filter((cell) => isUnfilledValue(cell)).length;
+    // The repo's own GFM row splitter, not `split("|")`: it drops the outer
+    // pipes and honours `\|`, the only way to write a pipe inside a cell. A
+    // plain split cut `` `echo ok \| TBD` `` in half and read the tail as an
+    // unfilled cell, failing a finished catalog under `--strict`.
+    return splitMarkdownRow(line).filter((cell) => isUnfilledValue(cell)).length;
   }
-  const bullet = BULLET_VALUE_PATTERN.exec(line)?.[1];
-  return isUnfilledValue(bullet ?? line) ? 1 : 0;
+  return isUnfilledListValue(line) ? 1 : 0;
+}
+
+/**
+ * Whether one non-table line is an unfilled value, once its structure is off.
+ *
+ * Two shapes are tried, because a catalog writes values both ways:
+ *
+ * - the whole line minus the list marker and any task-list checkbox — `- TBD`,
+ *   `- [ ] TBD`, or a section body left as a lone `TBD`;
+ * - whatever follows the **last** colon, which is where a `label: value`
+ *   bullet keeps its value. The label is taken as everything before that
+ *   colon rather than matched by a shape, because labels carry the very
+ *   characters a shape has to exclude: code spans (`` - Command for `lint`: TBD ``),
+ *   emphasis (`- **Test:** TBD`) and URLs (`- Evidence URL (https://e.com): TBD`)
+ *   all broke the previous `[^:`]{1,60}:` label and left the value unreadable.
+ *   A value that itself contains a colon (`- Cutoff: 12:00`) is filled in, so
+ *   reading only its tail cannot invent a finding.
+ */
+function isUnfilledListValue(line: string): boolean {
+  const marker = LIST_MARKER_PATTERN.exec(line);
+  const body =
+    marker === null ? line : line.slice(marker[0].length).replace(TASK_LIST_MARKER_PATTERN, "");
+  if (isUnfilledValue(body)) {
+    return true;
+  }
+  const separator = body.lastIndexOf(":");
+  return separator >= 0 && isUnfilledValue(body.slice(separator + 1));
 }
 
 /**
