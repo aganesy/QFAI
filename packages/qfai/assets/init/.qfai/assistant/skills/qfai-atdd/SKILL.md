@@ -228,7 +228,7 @@ to `exception` has recorded that it did not try branches 1 and 2.
 ## Scope (ATDD only)
 
 In scope: E2E, API, Integration. Out of scope: Unit and Component
-(`/qfai-implement`).
+(`/qfai-implement`). Tests that must sign in: `references/credential-reuse.md`.
 
 ## Non-goals
 

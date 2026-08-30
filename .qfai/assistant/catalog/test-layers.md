@@ -2,6 +2,11 @@
 
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
+For which CI lane runs which layer, see the sibling map
+[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the
+policy loader reads this file and not that one, so nothing there can change the
+vocabulary declared below.
+
 ## Layer vocabulary crosswalk (normative)
 
 qfai spells the same layer four ways across shipped artifacts. This table is
