@@ -107,6 +107,39 @@ describe("TDDLIST_STALE_STATUS — the ledger under-reporting", () => {
     );
   });
 
+  // `CR-20260818-0001`, approved 2026-08-23, option A. `selectorResolves` falls back to the
+  // selector's LAST identifier, which is right for its other consumer — there a match is evidence
+  // FOR a test's presence, so leniency costs a warning rather than swallowing one. Here the
+  // direction inverts: a match is evidence the row's `todo` is stale, so `header` matching almost
+  // any test file made the rule fire on rows whose test does not exist.
+  it("stays silent when only the selector's last token appears, not the selector", async () => {
+    await withLedger(
+      // `validates the header` shares its last identifier with `renders the header` in the fixture
+      // and shares nothing else. The lenient reader calls that a resolved selector.
+      ["| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | validates the header | todo | - | - |"],
+      { "tests/a.test.ts": TEST_FILE },
+      (issues) => {
+        expect(
+          stale(issues),
+          "a warning whose whole value is being trusted cannot fire on a test that is not there",
+        ).toEqual([]);
+      },
+    );
+  });
+
+  it("still fires when the selector appears verbatim, so the carve-out is not a mute", async () => {
+    await withLedger(
+      ["| TDD-0001 | TC-0001 | Unit | tests/a.test.ts | renders the header | todo | - | - |"],
+      { "tests/a.test.ts": TEST_FILE },
+      (issues) => {
+        expect(
+          stale(issues),
+          "the true direction must survive the carve-out, or it removed the rule instead of its false positive",
+        ).toHaveLength(1);
+      },
+    );
+  });
+
   it("does not fire on statuses other than todo", async () => {
     await withLedger(
       [
