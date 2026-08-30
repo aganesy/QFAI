@@ -37,9 +37,26 @@ bullet, backticked, nothing else on the line. A path cell matches when any glob
 matches it after normalising separators to `/` — a ledger cell that may also
 hold a dotted module path is normalised first
 (`.qfai/assistant/skills/qfai-implement/references/ui-affecting.md#normalising-owning-module`).
-Write the single bullet `none`
-when the project has no UI surface at all — that is a statement the reader
-accepts, not a gap.
+
+`**` is not one thing across tools — Bash, minimatch and fast-glob disagree on
+recursion, on whether it spans zero segments, and on dotfiles — so the matching
+rules are fixed here rather than left to whichever matcher an agent reaches for:
+
+- `**` matches **zero or more** path segments, so `src/components/**` matches
+  `src/components/Button.tsx` and `src/components/forms/Button.tsx` and
+  `src/components` itself.
+- `*` matches zero or more characters **within one segment**; it never crosses
+  a `/`.
+- `?` matches exactly one character within one segment.
+- A leading dot is **not** special: `src/**` matches `src/.keep`. Nothing here
+  is a shell, so the shell's dotfile rule does not apply.
+- Matching is case-sensitive, and both sides are compared after separators are
+  normalised to `/`.
+- No other metacharacter is recognised. Braces, character classes and negation
+  are literal text — write a second bullet instead.
+  Write the single bullet `none`
+  when the project has no UI surface at all — that is a statement the reader
+  accepts, not a gap.
 
 ui_paths:
 

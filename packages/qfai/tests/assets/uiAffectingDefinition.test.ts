@@ -391,5 +391,86 @@ describe("UI-affecting is defined once and referenced everywhere", () => {
       );
       expect(definition).toContain("../qfai-atdd/references/stale-manifest.md");
     });
+
+    it(`${tree}: the routed review resolves the design contract from contractsDir too`, async () => {
+      // The UI contract set already followed `paths.contractsDir`; the design
+      // contract the same reviewer compares against stayed pinned to
+      // `.qfai/contracts/design/`. On a project that repointed the directory the
+      // reviewer read nothing and either passed without the handoff or stopped
+      // on a default path that is not there.
+      const reviewer = await read(tree, REVIEWER);
+      expect(reviewer).toContain("`<contractsDir>/design/prototype-handoff.yaml`");
+      expect(reviewer).not.toContain("`.qfai/contracts/design/prototype-handoff.yaml`");
+      expect(reviewer).toContain("the same `<contractsDir>` as the line above");
+    });
+
+    it(`${tree}: the UI glob matcher is specified, not left to the tool`, async () => {
+      // `**` differs across Bash, minimatch and fast-glob on recursion, zero
+      // segments and dotfiles, so the same row answered differently depending
+      // on which matcher an agent reached for.
+      const structure = await read(tree, STRUCTURE);
+      expect(structure).toContain("`**` matches **zero or more** path segments");
+      expect(structure).toContain("it never crosses\n  a `/`");
+      expect(structure).toContain("A leading dot is **not** special");
+      expect(structure).toContain("Matching is case-sensitive");
+      expect(structure).toContain("No other metacharacter is recognised");
+    });
+
+    it(`${tree}: the dotted candidate cannot invent a match for a root-level file`, async () => {
+      // `app.config.ts` -> `app/config/ts` matches a declared `app/**`, so a
+      // non-UI config file was routed for rendered evidence and a parity review.
+      const definition = await read(tree, DEFINITION);
+      expect(definition).toContain("Candidate 2 adds matches; it must not invent one");
+      expect(definition).toContain("`app.config.ts` becomes\n`app/config/ts`");
+      expect(definition).toContain("its final dot-separated segment is not a file extension");
+      expect(definition).toContain("`app.config.ts` ends in `.ts` and is\n  read as a path only");
+    });
+
+    it(`${tree}: the CON-API source entry has a resolver of its own`, async () => {
+      // "the API contract entry that declares a CON-API-*" is not a location:
+      // the canonical tooling walks `<contractsDir>/api/**` and accepts JSON too,
+      // so searching the default directory for YAML alone missed the link and
+      // recorded `n/a` on an API change the UI renders.
+      const definition = await read(tree, DEFINITION);
+      expect(definition).toContain("**Where the API contract entry is**");
+      expect(definition).toContain("`<contractsDir>/api/**`");
+      expect(definition).toContain("**and** `.json`");
+      expect(definition).toContain("the miss is\none-directional");
+    });
+
+    it(`${tree}: the fallback diff sees a file git does not track yet`, async () => {
+      // A TDD row is evaluated on an uncommitted tree, where a brand-new
+      // `src/components/Button.tsx` is untracked: `git diff` lists nothing for
+      // it, so the row that most needs the fallback was the one it missed.
+      const definition = await read(tree, DEFINITION);
+      expect(definition).toContain("**plus the files git does not track yet**");
+      expect(definition).toContain("`git ls-files --others --exclude-standard`");
+      expect(definition).toContain("comparing two commits omits everything not yet committed");
+    });
+
+    it(`${tree}: item 9 shares the revision whether or not a clause fired`, async () => {
+      // `n/a` is a claim about the tree too — no declared UI path was touched —
+      // and a checkpoint re-fix that adds one makes it false exactly as it makes
+      // a stale PASS false. Exempting it accepted an `n/a` taken before the
+      // change existed while the final diff matched a UI path.
+      const revision = await read(tree, `${IMPLEMENT}/references/evidence-revision.md`);
+      expect(revision).toContain("gate items 3, 5, 7, 8 and 9) MUST all name the **same**");
+      expect(revision).toContain("**Item 9 is in that set whatever it answered.**");
+      expect(revision).toContain("`n/a` is a claim about the tree");
+      expect(revision).not.toContain("and 9 on a row a UI-affecting");
+    });
+
+    it(`${tree}: the recomputation binds the ledger writer in every mode`, async () => {
+      // Placed under coordinated parallel mode alone, it was skipped by default:
+      // the ordinary serial run copied the implementer's `Prototype parity`
+      // straight into the ledger, so the self-report went unchecked in the mode
+      // most rows take.
+      const policy = await read(tree, POLICY);
+      expect(policy).toContain("**This is a rule of the ledger writer, not of parallel mode.**");
+      expect(policy).toContain(
+        "**whoever writes the row recomputes `Prototype parity` before writing it**",
+      );
+      expect(policy).toContain("It is the one evidence field the writer does not copy");
+    });
   }
 });

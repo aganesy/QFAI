@@ -73,10 +73,22 @@ of them matches a declared UI path:
    (`src.components.Button` → `src/components/Button`). Skipped when the cell contains `/`, which
    only a path does.
 
-Candidate 2 can only add matches, never remove one, so evaluating both is free: a dotted module
-carries no `/` and cannot match a path glob verbatim, and a path put through it yields a string
-(`App/tsx`) that names no declared directory. Clause 2 is unaffected either way: `Test file` is
-required and always a path.
+Candidate 2 adds matches; it must not invent one. "A path put through it names no declared
+directory" is false for a root-level file with a dotted name: `app.config.ts` becomes
+`app/config/ts`, which a declared `app/**` matches — and the row is then sent for rendered evidence
+and a parity review over a config file that renders nothing. So candidate 2 is **only** tried when
+the cell could be a dotted module in the first place:
+
+- the cell contains no `/` (a path with segments always has one), **and**
+- its final dot-separated segment is not a file extension — that is, the cell does not end in a
+  `.` followed by 1–5 characters that are letters or digits. `app.config.ts` ends in `.ts` and is
+  read as a path only; `src.components.Button` ends in `Button` and gets both readings.
+
+An extension list is not needed for this, only the shape of one: a module segment that happens to
+be 1–5 alphanumerics — `src.components.api` — loses candidate 2, so it is matched as a path alone.
+That is the safe direction, and it is the one case where writing the cell as a path
+(`src/components/api`) removes the ambiguity outright. Clause 2 is unaffected either way:
+`Test file` is required and always a path.
 
 ### When `Owning module` is not declared
 
@@ -90,12 +102,20 @@ The fix is not to make the column mandatory — `execution-ledger.md` requires i
 dispatch, and requiring it on every row would put a declaration where the ledger deliberately has
 none. Instead, when the cell is `-`, clause 1 reads the paths the row's **own change** touched:
 
-- **The list** — the production files this row created or modified, taken exactly the way the seam
-  reconciliation takes them (`parallelization-policy.md#seam-reconciliation-after-a-parallel-run`):
-  `git diff --name-only <the revision the row started from>..<the row's current tree>`, restricted
-  to production paths, test files excluded (clause 2 already reads those). Each path is matched
-  against the declared UI paths verbatim — a diff path is always a path, so the dotted-module
-  candidate does not apply.
+- **The list** — the production files this row created or modified, taken the way the seam
+  reconciliation takes them (`parallelization-policy.md#seam-reconciliation-after-a-parallel-run`),
+  **plus the files git does not track yet**. A TDD row is normally evaluated on an uncommitted
+  tree, and a brand-new `src/components/Button.tsx` is untracked there: `git diff` alone lists
+  nothing for it, so the row that most needs this clause is the one it missed. Take both, and
+  concatenate:
+  - `git diff --name-only <the revision the row started from>` — tracked changes, working tree
+    included (no second revision: comparing two commits omits everything not yet committed);
+  - `git ls-files --others --exclude-standard` — files created and not yet added.
+
+  Restrict both to production paths and exclude test files with the same patterns (clause 2 already
+  reads those). Each path is matched against the declared UI paths verbatim — a diff path is always
+  a path, so the dotted-module candidate does not apply.
+
 - **When it is evaluated** — at the completion gate, where item 9 is checked and the change exists.
   Before that the row has no diff, so a trigger answered early (the Visual Review Guard reads the
   contracts _before_ implementation) is answered from the cell, the `Test file` and the obligation
@@ -122,6 +142,15 @@ ways by two agents. It holds when either literal occurrence exists, and otherwis
   declared UI contract occurs verbatim in the obligation's own source entry — `06_Test-Cases.md`
   for a `TC-*`, `02_User-stories.md` for a `US-*`, the API contract entry that declares a
   `CON-API-*`.
+
+**Where the API contract entry is**, since "the entry that declares a `CON-API-*`" is not a
+location: every `.yaml`, `.yml` **and** `.json` under `<contractsDir>/api/**`, walked recursively,
+with `<contractsDir>` resolved from `paths.contractsDir` exactly as for the UI set above. That is
+the set the canonical tooling reads. Searching the default directory for YAML alone would miss a
+project that repointed `contractsDir` or that writes its API contracts as JSON, and the miss is
+one-directional: the id is not found, the clause does not fire, and an API change the UI renders
+records `n/a`. The entry that declares the obligation is the one carrying the `CON-API-*` id; when
+several files carry it, all of them are the source entry.
 
 `primary_tasks[].id` is in that list because the structured `primary_tasks` shape
 (`../qfai-sdd/references/ui-contract-guide.md#screensprimary_tasks-shape`) is a closed

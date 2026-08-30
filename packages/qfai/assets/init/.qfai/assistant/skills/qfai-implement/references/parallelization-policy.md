@@ -178,6 +178,17 @@ When parallel dispatch is authorized, the ledger has one writer:
   the row and treat a worker `n/a` on a row a clause selects the way any other
   false gate claim is treated (`#seam-reconciliation-after-a-parallel-run`).
 
+**This is a rule of the ledger writer, not of parallel mode.** Serial execution
+has the same shape and the same actor: the implementation agent returns Status
+and Evidence, the orchestrator writes the row. Placed under coordinated parallel
+mode alone, the recomputation was skipped by default — the ordinary run copied
+the implementer's `Prototype parity` straight into the ledger, and the
+self-report the gate exists to check went unchecked in the mode most rows take.
+So: **whoever writes the row recomputes `Prototype parity` before writing it**,
+in every execution mode. It is the one evidence field the writer does not copy.
+In serial mode the inputs are the same, minus the merge: the ledger row, the
+declared UI paths, the row's own diff and the declared UI contracts.
+
 ## Ledger ownership
 
 `.qfai/specs/<spec-id>/tdd/test-list.md` has exactly one writer: the

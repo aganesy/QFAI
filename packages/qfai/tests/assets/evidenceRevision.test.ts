@@ -81,14 +81,16 @@ describe("evidence and verdicts carry a revision", () => {
       expect(skill).toContain(
         // Article-free: the clause now opens a sentence of its own, after the
         // `Audited evidence hash` rule that addresses what the revision leaves out.
-        // Item 9 joins the set on a row a UI-affecting clause routed: its verdict
-        // carries a `Reviewed revision` too, and excluding it from the agreement
-        // rule is what let a parity PASS taken against an older surface stand.
-        "item's sub-agent observations (items 3, 5, 7, 8, and 9 on a row a clause routed) all name the **same** revision",
+        // Item 9 is in the set whatever it answered: `n/a (not UI-affecting)` is
+        // a claim about the tree too, so a checkpoint re-fix that adds a UI path
+        // makes it false exactly as it makes a stale PASS false.
+        "item's sub-agent observations (items 3, 5, 7, 8 and 9 — item 9 whatever it answered, since `n/a (not UI-affecting)` is a claim about the tree too) all name the **same** revision",
       );
       expect(flat(await read(tree, REFERENCE))).toContain(
-        "An item's verdicts (gate items 3, 5, 7, 8, and 9 on a row a UI-affecting clause routed) MUST all name the **same** revision.",
+        "An item's verdicts (gate items 3, 5, 7, 8 and 9) MUST all name the **same** revision.",
       );
+      // The clause-scoped form exempted exactly the rows that most need it.
+      expect(skill).not.toContain("and 9 on a row a clause routed");
     });
 
     it(`${tree}: staleness is defined mechanically`, async () => {
