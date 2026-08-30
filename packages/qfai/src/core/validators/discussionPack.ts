@@ -4,6 +4,7 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { inspectLatestDiscussionPack } from "../discussionPack.js";
+import { hasImportLiteEvidence } from "./importLite.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
@@ -52,6 +53,18 @@ export async function validateDiscussionPackReadiness(
   }
 
   if (!readiness.latestPackDir || !readiness.latestPackName) {
+    // The import-lite route deliberately has no pack: `/qfai-sdd` Stage 0
+    // takes it when specs exist and no discussion directory does, and records
+    // the input source as `.qfai/evidence/import-lite-<ts>.md` instead. The
+    // shipped `qfai init` CI runs `--profile full --fail-on error`, so
+    // reporting the absent pack here failed the build of every spec set that
+    // documented route produces. Exactly one validator owns the "is there an
+    // input source" question, and on this branch it is
+    // `validateImportLiteEvidencePresence` (`QFAI-IMPLITE-001`) — which still
+    // fires when the evidence is missing too.
+    if (await hasImportLiteEvidence(root, config)) {
+      return issues;
+    }
     issues.push(
       issue(
         "QFAI-DPACK-001",

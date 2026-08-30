@@ -10,6 +10,7 @@
 ```gherkin
 # AC-0001
 # Source: discussion-YYYYMMDDhhmmssSSS#DAC-001-01
+# (imported spec set, no pack: import-lite-YYYYMMDDTHHmmss#REQ-XXXX)
 Scenario: <scenario title>
   Given <precondition>
   When <action>

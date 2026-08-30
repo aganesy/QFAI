@@ -97,7 +97,10 @@ and that none were added or dropped — in the `Rationale` column of the
 1. Latest discussion-pack `06_REQ.md` / `07_NFR.md` / `99_delta.md`.
    **Import-lite exception** — when Stage 0 took the missing-pack route
    (specs present, no discussion pack at all), input 1 is instead the
-   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md`: its
+   evidence file it wrote, `.qfai/evidence/import-lite-<ts>.md` — that
+   path at the default config; on a project that moved
+   `paths.discussionDir`, read the `evidence/` sibling of the _resolved_
+   directory instead, or the evidence Stage 0 just wrote is not found. Its
    `## Sources` and `## User provided excerpt` are the canonical REQ/NFR
    intake for this run, and its `## Assumptions / Missing information`
    items become Open Questions on whichever spec each row lands on.
@@ -113,7 +116,10 @@ and that none were added or dropped — in the `Rationale` column of the
    here, and never invent a discussion ID for a pack that does not exist.
 2. `_policies/03_Capabilities.md` (CAP catalog).
 3. `_policies/11_Slice-Policy.md` (operation rules + size thresholds).
-4. Active spec summaries from `01_Spec.md` headers across `.qfai/specs/spec-*`.
+4. Active spec summaries from `01_Spec.md` headers across `<paths.specsDir>/spec-*`
+   (`.qfai/specs/spec-*` at the default). Read the resolved path: on a project
+   that moved `paths.specsDir`, a fixed `.qfai/specs` enumerates nothing and every
+   append-first REQ is misclassified as CREATE.
 
 ## Procedure
 

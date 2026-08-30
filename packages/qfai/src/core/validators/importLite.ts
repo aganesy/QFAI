@@ -8,7 +8,30 @@ import { collectSpecEntries } from "../specLayout.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 
-const IMPORT_LITE_EVIDENCE_RE = /^import-lite-.*\.md$/i;
+/**
+ * `import-lite-<YYYYMMDDTHHmmss>[-<n>].md`, and nothing looser.
+ *
+ * The run stamp is the whole point of the name: the shipped procedure derives
+ * it from the wall clock and appends `-<n>` only to break a same-second
+ * collision. A `.*` tail also accepted `import-lite-.md` and the literal
+ * `import-lite-<ts>.md` — an unreplaced placeholder — either of which silences
+ * `QFAI-IMPLITE-001` while recording no run at all.
+ */
+const IMPORT_LITE_EVIDENCE_RE = /^import-lite-\d{8}T\d{6}(?:-\d+)?\.md$/i;
+
+/**
+ * True when the project carries an import-lite evidence file — the input
+ * source a spec set built with no discussion pack is allowed to have.
+ *
+ * Shared with `validateDiscussionPackReadiness`, which must not report a
+ * missing pack on that route: the shipped `qfai init` CI runs
+ * `--profile full --fail-on error`, so a `QFAI-DPACK-001` there fails the
+ * build of every imported spec set the documented route produces.
+ */
+export async function hasImportLiteEvidence(root: string, config: QfaiConfig): Promise<boolean> {
+  const discussionRoot = resolvePath(root, config, "discussionDir");
+  return existsImportLiteEvidence(path.join(path.dirname(discussionRoot), "evidence"));
+}
 
 export async function validateImportLiteEvidencePresence(
   root: string,
@@ -31,9 +54,7 @@ export async function validateImportLiteEvidencePresence(
     return [];
   }
 
-  const evidenceRoot = path.join(path.dirname(discussionRoot), "evidence");
-  const hasImportLiteEvidence = await existsImportLiteEvidence(evidenceRoot);
-  if (hasImportLiteEvidence) {
+  if (await hasImportLiteEvidence(root, config)) {
     return [];
   }
 
@@ -49,7 +70,7 @@ export async function validateImportLiteEvidencePresence(
       [
         "次のいずれかを実施してください:",
         "- `.qfai/discussion/discussion-*/06_REQ.md` を用意する",
-        "- `.qfai/evidence/import-lite-<ts>.md` を生成する",
+        "- `.qfai/evidence/import-lite-<YYYYMMDDTHHmmss>.md` を生成する",
       ].join("\n"),
     ),
   ];

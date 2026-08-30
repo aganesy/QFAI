@@ -336,9 +336,13 @@ for preflight, never requirement/spec SSOT — carry unresolved items into the s
 
 This route is the agent-driven Stage 0 only; the packaged `runSddPreflight` API does not implement
 it. That function reports a missing pack as a blocker and always stamps `source: discussion-pack`,
-so it cannot take this branch — write `.qfai/report/preflight_summary.md` by hand here, with
+so it cannot take this branch — write the preflight summary by hand here, with
 `source: import-lite` and the evidence path on the `import-lite evidence:` line, so the summary
-names its real input source instead of a pack that does not exist.
+names its real input source instead of a pack that does not exist. Write it to
+`<paths.outDir>/preflight_summary.md` — `.qfai/report/preflight_summary.md` only when
+`qfai.config.yaml` leaves `paths.outDir` at its default. A project that moved it keeps every other
+report under the resolved directory, and a hand-written summary in the old place is a second,
+unread one.
 
 On this route Stage 1 has no pack to read, so it takes its REQ/NFR intake from that evidence file
 instead: the `## Sources` and `## User provided excerpt` it records stand in for `06_REQ.md` /

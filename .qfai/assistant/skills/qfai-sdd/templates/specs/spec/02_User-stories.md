@@ -7,7 +7,7 @@
 ## US-0001: <title>
 
 - Parent: CAP-XXXX
-- Source: discussion-YYYYMMDDhhmmssSSS#DUS-XXX <!-- originating pack + story ID, or `-` if none -->
+- Source: discussion-YYYYMMDDhhmmssSSS#DUS-XXX <!-- pack route: originating pack + story ID. Imported spec set (no pack): import-lite-YYYYMMDDTHHmmss#REQ-XXXX. `-` only when neither route produced this item. -->
 - Goal: <goal>
 - Non-goals: <non-goal>
 - Notes: <notes>

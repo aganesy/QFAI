@@ -21,6 +21,7 @@ import { fileURLToPath } from "node:url";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { validateProject } from "../../src/core/validate.js";
 import { validateImportLiteEvidencePresence } from "../../src/core/validators/importLite.js";
 
 // tests/assets/<this file> -> tests -> packages/qfai -> packages -> repo root
@@ -239,5 +240,63 @@ describe("qfai-sdd documents who produces import-lite evidence", () => {
 
   it("fires when the evidence directory holds nothing at all", async () => {
     expect(await importLiteCodes(null)).toContain("QFAI-IMPLITE-001");
+  });
+
+  // The run stamp is the whole point of the name. A `.*` tail accepted an
+  // empty one and an unreplaced placeholder, either of which silences the
+  // finding while recording no run.
+  for (const name of [
+    "import-lite-.md",
+    "import-lite-<ts>.md",
+    "import-lite-notatimestamp.md",
+    "import-lite-20260822.md",
+  ]) {
+    it(`still fires for the stampless name ${name}`, async () => {
+      expect(await importLiteCodes(name)).toContain("QFAI-IMPLITE-001");
+    });
+  }
+
+  it("accepts the collision-suffixed form the procedure produces", async () => {
+    expect(await importLiteCodes("import-lite-20260822T090000-2.md")).not.toContain(
+      "QFAI-IMPLITE-001",
+    );
+  });
+});
+
+describe("the detector is reachable from the public validate profiles", () => {
+  it("reports QFAI-IMPLITE-001 through validateProject --profile sdd", async () => {
+    // The detector had no caller in production at all, so a spec change with
+    // neither a pack nor import-lite evidence passed the gate the shipped
+    // skill points at.
+    const result = await validateProject(root, undefined, { profile: "sdd" });
+    expect(result.issues.map((entry) => entry.code)).toContain("QFAI-IMPLITE-001");
+  });
+
+  it("goes quiet through the profile once the evidence exists", async () => {
+    await writeFile(
+      path.join(root, ".qfai/evidence/import-lite-20260822T090000.md"),
+      "# Evidence: import-lite\n",
+      "utf-8",
+    );
+    const result = await validateProject(root, undefined, { profile: "sdd" });
+    expect(result.issues.map((entry) => entry.code)).not.toContain("QFAI-IMPLITE-001");
+  });
+
+  it("does not fail the full profile on the missing pack this route has by design", async () => {
+    // `qfai init` ships CI running `--profile full --fail-on error`, so a
+    // QFAI-DPACK-001 here failed the build of every imported spec set.
+    const before = await validateProject(root, undefined, { profile: "full" });
+    expect(before.issues.map((entry) => entry.code)).toContain("QFAI-DPACK-001");
+
+    await writeFile(
+      path.join(root, ".qfai/evidence/import-lite-20260822T090000.md"),
+      "# Evidence: import-lite\n",
+      "utf-8",
+    );
+
+    const after = await validateProject(root, undefined, { profile: "full" });
+    const codes = after.issues.map((entry) => entry.code);
+    expect(codes).not.toContain("QFAI-DPACK-001");
+    expect(codes).not.toContain("QFAI-IMPLITE-001");
   });
 });

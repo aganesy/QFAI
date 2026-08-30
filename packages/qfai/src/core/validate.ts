@@ -37,6 +37,7 @@ import {
   validateContractReferences,
   validateDesignToken,
   validateDiscussionPackReadiness,
+  validateImportLiteEvidencePresence,
   validateDiscussionVisuals,
   validateDensityHints,
   validateHtmlMock,
@@ -387,6 +388,10 @@ async function runSddValidators(
     ...(await validateNavigationFlow(root, config)),
     ...(await validateWorklogSurface(root, config)),
     ...(await validateAssistantTreeMigration(root, config)),
+    // Input-source presence for a spec set built with no discussion pack.
+    // The detector had no caller at all, so a spec change with neither a pack
+    // nor import-lite evidence passed the gate the shipped skill points at.
+    ...(await validateImportLiteEvidencePresence(root, config)),
     ...(await validateSkillDocReferences(root, config)),
     ...(await validateReviewerJustification(root, config)),
     ...(await validateReviewerGate(root, config)),
