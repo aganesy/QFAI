@@ -23,6 +23,16 @@
  * the parity hash with no defined extent to recompute; and the same-revision
  * rule (`references/evidence-revision.md`) covered the GREEN and "the two
  * reviews", so a parity PASS taken before the UI moved stayed fresh.
+ *
+ * A fourth followed from defining that subject: it hashes "the surface
+ * artifacts the row's entry names", but no field in the phase-authored contract
+ * ever made the entry name one. A conforming UI row therefore named none, fell
+ * into "a row with no such artifact has no extra record", and had its parity
+ * verdict hashed over fields alone — so the screenshots it PASSed on could be
+ * replaced with `Reviewed revision` (which excludes `.qfai/evidence/**`) and
+ * `Audited evidence hash` both unmoved, and item 10 still passing. The manifest
+ * is now a required phase-authored field, named once and read by the reviewer
+ * and the gate alike, and an entry without it is refused at the gate.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -51,6 +61,25 @@ function lineWith(text: string, needle: string): string {
   const line = text.split(/\r?\n/).find((candidate) => candidate.includes(needle));
   expect(line, `no line contains ${JSON.stringify(needle)}`).toBeDefined();
   return line ?? "";
+}
+
+const PHASE_AUTHORED_HEADING = "**Phase-authored (written before the reviewer gate, items 7-8):**";
+const GATE_COMPLETED_HEADING = "**Gate-completed (appended after items 7-8 return PASS):**";
+
+/**
+ * The phase-authored half of the per-item evidence contract.
+ *
+ * Sliced, not searched whole: the write point is the property under test. A
+ * manifest named only in the gate-completed half would be written after the
+ * reviewers have hashed, which puts it in no audit subject and re-opens the
+ * same hole from the other side.
+ */
+function phaseAuthoredContract(skill: string): string {
+  const start = skill.indexOf(PHASE_AUTHORED_HEADING);
+  const end = skill.indexOf(GATE_COMPLETED_HEADING);
+  expect(start, "phase-authored heading missing").toBeGreaterThan(-1);
+  expect(end, "gate-completed heading missing").toBeGreaterThan(start);
+  return flat(skill.slice(start, end));
 }
 
 describe("prototype parity is recorded, not merely required", () => {
@@ -137,6 +166,58 @@ describe("prototype parity is recorded, not merely required", () => {
       expect(revision).toContain("**A UI-affecting row has a fifth: gate item 9**");
       expect(revision).toContain("must equal `Revision`");
       expect(revision).not.toContain("leaves `Revision` for the GREEN and the two reviews");
+    });
+
+    it(`${tree}: a UI-affecting row must name its surface artifacts before the review`, async () => {
+      // The subject can only hash artifacts the entry names. Without a field
+      // that makes it name them, every conforming UI entry named none and the
+      // parity hash was taken over fields alone.
+      const contract = phaseAuthoredContract(await readSkill(tree));
+
+      expect(contract).toContain("`Surface artifacts`");
+      expect(contract).toContain("UI-affecting row");
+      expect(contract).toContain("`.qfai/evidence/**`");
+    });
+
+    it(`${tree}: completion is refused when the manifest is absent or empty`, async () => {
+      // Required-but-unenforced is the same hole with a field in it: the gate
+      // has to reject the entry, and it has to reject an empty manifest too,
+      // which is otherwise indistinguishable from a row that legitimately has
+      // no artifact.
+      const prohibition = lineWith(
+        await readSkill(tree),
+        "single blocking statement about the evidence file",
+      );
+
+      expect(prohibition).toContain("`Surface artifacts`");
+      expect(prohibition).toContain("no path under it");
+    });
+
+    it(`${tree}: reviewer and gate read one named manifest, not two readings`, async () => {
+      // Structural half of the fix: the subject, the serialize step and the
+      // skill all name the same field, so the reviewer's list and gate item
+      // 10's list cannot be two different sets of files.
+      const delegation = flat(await readAsset(tree, DELEGATION_REL));
+
+      expect(delegation).toContain("row's phase-authored `Surface artifacts` manifest names");
+      expect(delegation).toContain("the entry's `Surface artifacts` manifest names");
+      expect(flat(await readSkill(tree))).toContain(
+        "this row's phase-authored `Surface artifacts` manifest names",
+      );
+    });
+
+    it(`${tree}: the empty-manifest escape is closed, the prototype exclusion kept`, async () => {
+      const delegation = flat(await readAsset(tree, DELEGATION_REL));
+
+      // The sentence that made the record class vacuous for a conforming row.
+      expect(delegation).not.toContain("A row with no such artifact has no extra record");
+      expect(delegation).toContain('has no "no such artifact" state');
+      // Over-correction pin: the fix must not start hashing the artifacts that
+      // sit inside the revision — `prototype-handoff.yaml` and the winner
+      // prototype are already pinned by `Reviewed revision`, and a second hash
+      // over them would stale this verdict on an unrelated prototype edit.
+      expect(delegation).toContain("contribute no record");
+      expect(delegation).toContain("`.qfai/contracts/design/prototype-handoff.yaml`");
     });
 
     it(`${tree}: the gate item the recording serves is still there`, async () => {
