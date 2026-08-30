@@ -67,9 +67,12 @@ describe.each(QFAI_TREES)("%s", (tree) => {
     expect(sdd).toContain("Contract-scoped (`/qfai-sdd --contract <CON-ID>`)");
     // The route also runs the Phase 2b API-row delta: a contract-only status
     // flip owes a new `Layer = API` row, or the retirement of a stale one, and
-    // Stage 0 + Phase 0 + Phase 4 alone ran no seeding phase at all.
+    // Stage 0 + Phase 0 + Phase 4 alone ran no seeding phase at all. Phase 2c
+    // joins it for a contract the delta finds no owner for — that is the only
+    // step able to name one, and without it an activation shipped a gate with
+    // no ledger row anywhere.
     expect(sdd).toContain(
-      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + Phase 4 (Delta update) only",
+      "Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only",
     );
   });
 

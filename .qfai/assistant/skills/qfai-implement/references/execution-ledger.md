@@ -79,7 +79,19 @@ by surface type **only in a project that declares at least one UI-bearing
 spec**. Where surface typing is unused the obligation stays project-wide, so
 every `US-*` is active and owes a row — reading that exemption unconditionally
 in such a project drops every E2E row and leaves the gate with nothing to
-clear it.
+clear it. And because that condition is a property of the **project**, a
+`/qfai-sdd` run that adds its first surface signal or removes its last re-runs
+the E2E-row delta over every spec's ledger, not only the spec it targeted.
+
+**A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red
+step 3b writes them.** Phase 2b seeds the row before the acceptance test exists
+and invents no path for it, and `/qfai-atdd` — which authors the test — never
+writes this ledger; so the path and selector first exist in that stage's handoff
+entry, as the row identity, and this skill copies both into the row in the same
+edit that moves it out of `todo`. That is why the `Test file` existence check
+below starts at `green` and not at `todo`: a seeded row legitimately has no test
+file yet. Naming no writer for the two cells left them at `-` for the row's
+whole life, so the row could be selected, handed over and never run.
 
 The binding is enforced in both directions: a `TC-*` on an E2E/API row raises
 `TDDLIST_OBLIGATION_LAYER_MISMATCH` and is **not** counted towards TC coverage,

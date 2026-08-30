@@ -187,7 +187,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 
 - With argument (`/qfai-sdd <spec-id-or-name> [--auto]`): update only the matched single spec target.
 - Without argument (`/qfai-sdd`): target all capabilities listed in `_policies/03_Capabilities.md`.
-- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. The Phase 2b delta runs after Phase 0, on the owner ledger only (Phase 2b's ownership rule below), and is scoped to this contract's row: a contract moved off `x-qfai-status: planned` becomes active and its `Layer = API` row is appended at `todo`, one moved back to `planned` or deleted has its row retired. Skipping it — the route did, running no seeding phase at all — left every contract-only status flip with a `QFAI-ATDD-113` gate and a ledger that disagree permanently, and no narrower rerun could fix it.
+- Contract-scoped (`/qfai-sdd --contract <CON-ID>`): run Stage 0 + Phase 0 (Contracts-first) + the **Phase 2b API-row delta** + **Phase 2c for a contract that delta finds no owner for** + Phase 4 (Delta update) only, against the named contract and the specs that reference it. This is the invocation `constitution/drift-protocol.md#when-drift-is-detected` step 4 names for a contract-class upstream artifact; without it, a contract-only Change Request had no rerun narrower than the whole spec. The Phase 2b delta runs after Phase 0, on the owner ledger only (Phase 2b's ownership rule below), and is scoped to this contract's row: a contract moved off `x-qfai-status: planned` becomes active and its `Layer = API` row is appended at `todo`, one moved back to `planned` or deleted has its row retired. Skipping it — the route did, running no seeding phase at all — left every contract-only status flip with a `QFAI-ATDD-113` gate and a ledger that disagree permanently, and no narrower rerun could fix it. **An activation this route cannot give an owner does not go through.** Phase 2b defers a contract no spec names to Phase 2c, and this route ran none — so making an unreferenced contract active here left the repo-wide `QFAI-ATDD-113` firing with no ledger to hold the row and no later step that would ever resolve one. So when the delta finds no owner for a contract this run activates, run Phase 2c over the specs in scope to name it and re-run the delta for what it resolves; if no spec names it even then, **leave the contract at `x-qfai-status: planned`** and stop with that finding, so the activation waits for a spec-scoped run whose own Phase 2b / Phase 2c seeds the row.
 - Reordering capability-to-spec mapping is a Change Request decision and must not be done implicitly.
 
 ## Critical Constraints
@@ -218,6 +218,15 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    (obligation in `US-Refs`, `TC-Refs` = `-`), and one `Layer = API` row per
    **active** `CON-API-*` the spec **owns** (obligation in `CON-API-Refs`,
    `TC-Refs` = `-`); copy `templates/specs/spec/tdd/test-list.md` when absent.
+   **A seeded E2E/API row leaves `Test file` and `Selector` at `-`, and
+   `/qfai-implement` is what fills them.** The acceptance test does not exist
+   yet, so this phase must not invent a path for it; `/qfai-atdd` authors it and
+   never writes this ledger, so it records that test's own path and selector as
+   the row identity in its handoff entry, and `/qfai-implement` Phase Red step
+   3b writes both cells from that entry in the same edit that moves the row out
+   of `todo`. Naming no writer for them left both at `-` permanently — reaching
+   the `green` `Test file` existence check with no test to run, and gate item 10
+   with no identity to compare.
    Without the first group `/qfai-implement` starts with zero selectable items;
    without the other two the ledger cannot hold a `US-*` / `CON-API-*`
    obligation, so an all-`done` ledger reports complete beside a
@@ -231,6 +240,17 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    therefore active; exempting them there would leave a legacy project with no
    E2E row and a failing gate. Seeding a genuinely exempt obligation parks a
    completion-prohibiting row on a test that must not be written.
+   **A surface-typing flip re-runs the E2E delta over every spec.** That
+   precondition is a property of the **project**, not of the target, so a run
+   that adds the project's **first** surface signal — or removes its **last** —
+   moves every other spec's `US-*` across the active/exempt line while this
+   phase otherwise touches the target spec alone. When this run flips it, apply
+   the E2E-row delta to **every** spec's ledger: losing the last signal returns
+   `QFAI-ATDD-111` to project-wide, so each non-target spec now owes E2E rows it
+   has none of, and gaining the first one makes the specs with no surface signal
+   exempt, so their existing E2E rows must be retired. Left at the target only,
+   the flip yields either a gate no ledger can clear or `todo` rows on tests
+   that must not be written — in every spec but one.
    **Ownership of an API row** is mechanical, because `.qfai/contracts/**` has
    no spec owner in the model: a spec owns a `CON-API-*` its own
    `spec-*/01..10` / `16_*` files name, and when more than one names it the
@@ -397,6 +417,6 @@ project_memory:
 
 - Phase order is fixed: Stage 0 Preflight → Stage 1 Triage → Phase 0 Contracts-first → Phase 1 Outline → Phase 2 Slice → Phase 2b Seed tdd/test-list.md → Phase 2c Obligation reconciliation → Phase 3 Plan finalize → Phase 4 Delta update; do not reorder.
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
-- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md`, one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
+- Phase 2b seeds each target spec's tdd/test-list.md in three groups, all Status = todo: one row per coverage-target TC from `06_Test-Cases.md`, one `Layer = E2E` row per active `US-*` (US-Refs), one `Layer = API` row per active `CON-API-*` the spec owns (CON-API-Refs); "active" is the catalog/test-layers.md exemption (no user-facing surface / x-qfai-status: planned). The surface exemption applies only when the project declares at least one UI-bearing spec; with surface typing unused every `US-*` is active, because QFAI-ATDD-111 stays project-wide. That precondition is project-wide, so a run that adds the project's first surface signal or removes its last re-runs the E2E-row delta over every spec's ledger, not the target's alone. A seeded E2E/API row carries `-` in Test file and Selector — the test does not exist yet, `/qfai-atdd` never writes this ledger, and `/qfai-implement` Phase Red step 3b writes both cells from that stage's handoff entry when it advances the row. A spec owns a `CON-API-*` named by its own `spec-*/01..10` or `16_*` files, the lowest-numbered spec wins when several name it, and an unnamed contract gets no row yet. It is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence. The API-row delta is re-run twice more: at the end of Phase 2c for every contract that gained an owner there (Phase 2b runs once, before it), and on the `--contract` route after Phase 0, which otherwise ran no seeding phase and left every `x-qfai-status` flip out of sync; that route runs Phase 2c itself for a contract it activates with no owner, and leaves the contract at `x-qfai-status: planned` when even that names none, rather than shipping a gate no ledger can clear. The same pass migrates an eight-column ledger: add `US-Refs` / `CON-API-Refs` to the header and move the `US-*` / `CON-API-*` its E2E/API rows kept in `TC-Refs` into the column their `Layer` owns.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
 - Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.

@@ -262,6 +262,124 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(bullet).not.toMatch(/Phase 0 \(Contracts-first\) \+ Phase 4/);
     });
 
+    it(`${tree}: the --contract route resolves an owner or leaves the contract planned`, async () => {
+      // Phase 2b defers an unowned `CON-API-*` to Phase 2c, and this route ran
+      // no Phase 2c — so activating a contract no spec names left the repo-wide
+      // `QFAI-ATDD-113` firing with no ledger to hold the row and no later step
+      // that would ever resolve one.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      const route = skill.slice(skill.indexOf("- Contract-scoped (`/qfai-sdd --contract"));
+      const bullet = route.slice(0, route.indexOf("\n-"));
+      expect(bullet).toContain("**Phase 2c for a contract that delta finds no owner for**");
+      expect(bullet).toContain(
+        "**An activation this route cannot give an owner does not go through.**",
+      );
+      expect(bullet).toContain("**leave the contract at `x-qfai-status: planned`**");
+      // The phase list must no longer end at the delta: that shape is what
+      // skipped the only step able to name an owner.
+      expect(bullet).not.toMatch(/\*\*Phase 2b API-row delta\*\* \+ Phase 4/);
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory does not state the unowned-activation stop").toContain(
+        "leaves the contract at `x-qfai-status: planned` when even that names none",
+      );
+    });
+
+    it(`${tree}: a surface-typing flip re-runs the E2E delta over every spec`, async () => {
+      // The exemption's precondition is project-wide, but Phase 2b applies its
+      // delta to the target spec only. Adding the project's first surface
+      // signal (or removing its last) therefore moved every other spec's `US-*`
+      // across the active/exempt line with no pass that would reconcile them.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toContain("**A surface-typing flip re-runs the E2E delta over every spec.**");
+      expect(skill).toMatch(/apply\s+the E2E-row delta to \*\*every\*\* spec's ledger/);
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory does not state the project-wide re-run").toContain(
+        "re-runs the E2E-row delta over every spec's ledger",
+      );
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "**A surface-typing flip re-runs the E2E delta over every spec.**",
+      );
+
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toMatch(/re-runs\s+the E2E-row delta over every spec's ledger/);
+    });
+
+    it(`${tree}: a seeded acceptance row names the writer of Test file and Selector`, async () => {
+      // Phase 2b seeds the row before the test exists, `/qfai-atdd` authors the
+      // test but never writes this ledger, and the RED handoff needs the row
+      // identity — so with no writer named the two cells stayed `-` for good.
+      const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
+      expect(skill).toMatch(
+        /seeded E2E\/API row leaves `Test file` and `Selector` at `-`, and\s+`\/qfai-implement` is what fills them/,
+      );
+
+      const memory = skill.slice(skill.indexOf("project_memory:"));
+      expect(memory, "project_memory does not name the writer").toContain(
+        "`/qfai-implement` Phase Red step 3b writes both cells",
+      );
+
+      const checklists = await read(
+        tree,
+        "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
+      );
+      expect(checklists).toContain(
+        "**`Test file` and `Selector` are seeded as `-` on an E2E/API row, and `/qfai-implement` fills them.**",
+      );
+
+      // The template is what a Phase 2b recovery copies, so it must carry the
+      // same contract.
+      const template = await read(tree, TEMPLATE);
+      expect(template).toMatch(
+        /`Test file` and `Selector` start at `-`, and\s+`\/qfai-implement` fills them/,
+      );
+
+      // The writer itself, and the identity copy the reviewers hash.
+      const implement = await read(tree, "assistant/skills/qfai-implement/SKILL.md");
+      expect(implement).toContain("this step is the writer that fills them");
+      expect(implement).toContain(
+        "on a Phase 2b-seeded acceptance row those two cells are still `-` there",
+      );
+
+      // The producer of the values: the authored test, not a copy of the `-`.
+      const atdd = await read(tree, "assistant/skills/qfai-atdd/SKILL.md");
+      expect(atdd).toContain("record the path and selector of the test **this run authored**");
+
+      const provenance = await read(
+        tree,
+        "assistant/skills/qfai-atdd/references/red-provenance.md",
+      );
+      expect(provenance).toMatch(
+        /the identity comes from the authored test, not from\s+the ledger/,
+      );
+
+      const ledger = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/execution-ledger.md",
+      );
+      expect(ledger).toMatch(
+        /\*\*A seeded acceptance row's `Test file` and `Selector` are `-` until Phase Red\s+step 3b writes them\.\*\*/,
+      );
+
+      // A manual recovery must not invent a path the handoff will contradict.
+      const preconditions = await read(
+        tree,
+        "assistant/skills/qfai-implement/references/ledger-preconditions.md",
+      );
+      expect(preconditions).toMatch(
+        /Leave `Test file` and `Selector` at `-` on a restored acceptance row/,
+      );
+    });
+
     it(`${tree}: an eight-column ledger is migrated, not only waived`, async () => {
       // The empty-obligation-cell check fires only where the column exists, so
       // a legacy ledger validates. Its E2E/API rows kept the obligation in

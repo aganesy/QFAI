@@ -38,6 +38,12 @@ into the spec directory — its header already carries `US-Refs` and
 - one `Layer = API` row per **active** `CON-API-*` this spec owns (obligation in
   `CON-API-Refs`, `TC-Refs` = `-`).
 
+Leave `Test file` and `Selector` at `-` on a restored acceptance row whose test
+does not exist yet, exactly as Phase 2b seeds them, and restore the recorded
+values where it does: Phase Red step 3b writes those two cells from the
+`/qfai-atdd` handoff entry, so inventing a path here puts a value in the ledger
+that no test answers to.
+
 Deriving from `06_Test-Cases.md` alone reproduces the exact gap this recovery
 exists to close: the acceptance rows never come back, and `/qfai-implement`
 processes no acceptance item while `QFAI-ATDD-111` / `QFAI-ATDD-113` stay red.

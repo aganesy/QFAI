@@ -264,6 +264,16 @@ Every branch carries the row identity and the obligation reference: the audit
 subject hashes them and the gatekeeper judges before `/qfai-implement` can add
 anything, so recorded later they move a stored hash and left out they can be repointed.
 
+**On a Phase 2b-seeded row the identity comes from the authored test, not from
+the ledger.** That row was seeded before any test existed, so its `Test file`
+and `Selector` cells are `-`; record the path and selector of the test this
+stage wrote, which is the only place they exist yet. `/qfai-implement` Phase Red
+step 3b writes both from this entry into the ledger in the same edit that
+advances the row, so gate item 10 then compares two equal values. Copying the
+`-` instead leaves the row with no writer for those cells at all — nothing later
+in the chain authors the test, and the `green` existence check has no path to
+check.
+
 **Where each form lives.** The `## Ledger rows advanced` table is an index: one
 row per `TDD-*`, holding the branch and an anchor. The commands and their output
 go in that row's own `### TDD-NNNN` section, in fenced blocks. They cannot go in

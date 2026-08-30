@@ -51,6 +51,16 @@ normally delivered by this spec's own TC rows, so an E2E/API row is a coverage
 obligation rather than the sole carrier of a feature. `/qfai-atdd` does not write to
 this ledger.
 
+**A seeded E2E/API row's `Test file` and `Selector` start at `-`, and
+`/qfai-implement` fills them.** The acceptance test does not exist when Phase 2b
+runs, so that phase invents no path for it. `/qfai-atdd` writes the test and
+records its path and selector as the row identity in its handoff entry — the one
+place they exist before this ledger has them — and `/qfai-implement` Phase Red
+step 3b copies both into the row in the same edit that moves it out of `todo`.
+Naming no writer for the two cells left them at `-` for the row's whole life:
+the `green` existence check has no test to run, and the reviewer's identity
+check has nothing to compare.
+
 Reseeding is a **delta**, never a regeneration: an unchanged TC's row keeps its
 `TDD-ID`, `Status`, `Test file`, `Selector`, `DR-ID` and `Evidence`, and TCs
 with no row yet are appended at `Status = todo`. Rewriting a row that has
