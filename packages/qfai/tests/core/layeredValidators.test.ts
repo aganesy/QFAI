@@ -81,6 +81,113 @@ describe("v1.4.36 layered validators", () => {
     }
   });
 
+  it("ignores an illustrative CAP Catalog heading inside a fenced sample", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+        preamble: [
+          "旧フォーマットの例:",
+          "",
+          "```markdown",
+          "## CAP Catalog",
+          "",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0001 | example |",
+          "```",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores an illustrative CAP Catalog heading inside an HTML comment", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002", "CAP-0003"], {
+        preamble: [
+          "<!--",
+          "## CAP Catalog",
+          "",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0001 | example |",
+          "-->",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+      await seedSpec(root, "0003", "CAP-0003");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("ignores a fenced CAP mention in the whole-file fallback", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001"]);
+      await writeFile(
+        path.join(root, ".qfai", "specs", "_policies", "03_Capabilities.md"),
+        [
+          "# 03 Capabilities",
+          "",
+          "- CAP-0001: capability",
+          "",
+          "## Example",
+          "",
+          "```markdown",
+          "- CAP-0009: 追加するときはこの形式で書く",
+          "```",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+      await seedSpec(root, "0001", "CAP-0001");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  // Over-correction pin: masking must not blank or truncate the real catalog
+  // when the document illustrates its own format after it.
+  it("still reads the real catalog when a fenced sample follows it", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
+    try {
+      await seedPolicies(root, ["CAP-0001", "CAP-0002"], {
+        trailingSection: [
+          "## Example",
+          "",
+          "```markdown",
+          "| CAP ID | Statement |",
+          "| ------ | --------- |",
+          "| CAP-0009 | example |",
+          "```",
+        ],
+      });
+      await seedSpec(root, "0001", "CAP-0001");
+      await seedSpec(root, "0002", "CAP-0002");
+
+      const issues = await validateSpecSplitByCapability(root, defaultConfig);
+      expect(issues).toEqual([]);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps column positions when an earlier cell holds an escaped pipe", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-layered-"));
     try {
@@ -201,7 +308,12 @@ describe("v1.4.36 layered validators", () => {
 async function seedPolicies(
   root: string,
   capIds: string[],
-  options: { prose?: string; notes?: Record<string, string>; trailingSection?: string[] } = {},
+  options: {
+    prose?: string;
+    preamble?: string[];
+    notes?: Record<string, string>;
+    trailingSection?: string[];
+  } = {},
 ): Promise<void> {
   const policiesDir = path.join(root, ".qfai", "specs", "_policies");
   await mkdir(policiesDir, { recursive: true });
@@ -215,6 +327,7 @@ async function seedPolicies(
       "# 03 Capabilities",
       "",
       ...(options.prose ? [options.prose, ""] : []),
+      ...(options.preamble ? [...options.preamble, ""] : []),
       "## CAP Catalog",
       "",
       "| CAP ID | Statement | Success metrics | Notes |",

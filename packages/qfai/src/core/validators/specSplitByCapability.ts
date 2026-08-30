@@ -3,7 +3,11 @@ import path from "node:path";
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
-import { type MarkdownTable, parseAllMarkdownTables } from "../specPackParsers.js";
+import {
+  maskNonSpecRegions,
+  type MarkdownTable,
+  parseAllMarkdownTables,
+} from "../specPackParsers.js";
 import type { Issue } from "../types.js";
 import { exists, issue, readSafe, to4, uniqueMatches } from "./utils.js";
 
@@ -56,10 +60,13 @@ function hasCapIdColumn(table: MarkdownTable): boolean {
  * list) cannot contribute rows. Without the heading — older policy files — the
  * first `CAP ID`-bearing table anywhere in the document is used, and failing
  * that the first table at all, which is what the column-0 default assumes.
+ *
+ * Takes text already passed through `maskNonSpecRegions`, so an illustrative
+ * heading or table cannot win either resolution step.
  */
-function resolveCatalogTable(text: string): MarkdownTable | null {
-  const section = extractCapCatalogSection(text);
-  const tables = parseAllMarkdownTables(section ?? text);
+function resolveCatalogTable(maskedText: string): MarkdownTable | null {
+  const section = extractCapCatalogSection(maskedText);
+  const tables = parseAllMarkdownTables(section ?? maskedText);
   return tables.find(hasCapIdColumn) ?? tables[0] ?? null;
 }
 
@@ -76,8 +83,17 @@ function findCapIdColumn(headers: string[]): number {
  * (`parseAllMarkdownTables` 経由) に任せるので、セル内のエスケープ済み `\|`
  * で列位置がずれることはない。テーブルから 1 件も取れない場合のみ、旧挙動である
  * ファイル全体走査に落とす (箇条書きだけで CAP を並べた既存プロジェクト用)。
+ *
+ * 見出し探索・表の解析・全体走査フォールバックはいずれも、fenced code block /
+ * HTML コメント / インデントコードを `maskNonSpecRegions` で伏せた同一のテキスト
+ * に対して行う (`resolveTestCaseTable` と同じ手順)。この文書は自分自身の書式を
+ * 例示することがあり、伏せずに探すと実カタログより前に置かれた例示の見出しが
+ * 節の開始点に選ばれ、直後の実見出しでその節が閉じてしまう。旧実装の全体走査は
+ * 重複を除いたので例示は実カタログの前置きとして吸収されたが、節ベースの解決では
+ * 例示がカタログそのものを置き換え、CAP 件数と割り当て順が壊れる。
  */
-function extractCatalogCapIds(text: string): string[] {
+function extractCatalogCapIds(rawText: string): string[] {
+  const text = maskNonSpecRegions(rawText);
   const table = resolveCatalogTable(text);
   const capIds: string[] = [];
   if (table) {
