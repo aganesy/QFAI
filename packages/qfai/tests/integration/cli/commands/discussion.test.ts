@@ -8,7 +8,7 @@
 // QFAI:SPEC-0010:TC-0010-0012
 // QFAI:SPEC-0010:TC-0010-0013
 
-import { mkdir, mkdtemp, rm } from "node:fs/promises";
+import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -254,5 +254,49 @@ describe("discussion use confirms the write and flags an unmatched id", () => {
     const err = cap.err.join("\n");
     expect(err).toMatch(/not-even-a-discussion-id/);
     expect(err).toMatch(/does not match an existing discussion-\* dir/);
+  });
+
+  it("stays silent about a real id when the discussion root cannot be read", async () => {
+    // `findPacks` answers [] for an unreadable root as well as an empty one,
+    // so the note used to claim a pack it never saw does not exist. Staged as
+    // a file where the directory belongs: readdir answers ENOTDIR, a
+    // non-ENOENT failure on every platform and not defeated by running as
+    // root.
+    const discussionRoot = path.join(root, ".qfai", "discussion");
+    await rm(discussionRoot, { recursive: true, force: true });
+    await mkdir(path.dirname(discussionRoot), { recursive: true });
+    await writeFile(discussionRoot, "not a directory\n", "utf-8");
+
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "use",
+      id: "discussion-20260527075558258",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+
+    // The write still succeeds — the note is best effort — but it must not
+    // assert anything about packs it could not enumerate.
+    expect(code).toBe(0);
+    expect(await readDiscussionCurrentId(root)).toBe("discussion-20260527075558258");
+    expect(cap.err.join("\n")).toBe("");
+  });
+
+  it("still notes an unmatched id when the discussion root is simply absent", async () => {
+    // ENOENT is the one read failure that really does mean "no candidates".
+    await rm(path.join(root, ".qfai", "discussion"), { recursive: true, force: true });
+
+    const cap = capture();
+    const code = await runDiscussion({
+      root,
+      action: "use",
+      id: "discussion-20260527075558258",
+      write: cap.write,
+      writeErr: cap.writeErr,
+    });
+
+    expect(code).toBe(0);
+    expect(cap.err.join("\n")).toMatch(/does not match an existing discussion-\* dir/);
   });
 });

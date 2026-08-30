@@ -1,6 +1,8 @@
+import { readdir } from "node:fs/promises";
 import path from "node:path";
 
 import { loadConfig } from "../../core/config.js";
+import { isEnoent } from "../../core/fs/errno.js";
 import { findPacks } from "../../core/packLocator.js";
 import { readDiscussionCurrentId, writeDiscussionCurrentId } from "../../core/state.js";
 import { error, info } from "../lib/logger.js";
@@ -33,6 +35,20 @@ async function resolveDiscussionRoot(root: string): Promise<string> {
 }
 
 async function listCandidateDirs(discussionRoot: string): Promise<string[]> {
+  // `findPacks` answers `[]` for a root it could not read as well as for one
+  // that is genuinely empty, and the caller turns `[]` into "does not match an
+  // existing discussion-* dir" — a claim about packs it never saw. Probe the
+  // directory first so the two cases separate: an absent root really has no
+  // candidates and the note is accurate, while an EACCES or an I/O error
+  // throws and the caller drops the note instead of misreporting a real id.
+  try {
+    await readdir(discussionRoot);
+  } catch (error: unknown) {
+    if (!isEnoent(error)) {
+      throw error;
+    }
+    return [];
+  }
   const packs = await findPacks(discussionRoot, "discussion");
   return packs.map((pack) => pack.name).sort((left, right) => left.localeCompare(right));
 }
