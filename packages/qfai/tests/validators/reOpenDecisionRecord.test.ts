@@ -87,7 +87,13 @@ function reOpen(fields: string[], options: { id?: string; decision?: string | nu
 }
 
 async function withSpec<T>(
-  files: { decisions?: string; delta?: string; policy?: string },
+  files: {
+    decisions?: string;
+    delta?: string;
+    policy?: string;
+    /** Extra `*_delta.md` files beside the canonical `09_delta.md`. */
+    extraDeltas?: Record<string, string>;
+  },
   fn: (root: string) => Promise<T>,
 ): Promise<T> {
   const root = path.join(
@@ -114,6 +120,9 @@ async function withSpec<T>(
       ["08_Open-questions.md", "# OQ\n"],
       ["09_delta.md", files.delta ?? DELTA_BASE],
     ] as const) {
+      await writeFile(path.join(specDir, name), body, "utf-8");
+    }
+    for (const [name, body] of Object.entries(files.extraDeltas ?? {})) {
       await writeFile(path.join(specDir, name), body, "utf-8");
     }
     return await fn(root);
@@ -780,6 +789,135 @@ describe("the ways past the gate the third review found", () => {
     ].join("\n");
     await withSpec(
       { decisions: reOpen(["- Re-opens: DR-0001-0001", APPROVED]), delta },
+      async (root) => {
+        const found = await codes(root);
+        expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+      },
+    );
+  });
+});
+
+describe("the ways past the gate the fourth review found", () => {
+  /** `DELTA_BASE` with the rejected candidate re-adopted under `## Adopted`. */
+  const READOPTED = DELTA_BASE.replace(
+    "## Adopted\n",
+    "## Adopted\n\n- Adopted: in-process cache\n- Why: the size bound landed\n",
+  );
+
+  /** The empty section skeleton, for deltas that put their fields elsewhere. */
+  const EMPTY_DELTA = [
+    "# 09 Delta",
+    "",
+    "## Change Summary",
+    "",
+    "- Change ID: DELTA-0001",
+    "",
+    "## Rationale",
+    "",
+    "## Candidates Considered",
+    "",
+    "## Adopted",
+    "",
+    "## Rejected",
+    "",
+  ].join("\n");
+
+  const REOPEN_DECISIONS = reOpen(["- Re-opens: DR-0001-0001", APPROVED]);
+
+  it("reports a re-open no `- Candidate:` block points back at", async () => {
+    // A lone back-reference at the head of `## Rejected` sits under no
+    // candidate at all. Collected flat it satisfied the record's back-reference
+    // while the candidate that was actually re-adopted carried none.
+    const delta = DELTA_BASE.replace(
+      "## Rejected\n",
+      `## Rejected\n\n- Re-opened by: ${RE_OPEN_ID}\n`,
+    );
+    await withSpec({ decisions: REOPEN_DECISIONS, delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-004");
+    });
+  });
+
+  it("still accepts a back-reference written under its own candidate", async () => {
+    await withSpec({ decisions: REOPEN_DECISIONS, delta: deltaFor(RE_OPEN_ID) }, async (root) => {
+      const found = await codes(root);
+      expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+    });
+  });
+
+  it("still reports an unbound back-reference that resolves to no record", async () => {
+    // Dropping the unbound references entirely would lose this: a
+    // `Re-opened by:` naming an id no record declares is still a dangling
+    // reference, whether or not a candidate owns it.
+    const delta = DELTA_BASE.replace(
+      "## Rejected\n",
+      "## Rejected\n\n- Re-opened by: DR-0009-0009\n",
+    );
+    await withSpec({ decisions: REOPEN_DECISIONS, delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-004");
+    });
+  });
+
+  it("collects sections whose ATX headings carry closing hashes", async () => {
+    // `## Rejected ##` is a `Rejected` heading in CommonMark — the trailing
+    // hashes are decoration. Reading them as part of the name let a delta keep
+    // empty plain sections and re-adopt the candidate in the decorated pair.
+    const delta = [
+      EMPTY_DELTA,
+      "## Adopted ##",
+      "",
+      "- Adopted: in-process cache",
+      "",
+      "## Rejected ##",
+      "",
+      "- Candidate: in-process cache",
+      "- Reason: unbounded growth",
+      "- DO NOT: reintroduce without a size bound",
+      "- Temptation: it is the shortest diff",
+      "",
+    ].join("\n");
+    await withSpec({ delta }, async (root) => {
+      expect(await codes(root)).toContain("QFAI-DECISION-006");
+    });
+  });
+
+  it("does not read a `### Adopted` under another section as the delta's", async () => {
+    // The contract names `## Adopted`. Matching on the heading name alone made
+    // an illustrative `### Adopted` under `## Notes` re-adopt the candidate.
+    const delta = [
+      DELTA_BASE,
+      "",
+      "## Notes",
+      "",
+      "### Adopted",
+      "",
+      "- Adopted: in-process cache",
+      "",
+    ].join("\n");
+    await withSpec({ delta }, async (root) => {
+      const found = await codes(root);
+      expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
+    });
+  });
+
+  it("validates the canonical delta beside a lexicographically earlier one", async () => {
+    // `resolveDeltaCandidates` sorts, so `entry.deltaPath` is `00_delta.md`
+    // here. Reading only that file left the re-adoption in the required
+    // `09_delta.md` outside every `QFAI-DECISION-*` check.
+    await withSpec(
+      { delta: READOPTED, extraDeltas: { "00_delta.md": DELTA_BASE } },
+      async (root) => {
+        expect(await codes(root)).toContain("QFAI-DECISION-006");
+      },
+    );
+  });
+
+  it("leaves a clean canonical delta alone when an extra delta file exists", async () => {
+    await withSpec(
+      {
+        decisions: REOPEN_DECISIONS,
+        delta: deltaFor(RE_OPEN_ID),
+        extraDeltas: { "00_delta.md": EMPTY_DELTA },
+      },
       async (root) => {
         const found = await codes(root);
         expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);

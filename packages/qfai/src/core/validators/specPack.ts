@@ -1303,7 +1303,7 @@ async function collectExistingLayeredDeltaFiles(entry: SpecEntry): Promise<strin
   const candidates = Array.from(new Set(entry.deltaCandidates));
   const existing: string[] = [];
   for (const candidate of candidates) {
-    if (!/(?:^|_)delta\.md$/i.test(path.basename(candidate))) {
+    if (!DELTA_FILE_NAME.test(path.basename(candidate))) {
       continue;
     }
     if (await fileExists(candidate)) {
@@ -1496,21 +1496,20 @@ const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
  */
 async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Promise<Issue[]> {
   const decisionsText = await readSafe(entry.decisionsPath);
-  // Masked once, here: fenced samples, HTML comments and indented code are not
-  // the delta. Without it a `Re-opened by:` parked in a comment or a fenced
-  // example counted as a live back-reference, which is a way past
-  // `QFAI-DECISION-004` and `-006` that leaves the real candidate unreferenced.
-  const deltaText = entry.deltaPath ? maskNonSpecRegions(await readSafe(entry.deltaPath)) : "";
+  const deltas = await collectDeltaFiles(entry);
   const records = parseDecisionRecordEntries(decisionsText);
   const reOpens = records.filter((record) => record.status === RE_OPEN_STATUS);
-  const backRefs = extractReOpenedByRefs(deltaText);
+  const bound = deltas.flatMap((delta) =>
+    delta.rejected.candidates.flatMap((candidate) => candidate.reOpenedBy),
+  );
+  const unbound = deltas.flatMap((delta) => delta.rejected.unbound);
   const decisionsName = path.basename(entry.decisionsPath);
   // Runs whether or not a re-open exists: a candidate moved from `## Rejected`
   // to `## Adopted` with no record at all is the reintroduction the guard is
   // about, and it is exactly the case the two `Re-opened by:` checks below
   // cannot see, because nothing was written for them to read.
-  const readopted = validateReadoptedCandidates(entry, deltaText, decisionsName);
-  if (reOpens.length === 0 && backRefs.length === 0) {
+  const readopted = deltas.flatMap((delta) => validateReadoptedCandidates(delta, decisionsName));
+  if (reOpens.length === 0 && bound.length === 0 && unbound.length === 0) {
     return readopted;
   }
 
@@ -1531,8 +1530,60 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
   for (const record of reOpens) {
     issues.push(...validateReOpenRecord(record, context));
   }
-  issues.push(...validateReOpenBackReferences(entry, reOpens, backRefs, context.decisionsName));
+  issues.push(
+    ...validateReOpenBackReferences(entry, reOpens, bound, unbound, context.decisionsName),
+  );
   return issues;
+}
+
+/** One delta file of a spec, with the two sections these checks read parsed. */
+type DeltaFile = { path: string; rejected: RejectedSection; adopted: Set<string> };
+
+/** A `*_delta.md`, under either the layered or the legacy naming. */
+const DELTA_FILE_NAME = /(?:^|_)delta\.md$/i;
+
+/** The delta files this spec could have, canonical first, without duplicates. */
+function deltaFilePaths(entry: SpecEntry): string[] {
+  const seen = new Set<string>();
+  for (const candidate of [entry.deltaPath, ...entry.deltaCandidates]) {
+    if (candidate.length > 0 && DELTA_FILE_NAME.test(path.basename(candidate))) {
+      seen.add(candidate);
+    }
+  }
+  return [...seen];
+}
+
+/**
+ * Every delta the spec actually has, parsed once each.
+ *
+ * `entry.deltaPath` alone is not enough. `resolveDeltaCandidates` sorts the
+ * `*_delta.md` files it finds and the layouts take the first, so a layered spec
+ * holding an extra `00_delta.md` beside the required `09_delta.md` pointed
+ * `deltaPath` at the extra file: the required-files check still passed on
+ * `09_delta.md`, while every re-adoption written there sat outside all of
+ * `QFAI-DECISION-*`. Each candidate is authoritative for the guard, so each is
+ * read, and a candidate that does not exist reads as empty and contributes
+ * nothing.
+ *
+ * Masking happens here, once per file: fenced samples, HTML comments and
+ * indented code are not the delta, and a `Re-opened by:` parked in one of them
+ * is not a live back-reference.
+ */
+async function collectDeltaFiles(entry: SpecEntry): Promise<DeltaFile[]> {
+  const files: DeltaFile[] = [];
+  for (const target of deltaFilePaths(entry)) {
+    const raw = await readSafe(target);
+    if (raw.length === 0) {
+      continue;
+    }
+    const text = maskNonSpecRegions(raw);
+    files.push({
+      path: target,
+      rejected: collectRejectedSection(text),
+      adopted: collectAdoptedCandidateKeys(text),
+    });
+  }
+  return files;
 }
 
 /**
@@ -1586,27 +1637,15 @@ function candidateKey(raw: string): string {
  * of the candidate that was re-adopted, so a delta re-adopting two candidates
  * cannot cover both with one `Re-opened by:`.
  */
-function validateReadoptedCandidates(
-  entry: SpecEntry,
-  deltaText: string,
-  decisionsName: string,
-): Issue[] {
-  if (deltaText.length === 0) {
-    return [];
-  }
-  const rejected = collectRejectedCandidates(deltaText);
-  if (rejected.length === 0) {
-    return [];
-  }
-  const adopted = collectAdoptedCandidateKeys(deltaText);
-  if (adopted.size === 0) {
+function validateReadoptedCandidates(delta: DeltaFile, decisionsName: string): Issue[] {
+  if (delta.adopted.size === 0) {
     return [];
   }
 
   const issues: Issue[] = [];
-  for (const candidate of rejected) {
+  for (const candidate of delta.rejected.candidates) {
     const key = candidateKey(candidate.name);
-    if (key.length === 0 || isPlaceholderValue(candidate.name) || !adopted.has(key)) {
+    if (key.length === 0 || isPlaceholderValue(candidate.name) || !delta.adopted.has(key)) {
       continue;
     }
     if (candidate.reOpenedBy.length > 0) {
@@ -1617,7 +1656,7 @@ function validateReadoptedCandidates(
         "QFAI-DECISION-006",
         `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。`,
         "error",
-        entry.deltaPath.length > 0 ? entry.deltaPath : entry.decisionsPath,
+        delta.path,
         RE_OPENED_BY_RULE,
         [candidate.name],
         "canonical",
@@ -1693,9 +1732,31 @@ function sectionLines(text: string, heading: string): string[] {
   return sectionLineGroups(text, heading).flat();
 }
 
-/** The `- Candidate:` blocks of a delta's `## Rejected`, in document order. */
-function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
+/**
+ * A delta's `## Rejected`, parsed once: the candidate blocks, and the
+ * back-references that belong to none of them.
+ */
+type RejectedSection = {
+  candidates: RejectedCandidate[];
+  /** `Re-opened by:` values written above the section's first `- Candidate:`. */
+  unbound: string[];
+};
+
+/**
+ * The `- Candidate:` blocks of a delta's `## Rejected`, in document order, with
+ * each `Re-opened by:` attached to the block it was written under.
+ *
+ * The binding is the point. A `- Re-opened by:` at the head of the section —
+ * or of a duplicate `## Rejected` — documents no candidate at all; collected
+ * flat it stood in for the back-reference of every `Status: re-open` record,
+ * so the candidate that was actually re-adopted could carry none and
+ * `QFAI-DECISION-004` still passed. Such a reference is kept in `unbound`
+ * rather than dropped: it may still name an id no record declares, which is a
+ * dangling reference whoever owns it.
+ */
+function collectRejectedSection(deltaText: string): RejectedSection {
   const candidates: RejectedCandidate[] = [];
+  const unbound: string[] = [];
   for (const lines of sectionLineGroups(deltaText, "Rejected")) {
     // Reset per section: a `- Re-opened by:` that opens a second `## Rejected`
     // sits under no candidate at all. Scanning the sections joined kept the
@@ -1711,12 +1772,18 @@ function collectRejectedCandidates(deltaText: string): RejectedCandidate[] {
         continue;
       }
       const reOpenedBy = RE_OPENED_BY_LINE.exec(line);
-      if (reOpenedBy && current) {
-        current.reOpenedBy.push(...splitReOpenedByRefs(reOpenedBy[1] ?? ""));
+      if (!reOpenedBy) {
+        continue;
+      }
+      const refs = splitReOpenedByRefs(reOpenedBy[1] ?? "");
+      if (current) {
+        current.reOpenedBy.push(...refs);
+      } else {
+        unbound.push(...refs);
       }
     }
   }
-  return candidates;
+  return { candidates, unbound };
 }
 
 /** The normalised `- Adopted:` names of a delta's `## Adopted`. */
@@ -2048,18 +2115,24 @@ function validateReOpenApproval(record: DecisionRecordEntry, context: ReOpenCont
  * still reads `Re-opened by: -` leaves the rejection standing as `DO NOT` while
  * the record claims it was lifted, which is exactly the state the guard is
  * meant to make unreachable.
+ *
+ * Only `bound` references — the ones written under a `- Candidate:` block —
+ * answer the record direction, because only those say which rejection was
+ * lifted. `unbound` ones are still checked for resolving to a record: a
+ * dangling `Re-opened by:` is a defect wherever it sits.
  */
 function validateReOpenBackReferences(
   entry: SpecEntry,
   reOpens: DecisionRecordEntry[],
-  backRefs: string[],
+  bound: string[],
+  unbound: string[],
   decisionsName: string,
 ): Issue[] {
   const issues: Issue[] = [];
   const reOpenIds = new Set(reOpens.map((record) => record.id));
-  const referenced = new Set(backRefs.map((ref) => ref.toUpperCase()));
+  const referenced = new Set(bound.map((ref) => ref.toUpperCase()));
   const deltaFile = entry.deltaPath.length > 0 ? entry.deltaPath : entry.decisionsPath;
-  for (const ref of backRefs) {
+  for (const ref of [...bound, ...unbound]) {
     if (reOpenIds.has(ref.toUpperCase())) continue;
     issues.push(
       issue(
@@ -2105,27 +2178,6 @@ function splitReOpenedByRefs(raw: string): string[] {
   const refs: string[] = [];
   for (const token of cleanFieldValue(raw).split(/[,;\s]+/)) {
     if (token.length > 0 && !isPlaceholderValue(token)) refs.push(token);
-  }
-  return refs;
-}
-
-/**
- * The non-placeholder `Re-opened by:` values in a delta's `## Rejected`.
- *
- * `deltaText` is expected to be {@link maskNonSpecRegions}-masked already: the
- * section is extracted from it, and an unmasked document hands a
- * `- Re-opened by: DR-*` retired into a multi-line HTML comment or a fenced
- * example back as a live back-reference.
- */
-function extractReOpenedByRefs(deltaText: string): string[] {
-  if (deltaText.length === 0) {
-    return [];
-  }
-  const refs: string[] = [];
-  for (const line of sectionLines(deltaText, "Rejected")) {
-    const match = RE_OPENED_BY_LINE.exec(line);
-    if (!match) continue;
-    refs.push(...splitReOpenedByRefs(match[1] ?? ""));
   }
   return refs;
 }
@@ -2657,13 +2709,12 @@ function normalizeHeader(value: string): string {
 
 function extractH2Headings(text: string): Set<string> {
   const headings = new Set<string>();
-  const pattern = /^##\s+(.+?)\s*$/gm;
-  for (const match of text.matchAll(pattern)) {
-    const heading = match[1];
-    if (!heading) {
+  for (const line of text.replace(/\r\n/g, "\n").split("\n")) {
+    const heading = parseAtxHeading(line);
+    if (heading?.level !== H2_LEVEL || heading.name.length === 0) {
       continue;
     }
-    headings.add(normalizeHeading(heading));
+    headings.add(normalizeHeading(heading.name));
   }
   return headings;
 }
@@ -2672,14 +2723,46 @@ function normalizeHeading(value: string): string {
   return value.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-const HEADING_LINE = /^(#{1,6})\s*(.+?)\s*$/;
+/** The heading level the spec-pack contract writes its named sections at. */
+const H2_LEVEL = 2;
+
+const HEADING_LINE = /^(#{1,6})\s*(.*?)\s*$/;
+
+/**
+ * CommonMark's optional closing sequence: whitespace, then a run of `#` at the
+ * end of the line. Decoration, not part of the heading's name — and the leading
+ * whitespace is required, so `C#` keeps its hash.
+ */
+const ATX_CLOSING_HASHES = /(?:^|\s)#+$/;
+
+/** An ATX heading: its level, and its name with the decoration removed. */
+type AtxHeading = { level: number; name: string };
+
+/**
+ * The one place a heading line is read.
+ *
+ * Both readers below need the same two facts, and parsing them apart let them
+ * disagree: `extractH2Headings` required a space after the hashes while
+ * {@link extractMarkdownSections} did not, and neither stripped the closing
+ * sequence, so `## Rejected ##` was a section named `rejected ##` — collected by
+ * nothing, which let a delta keep an empty plain `## Rejected` and re-adopt its
+ * candidate in the decorated pair with `QFAI-DECISION-006` silent.
+ */
+function parseAtxHeading(line: string): AtxHeading | null {
+  const match = HEADING_LINE.exec(line);
+  if (!match) {
+    return null;
+  }
+  const name = (match[2] ?? "").replace(ATX_CLOSING_HASHES, "").trim();
+  return { level: (match[1] ?? "").length, name };
+}
 
 function extractMarkdownSection(text: string, heading: string): string {
   return extractMarkdownSections(text, heading)[0] ?? "";
 }
 
 /**
- * **Every** section carrying `heading`, in document order.
+ * **Every** `## `-level section carrying `heading`, in document order.
  *
  * A document may repeat a heading, and taking only the first is a way past the
  * checks that read a named section: with two `## Rejected` blocks, the first
@@ -2688,6 +2771,11 @@ function extractMarkdownSection(text: string, heading: string): string {
  * collected — `extractH2Headings` folds the duplicate into a `Set`, so no
  * structural error fired either, and `QFAI-DECISION-006` could not see the
  * reintroduction it exists to report.
+ *
+ * The level is part of the match, not only the name. The contract names
+ * `## Adopted` and `## Rejected`; matching on the name alone made an
+ * illustrative `### Adopted` under a `## Notes` section the delta's own
+ * adoption list, and a candidate merely quoted there was reported as re-adopted.
  */
 function extractMarkdownSections(text: string, heading: string): string[] {
   const lines = text.replace(/\r\n/g, "\n").split("\n");
@@ -2695,21 +2783,14 @@ function extractMarkdownSections(text: string, heading: string): string[] {
   const sections: string[] = [];
 
   for (let index = 0; index < lines.length; index += 1) {
-    const match = HEADING_LINE.exec(lines[index] ?? "");
-    if (!match) {
+    const match = parseAtxHeading(lines[index] ?? "");
+    if (match?.level !== H2_LEVEL || match.name.toLowerCase() !== target) {
       continue;
     }
-    if ((match[2] ?? "").trim().toLowerCase() !== target) {
-      continue;
-    }
-    const level = (match[1] ?? "").length;
     let end = lines.length;
     for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
-      const next = HEADING_LINE.exec(lines[cursor] ?? "");
-      if (!next) {
-        continue;
-      }
-      if ((next[1] ?? "").length <= level) {
+      const next = parseAtxHeading(lines[cursor] ?? "");
+      if (next && next.level <= H2_LEVEL) {
         end = cursor;
         break;
       }
