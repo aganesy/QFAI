@@ -4,6 +4,8 @@
 
 ## [Unreleased]
 
+## [1.10.1] - 2026-08-31
+
 ### Added
 
 - **`qfai init` ships a layered CI workflow.** `.github/workflows/qfai-tests.yml` is new in the
