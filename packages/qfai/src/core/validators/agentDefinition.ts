@@ -11,6 +11,7 @@ import {
   recordRoutedAgents,
   validateSkillRoles,
   type ProfileSelection,
+  type RoutingBinding,
   type SkillRouting,
 } from "./skillRoles.js";
 import { exists, issue } from "./utils.js";
@@ -335,7 +336,13 @@ async function validateRouting(
         continue;
       }
       const routeObj = route as Record<string, unknown>;
-      const routedEntry = collectRouteHeader(routeObj, routed);
+      const routedEntry = collectRouteHeader(
+        routeObj,
+        routed,
+        issues,
+        rel,
+        formatSkillLabel(routeObj.skill, routeIndex),
+      );
       if (!Array.isArray(routeObj.phases)) {
         continue;
       }
@@ -464,24 +471,43 @@ const PHASE_AGENT_FIELDS = [
  * while the first block's reviewers went unlisted, so a conflicting second
  * declaration is recorded for `validateSkillRoles` to report and the first one
  * stands.
+ *
+ * A `review_profile:` that is present but is not a usable name is reported
+ * here and flagged on the entry. Ignoring the value collected the route as one
+ * that declares no review gate at all, which is a different manifest: the
+ * skill then passed `QFAI-AGENT-014` / `-018` without any of the reviewers the
+ * broken key was meant to bind, and nothing named the key.
  */
 function collectRouteHeader(
   routeObj: Record<string, unknown>,
   routed: Map<string, SkillRouting>,
+  issues: Issue[],
+  routingPathRel: string,
+  skillLabel: string,
 ): SkillRouting | undefined {
   if (typeof routeObj.skill !== "string" || routeObj.skill.length === 0) {
     return undefined;
   }
   const entry = routed.get(routeObj.skill) ?? emptySkillRouting();
-  if (typeof routeObj.review_profile === "string") {
+  const declared = routeObj.review_profile;
+  if (typeof declared === "string" && declared.trim().length > 0) {
+    const profile = declared.trim();
     if (entry.reviewProfile === undefined) {
-      entry.reviewProfile = routeObj.review_profile;
-    } else if (entry.reviewProfile !== routeObj.review_profile) {
-      entry.reviewProfileConflict ??= {
-        first: entry.reviewProfile,
-        second: routeObj.review_profile,
-      };
+      entry.reviewProfile = profile;
+    } else if (entry.reviewProfile !== profile) {
+      entry.reviewProfileConflict ??= { first: entry.reviewProfile, second: profile };
     }
+  } else if (declared !== undefined) {
+    entry.reviewProfileUnusable = true;
+    issues.push(
+      issue(
+        "QFAI-AGENT-013",
+        `${skillLabel} declares review_profile ${JSON.stringify(declared)}; expected the name of a review-profiles.yml profile`,
+        "error",
+        routingPathRel,
+        "agentDefinition.routingReviewProfileShape",
+      ),
+    );
   }
   routed.set(routeObj.skill, entry);
   return entry;
@@ -648,15 +674,18 @@ async function validateProfiles(
       // Before collecting: both readers below guard on `Array.isArray`, so
       // `always_required: completion-reviewer` produced an empty selection set
       // and no finding — a broken mandatory review gate that passed silently.
-      validateReviewerFieldShapes(profileObj, issues, profileName, rel);
-      selections.set(
-        profileName,
-        collectProfileReviewers(
+      // The result is carried on the selection because a truncated reviewer
+      // list is not a short one: the roles cross-check has to know it is
+      // reading a floor before it tells a skill to drop a declared reviewer.
+      const shapesUsable = validateReviewerFieldShapes(profileObj, issues, profileName, rel);
+      selections.set(profileName, {
+        reviewers: collectProfileReviewers(
           profileObj.always_required,
           profileObj.conditional_required,
           reviewerIds,
         ),
-      );
+        incomplete: !shapesUsable,
+      });
       validateReviewerRefs(
         profileObj.always_required,
         reviewerIds,
@@ -702,8 +731,8 @@ function collectProfileReviewers(
   always: unknown,
   conditional: unknown,
   reviewerIds: Set<string>,
-): ProfileSelection {
-  const reviewers: ProfileSelection = new Map();
+): Map<string, RoutingBinding> {
+  const reviewers = new Map<string, RoutingBinding>();
   for (const [value, binding] of [
     [conditional, "conditional"],
     [always, "required"],
@@ -720,18 +749,25 @@ function collectProfileReviewers(
   return reviewers;
 }
 
-/** Report an `always_required` / `conditional_required` that is not a list. */
+/**
+ * Report an `always_required` / `conditional_required` that is not a list.
+ *
+ * Returns whether every reviewer field was usable, so the caller can mark the
+ * selection it collects as a floor rather than the profile's full membership.
+ */
 function validateReviewerFieldShapes(
   profileObj: Record<string, unknown>,
   issues: Issue[],
   profileName: string,
   profilesPathRel: string,
-): void {
+): boolean {
+  let usable = true;
   for (const field of ["always_required", "conditional_required"] as const) {
     const value = profileObj[field];
     if (value === undefined || Array.isArray(value)) {
       continue;
     }
+    usable = false;
     issues.push(
       issue(
         "QFAI-AGENT-009",
@@ -742,6 +778,7 @@ function validateReviewerFieldShapes(
       ),
     );
   }
+  return usable;
 }
 
 function formatSkillLabel(skill: unknown, routeIndex: number): string {

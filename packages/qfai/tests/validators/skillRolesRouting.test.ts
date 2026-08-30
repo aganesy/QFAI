@@ -601,12 +601,66 @@ describe("QFAI-AGENT-016 — an unreadable SKILL.md frontmatter is reported", ()
     });
   }
 
+  it("reports a frontmatter block that is opened and never closed", async () => {
+    // The delimiter regex needs both fences, so a lost closing `---` simply
+    // failed to match and read as "this file has no frontmatter" — while the
+    // assistant sees the whole document as body text and loads no skill at
+    // all. Absence and breakage are not the same claim.
+    const issues = await runFixture({
+      mandatory: ["delivery-planner"],
+      rawSkillDoc: "---\nname: demo-skill\nroles: [delivery-planner]\n\n# Demo\n",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
+  });
+
   it("still treats a SKILL.md with no frontmatter block as no declaration", async () => {
     const issues = await runFixture({
       mandatory: ["delivery-planner"],
       rawSkillDoc: "# Demo\n\nNo frontmatter at all.\n",
     });
     expect(issues).toEqual([]);
+  });
+
+  it("does not read a body-level --- rule as an unterminated block", async () => {
+    const issues = await runFixture({
+      mandatory: ["delivery-planner"],
+      rawSkillDoc: "# Demo\n\nIntro.\n\n---\n\nA thematic break, not frontmatter.\n",
+    });
+    expect(issues).toEqual([]);
+  });
+});
+
+describe("QFAI-AGENT-016 — an unusable routing-profile: is not an absent one", () => {
+  // An absent `routing-profile:` is the deliberate "not routed" declaration
+  // (`web-research`). A key that is present but is not a profile name binds the
+  // skill to nothing while looking like that exemption, so neither
+  // `QFAI-AGENT-016` nor `QFAI-AGENT-018` could fire on it.
+  for (const [label, declared] of [
+    ["a list", "[demo-profile]"],
+    ["an empty string", '""'],
+  ] as const) {
+    it(`reports ${label} instead of reading the skill as deliberately un-routed`, async () => {
+      const issues = await runFixture({
+        roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+        mandatory: ["delivery-planner"],
+        skillRoutingProfile: declared,
+      });
+      expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.file).toBe(".qfai/assistant/skills/demo-skill/SKILL.md");
+    });
+  }
+
+  it("reports it for a skill directory the manifest routes nothing to", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner"],
+      extraSkill: { name: "orphan-skill", routingProfile: "[demo-profile]" },
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-016"]);
+    expect(issues[0]?.file).toBe(".qfai/assistant/skills/orphan-skill/SKILL.md");
   });
 });
 
@@ -635,6 +689,46 @@ describe("QFAI-AGENT-018 — manifest-side profile defects do not need a skill d
     expect(issues).toHaveLength(1);
   });
 
+  it("reports an undefined profile for a routed skill that ships no SKILL.md", async () => {
+    // The existence check sat behind the `SKILL.md` read, so a route through a
+    // profile `review-profiles.yml` never defines was invisible whenever the
+    // skill shipped no readable file — and nothing else in this validator
+    // checks a route's profile reference at all.
+    const issues = await runFixture({
+      mandatory: ["delivery-planner"],
+      reviewProfile: "ghost-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.message).toContain("ghost-profile");
+    expect(issues[0]?.message).toContain("review-profiles.yml does not define");
+  });
+
+  it("reports a review_profile: that is not a profile name", async () => {
+    // `typeof === "string"` alone dropped the value, collecting the route as
+    // one that declares no review gate — so the reviewers the key was meant to
+    // bind vanished and no finding named the key.
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      reviewProfile: "[demo-profile]",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-013"]);
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.message).toContain("review_profile");
+  });
+
+  it("does not call a malformed review_profile: an absent one", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      reviewProfile: "[demo-profile]",
+    });
+    // The shape finding owns it. Reporting a mismatch as well would say the
+    // route "declares no review_profile", which is not what the file says.
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-013"]);
+  });
+
   it("reports two route blocks that give one skill different review gates", async () => {
     const issues = await runFixture({
       roles: ["delivery-planner", "completion-reviewer", "implementation-reviewer"],
@@ -659,6 +753,78 @@ describe("QFAI-AGENT-018 — manifest-side profile defects do not need a skill d
     expect(conflict[0]?.severity).toBe("error");
     expect(conflict[0]?.message).toContain("demo-profile");
     expect(conflict[0]?.message).toContain("other-profile");
+  });
+});
+
+describe("an untrustworthy review gate short-circuits the roles cross-check", () => {
+  // Every case below already produces one precise finding about the gate. The
+  // reviewer set behind that finding is known to be partial, so running the
+  // closed-set comparison on it adds work items that name roles the skill in
+  // fact declared correctly — and stops asking for the mandatory ones.
+  it("does not call a reviewer unreachable when the route names no gate", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      reviewProfile: null,
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+  });
+
+  it("does not ask a skill to drop a reviewer a truncated profile lost", async () => {
+    const issues = await runManifestFixture({
+      roles: ["delivery-planner", "completion-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      profilesYaml: `profiles:
+  demo-profile:
+    always_required: completion-reviewer
+`,
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-009"]);
+  });
+
+  it("does not blame the roles of a skill routed through an undefined profile", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner", "completion-reviewer"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "ghost-profile",
+      reviewProfile: "ghost-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+  });
+
+  it("does not cross-check against the first of two conflicting gates", async () => {
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+      brokenRouting: `routing:
+  - skill: demo-skill
+    review_profile: demo-profile
+    phases:
+      - id: first
+        mandatory_agents: [delivery-planner]
+  - skill: demo-skill
+    review_profile: other-profile
+    phases:
+      - id: second
+        mandatory_agents: [delivery-planner]
+`,
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-018"]);
+    expect(issues[0]?.message).toContain("two different");
+  });
+
+  it("still runs both directions when the gate is sound", async () => {
+    // The over-correction pin: a trustworthy profile must keep producing the
+    // findings the short-circuit above suppresses.
+    const issues = await runFixture({
+      roles: ["delivery-planner"],
+      mandatory: ["delivery-planner"],
+      skillRoutingProfile: "demo-profile",
+    });
+    expect(issues.map((entry) => entry.code)).toEqual(["QFAI-AGENT-014", "QFAI-AGENT-014"]);
+    expect(issues.map((entry) => entry.severity).sort()).toEqual(["error", "warning"]);
   });
 });
 

@@ -30,6 +30,12 @@ schema_version: "1.0"
 # That `routing-profile:` must also name the same profile this file's
 # `review_profile:` gives the skill, and one `review-profiles.yml` defines
 # (`QFAI-AGENT-018`): otherwise the two sides state different review gates.
+# Both keys must be a non-empty profile name when present — a list or an empty
+# value is a shape error (`QFAI-AGENT-013` here, `QFAI-AGENT-016` in the skill)
+# rather than "no gate declared". Whenever the gate is in any of those states,
+# the roles cross-check above is skipped for that skill: the reviewer set it
+# would compare against is known to be partial, and reporting from it would
+# name roles that are in fact declared correctly.
 
 routing:
   - skill: qfai-discussion
