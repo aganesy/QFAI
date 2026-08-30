@@ -1059,6 +1059,19 @@ const PLANNED_DB_CONTRACT_RE = new RegExp(
   "im",
 );
 
+/**
+ * True when a DB contract declares itself not yet implemented.
+ *
+ * The counterpart of `isPlannedApiContract`, and deliberately a different rule:
+ * the API marker counts at the document root only, while this one counts on any
+ * line of the file. Exported so the shipped estimator procedure, which has to
+ * describe both forms, can be pinned against the behaviour rather than restate
+ * it and drift.
+ */
+export function isPlannedDbContract(text: string): boolean {
+  return PLANNED_DB_CONTRACT_RE.test(text);
+}
+
 async function collectDbContractIds(dbRoot: string): Promise<CollectedContractIds> {
   const files = await collectDbContractFiles(dbRoot);
   const active = new Set<string>();
@@ -1066,7 +1079,7 @@ async function collectDbContractIds(dbRoot: string): Promise<CollectedContractId
 
   for (const file of files) {
     const text = await readSafe(file);
-    const planned = PLANNED_DB_CONTRACT_RE.test(text);
+    const planned = isPlannedDbContract(text);
     for (const id of extractDeclaredContractIds(text)) {
       const normalized = id.toUpperCase();
       if (DB_CONTRACT_ID_RE.test(normalized)) {

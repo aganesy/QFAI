@@ -4,6 +4,8 @@ import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
+import { isPlannedApiContract, isPlannedDbContract } from "../../src/core/atddTraceability.js";
+
 // Anchored to this file, not to `process.cwd()`: the reads below must resolve
 // the same way whether the suite is launched from the repo root, from
 // `packages/qfai`, or by an IDE runner with its own CWD.
@@ -109,9 +111,31 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       // against obligations no test owes yet.
       const signals = await read(tree, SIGNALS);
       expectPhrase(signals, "Only **active** obligations count");
-      expectPhrase(signals, "`x-qfai-status: planned` at its document root is deferred out of the");
-      expectPhrase(signals, "`QFAI-ATDD-113` / `QFAI-ATDD-115` test obligation");
-      expectPhrase(signals, "leave it out of its row and name the deferred IDs in `Notes`");
+      expectPhrase(signals, "leave it\nout of its row and name the deferred IDs in `Notes`");
+
+      // The two kinds are deferred by two different markers, and the procedure
+      // has to state each one. A single document-root condition covering both
+      // reads a DB contract whose marker sits below a statement as active,
+      // while `QFAI-ATDD-115` has already excluded it.
+      expectPhrase(signals, "**The two kinds carry that marker in different places.**");
+      expectPhrase(
+        signals,
+        "`CON-API-*` (YAML/JSON) — the marker counts only as a\n**document-root key**",
+      );
+      expectPhrase(
+        signals,
+        "`CON-DB-*` (SQL) — the marker is a **standalone `-- x-qfai-status: planned`\ncomment line, at any position in the file**",
+      );
+      expectPhrase(
+        signals,
+        "It does not have to come before\nthe contract ID or before any statement",
+      );
+      // Over-correction pin: the DB rule must not be generalised to the API
+      // contract, where a marker nested under one operation defers nothing.
+      expectPhrase(
+        signals,
+        "The same key nested under one operation defers nothing: one path must not be\n  able to drop the API-test obligation",
+      );
 
       const skill = await read(tree, SKILL);
       expectPhrase(
@@ -181,4 +205,24 @@ describe("the ATDD estimator table's Signal column has a definition", () => {
       expectPhrase(skill, "A `Signal` cell is never a copy of its `Raw count`");
     });
   }
+
+  it("the two documented marker forms are the ones the validators honour", () => {
+    // The prose above is only right while it matches the deferral the
+    // traceability collectors apply. Pinning both predicates here means a later
+    // change to either rule fails with the document that describes it.
+    const dbLate =
+      "-- QFAI:CON-DB-0001\nCREATE TABLE t (id integer);\n\n-- x-qfai-status: planned\n";
+    expect(isPlannedDbContract(dbLate)).toBe(true);
+    // ...but only as a whole comment line, which is why the text says so.
+    expect(
+      isPlannedDbContract("CREATE TABLE t ( -- x-qfai-status: planned\n  id integer);\n"),
+    ).toBe(false);
+    // The API rule is the narrower one: root key yes, nested key no.
+    expect(isPlannedApiContract("openapi: 3.0.0\nx-qfai-status: planned\npaths: {}\n")).toBe(true);
+    expect(
+      isPlannedApiContract(
+        "openapi: 3.0.0\npaths:\n  /a:\n    get:\n      x-qfai-status: planned\n",
+      ),
+    ).toBe(false);
+  });
 });

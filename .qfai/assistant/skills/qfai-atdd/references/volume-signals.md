@@ -16,11 +16,26 @@ that row, and a `CON-DB-*` is an integration obligation and belongs to `#TC`.
 Every obligation is counted in exactly one row, so the three never
 double-count and `total` is their sum.
 
-Only **active** obligations count. A contract whose file declares
-`x-qfai-status: planned` at its document root is deferred out of the
-`QFAI-ATDD-113` / `QFAI-ATDD-115` test obligation by
-`catalog/test-layers.md`, so counting it would charge this spec for work no
-test owes yet: leave it out of its row and name the deferred IDs in `Notes`.
+Only **active** obligations count. A contract that declares
+`x-qfai-status: planned` is deferred by `catalog/test-layers.md` out of its
+test obligation — `QFAI-ATDD-113` for an API contract, `QFAI-ATDD-115` for a DB
+one — so counting it would charge this spec for work no test owes yet: leave it
+out of its row and name the deferred IDs in `Notes`.
+
+**The two kinds carry that marker in different places.** Read each one the way
+its own validator reads it, or the count and the obligation disagree:
+
+- `CON-API-*` (YAML/JSON) — the marker counts only as a **document-root key**.
+  The same key nested under one operation defers nothing: one path must not be
+  able to drop the API-test obligation for every other `CON-API-*` the file
+  declares.
+- `CON-DB-*` (SQL) — the marker is a **standalone `-- x-qfai-status: planned`
+  comment line, at any position in the file**. It does not have to come before
+  the contract ID or before any statement, so a file whose marker sits under a
+  `CREATE TABLE` is deferred just the same. Only a whole comment line counts —
+  the same text trailing a statement on a shared line defers nothing. Applying
+  the API rule here would read as active a DB contract `QFAI-ATDD-115` has
+  already excluded, inflating `#TC` and `INT_s`.
 
 - `#US` — the E2E row: required `US-*` declared by this spec, **plus** this
   spec's required `TC-*` declaring `Level` `L5`/`E2E`.
