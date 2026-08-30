@@ -41,6 +41,7 @@ import type { QfaiConfig } from "../config.js";
 import { collectFilesByGlobs, DEFAULT_GLOB_FILE_LIMIT } from "../fs.js";
 import { DEFAULT_TEST_FILE_EXCLUDE_GLOBS } from "../traceability.js";
 import type { Issue, IssueSeverity } from "../types.js";
+import { maskJsNonCode } from "./jsSourceMask.js";
 import { issue } from "./utils.js";
 
 /**
@@ -57,7 +58,9 @@ import { issue } from "./utils.js";
  *
  * Still regex, not AST, for the reason the original comment gives: the scan
  * runs over thousands of files and the common case is the stub written as
- * executable code.
+ * executable code. The JS entry does put a lexer in front of its pattern
+ * ({@link maskJsNonCode}) — but only to blank the comments and literals the
+ * construct's *text* lives in, which is lexical, not structural.
  */
 type StubDialect = {
   extensions: readonly string[];
@@ -80,6 +83,37 @@ type StubDialect = {
    * docstring.
    */
   grade?: (match: RegExpMatchArray) => StubGrade;
+  /**
+   * Whether one construct of this dialect may be written across a line break.
+   * Defaults to `false`, and {@link collectStubIssues} enforces it by dropping
+   * any match that carries a newline.
+   *
+   * Only the JS entry opts in, because only its construct is a member chain: a
+   * printer breaks one at a `.` once it outgrows the print width, and the two
+   * halves are still a single call. Every other dialect here matches a single
+   * statement, and its `\s*` reaching across a newline would join two
+   * unrelated lines — `skip_fn = pytest.skip` followed by a `(result)` line
+   * reads as a `pytest.skip(` call that is never made, and reports a
+   * `QFAI-TEST-001` **error** against a file with no skipped test in it. Making
+   * this a property of the dialect rather than of each pattern's spelling
+   * keeps a dialect added later from inheriting the same defect by writing the
+   * habitual `\s*`.
+   */
+  spansLines?: boolean;
+  /**
+   * Blanks the spans of a file the construct can be *written* in but never
+   * *executed* in — comments and literals — before the pattern is applied.
+   *
+   * Defaults to scanning the file as-is. Only the JS entry sets it: this
+   * validator scans a repository's own test files, where a generator or parser
+   * suite routinely holds `it.skip(…)` as fixture data and prose spells the
+   * construct out in a comment. Neither is a parked test, and reporting them
+   * fails `--fail-on warning` with nothing actually skipped.
+   *
+   * The mask must preserve offsets and line breaks — the line a finding
+   * carries is derived from the match offset in the text scanned.
+   */
+  mask?: (content: string) => string;
 };
 
 /** The rule a matched construct is filed under, with its severity. */
@@ -141,6 +175,11 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // instead of fragmenting once per modifier combination.
     label: (match) => `${match[1]}.${match[2]}`,
     grade: (match) => (match[2] === "skip" ? SKIPPED_TEST_WARNING : STUB_ERROR),
+    // The member chain is the one construct here a formatter may break, and a
+    // comment or literal is the one place the construct's text appears without
+    // a test being parked. Both opt-ins are the JS dialect's alone.
+    spansLines: true,
+    mask: maskJsNonCode,
   },
   {
     extensions: [".py"],
@@ -215,9 +254,19 @@ function stubIssue(
  * nothing for it, so a suite parked that way was invisible even to
  * `--fail-on warning`. The line number therefore comes from the offset the
  * match *starts* at, which is where the construct's root identifier sits.
+ *
+ * Scanning the whole file is what lets a pattern reach across a newline at
+ * all, so the two dialect opt-ins that bound it are applied here:
+ * {@link StubDialect.mask} takes the spans that hold the construct's text
+ * without executing it out of the scan, and {@link StubDialect.spansLines}
+ * gates whether a match may carry a newline. Both default to the narrow
+ * behaviour, so a dialect added later cannot inherit either hazard silently.
  */
 function collectStubIssues(relFile: string, content: string, dialect: StubDialect): Issue[] {
   const issues: Issue[] = [];
+  // Offsets and line breaks survive the mask, so a match position in the
+  // scanned text is still a position in the file the finding names.
+  const scannable = dialect.mask ? dialect.mask(content) : content;
   // matchAll yields matches in ascending offset order, so the line counter is
   // carried forward from the previous match instead of re-counting from the
   // top of the file: the whole scan stays linear however many stubs are found.
@@ -226,9 +275,14 @@ function collectStubIssues(relFile: string, content: string, dialect: StubDialec
   // stopping at the first one on a line.
   let scanned = 0;
   let lineNumber = 1;
-  for (const match of content.matchAll(dialect.pattern)) {
-    lineNumber += content.slice(scanned, match.index).split("\n").length - 1;
+  for (const match of scannable.matchAll(dialect.pattern)) {
+    // Advanced before the newline gate below, so a rejected match still leaves
+    // the counter on the offset it reached.
+    lineNumber += scannable.slice(scanned, match.index).split("\n").length - 1;
     scanned = match.index;
+    if (!dialect.spansLines && match[0].includes("\n")) {
+      continue;
+    }
     // The whitespace a fallback label carries can now include the newline the
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");

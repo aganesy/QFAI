@@ -324,6 +324,95 @@ describe("QFAI-TEST-003 — the vitest/jest skip form is its own waivable rule",
     });
   });
 
+  it("keeps the JS member chain allowed to break over a newline", async () => {
+    // The other half of the pair below: confining the cross-line reach to the
+    // JS dialect must not take it away from the JS dialect. A chain a printer
+    // split at its `.` is still one call, and still a parked test.
+    await withTests(
+      { "tests/a.test.ts": `test\n  ${SKIP}("still one call", () => {});\n` },
+      async (root) => {
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+        expect(skipped.map((i) => i.loc?.line)).toEqual([1]);
+      },
+    );
+  });
+
+  it("does not let a non-JS pattern reach across a newline", async () => {
+    // Scanning the whole file let every dialect's `\s*` consume a line break,
+    // not just the JS member chain's. `pytest.skip` bound to a name, with an
+    // unrelated call expression on the next line, is no call at all — but
+    // `pytest.skip` + newline + `(` matched, and filed an **error** against a
+    // file with nothing skipped in it, failing an ordinary `--fail-on error`.
+    await withTests(
+      {
+        "tests/test_a.py": "skip_fn = pytest.skip\n(result)\n",
+        "tests/a_test.go": "fn := t.Skip\n(result)\n",
+        "tests/AT.cs": 'string Skip\n= "later";\n',
+      },
+      async (root) => {
+        expect(await stubCodes(root)).not.toContain("QFAI-TEST-001");
+      },
+    );
+  });
+
+  it("still reports each non-JS stub written on one line", async () => {
+    // Over-correction pin for the newline gate: the construct these dialects
+    // actually use is a single statement, and every one of them must survive.
+    await withTests(
+      {
+        "tests/test_a.py": "def test_a():\n    pytest.skip('later')\n",
+        "tests/a_test.go": 'func TestA(t *testing.T) {\n\tt.Skip("later")\n}\n',
+        "tests/AT.cs": '[Fact(Skip = "later")]\npublic void A() {}\n',
+      },
+      async (root) => {
+        const issues = await validateTestTodoStubs(root, CONFIG);
+        expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toHaveLength(3);
+      },
+    );
+  });
+
+  it("ignores the construct inside a comment or a literal, not the real call", async () => {
+    // A regex over a raw file cannot tell a parked test from a fixture that
+    // *holds* one as data. This validator scans a repository's own test files,
+    // where a generator or parser suite carries the construct in a string and
+    // prose spells it out in a comment — so `--fail-on warning` failed with
+    // nothing skipped anywhere. Both directions are pinned in one fixture: the
+    // five inert spellings stay silent and the real call on line 8 does not.
+    const mixed = [
+      `const source = "it${SKIP}(name, fn)";`,
+      "const emitted = `test" + SKIP + "(name, fn)`;",
+      `const matcher = /it${SKIP}(pending)/;`,
+      `// describe${SKIP}("example", () => {});`,
+      "/*",
+      ` * it${TODO}("documented later");`,
+      " */",
+      `it${SKIP}("really parked", () => {});`,
+      "",
+    ].join("\n");
+    await withTests({ "tests/a.test.ts": mixed }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      expect(issues.filter((i) => i.code === "QFAI-TEST-001")).toEqual([]);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([8]);
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`it${SKIP}`]);
+    });
+  });
+
+  it("still matches a chain a comment sits inside", async () => {
+    // Over-correction pin for the mask: it blanks one character per character,
+    // so a comment between the root identifier and the `.skip` link collapses
+    // to whitespace the chain pattern already tolerates instead of splitting
+    // the call in two.
+    const commented = `it /* parked for now */ ${SKIP}("x", () => {});\n`;
+    await withTests({ "tests/a.test.ts": commented }, async (root) => {
+      const issues = await validateTestTodoStubs(root, CONFIG);
+      const skipped = issues.filter((i) => i.code === "QFAI-TEST-003");
+      expect(skipped.map((i) => i.loc?.line)).toEqual([1]);
+      expect(skipped.map((i) => i.refs?.[0])).toEqual([`it${SKIP}`]);
+    });
+  });
+
   it("leaves a plain it()/describe() call alone", async () => {
     await withTests(
       {
