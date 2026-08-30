@@ -208,7 +208,18 @@ const EXCERPT_SECTION = "user provided excerpt";
  * does not count — a list of what is missing is not an input source.
  */
 function recordsImportLiteInputSource(text: string): boolean {
-  const sections = splitSections(text);
+  const { sections, unclosedFence } = splitSections(text);
+  if (unclosedFence) {
+    // An unterminated fence swallows every heading that follows it, so the
+    // whole tail of the template lands in whichever section opened the fence.
+    // `hasRecordedExcerpt` then reads the `Assumptions / Missing information`
+    // and `Notes` headings as excerpt prose, and an untouched template one
+    // closing line short of well-formed clears `QFAI-IMPLITE-001` and
+    // suppresses `QFAI-DPACK-001` while naming nothing traceable. Past that
+    // line no section can be attributed, so the record is unusable rather than
+    // partly readable; a well-formed sibling file still wins.
+    return false;
+  }
   if (!hasRequiredMetadata(sections.get(METADATA_SECTION) ?? [])) {
     return false;
   }
@@ -222,6 +233,16 @@ function recordsImportLiteInputSource(text: string): boolean {
 const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
 
 /**
+ * A parsed evidence body: section lines, plus whether the text ended with a
+ * fence still open. The second half is what tells a genuine excerpt apart from
+ * a document whose sections stopped being attributable partway through.
+ */
+type EvidenceSections = {
+  sections: Map<string, string[]>;
+  unclosedFence: boolean;
+};
+
+/**
  * Body lines keyed by the lowercased `## ` heading that introduced them.
  *
  * Fenced code blocks are tracked because the template's excerpt is a fence and
@@ -230,7 +251,7 @@ const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
  * there, leaving `User provided excerpt` holding only the fence-open line — so
  * a genuine excerpt read as empty and blocked the import-lite preflight.
  */
-function splitSections(text: string): Map<string, string[]> {
+function splitSections(text: string): EvidenceSections {
   const sections = new Map<string, string[]>();
   let current: string[] | null = null;
   let fence: string | null = null;
@@ -249,7 +270,7 @@ function splitSections(text: string): Map<string, string[]> {
     current = [];
     sections.set((heading[1] ?? "").trim().toLowerCase(), current);
   }
-  return sections;
+  return { sections, unclosedFence: fence !== null };
 }
 
 /**

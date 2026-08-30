@@ -741,3 +741,126 @@ describe("preflight summary template", () => {
     expect(template).not.toContain("- source: discussion-pack\n");
   });
 });
+
+describe("import-lite evidence with an unclosed excerpt fence", () => {
+  /**
+   * The shipped template one closing ``` short: Sources is untouched and the
+   * excerpt is still `<paste if available>`, so nothing traceable is recorded.
+   * With the fence left open, `Assumptions / Missing information` and `Notes`
+   * stop being headings and land in the excerpt section as ordinary prose.
+   */
+  const UNCLOSED_EXCERPT = [
+    "# Evidence: import-lite (legacy-import)",
+    "",
+    "## Metadata",
+    "",
+    "- generated_at: 2026-04-01T00:00:00Z",
+    "- author: AI",
+    "- entrypoint: import-lite",
+    "",
+    "## Sources",
+    "",
+    "- URLs:",
+    "- Local paths:",
+    "",
+    "## User provided excerpt",
+    "",
+    "```text",
+    "<paste if available>",
+    "",
+    "## Assumptions / Missing information",
+    "",
+    "- <missing item 1>",
+    "",
+    "## Notes",
+    "",
+    "- This file is a pointer artifact for preflight, not requirement/spec SSOT.",
+    "",
+  ].join("\n");
+
+  it("does not count trailing template sections as a recorded excerpt", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(root, "import-lite-20260401000000000.md", UNCLOSED_EXCERPT);
+
+    expect((await run(root)).map((found) => found.code)).toEqual(["QFAI-IMPLITE-001"]);
+    expect(await findImportLiteEvidence(root)).toBeNull();
+  });
+
+  // The same hole opened the preflight entrypoint, which is what suppresses
+  // QFAI-DPACK-001 on the full/verify gate.
+  it("keeps the preflight blocked", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(root, "import-lite-20260401000000000.md", UNCLOSED_EXCERPT);
+
+    const result = await runSddPreflight(root, defaultConfig);
+
+    expect(result.status).toBe("blocked");
+    expect(result.selectedInputPath).toBeNull();
+  });
+
+  // Over-correction pin: closing the fence is the entire remedy, so a real
+  // excerpt inside a fence that terminates — including one that closes on the
+  // file's very last line — is still an input source.
+  it("still accepts a real excerpt whose fence closes on the last line", async () => {
+    const root = await newRoot();
+    await seedSpec(root);
+    await writeEvidence(
+      root,
+      "import-lite-20260401000000000.md",
+      [
+        "# Evidence: import-lite (legacy-import)",
+        "",
+        "## Metadata",
+        "",
+        "- generated_at: 2026-04-01T00:00:00Z",
+        "- author: AI",
+        "- entrypoint: import-lite",
+        "",
+        "## Sources",
+        "",
+        "- URLs:",
+        "- Local paths:",
+        "",
+        "## User provided excerpt",
+        "",
+        "```text",
+        "The importer must keep legacy CSV columns.",
+        "```",
+      ].join("\n"),
+    );
+
+    expect(await run(root)).toEqual([]);
+    expect(await findImportLiteEvidence(root)).not.toBeNull();
+  });
+});
+
+describe("import-lite in the shipped Stage 0 guidance", () => {
+  const PLAYBOOK = path.join(path.dirname(SKILL_MD), "references", "sdd-execution-playbook.md");
+
+  // SKILL.md sends the agent to the playbook for "detailed sequencing", and
+  // the playbook's Stage 0 said only "identify the latest discussion-pack /
+  // stop if required files are missing" — halting on the very absence the
+  // import-lite entrypoint exists to carry through.
+  it("gives the playbook the no-discussion-pack exception", async () => {
+    const playbook = await readFile(PLAYBOOK, "utf-8");
+    const stageZero = playbook.slice(playbook.indexOf("## Stage 0: Preflight"));
+    const body = stageZero.slice(0, stageZero.indexOf("\n## Stage 1"));
+
+    expect(body).toContain("templates/evidence/import-lite.md");
+    expect(body).toContain(".qfai/evidence/import-lite-<timestamp>.md");
+    expect(body).toContain("QFAI-IMPLITE-001");
+  });
+
+  // Inputs Priority listed the discussion pack as the only top input, so an
+  // evidence file Stage 0 had already selected had no slot to be read from.
+  it("names the evidence file in the SKILL.md Inputs Priority list", async () => {
+    const skill = await readFile(SKILL_MD, "utf-8");
+    const priority = skill.slice(skill.indexOf("## Inputs Priority"));
+
+    expect(priority.slice(0, priority.indexOf("\n## ", 1))).toContain(
+      ".qfai/evidence/import-lite-*.md",
+    );
+  });
+});
