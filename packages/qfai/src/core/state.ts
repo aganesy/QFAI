@@ -11,13 +11,15 @@ import {
   readlink,
   realpath,
   rename,
+  rm,
   stat,
-  unlink,
   writeFile,
 } from "node:fs/promises";
+import type { FileHandle } from "node:fs/promises";
 import path from "node:path";
 
 import { hasErrnoCode, isEnoent } from "./fs/errno.js";
+import { QFAI_STATE_SCRATCH_SUFFIX } from "./gitignore.js";
 
 /**
  * `.qfai/state.json` is the single SSOT for ephemeral, per-runtime
@@ -155,29 +157,48 @@ export async function readStateStrict(root: string): Promise<Record<string, unkn
   throw new StateUnreadableError(stateAbsPath(root), loaded.reason, { cause: loaded.cause });
 }
 
-/** Scratch files this module creates: `<target>.<pid>.<random>.tmp`. */
-const TEMP_SUFFIX_RE = /\.\d+\.[0-9a-f]{12}\.tmp$/u;
+/**
+ * Name of the staging directory one write uses:
+ * `<document>.<pid>.<random>.qfai-state.tmp`. The pid and the per-call random
+ * part keep two processes — and two concurrent writes inside one process —
+ * off each other's staging directory.
+ */
+function scratchDirName(base: string): string {
+  return `${base}.${process.pid}.${randomBytes(6).toString("hex")}${QFAI_STATE_SCRATCH_SUFFIX}`;
+}
 
 /**
- * Age past which a leftover scratch file cannot belong to a write still
- * in flight, so it is debris from an interrupted run. Deliberately
- * generous: deleting a temp file another process is still filling would
- * turn its rename into an ENOENT failure.
+ * Matcher for {@link scratchDirName}, built from the same suffix constant so
+ * the sweep cannot stop recognising the names this module creates.
+ */
+const SCRATCH_DIR_RE = new RegExp(
+  `\\.\\d+\\.[0-9a-f]{12}${QFAI_STATE_SCRATCH_SUFFIX.replace(/\./gu, "\\.")}$`,
+  "u",
+);
+
+/**
+ * Age past which a leftover staging directory cannot belong to a write
+ * still in flight, so it is debris from an interrupted run. Deliberately
+ * generous: deleting one another process is still filling would turn its
+ * rename into an ENOENT failure.
  */
 const STALE_TEMP_MS = 60 * 60 * 1000;
 
 /**
- * Best-effort collection of scratch files left by runs that were killed
- * between the write and the rename. Without it they accumulate next to
- * `state.json` forever.
+ * Best-effort collection of staging directories left by runs that were
+ * killed between the write and the rename. Without it they accumulate
+ * next to the document forever.
  *
  * This is the second half of the answer to that debris, not the whole
  * one: it only runs when a LATER write happens, and a checkout whose
  * next command never writes state keeps its leftover indefinitely. The
  * first half is `QFAI_STATE_SCRATCH_IGNORE` in the managed `.gitignore`
  * (`core/gitignore.ts`), which keeps a leftover out of `git add .` for
- * as long as it survives — the scratch itself cannot be moved out of
- * `.qfai`, since `rename` is atomic only within one directory.
+ * as long as it survives — the staging directory cannot be moved
+ * somewhere already ignored, since `rename` needs both names on one
+ * filesystem, so the ignore pattern matches on the name's suffix and
+ * therefore covers the directory a symlinked document resolves into as
+ * well as `.qfai` itself.
  *
  * Never fails the write it follows.
  */
@@ -190,11 +211,13 @@ async function sweepStaleTemps(dir: string, base: string): Promise<void> {
   }
   const cutoff = Date.now() - STALE_TEMP_MS;
   for (const name of names) {
-    if (!name.startsWith(`${base}.`) || !TEMP_SUFFIX_RE.test(name)) continue;
+    if (!name.startsWith(`${base}.`) || !SCRATCH_DIR_RE.test(name)) continue;
     const abs = path.join(dir, name);
     try {
-      if ((await stat(abs)).mtimeMs > cutoff) continue;
-      await unlink(abs);
+      // `lstat`, so a symlink wearing the name is judged on itself, and
+      // `rm` does not follow one either: it removes the link alone.
+      if ((await lstat(abs)).mtimeMs > cutoff) continue;
+      await rm(abs, { recursive: true, force: true });
     } catch {
       // Raced with its owner or not ours to remove; leave it alone.
     }
@@ -246,79 +269,136 @@ async function prepareWriteTarget(abs: string): Promise<{ target: string; curren
   }
 }
 
-/** Remove a scratch file; never masks the failure that prompted it. */
-async function discardScratch(tmp: string): Promise<void> {
+/** One write's scratch: the private directory, the file, and what it holds. */
+type Scratch = {
+  /** The staging directory this write created; removed on every exit path. */
+  readonly dir: string;
+  /** The scratch file inside it, the source of the `rename`. */
+  readonly file: string;
+  /** Still open: the mode is only widened once the ownership check clears. */
+  readonly handle: FileHandle;
+  /** `fstat` of the inode this write created, for {@link assertScratchIntact}. */
+  readonly stats: Stats;
+};
+
+/**
+ * Stage the replacement document in a directory this write owns alone.
+ *
+ * The scratch used to be a plain sibling of the document, which on a
+ * shared checkout put it in a directory other accounts may create,
+ * rename and unlink entries in: between the last byte and the `rename`
+ * such an account could swap the scratch for a symlink, and the rename
+ * would publish that link AS the document. Detecting the swap afterwards
+ * is inherently racy — the check and the `rename` are two separate
+ * pathname lookups, and Node exposes no `renameat2`/`RENAME_EXCHANGE`
+ * to fuse them. Denying the swap does not need the two to be fused:
+ *
+ *   - `mkdir` (never `recursive`, so an existing name is EEXIST rather
+ *     than adopted) creates the staging directory with mode `0700`, so
+ *     no other account holds the write permission a swap of an entry
+ *     inside it requires;
+ *   - `open` is `wx` (`O_CREAT|O_EXCL|O_WRONLY`) on that fresh, empty
+ *     directory, so nothing can already sit at the scratch name, and
+ *     every later `fchmod`/`fstat` describes the inode this call made
+ *     rather than whatever a path lookup would find.
+ *
+ * The scratch keeps the document's basename, and the directory carries
+ * `QFAI_STATE_SCRATCH_SUFFIX`, so the managed `.gitignore` covers a
+ * leftover wherever the write lands — including the directory a
+ * symlinked `state.json` resolves into, which no `.qfai/`-anchored
+ * pattern reaches.
+ *
+ * The scratch is filled at `0600` even when the document is more
+ * permissive; {@link publishScratch} widens it. A shared host is
+ * exactly where the document's mode may name a group the running user
+ * is only a supplementary member of, and on a non-setgid directory the
+ * scratch is created with the user's PRIMARY group instead: copying a
+ * group-readable mode before that gid is known hands the whole state to
+ * an unrelated group for the length of the write.
+ */
+async function stageScratch(
+  dir: string,
+  base: string,
+  body: string,
+  mode: number | undefined,
+): Promise<Scratch> {
+  const staging = path.join(dir, scratchDirName(base));
+  await mkdir(staging, { mode: 0o700 });
+  const file = path.join(staging, base);
   try {
-    await unlink(tmp);
-  } catch {
-    // Best-effort cleanup only; the original failure is what matters.
+    const handle = await open(file, "wx", mode === undefined ? undefined : 0o600);
+    try {
+      await handle.writeFile(body, "utf-8");
+      return { dir: staging, file, handle, stats: await handle.stat() };
+    } catch (err) {
+      await handle.close().catch(() => undefined);
+      throw err;
+    }
+  } catch (err) {
+    await rm(staging, { recursive: true, force: true }).catch(() => undefined);
+    throw err;
   }
 }
 
-/**
- * Fill the scratch file `rename` will move over the document, and
- * report what landed on disk.
- *
- * Everything happens through ONE descriptor, opened `wx`
- * (`O_CREAT|O_EXCL|O_WRONLY`), because every path-based step here is a
- * fresh lookup another account sharing the directory can win. `O_EXCL`
- * refuses to follow a symlink already planted at the scratch name, and
- * `fchmod`/`fstat` on the open handle describe the inode this call
- * created — a path-based `chmod`/`stat` follows a link swapped in after
- * the last byte was written, so an attacker-chosen file with the
- * document's uid/gid would pass the ownership check in
- * {@link transfersOwnership} and the rename would then publish the link
- * itself as `state.json`.
- *
- * The mode is handed to `open` rather than chmod-ed afterwards so the
- * scratch carries the document's permissions from its FIRST byte:
- * creating it under the ambient umask (typically `0644`) and only
- * tightening it once the whole document is written exposes a `0600`
- * state to every other account on a shared host for the length of the
- * write, and leaves a loosely-permissioned copy behind if the process
- * dies inside that window. `umask` can only CLEAR bits, so the
- * `fchmod` still runs to widen the file back to the recorded mode.
- */
-async function fillScratch(tmp: string, body: string, mode: number | undefined): Promise<Stats> {
-  const handle = await open(tmp, "wx", mode);
-  let written: Stats;
-  try {
-    await handle.writeFile(body, "utf-8");
-    if (mode !== undefined) await handle.chmod(mode);
-    written = await handle.stat();
-  } catch (err) {
-    // The caller unlinks the scratch; only the close is ours to undo.
-    await handle.close().catch(() => undefined);
-    throw err;
-  }
-  // Deliberately not swallowed: a close that fails is a write that did
-  // not land, and renaming that scratch would publish a truncated state.
-  await handle.close();
-  return written;
+/** Drop an unpublished scratch; never masks the failure that prompted it. */
+async function discardScratch(scratch: Scratch): Promise<void> {
+  // Best-effort cleanup only; the original failure is what matters, and
+  // `sweepStaleTemps` collects anything that survives.
+  await scratch.handle.close().catch(() => undefined);
+  await rm(scratch.dir, { recursive: true, force: true }).catch(() => undefined);
 }
 
 /**
  * Refuse the rename when the scratch is no longer the inode
- * {@link fillScratch} filled.
+ * {@link stageScratch} filled.
  *
- * `rename` moves whatever the NAME points at, and it does not follow
- * symlinks — so a scratch swapped for a link between the close and the
- * rename turns `state.json` into that link, and every later write
- * lands on the attacker's file instead. `lstat` here is the last
- * cheap check available (Node exposes no `renameat2`/`RENAME_EXCHANGE`);
- * it closes the window the open descriptor cannot cover.
+ * Backstop, not the primary defence: the staging directory's `0700`
+ * already denies another account the write permission a swap needs, and
+ * this only catches what that cannot — a swap of the staging directory
+ * itself by an account that may rename entries in the document's
+ * directory. Such an account can equally rename a symlink straight onto
+ * the document, which {@link prepareWriteTarget} then writes through, so
+ * the residual window grants no capability the environment does not
+ * already give away.
  *
  * `ino` of 0 means the platform does not report inode numbers, so only
  * the file-type half of the check applies there — never a false refusal.
  */
-async function assertScratchIntact(tmp: string, written: Stats): Promise<void> {
-  const now = await lstat(tmp);
+async function assertScratchIntact(scratch: Scratch): Promise<void> {
+  const now = await lstat(scratch.file);
+  const written = scratch.stats;
   const sameInode = written.ino === 0 || (now.ino === written.ino && now.dev === written.dev);
   if (now.isSymbolicLink() || !now.isFile() || !sameInode) {
     throw new Error(
-      `${tmp} was replaced after it was written; refusing to rename it over the state file.`,
+      `${scratch.file} was replaced after it was written; refusing to rename it over the state file.`,
     );
   }
+}
+
+/**
+ * Widen the scratch to the document's mode, move it over the document,
+ * and take the staging directory back down.
+ *
+ * The widening happens HERE because only the caller's checks establish
+ * that the scratch carries the document's owner AND group; until then
+ * the recorded mode could grant a group the document never granted (see
+ * {@link stageScratch}). `umask` can only clear bits, so this `fchmod`
+ * is also what restores a mode the ambient umask would have trimmed.
+ */
+async function publishScratch(
+  scratch: Scratch,
+  target: string,
+  mode: number | undefined,
+): Promise<void> {
+  if (mode !== undefined) await scratch.handle.chmod(mode);
+  // Deliberately not swallowed: a close that fails is a write that did
+  // not land, and renaming that scratch would publish a truncated state.
+  await scratch.handle.close();
+  await assertScratchIntact(scratch);
+  await renameOnto(scratch.file, target);
+  // The document is written; an emptied directory that will not go is
+  // debris for `sweepStaleTemps`, not a failed write.
+  await rm(scratch.dir, { recursive: true, force: true }).catch(() => undefined);
 }
 
 /** True when the directory refused a new entry although the document itself is writable. */
@@ -386,26 +466,29 @@ async function renameOnto(tmp: string, target: string): Promise<void> {
 }
 
 /**
- * Persist the whole state document atomically: write a sibling temp
- * file, then rename it over the target. An interrupted run therefore
- * leaves either the old document or the new one, never a truncated
- * one. The temp name carries the pid AND a per-call random suffix, so
- * neither two processes nor two concurrent writes inside one process
- * collide on the scratch file (interleaved read-modify-write remains a
- * separate concern). A failure anywhere in the sequence removes the
- * scratch file before rethrowing.
+ * Persist the whole state document atomically: fill a scratch file in a
+ * staging directory beside the target, then rename it over the target.
+ * An interrupted run therefore leaves either the old document or the new
+ * one, never a truncated one. The staging name carries the pid AND a
+ * per-call random suffix, so neither two processes nor two concurrent
+ * writes inside one process collide (interleaved read-modify-write
+ * remains a separate concern). A failure anywhere in the sequence takes
+ * the staging directory back down before rethrowing.
  *
- * The sibling temp needs rights the direct `writeFile` this replaced
- * did not, and it cannot carry rights that file kept. Where the two
- * disagree the write falls back to rewriting the document in place —
- * losing atomicity, but never the reachability or the ownership the
- * previous implementation guaranteed:
+ * Staging needs rights the direct `writeFile` this replaced did not, and
+ * it cannot carry rights that file kept. Where the two disagree the
+ * write falls back to rewriting the document in place — losing
+ * atomicity, but never the reachability or the ownership the previous
+ * implementation guaranteed:
  *   - the parent directory rejects new entries (file-update-only
- *     permissions), so no scratch file can be created at all;
+ *     permissions), so no staging directory can be created at all;
  *   - the scratch file's owner/group differs from the document's, so
  *     the rename would replace them;
  *   - the document has other hard links, which the rename would strand
  *     on the pre-write inode.
+ *
+ * In the ownership case the scratch is discarded still at `0600`, never
+ * widened to a mode naming a group it does not belong to.
  */
 export async function writeStateFile(root: string, state: Record<string, unknown>): Promise<void> {
   const abs = stateAbsPath(root);
@@ -414,18 +497,13 @@ export async function writeStateFile(root: string, state: Record<string, unknown
   const body = `${JSON.stringify(state, null, 2)}\n`;
   const dir = path.dirname(target);
   const base = path.basename(target);
-  const tmp = path.join(dir, `${base}.${process.pid}.${randomBytes(6).toString("hex")}.tmp`);
+  // permission bits only, not the file type
+  const mode = current === undefined ? undefined : current.mode & 0o7777;
 
-  let scratch: Stats;
+  let scratch: Scratch;
   try {
-    // permission bits only, not the file type
-    scratch = await fillScratch(
-      tmp,
-      body,
-      current === undefined ? undefined : current.mode & 0o7777,
-    );
+    scratch = await stageScratch(dir, base, body, mode);
   } catch (err) {
-    await discardScratch(tmp);
     if (current !== undefined && isDirectoryDenied(err)) {
       await writeFile(target, body, "utf-8");
       return;
@@ -436,16 +514,15 @@ export async function writeStateFile(root: string, state: Record<string, unknown
   try {
     if (
       current !== undefined &&
-      (transfersOwnership(scratch, current) || sharesInodeWithOtherNames(current))
+      (transfersOwnership(scratch.stats, current) || sharesInodeWithOtherNames(current))
     ) {
       await writeFile(target, body, "utf-8");
-      await discardScratch(tmp);
+      await discardScratch(scratch);
     } else {
-      await assertScratchIntact(tmp, scratch);
-      await renameOnto(tmp, target);
+      await publishScratch(scratch, target, mode);
     }
   } catch (err) {
-    await discardScratch(tmp);
+    await discardScratch(scratch);
     throw err;
   }
   await sweepStaleTemps(dir, base);

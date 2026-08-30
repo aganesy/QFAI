@@ -187,6 +187,25 @@ describe("TC-0010-0012: state.json discussion.currentId reader/writer", () => {
     expect(await readdir(path.dirname(abs))).toEqual(["state.json"]);
   });
 
+  it.skipIf(process.platform === "win32")(
+    "republishes the document with the permissions it already had",
+    async () => {
+      const abs = path.join(root, ".qfai", "state.json");
+      await mkdir(path.dirname(abs), { recursive: true });
+      await writeFile(abs, `${JSON.stringify({ atdd: { cycles: 1 } })}\n`, "utf-8");
+      await chmod(abs, 0o640);
+
+      // The scratch is filled at 0600 so an unrelated group cannot read
+      // the state mid-write; the document's own mode has to come back
+      // once the owner and group are known to match.
+      await writeDiscussionCurrentId(root, "discussion-MODE");
+
+      expect((await lstat(abs)).mode & 0o777).toBe(0o640);
+      expect(await readDiscussionCurrentId(root)).toBe("discussion-MODE");
+      expect(await readdir(path.dirname(abs))).toEqual(["state.json"]);
+    },
+  );
+
   it("removes the scratch file when the write fails", async () => {
     // `.qfai/state.json` as a directory makes the rename fail after the
     // scratch file already exists.
