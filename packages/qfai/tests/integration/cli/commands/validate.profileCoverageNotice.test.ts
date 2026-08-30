@@ -20,11 +20,24 @@ const PARTIAL_PROFILES = [
   "saas-package",
 ] as const;
 
+/** The half of `validate.json` this suite reads. */
+type Report = { issues: Finding[]; profileValidatorsRan?: boolean };
+
+function isReport(value: unknown): value is Report {
+  if (typeof value !== "object" || value === null || !("issues" in value)) return false;
+  return Array.isArray(value.issues);
+}
+
+async function reportBody(root: string): Promise<Report> {
+  const parsed: unknown = JSON.parse(await readFile(path.join(root, CANONICAL_REL), "utf-8"));
+  if (!isReport(parsed)) {
+    throw new Error(`${CANONICAL_REL} is not a validation report`);
+  }
+  return parsed;
+}
+
 async function findings(root: string): Promise<Finding[]> {
-  const body = JSON.parse(await readFile(path.join(root, CANONICAL_REL), "utf-8")) as {
-    issues: Finding[];
-  };
-  return body.issues;
+  return (await reportBody(root)).issues;
 }
 
 /** A minimal spec pack: enough for the spec-pack and contract gates to speak. */
@@ -55,6 +68,38 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-coverage-"));
   try {
     await seedSpec(root);
+    await task(root);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+}
+
+/**
+ * The same project with its skills directory replaced by a regular file.
+ *
+ * That is the one shape a later `readdir` cannot survive, so
+ * `runProfileValidators` returns the integration-surface findings alone and
+ * runs none of the profile's own validators.
+ */
+async function withUnwalkableSurface(task: (root: string) => Promise<void>): Promise<void> {
+  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-profile-coverage-surface-"));
+  try {
+    await seedSpec(root);
+    await mkdir(path.join(root, ".qfai", "assistant"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "assistant", "skills"), "not a directory\n", "utf-8");
+    // Enough of a surface that `qfai init` counts as having run here.
+    await writeFile(
+      path.join(root, ".qfai", "assistant", "README.md"),
+      [
+        "# QFAI assistant tree",
+        "",
+        "## Canonical entrypoint",
+        "",
+        "- .qfai/assistant/skills/",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
     await task(root);
   } finally {
     await rm(root, { recursive: true, force: true });
@@ -296,6 +341,53 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
     });
   });
 
+  it("keeps the code-reference TRACE gates out of the shared traceability group", async () => {
+    // `runSddValidators` calls `validateTraceability` with the default
+    // `includeCodeReferences: false`, so the same validator run under `sdd`
+    // evaluates neither `QFAI-TRACE-117` nor `QFAI-TRACE-124` — a `tdd` or
+    // `full` run can fail on a gate the `sdd` notice claimed as covered.
+    await withProject(async (root) => {
+      const sdd = await noticeFor(root, "sdd");
+      expect(sdd?.message).toContain("QFAI-TRACE-117");
+      expect(sdd?.message).toContain("QFAI-TRACE-124");
+      // The structural codes stay shared — sdd runs those.
+      expect(sdd?.message).not.toContain("QFAI-TRACE-118");
+      expect(sdd?.message).not.toContain("QFAI-TRACE-1*");
+
+      // `runTddValidators` passes `includeCodeReferences: true`.
+      const tdd = await noticeFor(root, "tdd");
+      expect(tdd?.message).not.toContain("QFAI-TRACE-117");
+      expect(tdd?.message).not.toContain("QFAI-TRACE-124");
+    });
+  });
+
+  it("points the SaaS-only hard gates at --profile saas-package", async () => {
+    // `runSaasPackageProfile` is composed by that profile alone, so a full scan
+    // cannot deliver either gate and must say which profile can.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const full = await noticeFor(root, "full");
+        expect(full?.message).toContain(
+          "D-SAAS-PACKAGE-ATTESTATION-MISSING (`--profile saas-package`)",
+        );
+        expect(full?.message).toContain("D-SAAS-PACKAGE-HANDOFF-SCHEMA (`--profile saas-package`)");
+        // Not folded into the "run full" list: a full scan never runs them.
+        expect(listedFamilies(full?.message ?? "")).not.toContain(
+          "D-SAAS-PACKAGE-ATTESTATION-MISSING",
+        );
+
+        // The owner emits one of them on this fixture (no attestation file) and
+        // must not list its own gates as unevaluated.
+        await runValidate({ root, strict: false, profile: "saas-package" });
+        const all = await findings(root);
+        expect(all.map((entry) => entry.code)).toContain("D-SAAS-PACKAGE-ATTESTATION-MISSING");
+        const saas = all.find((entry) => entry.code === "QFAI-PROFILE-001");
+        expect(saas?.message).not.toContain("D-SAAS-PACKAGE-ATTESTATION-MISSING");
+        expect(saas?.message).not.toContain("D-SAAS-PACKAGE-HANDOFF-SCHEMA");
+      });
+    });
+  });
+
   it("names the spec-pack families --profile tdd skips", async () => {
     // `runSddValidators` owns these and `runTddValidators` calls none of them.
     await withProject(async (root) => {
@@ -316,6 +408,66 @@ describe("GATE_GROUP_FAMILIES files each family under the group that runs it", (
       ]) {
         expect(notice?.message).toContain(family);
       }
+    });
+  });
+});
+
+describe("the notice describes the run, not the requested profile's table", () => {
+  // POSIX only: the scenario is the ENOTDIR shape, and Windows folds that
+  // errno into ENOENT, which reads as absence.
+  it.skipIf(process.platform === "win32")(
+    "does not claim full-scan coverage when the run stopped at the integration surface",
+    async () => {
+      // `runProfileValidators` returns `surface.issues` alone when a path the
+      // profile's own validators walk cannot be walked, so `full` ran no
+      // validator at all — and printed "evaluated every gate a full scan
+      // covers" next to the `QFAI-LINK-001` that says why it did not.
+      await withoutCiEnv(async () => {
+        await withUnwalkableSurface(async (root) => {
+          await runValidate({ root, strict: false, profile: "full" });
+          const body = await reportBody(root);
+          const codes = body.issues.map((entry) => entry.code);
+          expect(codes).toContain("QFAI-LINK-001");
+          expect(body.profileValidatorsRan).toBe(false);
+
+          const notice = body.issues.find((entry) => entry.code === "QFAI-PROFILE-001");
+          expect(notice?.message).not.toContain("evaluated every gate a full scan covers");
+          expect(notice?.message).toContain("evaluated NO hard gate in this run");
+          expect(notice?.message).toContain("QFAI-LINK-001");
+        });
+      });
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "does not name only the other profiles' gates when a partial profile stopped",
+    async () => {
+      // `sdd` walks the configured skills directory too, so the same damage
+      // stops it — and the ordinary wording implies its own gates were observed.
+      await withoutCiEnv(async () => {
+        await withUnwalkableSurface(async (root) => {
+          const notice = await noticeFor(root, "sdd");
+          expect(notice?.message).toContain("evaluated NO hard gate in this run");
+          expect(listedFamilies(notice?.message ?? "")).toEqual([]);
+        });
+      });
+    },
+  );
+
+  it("still reports full-scan coverage on a run that reached its validators", async () => {
+    // Over-correction pin: the abort branch must not swallow the ordinary
+    // wording for a healthy run.
+    await withoutCiEnv(async () => {
+      await withProject(async (root) => {
+        const notice = await noticeFor(root, "full");
+        expect(notice?.message).toContain("evaluated every gate a full scan covers");
+        expect(notice?.message).not.toContain("evaluated NO hard gate");
+        expect((await reportBody(root)).profileValidatorsRan).toBe(true);
+
+        const sdd = await noticeFor(root, "sdd");
+        expect(sdd?.message).toContain("is a partial profile");
+        expect(listedFamilies(sdd?.message ?? "").length).toBeGreaterThan(0);
+      });
     });
   });
 });

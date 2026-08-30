@@ -124,11 +124,8 @@ export async function validateProject(
   // slips through while `QFAI-SCOPE-00x` reports the misuse.
   const specScope = requestedScope;
 
-  const findings = [
-    ...configIssues,
-    ...scopeIssues,
-    ...(await runProfileValidators(root, config, profile, options.platform, specScope)),
-  ];
+  const profileRun = await runProfileValidators(root, config, profile, options.platform, specScope);
+  const findings = [...configIssues, ...scopeIssues, ...profileRun.issues];
   const scopedFindings = findings.filter((finding) =>
     isFindingInSpecScope(finding, scopeRoots, specScope),
   );
@@ -152,6 +149,10 @@ export async function validateProject(
   return {
     toolVersion,
     profile,
+    // Reported, not inferred: a run stopped by the integration surface returns
+    // only those findings, and their absence is indistinguishable from a clean
+    // surface to a reader looking at the issue list alone.
+    profileValidatorsRan: profileRun.ranProfileValidators,
     issues,
     counts: countIssues(issues),
     traceability: {
@@ -275,13 +276,27 @@ function toRepoRelative(root: string, absolute: string): string {
   return path.relative(root, absolute).split(path.sep).join("/");
 }
 
+/**
+ * What one profile's run produced, and whether its own validators ran at all.
+ *
+ * The two cannot be recovered from the issue list downstream: an aborted run
+ * and a healthy one both return `surface.issues` first, so a caller counting
+ * findings cannot tell "the surface is broken and nothing else was looked at"
+ * from "the surface is broken and everything else passed".
+ */
+type ProfileValidatorRun = {
+  readonly issues: Issue[];
+  /** `false` when the integration-surface inspection stopped the run below. */
+  readonly ranProfileValidators: boolean;
+};
+
 async function runProfileValidators(
   root: string,
   config: ConfigLoadResult["config"],
   profile: ValidationProfile,
   platformOption?: string,
   specScope?: SpecScope,
-): Promise<Issue[]> {
+): Promise<ProfileValidatorRun> {
   // Runs in every profile, ahead of the profile's own validators. A broken
   // integration link means the assistant loaded no skill and routed no agent,
   // so every gate the profile is about was defined by files nothing read. That
@@ -308,9 +323,12 @@ async function runProfileValidators(
     toRepoRelative(root, resolvePath(root, config, "skillsDir")),
   );
   if (surface.unwalkable.some((damaged) => walked.some((base) => isUnder(base, damaged)))) {
-    return surface.issues;
+    return { issues: surface.issues, ranProfileValidators: false };
   }
-  return [...surface.issues, ...(await runProfileOwnValidators())];
+  return {
+    issues: [...surface.issues, ...(await runProfileOwnValidators())],
+    ranProfileValidators: true,
+  };
 
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {

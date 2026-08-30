@@ -8,6 +8,7 @@ import { normalizeSpecId } from "../../core/specScope.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { SUNSETS, isAtOrPastSunset } from "../../core/sunset.js";
 import { toRelativePath } from "../../core/paths.js";
+import { ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE } from "../../core/saasPackage/profile.js";
 import { saasPackageSkippedGateFamilies } from "../../core/saasPackage/skippedGates.js";
 import type { Issue, ValidationProfile, ValidationResult } from "../../core/types.js";
 import {
@@ -162,7 +163,12 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
-  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
+  // `!== false` rather than a truth test: a result that carries no claim (one
+  // not produced by `validateProject`) keeps the ordinary per-profile wording.
+  const partialProfileNotice = buildPartialProfileNotice(
+    normalized.profile,
+    normalized.profileValidatorsRan !== false,
+  );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
     normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
@@ -414,6 +420,11 @@ function buildDeprecationIssue(args: {
  *     tdd-only `validateTraceabilityIntegrity`, so a shared entry spelled
  *     `QFAI-CONTRACT-*` / `QFAI-TRACE-*` would let a stage claim coverage of a
  *     hard gate it never ran. Those codes get their own single-emitter groups.
+ *     One emitter is not one group either: `validateTraceability` runs its two
+ *     code-reference gates only under `includeCodeReferences`, which
+ *     `runSddValidators` leaves off, so `QFAI-TRACE-117` / `QFAI-TRACE-124`
+ *     split away from the shared block into a group `tdd` lists and `sdd` does
+ *     not.
  *   - `QFAI-DCON-*` has one emitter per profile
  *     (`validateSddDesignContractReadiness` /
  *     `validatePrototypingDesignContractReadiness`), which share only the root
@@ -510,10 +521,42 @@ const GATE_GROUP_FAMILIES = {
   ],
   // `validateContractReferences` — `runSddValidators` only.
   "contract-references": ["QFAI-CONTRACT-030"],
-  // `validateTraceability` — `runSddValidators` and `runTddValidators`. Its
-  // codes are the `QFAI-TRACE-1xx` block; `QFAI-TRACE-001/002` are the
-  // tdd-only integrity gate below.
-  traceability: ["QFAI-TRACE-1*"],
+  // `validateTraceability` — `runSddValidators` and `runTddValidators`. Listed
+  // by code rather than as `QFAI-TRACE-1*`: the wildcard would also claim the
+  // two code-reference gates below, which the shared call does not reach, and
+  // `QFAI-TRACE-001/002` belong to the tdd-only integrity gate further down.
+  traceability: [
+    "QFAI-TRACE-100",
+    "QFAI-TRACE-101",
+    "QFAI-TRACE-102",
+    "QFAI-TRACE-103",
+    "QFAI-TRACE-104",
+    "QFAI-TRACE-105",
+    "QFAI-TRACE-106",
+    "QFAI-TRACE-107",
+    "QFAI-TRACE-108",
+    "QFAI-TRACE-109",
+    "QFAI-TRACE-110",
+    "QFAI-TRACE-111",
+    "QFAI-TRACE-112",
+    "QFAI-TRACE-113",
+    "QFAI-TRACE-114",
+    "QFAI-TRACE-115",
+    "QFAI-TRACE-116",
+    "QFAI-TRACE-118",
+    "QFAI-TRACE-119",
+    "QFAI-TRACE-120",
+    "QFAI-TRACE-121",
+    "QFAI-TRACE-122",
+    "QFAI-TRACE-123",
+  ],
+  // The two `validateTraceability` gates behind its `includeCodeReferences`
+  // option: `QFAI-TRACE-124` (test globs unset) and `QFAI-TRACE-117` (SC with
+  // no code reference). `runSddValidators` defaults the option to `false`, so
+  // `--profile sdd` calls the same validator and still evaluates neither —
+  // filing them with the shared codes hid a gate that a `tdd` or `full` run
+  // fails on. `runTddValidators` and `runFullValidators` both pass `true`.
+  "traceability-code-references": ["QFAI-TRACE-117", "QFAI-TRACE-124"],
   // `validateTraceabilityIntegrity` — `runTddValidators` only.
   "traceability-integrity": ["QFAI-TRACE-001", "QFAI-TRACE-002"],
   // Root DESIGN.md sample / identity / lock gates, run by both
@@ -583,6 +626,15 @@ const GATE_GROUP_FAMILIES = {
   // false`) because it also runs the SDD profile, the legitimate owner of the
   // files this guard polices. Stage-only: see `STAGE_ONLY_GATE_GROUPS`.
   "upstream-ssot-guard": ["QFAI-DRIFT-*"],
+  // `runSaasPackageProfile` — reached only from the `saas-package` profile
+  // (`core/validate.ts#runSaasPackage`), which `runFullValidators` does not
+  // call. Both codes are `error`, so a package missing its design-system
+  // attestation or carrying a malformed handoff fails `--profile saas-package`
+  // and nothing else — including a full scan. Stage-only for that reason.
+  // `D-SAAS-PACKAGE-VERIFY-SKIPPED` is deliberately absent: it is the profile's
+  // own info marker for the gates it skips, not a gate another run could
+  // evaluate.
+  "saas-package-profile": [ATTESTATION_MISSING_CODE, HANDOFF_SCHEMA_CODE],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -593,18 +645,21 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
  * Groups `full` / `verify` deliberately do NOT run, mapped to the profile that
  * does run each one.
  *
- * `runFullValidators` disables both — `runSddValidators(..., false, ...)` drops
- * `QFAI-DCON-019` and `runTddValidators(..., false, false)` drops the upstream
- * guard — because a repo-wide audit also covers the stage that legitimately
- * owns the files each gate polices, so firing them there would flag every
- * lawful edit. Listing them under `full` made the notice tell a partial
- * profile to run a scan that never evaluates them, while `full` itself,
- * showing no notice, read as complete coverage. Both halves are fixed by
- * excluding them from `full` and naming their owning profile in the notice.
+ * `runFullValidators` disables two of them — `runSddValidators(..., false, ...)`
+ * drops `QFAI-DCON-019` and `runTddValidators(..., false, false)` drops the
+ * upstream guard — because a repo-wide audit also covers the stage that
+ * legitimately owns the files each gate polices, so firing them there would
+ * flag every lawful edit. The third is not disabled but unreachable: `full`
+ * never composes `runSaasPackageProfile` at all. Listing any of them under
+ * `full` made the notice tell a partial profile to run a scan that never
+ * evaluates them, while `full` itself, showing no notice, read as complete
+ * coverage. Both halves are fixed by excluding them from `full` and naming
+ * their owning profile in the notice.
  */
 const STAGE_ONLY_GATE_GROUPS: Partial<Record<GateGroup, ValidationProfile>> = {
   "design-contract-readiness-sdd": "sdd",
   "upstream-ssot-guard": "tdd",
+  "saas-package-profile": "saas-package",
 };
 
 function stageOwnerOf(group: GateGroup): ValidationProfile | undefined {
@@ -661,11 +716,15 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
     "atdd-traceability",
     "contracts",
     "traceability",
+    // `runTddValidators` calls `validateTraceability` with
+    // `includeCodeReferences: true`, which `runSddValidators` does not.
+    "traceability-code-references",
     "traceability-integrity",
   ],
   // `runSaasPackage` runs the prototyping composition, then narrows it via
-  // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below).
-  "saas-package": PROTOTYPING_GATE_GROUPS,
+  // `SAAS_PACKAGE_SKIPPED_GATES` (folded back into the notice below) and adds
+  // its own attestation / handoff gates, which no other profile reaches.
+  "saas-package": [...PROTOTYPING_GATE_GROUPS, "saas-package-profile"],
 };
 
 function isKnownProfile(profile: string): profile is ValidationProfile {
@@ -728,10 +787,30 @@ function unevaluatedGates(profile: string): UnevaluatedGates {
  * every gate a full scan covers, but `runFullValidators` disables the two
  * stage-ownership gates, and a run that says nothing at all reads as complete
  * coverage of every gate in the tool.
+ *
+ * All of that describes what the requested profile *would* evaluate, which is
+ * only what it did evaluate when its validators actually ran.
+ * `runProfileValidators` returns the integration-surface findings alone when a
+ * path those validators walk cannot be walked, so the group table describes
+ * nothing that happened: `profileValidatorsRan === false` gets its own wording
+ * rather than a coverage claim printed next to the `QFAI-LINK-001` that
+ * contradicts it.
  */
-function buildPartialProfileNotice(profile: string | undefined): Issue | null {
+function buildPartialProfileNotice(
+  profile: string | undefined,
+  profileValidatorsRan: boolean,
+): Issue | null {
   if (!profile) {
     return null;
+  }
+  if (!profileValidatorsRan) {
+    return profileNotice(
+      `profile="${profile}" evaluated NO hard gate in this run. The integration-surface ` +
+        "inspection found a path this profile's own validators walk that cannot be walked, so " +
+        "the run stopped before any of them ran and reported only that damage " +
+        "(`QFAI-LINK-001`). Repair the path it names and re-run: neither these findings nor " +
+        "their absence says anything about this profile's gates.",
+    );
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
@@ -754,6 +833,11 @@ function buildPartialProfileNotice(profile: string | undefined): Issue | null {
         `${fullCovered.join(", ")}. A PASS here is not full-scan coverage — run ` +
         "`qfai validate --fail-on error` (full profile) before declaring completion." +
         stageOnlySentence;
+  return profileNotice(message);
+}
+
+/** The `QFAI-PROFILE-001` envelope every coverage wording above shares. */
+function profileNotice(message: string): Issue {
   return {
     code: "QFAI-PROFILE-001",
     severity: "info",
