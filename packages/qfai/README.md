@@ -37,10 +37,14 @@ The agent reads the repository, produces the required artifacts, and iterates un
 - Per-iter evidence is a single `<screen>.review.json` per declared spec ×
   screen pair (4-axis ordinal verdicts, 6 `*Feel` short-prose impressions
   bounded to 200 words each, `layoutAntiPatternsDetected[]`,
-  `designMdViolations[]`, and `pivotDirective`). On the default path the
-  reviewer-emitted `<screen>.review.json` is the only per-cycle artifact; the
-  opt-in `--capture` and `--cycle 0 --emit-skeletons` flags additionally write
-  `<screen>.png` / `<screen>.html` into the same iteration directory. No
+  `designMdViolations[]`, and `pivotDirective`). It is the only
+  reviewer-authored file, not the only per-cycle artifact: the CLI itself
+  always writes `iterate-plan.json` into the same `iter-NN/` directory, and
+  from cycle 1 onward — once the previous cycle is recorded in
+  `prototyping.json#iterations[]` — an advisory `iterate-context.json` holding
+  the prior scores and open blockers. The opt-in `--capture` and
+  `--cycle 0 --emit-skeletons` flags additionally write `<screen>.png` /
+  `<screen>.html` there. Archive the whole `iter-NN/` directory; no
   `interaction.json` is written on any path.
 - Calibration SSOT is the calibration pack referenced by `calibrationRef.packPath`.
 
