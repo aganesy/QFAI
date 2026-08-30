@@ -360,6 +360,71 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     expect(codes).toContain("QFAI-RESEARCH-010"); // reflection[].reason
   });
 
+  it("rejects a placeholder that was quoted or carries a trailing comment", async () => {
+    // Both are legal YAML and both are still the shipped template. Matching the
+    // whole line let them through, and the required-field checks then read them
+    // as filled in — so a pack that changed only the date cleared the gate.
+    const filled = fillEveryPlaceholder(await readShippedTemplate())
+      .replace(
+        /^([ \t]+)title: Recorded by the research-first protocol run$/m,
+        '$1title: "[Reference title]"',
+      )
+      .replace(
+        /^([ \t]+)reason: Recorded by the research-first protocol run$/m,
+        "$1reason: [Why this applies] # TODO",
+      );
+    const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
+    const placeholder = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
+
+    expect(placeholder).toHaveLength(1);
+    expect(placeholder[0]?.message).toContain("title");
+    expect(placeholder[0]?.message).toContain("reason");
+  });
+
+  it("resolves a source_id whose id carries a trailing comment", async () => {
+    // Quoting was handled before the comment was removed, so `id: "SRC-0001"
+    // # primary` normalised to `"SRC-0001"` and a correct reference was
+    // reported unresolved.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      /^([ \t]+)(- )?id: SRC-0001$/m,
+      '$1$2id: "SRC-0001" # primary',
+    );
+    const codes = (await validateResearchSummary(await seedPack(filled), defaultConfig)).map(
+      (item) => item.code,
+    );
+
+    expect(codes).not.toContain("QFAI-RESEARCH-013");
+  });
+
+  it("rejects an empty block scalar in a required field", async () => {
+    // `description: |-` with no body is the empty string in YAML, but reading
+    // the header line alone returned `|-` — a non-empty value that passed every
+    // required-field check while the field held nothing.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      /^([ \t]+)description: Recorded by the research-first protocol run$/m,
+      "$1description: |-",
+    );
+    const codes = (await validateResearchSummary(await seedPack(filled), defaultConfig)).map(
+      (item) => item.code,
+    );
+
+    expect(codes).toContain("QFAI-RESEARCH-016"); // best_practices[].description
+  });
+
+  it("accepts a block scalar that actually carries a body", async () => {
+    // The fix must read the body, not just reject the header: a real multi-line
+    // description is a legitimate way to write the field.
+    const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(
+      /^([ \t]+)description: Recorded by the research-first protocol run$/m,
+      "$1description: |-\n$1  Recorded by the research-first protocol run\n$1  across two lines.",
+    );
+    const codes = (await validateResearchSummary(await seedPack(filled), defaultConfig)).map(
+      (item) => item.code,
+    );
+
+    expect(codes).toEqual([]);
+  });
+
   it("requires action and reason on every reflection entry, not just one", async () => {
     // A list whose first entry is complete must not vouch for the rest.
     const filled = fillEveryPlaceholder(await readShippedTemplate()).replace(

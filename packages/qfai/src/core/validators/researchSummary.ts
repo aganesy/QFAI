@@ -2,6 +2,7 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import fg from "fast-glob";
+import { parse as parseYaml } from "yaml";
 
 import type { QfaiConfig } from "../config.js";
 import {
@@ -19,8 +20,33 @@ const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
 /** ```yaml fence inside the stored section — the prose around it is not data. */
 const YAML_FENCE_RE = /^```[^\n]*\n([\s\S]*?)^```/gm;
-/** `key: [fill me in]` — a shipped template placeholder that was never replaced. */
-const PLACEHOLDER_FIELD_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*\[[^\]]*\][ \t]*$/gm;
+/** Any `key: value` line, so the value can be judged after YAML reads it. */
+const FIELD_LINE_RE = /^[ \t]*(?:-[ \t]*)?([A-Za-z0-9_]+):[ \t]*(.*)$/gm;
+/** `[fill me in]` — the shipped template's placeholder shape, once parsed. */
+const PLACEHOLDER_TEXT_RE = /^\[[^\]]*\]$/;
+/**
+ * The Output Schema fields that carry a scalar, and the only keys the
+ * placeholder scan reads.
+ *
+ * Scanning every key would have to decide what a flow sequence means on a key
+ * the schema says nothing about — `tags: [a, b]` is data, not a placeholder.
+ * On these keys it is never data: the schema says scalar, so a sequence there
+ * is the unreplaced `[...]` the template shipped.
+ */
+const SCALAR_SCHEMA_FIELDS = new Set([
+  "id",
+  "title",
+  "url",
+  "published",
+  "category",
+  "description",
+  "source_id",
+  "finding",
+  "action",
+  "reason",
+]);
+/** `|`, `>` with optional chomping and indentation indicators. */
+const BLOCK_SCALAR_HEADER_RE = /^[|>][+-]?\d*$/;
 /** `source_id:` reference carried by best_practices / anti_patterns / reflection entries. */
 const SOURCE_ID_REF_RE = /^[ \t]*(?:-[ \t]*)?source_id:[ \t]*(.*)$/gm;
 /** The decisions `reflection[].action` is allowed to record. */
@@ -516,14 +542,40 @@ function extractYamlPayload(section: string): string {
   return blocks.length > 0 ? blocks.join("\n") : section;
 }
 
-/** Keys whose value is still a `[bracketed]` template placeholder. */
+/**
+ * Keys whose value is still a `[bracketed]` template placeholder.
+ *
+ * Judged on the value **YAML reads**, not on the literal line. Matching the
+ * whole line let `title: "[Reference title]"` and `reason: [Why...] # TODO`
+ * through — both legal YAML, both still the shipped template — and the
+ * required-field checks then accepted them as filled in, so a pack that
+ * changed only the date cleared the completion gate.
+ */
 function collectPlaceholderKeys(yaml: string): string[] {
   const keys = new Set<string>();
-  for (const match of yaml.matchAll(PLACEHOLDER_FIELD_RE)) {
+  for (const match of yaml.matchAll(FIELD_LINE_RE)) {
     const key = match[1];
-    if (key) keys.add(key);
+    if (!key || !SCALAR_SCHEMA_FIELDS.has(key.toLowerCase())) continue;
+    if (isPlaceholderValue(match[2] ?? "")) {
+      keys.add(key);
+    }
   }
   return [...keys];
+}
+
+/** Whether a raw value text is the template's `[...]` placeholder. */
+function isPlaceholderValue(raw: string): boolean {
+  const text = raw.trim();
+  if (text.length === 0) {
+    return false;
+  }
+  const parsed = parseScalarText(text);
+  // Unquoted, `[fill me in]` is a one-element flow sequence; quoted, it is the
+  // string `[fill me in]`. Both spellings are the same unreplaced placeholder.
+  if (Array.isArray(parsed)) {
+    return parsed.length === 1 && typeof parsed[0] === "string";
+  }
+  return typeof parsed === "string" && PLACEHOLDER_TEXT_RE.test(parsed.trim());
 }
 
 /** `source_id` values that no `sources[].id` in the same summary resolves. */
@@ -569,8 +621,44 @@ function extractResearchSummarySection(content: string): string | null {
  * marker) so `source_id:` is never mistaken for `id:`.
  */
 function readScalarField(entry: string, field: string): string | null {
-  const match = new RegExp(`^[ \\t]*(?:-[ \\t]*)?${field}:[ \\t]*(.*)$`, "im").exec(entry);
-  return match ? normalizeScalar(match[1] ?? "") : null;
+  const lines = entry.split(/\r?\n/);
+  const re = new RegExp(`^([ \\t]*)(?:-[ \\t]*)?${field}:[ \\t]*(.*)$`, "i");
+  for (let index = 0; index < lines.length; index += 1) {
+    const match = re.exec(lines[index] ?? "");
+    if (match === null) {
+      continue;
+    }
+    const inline = (match[2] ?? "").trim();
+    if (!BLOCK_SCALAR_HEADER_RE.test(inline)) {
+      return normalizeScalar(inline);
+    }
+    // A block scalar's value is the more-indented lines under its header, so
+    // reading the header line alone returned `|-` — a non-empty string that
+    // passed every required-field check while the field held nothing.
+    return readBlockScalar(lines, index, (match[1] ?? "").length);
+  }
+  return null;
+}
+
+/** The body of a block scalar whose header sits at `lines[headerIndex]`. */
+function readBlockScalar(
+  lines: readonly string[],
+  headerIndex: number,
+  headerIndent: number,
+): string {
+  const body: string[] = [];
+  for (let index = headerIndex + 1; index < lines.length; index += 1) {
+    const line = lines[index] ?? "";
+    if (line.trim().length === 0) {
+      body.push("");
+      continue;
+    }
+    if ((/^[ \t]*/.exec(line)?.[0] ?? "").length <= headerIndent) {
+      break;
+    }
+    body.push(line.trim());
+  }
+  return body.join("\n").trim();
 }
 
 /**
@@ -582,12 +670,35 @@ function readScalarField(entry: string, field: string): string | null {
  */
 function normalizeScalar(raw: string): string {
   const text = raw.trim();
-  const quoted = /^(["'])([\s\S]*)\1$/.exec(text);
-  if (quoted) {
-    return (quoted[2] ?? "").trim();
+  if (text.length === 0) {
+    return "";
   }
-  const uncommented = text.replace(/[ \t]+#.*$/, "").trim();
-  return uncommented === "~" || /^null$/i.test(uncommented) ? "" : uncommented;
+  const parsed = parseScalarText(text);
+  if (parsed === null || parsed === undefined) {
+    return "";
+  }
+  if (typeof parsed === "string") {
+    return parsed.trim();
+  }
+  if (typeof parsed === "number" || typeof parsed === "boolean") {
+    return String(parsed);
+  }
+  // Not a scalar at all — a flow sequence or mapping. Keep the text so the
+  // placeholder check can still see `[fill me in]` rather than reading it as a
+  // one-element list and calling the field answered.
+  return text;
+}
+
+/** `parse` the value on its own, or `undefined` when it is not valid YAML. */
+function parseScalarText(text: string): unknown {
+  try {
+    return parseYaml(text) as unknown;
+  } catch {
+    // A value that does not parse is judged as written rather than silently
+    // read as empty: an unparseable field is a defect the schema checks report,
+    // not a licence to treat it as filled in.
+    return text;
+  }
 }
 
 /** `field:` present with a non-empty YAML scalar value, anywhere in the entry. */
