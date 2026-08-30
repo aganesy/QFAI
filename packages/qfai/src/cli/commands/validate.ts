@@ -16,7 +16,7 @@ import {
 } from "../../core/validators/layerCoverage.js";
 import {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
-  packageSelfGovernanceApplies,
+  unevaluatedPackageSelfGovernanceFamilies,
 } from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
@@ -168,7 +168,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const normalized = normalizeValidationResult(root, result);
   const partialProfileNotice = buildPartialProfileNotice(
     normalized.profile,
-    await packageSelfGovernanceApplies(root),
+    await unevaluatedPackageSelfGovernanceFamilies(root),
   );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
@@ -466,12 +466,17 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
 /**
  * Deduped, order-preserving families for the groups a profile does not run.
  *
- * `selfGovernanceApplies` reports whether the qfai package source tree the
- * self-governance group reads is present in the validated repo. When it is
- * not, that group's detectors cannot fire whatever the project does, so its
- * codes join the list even though the profile wires them in.
+ * `unevaluatedSelfGovernance` carries the self-governance codes whose own
+ * inputs are absent, so those detectors cannot fire whatever the project does
+ * and their codes join the list even though the profile wires them in. It is
+ * per code, not per group: the two detectors read different files, and a tree
+ * carrying one detector's inputs but not the other's would otherwise drop both
+ * from the notice while one of them had structurally not run.
  */
-function unevaluatedFamilies(profile: string, selfGovernanceApplies: boolean): string[] {
+function unevaluatedFamilies(
+  profile: string,
+  unevaluatedSelfGovernance: readonly string[],
+): string[] {
   if (!isKnownProfile(profile)) {
     return [];
   }
@@ -490,8 +495,8 @@ function unevaluatedFamilies(profile: string, selfGovernanceApplies: boolean): s
     // put "full is a partial profile" into the artifact.
     return families;
   }
-  if (!selfGovernanceApplies && evaluated.has("package-self-governance")) {
-    for (const family of GATE_GROUP_FAMILIES["package-self-governance"]) push(family);
+  if (evaluated.has("package-self-governance")) {
+    for (const family of unevaluatedSelfGovernance) push(family);
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -515,14 +520,14 @@ function unevaluatedFamilies(profile: string, selfGovernanceApplies: boolean): s
  */
 function buildPartialProfileNotice(
   profile: string | undefined,
-  selfGovernanceApplies: boolean,
+  unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
   if (!profile) {
     return null;
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile, selfGovernanceApplies);
+  const unevaluated = unevaluatedFamilies(profile, unevaluatedSelfGovernance);
   if (unevaluated.length === 0) {
     return null;
   }

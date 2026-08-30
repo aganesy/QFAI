@@ -87,7 +87,7 @@ export { detectHandoffSchemaDrift } from "./handoffSchemaDrift.js";
 export {
   PACKAGE_SELF_GOVERNANCE_FAMILIES,
   PACKAGE_SOURCE_ROOT_REL,
-  packageSelfGovernanceApplies,
+  unevaluatedPackageSelfGovernanceFamilies,
   runPackageSelfGovernanceValidators,
 } from "./packageSelfGovernance.js";
 export {
