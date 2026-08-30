@@ -2,6 +2,10 @@
 
 This document is the SSOT for ATDD test-layer semantics and completion gates.
 
+For which CI lane runs which layer, see the sibling map
+[`test-layers-ci-lanes.md`](./test-layers-ci-lanes.md). That file is a crosswalk only — the policy
+loader reads this file and not that one, so nothing there can change the vocabulary declared below.
+
 ## Layer vocabulary crosswalk (normative)
 
 qfai spells the same layer four ways across shipped artifacts. This table is
@@ -469,8 +473,7 @@ Treat these as review signals in the same class as volume floors — worth a fin
 
 ## Test stub detection (QFAI-TEST-001 / -002 / -003)
 
-`QFAI-TEST-001` (error) reports the silent-placeholder construct of each
-supported stack:
+`QFAI-TEST-001` (error) reports the silent-placeholder construct of each supported stack:
 
 | Extensions           | Construct                                                           |
 | -------------------- | ------------------------------------------------------------------- |
@@ -482,14 +485,13 @@ supported stack:
 | `.rb`                | a line starting `skip` / `pending`                                  |
 | `.cs`                | `[Ignore` / `Skip = "`                                              |
 
-`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` /
-`test.skip(` / `describe.skip(`, chained `.each` spellings included. It is its
-own rule, not a graded-down `QFAI-TEST-001`: a waiver is judged against the
-highest severity its rule produced in the run, so sharing one code would let a
-single `.todo` promote the pair to `error` and take the per-path waiver in
-`.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
-keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton
-awaiting implementation), so drop the modifier rather than delete the test.
+`QFAI-TEST-003` (warning) is the JS/TS `.skip` family — `it.skip(` / `test.skip(` /
+`describe.skip(`, chained `.each` spellings included. It is its own rule, not a graded-down
+`QFAI-TEST-001`: a waiver is judged against the highest severity its rule produced in the run,
+so sharing one code would let a single `.todo` promote the pair to `error` and take the
+per-path waiver in `.qfai/waivers.yml` away from every `.skip`. The fix differs too — a `.skip`
+keeps its body (it is what `npx qfai atdd scaffold` emits for a skeleton awaiting
+implementation), so drop the modifier rather than delete the test.
 
 `QFAI-TEST-002` (info) names any extension the scan opened that has no dialect.
 Without it a clean run on an unsupported stack is indistinguishable from a
