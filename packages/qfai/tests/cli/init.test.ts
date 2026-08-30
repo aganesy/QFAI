@@ -5,7 +5,6 @@ import {
   mkdir,
   readFile,
   readlink,
-  rm,
   writeFile,
   symlink,
 } from "node:fs/promises";
@@ -26,6 +25,7 @@ import {
   QFAI_GITIGNORE_GOVERNANCE_NEGATIONS,
   QFAI_GITIGNORE_MARKER,
 } from "../../src/core/gitignore.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const REQUIRED_SKILLS = [
   "qfai-configure",
@@ -77,9 +77,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       // And nothing was written through the link.
       await expect(readFile(escapee, "utf-8")).rejects.toThrow();
     } finally {
-      await rm(sourceRoot, { recursive: true, force: true });
-      await rm(destRoot, { recursive: true, force: true });
-      await rm(outside, { recursive: true, force: true });
+      await removeTempTree(sourceRoot);
+      await removeTempTree(destRoot);
+      await removeTempTree(outside);
     }
   });
 
@@ -99,8 +99,8 @@ describe("qfai init", { timeout: 60000 }, () => {
         copyTemplateTree(sourceRoot, destRoot, { force: false, dryRun: false }),
       ).rejects.toThrow(/--force/);
     } finally {
-      await rm(sourceRoot, { recursive: true, force: true });
-      await rm(destRoot, { recursive: true, force: true });
+      await removeTempTree(sourceRoot);
+      await removeTempTree(destRoot);
     }
   });
 
@@ -143,7 +143,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -157,12 +157,20 @@ describe("qfai init", { timeout: 60000 }, () => {
       await expect(access(workflowPath)).resolves.toBeUndefined();
 
       const content = await readFile(workflowPath, "utf-8");
-      expect(content).toContain("qfai validate --profile full --fail-on error");
-      expect(content).toContain("actions/checkout@v4");
-      expect(content).toContain("actions/setup-node@v4");
+      // The lane's subcommand / --profile value / --fail-on threshold used to
+      // be asserted here as one ad-hoc string — the same literal the asset
+      // suite carried. Subsumed and replaced (DTC-26) by the declared shape's
+      // dimension-5 pins in
+      // tests/integration/shippedWorkflowShapeGate.test.ts, which is now their
+      // one oracle; this it keeps its TC-0003-0001 alias annotation for the
+      // init-written checks that remain.
+      // DTC-26 co-change (TC-0003-0030): the shipped set is SHA-pinned, so
+      // the former floating-major expectations are asserted in pin form.
+      expect(content).toMatch(/actions\/checkout@[0-9a-f]{40}\b/);
+      expect(content).toMatch(/actions\/setup-node@[0-9a-f]{40}\b/);
       expect(content).toContain("QFAI-TEST-001");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -215,7 +223,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         ),
       ).toContain(".qfai/discussion/*");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -229,7 +237,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const markerCount = content.split(QFAI_GITIGNORE_MARKER).length - 1;
       expect(markerCount).toBe(1);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -245,7 +253,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toMatch(/^node_modules\/\n/);
       expect(content).toContain(".qfai/report/*");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -333,7 +341,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -375,7 +383,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -404,14 +412,18 @@ describe("qfai init", { timeout: 60000 }, () => {
       const constitutionAfter = await readFile(existingConstitution, "utf-8");
       expect(constitutionAfter).toBe("custom constitution\n");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
   it("keeps every existing root asset across --force, not just DESIGN.md", async () => {
-    // The root asset tree is create-only in full: `force: false` is what
-    // saves it, so DESIGN.md is not singled out. Lock all three shipped root
-    // files so a future widening of --force to the root tree cannot quietly
+    // The root assets are create-only in full: a `force: false` literal is
+    // what saves every one of them, so DESIGN.md is not singled out. The
+    // shipped workflow reaches disk through its own create-only copy rather
+    // than the root-tree one, but by the same literal and the same rule —
+    // the ownership contract that calls it load-bearing is stating, for the
+    // workflow, what holds for the whole root surface. Lock all three
+    // shipped root files so a future widening of --force cannot quietly
     // overwrite a project's authored DESIGN.md, its `qfai-configure`-tuned
     // qfai.config.yaml, or its CI workflow.
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
@@ -434,7 +446,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(after).toBe(`authored ${relative}\n`);
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -475,7 +487,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(afterForce).toBe(template);
       expect(afterForce).not.toBe("custom skills\n");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -499,7 +511,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const skillMd = path.join(skillLink, "SKILL.md");
       await access(skillMd);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -534,7 +546,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await expect(access(deprecatedCanonicalClaude)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedCanonicalGithub)).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -562,7 +574,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const stat = await lstat(path.join(root, ".codex", "skills", "qfai-configure"));
       expect(stat.isSymbolicLink()).toBe(true);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -587,7 +599,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -607,7 +619,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const after = await readFile(customCodexSkill, "utf-8");
       expect(after).toBe("custom codex skill\n");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -634,7 +646,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(output).toContain("would remove paths:");
       await access(legacyPath);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -661,7 +673,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
       expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -679,7 +691,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const normalized = target.replace(/\\/g, "/");
       expect(normalized).toContain(".qfai/assistant/skills/qfai-configure");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -699,7 +711,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const targetAfter = await readlink(skillLink);
       expect(targetAfter).toBe(targetBefore);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -710,7 +722,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       // Break a symlink by removing the target and re-creating with wrong target
       const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
-      await rm(skillLink, { recursive: true, force: true });
+      await removeTempTree(skillLink);
       await symlink("../../nonexistent/path", skillLink, "dir");
 
       // Verify it's broken
@@ -725,7 +737,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       // Should be resolvable now
       await access(path.join(skillLink, "SKILL.md"));
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -740,7 +752,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toContain(".github/skills/");
       expect(content).not.toContain(".github/prompts/");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -762,7 +774,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(stat.isFile()).toBe(true);
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -808,7 +820,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(principles).toContain("YAGNI");
       expect(principles).toContain("DRY");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -837,7 +849,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(output).toContain("code-review.instructions.md");
       expect(output).toContain("principles.instructions.md");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -859,7 +871,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         "custom-pr\n",
       );
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -875,7 +887,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await access(path.join(instrDir, "code-review.instructions.md"));
       await access(path.join(instrDir, "principles.instructions.md"));
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -897,7 +909,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const principles = await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8");
       expect(principles).toContain("SOLID");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -920,7 +932,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(output2).toContain("code-review.instructions.md");
       expect(output2).toContain("principles.instructions.md");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -937,7 +949,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         access(path.join(root, ".github", "instructions", "principles.instructions.md")),
       ).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -983,7 +995,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(crAfterRun3).toBe(crAfterRun1);
       expect(prAfterRun3).toBe(prAfterRun1);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1035,7 +1047,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       expect(output2).not.toContain("@github-copilot review");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1053,7 +1065,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const content = await readFile(path.join(instrDir, "code-review.instructions.md"), "utf-8");
       expect(content).toBe("");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1082,7 +1094,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const skillLink = path.join(root, ".claude", "skills", "qfai-configure");
       await expectSymlink(skillLink);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1102,7 +1114,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).not.toContain("!.qfai/discussion/README.md");
       expect(content).not.toContain(".qfai/discussion/discussion-*/");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1116,7 +1128,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const markerCount = content.split("# ── QFAI managed (generated by qfai init) ──").length - 1;
       expect(markerCount).toBe(1);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1130,7 +1142,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toMatch(/^node_modules\//m);
       expect(content).toContain(".qfai/review/*");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1165,7 +1177,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).toContain(".qfai/review/*");
       expect(content).not.toContain("!.qfai/review/README.md");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1198,7 +1210,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: false, yes: true });
       expect(await readFile(path.join(root, ".gitignore"), "utf-8")).toBe(content);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1228,7 +1240,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(lines.indexOf(negation)).toBeGreaterThan(lines.indexOf(".qfai/evidence/*"));
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1254,7 +1266,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).not.toContain(".qfai/evidence/*");
       expect(content.split(QFAI_GITIGNORE_MARKER).length - 1).toBe(1);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1271,7 +1283,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const templateBytes = await readFile(templatePath);
       expect(writtenBytes.equals(templateBytes)).toBe(true);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1289,7 +1301,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(await readFile(designMdPath, "utf-8")).toBe(userContent);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1307,7 +1319,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(await readFile(designMdPath, "utf-8")).toBe(userContent);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1318,7 +1330,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: false, dryRun: true, yes: true });
       await expect(access(path.join(root, "DESIGN.md"))).rejects.toMatchObject({ code: "ENOENT" });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1337,7 +1349,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(secondRun).toContain("skipped paths:");
       expect(secondRun).toContain("DESIGN.md");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1352,7 +1364,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(content).not.toContain("!.qfai/review/review-*/");
       expect(content).not.toContain("!.qfai/review/review-*/**");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1369,7 +1381,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(body).toContain(`.qfai/assistant/${layer}/`);
       }
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1392,7 +1404,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(tplBody).toContain("kind: decision");
       expect(tplBody).toMatch(/promote-to:/);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1408,7 +1420,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const after = await readFile(readmePath, "utf-8");
       expect(after).toBe(userEdit);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1441,7 +1453,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       expect(newManifest).toContain("agents: []");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1496,7 +1508,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       expect(manifestFile).toContain('"value": 1');
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1555,7 +1567,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       }
       expect(doubleNested).toBe(false);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1593,7 +1605,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       }
       expect(manifestExists).toBe(false);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1634,7 +1646,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       expect(catalogCopy).toContain("user note");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1673,7 +1685,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       );
       expect(preserved).toContain("legacy A");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1712,7 +1724,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const secondBody = await readFile(memoPath, "utf-8");
       expect(secondBody).toBe(firstBody);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1775,7 +1787,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(captured).toMatch(/sunset: v1\.10\.0/);
       expect(captured).toMatch(/read-compatible for the current minor release only/);
     } finally {
-      if (root) await rm(root, { recursive: true, force: true });
+      if (root) await removeTempTree(root);
     }
   });
 
@@ -1808,7 +1820,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(text).toContain("qfai init --upgrade-assistant-tree");
       expect(text).not.toMatch(/read-compatible/);
     } finally {
-      if (root) await rm(root, { recursive: true, force: true });
+      if (root) await removeTempTree(root);
     }
   });
 
@@ -1840,7 +1852,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(migrated).toBe("legacy content\n");
       expect(await readFile(r.legacyFile, "utf-8")).toBe("legacy content\n");
     } finally {
-      if (root) await rm(root, { recursive: true, force: true });
+      if (root) await removeTempTree(root);
     }
   });
 });
