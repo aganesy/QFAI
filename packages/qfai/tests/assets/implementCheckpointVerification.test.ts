@@ -13,6 +13,12 @@ const SKILL_DIRS = [
   path.join(repoRoot, ".qfai/assistant/skills/qfai-implement"),
 ];
 
+/** The authoring side of the `Selector` contract, shipped surface plus mirror. */
+const SDD_SKILL_DIRS = [
+  path.join(repoRoot, "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd"),
+  path.join(repoRoot, ".qfai/assistant/skills/qfai-sdd"),
+];
+
 /** GitHub's heading slug: lowercase, drop punctuation, spaces to hyphens. */
 function slug(heading: string): string {
   return heading
@@ -181,7 +187,7 @@ describe("qfai-implement checkpoint verification contract", () => {
       expect(skill).toContain("**step 1 is not settled by its exit code**");
       // Completion prohibition: a nameless exit 0 blocks completion as a non-zero exit does.
       expect(skill).toContain(
-        "or a step 1 command exited 0 with no test named in its recorded output",
+        "or a step 1 command exited 0 with neither a test named in its recorded output",
       );
       // The bare exit-code definitions must not survive anywhere unqualified.
       expect(skill).not.toContain("(PASS only when every command exits 0)");
@@ -200,12 +206,124 @@ describe("qfai-implement checkpoint verification contract", () => {
         "utf-8",
       );
       expect(reference).toContain("**d. The option that makes the run visible.**");
-      expect(reference).toContain("pytest <Test file> -v -k '<Selector>'");
+      expect(reference).toContain("pytest <Test file> --verbosity=1 -k '<Selector>'");
       expect(reference).toContain("go test ./<dir of Test file> -v -run '<Selector>'");
       expect(reference).toContain("--reporter=verbose");
       expect(reference).toContain("--verbose");
       // The fallback for a runner with no such option.
       expect(reference).toMatch(/count of tests it reports as selected or run/);
+    }
+  });
+
+  // pytest's `-v` is a counter, not a level: against a project that configures
+  // `addopts = -q` it only cancels the `-q` and lands back on the nameless
+  // default, so every correct run would FAIL the output-names-the-entry
+  // criterion. Only an absolute level is independent of the project's config.
+  it("sets pytest's verbosity absolutely so a configured -q cannot mute it", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("--verbosity=1");
+      // The relative form must not survive as the prescribed pytest command.
+      expect(reference).not.toContain("pytest <Test file> -v -k");
+      expect(reference).not.toContain('`-v` for pytest ("Increase verbosity")');
+      // The reason, so a later edit cannot quietly revert to the counter.
+      expect(reference).toContain("one that sets the level, never one");
+      expect(reference).toMatch(/addopts = -q/);
+      expect(reference).toMatch(/PYTEST_ADDOPTS/);
+      // `go test -v`, vitest and jest are booleans / named reporters already.
+      expect(reference).toContain("are already absolute");
+    }
+  });
+
+  // A `Selector` cell was contracted as "a comma-separated list", but a comma is
+  // legal inside a single vitest/jest name — this repo has several. Splitting a
+  // bare cell on commas turns one name into entries that each match nothing, and
+  // a name option that matches nothing still exits 0.
+  it("splits a selector cell by its entry form, never on a bare cell's commas", async () => {
+    // The name below is a real one from this repo, kept assembled here so the
+    // fixture cannot drift into looking like a list.
+    const commaName = "falls back to the built-in set, and labels it, when the file is absent";
+
+    for (const dir of SKILL_DIRS) {
+      const granularity = await readFile(
+        path.join(dir, "references", "selector-granularity.md"),
+        "utf-8",
+      );
+      // The split rule has one home, stated as a parse and not a guess.
+      expect(headingSlugs(granularity)).toContain("entry-form");
+      expect(granularity).toContain("parses as a JSON array of strings");
+      expect(granularity).toContain("**one entry per element**");
+      expect(granularity).toContain("**Never split a bare cell on commas.**");
+      expect(granularity).toContain(commaName);
+      // Writing rules, so the form can be produced as well as read.
+      expect(granularity).toContain("**Writing.**");
+      expect(granularity).toMatch(/JSON's own\s+escaping/);
+      expect(granularity).toContain("written as a one-element array");
+      // The ambiguous contract must be gone from the contract's home.
+      expect(granularity).not.toContain("a comma-separated list or a glob");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("selector-granularity.md#entry-form");
+      expect(reference).toContain("**Do not split on commas**");
+      expect(reference).toContain(commaName);
+      expect(reference).not.toContain("comma-separated list or a glob");
+
+      // The other two statements of the same contract must not disagree with it.
+      const ledger = await readFile(path.join(dir, "references", "execution-ledger.md"), "utf-8");
+      expect(ledger).toContain("a JSON array of names or a glob");
+      expect(ledger).not.toContain("as a comma-separated list or a glob");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("a JSON array of names or a glob");
+      expect(skill).not.toContain("a comma-separated list or a glob");
+    }
+
+    // The row is authored by `/qfai-sdd`; a read rule the write side does not
+    // know is a rule no ledger obeys.
+    for (const dir of SDD_SKILL_DIRS) {
+      const rules = await readFile(
+        path.join(dir, "references", "spec-traceability-rules.md"),
+        "utf-8",
+      );
+      expect(rules).toContain("a JSON array of entries, or a glob pattern");
+      expect(rules).toContain("selector-granularity.md#entry-form");
+      expect(rules).not.toContain("a comma-separated list, or a glob pattern");
+    }
+  });
+
+  // The reference lets a runner that prints no names pass on a positive
+  // selected/run count. That exception was never copied into the body, so an
+  // agent reading the body alone blocked every such runner at `refactor`.
+  it("mirrors the run-count fallback into the skill body", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+
+      // Completion prohibition: a nameless exit 0 is blocking only when the
+      // count is missing too.
+      expect(skill).toContain(
+        "with neither a test named in its recorded output nor — on a runner with no option that prints names — a positive selected/run count recorded in its place",
+      );
+      // Evidence definition (`Checkpoint verification result`).
+      expect(skill).toContain(
+        "records a positive selected/run count in its place; an exit 0 with neither selected nothing and is a FAIL",
+      );
+      // Body pass criteria.
+      expect(skill).toContain(
+        "reports a positive selected/run count instead — because a run that selected zero tests exits 0 as well",
+      );
+      // The name-only forms must not survive: they are what blocked the runner.
+      expect(skill).not.toContain(
+        "or a step 1 command exited 0 with no test named in its recorded output",
+      );
+      expect(skill).not.toContain(
+        "entry it ran; an exit 0 naming no test selected nothing and is a FAIL",
+      );
     }
   });
 

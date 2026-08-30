@@ -164,7 +164,7 @@ Each `.qfai/specs/<spec-id>/tdd/test-list.md` is the execution ledger for the TD
 - Legal `Layer` values: `Unit`, `Component`, `Integration`, `API`, `E2E`.
   Legal obligation kinds per layer: `TC-*` on Unit / Component / Integration,
   `US-*` on E2E, `CON-API-*` on API.
-- `Selector` may hold one entry, a comma-separated list, or a glob pattern. It is not limited to a single test function.
+- `Selector` may hold one entry, a JSON array of entries, or a glob pattern. It is not limited to a single test function. Write a multi-entry cell as the array: a bare cell is **one** entry however much punctuation it holds, because a comma is legal inside a single test name and nothing splits a bare cell on commas (`qfai-implement/references/selector-granularity.md#entry-form`).
 - `TC-Refs` is many-to-many with `TDD-ID`: one `TC-*` may be decomposed across several TDD rows, and each of those rows carries that `TC-*`.
 - A matrix-shaped `TC-*` (many rejection reasons, a status-code matrix, several independent state transitions) MUST be split across multiple TDD rows before RED begins — one falsifying oracle per row, one row per independently observable boundary. Do not accumulate unrelated boundaries behind a single selector; doing so invalidates the RED observation, because only the first failing assert is ever observed.
 - Coverage is measured as unit/component TC references from `06_Test-Cases.md`

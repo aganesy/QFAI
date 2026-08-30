@@ -50,14 +50,19 @@ the placeholders; record the literal commands actually executed in evidence.
    Record the literal command actually run either way. If a project's runner selects by something
    else again, derive that unit from `Test file` in the same manner and say so in the evidence.
 
-   **c. One command per `Selector` entry.** A `Selector` may legally hold several entries — a
-   comma-separated list or a glob, for one boundary observed from several angles
-   (`selector-granularity.md`). The name options above take a substring, an expression or a regex;
-   none of them takes a list, and none of them takes a shell glob. Interpolating the whole cell into
-   one name option therefore matches nothing and **exits 0**: `vitest run <Test file> -t 'a, b'`
-   skips every test in the file and reports success, so the checkpoint passes without having run any
-   of the row's tests. This is the same rule Phase Red applies to a RED observation, for the same
-   reason. So **emit one command per entry**, run all of them, and record every one of them in
+   **c. One command per `Selector` entry.** A `Selector` may legally hold several entries — a JSON
+   array of names, or a glob, for one boundary observed from several angles. **How many entries a
+   cell holds is decided by `selector-granularity.md#entry-form`, and by nothing else**: a cell that
+   parses as a JSON array holds one entry per element, and every other cell is a single entry,
+   whatever punctuation it carries. **Do not split on commas** — a comma is legal inside one
+   vitest/jest name (`falls back to the built-in set, and labels it, when the file is absent` is one
+   name), so a comma split builds several commands that each match nothing and each exit 0. The name
+   options above take a substring, an expression or a regex; none of them takes a list, and none of
+   them takes a shell glob. Interpolating a whole multi-entry cell into one name option therefore
+   matches nothing and **exits 0**: `vitest run <Test file> -t '["a","b"]'` skips every test in the
+   file and reports success, so the checkpoint passes without having run any of the row's tests.
+   This is the same rule Phase Red applies to a RED observation, for the same reason.
+   So **emit one command per entry**, run all of them, and record every one of them in
    `Checkpoint verification command`. A glob entry is translated into the runner's own name language
    rather than passed literally, and **only where that language can anchor the prefix**: `go test`
    takes an RE2 regex, so `test_rejects_expired_token_*` is `-run '^test_rejects_expired_token_'`;
@@ -75,10 +80,16 @@ the placeholders; record the literal commands actually executed in evidence.
    runners suppress that by default: `pytest -k '<Selector>'` prints `test_sample.py . [100%]` and
    `go test -run '<Selector>'` prints `ok example.com/pkg` — neither names a test, so a run that
    selected the row's test would be indistinguishable from one that selected nothing, and every
-   checkpoint would FAIL. Add the runner's own option — `-v` for pytest ("Increase verbosity") and
-   for `go test` ("log all tests as they are run"), `--reporter=verbose` for vitest, `--verbose`
-   for jest — so the commands in b read `pytest <Test file> -v -k '<Selector>'` and
-   `go test ./<dir of Test file> -v -run '<Selector>'`. If a runner has no such option, record
+   checkpoint would FAIL. Add the runner's own option, and pick **one that sets the level, never one
+   that shifts it**: pytest defines `-v` as "Increase verbosity" and `-q` as "Decrease verbosity",
+   so on a project carrying `addopts = -q` in `pytest.ini` or `PYTEST_ADDOPTS` a `-v` only cancels
+   the `-q` and lands back on the nameless default — the run exits 0, prints
+   `test_sample.py . [100%]`, and FAILs the criterion the option was added to satisfy. Pass
+   `--verbosity=1` instead: it sets the level outright, so it does not depend on what the project
+   configured. `go test -v` ("log all tests as they are run"), vitest's `--reporter=verbose` and
+   jest's `--verbose` are already absolute — a boolean or a named reporter, not a counter — so they
+   need no equivalent. The commands in b then read `pytest <Test file> --verbosity=1 -k '<Selector>'`
+   and `go test ./<dir of Test file> -v -run '<Selector>'`. If a runner has no such option, record
    instead the runner-specific count of tests it reports as selected or run, and treat a count of
    zero as the FAIL that a nameless exit 0 would otherwise hide.
 
