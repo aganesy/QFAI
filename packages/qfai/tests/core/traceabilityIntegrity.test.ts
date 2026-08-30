@@ -2,7 +2,7 @@
  * traceabilityIntegrity tests — TDD-0011 through TDD-0015 (spec-0038).
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdir, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -14,6 +14,7 @@ vi.mock("node:child_process", () => ({
 
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
 import type { QfaiConfig } from "../../src/core/config.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const stubConfig: QfaiConfig = {
   paths: {
@@ -63,7 +64,7 @@ describe("TDD-0011: spec BR changed + impl unchanged", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits QFAI-TRACE-001 when spec BR changed but linked impl not changed", async () => {
@@ -105,7 +106,7 @@ describe("TDD-0012: spec BR changed + impl changed", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("returns no issues when spec BR changed and linked impl also changed", async () => {
@@ -149,7 +150,7 @@ describe("ledger reads only the first Markdown table", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("ignores BR/AC-shaped rows in a supplementary table below the ledger", async () => {
@@ -222,7 +223,7 @@ describe("TDD-0013: ledger absent", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits warning and skips when 16_Traceability-ledger.md is missing", async () => {
@@ -262,7 +263,7 @@ describe("TDD-0014: evidence without Diff Context", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("does not error when evidence file exists but lacks Diff Context section", async () => {
