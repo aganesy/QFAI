@@ -26,6 +26,10 @@ const completionMatrixPath = path.join(
   "discussion-completion-matrix.md",
 );
 const uiBearingPlaybookPath = path.join(templateBase, "references", "ui-bearing-playbook.md");
+const sddExecutionPlaybookPath = path.join(
+  repoRoot,
+  "packages/qfai/assets/init/.qfai/assistant/skills/qfai-sdd/references/sdd-execution-playbook.md",
+);
 
 // Shared vocabulary between the matrix and the Reviewer Gate templates. The
 // matrix wraps the phrase across two lines, so match on whitespace not a space.
@@ -361,6 +365,26 @@ describe("discussion skill template integration", () => {
       .find((line) => /^\d+\. Generate `prototyping\.yaml`/.test(line));
     expect(generationStep, "SKILL.md lost its prototyping.yaml step").toBeDefined();
     expect(generationStep).toMatch(/cli-only pack emits none/);
+  });
+
+  // A cli-only pack deliberately emits no `prototyping.yaml`, so the next
+  // stage must not stop on its absence. `/qfai-sdd` Stage 0 is the first thing
+  // that pack meets after discussion completes — an unconditional stop there
+  // simply moves the blocker one skill downstream.
+  it("SDD Stage 0 preflight が cli-only pack に prototyping.yaml を要求しない", async () => {
+    const playbook = await readFile(sddExecutionPlaybookPath, "utf-8");
+    const stageZero = playbook.split(/^## /m).find((s) => s.startsWith("Stage 0: Preflight")) ?? "";
+    expect(stageZero, "no Stage 0: Preflight section").not.toBe("");
+    expect(stageZero).toMatch(/prototyping\.yaml/);
+    // The stop condition survives — but only for the surfaces that produce the
+    // file. `VISUAL_BROWSER_SURFACES` is the code SSOT for that set.
+    expect(stageZero).toMatch(/visual-prototyping/i);
+    for (const surface of VISUAL_BROWSER_SURFACES) {
+      expect(stageZero, `Stage 0 does not name the '${surface}' surface`).toContain(
+        `\`${surface}\``,
+      );
+    }
+    expect(stageZero).toMatch(/cli-only/);
   });
 
   // `screenContract.ts` requires a non-empty `route`, never a URL. Telling

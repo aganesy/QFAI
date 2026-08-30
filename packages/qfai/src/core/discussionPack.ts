@@ -5,7 +5,7 @@ import { loadConfig } from "./config.js";
 import type { UiBearingClassification } from "./detection/surfaceType.js";
 import { readValidatedClassification } from "./detection/surfaceType.js";
 import { findPacks, latestPack as selectLatestPack } from "./packLocator.js";
-import { readDiscussionCurrentId } from "./state.js";
+import { readDiscussionCurrentIdState } from "./state.js";
 
 /**
  * Resolve the discussion root for `<root>` honoring
@@ -176,13 +176,19 @@ export async function findLatestDiscussionPackDir(discussionRoot: string): Promi
 /**
  * Why `resolveActiveDiscussionPack` could not name an active pack.
  *
- * The three cases are NOT interchangeable. `"unset"` is the ordinary state of
- * a project that has never run `qfai discussion use`; `"dangling"` and
- * `"duplicate"` are corrupt runtime state that only that command can repair.
- * A consumer that collapses the corrupt cases into the ordinary one silently
- * substitutes a pack nobody selected.
+ * The four cases are NOT interchangeable. `"unset"` is the ordinary state of
+ * a project that has never run `qfai discussion use`; `"corrupt"`,
+ * `"dangling"` and `"duplicate"` are broken runtime state that only a repair
+ * can clear. A consumer that collapses a broken case into the ordinary one
+ * silently substitutes a pack nobody selected.
+ *
+ * `"corrupt"` specifically covers an unreadable `.qfai/state.json`: invalid
+ * JSON, a non-object document, a non-object `discussion` block, or a
+ * non-string / blank `discussion.currentId`. Those used to reach the reader as
+ * the same `null` an absent file produces, so a broken state file was
+ * indistinguishable from a project that never pinned a pack.
  */
-export type ResolveActiveDiscussionPackErrorReason = "unset" | "dangling" | "duplicate";
+export type ResolveActiveDiscussionPackErrorReason = "unset" | "corrupt" | "dangling" | "duplicate";
 
 /**
  * Error thrown by `resolveActiveDiscussionPack` when the runtime-state
@@ -211,10 +217,14 @@ export class ResolveActiveDiscussionPackError extends Error {
  * is NOT used.
  *
  * Throws `ResolveActiveDiscussionPackError` when:
- *   - `currentId` is absent / blank, or
- *   - `currentId` resolves to a directory that does not exist, or
+ *   - `currentId` was never written (`reason: "unset"`), or
+ *   - `.qfai/state.json` exists but cannot be read as a pointer
+ *     (`reason: "corrupt"`), or
+ *   - `currentId` resolves to a directory that does not exist
+ *     (`reason: "dangling"`), or
  *   - `currentId` resolves to a name that matches more than one pack
- *     entry under the discussion root (a malformed filesystem).
+ *     entry under the discussion root (`reason: "duplicate"`, a malformed
+ *     filesystem).
  *
  * The thrown message lists every candidate `discussion-*` directory
  * present on disk plus the literal recovery command
@@ -229,15 +239,27 @@ export async function resolveActiveDiscussionPack(root: string): Promise<string>
   // of this active-pack resolver report the pack as missing because
   // it was scanning the wrong directory.
   const discussionRoot = await resolveDiscussionRootFromConfig(root);
-  const currentId = await readDiscussionCurrentId(root);
+  const pointer = await readDiscussionCurrentIdState(root);
   const candidates = await findPacks(discussionRoot, "discussion");
   const candidateNames = candidates
     .map((pack) => pack.name)
     .sort((left, right) => left.localeCompare(right));
 
-  if (currentId === null) {
+  if (pointer.kind === "unset") {
     throw new ResolveActiveDiscussionPackError(buildRecoveryMessage(candidateNames, null), "unset");
   }
+  // A state file that exists but cannot be read as a pointer is NOT an unset
+  // pointer. Reporting it as `"unset"` would let a consumer that falls back to
+  // an inferred pack (e.g. the newest one) act on a classification nothing
+  // selected, because the reader collapsed "never pinned" and "pinned but
+  // unreadable" into the same absent value.
+  if (pointer.kind === "corrupt") {
+    throw new ResolveActiveDiscussionPackError(
+      buildCorruptStateMessage(candidateNames, pointer.detail),
+      "corrupt",
+    );
+  }
+  const currentId = pointer.currentId;
 
   const matches = candidates.filter((pack) => pack.name === currentId);
   if (matches.length === 0) {
@@ -271,6 +293,12 @@ function buildRecoveryMessage(candidateNames: readonly string[], currentId: stri
       ? "no active discussion pointer is set in .qfai/state.json#discussion.currentId"
       : `the active pointer .qfai/state.json#discussion.currentId='${currentId}' does not match any discussion pack on disk`;
   return `${reason}; candidate discussion packs: ${candidateList}; recover with: qfai discussion use <id>`;
+}
+
+function buildCorruptStateMessage(candidateNames: readonly string[], detail: string): string {
+  const candidateList =
+    candidateNames.length > 0 ? candidateNames.join(", ") : "<none found on disk>";
+  return `the active discussion pointer cannot be read: ${detail}; candidate discussion packs: ${candidateList}; recover with: qfai discussion use <id>`;
 }
 
 function buildDuplicateMessage(
