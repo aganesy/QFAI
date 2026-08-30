@@ -286,7 +286,7 @@ Notes:
   obligation** — the ledger covers them — so a spec whose TCs are all L1/L2 is
   done here with no ATDD annotation at all. Duplicating a TC into a second layer
   is a not-done condition, not extra credit.
-- All required `CON-API` are covered by API tests — `required` as defined under Coverage obligations (active contract operations; `x-qfai-status: planned` defers).
+- All required `CON-API` are covered by API tests — `required` as defined under Coverage obligations (active contract **ids**, one per contract file, never per OpenAPI operation; `x-qfai-status: planned` defers the whole file).
 - All required `CON-DB` are covered by integration tests (`QFAI-ATDD-115`); a contract
   outside the current slice is deferred with `-- x-qfai-status: planned`, not left uncovered.
 - Validation passes for this spec: `npx qfai validate --profile atdd --fail-on error --spec <spec-id>`.

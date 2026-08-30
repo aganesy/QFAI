@@ -158,6 +158,19 @@ describe("qfai-atdd defines what `required` narrows to, per ID kind", () => {
       }
     });
 
+    // The DoD's parenthetical restated the unit as "active contract
+    // operations", which contradicts the Coverage obligations rule it points
+    // at: the gate counts `QFAI-CONTRACT-ID`s, one per file, so a document
+    // describing GET and POST is one obligation and not two. Left as it was, a
+    // multi-operation contract had the DoD demanding tests the gate never asks
+    // for.
+    it(`${tree}: the DoD counts CON-API by id, not by OpenAPI operation`, async () => {
+      const dod = flat(section(await read(tree), "Success Criteria (Definition of Done)"));
+      expect(dod).toContain("active contract **ids**, one per contract file");
+      expect(dod).toContain("never per OpenAPI operation");
+      expect(dod).not.toContain("active contract operations");
+    });
+
     it(`${tree}: the volume estimator points at the same definition`, async () => {
       const signals = flat(section(await read(tree), "Volume Signals (mandatory, not gates)"));
       // `E2E = required US-*` is where the wrong reading first costs a row
