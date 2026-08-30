@@ -724,6 +724,69 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps a project command whose fence holds a line carrying an info string", async () => {
+    // CommonMark closes a fence only on a line whose marker run is followed by
+    // whitespace alone; a run with text after it is content, not a close.
+    // Closing on the character and the length alone ended the block at the
+    // inner "```js", and the quoted delegation below it counted as ownership.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper was written like this:",
+        "",
+        "```md",
+        "```js",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("removes a wrapper whose fence is closed by a marker run with trailing spaces", async () => {
+    // The other half of the same rule: whitespace after the run is allowed, so
+    // the block really does end there and the delegation that follows is at
+    // top level. Demanding a bare marker run would keep stale wrappers.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await writeFile(
+        command,
+        [
+          "```text",
+          "an example the project pasted above the wrapper body",
+          "```  ",
+          "",
+          "@.qfai/assistant/prompts/qfai-spec.md",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(command)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("keeps a project command carrying a delegation in the prompt wrapper's form", async () => {
     // `.claude/commands/` only ever got the `@<path>` form; the `- <path>`
     // bullet is what the prompt and skill wrappers use. Sharing one set of

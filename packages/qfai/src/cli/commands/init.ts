@@ -1981,17 +1981,19 @@ function hasDelegationLine(body: string, forms: readonly string[]): boolean {
   for (const line of body.split(/\r?\n/)) {
     const fence = FENCE_RE.exec(line);
     if (fence !== null) {
-      const marker = fence[1]?.[0] ?? "";
-      const length = fence[1]?.length ?? 0;
+      const run = fence[1] ?? "";
+      const marker = run[0] ?? "";
+      const tail = fence[2] ?? "";
       if (open === null) {
-        open = { marker, length };
+        open = { marker, length: run.length };
         continue;
       }
-      // CommonMark: 閉じるのは「同じ文字で、開いたときと同じ長さ以上」の
-      // fence だけ。どの fence 行でも状態を反転させていたため、4 backtick の
-      // ブロックの中に 3 backtick の例が入っていると、そこで閉じたと誤認して
-      // 続く引用行を「本物の委譲行」として数えていた。
-      if (marker === open.marker && length >= open.length) {
+      // CommonMark: 閉じるのは「開いたときと同じ文字」「同じ長さ以上」で、
+      // かつ marker 列の後ろが空白だけの行。文字と長さしか見ていなかったため、
+      // 情報文字列つきの行 (```md ブロックの中に書かれた ```js など) — 本来は
+      // 中身であって閉じ fence ではない — で閉じたと誤認し、その後ろの
+      // 引用行を「本物の委譲行」として数えていた。
+      if (marker === open.marker && run.length >= open.length && FENCE_CLOSE_TAIL_RE.test(tail)) {
         open = null;
       }
       continue;
@@ -2004,7 +2006,10 @@ function hasDelegationLine(body: string, forms: readonly string[]): boolean {
 }
 
 /** Markdown の code fence 行 (``` / ~~~、字下げ 0-3、情報文字列可)。 */
-const FENCE_RE = /^ {0,3}(`{3,}|~{3,})/;
+const FENCE_RE = /^ {0,3}(`{3,}|~{3,})(.*)$/;
+
+/** 閉じ fence の marker 列の後ろに許される文字 — CommonMark では空白だけ。 */
+const FENCE_CLOSE_TAIL_RE = /^[ \t]*$/;
 
 /** その stem に対して、ある surface で出荷実績のある委譲行の全形。 */
 type DelegationForms = (stem: string) => readonly string[];
