@@ -36,6 +36,7 @@
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
+    "tests/assets/prototypeParityRecording.test.ts",
     "tests/assets/retractedClaims.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",
