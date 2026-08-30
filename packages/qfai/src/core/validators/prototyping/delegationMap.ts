@@ -100,7 +100,8 @@ export function validateDelegationMapIssues(
   for (const [category, rawRole] of Object.entries(delegationMap)) {
     // Resolves both the canonical scope keys and the shipped SKILL.md
     // Delegation Scope Table labels (e.g. "Generation"), so a map written
-    // against the distributed table is actually checked.
+    // against the distributed table is checked — against the roles that
+    // table's own row documents, not the wider canonical set.
     const allowedRoles = resolveDelegationScope(category);
     if (allowedRoles === undefined) {
       // Unknown category is not flagged here (scope violation is a separate

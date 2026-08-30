@@ -13,6 +13,11 @@ import { fileURLToPath } from "node:url";
 import { afterEach, describe, expect, it } from "vitest";
 
 import {
+  PROTOTYPING_REQUIRED_ROLE_IDS,
+  SHIPPED_DELEGATION_SCOPE_TABLE,
+  resolveDelegationScope,
+} from "../../../src/core/prototyping/policy.js";
+import {
   validateDelegationMapIssues,
   validatePrototypingDelegationMap,
 } from "../../../src/core/validators/prototyping/delegationMap.js";
@@ -216,7 +221,7 @@ describe("shipped Delegation Scope Table categories are validated", () => {
     "assets/init/.qfai/assistant/skills/qfai-prototyping/SKILL.md",
   );
 
-  async function readShippedScopeRows(): Promise<{ category: string; role: string }[]> {
+  async function readShippedScopeRows(): Promise<{ category: string; roles: string[] }[]> {
     const body = await readFile(SKILL_MD, "utf-8");
     const table = body.split("## Delegation Scope Table")[1]?.split("\n## ")[0] ?? "";
     return table
@@ -235,7 +240,14 @@ describe("shipped Delegation Scope Table categories are validated", () => {
           cells[0] !== "Work" &&
           !/^-+$/.test(cells[0]),
       )
-      .map((cells) => ({ category: cells[0] ?? "", role: cells[1] ?? "" }));
+      .map((cells) => ({
+        category: cells[0] ?? "",
+        // A row MAY list several roles; the shipped rows currently list one.
+        roles: (cells[1] ?? "")
+          .split(/[,/]/)
+          .map((role) => role.trim())
+          .filter((role) => role.length > 0),
+      }));
   }
 
   it("parses the shipped table", async () => {
@@ -243,11 +255,13 @@ describe("shipped Delegation Scope Table categories are validated", () => {
   });
 
   it("accepts every shipped category paired with its documented role", async () => {
-    for (const { category, role } of await readShippedScopeRows()) {
-      expect(
-        validateDelegationMapIssues({ [category]: role }, PROTO_JSON_REL_SSOT),
-        `shipped row "${category}" -> "${role}" must be an allowed assignment`,
-      ).toEqual([]);
+    for (const { category, roles } of await readShippedScopeRows()) {
+      for (const role of roles) {
+        expect(
+          validateDelegationMapIssues({ [category]: role }, PROTO_JSON_REL_SSOT),
+          `shipped row "${category}" -> "${role}" must be an allowed assignment`,
+        ).toEqual([]);
+      }
     }
   });
 
@@ -263,4 +277,96 @@ describe("shipped Delegation Scope Table categories are validated", () => {
       ).toEqual(["QFAI-PROT-311"]);
     }
   });
+
+  // ─── The table's own allowed-role set governs its labels ───────────────
+  // Resolving an English label through a canonical Japanese key handed it
+  // that key's wider role set, so an assignment the shipped table forbids
+  // passed validation.
+
+  it("resolves every shipped label to exactly the roles its own row documents", async () => {
+    for (const { category, roles } of await readShippedScopeRows()) {
+      expect(
+        new Set(resolveDelegationScope(category) ?? []),
+        `shipped row "${category}" must not inherit a wider role set`,
+      ).toEqual(new Set(roles));
+    }
+  });
+
+  it("knows exactly the categories the shipped table documents", async () => {
+    // Both directions: a new table row without a policy entry is unchecked,
+    // and a policy label with no table row invents a rule nobody ships.
+    const rows = await readShippedScopeRows();
+    expect(new Set(Object.keys(SHIPPED_DELEGATION_SCOPE_TABLE))).toEqual(
+      new Set(rows.map((row) => row.category)),
+    );
+  });
+
+  it("documents only role ids the policy knows", async () => {
+    for (const { category, roles } of await readShippedScopeRows()) {
+      for (const role of roles) {
+        expect(PROTOTYPING_REQUIRED_ROLE_IDS, `shipped row "${category}"`).toContain(role);
+      }
+    }
+  });
+
+  it("rejects a shipped label assigned to a role only its canonical category allows", () => {
+    // The table documents `Generation` -> product-experience-architect only;
+    // frontend-engineer is allowed for the canonical UI実装 category.
+    const issues = validateDelegationMapIssues(
+      { Generation: "frontend-engineer" },
+      PROTO_JSON_REL_SSOT,
+    );
+
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-PROT-311"]);
+    expect(issues[0]?.message).toContain("Allowed roles: product-experience-architect.");
+  });
+
+  it("rejects Evaluation scoring assigned to the canonical category's extra role", () => {
+    const issues = validateDelegationMapIssues(
+      { "Evaluation scoring": "product-experience-architect" },
+      PROTO_JSON_REL_SSOT,
+    );
+
+    expect(issues.map((i) => i.code)).toEqual(["QFAI-PROT-311"]);
+    expect(issues[0]?.message).toContain("Allowed roles: product-surface-reviewer.");
+  });
+
+  // ─── Over-correction pins ─────────────────────────────────────────────
+
+  it("still accepts a shipped label paired with its own documented role", () => {
+    expect(
+      validateDelegationMapIssues(
+        { Generation: "product-experience-architect" },
+        PROTO_JSON_REL_SSOT,
+      ),
+    ).toEqual([]);
+  });
+
+  it("still leaves the canonical categories on their canonical role sets", () => {
+    // UI実装 keeps frontend-engineer; only the English label is narrowed.
+    expect(
+      validateDelegationMapIssues(
+        { UI実装: "frontend-engineer", 評価スコアリング: "product-experience-architect" },
+        PROTO_JSON_REL_SSOT,
+      ),
+    ).toEqual([]);
+  });
+
+  it.each(["evaluation scoring", "  Evaluation   Scoring  "])(
+    "still resolves the label variant %j",
+    (label) => {
+      expect(
+        validateDelegationMapIssues({ [label]: "product-surface-reviewer" }, PROTO_JSON_REL_SSOT),
+      ).toEqual([]);
+    },
+  );
+
+  it.each(["Playwright CLI execution & capture", "Playwright CLI execution and capture"])(
+    "still accepts %j for devops-ci-engineer",
+    (label) => {
+      expect(
+        validateDelegationMapIssues({ [label]: "devops-ci-engineer" }, PROTO_JSON_REL_SSOT),
+      ).toEqual([]);
+    },
+  );
 });
