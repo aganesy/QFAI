@@ -50,8 +50,10 @@ log grep / alert rule / runbook が言語を場合分けせずに済む。
 > 残っている。大半は `validators/**` だが、`config.ts` の
 > `QFAI_CONFIG_INVALID` や `waivers.ts` / `report.ts` のように validator 外の
 > `Issue` producer も含む。既存メッセージの移行は段階的に行うが、新規追加は
-> 上記の規定に従う。移行途中のファイルは `src/**` 全体を走査する meta-test の
-> baseline で ratchet されており、baseline を超える追加は CI で落ちる。
+> 上記の規定に従う。移行途中のメッセージは `src/**` 全体を走査する meta-test の
+> allowlist に**文言単位**で登録されており、allowlist に無い日本語メッセージは
+> CI で落ちる。既存メッセージを英語化したら該当項目も同じ変更で削除する
+> (行数の空き枠として再利用できない)。
 
 ## Severity Decision Matrix
 

@@ -20,12 +20,20 @@
  * `Issue.message` is produced well beyond `src/core/validators/**` —
  * `src/core/config.ts` builds `QFAI_CONFIG_INVALID`, `src/core/waivers.ts`
  * and `src/core/report.ts` build their own — and those messages reach
- * stdout through `emitText` just like a validator's. So the ratchet below
- * covers the whole of `src/**`: every file's remaining Japanese lines are
- * baselined, and anything above that ceiling — a new Japanese
- * `Issue.message`, or a new file carrying one — fails. A file absent from
- * the baseline must contain no Japanese at all, which is what keeps the
- * already-converted `src/cli/**` and `src/core/doctor.ts` converted.
+ * stdout through `emitText` just like a validator's. So the check below
+ * covers the whole of `src/**`, matching every Japanese line against
+ * `cliMessageLanguage.allowlist.ts`, which pins the messages the staged
+ * migration has not reached yet *by their content*.
+ *
+ * Content, not a per-file line count: a ceiling of "n Japanese lines in
+ * this file" is satisfied just as well by n *different* ones, so
+ * translating a message would free a slot for a brand-new Japanese
+ * message — the file total never moves and the ceiling never complains.
+ * Matching content closes that: an unlisted Japanese line fails wherever
+ * it appears, and a listed message that has been translated has to be
+ * struck from the list rather than left as a reusable slot. A file absent
+ * from the allowlist is held at zero, which is what keeps the already
+ * converted `src/cli/**` and `src/core/doctor.ts` converted.
  *
  * Source *comments* are deliberately out of scope: they are not shipped to
  * an operator, and this repository keeps Japanese prose in them. They are
@@ -33,12 +41,21 @@
  * marker *inside* an operator-facing string literal — a plain one or a
  * template literal spanning an interpolation — cannot hide a violation.
  */
-import { readFile, readdir, stat } from "node:fs/promises";
+import { readFile } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
-import ts from "typescript";
 import { describe, expect, it } from "vitest";
+
+import {
+  diffAgainstAllowlist,
+  findJapaneseLines,
+  formatJapaneseLine,
+  listSourceFiles,
+  relativeToPosix,
+} from "../helpers/japaneseMessageScan.js";
+
+import { SRC_JAPANESE_ALLOWLIST } from "./cliMessageLanguage.allowlist.js";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -57,195 +74,104 @@ const GUIDELINES_MD = path.join(
   "cli-ux-guidelines.md",
 );
 
-/** Hiragana, katakana, CJK ideographs, and CJK/fullwidth punctuation. */
-const CJK_RE = /[\u3000-\u303F\u3040-\u309F\u30A0-\u30FF\u4E00-\u9FFF\uFF00-\uFFEF]/;
+/** Scanning every file under `src/` costs seconds; 15s is not enough headroom. */
+const SCAN_TIMEOUT_MS = 60_000;
 
-/**
- * Ratchet ceiling for the staged message migration:
- * path relative to `SRC_DIR` -> Japanese code lines still tolerated.
- *
- * Lower an entry (and drop it once it reaches zero) as messages are migrated;
- * never raise one. A file absent from this map must contain no Japanese at all.
- */
-const SRC_JAPANESE_BASELINE: Readonly<Record<string, number>> = {
-  "core/atdd/scaffold.ts": 1,
-  "core/atddTraceability.ts": 2,
-  "core/config.ts": 53,
-  "core/deltaV1.ts": 4,
-  "core/layerPolicy.ts": 8,
-  "core/phasePolicy.ts": 5,
-  "core/preflight/sddPreflight.ts": 7,
-  "core/prototyping/evaluatorReview.ts": 1,
-  "core/prototyping/policy.ts": 4,
-  "core/report.ts": 23,
-  "core/specPackParsers.ts": 2,
-  "core/specSummary.ts": 1,
-  "core/validate.ts": 4,
-  "core/validators/assistantAssets.ts": 5,
-  "core/validators/atddCodeTraceability.ts": 34,
-  "core/validators/atddLedger.ts": 1,
-  "core/validators/businessFlow.ts": 8,
-  "core/validators/configReferenceIntegrity.ts": 3,
-  "core/validators/contractConsistency.ts": 6,
-  "core/validators/contractReferences.ts": 2,
-  "core/validators/contracts.ts": 20,
-  "core/validators/densityHints.ts": 10,
-  "core/validators/discussMermaid.ts": 3,
-  "core/validators/discussionPack.ts": 20,
-  "core/validators/discussionVisuals.ts": 5,
-  "core/validators/htmlMockBlocks.ts": 2,
-  "core/validators/ids.ts": 1,
-  "core/validators/importLite.ts": 4,
-  "core/validators/integrationSurface.ts": 11,
-  "core/validators/layerCoverage.ts": 35,
-  "core/validators/layeredTraceability.ts": 11,
-  "core/validators/mermaidEnforcement.ts": 13,
-  "core/validators/mermaidFence.ts": 3,
-  "core/validators/navigationFlow.ts": 1,
-  "core/validators/orphanProhibition.ts": 6,
-  "core/validators/prototyping/completionCertificate.ts": 2,
-  "core/validators/prototyping/delegationMap.ts": 4,
-  "core/validators/repositoryHygiene.ts": 4,
-  "core/validators/requireIndex.ts": 6,
-  "core/validators/requirementsContext.ts": 36,
-  "core/validators/reviewArtifacts.ts": 37,
-  "core/validators/skill/prototypingSkill.ts": 12,
-  "core/validators/skill/sidecarFlowOrdering.ts": 1,
-  "core/validators/skillsIntegrity.ts": 7,
-  "core/validators/specPack.ts": 120,
-  "core/validators/specSplitByCapability.ts": 6,
-  "core/validators/statusInSpecs.ts": 3,
-  "core/validators/tddList.ts": 10,
-  "core/validators/testTodoStubs.ts": 2,
-  "core/validators/traceability.ts": 35,
-  "core/waivers.ts": 27,
-  "shared/assets.ts": 2,
-};
-
-async function listSourceFiles(dir: string): Promise<string[]> {
-  const entries = await readdir(dir);
-  const out: string[] = [];
-  for (const name of entries) {
-    const full = path.join(dir, name);
-    const info = await stat(full);
-    if (info.isDirectory()) {
-      out.push(...(await listSourceFiles(full)));
-    } else if (name.endsWith(".ts") && !name.endsWith(".d.ts") && !name.endsWith(".test.ts")) {
-      out.push(full);
-    }
-  }
-  return out;
+function reportJapaneseLines(relPath: string, source: string): string[] {
+  return findJapaneseLines(source).map((found) => formatJapaneseLine(relPath, found));
 }
 
-/**
- * Blank out comments so only code — string literals included — is scanned.
- *
- * The TypeScript scanner does the lexing, so `info("prefix // text")` and
- * `info("/* text *\/")` keep their operator-facing text: a comment marker that
- * happens to sit inside a string literal is not a comment.
- *
- * The scanner alone is not enough for template literals: after the expression
- * of a `${...}` substitution it resumes in ordinary-expression mode, so the
- * remainder of `` `prefix ${value} // text` `` lexes as a line comment unless
- * the closing `}` is re-scanned as a template continuation. `templateBraces`
- * records the brace depth each unfinished template was opened at, so the `}`
- * that closes a substitution is told apart from one closing a block or object
- * literal inside it, and only the former is re-scanned.
- *
- * Replacing comments with spaces rather than deleting them keeps line numbers
- * intact, so a failure report points at the line the offending string is
- * really on.
- */
-function stripComments(source: string): string {
-  const scanner = ts.createScanner(ts.ScriptTarget.Latest, /* skipTrivia */ false);
-  scanner.setText(source);
-  const chars = source.split("");
-  const templateBraces: number[] = [];
-  let braceDepth = 0;
-  let token = scanner.scan();
-  while (token !== ts.SyntaxKind.EndOfFileToken) {
-    if (token === ts.SyntaxKind.TemplateHead) {
-      templateBraces.push(braceDepth);
-    } else if (token === ts.SyntaxKind.OpenBraceToken) {
-      braceDepth += 1;
-    } else if (token === ts.SyntaxKind.CloseBraceToken) {
-      if (templateBraces[templateBraces.length - 1] === braceDepth) {
-        token = scanner.reScanTemplateToken(/* isTaggedTemplate */ false);
-        if (token === ts.SyntaxKind.TemplateTail) {
-          templateBraces.pop();
-        }
-        continue;
-      }
-      braceDepth -= 1;
-    } else if (
-      token === ts.SyntaxKind.SingleLineCommentTrivia ||
-      token === ts.SyntaxKind.MultiLineCommentTrivia
-    ) {
-      for (let index = scanner.getTokenStart(); index < scanner.getTokenEnd(); index += 1) {
-        if (chars[index] !== "\n" && chars[index] !== "\r") {
-          chars[index] = " ";
-        }
-      }
-    }
-    token = scanner.scan();
-  }
-  return chars.join("");
-}
-
-function findCjkLines(relPath: string, source: string): string[] {
-  return stripComments(source)
-    .split(/\r?\n/)
-    .flatMap((line, index) =>
-      CJK_RE.test(line) ? [`${relPath}:${index + 1}: ${line.trim()}`] : [],
-    );
-}
-
-function relativeToPosix(from: string, file: string): string {
-  return path.relative(from, file).split(path.sep).join("/");
+async function readSources(files: readonly string[], from: string): Promise<[string, string][]> {
+  return Promise.all(
+    files.map(
+      async (file): Promise<[string, string]> => [
+        relativeToPosix(from, file),
+        await readFile(file, "utf-8"),
+      ],
+    ),
+  );
 }
 
 describe("operator-facing CLI message language", () => {
-  it("keeps every string emitted from src/cli in English", async () => {
-    const files = await listSourceFiles(CLI_DIR);
-    expect(files.length).toBeGreaterThan(0);
+  it(
+    "keeps every string emitted from src/cli in English",
+    async () => {
+      const files = await listSourceFiles(CLI_DIR);
+      expect(files.length).toBeGreaterThan(0);
 
-    const offenders: string[] = [];
-    for (const file of files) {
-      const source = await readFile(file, "utf-8");
-      offenders.push(...findCjkLines(relativeToPosix(PACKAGE_ROOT, file), source));
-    }
+      const offenders = (await readSources(files, PACKAGE_ROOT)).flatMap(([rel, source]) =>
+        reportJapaneseLines(rel, source),
+      );
 
-    expect(offenders).toEqual([]);
-  });
+      expect(offenders).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
 
   it("keeps every qfai doctor check message in English", async () => {
     const source = await readFile(DOCTOR_TS, "utf-8");
-    expect(findCjkLines(relativeToPosix(PACKAGE_ROOT, DOCTOR_TS), source)).toEqual([]);
+    expect(reportJapaneseLines(relativeToPosix(PACKAGE_ROOT, DOCTOR_TS), source)).toEqual([]);
   });
 
-  it("admits no new Japanese message anywhere under src", async () => {
-    const files = await listSourceFiles(SRC_DIR);
-    expect(files.length).toBeGreaterThan(0);
+  it(
+    "admits no Japanese message under src that the allowlist does not name",
+    async () => {
+      const files = await listSourceFiles(SRC_DIR);
+      expect(files.length).toBeGreaterThan(0);
 
-    const regressions: string[] = [];
-    const seen = new Set<string>();
-    for (const file of files) {
-      const rel = relativeToPosix(SRC_DIR, file);
-      seen.add(rel);
-      const source = await readFile(file, "utf-8");
-      const found = findCjkLines(rel, source).length;
-      const allowed = SRC_JAPANESE_BASELINE[rel] ?? 0;
-      if (found > allowed) {
-        regressions.push(
-          `${rel}: ${found} Japanese line(s), baseline allows ${allowed}. ` +
-            "New operator-facing messages must be English (cli-ux-guidelines.md, Message Language).",
+      const added: string[] = [];
+      const migrated: string[] = [];
+      const seen = new Set<string>();
+      for (const [rel, source] of await readSources(files, SRC_DIR)) {
+        seen.add(rel);
+        const diff = diffAgainstAllowlist(
+          rel,
+          findJapaneseLines(source),
+          SRC_JAPANESE_ALLOWLIST[rel] ?? [],
         );
+        added.push(...diff.added);
+        migrated.push(...diff.migrated);
       }
-    }
 
-    const stale = Object.keys(SRC_JAPANESE_BASELINE).filter((rel) => !seen.has(rel));
-    expect(stale, "baseline entries whose file no longer exists — drop them").toEqual([]);
-    expect(regressions).toEqual([]);
+      const stale = Object.keys(SRC_JAPANESE_ALLOWLIST).filter((rel) => !seen.has(rel));
+      expect(stale, "allowlist entries whose file no longer exists — drop them").toEqual([]);
+      expect(
+        added,
+        "Japanese message the allowlist does not name. A new operator-facing message must be " +
+          "English (cli-ux-guidelines.md, Message Language)",
+      ).toEqual([]);
+      expect(
+        migrated,
+        "allowlist entries whose message is gone — delete them, do not leave a reusable slot",
+      ).toEqual([]);
+    },
+    SCAN_TIMEOUT_MS,
+  );
+
+  it("reports a new Japanese message that replaces a translated one", () => {
+    const found = findJapaneseLines('error("新しい日本語メッセージ");');
+
+    const diff = diffAgainstAllowlist("core/sample.ts", found, ["古い日本語メッセージ"]);
+
+    expect(diff.added).toEqual(['core/sample.ts:1: error("新しい日本語メッセージ");']);
+    expect(diff.migrated).toEqual(["core/sample.ts: 古い日本語メッセージ"]);
+  });
+
+  it("reports an extra copy of a message the allowlist already names", () => {
+    const found = findJapaneseLines(['error("同じ日本語");', 'warn("同じ日本語");'].join("\n"));
+
+    const diff = diffAgainstAllowlist("core/sample.ts", found, ["同じ日本語"]);
+
+    expect(diff.added).toEqual(['core/sample.ts:2: warn("同じ日本語");']);
+    expect(diff.migrated).toEqual([]);
+  });
+
+  it("passes an un-migrated file through unchanged, whatever the code around it", () => {
+    const found = findJapaneseLines('const renamed = error("残っている日本語");');
+
+    const diff = diffAgainstAllowlist("core/sample.ts", found, ["残っている日本語"]);
+
+    expect(diff).toEqual({ added: [], migrated: [] });
   });
 
   it("does not mistake a comment marker inside a string for a comment", () => {
@@ -255,7 +181,7 @@ describe("operator-facing CLI message language", () => {
       "// 日本語のコメント",
     ].join("\n");
 
-    expect(findCjkLines("sample.ts", source)).toEqual([
+    expect(reportJapaneseLines("sample.ts", source)).toEqual([
       'sample.ts:1: info("prefix // 日本語");',
       'sample.ts:2: info("/* 日本語 */");',
     ]);
@@ -269,7 +195,7 @@ describe("operator-facing CLI message language", () => {
       "// 日本語のコメント",
     ].join("\n");
 
-    expect(findCjkLines("sample.ts", source)).toEqual([
+    expect(reportJapaneseLines("sample.ts", source)).toEqual([
       "sample.ts:1: info(`prefix ${value} // 日本語`);",
       "sample.ts:2: info(`prefix ${value} /* 日本語 */`);",
       "sample.ts:3: info(`outer ${obj.f({ k: `inner ${x} // 日本語` })} tail`);",
