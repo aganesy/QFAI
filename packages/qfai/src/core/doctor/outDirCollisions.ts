@@ -112,11 +112,12 @@ async function canonicalizeOutDir(outDirAbs: string): Promise<string> {
 }
 
 /** Map every `qfai.config.yaml` in the monorepo to its resolved `outDir`. */
-async function collectOutDirOwnership(root: string): Promise<OutDirOwnership> {
+async function collectOutDirOwnership(root: string, scanLimit?: number): Promise<OutDirOwnership> {
   const monorepoRoot = await findMonorepoRoot(root);
   const configScan = await collectFilesByGlobs(monorepoRoot, {
     globs: ["**/qfai.config.yaml"],
     ignore: DEFAULT_CONFIG_SEARCH_IGNORE_GLOBS,
+    ...(scanLimit === undefined ? {} : { limit: scanLimit }),
   });
   const configRoots = Array.from(
     new Set(configScan.files.map((configPath) => path.dirname(configPath))),
@@ -181,10 +182,27 @@ export async function detectOutDirCollisions(root: string): Promise<OutDirCollis
  * still recognised; a directory that cannot be resolved at all throws,
  * which the pre-prune guard turns into a refusal to delete.
  */
-export async function findOutDirCoOwners(root: string, outDirAbs: string): Promise<string[]> {
+export async function findOutDirCoOwners(
+  root: string,
+  outDirAbs: string,
+  /** Lowers the config-scan file limit. Test seam; production uses the default. */
+  scanLimit?: number,
+): Promise<string[]> {
   const selfRoot = path.resolve(root);
   const target = await canonicalizeOutDir(outDirAbs);
-  const { ownersByCanonicalOutDir } = await collectOutDirOwnership(selfRoot);
+  const { ownersByCanonicalOutDir, scan } = await collectOutDirOwnership(selfRoot, scanLimit);
+  // A truncated scan is not "no co-owners" — it is "the question was not
+  // answered". The glob stops at its file limit, so a co-owner enumerated
+  // after the cut is simply absent from the map, and an empty result here
+  // would authorise an irreversible delete on unproven exclusive ownership.
+  // The `output.outDirCollision` diagnostic does warn about truncation, but
+  // it runs after the clean phase. Throwing lets the pre-prune guard refuse,
+  // the same way it does for a directory that cannot be canonicalised.
+  if (scan.truncated) {
+    throw new Error(
+      `outDir ownership scan hit its ${scan.limit}-file limit after ${scan.matchedFileCount} qfai.config.yaml matches; exclusive ownership of ${outDirAbs} cannot be proven`,
+    );
+  }
   const owners = ownersByCanonicalOutDir.get(target);
   if (!owners) {
     return [];

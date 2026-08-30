@@ -178,6 +178,19 @@ export async function precheckRunLogPrune(
       reason: `outDir is shared with ${coOwners.length} other project root(s) (${coOwners.join(", ")}); resolve the collision before pruning`,
     };
   }
+  // 3. `validate.log` exists but cannot be read. The run it names has to
+  //    survive the prune, and an unreadable pointer cannot say which run
+  //    that is. `readPointerRunIds` throws for exactly that case, so probing
+  //    it here turns the abort into a reported reason instead of a stack
+  //    trace — and keeps the refusal ahead of the first `rm`.
+  try {
+    await readPointerRunIds(reportRoot);
+  } catch (error) {
+    return {
+      blocked: true,
+      reason: error instanceof Error ? error.message : String(error),
+    };
+  }
   return { blocked: false };
 }
 
@@ -297,7 +310,20 @@ async function readPointerRunIds(reportRoot: string): Promise<ReadonlySet<string
   let contents: string;
   try {
     contents = await readFile(path.join(reportRoot, "validate.log"), "utf-8");
-  } catch {
+  } catch (error: unknown) {
+    // Only "there is no pointer" is an empty set. An EACCES or a transient
+    // I/O error means the pointer exists and could not be read, and treating
+    // that as "points at nothing" deletes whatever it names: the window is
+    // real, because a fresh validate can fill the keep-latest slots while
+    // `validate.log` still refers to an older, now TTL-expired run. Fail
+    // closed instead — the caller turns this into a refusal to prune.
+    if (!isEnoent(error)) {
+      throw new Error(
+        `failed to read the validate.log run pointer in ${reportRoot}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    }
     return runIds;
   }
   const pointer = RUN_LOG_POINTER_RE.exec(contents)?.[1];

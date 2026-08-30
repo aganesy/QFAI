@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { runDoctor } from "../../../../src/cli/commands/doctor.js";
 import { createDoctorData } from "../../../../src/core/doctor.js";
+import { findOutDirCoOwners } from "../../../../src/core/doctor/outDirCollisions.js";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 const tempDirs: string[] = [];
@@ -205,6 +206,87 @@ describe("doctor --clean prunes stale validate run logs", () => {
 
     expect(exit).toBe(0);
     expect(await exists(shared)).toBe(true);
+  });
+
+  it("refuses to prune when validate.log exists but cannot be read", async () => {
+    // A fresh validate can fill the keep-latest slots while validate.log
+    // still names an older, TTL-expired run. Reading "unreadable" as "points
+    // at nothing" then deletes exactly the run the Hard Gate evidence cites.
+    //
+    // The unreadable pointer is staged as a directory rather than with
+    // chmod: readFile answers EISDIR, which is a non-ENOENT failure on every
+    // platform and is not defeated by running as root.
+    const root = await newTempDir("unreadable-pointer");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "report:\n  staleTtlDays: 14\n  keepLatestRuns: 1\n",
+      "utf-8",
+    );
+    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+    await seedRunLog(root, "run-20260811120000002", 0);
+    await mkdir(path.join(root, ".qfai", "report", "validate.log"), { recursive: true });
+
+    const exit = await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
+
+    expect(exit).toBe(0);
+    expect(await exists(stale)).toBe(true);
+  });
+
+  it("keeps pruning when validate.log simply does not exist", async () => {
+    // ENOENT is the one read failure that really does mean "no pointer".
+    const root = await newTempDir("absent-pointer");
+    await writeFile(
+      path.join(root, "qfai.config.yaml"),
+      "report:\n  staleTtlDays: 14\n  keepLatestRuns: 1\n",
+      "utf-8",
+    );
+    const stale = await seedRunLog(root, "run-20260401120000001", 30);
+    await seedRunLog(root, "run-20260811120000002", 0);
+
+    await runDoctor({ root, rootExplicit: true, format: "text", clean: true });
+
+    expect(await exists(stale)).toBe(false);
+  });
+
+  it("refuses to prune when the ownership scan could not enumerate every config", async () => {
+    // The glob stops at its file limit, so a co-owner listed after the cut is
+    // simply absent from the map. An empty co-owner list would then authorise
+    // an irreversible delete on ownership that was never proven.
+    const mono = await newTempDir("truncated-scan");
+    await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
+    for (const name of ["app-a", "app-b", "app-c"]) {
+      const dir = path.join(mono, name);
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "qfai.config.yaml"),
+        "paths:\n  outDir: ../shared-report\n",
+        "utf-8",
+      );
+    }
+
+    await expect(
+      findOutDirCoOwners(path.join(mono, "app-a"), path.join(mono, "shared-report"), 1),
+    ).rejects.toThrow(/exclusive ownership .* cannot be proven/u);
+  });
+
+  it("answers normally when the scan enumerated every config", async () => {
+    const mono = await newTempDir("complete-scan");
+    await writeFile(path.join(mono, "pnpm-workspace.yaml"), "packages:\n  - '*'\n", "utf-8");
+    for (const name of ["app-a", "app-b"]) {
+      const dir = path.join(mono, name);
+      await mkdir(dir, { recursive: true });
+      await writeFile(
+        path.join(dir, "qfai.config.yaml"),
+        "paths:\n  outDir: ../shared-report\n",
+        "utf-8",
+      );
+    }
+
+    const coOwners = await findOutDirCoOwners(
+      path.join(mono, "app-a"),
+      path.join(mono, "shared-report"),
+    );
+    expect(coOwners).toEqual([path.join(mono, "app-b")]);
   });
 
   it("doctor reports the run-log count so the growth is visible", async () => {
