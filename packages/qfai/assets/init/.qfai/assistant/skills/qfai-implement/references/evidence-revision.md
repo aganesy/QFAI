@@ -4,7 +4,8 @@ Four of the twelve gate items — 3, 5, 7 and 8 — are sub-agent observations, 
 item 6 re-confirms GREEN after the refactor; `#evidence-hard-rules` says stale
 evidence MUST NOT be reused. That rule needs something to compare against. This
 file defines it. Which of the five addresses which tree is the table under
-_Which tree each gate item addresses_.
+_Which tree each gate item addresses_, which carries item 12's checkpoint
+address as well.
 
 ## The field
 
@@ -157,8 +158,11 @@ pre-refactor one, and break that table or gate item 10. The three places:
 1. **Reviewer responses** — as `Reviewed revision`, per
    `../../../constitution/shared-skill-delegation-baseline.md#reviewer-response-template`.
 2. **The per-item evidence contract** — one `Revision` per round block, beside
-   the RED / GREEN commands and results, and one for the refactor-verify pair,
-   named `Refactor verify revision` after the pair it sits beside.
+   the RED / GREEN commands and results, one for the refactor-verify pair, named
+   `Refactor verify revision` after the pair it sits beside, and one for the
+   checkpoint pair, named `Checkpoint verification revision` the same way
+   (`checkpoint-verification.md`). Which of these carry a `Round N:` prefix is
+   `round-evidence.md`'s list and only that.
 3. **The review pack** — `summary.json`'s `revision` field, which is what makes
    the fact machine-checkable (`QFAI-REVIEW-009`). Write
    `"revision_form": "content-hash"` beside it — **required**, not optional.
@@ -191,16 +195,31 @@ One table, so nothing has to be inferred from an exception list attached to a
 different item. The **final tree** is the one the reviewers judge: the tree as it
 stands after Phase: Refactor.
 
-| Gate item                             | Field that carries the address                                          | Tree it addresses                                                                                                           |
-| ------------------------------------- | ----------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| 3 — RED observed                      | `Round N: RED revision`, or `Falsifiability revision` on a branch-2 row | before the production code that makes the test pass exists; for a mutation run, the mutated tree, reverted before the GREEN |
-| 5 — GREEN observed                    | `Round N: Revision`                                                     | after implementation, **before** the refactor                                                                               |
-| 6 — GREEN re-confirmed after refactor | `Refactor verify revision`, beside `Refactor verify command` / `result` | the final tree                                                                                                              |
-| 7 — `completion-reviewer` PASS        | `Reviewed revision` in the response                                     | the final tree                                                                                                              |
-| 8 — `implementation-reviewer` PASS    | `Reviewed revision` in the response                                     | the final tree                                                                                                              |
+| Gate item                             | Field that carries the address                                                   | Tree it addresses                                                                                                           |
+| ------------------------------------- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| 3 — RED observed                      | `Round N: RED revision`, or `Round N: Falsifiability revision` on a branch-2 row | before the production code that makes the test pass exists; for a mutation run, the mutated tree, reverted before the GREEN |
+| 5 — GREEN observed                    | `Round N: Revision`                                                              | after implementation, **before** the refactor                                                                               |
+| 6 — GREEN re-confirmed after refactor | `Refactor verify revision`, beside `Refactor verify command` / `result`          | the final tree                                                                                                              |
+| 7 — `completion-reviewer` PASS        | `Reviewed revision` in the response                                              | the final tree                                                                                                              |
+| 8 — `implementation-reviewer` PASS    | `Reviewed revision` in the response                                              | the final tree                                                                                                              |
+| 12 — checkpoint verification passed   | `Checkpoint verification revision`, beside its `command` / `result`              | the tree the checkpoint's own command set ran on — the final tree, that boundary sitting after every reviewer PASS          |
 
 **Items 6, 7 and 8 MUST name the same revision. Items 3 and 5 each name their
 own**, and are exempt from that rule for the reason below.
+
+**Item 12 takes its address from its own run.** The per-item boundary is reached
+after items 7 and 8 have passed and before `refactor -> done`, so a checkpoint
+that passes first time ran on the tree those three name — but that is the
+ordinary case, not a guarantee, and the seal over the checkpoint record has to
+say which tree the record describes. A checkpoint failure is fixed and the whole
+set re-run (`checkpoint-verification.md#pass-criteria`), which moves the address;
+the same fix re-earns the reviewer PASSes and refreshes the `Refactor verify`
+triple, so the four move together rather than drifting apart. Borrowing a round
+block's `Revision` for the seal would be worse than imprecise: that field
+addresses the pre-refactor tree, so the seal would certify a run that was never
+made there, and a producer trying to make the two agree would overwrite item 5's
+address and break the row above. The spec-level boundary has no row and so no
+round block to borrow from at all; it records the field the same way.
 
 **On a T1 batched review, item 6 is re-taken when the group closes.** Members are
 parked in `refactor` while the rest of the coherent group is implemented, so each
@@ -212,12 +231,14 @@ every member's relevant suite on that tree and refreshes all three
 above is unsatisfiable for every member but the last — not because batching
 exempts anything, but because the address was taken too early.
 
-**On a parallel run, item 6 and both reviews are re-taken after the merge.** A
-worker takes all three inside its own worktree, and the merge adds every other
-slice's change, so the address the three share is not the integrated tree's. The
+**On a parallel run, item 6 and every review are re-taken after the merge.** A
+worker takes them all inside its own worktree, and the merge adds every other
+slice's change, so the address they share is not the integrated tree's. The
 post-merge step re-runs each merged item's relevant suite, refreshes its
-`Refactor verify` fields and re-requests the two reviews before that item goes
-`done`
+`Refactor verify` fields and re-requests the reviews — items 7 and 8 on every
+item, and item 9's `product-surface-reviewer` parity review as well on a
+UI-affecting one, whose rendered output another slice can change while this
+item's own suite stays GREEN — before that item goes `done`
 (`parallelization-policy.md#re-verify-each-merged-item-on-the-integrated-tree`).
 "Before `done`" is literal: the orchestrator writes a worker's returned `done`
 into the trunk as `refactor` and promotes it only after the re-take passes
@@ -295,8 +316,9 @@ Consequences:
   that no longer exists. A GREEN is observed before the refactor, so any refactor
   that changes a byte moves the address before items 7 and 8 are even requested.
   In all three, that is the property the observation is worth
-  having, not decay. Each records its own field — `RED revision` beside the RED
-  pair, `Falsifiability revision` beside the trio, `Round N: Revision` beside the
+  having, not decay. Each records its own field — `Round N: RED revision` beside
+  the RED pair, `Round N: Falsifiability revision` beside the trio,
+  `Round N: Revision` beside the
   GREEN pair — and leaves `Refactor verify revision` for item 6 and the two
   reviews, which must still agree with each other. Folding
   any of them into one field made a correct row permanently stale and unable to

@@ -26,6 +26,8 @@ const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.
 const VOLUME = "assistant/skills/qfai-implement/references/volume-policy.md";
 const PARALLEL = "assistant/skills/qfai-implement/references/parallelization-policy.md";
 const LEDGER = "assistant/skills/qfai-implement/references/execution-ledger.md";
+const ROUND = "assistant/skills/qfai-implement/references/round-evidence.md";
+const CHECKPOINT = "assistant/skills/qfai-implement/references/checkpoint-verification.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -205,11 +207,147 @@ describe("evidence and verdicts carry a revision", () => {
         "Re-request `completion-reviewer` and `implementation-reviewer` for that item against the same tree",
       );
       expect(reference).toContain(
-        "**On a parallel run, item 6 and both reviews are re-taken after the merge.**",
+        "**On a parallel run, item 6 and every review are re-taken after the merge.**",
       );
       expect(skill).toContain(
         "re-take each item's item 6 on the integrated tree and re-request its items 7-8 reviews there",
       );
+    });
+
+    it(`${tree}: the post-merge re-take covers a UI item's parity review too`, async () => {
+      // The re-take re-requested only the two code reviewers, and the promotion
+      // condition read only their PASSes, so a T3 row reached `done` on a
+      // `product-surface-reviewer` verdict taken in the worker's worktree —
+      // before any sibling slice's stylesheet, layout container or shared
+      // component was in the tree. Gate item 9 is what admits a UI item to
+      // `done`, and nothing re-observed the rendered output it rules on.
+      const parallel = flat(await read(tree, PARALLEL));
+      const reference = flat(await read(tree, REFERENCE));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(parallel).toContain(
+        "**A UI-affecting item re-requests `product-surface-reviewer` there too**, so item 9's prototype parity PASS names it as well",
+      );
+      expect(parallel).toContain(
+        "that item's re-verify and **every re-review it owes** have returned PASS on the merged tree — `completion-reviewer` and `implementation-reviewer` on every item, and `product-surface-reviewer` as well on a UI-affecting one",
+      );
+      expect(reference).toContain(
+        "item 9's `product-surface-reviewer` parity review as well on a UI-affecting one",
+      );
+      expect(skill).toContain(
+        "**plus item 9's `product-surface-reviewer` parity review on a UI-affecting item**",
+      );
+      // Over-correction pin: the parity review is added to the re-take, not
+      // substituted for the two code reviews every merged item still owes.
+      expect(parallel).toContain(
+        "Re-request `completion-reviewer` and `implementation-reviewer` for that item against the same tree",
+      );
+    });
+
+    it(`${tree}: the reconciliation write walks listed edges from todo`, async () => {
+      // Workers never touch the trunk ledger, so a dispatched row is still
+      // `todo` when the reconciliation write lands. Assigning the returned
+      // status there is one jump — `todo -> refactor` for the held `done`, or
+      // `todo -> done` without the hold — and neither is in the ledger's
+      // enumeration, which says it is complete. A wholly successful parallel
+      // run was therefore recorded by a prohibited transition.
+      const parallel = flat(await read(tree, PARALLEL));
+      const ledger = flat(await read(tree, LEDGER));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(parallel).toContain(
+        "**The reconciliation write replays the row's own path, one listed edge at a time.**",
+      );
+      expect(parallel).toContain(
+        "`todo -> refactor` and `todo -> done` are both absent from `execution-ledger.md#allowed-transitions`",
+      );
+      expect(parallel).toContain(
+        "`todo -> red` on its RED, `red -> green` on its GREEN, `green -> refactor` on its refactor-verify",
+      );
+      expect(parallel).toContain(
+        "Every other returned status is reached by continuing the same replay to it, never by jumping",
+      );
+      expect(skill).toContain(
+        "**That write replays the row's own path one listed edge at a time**",
+      );
+      // Over-correction pin: the fix is the replay, not a new edge. The ledger
+      // enumeration must still not carry a jump out of `todo` past `red`.
+      expect(ledger).toContain("`todo` -> `red` (write a failing test)");
+      expect(ledger).not.toContain("`todo` -> `refactor`");
+      expect(ledger).not.toContain("`todo` -> `done`");
+      expect(ledger).toContain("Any edge not listed above is prohibited.");
+    });
+
+    it(`${tree}: the checkpoint seal names the checkpoint's own revision`, async () => {
+      // The seal was bound to "the `Revision` this run was made against", and
+      // `Revision` is a round field addressing the pre-refactor tree, while the
+      // per-item boundary runs after every reviewer PASS. There was no
+      // checkpoint-owned address, so a producer either sealed a final-tree run
+      // with a pre-refactor address or dragged item 5's forward to match.
+      const checkpoint = flat(await read(tree, CHECKPOINT));
+      const reference = flat(await read(tree, REFERENCE));
+      const round = flat(await read(tree, ROUND));
+      const skill = flat(await read(tree, SKILL));
+
+      expect(checkpoint).toContain(
+        "`Checkpoint verification result`, `Checkpoint verification revision` and `Checkpoint verification seal`",
+      );
+      expect(checkpoint).toContain("**The revision is this run's own**");
+      expect(checkpoint).toContain(
+        "It is not a round block's `Revision`: `round-evidence.md` scopes that field to a round and it addresses the pre-refactor tree",
+      );
+      expect(checkpoint).toContain(
+        "The seal is the audit hash over the command and the result together with that revision",
+      );
+      // The spec-level boundary has no row at all, so it cannot borrow either.
+      expect(checkpoint).toContain(
+        "together with a `Checkpoint verification revision` of its own, recorded beside them",
+      );
+      expect(skill).toContain(
+        "plus `Checkpoint verification revision`, **this run's own address** and never a round block's `Revision`",
+      );
+      // The table is what a producer reads to pick the field.
+      expect(reference).toContain("| 12 — checkpoint verification passed");
+      expect(reference).toContain("**Item 12 takes its address from its own run.**");
+      // It is a row-level field, so `round-evidence.md` gives it no prefix.
+      expect(round).toContain(
+        "the checkpoint fields, the pair with its `Checkpoint verification revision` and seal",
+      );
+      // Over-correction pin: item 6 keeps `Refactor verify revision`; the
+      // checkpoint gets a field of its own rather than taking that one over.
+      expect(checkpoint).toContain("It is not borrowed from `Refactor verify revision` either");
+      expect(reference).toContain(
+        "| `Refactor verify revision`, beside `Refactor verify command` / `result`",
+      );
+    });
+
+    it(`${tree}: a branch-2 RED address is round-prefixed in the table`, async () => {
+      // The table paired a prefixed `Round N: RED revision` with an unprefixed
+      // `Falsifiability revision` in one cell, so a producer read the second as
+      // row-level. A branch-2 row past Round 2 then either overwrote Round 1's
+      // mutation address or stranded the new one outside every round block.
+      const reference = flat(await read(tree, REFERENCE));
+      const round = flat(await read(tree, ROUND));
+
+      expect(reference).toContain(
+        "`Round N: RED revision`, or `Round N: Falsifiability revision` on a branch-2 row",
+      );
+      expect(reference).toContain(
+        "`Round N: RED revision` beside the RED pair, `Round N: Falsifiability revision` beside the trio, `Round N: Revision` beside the GREEN pair",
+      );
+      // The prefix rule itself is stated once, in the cardinality authority.
+      expect(round).toContain(
+        "`Round N: Falsifiability revision` **in place of `Round N: RED revision`** as that trio's address",
+      );
+      expect(round).toContain(
+        "the RED pair with `RED revision` and `RED test hash` (or, in their place, the falsifiability trio with `Falsifiability revision`)",
+      );
+      // Over-correction pin: `Refactor verify revision` is row-level and must
+      // NOT acquire a prefix from this sweep.
+      expect(round).toContain(
+        "the refactor-verify fields — the pair and its `Refactor verify revision`",
+      );
+      expect(reference).not.toContain("`Round N: Refactor verify revision`");
     });
 
     it(`${tree}: a worker's returned done is held at refactor until the re-take passes`, async () => {
@@ -224,7 +362,7 @@ describe("evidence and verdicts carry a revision", () => {
 
       expect(parallel).toContain("**A returned `done` is written as `refactor`, not as `done`.**");
       expect(parallel).toContain(
-        "The orchestrator writes `refactor -> done` only once the integration verify, that item's re-verify and both of its re-reviews have returned PASS on the merged tree",
+        "The orchestrator writes `refactor -> done` only once the integration verify, that item's re-verify and **every re-review it owes** have returned PASS on the merged tree",
       );
       expect(skill).toContain("**A worker's returned `done` is written as `refactor`**");
       expect(reference).toContain(

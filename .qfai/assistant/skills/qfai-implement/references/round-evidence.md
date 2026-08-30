@@ -19,10 +19,13 @@ reviewer `REVISE` that requires new production behaviour adds a round.
 - `Round N: RED result` — the failure output (result completeness is
   best-effort; truncated output is acceptable)
 - `Round N: Satisfied-by` / `Falsifiability command` / `Falsifiability result`
-  — **in place of the RED pair** on a `falsifiability` row. It is that row's
-  RED observation, so it sits where the RED pair sits and takes the same prefix;
-  writing it unprefixed left the completion gate unable to find the round it
-  belongs to
+  — **in place of the RED pair** on a `falsifiability` row, with
+  `Round N: Falsifiability revision` **in place of `Round N: RED revision`** as
+  that trio's address. It is that row's RED observation, so all of it sits where
+  the RED pair and its address sit and takes the same prefix; writing any of it
+  unprefixed left the completion gate unable to find the round it belongs to,
+  and a branch-2 row that reached Round 2 unable to say which mutation run the
+  address described — the round before it having been overwritten or reused
 - `Round N: GREEN command` — the exact command executed to observe success
 - `Round N: GREEN result` — the success output
 - `Round N: reviewer verdict` — the verdict that closed the round (`PASS`, or
@@ -38,11 +41,14 @@ requires new production behaviour adds a round. A `REVISE` that needs none
 as free prose.
 
 Every field in a round block carries the `Round N:` prefix, and **this list
-is the whole of it** — `Revision`, the RED pair (or the falsifiability trio in
-its place), the GREEN pair, the reviewer verdict. Row-level fields are not round
-fields and take no prefix: `TDD-ID`, the obligation reference, `Test file`,
-`Selector`, `Layer`, and the refactor-verify fields — the pair and its
-`Refactor verify revision`. `RED revision`,
+is the whole of it** — `Revision`, the RED pair with `RED revision` and
+`RED test hash` (or, in their place, the falsifiability trio with
+`Falsifiability revision`), the GREEN pair, the reviewer verdict. Row-level
+fields are not round fields and take no prefix: `TDD-ID`, the obligation
+reference, `Test file`, `Selector`, `Layer`, the refactor-verify fields — the
+pair and its `Refactor verify revision` — and the checkpoint fields, the pair
+with its `Checkpoint verification revision` and seal
+(`checkpoint-verification.md`). `RED revision`,
 `RED test hash` and `Falsifiability revision` were on that list until a
 second round showed they describe a round's RED, not the row's.
 
