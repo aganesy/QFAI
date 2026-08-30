@@ -8,9 +8,11 @@
  * a renamed — or never written — module left the contract asserting a plausible
  * path forever, and the reader got no error, only a dead end.
  *
- * The check is deliberately narrow: it only resolves entries that *look* like
- * repository-relative paths, so parenthetical prose and symbol names inside the
- * block ("`MAX_ITERATIONS = 10`") are never mistaken for a file. Fenced code
+ * The check is deliberately narrow: it only reads entries that *look* like
+ * paths, so parenthetical prose and symbol names inside the block
+ * ("`MAX_ITERATIONS = 10`") are never mistaken for a file. Narrow is not the
+ * same as silent, though — a rooted path is still a path, so it is read and
+ * then rejected for leaving the project, never dropped. Fenced code
  * and HTML comments are skipped as well, so a document that *illustrates* the
  * block format — or one that comments an obsolete route out — cannot be read as
  * declaring one.
@@ -33,11 +35,28 @@ const ENTRY_RE = /^\s+-\s+`([^`]+)`/;
 const INDENTED_ITEM_RE = /^\s+-\s+/;
 
 /**
- * A backticked token is treated as a path only when it is slash-separated and
+ * A backticked token is treated as a path only when it is separator-joined and
  * made purely of path-safe characters. `packages/qfai/src/core/doctor.ts` is a
  * path; `resolvePlaywrightLauncher` and `MAX_ITERATIONS = 10` are not.
  */
-const PATH_LIKE_RE = /^[A-Za-z0-9_@.-]+(?:\/[A-Za-z0-9_@.-]+)+\/?$/;
+const RELATIVE_PATH_LIKE_RE = /^[A-Za-z0-9_@.-]+(?:\/[A-Za-z0-9_@.-]+)+\/?$/;
+
+/**
+ * The same shape, rooted: a POSIX absolute path (`/etc/passwd`), a
+ * drive-qualified Windows one (`C:\Users\me`, `C:/Users/me`), or a UNC share
+ * (`\\server\share`). None of these can name a repository-relative module, but
+ * they must still be *extracted*: an entry the matcher does not recognise is
+ * an entry no gate ever sees, and silently dropping one is the single outcome
+ * this validator exists to prevent. `resolveWithinRoot` then reports it as
+ * leaving the project root.
+ */
+const ABSOLUTE_PATH_LIKE_RE =
+  /^(?:\/|\\\\|[A-Za-z]:[\\/])[A-Za-z0-9_@.-]+(?:[\\/][A-Za-z0-9_@.-]+)*[\\/]?$/;
+
+/** Whether a backticked token names a filesystem path, rooted or not. */
+function isPathShaped(token: string): boolean {
+  return RELATIVE_PATH_LIKE_RE.test(token) || ABSOLUTE_PATH_LIKE_RE.test(token);
+}
 
 /** An opening or closing fence: three or more backticks or tildes. */
 const FENCE_RE = /^\s{0,3}(`{3,}|~{3,})\s*(.*)$/;
@@ -130,11 +149,19 @@ function maskedContent(lines: readonly string[]): string[] {
 
 /**
  * Resolve a contract-declared module path against the project root, refusing
- * anything that leaves it. `PATH_LIKE_RE` admits `..` segments, so without this
- * an entry such as `../../etc/passwd` would resolve to a file that happens to
+ * anything that leaves it. The matcher admits `..` segments, so without this an
+ * entry such as `../../etc/passwd` would resolve to a file that happens to
  * exist outside the project and pass as a valid SSOT module.
  */
 export function resolveWithinRoot(root: string, modulePath: string): string | null {
+  // A rooted path leaves the project by construction. Both conventions are
+  // refused on every host: `path.resolve` on POSIX would otherwise reinterpret
+  // a Windows path as a relative name (`C:\a` becomes `<root>/C:\a`) and report
+  // it as merely missing, so a contract written on Windows would be judged by a
+  // different rule than the one CI applies to it.
+  if (path.posix.isAbsolute(modulePath) || path.win32.isAbsolute(modulePath)) {
+    return null;
+  }
   const rootAbs = path.resolve(root);
   const resolved = path.resolve(rootAbs, modulePath);
   const relative = path.relative(rootAbs, resolved);
@@ -158,10 +185,17 @@ export type SsotModuleEntry = {
 /**
  * Extract the path-like entries of every `- SSOT modules:` block in `text`.
  *
- * The block ends at the first line that is neither an indented list item nor an
- * indented continuation of the previous entry — i.e. at the next top-level list
- * item, heading, or blank line. Continuation lines are skipped rather than
- * parsed, so a backtick in a parenthetical never becomes a phantom entry.
+ * The block ends at the first line of *content* that is neither an indented
+ * list item nor an indented continuation of the previous entry — i.e. at the
+ * next top-level list item, heading, or blank line. Continuation lines are
+ * skipped rather than parsed, so a backtick in a parenthetical never becomes a
+ * phantom entry.
+ *
+ * Termination reads the masked content, not the raw line, so that the parsing
+ * rule is one rule: a region the mask removed is not content and therefore
+ * cannot end anything. An unindented `<!-- … -->` sitting between two entries
+ * used to terminate the block on its raw text while contributing nothing to it,
+ * which left every entry below it unexamined.
  *
  * The line that *ends* a block is handed back to the outer scan rather than
  * consumed, so a contract that documents two targets with two adjacent
@@ -179,16 +213,24 @@ export function extractSsotModuleEntries(text: string): SsotModuleEntry[] {
     }
     let cursor = index + 1;
     for (; cursor < lines.length; cursor++) {
-      const line = lines[cursor] ?? "";
-      if (line.trim().length === 0 || !/^\s/.test(line)) {
-        break;
-      }
       const visible = content[cursor] ?? "";
+      if (visible.trim().length === 0) {
+        // Nothing visible here. A genuinely blank line closes the block; a line
+        // the mask emptied — an HTML comment between two entries, or a fenced
+        // sample — carries no content, so the block continues past it.
+        if ((lines[cursor] ?? "").trim().length === 0) {
+          break;
+        }
+        continue;
+      }
+      if (!/^\s/.test(visible)) {
+        break; // the next top-level list item or heading
+      }
       if (!INDENTED_ITEM_RE.test(visible)) {
-        continue; // continuation line, fenced sample, or commented-out entry
+        continue; // continuation line, or an entry whose text was masked away
       }
       const modulePath = ENTRY_RE.exec(visible)?.[1];
-      if (modulePath !== undefined && PATH_LIKE_RE.test(modulePath)) {
+      if (modulePath !== undefined && isPathShaped(modulePath)) {
         entries.push({ modulePath, line: cursor + 1 });
       }
     }
@@ -232,7 +274,7 @@ export async function validateContractSsotModules(
             "contracts.ssotModuleExists",
             [entry.modulePath],
             "canonical",
-            "SSOT modules はプロジェクトルート相対の実装経路のみを指せます。`..` で外へ出ないパスに修正してください。",
+            "SSOT modules はプロジェクトルート相対の実装経路のみを指せます。絶対パス (`/…`, `C:\\…`, `\\\\…`) や `..` で外へ出るパスではなく、ルート相対のパスに修正してください。",
             { loc: { line: entry.line } },
           ),
         );

@@ -95,6 +95,49 @@ describe("extractSsotModuleEntries", () => {
     ]);
   });
 
+  it("reads a rooted path as an entry so the root check can reject it", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# CLI Contract",
+        "",
+        "- SSOT modules:",
+        "  - `/etc/passwd`",
+        "  - `C:\\Windows\\System32\\drivers\\etc\\hosts`",
+        "  - `C:/Users/me/qfai.ts`",
+        "  - `\\\\server\\share\\module.ts`",
+        "  - `notAPath`",
+        "  - `resolvePlaywrightLauncher`",
+      ].join("\n"),
+    );
+
+    expect(entries).toEqual([
+      { modulePath: "/etc/passwd", line: 4 },
+      { modulePath: "C:\\Windows\\System32\\drivers\\etc\\hosts", line: 5 },
+      { modulePath: "C:/Users/me/qfai.ts", line: 6 },
+      { modulePath: "\\\\server\\share\\module.ts", line: 7 },
+    ]);
+  });
+
+  it("keeps reading a block past an unindented comment between entries", () => {
+    const entries = extractSsotModuleEntries(
+      [
+        "# CLI Contract",
+        "",
+        "- SSOT modules:",
+        "  - `packages/qfai/src/core/first.ts`",
+        "<!-- the split below lands with the next release -->",
+        "  - `packages/qfai/src/core/second.ts`",
+        "",
+        "  - `packages/qfai/src/core/after-a-blank-line.ts`",
+      ].join("\n"),
+    );
+
+    expect(entries).toEqual([
+      { modulePath: "packages/qfai/src/core/first.ts", line: 4 },
+      { modulePath: "packages/qfai/src/core/second.ts", line: 6 },
+    ]);
+  });
+
   it("reads the second of two adjacent blocks", () => {
     const entries = extractSsotModuleEntries(
       [
@@ -185,6 +228,59 @@ describe("validateContractSsotModules", () => {
       expect(issues[0]?.loc?.line).toBe(4);
     } finally {
       await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("rejects an absolute entry even when the target exists", async () => {
+    const parent = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-absolute-"));
+    const root = path.join(parent, "project");
+    try {
+      await mkdir(root, { recursive: true });
+      const outside = path.join(parent, "outside.ts");
+      await writeFile(outside, "export const a = 1;\n", "utf-8");
+      const absolute = outside.replace(/\\/g, "/");
+      await seedContract(root, "qfai-validate.md", [
+        "# CLI Contract: `qfai validate`",
+        "",
+        "- SSOT modules:",
+        `  - \`${absolute}\``,
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("QFAI-CONTRACT-050");
+      expect(issues[0]?.severity).toBe("error");
+      expect(issues[0]?.message).toContain("プロジェクトルート外");
+      expect(issues[0]?.refs).toContain(absolute);
+      expect(issues[0]?.loc?.line).toBe(4);
+    } finally {
+      await rm(parent, { recursive: true, force: true });
+    }
+  });
+
+  it("checks the entries below an unindented comment inside a block", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-ssot-modules-"));
+    try {
+      await mkdir(path.join(root, "src", "core"), { recursive: true });
+      await writeFile(path.join(root, "src", "core", "real.ts"), "export const a = 1;\n", "utf-8");
+      await seedContract(root, "qfai-validate.md", [
+        "# CLI Contract: `qfai validate`",
+        "",
+        "- SSOT modules:",
+        "  - `src/core/real.ts`",
+        "<!-- the reviewer-gate split lands with the next release -->",
+        "  - `src/core/gone.ts`",
+      ]);
+
+      const issues = await validateContractSsotModules(root, defaultConfig);
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("QFAI-CONTRACT-050");
+      expect(issues[0]?.refs).toContain("src/core/gone.ts");
+      expect(issues[0]?.loc?.line).toBe(6);
+    } finally {
+      await rm(root, { recursive: true, force: true });
     }
   });
 
