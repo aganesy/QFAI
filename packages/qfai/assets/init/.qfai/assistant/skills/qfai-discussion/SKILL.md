@@ -60,7 +60,7 @@ UI-bearing packs must produce, as primary truth: `uiux/40_screen_contracts.md`, 
 8. Generate the exploration-first sidecar family for UI-bearing targets.
 9. **Emit root `DESIGN.md` draft** for UI-bearing targets per `references/design-dna-intake.md`. Required when UI-bearing; skip otherwise.
 10. Generate `prototyping.yaml` only when the latest discussion pack is UI-bearing and an explicit prototyping recommendation is useful.
-11. Request review and record the Reviewer result.
+11. Request review and record the Reviewer result, following `references/review-cycle-playbook.md` for pack layout, cycle rules, and the `summary.json` fields.
 
 For UI-bearing targets, follow `references/design-dna-intake.md` while authoring the UI/UX sidecars, and apply the durable decision rules in `references/ui_ux_best_practices.md` (open only the `ui_ux/` appendix the current task needs). Keep this `SKILL.md` compact; put detailed interview prompts and examples in the reference file.
 
