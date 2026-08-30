@@ -2297,3 +2297,59 @@ describe("the environment guard tells a denied read apart from an unprotected en
     }
   });
 });
+
+describe("the release job installs no floating version of anything", () => {
+  // Every global install in this job runs in the one place holding `id-token: write` and
+  // performing an irreversible upload. `npm@latest` meant the same tag installed a different
+  // npm on different days: a future release with a different engine requirement, a regression,
+  // or a tampered publish all arrive without a diff.
+  //
+  // The floor check that already existed cannot see any of that — it only asks whether the
+  // version is at least 11.5.1. It stays, because it is the ASSERTION that the pin is still
+  // adequate, which is a different question from what to install.
+
+  it("names an exact version and a registry for every global install", () => {
+    const doc = parseYaml(
+      readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8"),
+    ) as { jobs?: Record<string, { steps?: Array<Record<string, unknown>> }> };
+    const installs: Array<{ where: string; line: string }> = [];
+    for (const [jobId, job] of Object.entries(doc.jobs ?? {})) {
+      for (const step of job.steps ?? []) {
+        const body = String(step["run"] ?? "");
+        for (const raw of body.split(/\r?\n/)) {
+          const line = raw.trim();
+          if (!/^(npm|pnpm|yarn) (install|add|i)\b/.test(line)) continue;
+          if (!/(^|\s)(-g|--global)(\s|$)/.test(line)) continue;
+          installs.push({
+            where: `${jobId}: ${String(step["name"] ?? "(unnamed)")}`,
+            line,
+          });
+        }
+      }
+    }
+    expect(installs.length, "release.yml installs nothing globally").toBeGreaterThan(0);
+
+    for (const { where, line } of installs) {
+      expect(
+        line,
+        `${where} installs a floating version, so the same tag installs different code on ` +
+          "different days — in the job that holds id-token: write",
+      ).not.toMatch(/@latest\b/);
+      expect(line, `${where} names no exact version`).toMatch(/@[0-9]+\.[0-9]+\.[0-9]+(\s|$)/);
+      expect(
+        line,
+        `${where} names no registry, so the package name is one an attacker-controlled ` +
+          "registry can answer",
+      ).toMatch(/--registry https:\/\/registry\.npmjs\.org/);
+    }
+  });
+
+  it("keeps the floor check, which is what says the pin is still adequate", () => {
+    const text = readFileSync(path.join(REPO_ROOT, ".github", "workflows", "release.yml"), "utf-8");
+    expect(
+      text,
+      "the trusted-publishing floor must survive the pin: it is the assertion that what is " +
+        "pinned still clears the bar",
+    ).toMatch(/need="11\.5\.1"/);
+  });
+});

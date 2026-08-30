@@ -458,10 +458,22 @@ jobs:
           # job that holds the publishing identity, and with the installed npm doing the publish.
           # `--ignore-scripts` stops the package running at install time rather than when invoked.
           #
-          # The VERSION stays `@latest` deliberately: this step exists because the bundled npm is
-          # too old for trusted publishing, and the floor check below is what decides whether what
-          # arrived is new enough. A pin here would be a second version to maintain.
-          npm install -g --ignore-scripts --registry https://registry.npmjs.org/ npm@latest
+          # And the VERSION, for the same reason the corepack fallback carries one.
+          #
+          # This was `npm@latest`, on the argument that the floor check below decides whether
+          # what arrived is new enough and a pin would be a second version to maintain. That
+          # argument is wrong in the direction that matters here: `@latest` means the same tag
+          # installs a different npm on different days, into the one job that holds
+          # `id-token: write` and performs an irreversible upload. A future release with a
+          # different engine requirement, a regression, or a tampered publish all arrive without
+          # a diff — and the floor check cannot see any of that, because it only asks whether the
+          # version is at least 11.5.1.
+          #
+          # The floor stays. It is the ASSERTION that this pin is still adequate, which is a
+          # different job from choosing what to install: bump the pin and the floor tells you
+          # whether the new one still clears the bar. Two numbers, because they answer two
+          # questions.
+          npm install -g --ignore-scripts --registry https://registry.npmjs.org/ npm@12.0.2
           have="$(npm --version)"
           need="11.5.1"
           lowest="$(printf '%s\n%s\n' "$have" "$need" | sort -V | head -1)"
