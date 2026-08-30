@@ -26,6 +26,7 @@ const GATE = `${SDD}/references/sdd-quality-gate.md`;
 const RULES = `${SDD}/references/contract-artifact-rules.md`;
 const CHECKLISTS = `${SDD}/references/sdd-phase-checklists.md`;
 const PLAYBOOK = `${SDD}/references/sdd-execution-playbook.md`;
+const CONTRACT_INDEX = `${SDD}/templates/specs/_policies/05_Contracts.md`;
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -223,19 +224,112 @@ describe("Phase 2c reconciles contracts against their obligations", () => {
         "**Re-expand the scope after every contract write this phase makes.**",
       );
       expect(skill).toContain(
-        "Recompute the referencing specs after each contract write, reconcile the ones that just entered, and repeat until a pass adds no spec.",
+        "Recompute the referencing specs after each contract write, re-reconcile every obligation in scope",
       );
       expect(skill).toContain(
-        "Re-expand that set after every contract write this phase makes, until a pass adds no spec.",
+        "Re-expand that set after every contract write this phase makes and re-reconcile every obligation in it",
       );
       expect(rules).toContain(
         "**Re-expand the scope after every contract write this phase makes.**",
       );
-      expect(rules).toContain("repeat until a pass adds no spec");
+      expect(rules).toContain("repeat until a pass adds no spec **and** writes no contract");
       expect(checklists).toContain("Contract-scoped mode, scope closure:");
       expect(checklists).toContain(
-        "A shared contract amended here may be referenced only by specs Phase 0 never put in scope.",
+        "A shared contract amended here may be referenced only by specs Phase 0 never put in scope",
       );
+    });
+
+    it(`${tree}: the closure terminates on writes, not on scope growth alone`, async () => {
+      // The first form of the closure asked only "did a spec enter?" and
+      // re-reconciled only the specs that just entered. A contract write made
+      // for one obligation can break another that already passed against the
+      // same contract, in a spec already in scope: no spec enters, the loop
+      // ends, and Phase 4 closes the Change Request over the broken one.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain(
+        "re-reconcile every obligation in scope — not only the specs that just entered — and repeat until a pass adds no spec **and** writes no contract",
+      );
+      expect(rules).toContain(
+        "**re-reconcile every obligation in scope, not only the ones that just entered**",
+      );
+      expect(rules).toContain(
+        "Terminate on the joint condition: repeat until a pass adds no spec **and** writes no contract.",
+      );
+      expect(rules).toContain(
+        "Scope growth alone is the wrong bell, because a repair that breaks a settled obligation adds no spec at all.",
+      );
+      // Non-termination is a finding, not a reason to keep looping.
+      expect(rules).toContain(
+        "A pass that keeps writing without settling is two obligations contradicting each other over one contract",
+      );
+      expect(checklists).toContain(
+        "re-reconcile every obligation in scope rather than only the ones that just entered, and repeat until a pass adds no spec **and** writes no contract",
+      );
+    });
+
+    it(`${tree}: repairs stay inside the contracts the rerun may touch`, async () => {
+      // Reading every existing BR/AC of an in-scope spec reaches obligations
+      // realized by contracts the run never touched. Repairing one of those on
+      // the contract side rewrites an upstream artifact the Change Request
+      // never listed, and the re-expansion then pulls in its own referents.
+      const skill = flat(await read(tree, SKILL));
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+
+      expect(skill).toContain("**Repair only the contracts this run is approved to touch.**");
+      expect(skill).toContain("record any other mismatch and halt it as its own Change Request");
+      expect(rules).toContain("**Repair only the contracts this run is approved to touch.**");
+      expect(rules).toContain(
+        "an approval for `A` grown into a rewrite of `B` and everything downstream of it",
+      );
+      expect(rules).toContain(
+        "A mismatch outside that set is recorded and halts the rerun as its own Change Request",
+      );
+      expect(checklists).toContain("Contract-scoped mode, write confinement:");
+
+      // Over-correction pin: confining the writes must not delete the closure,
+      // nor forbid the paired write Cross-contract Reconciliation requires.
+      expect(rules).toContain(
+        "plus a contract a repair to one of them must move with it to keep Cross-contract Reconciliation true",
+      );
+      expect(rules).toContain(
+        "**Re-expand the scope after every contract write this phase makes.**",
+      );
+    });
+
+    it(`${tree}: the pairing is declared in the index, not inferred`, async () => {
+      // "Every contract paired against it" was not machine-determinable: the
+      // index had no pairing column, `Depends On` is apply order by its own
+      // definition, and QFAI-CONTRACT-040 matches normalized field names, so
+      // several contracts declaring `status` are indistinguishable.
+      const rules = flat(await read(tree, RULES));
+      const checklists = flat(await read(tree, CHECKLISTS));
+      const index = flat(await read(tree, CONTRACT_INDEX));
+
+      expect(rules).toContain("**Read the pairing, do not infer it.**");
+      expect(rules).toContain("It is the `Reconciled With` column of `_policies/05_Contracts.md`");
+      expect(rules).toContain(
+        "every contract declaring a domain for a field whose normalized name (separators dropped, case folded) matches one the named contract declares — all of them, not the one that looks intended",
+      );
+      // The Phase 0 rule has to write the column the rerun reads.
+      expect(rules).toContain(
+        "Record the pairing you reconciled in the `Reconciled With` column of `_policies/05_Contracts.md`",
+      );
+      expect(checklists).toContain("Contract-scoped mode, pairing:");
+
+      expect(index).toContain("Reconciled With");
+      expect(index).toContain(
+        "`Reconciled With` lists the contracts this one was reconciled **against** in Phase 0 Cross-contract Reconciliation",
+      );
+      // Over-correction pin: the new column must not absorb `Depends On`,
+      // which stays apply-order-only.
+      expect(index).toContain(
+        "`Depends On` lists the contracts that must be applied **before** this one",
+      );
+      expect(index).toContain("It is not apply order and must not be folded into `Depends On`");
     });
 
     it(`${tree}: contract-scoped resolution stays on the contract side`, async () => {
