@@ -43,7 +43,13 @@ async function withProject(task: (root: string) => Promise<void>): Promise<void>
 }
 
 async function codesFor(root: string, profile: ValidationProfile, platform?: string) {
-  const result = await validateProject(root, undefined, { profile, platform });
+  // `exactOptionalPropertyTypes` is on, so an omitted `--platform` has to be an
+  // ABSENT property rather than one holding `undefined`; spreading is what keeps
+  // the "no platform given" case expressible without widening the option type.
+  const result = await validateProject(root, undefined, {
+    profile,
+    ...(platform === undefined ? {} : { platform }),
+  });
   return result.issues.map((found) => found.code);
 }
 
