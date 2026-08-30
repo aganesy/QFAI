@@ -40,6 +40,19 @@ const NOT_OBSERVABLE = "assistant/skills/qfai-implement/references/red-not-obser
 const GATEKEEPER = "assistant/agents/qa-gatekeeper.md";
 const CATALOG = "assistant/manifest/agent-catalog.yml";
 
+/**
+ * The three reviewers `/qfai-implement` routes as blocking, plus the catalog
+ * they are mirrored into. Each one selects the evidence file it judges, so a
+ * rule about which file that is has to hold in all four or the row stops at
+ * whichever of them still picks by `Layer` alone.
+ */
+const EVIDENCE_SELECTORS = [
+  GATEKEEPER,
+  "assistant/agents/completion-reviewer.md",
+  "assistant/agents/implementation-reviewer.md",
+  CATALOG,
+];
+
 const flat = (s: string): string => s.replace(/\s+/g, " ");
 
 const read = async (tree: string, rel: string): Promise<string> =>
@@ -2601,7 +2614,7 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     // the pre-advance line and never marks the row it exists to rescue.
     const implement = flat(await read(tree, IMPLEMENT));
     expect(implement).toContain(
-      "**Read the working tree before the history, because an advance need not be committed at all.**",
+      "**On an `Integration` row, read the working tree before the history, because an advance need not be committed at all.**",
     );
     expect(implement).toContain("`working-tree+<content hash>`");
     expect(implement).toContain("compare the row's line with `HEAD` first");
@@ -2689,5 +2702,62 @@ describe.each(TREES)("%s (the two sides of each contract agree)", (tree) => {
     expect(implement).toContain(
       "`.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row",
     );
+  });
+
+  it("gives the three reviewers the marker before the `Layer` too", async () => {
+    // The Orchestrator Protocol keeps a marked legacy row's evidence in the
+    // implement file, but `qa-gatekeeper`, `completion-reviewer` and
+    // `implementation-reviewer` each pick the file they read by `Layer` alone.
+    // So the writer and the readers disagreed on one row: the reviewers opened
+    // an ATDD file that was never written for it and stopped on missing
+    // evidence — or hashed the wrong audit subject — and the row still could
+    // not reach `done` after the marker rescued it.
+    for (const rel of EVIDENCE_SELECTORS) {
+      const text = flat(await read(tree, rel));
+      expect(text, rel).toContain(
+        "**Two kinds of row do not go by `Layer`; read them first.** A row carrying `Pre-split-evidence: implement` in its `Evidence` cell keeps `.qfai/evidence/implement-<spec-id>.md`",
+      );
+      expect(text, rel).toContain(
+        "sends this role to an ATDD file that was never written for the row",
+      );
+    }
+  });
+
+  it("carries the L1/L2 carve-out into the three reviewer input rules too", async () => {
+    // Same three readers, the other exception. `/qfai-atdd` authors no test for
+    // an `Integration` row whose TC-Refs are L1/L2 only, so `/qfai-implement`
+    // writes that row's evidence to the implement file — but the reviewers
+    // pinned every `Integration` row's input to the ATDD file, so the carve-out
+    // row died at the first observation review whether or not it was marked.
+    for (const rel of EVIDENCE_SELECTORS) {
+      const text = flat(await read(tree, rel));
+      expect(text, rel).toContain(
+        "and so does an `Integration` row whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`",
+      );
+      expect(text, rel).toContain("`/qfai-atdd` authors no test for it");
+      // Over-correction pin: an ordinary ATDD-owned row is still read from the
+      // ATDD file — the exceptions are exceptions, not a repeal of the split.
+      expect(text, rel).toContain("`.qfai/evidence/atdd-<spec-id>.md`");
+    }
+  });
+
+  it("limits the working-tree rescue to the layer this version moves", async () => {
+    // The working-tree read dates the anchor not at all. `E2E` / `API` moved in
+    // an earlier version, so an uncommitted implement anchor on one of those is
+    // a row being written to the wrong file now, not a legacy row — and marking
+    // it would pass a row that never produced its ATDD handoff as complete,
+    // which is exactly what the marker exists to prevent.
+    const implement = flat(await read(tree, IMPLEMENT));
+    expect(implement).toContain("So, **for `Integration` only**");
+    expect(implement).toContain("**`E2E` and `API` are decided by the history alone.**");
+    expect(implement).toContain(
+      "an implement anchor in the working tree is a row written to the wrong file _now_, not a legacy one",
+    );
+    expect(implement).toContain(
+      "only `Integration`, whose split is this version, can still have a lawful implement anchor sitting uncommitted",
+    );
+    // Over-correction pin: the rescue itself survives for `Integration`, which
+    // is the row the previous round added it for.
+    expect(implement).toContain("Where it differs, the working-tree line **is** the advance");
   });
 });
