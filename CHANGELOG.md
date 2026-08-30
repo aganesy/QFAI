@@ -46,6 +46,23 @@
 
 ### Changed
 
+- **`qfai --help` documents the per-command exit-code matrix, and an unknown
+  command now exits 1.** The help output carried a `Commands:` and an
+  `Options:` block and nothing else; exit codes appeared only incidentally
+  inside two option descriptions, and `64` / `65` / `66` — live return values
+  from `prototyping iterate` and `prototyping certify` — appeared nowhere. The
+  canonical matrix lives in the framework's own CLI contracts, which are not
+  part of the published package, so a consumer installing qfai from npm could
+  not reach it at all. Treating "non-zero" as one bucket misreads `64`
+  (converged — a success for the prototyping loop) as a failure. A new
+  `Exit codes:` block is rendered from the same constants the commands return,
+  per command rather than as one flat table, since the same number means
+  different things depending on the command. Alongside it, a mistyped
+  top-level command (`qfai vlaidate`, with or without `--help`) now sets exit
+  code 1 instead of printing usage and exiting 0, so a typo is detectable from
+  CI. The `guardrails`-only usage-error code (`2` where every other command
+  returns `1`) is documented rather than changed — unifying it would break
+  existing callers.
 - **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
   every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
   report built its own set from the first table alone and skipped the spec

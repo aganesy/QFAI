@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -90,7 +90,9 @@ describe("qfai --help exit-code section", () => {
       new RegExp(`report\\s+${EXIT_CODES.ok} = 成功,[\\s\\S]*?${EXIT_CODES.inputError} = 入力`),
     );
     expect(section).toMatch(
-      new RegExp(`prototyping show-spec\\s+${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} =`),
+      new RegExp(
+        `prototyping show-spec\\s+${EXIT_CODES.ok} = 成功,[\\s\\S]*?${EXIT_CODES.inputError} = prototyping.json`,
+      ),
     );
     expect(section).toContain("--check の証明書 digest・gate mismatch");
   });
@@ -210,6 +212,105 @@ describe("qfai --help exit-code section", () => {
     // cli/index.ts maps any throw to 1 — the row has to carry it.
     expect(certifyRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 実行時エラー`));
     expect(certifyRow).toContain("証明書 I/O の例外");
+  });
+
+  it("names the runtime error the validate / doctor / preflight rows blamed on --fail-on", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const validateRow = section.slice(
+      section.indexOf("validate / doctor"),
+      section.indexOf("prototyping preflight"),
+    );
+    const preflightRow = section.slice(
+      section.indexOf("prototyping preflight"),
+      section.indexOf("guardrails"),
+    );
+
+    // emitJson() (validate) and the --out writeFile() (doctor / preflight)
+    // are unguarded, so an unwritable destination throws and cli/index.ts
+    // maps it to 1. Presenting 1 as "the --fail-on threshold was reached"
+    // makes an I/O failure read as a quality verdict.
+    for (const row of [validateRow, preflightRow]) {
+      expect(row).toMatch(
+        new RegExp(`${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時`),
+      );
+      expect(row).toContain("出力 I/O の例外");
+    }
+  });
+
+  it("exits 1, not 0 or the --fail-on 1, when preflight cannot write its --out file", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-preflight-out-"));
+    tempDirs.push(dir);
+    // A regular file where --out wants a parent directory makes doctor's
+    // mkdir() fail with ENOTDIR — an I/O error reachable without relying on
+    // permission bits (the suite runs as uid 0 in CI containers).
+    const blocker = path.join(dir, "blocker");
+    await writeFile(blocker, "not a directory\n", "utf-8");
+
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      await expect(
+        run(
+          [
+            "prototyping",
+            "preflight",
+            "--root",
+            dir,
+            "--format",
+            "json",
+            "--out",
+            path.join(blocker, "preflight.json"),
+          ],
+          dir,
+        ),
+      ).rejects.toBeInstanceOf(Error);
+    } finally {
+      spy.mockRestore();
+    }
+  });
+
+  it("documents show-spec's 1 for a spec-resolution I/O error, not only the 0 / 2 pair", async () => {
+    const help = await captureHelp();
+    const section = help.slice(help.indexOf("Exit codes:"));
+    const showSpecRow = section.slice(
+      section.indexOf("prototyping show-spec"),
+      section.indexOf("その他のコマンド"),
+    );
+
+    // resolveSurfaceUnion() re-throws every non-ENOENT spec-body read error
+    // rather than classifying the spec as non-UI, so 1 is reachable with a
+    // perfectly valid prototyping.json.
+    expect(showSpecRow).toMatch(new RegExp(`${EXIT_CODES.findings} = 実行時エラー`));
+    expect(showSpecRow).toContain("spec 解決時の I/O 例外");
+    // Over-correction pin: the missing / corrupt prototyping.json stays 2.
+    expect(showSpecRow).toMatch(
+      new RegExp(`${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`),
+    );
+  });
+
+  it("exits 1 when show-spec hits a non-ENOENT spec read failure", async () => {
+    const dir = await mkdtemp(path.join(tmpdir(), "qfai-showspec-io-"));
+    tempDirs.push(dir);
+    const protoJson = path.join(dir, ".qfai", "evidence", "prototyping", "prototyping.json");
+    await mkdir(path.dirname(protoJson), { recursive: true });
+    await writeFile(
+      protoJson,
+      `${JSON.stringify({ frozenSpecsCovered: ["spec-0001"], specsCovered: ["spec-0001"] }, null, 2)}\n`,
+      "utf-8",
+    );
+    // A directory named 01_Spec.md makes readFile fail with EISDIR — the
+    // non-ENOENT class resolveSurfaceUnion re-throws. Same reason as above:
+    // chmod-based unreadability is a no-op for uid 0.
+    await mkdir(path.join(dir, ".qfai", "specs", "spec-0001", "01_Spec.md"), { recursive: true });
+
+    const spy = vi.spyOn(process.stdout, "write").mockImplementation(() => true);
+    try {
+      await expect(run(["prototyping", "show-spec", "--root", dir], dir)).rejects.toBeInstanceOf(
+        Error,
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("splits the parser-rejected --check-convergence cycle from the runner's range error", async () => {

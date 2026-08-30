@@ -24,7 +24,11 @@ export const EXIT_CODES = {
    * guardrails check: 検査エラーを検出。
    * 使用法エラーおよび実行時エラーの既定値でもある (guardrails を除く)。
    * ここでいう実行時エラーはトップレベルの catch が拾う送出全般で、
-   * prototyping certify の証明書書き込み失敗もこの値になる。
+   * prototyping certify の証明書書き込み失敗、validate の JSON 出力や
+   * doctor / preflight の --out 書き込み失敗、prototyping show-spec が
+   * spec 本文を ENOENT 以外の理由で読めない場合もこの値になる。
+   * どれも検査結果の不合格ではないため、復旧手段 (権限 / ディスク /
+   * パスの修正) が閾値到達とは異なる点に注意。
    * パーサが値を拒否する値フラグ (--cycle に非負整数以外) も、
    * peek / 本処理へ進まずこの使用法エラーで停止する。
    */
@@ -63,11 +67,19 @@ const LABEL_WIDTH = 29;
 const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   {
     label: "validate / doctor",
-    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = --fail-on 閾値に到達`],
+    lines: [
+      `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時エラー`,
+      "      (validate の JSON 出力 / doctor --out の書き込み失敗など、出力 I/O の例外)",
+    ],
   },
   {
     label: "prototyping preflight",
-    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.findings} = --fail-on 閾値に到達`],
+    lines: [
+      `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.findings} = --fail-on 閾値に到達, または実行時エラー`,
+      "      (--out の書き込み失敗など、出力 I/O の例外 — doctor と同じ実装経路)",
+    ],
   },
   {
     label: "guardrails",
@@ -120,7 +132,12 @@ const EXIT_CODE_ROWS: readonly ExitCodeRow[] = [
   },
   {
     label: "prototyping show-spec",
-    lines: [`${EXIT_CODES.ok} = 成功, ${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`],
+    lines: [
+      `${EXIT_CODES.ok} = 成功,`,
+      `${EXIT_CODES.findings} = 実行時エラー (spec 解決時の I/O 例外 — 権限エラー等,`,
+      "      ENOENT 以外の spec 本文読み込み失敗は再送出される),",
+      `${EXIT_CODES.inputError} = prototyping.json の欠落 / 破損`,
+    ],
   },
   {
     label: "その他のコマンド",
