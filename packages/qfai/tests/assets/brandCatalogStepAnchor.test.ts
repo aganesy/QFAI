@@ -18,27 +18,53 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
   const catalogPath = path.join(discussionSkillDir, "references", "design-md-brand-catalog.md");
   const skillMdPath = path.join(discussionSkillDir, "SKILL.md");
 
-  it("no shipped asset routes work to the retired `Step 11.3` address", async () => {
+  it("no discussion-skill asset routes work to the retired `Step 11.3` address", async () => {
     // `/qfai-discussion`'s Required Process is a flat 11-item list with
-    // no sub-steps. Any surviving `Step 11.3` reference sends the agent
-    // looking for a step that no shipped artifact defines.
-    // `dot: true` is required: the shipped skill tree lives under
-    // `assets/init/.qfai/`, which fast-glob skips by default.
-    const allMd = await fg(["**/*.md"], { cwd: assetsRoot, absolute: true, dot: true });
+    // no sub-steps, so `Step 11.3` addresses nothing this skill defines.
+    // Scope: the discussion skill tree only. Step numbers are per-skill
+    // local names, not a shipped-wide namespace, so scanning every asset
+    // Markdown file would fail CI the moment another skill legitimately
+    // numbered a step `11.3` — exactly as `qfai-verify/SKILL.md` already
+    // defines its own `Step 0.5`.
+    const discussionMd = await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true });
+    expect(discussionMd.length).toBeGreaterThan(0);
     const dangling = /Step\s+11\.3/i;
     const hits: string[] = [];
-    for (const file of allMd) {
+    for (const file of discussionMd) {
       const text = await readFile(file, "utf-8");
       const lines = text.split("\n");
       for (let i = 0; i < lines.length; i += 1) {
         const line = lines[i];
         if (line === undefined) continue;
         if (dangling.test(line)) {
-          hits.push(`${path.relative(assetsRoot, file)}:${i + 1}: ${line.trim()}`);
+          hits.push(`${path.relative(discussionSkillDir, file)}:${i + 1}: ${line.trim()}`);
         }
       }
     }
     expect(hits).toEqual([]);
+  });
+
+  it("the retired-address scan stays inside the discussion skill tree", async () => {
+    // Over-correction pin. Re-widening the scan to `assetsRoot` would pull
+    // in sibling skills whose step numbers are their own local namespace.
+    // `qfai-verify/SKILL.md` is the live proof: it defines `## Step 0.5`,
+    // which is valid there and says nothing about discussion's step 9.
+    const verifySkillMd = path.join(
+      assetsRoot,
+      "init",
+      ".qfai",
+      "assistant",
+      "skills",
+      "qfai-verify",
+      "SKILL.md",
+    );
+    expect(await readFile(verifySkillMd, "utf-8")).toMatch(/^##\s+Step 0\.5\b/m);
+
+    const scanned = await fg(["**/*.md"], { cwd: discussionSkillDir, absolute: true });
+    expect(scanned).not.toContain(verifySkillMd);
+    for (const file of scanned) {
+      expect(file.startsWith(discussionSkillDir + path.sep)).toBe(true);
+    }
   });
 
   it("the catalog routes archetype selection to Required Process step 9", async () => {
@@ -93,6 +119,50 @@ describe("brand catalog step anchor", { timeout: 15000 }, () => {
       "utf-8",
     );
     expect(intake).toContain("accessibility.motion");
+  });
+
+  it("step 9 keeps archetype selection inside the planner-first boundary", async () => {
+    // `brand.archetype` is a hard-required DESIGN.md field
+    // (`validateDesignMd` in `src/core/design/designMd.ts` raises
+    // `missing-required` on `brand.archetype`), and the root DESIGN.md
+    // draft is a mandatory UI-bearing discussion output. So step 9 must
+    // keep telling the agent to fill it — but it must also say what the
+    // fill is NOT, or the instruction reads as the superseded
+    // archetype-driven design-system generation that discussion no longer
+    // does. `discussion-completion-matrix.md` carries both halves at once:
+    // the full `visual.*` tree is required, AND directions stay unranked.
+    const skillMd = await readFile(skillMdPath, "utf-8");
+    const step9 =
+      skillMd.split("\n").find((line) => line.startsWith("9. ") && line.includes("DESIGN.md")) ??
+      "";
+    expect(step9).toMatch(/required `brand\.archetype`/);
+    expect(step9).toMatch(/draft brand SSOT only/);
+    expect(step9).toMatch(/exploration directions stay unranked/);
+    expect(step9).toMatch(/design system is not finalized here/);
+    // The word discussion never earns: an autonomous winner pick.
+    expect(step9).not.toMatch(/autonomous/i);
+
+    // The catalog is read standalone during Phase A, so the same boundary
+    // has to be legible there and must not resurrect the retired framing.
+    const catalog = await readFile(catalogPath, "utf-8");
+    expect(catalog).toMatch(/required `brand\.archetype`/);
+    expect(catalog).toMatch(/does not rank the\s+exploration directions/);
+    expect(catalog).toMatch(/does not finalize the design system/);
+    expect(catalog).not.toMatch(/autonomous/i);
+  });
+
+  it("the completion matrix still requires the DESIGN.md front-matter step 9 fills", async () => {
+    // Over-correction pin. Deleting archetype selection from step 9 would
+    // strand this obligation: the matrix blocks completion until root
+    // DESIGN.md parses with `brand` present, and `brand.archetype` is
+    // required inside it. The unranked-directions rule below it is a
+    // separate axis, not a licence to drop the field.
+    const matrix = await readFile(
+      path.join(discussionSkillDir, "references", "discussion-completion-matrix.md"),
+      "utf-8",
+    );
+    expect(matrix).toMatch(/Root `DESIGN\.md` exists[\s\S]*?`brand`/);
+    expect(matrix).toMatch(/Exploration directions are carried unranked/);
   });
 
   it("the intake reference still carries the anchor the catalog links to", async () => {

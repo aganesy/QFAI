@@ -1,9 +1,9 @@
 # Design-MD Brand Catalog
 
-Reference catalog of 8 canonical brand archetypes for autonomous selection during Required Process
-step 9 (Phase A) of `qfai-discussion/SKILL.md`. Each archetype supplies defaults that the agent maps
-to the project's design system; `design-dna-intake.md#output-mapping-new-ssot-path` defines where the
-selected value is written.
+Reference catalog of 8 canonical brand archetypes. Required Process step 9 (Phase A) of
+`qfai-discussion/SKILL.md` picks one to fill the required `brand.archetype` field of the root
+`DESIGN.md` draft; each archetype supplies `aesthetic_properties` that Phase B turns into draft
+tokens, and `design-dna-intake.md#output-mapping-new-ssot-path` defines where each value is written.
 
 ---
 
@@ -83,7 +83,10 @@ selected value is written.
 
 ## Selection Guide
 
-Use this catalog during Required Process step 9, Phase A (`qfai-discussion/SKILL.md`):
+Use this catalog during Required Process step 9, Phase A (`qfai-discussion/SKILL.md`).
+Picking an archetype fills a required field of the `DESIGN.md` **draft**. It does not rank the
+exploration directions and does not finalize the design system — both stay out of scope for
+discussion (`discussion-completion-matrix.md`).
 
 1. Score each archetype against the brand intent captured in root `DESIGN.md` front-matter (`brand.voice`, `audience.emotion`, `audience.do_not_look_like`).
 2. Apply the archetype tie-breaker when two archetypes tie: highest visual-theme weight wins, then alphabetical name.
