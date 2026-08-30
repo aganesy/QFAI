@@ -15,7 +15,7 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { chmod, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -63,7 +63,48 @@ type Seed = {
   worktreeGitignore?: string;
   /** Runs `git init` + `git add -f` on the matrix, so the index tracks it. */
   trackMatrix?: boolean;
+  /**
+   * Further specs, each annotated and each with its matrix written — the shape
+   * that makes a per-spec git probe visible as a per-spec cost.
+   */
+  extraSpecIds?: readonly string[];
 };
+
+/** A spec directory with one annotated integration test and its matrix. */
+async function seedExtraSpec(root: string, specId: string): Promise<void> {
+  const number = specId.replace(/^spec-/, "");
+  const specDir = path.join(root, ".qfai", "specs", specId);
+  await mkdir(specDir, { recursive: true });
+  await writeFile(path.join(specDir, "01_Spec.md"), "# Spec\n", "utf-8");
+  await writeFile(path.join(specDir, "02_User-stories.md"), "# US\n", "utf-8");
+  await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
+  await writeFile(
+    path.join(specDir, "06_Test-Cases.md"),
+    [
+      "# 06 Test Cases",
+      "",
+      "## Test Case Table",
+      "",
+      "| TC-ID | Level | AC-Refs | EX-Ref | Steps | Expected |",
+      "| ----- | ----- | ------- | ------ | ----- | -------- |",
+      "| TC-0001 | L3 | AC-0001 | EX-0001 | s | e |",
+      "",
+    ].join("\n"),
+    "utf-8",
+  );
+  const testDir = path.join(root, "tests", "integration", specId);
+  await mkdir(testDir, { recursive: true });
+  await writeFile(
+    path.join(testDir, "a.test.ts"),
+    `// QFAI:SPEC-${number}:TC-0001\nit('covers', () => {});\n`,
+    "utf-8",
+  );
+  await writeFile(
+    path.join(root, ".qfai", "evidence", `coverage-depth-${specId}.md`),
+    MATRIX,
+    "utf-8",
+  );
+}
 
 async function seedProject(seed: Seed): Promise<string> {
   const base = await mkdtemp(path.join(os.tmpdir(), "qfai-coverage-depth-"));
@@ -140,6 +181,9 @@ async function seedProject(seed: Seed): Promise<string> {
   }
   if (seed.stageEvidence !== undefined) {
     await writeFile(path.join(evidenceDir, "atdd-spec-0001.md"), seed.stageEvidence, "utf-8");
+  }
+  for (const extraSpecId of seed.extraSpecIds ?? []) {
+    await seedExtraSpec(root, extraSpecId);
   }
   if (seed.trackMatrix ?? false) {
     const git = (args: string[]): void => {
@@ -295,6 +339,30 @@ describe("QFAI-ATDD-132: the matrix must survive `.gitignore`", () => {
       matrix: MATRIX,
       gitignore: ".qfai/report/*\n.qfai/evidence/*\n",
       trackMatrix: true,
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-132");
+  });
+
+  it("reports an ignore line written with a character class", async () => {
+    // `git check-ignore -v .qfai/evidence/coverage-depth-spec-0001.md` names
+    // this line as the winner. Escaping `[` and `]` into literals made it a
+    // miss, so a project that really cannot commit its matrix looked clean.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      gitignore: ".qfai/evidence/coverage-depth-spec-[0-9]*.md\n",
+    });
+
+    expect(codes).toContain("QFAI-ATDD-132");
+  });
+
+  it("says nothing about a character class that excludes the matrix", async () => {
+    // The over-correction pin: `[a-z]` does not match `0`, and git agrees —
+    // reading every bracket as "matches something" would be the same defect
+    // pointing the other way.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      gitignore: `${QFAI_GITIGNORE_BLOCK}\n.qfai/evidence/coverage-depth-spec-[a-z]*.md\n`,
     });
 
     expect(codes).not.toContain("QFAI-ATDD-132");
@@ -459,6 +527,112 @@ describe("QFAI-ATDD-133: the stage evidence links the matrix instead of inlining
     expect(codes).not.toContain("QFAI-ATDD-133");
   });
 
+  it("reports a leading-slash link, which points at the root and not here", async () => {
+    // Markdown resolves `/…` against the site or repository root, so this link
+    // names a top-level file that does not exist. Re-basing it onto the
+    // evidence directory turned a broken link into the exact path the gate
+    // looks for and let the section pass.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See [matrix](/coverage-depth-spec-0001.md) (committed). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("accepts a leading-slash link that names the matrix from the repository root", async () => {
+    // The over-correction pin. A leading `/` is read from the root rather than
+    // rejected outright, so the one absolute spelling that does resolve to the
+    // matrix still counts — the finding is the meaning change, not the slash.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See [matrix](/.qfai/evidence/coverage-depth-spec-0001.md). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-133");
+  });
+
+  it("reports a table that omits its leading pipes", async () => {
+    // GFM makes the outer pipes optional, so this renders as a table while a
+    // row test anchored on a line starting with `|` saw nothing at all — and
+    // the justifications stayed in the file the ignore rules drop.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+        "Obligation | Layer | Depth",
+        "--- | --- | ---",
+        "`TC-0001` | Integration | D3",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("does not read a thematic break as a table", async () => {
+    // The over-correction pin for the delimiter-row rule: `---` with no pipe
+    // is a horizontal rule, and GFM requires the pipe even for a one-column
+    // table, so nothing here is a table.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: [
+        "# ATDD",
+        "",
+        "## Coverage Depth Matrix",
+        "",
+        "See `.qfai/evidence/coverage-depth-spec-0001.md` (committed). Totals: ✅ 7 / ⚠️ 0 / ❌ 0.",
+        "",
+        "---",
+        "",
+      ].join("\n"),
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-133");
+  });
+
+  it("reports an inline table in a second section of the same name", async () => {
+    // `findIndex` stopped at the first heading, so a clean link-and-totals
+    // section on top hid an inline table below it — both render, and the gate
+    // read only the half that was well formed.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: `${LINKED_SECTION}\n${INLINE_SECTION.replace("# ATDD\n\n", "")}`,
+    });
+
+    expect(codes).toContain("QFAI-ATDD-133");
+  });
+
+  it("accepts a repeated section when every occurrence is well formed", async () => {
+    // The over-correction pin: reading all the sections must not turn a
+    // duplicated heading into a finding by itself.
+    const codes = await codesFor({
+      matrix: MATRIX,
+      stageEvidence: `${LINKED_SECTION}\n${LINKED_SECTION.replace("# ATDD\n\n", "")}`,
+    });
+
+    expect(codes).not.toContain("QFAI-ATDD-133");
+  });
+
   it("accepts a bare ⚠ without the variation selector", async () => {
     const codes = await codesFor({
       matrix: MATRIX,
@@ -493,6 +667,81 @@ describe("QFAI-ATDD-133: the stage evidence links the matrix instead of inlining
   it("says nothing about a spec with no stage evidence file", async () => {
     expect(await codesFor({ matrix: MATRIX })).not.toContain("QFAI-ATDD-133");
   });
+});
+
+/**
+ * A `git` on `PATH` that answers nothing and records every call.
+ *
+ * The index probe is the one thing in this validator that starts a process, so
+ * counting invocations is how "once per run" is told apart from "once per
+ * spec" — and an empty answer means every matrix reads as untracked, which is
+ * the branch the probe is on in the first place.
+ */
+async function installGitRecorder(dir: string): Promise<{ log: string; restore: () => void }> {
+  const bin = path.join(dir, "fake-bin");
+  const log = path.join(dir, "git-calls.log");
+  await mkdir(bin, { recursive: true });
+  const shim = path.join(bin, "git");
+  await writeFile(shim, `#!/bin/sh\nprintf '%s\\n' "$*" >> ${JSON.stringify(log)}\nexit 0\n`, {
+    encoding: "utf-8",
+  });
+  await chmod(shim, 0o755);
+  const previous = process.env.PATH;
+  process.env.PATH = `${bin}${path.delimiter}${previous ?? ""}`;
+  return {
+    log,
+    restore: () => {
+      process.env.PATH = previous;
+    },
+  };
+}
+
+describe("the index probe costs one process, not one per spec", () => {
+  it.skipIf(process.platform === "win32")(
+    "asks `git ls-files` once however many matrices are ignored",
+    async () => {
+      // `git ls-files --error-unmatch` was asked per ignored spec from inside
+      // the loop, so a project whose legacy block swallows every matrix paid
+      // one synchronous process start per spec.
+      const root = await seedProject({
+        matrix: MATRIX,
+        gitignore: ".qfai/report/*\n.qfai/evidence/*\n",
+        extraSpecIds: ["spec-0002", "spec-0003"],
+      });
+      const recorder = await installGitRecorder(root);
+      let codes: string[];
+      try {
+        const evaluated = await evaluateAtddCodeTraceability(root, defaultConfig);
+        codes = (await validateAtddCoverageDepth(root, evaluated)).map((entry) => entry.code);
+      } finally {
+        recorder.restore();
+      }
+
+      // All three matrices are ignored and none is tracked, so the loop really
+      // did visit every one of them.
+      expect(codes.filter((code) => code === "QFAI-ATDD-132")).toHaveLength(3);
+      const calls = (await readFile(recorder.log, "utf-8")).trim().split("\n");
+      expect(calls).toHaveLength(1);
+    },
+  );
+
+  it.skipIf(process.platform === "win32")(
+    "never starts the process for a project whose matrices are committed",
+    async () => {
+      // The pin on the laziness the batch must not cost: the healthy path
+      // still asks git nothing at all.
+      const root = await seedProject({ matrix: MATRIX, extraSpecIds: ["spec-0002"] });
+      const recorder = await installGitRecorder(root);
+      try {
+        const evaluated = await evaluateAtddCodeTraceability(root, defaultConfig);
+        await validateAtddCoverageDepth(root, evaluated);
+      } finally {
+        recorder.restore();
+      }
+
+      await expect(readFile(recorder.log, "utf-8")).rejects.toThrow();
+    },
+  );
 });
 
 describe("profile wiring", () => {

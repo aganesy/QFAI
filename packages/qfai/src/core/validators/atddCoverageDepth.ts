@@ -219,52 +219,110 @@ async function readIgnoreScope(root: string): Promise<IgnoreScope> {
 }
 
 /**
- * True when git already tracks `rel`, asked of the index rather than the tree.
+ * Every matrix path the index already tracks, read from git in one call.
  *
  * `.gitignore` does not untrack anything. A matrix committed before a matching
  * ignore line arrived stays in history, and its later edits still stage the
  * normal way — so the audit record `QFAI-ATDD-132` exists to protect is intact,
  * and failing `--fail-on error` on it would block a project for a state git
- * itself considers fine. Asked only about a matrix the layers already called
- * ignored, so at most one probe per spec and none at all on the healthy path.
+ * itself considers fine.
+ *
+ * One listing, not one `git ls-files --error-unmatch` per spec: a project whose
+ * legacy ignore block swallows every matrix asked the question once per spec
+ * from inside the loop, so a hundred specs meant a hundred synchronous process
+ * spawns and a `validate` that slowed down in proportion to the spec count. The
+ * listing is scoped to `.qfai/evidence`, the only directory a matrix can live
+ * in, and `git ls-files` prints its paths relative to the working directory —
+ * the same project-relative frame {@link coverageDepthRelPath} produces, in a
+ * monorepo subdirectory too.
  *
  * A repository git cannot answer for — no `git` on `PATH`, no repository at
- * `root` — reads as untracked, which keeps the finding for exactly the projects
- * where nothing proves the file reached a commit.
+ * `root` — reads as an empty set, which keeps the finding for exactly the
+ * projects where nothing proves the file reached a commit.
  */
-function isTrackedByGit(root: string, rel: string): boolean {
+function trackedEvidencePaths(root: string): ReadonlySet<string> {
   try {
-    execFileSync("git", ["ls-files", "--error-unmatch", "--", rel], {
+    const listing = execFileSync("git", ["ls-files", "-z", "--", EVIDENCE_DIR_REL], {
       cwd: root,
       encoding: "utf-8",
-      stdio: ["ignore", "ignore", "ignore"],
+      stdio: ["ignore", "pipe", "ignore"],
+      // A truncated listing would throw and read as "nothing is tracked", which
+      // turns into spurious errors; the evidence directory never comes close.
+      maxBuffer: 32 * 1024 * 1024,
     });
-    return true;
+    return new Set(listing.split("\0").filter((entry) => entry.length > 0));
   } catch {
+    return new Set();
+  }
+}
+
+/**
+ * Every `## Coverage Depth Matrix` section body, in document order.
+ *
+ * All of them, not the first: an evidence file may carry the heading twice, and
+ * reading only the first one meant a well-formed section could be placed on top
+ * of a second that inlines the table — both render, and the gate saw the half
+ * that was clean.
+ */
+function matrixSections(content: string): string[][] {
+  const sections: string[][] = [];
+  let body: string[] | null = null;
+  for (const line of content.replace(/\r\n/g, "\n").split("\n")) {
+    if (MATRIX_HEADING_RE.test(line)) {
+      body = [];
+      sections.push(body);
+      continue;
+    }
+    if (/^#{1,6}\s/.test(line)) {
+      body = null;
+      continue;
+    }
+    body?.push(line);
+  }
+  return sections;
+}
+
+/**
+ * A GFM delimiter row: `| --- | :-: |`, `--- | ---`, `|---|`.
+ *
+ * The pipe is required even when the cells are: GFM asks a one-column table for
+ * `|---|`, which is what keeps a `---` thematic break — and a setext underline —
+ * from reading as a table.
+ */
+function isDelimiterRow(line: string): boolean {
+  const trimmed = line.trim();
+  if (!trimmed.includes("|")) {
     return false;
   }
+  return trimmed
+    .replace(/^\|/, "")
+    .replace(/\|$/, "")
+    .split("|")
+    .every((cell) => /^\s*:?-+:?\s*$/.test(cell));
 }
 
-/** The body of the `## Coverage Depth Matrix` section, or `null` when absent. */
-function matrixSection(content: string): string[] | null {
-  const lines = content.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((line) => MATRIX_HEADING_RE.test(line));
-  if (start === -1) {
-    return null;
-  }
-  const body: string[] = [];
-  for (const line of lines.slice(start + 1)) {
-    if (/^#{1,6}\s/.test(line)) {
-      break;
-    }
-    body.push(line);
-  }
-  return body;
-}
-
-/** A markdown table row — the shape the section must not carry. */
+/**
+ * A markdown table — the shape the section must not carry.
+ *
+ * Leading and trailing pipes are optional in GFM, so a test anchored on a line
+ * that starts with `|` saw no table in
+ *
+ * ```md
+ * Obligation | Layer
+ * --- | ---
+ * ```
+ *
+ * which renders as one, and is exactly where the justifications end up. What no
+ * table can omit is the delimiter row directly under its header, so that pair
+ * is what this looks for — with the leading-pipe row kept as its own case,
+ * since a table split across the section boundary can present a body row alone.
+ */
 function hasTableRow(body: readonly string[]): boolean {
-  return body.some((line) => line.trim().startsWith("|"));
+  return body.some(
+    (line, index) =>
+      line.trim().startsWith("|") ||
+      (isDelimiterRow(line) && (body[index - 1] ?? "").trim().length > 0),
+  );
 }
 
 /**
@@ -322,16 +380,23 @@ function pathCandidates(body: readonly string[]): string[] {
  * Both spellings the evidence file legitimately uses resolve to the same
  * string: the template's repo-relative ``.qfai/evidence/coverage-depth-…`` and
  * a link written relative to the evidence directory the file itself sits in.
+ *
+ * A leading `/` is neither of those and is not re-based onto the evidence
+ * directory. Markdown resolves it against the site or repository root, so
+ * `[matrix](/coverage-depth-spec-0001.md)` points at a top-level file that does
+ * not exist; prefixing it silently rewrote a broken link into the very path the
+ * gate is looking for. Read from the root instead, which is where the link
+ * itself points, so only a reference that names the matrix from there passes.
  */
 function resolveReference(candidate: string): string {
   const cleaned = candidate
     .trim()
     .replace(/\\/g, "/")
     .replace(/[#?].*$/, "");
-  const anchored = cleaned.replace(/^\//, "");
-  const base = anchored.startsWith(`${EVIDENCE_DIR_REL}/`)
-    ? anchored
-    : `${EVIDENCE_DIR_REL}/${anchored}`;
+  const base =
+    cleaned.startsWith("/") || cleaned.startsWith(`${EVIDENCE_DIR_REL}/`)
+      ? cleaned.replace(/^\//, "")
+      : `${EVIDENCE_DIR_REL}/${cleaned}`;
   const resolved: string[] = [];
   for (const segment of base.split("/")) {
     if (segment.length === 0 || segment === ".") {
@@ -355,58 +420,76 @@ export async function validateAtddCoverageDepth(
   root: string,
   result: AtddCodeTraceabilityResult,
 ): Promise<Issue[]> {
-  const issues: Issue[] = [];
-  const ignoreScope = await readIgnoreScope(root);
-
-  for (const [specId, specDir] of await specsWithAtddTests(result)) {
-    const matrixRel = coverageDepthRelPath(specId);
-    if (!(await exists(path.join(root, matrixRel)))) {
-      issues.push(
-        issue(
-          "QFAI-ATDD-131",
-          `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。`,
-          // Warning, not error: the obligation is per ATDD stage run, and a
-          // spec whose tests were annotated before the matrix became a
-          // Mandatory Output would otherwise fail a gate retroactively. The
-          // point of the rule is that absence stops being indistinguishable
-          // from a full matrix — a finding does that; `--fail-on warning`
-          // turns it into a block for projects that want one.
-          "warning",
-          specDir,
-          "atddCoverageDepth.matrixMissing",
-          [specId],
-          "change",
-          `${matrixRel} に Coverage Depth Matrix を作成し、❌ セルには根拠を併記してください（\`.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md\`）。`,
-          { relatedFiles: [matrixRel] },
-        ),
-      );
-      continue;
-    }
-    if (
-      isPathIgnoredByLayers(ignoreScope.layers, ignoreScope.toIgnorePath(matrixRel)) &&
-      !isTrackedByGit(root, matrixRel)
-    ) {
-      issues.push(
-        issue(
-          "QFAI-ATDD-132",
-          `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。`,
-          // Error: the file exists, so the stage ran and produced the
-          // judgement — and the ignore rule is what deletes that judgement
-          // from history. Nothing about it is retroactive or ambiguous.
-          "error",
-          matrixRel,
-          "atddCoverageDepth.matrixIgnored",
-          [specId],
-          "change",
-          "`qfai init` で managed `.gitignore` ブロックを更新するか、`!.qfai/evidence/coverage-depth-*.md` より後ろにある ignore 行を外してください（git は最後に一致した行を採用し、深い階層の `.gitignore` — 例えば `.qfai/evidence/.gitignore` — が上位を上書きします）。",
-          { relatedFiles: [specDir] },
-        ),
-      );
-    }
-  }
-
+  const issues = await matrixFileIssues(root, await specsWithAtddTests(result));
   issues.push(...(await stageEvidenceIssues(root, result)));
   return issues;
+}
+
+/** `QFAI-ATDD-131` and `-132` over every spec that owes a matrix. */
+async function matrixFileIssues(
+  root: string,
+  specs: ReadonlyArray<readonly [string, string]>,
+): Promise<Issue[]> {
+  const issues: Issue[] = [];
+  const ignoreScope = await readIgnoreScope(root);
+  // Asked of git only once a layer has actually called some matrix ignored, so
+  // a healthy project never spawns the process at all.
+  let tracked: ReadonlySet<string> | undefined;
+
+  for (const [specId, specDir] of specs) {
+    const matrixRel = coverageDepthRelPath(specId);
+    if (!(await exists(path.join(root, matrixRel)))) {
+      issues.push(missingMatrixIssue(specId, specDir, matrixRel));
+      continue;
+    }
+    if (!isPathIgnoredByLayers(ignoreScope.layers, ignoreScope.toIgnorePath(matrixRel))) {
+      continue;
+    }
+    tracked ??= trackedEvidencePaths(root);
+    if (!tracked.has(matrixRel)) {
+      issues.push(ignoredMatrixIssue(specId, specDir, matrixRel));
+    }
+  }
+  return issues;
+}
+
+/** `QFAI-ATDD-131`: the spec has ATDD-owned tests and no matrix file. */
+function missingMatrixIssue(specId: string, specDir: string, matrixRel: string): Issue {
+  return issue(
+    "QFAI-ATDD-131",
+    `${specId}: ATDD 対象テストがあるのに Coverage Depth Matrix (${matrixRel}) がありません。`,
+    // Warning, not error: the obligation is per ATDD stage run, and a spec
+    // whose tests were annotated before the matrix became a Mandatory Output
+    // would otherwise fail a gate retroactively. The point of the rule is that
+    // absence stops being indistinguishable from a full matrix — a finding
+    // does that; `--fail-on warning` turns it into a block for projects that
+    // want one.
+    "warning",
+    specDir,
+    "atddCoverageDepth.matrixMissing",
+    [specId],
+    "change",
+    `${matrixRel} に Coverage Depth Matrix を作成し、❌ セルには根拠を併記してください（\`.qfai/assistant/skills/qfai-atdd/references/test-case-depth-checklist.md\`）。`,
+    { relatedFiles: [matrixRel] },
+  );
+}
+
+/** `QFAI-ATDD-132`: the matrix exists, is ignored, and git does not track it. */
+function ignoredMatrixIssue(specId: string, specDir: string, matrixRel: string): Issue {
+  return issue(
+    "QFAI-ATDD-132",
+    `${specId}: Coverage Depth Matrix (${matrixRel}) が .gitignore で除外されています。`,
+    // Error: the file exists, so the stage ran and produced the judgement —
+    // and the ignore rule is what deletes that judgement from history. Nothing
+    // about it is retroactive or ambiguous.
+    "error",
+    matrixRel,
+    "atddCoverageDepth.matrixIgnored",
+    [specId],
+    "change",
+    "`qfai init` で managed `.gitignore` ブロックを更新するか、`!.qfai/evidence/coverage-depth-*.md` より後ろにある ignore 行を外してください（git は最後に一致した行を採用し、深い階層の `.gitignore` — 例えば `.qfai/evidence/.gitignore` — が上位を上書きします）。",
+    { relatedFiles: [specDir] },
+  );
 }
 
 /**
@@ -444,6 +527,34 @@ function sectionProblem(
   return null;
 }
 
+/**
+ * The first problem any `## Coverage Depth Matrix` section in the file has.
+ *
+ * Every section, because the heading can appear more than once and a reader
+ * sees them all: a clean link-and-totals section placed first used to hide an
+ * inline table in a second one further down, which is the whole shape the gate
+ * exists to stop — the table and its justifications left in a file the ignore
+ * rules keep out of history. The occurrence is named when there is more than
+ * one, since the message otherwise points at a section that is fine.
+ */
+function fileProblem(
+  sections: ReadonlyArray<readonly string[]>,
+  evidenceRel: string,
+  matrixRel: string,
+): string | null {
+  if (sections.length === 0) {
+    return sectionProblem(null, evidenceRel, matrixRel);
+  }
+  for (const [index, body] of sections.entries()) {
+    const problem = sectionProblem(body, evidenceRel, matrixRel);
+    if (problem === null) {
+      continue;
+    }
+    return sections.length === 1 ? problem : `${problem}（${index + 1} 個目の同名セクション）`;
+  }
+  return null;
+}
+
 /** `QFAI-ATDD-133` over every spec whose ATDD stage evidence file exists. */
 async function stageEvidenceIssues(
   root: string,
@@ -459,9 +570,9 @@ async function stageEvidenceIssues(
     if (!(await exists(path.join(root, evidenceRel)))) {
       continue;
     }
-    const body = matrixSection(await readSafe(path.join(root, evidenceRel)));
+    const sections = matrixSections(await readSafe(path.join(root, evidenceRel)));
     const matrixRel = coverageDepthRelPath(specId);
-    const problem = sectionProblem(body, evidenceRel, matrixRel);
+    const problem = fileProblem(sections, evidenceRel, matrixRel);
     if (problem === null) {
       continue;
     }

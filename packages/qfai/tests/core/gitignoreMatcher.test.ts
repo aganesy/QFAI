@@ -28,6 +28,18 @@ describe("gitignorePatternMatches", () => {
     ["evidence/", ".qfai/evidence/decisions/sample/leaf"],
     ["coverage-depth-?.md", "coverage-depth-a.md"],
     [".qfai/**/decisions/", ".qfai/evidence/decisions/sample"],
+    // Character classes. `git check-ignore -v` names each of these as the rule
+    // that ignores the matrix; escaping `[` and `]` into literals made every
+    // one of them a miss, so an ignore line a project really wrote went unseen
+    // and the matrix looked safely committable.
+    [".qfai/evidence/coverage-depth-spec-[0-9]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    ["coverage-depth-spec-[a-z0-9]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    ["coverage-depth-spec-[[:digit:]]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    // A negated class matches what it excludes.
+    ["coverage-depth-spec-[!a-z]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    ["coverage-depth-spec-[^a-z]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    // `]` straight after the opening bracket is the character, not the end.
+    ["decision[]a].md", ".qfai/evidence/decision].md"],
   ])("%s matches %s", (pattern, sample) => {
     expect(gitignorePatternMatches(pattern, sample)).toBe(true);
   });
@@ -43,6 +55,16 @@ describe("gitignorePatternMatches", () => {
     ["# *.md", ".qfai/evidence/a.md"],
     ["", ".qfai/evidence/a.md"],
     ["!*.md", ".qfai/evidence/a.md"],
+    // The over-correction pins for the class support: a class still excludes
+    // what it does not name, and a negated one still excludes what it does.
+    ["coverage-depth-spec-[a-z]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    ["coverage-depth-spec-[!0-9]*.md", ".qfai/evidence/coverage-depth-spec-0001.md"],
+    // No wildcard crosses a separator under `FNM_PATHNAME`, and this range
+    // spans `/` (0x2E-0x39).
+    [".qfai/evidence[.-9]decisions", ".qfai/evidence/decisions"],
+    // An unterminated `[` aborts wildmatch: `git check-ignore` reports the
+    // file as not ignored, rather than matching the bracket literally.
+    ["weird[x.md", ".qfai/evidence/weird[x.md"],
   ])("%s does not match %s", (pattern, sample) => {
     expect(gitignorePatternMatches(pattern, sample)).toBe(false);
   });
