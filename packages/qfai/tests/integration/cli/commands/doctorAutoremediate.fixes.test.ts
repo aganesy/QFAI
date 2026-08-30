@@ -134,6 +134,67 @@ describe("doctor --autoremediate fixes install + clean + config", () => {
     expect(await fileExists(path.join(dryRoot, ".qfai", "review", ".legacy-packs"))).toBe(false);
   });
 
+  it("previews the config-fill against the parsed document, as the live run sees it", async () => {
+    // The dry-run branch skipped `tryFillConfigDefaults` entirely and printed a
+    // fixed `would fill default-keyed config fields` line, so the preview
+    // promised an append for a config that already declares `review:` (live
+    // run: writes nothing) and for one that is not a parseable mapping (live
+    // run: `skipped config-fill`). An operator reading the plan saw a change
+    // that was neither needed nor possible.
+    const seed = async (label: string, source: string): Promise<string> => {
+      const root = await newTempDir(label);
+      await writeFile(path.join(root, "qfai.config.yaml"), source, "utf-8");
+      return root;
+    };
+    const preview = async (root: string): Promise<string> => {
+      const summary = await runAutoremediate({
+        root,
+        dryRun: true,
+        yes: true,
+        isCi: false,
+        skipInstall: true,
+      });
+      expect(summary.configFieldsWritten).toEqual([]);
+      return summary.lines.join("\n");
+    };
+
+    // (a) Key already present: nothing to fill, so nothing may be promised.
+    const presentSource = "review:\n  staleTtlDays: 30\n";
+    const presentRoot = await seed("preview-present", presentSource);
+    const presentLines = await preview(presentRoot);
+    expect(presentLines).not.toContain("would fill default-keyed config fields");
+    expect(presentLines).toContain("config-fill not needed, default-keyed fields present");
+    // ...and the live run on the same input indeed writes nothing.
+    const presentLive = await runAutoremediate({
+      root: await seed("live-present", presentSource),
+      dryRun: false,
+      yes: true,
+      isCi: false,
+      skipInstall: true,
+    });
+    expect(presentLive.configFieldsWritten).toEqual([]);
+    expect(presentLive.lines.join("\n")).not.toContain("wrote default-keyed fields");
+
+    // (b) Unparseable document: the preview must decline exactly as live does.
+    const brokenRoot = await seed(
+      "preview-unparseable",
+      "paths:\n  specsDir: .qfai/specs\n : : :\n",
+    );
+    const brokenLines = await preview(brokenRoot);
+    expect(brokenLines).not.toContain("would fill default-keyed config fields");
+    expect(brokenLines).toContain("skipped config-fill");
+    expect(await readFile(path.join(brokenRoot, "qfai.config.yaml"), "utf-8")).toContain(" : : :");
+
+    // (c) Over-correction pin: a genuinely missing field must STILL be
+    // previewed, and now by name rather than as a blanket claim.
+    const gapRoot = await seed("preview-gap", "paths:\n  specsDir: .qfai/specs\n");
+    const gapLines = await preview(gapRoot);
+    expect(gapLines).toContain("autoremediate: would fill default-keyed config fields: review");
+    expect(await readFile(path.join(gapRoot, "qfai.config.yaml"), "utf-8")).not.toContain(
+      "staleTtlDays",
+    );
+  });
+
   it("does NOT overwrite a user-authored review.staleTtlDays value", async () => {
     const root = await newTempDir("no-overwrite");
     const configPath = path.join(root, "qfai.config.yaml");

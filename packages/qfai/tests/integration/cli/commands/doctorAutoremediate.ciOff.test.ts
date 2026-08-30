@@ -124,5 +124,9 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     expect(dryRunLines).not.toMatch(/review packs archived=/u);
     expect(dryRunLines).toContain("autoremediate: would archive review packs=1");
     expect(dryRunLines).toContain(`  would move -> _archive/review-${oldTs}`);
+    // The config here genuinely lacks `review:`, so the fill IS planned — and
+    // the plan names the field it would add rather than claiming a fill
+    // unconditionally (see `doctorAutoremediate.fixes.test.ts`).
+    expect(dryRunLines).toContain("autoremediate: would fill default-keyed config fields: review");
   });
 });

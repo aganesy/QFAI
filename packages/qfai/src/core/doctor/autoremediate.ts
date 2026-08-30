@@ -11,7 +11,9 @@
  * (`isCiEnvironment`) and passes `isCi`, which makes this emit
  * `"autoremediate disabled in CI"` and return without remediating.
  * Honors `--dry-run` by surfacing the plan in the future tense, without
- * side effects.
+ * side effects. The plan is the one a live run would execute: the
+ * config-fill preview parses the config and names only the fields that
+ * are actually missing, and reports the same decline a live run would.
  *
  * `--yes` is meant to skip the interactive confirmation the CLI contract
  * requires before any install / tracked-file write. That prompt is NOT
@@ -122,46 +124,101 @@ async function defaultInstallRunner(name: string, cwd: string): Promise<void> {
   });
 }
 
-async function tryFillConfigDefaults(
-  root: string,
-): Promise<{ written: string[]; lines: string[] }> {
-  const written: string[] = [];
-  const lines: string[] = [];
+type ConfigFillPlan = {
+  readonly configPath: string;
+  /** Default-keyed fields absent from the PARSED document, in declaration order. */
+  readonly missing: readonly string[];
+  /** Exact content a live run would write; `null` when there is nothing to write. */
+  readonly nextSource: string | null;
+  /** Set when the pass declines outright (unreadable, or not a YAML mapping). */
+  readonly skipLine: string | null;
+};
+
+/**
+ * Decide — without writing — what a config-fill would do.
+ *
+ * The dry-run branch used to skip this work entirely and print a fixed
+ * `would fill default-keyed config fields` line, so a preview promised an
+ * append for a config that already carried the key (live run: writes nothing)
+ * and for one that does not parse as a mapping (live run: `skipped
+ * config-fill`). Both paths now read the same plan, so the preview cannot
+ * claim a change the live run will not make.
+ */
+async function planConfigFill(root: string): Promise<ConfigFillPlan> {
   const configPath = path.join(root, "qfai.config.yaml");
   let existing = "";
   if (await exists(configPath)) {
     try {
       existing = await readFile(configPath, "utf-8");
     } catch {
-      lines.push(`autoremediate: skipped config-fill (failed to read ${configPath})`);
-      return { written, lines };
+      return {
+        configPath,
+        missing: [],
+        nextSource: null,
+        skipLine: `autoremediate: skipped config-fill (failed to read ${configPath})`,
+      };
     }
   }
   const presentKeys = topLevelKeys(existing);
   if (presentKeys === null) {
-    lines.push(
-      `autoremediate: skipped config-fill (${configPath} is not a parseable YAML mapping)`,
-    );
-    return { written, lines };
+    return {
+      configPath,
+      missing: [],
+      nextSource: null,
+      skipLine: `autoremediate: skipped config-fill (${configPath} is not a parseable YAML mapping)`,
+    };
   }
+  const missing: string[] = [];
   let appended = existing;
   for (const field of DEFAULT_KEYED_CONFIG_FIELDS) {
     if (!presentKeys.has(field.key)) {
       appended = `${appended.replace(/\s*$/u, "")}\n${field.defaultLine}`;
-      written.push(field.key);
+      missing.push(field.key);
     }
   }
-  if (written.length > 0) {
-    try {
-      await writeFile(configPath, appended, "utf-8");
-      lines.push(`autoremediate: wrote default-keyed fields: ${written.join(", ")}`);
-    } catch (error) {
-      lines.push(
+  return {
+    configPath,
+    missing,
+    nextSource: missing.length > 0 ? appended : null,
+    skipLine: null,
+  };
+}
+
+/** Report a plan in the future tense. Issues no filesystem write. */
+function describeConfigFillPlan(plan: ConfigFillPlan): string {
+  if (plan.skipLine !== null) {
+    return plan.skipLine;
+  }
+  if (plan.missing.length === 0) {
+    return "autoremediate: config-fill not needed, default-keyed fields present (dry-run)";
+  }
+  return `autoremediate: would fill default-keyed config fields: ${plan.missing.join(", ")} (dry-run)`;
+}
+
+async function applyConfigFill(
+  plan: ConfigFillPlan,
+): Promise<{ written: string[]; lines: string[] }> {
+  if (plan.skipLine !== null) {
+    return { written: [], lines: [plan.skipLine] };
+  }
+  if (plan.nextSource === null) {
+    return { written: [], lines: [] };
+  }
+  const written = [...plan.missing];
+  try {
+    await writeFile(plan.configPath, plan.nextSource, "utf-8");
+    return {
+      written,
+      lines: [`autoremediate: wrote default-keyed fields: ${written.join(", ")}`],
+    };
+  } catch (error) {
+    return {
+      written,
+      lines: [
         `autoremediate: failed to write config defaults: ${error instanceof Error ? error.message : String(error)}`,
-      );
-    }
+      ],
+    };
   }
-  return { written, lines };
 }
 
 export async function runAutoremediate(
@@ -243,13 +300,20 @@ export async function runAutoremediate(
 
   // (3) Write missing default-keyed config fields (user-authored values
   // are NOT touched because we only append the key when absent).
+  // Both branches read the SAME plan. The dry-run branch used to short-circuit
+  // to a fixed `would fill default-keyed config fields` line without looking at
+  // the file, so it promised an append for a config that already declared the
+  // key — a live run writes nothing there — and for one that is not a parseable
+  // mapping, where a live run declines with `skipped config-fill`. Planning is
+  // read-only, so the preview costs nothing and cannot drift from the write.
+  const configPlan = await planConfigFill(options.root);
   let configFieldsWritten: string[] = [];
-  if (!options.dryRun) {
-    const filled = await tryFillConfigDefaults(options.root);
+  if (options.dryRun) {
+    lines.push(describeConfigFillPlan(configPlan));
+  } else {
+    const filled = await applyConfigFill(configPlan);
     configFieldsWritten = filled.written;
     lines.push(...filled.lines);
-  } else {
-    lines.push("autoremediate: would fill default-keyed config fields (dry-run)");
   }
 
   // (4) Record the review packs that predate `revision_form`, once.

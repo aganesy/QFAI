@@ -183,6 +183,17 @@ install phase is structurally skipped and doctor says so explicitly.
   `would archive` / `would move -> _archive/<pack>`) and no
   filesystem write is issued. The archive count a dry-run prints is
   the count a live run WOULD move; it never reads as already moved.
+- The plan is DECIDED, not assumed. A dry-run runs every read-only
+  check the live pass runs and reports only the changes that pass
+  would actually make. For the config-fill that means parsing
+  `qfai.config.yaml` and naming the missing fields
+  (`would fill default-keyed config fields: review`); a config that
+  already declares the key previews as
+  `config-fill not needed, default-keyed fields present`, and one
+  that is not a parseable mapping previews with the same
+  `skipped config-fill` line the live run emits. A `would` line is
+  therefore a commitment: if the preview names no change, the live
+  run makes none.
 - `--yes` skips the interactive confirmation that `--autoremediate`
   REQUIRES by default. That confirmation is a mandatory safety gate
   of this contract (spec-0006 REQ-0156 / BR-0006-0014): without

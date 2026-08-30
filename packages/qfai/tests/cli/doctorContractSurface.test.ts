@@ -203,6 +203,18 @@ describe("`qfai doctor` CLI contract surface", () => {
     expect(contract).toContain("### `--dry-run` / `--yes` interaction");
   });
 
+  it("declares the dry-run plan as decided, not assumed", async () => {
+    const contract = flat(await readFile(CONTRACT, "utf-8"));
+
+    // The config-fill preview used to be a fixed line printed without reading
+    // the config, so it promised an append for a config that already declared
+    // the key and for one that does not parse. The contract must say a `would`
+    // line is a commitment, and name the two answers a live run gives instead.
+    expect(contract).toContain("The plan is DECIDED, not assumed");
+    expect(contract).toContain("would fill default-keyed config fields: review");
+    expect(contract).toContain("config-fill not needed, default-keyed fields present");
+  });
+
   it("keeps the `--yes` confirmation gate as a requirement, not a retracted one", async () => {
     const contract = flat(await readFile(CONTRACT, "utf-8"));
 
