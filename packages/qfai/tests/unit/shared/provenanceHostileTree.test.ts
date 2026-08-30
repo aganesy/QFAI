@@ -1114,50 +1114,76 @@ describe("a holder that was reclaimed does not disturb the lock that replaced it
     ).toEqual([]);
   });
 
-  it("decides whose lock it is BEFORE it frees the canonical name", async () => {
-    // The row above pins the OUTCOME, and the outcome is not the whole of review finding [128].
+  it("never moves the canonical name, so it cannot free another holder's", async () => {
+    // The row above pins the OUTCOME. This one pins the mechanism, and the mechanism changed.
     //
-    // Measured while writing this: with the identity check removed, a resumed holder still
-    // renames its successor's lock away and then restores it, and every observation a
-    // single-process fixture can make afterwards is identical — same directory, same inode,
-    // same marker. What differs is the WINDOW. Between the rename and the restore the canonical
-    // name is free, and the finding's third writer takes it there; the restore then declines to
-    // overwrite, the successor's lock is orphaned under a released name, and two writers are
-    // inside the section. Producing that interleaving needs a third process scheduled into a
-    // window of a few syscalls, which is not a test this suite can make deterministic.
+    // Release used to check the identity and then rename the lock aside. Those are two
+    // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
+    // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
+    // took the freed name, the restore declined and two writers were inside the section. That
+    // is review finding [137], and narrowing the window does not close it, because the
+    // operation acted on a NAME rather than on this holder's object.
     //
-    // So the ordering is pinned instead, on the source, and the assertion is that the question
-    // is ASKED before the name is freed rather than only after. The row above still holds the
-    // outcome, and the two together are what the finding asks for.
+    // So it acts on the object. `rmdir` removes a directory only when it is empty, and the only
+    // way it becomes empty is this holder unlinking the one marker it created; a successor's
+    // lock holds a different marker, so `rmdir` fails and nothing moves. The canonical name is
+    // freed by the removal succeeding, never ahead of it.
     const source = await readFile(
       new URL("../../../src/shared/provenance.ts", import.meta.url),
       "utf-8",
     );
-    const release = source.indexOf("const release = async (): Promise<void> => {");
-    expect(release, "the release must exist to be checked").toBeGreaterThan(-1);
-    const body = source.slice(release, source.indexOf("\n  };", release));
+    const at = source.indexOf("const release = async (): Promise<void> => {");
+    expect(at, "the release must exist to be checked").toBeGreaterThan(-1);
+    const body = source.slice(at, source.indexOf("\n  };", at));
 
-    const asked = body.search(/standing\.dev !== held\.dev/);
-    const freed = body.search(/await rename\(lockDir, quarantine\)/);
     expect(
-      asked,
-      "the standing lock must be compared against the object this holder published",
-    ).toBeGreaterThan(-1);
+      body,
+      "release must not rename the canonical name anywhere: that is the operation that can free " +
+        "it for an object which is not this holder's",
+    ).not.toMatch(/rename\(lockDir/);
     expect(
-      freed,
-      "the canonical name must still be freed by moving, not by unlinking through it",
-    ).toBeGreaterThan(-1);
+      body,
+      "it must compare the standing lock against the object this holder published",
+    ).toMatch(/standing\.ino !== held\.ino/);
     expect(
-      asked,
-      "and the question must be asked BEFORE the name is freed — after it, the window review " +
-        "finding [128] describes is already open",
-    ).toBeLessThan(freed);
+      body,
+      "and remove only its own marker, so an emptied directory is one it emptied",
+    ).toMatch(/unlink\(path\.join\(lockDir, marker\)\)/);
+    expect(
+      body,
+      "with rmdir as the removal, which refuses a directory holding somebody else's marker",
+    ).toMatch(/rmdir\(lockDir\)/);
+  });
 
-    // …and asked again of the object in hand, because the check and the rename are two calls.
+  it("takes its published identity from the object it staged, not from the name", async () => {
+    // Review finding [134]. The identity was read with `lstat(lockDir)` AFTER the rename, which
+    // asks what is at that name NOW — not necessarily what was just put there. A `rename` is
+    // atomic, so the object that arrived is the object staged, and the staging directory was
+    // read under a private name nothing else could reach.
+    const source = await readFile(
+      new URL("../../../src/shared/provenance.ts", import.meta.url),
+      "utf-8",
+    );
+    const stagedAt = source.indexOf("const staged = await lstat(staging)");
+    const renameAt = source.indexOf("await rename(staging, lockDir)");
     expect(
-      body.search(/moved\.ino !== held\.ino/),
-      "the moved object must be proven this holder's by identity, not by having been at a path",
-    ).toBeGreaterThan(freed);
+      stagedAt,
+      "the staging identity must be read from the staging directory",
+    ).toBeGreaterThan(-1);
+    expect(renameAt, "and the rename must exist").toBeGreaterThan(-1);
+    expect(stagedAt, "read BEFORE the rename, while nothing else can reach that name").toBeLessThan(
+      renameAt,
+    );
+
+    expect(
+      source.slice(renameAt, renameAt + 4000),
+      "and what arrived must be compared against it, rather than adopted as this holder's",
+    ).toMatch(/arrived\.ino !== staged\.ino/);
+    expect(
+      source.slice(renameAt, renameAt + 4000),
+      "with acquisition failing when they disagree — continuing would record somebody else's " +
+        "directory as this holder's own",
+    ).toMatch(/throw new Error\(/);
   });
   it("still releases its own lock when it was never reclaimed", async () => {
     // The other direction. A release that refuses too readily leaves the lock standing, and the

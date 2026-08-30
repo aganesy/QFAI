@@ -597,66 +597,39 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
     clearInterval(heartbeat);
     if (held === undefined) return; // never published, so nothing under that name is ours
 
-    // Asked BEFORE the canonical name is freed. Review finding [128]: the rename was
-    // unconditional, so a holder that had been reclaimed as stale and then resumed moved its
-    // SUCCESSOR's lock aside. A third writer taking the freed name then made the restore fail,
-    // and the successor — still inside its section — was joined by that third writer. Two
-    // writers in there at once is the lost update this primitive exists to prevent, and it is
-    // not self-healing: the entry is simply absent afterwards, its file reads as
-    // `adopter-owned`, and it is never recorded again.
+    // The canonical name is never MOVED, and that is review finding [137].
+    //
+    // The previous version checked the identity and then renamed the lock aside. Those are two
+    // syscalls: a holder that verified its own lock, stalled, was reclaimed as stale and
+    // replaced, and then resumed would move its SUCCESSOR's directory — and if a third writer
+    // took the freed name, the restore declined and two writers were inside the section at
+    // once. Narrowing the window does not close it, because the operation itself acted on a
+    // NAME rather than on this holder's object.
+    //
+    // So it acts on the object. `rmdir` removes a directory only when it is empty, and the
+    // only way it becomes empty is this holder unlinking the one marker it created. A
+    // successor's lock holds a different marker, so `rmdir` fails on it and nothing moves. The
+    // canonical name is freed by the removal succeeding, never ahead of it.
     const standing = await lstat(lockDir).catch(() => undefined);
     if (standing === undefined) return; // already gone
     if (standing.isSymbolicLink() || !standing.isDirectory()) {
       // Swapped for something that is not a lock. Not followed and not removed: taking away a
       // link somebody else put there is the act this whole primitive refuses, and the next run
-      // stops on it with the path named.
+      // stops on it with the path named. Review finding [122].
       return;
     }
     if (standing.dev !== held.dev || standing.ino !== held.ino) {
-      // Somebody else's lock stands at the name — this holder was reclaimed while it worked.
-      // Freeing the name here is what review finding [128] describes, so nothing is touched.
+      // Somebody else's lock stands at the name — this holder was reclaimed while it worked,
+      // and its own directory is already gone. Nothing here is ours.
       return;
     }
 
-    // Only now is the name freed, and it is freed by MOVING rather than by unlinking through
-    // it. Review finding [122]: `unlink(lockDir/marker)` resolved the lock name at the moment
-    // of the call, and the marker's name is readable from inside the section — so a directory
-    // swapped for a link, with a file of that name waiting on the other side, had an external
-    // file deleted. `refuseLinkedLockPath` cannot help; it runs once, before acquisition.
-    const quarantine = path.join(recordDir, `${LOCK_DIR_NAME}.released-${randomUUID()}`);
-    try {
-      await rename(lockDir, quarantine);
-    } catch {
-      return; // gone between the check and the move; nothing there is ours to remove
-    }
-
-    // And asked again, of the object now in hand, because the check above and the rename are
-    // two calls: what was moved is proven ours by identity, not by having been at a path.
-    const moved = await lstat(quarantine).catch(() => undefined);
-    if (moved === undefined) return;
-    if (
-      moved.isSymbolicLink() ||
-      !moved.isDirectory() ||
-      moved.dev !== held.dev ||
-      moved.ino !== held.ino
-    ) {
-      // Not the object this holder published. Put it back if the name is still free, and
-      // otherwise leave it where it is rather than overwrite a lock somebody has since taken.
-      await restoreLockDirectory(quarantine, lockDir);
-      return;
-    }
-
-    const markers = await readdir(quarantine).catch(() => undefined);
-    if (markers === undefined) return;
-    if (markers.length !== 1 || markers[0] !== marker) {
-      // Our directory, holding something other than our marker alone. That is not a state this
-      // primitive produces, so it is reported by being left alone rather than cleaned up.
-      await restoreLockDirectory(quarantine, lockDir);
-      return;
-    }
-
-    await unlink(path.join(quarantine, marker)).catch(() => undefined);
-    await rmdir(quarantine).catch(() => undefined);
+    // Both exact, and both scoped to this holder's marker. A stalled holder releasing into a
+    // lock that is no longer its own gets `ENOENT` from the unlink and `ENOTEMPTY` from the
+    // rmdir, and does no damage — which is the property the very first version of this
+    // primitive had, and the one the identity check above restores rather than replaces.
+    await unlink(path.join(lockDir, marker)).catch(() => undefined);
+    await rmdir(lockDir).catch(() => undefined);
   };
 
   // The lock path itself, before anything is created or removed under it.
@@ -672,6 +645,9 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
   await refuseLinkedLockPath(lockDir);
 
   await mkdir(staging, { recursive: true });
+  // Read here, under a name nothing else knows, so it is the identity of an object this
+  // process made rather than of whatever a path resolves to later. Review finding [134].
+  const staged = await lstat(staging).catch(() => undefined);
   try {
     const handle = await open(path.join(staging, marker), "wx");
     await handle.close();
@@ -692,14 +668,34 @@ async function acquireRecordLock(recordDir: string): Promise<() => Promise<void>
         // the section.
         const published = new Date();
         await utimes(path.join(lockDir, marker), published, published).catch(() => undefined);
-        // The object this holder published, by identity. Review finding [128]: release used to
-        // free the canonical NAME before it could tell whose lock was under it, so a stalled
-        // holder that resumed after being reclaimed moved its successor's lock aside — and if a
-        // third writer then took the freed name, the restore failed and two writers were in the
-        // section at once. `dev`/`ino` is what distinguishes the directory this holder created
-        // from any other directory that has since been published at the same path.
-        const own = await lstat(lockDir).catch(() => undefined);
-        if (own !== undefined) held = { dev: own.dev, ino: own.ino };
+        // The object this holder published, by identity — read from the STAGING directory
+        // before the rename, not from the lock name after it.
+        //
+        // Review finding [128] introduced this identity: release used to free the canonical
+        // NAME before it could tell whose lock was under it, so a stalled holder that resumed
+        // after being reclaimed moved its successor's lock aside. Review finding [134] then
+        // found the identity itself taken the wrong way: reading `lstat(lockDir)` AFTER the
+        // rename asks what is at that name now, which is not necessarily what we just put
+        // there. A `rename` is atomic, so the object that arrived is the object we staged —
+        // and `staged` was read while nothing else could reach it, under a private name.
+        //
+        // If the two disagree, something replaced the lock between the rename and this read.
+        // That is not a lock this holder can claim, so acquisition fails rather than
+        // continuing with somebody else's identity recorded as its own.
+        const arrived = await lstat(lockDir).catch(() => undefined);
+        if (
+          staged === undefined ||
+          arrived === undefined ||
+          arrived.dev !== staged.dev ||
+          arrived.ino !== staged.ino
+        ) {
+          clearInterval(heartbeat);
+          throw new Error(
+            "qfai: the provenance lock was replaced between publishing it and reading it back. " +
+              "Nothing was written. Re-run once no other `qfai` process is working in this tree.",
+          );
+        }
+        held = { dev: staged.dev, ino: staged.ino };
         return release;
       } catch {
         // Held, or the destination is not publishable. Age decides which.
