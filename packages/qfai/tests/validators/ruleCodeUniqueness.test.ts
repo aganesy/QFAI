@@ -61,7 +61,12 @@ const DYNAMIC_CODE_SITES = new Map<string, ReadonlyMap<string, number>>([
       ["input.unknownCode", 2],
     ]),
   ],
-  ["validators/reviewerJustification.ts", new Map([["code", 1]])],
+  // Two, not one. The second site is the workflow-set ingestion branch: it emits the
+  // finding's own code at `info` while that code's catalog registration is deferred,
+  // and the code it emits is the same `code` local the rejection site below uses. The
+  // two codes it can reach are declared in `justificationCatalog.ts` — which this scan
+  // reads as their owner — rather than restated here.
+  ["validators/reviewerJustification.ts", new Map([["code", 2]])],
 ]);
 
 /**

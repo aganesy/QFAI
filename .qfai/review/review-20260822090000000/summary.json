@@ -1,0 +1,17 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T09:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "0132370d",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 8 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 13 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 9 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B4+M1+m1+A2 = 8, B5+M5+m2+A1 = 13 and B2+M2+m3+A2 = 9",
+  "revision_form_note": "`revision` is the commit this round reviewed. `content-hash` is the only admissible current value and what every pack in this repository records under it is a short git commit sha; whether the field is meant to cover one is an open question this stage cannot settle, recorded in the stage evidence rather than presented as resolved.",
+  "notes": "Pointed at round 15's repairs. Eleven blocking findings, of which two were defects in the here-document repair round 15 had just written and three were round 15's guard repairs still failing in the direction they were repaired for. Two doubled escapes were found by extracting a regex from the file's own bytes and evaluating it — neither is visible by reading the line. Two more execution channels shipped through the whole suite, both values on keys the enumerations already allow: `on:`/`permissions:`/`runs-on:` and `needs:`/`QFAI_NEEDS_JSON`. Two of the round's costliest findings were against this stage's own round-15 corrections: a profile figure measured before the fix that changed it and recorded after, and an in-place CR correction that withdrew the premise of a bullet two files cite. The stage did not edit the subject while the round ran; the gatekeeper's plants were reported by both siblings rather than measured through."
+}
