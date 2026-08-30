@@ -1318,14 +1318,9 @@ async function createCodexAgentTomls(
       skipped.push(destination);
       continue;
     }
-    if (destinationStats?.isDirectory() === true) {
-      // `removeSymlinkAt` leaves a real directory alone and the `writeFile`
-      // below then failed `EISDIR`, aborting the whole run — with the profiles
-      // of every agent sorted before this one already rewritten. `--force` is
-      // the command for repairing a broken checkout; it must not be the one
-      // that leaves a half-updated tree. The directory is not generator
-      // output, so it is refused rather than replaced.
-      info(`  skip: ${destination} (ディレクトリが存在するため生成できません)`);
+    const occupant = describeUnwritableDestination(destinationStats);
+    if (occupant !== undefined) {
+      info(`  skip: ${destination} (${occupant})`);
       skipped.push(destination);
       continue;
     }
@@ -1353,7 +1348,6 @@ async function createCodexAgentTomls(
       continue;
     }
 
-    copied.push(destination);
     if (!options.dryRun) {
       await mkdir(path.dirname(destination), { recursive: true });
       // `writeFile` follows a symlink and truncates whatever it points at, so a
@@ -1361,8 +1355,15 @@ async function createCodexAgentTomls(
       // documented `--force` refresh into an overwrite of an arbitrary file,
       // this repository or not. The wrapper is generator output: drop the link.
       await removeSymlinkAt(destination);
-      await writeFile(destination, plan.toml, "utf-8");
+      if (!(await writeGeneratedProfile(destination, plan.toml))) {
+        // The `lstat` above already refused everything that is not a regular
+        // file; this is the same refusal for an entry that arrived after it.
+        info(`  skip: ${destination} (${NON_REGULAR_DESTINATION})`);
+        skipped.push(destination);
+        continue;
+      }
     }
+    copied.push(destination);
   }
 
   if (options.force) {
@@ -1613,6 +1614,69 @@ async function removeSymlinkAt(target: string): Promise<void> {
   const stats = await safeLstat(target);
   if (stats?.isSymbolicLink() === true) {
     await rm(target, { force: true });
+  }
+}
+
+const NON_REGULAR_DESTINATION =
+  "通常ファイル以外のエントリ（FIFO / ソケット / デバイス）が存在するため生成できません";
+
+/**
+ * Why this destination cannot take generator output, or `undefined`.
+ *
+ * Absent is fine — the write creates it. A regular file is fine — it is the
+ * profile being refreshed. A symlink is fine — {@link removeSymlinkAt} drops
+ * the link, and the write then creates a real file beside it rather than
+ * through it.
+ *
+ * Nothing else is. A directory failed the write `EISDIR` and aborted the run
+ * with every earlier agent's profile already rewritten; a **FIFO** is worse
+ * still, because `writeFile` on one blocks until a reader appears and `qfai
+ * init --force` simply stops, with no diagnostic and no exit. A socket or a
+ * device node fails mid-run the way the directory did. None of them is
+ * generator output, so each is refused rather than replaced — a refusal costs
+ * one profile, and going ahead costs the run.
+ */
+function describeUnwritableDestination(stats: Stats | undefined): string | undefined {
+  if (stats === undefined || stats.isFile() || stats.isSymbolicLink()) {
+    return undefined;
+  }
+  return stats.isDirectory() ? "ディレクトリが存在するため生成できません" : NON_REGULAR_DESTINATION;
+}
+
+/**
+ * Write the profile, refusing anything that is not a regular file.
+ *
+ * The `lstat` before the write answers for the entry that was there then; this
+ * answers for the one the write actually lands on. `O_NOFOLLOW` refuses a
+ * symlink that arrived in between (`ELOOP`), `O_NONBLOCK` turns opening a FIFO
+ * with no reader into `ENXIO` instead of a hang, and the `fstat` on the open
+ * handle refuses a FIFO that *does* have a reader, a socket, or a device before
+ * a byte is written. Returns `false` when it refuses.
+ */
+async function writeGeneratedProfile(destination: string, content: string): Promise<boolean> {
+  const flags =
+    constants.O_WRONLY |
+    constants.O_CREAT |
+    constants.O_TRUNC |
+    (typeof constants.O_NOFOLLOW === "number" ? constants.O_NOFOLLOW : 0) |
+    (typeof constants.O_NONBLOCK === "number" ? constants.O_NONBLOCK : 0);
+  let handle: FileHandle | undefined;
+  try {
+    handle = await open(destination, flags, 0o644);
+    if (!(await handle.stat()).isFile()) {
+      return false;
+    }
+    await handle.writeFile(content, "utf-8");
+    return true;
+  } catch (err: unknown) {
+    const code = (err as NodeJS.ErrnoException | null)?.code;
+    // The three the guards above produce. Anything else is a real failure.
+    if (code === "ELOOP" || code === "ENXIO" || code === "EISDIR") {
+      return false;
+    }
+    throw err;
+  } finally {
+    await handle?.close();
   }
 }
 

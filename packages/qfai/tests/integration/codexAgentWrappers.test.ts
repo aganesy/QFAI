@@ -1,3 +1,4 @@
+import { spawnSync } from "node:child_process";
 import { lstat, mkdir, mkdtemp, readFile, readdir, rm, symlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -374,6 +375,35 @@ describe("qfai init generates the Codex agent profiles", { timeout: 60000 }, () 
     });
     expect(output).toContain("ディレクトリ");
     expect((await lstat(target)).isDirectory()).toBe(true);
+    // The run went on: the agent sorted after the conflict was regenerated.
+    expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
+  });
+
+  // A FIFO is the destination that does not fail — `writeFile` on one blocks
+  // until a reader appears, so `qfai init --force` stops with no diagnostic
+  // and no exit. A socket or a device node fails the way the directory does,
+  // mid-run. None of them is generator output.
+  it("skips a destination occupied by a FIFO instead of hanging on it", async () => {
+    if (process.platform === "win32") {
+      return;
+    }
+    const root = await initProject();
+    const target = codexAgentPath(root, "doc-steward");
+    const neighbour = codexAgentPath(root, "qa-gatekeeper");
+    await rm(target, { force: true });
+    const made = spawnSync("mkfifo", [target]);
+    if (made.status !== 0) {
+      // No `mkfifo` here — nothing for this case to assert.
+      return;
+    }
+    await writeFile(neighbour, 'name = "qa-gatekeeper"\ndescription = "stale"\n', "utf-8");
+
+    const output = await captureStdout(async () => {
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+    });
+
+    expect(output).toContain("通常ファイル以外");
+    expect((await lstat(target)).isFIFO()).toBe(true);
     // The run went on: the agent sorted after the conflict was regenerated.
     expect(await readFile(neighbour, "utf-8")).not.toContain('description = "stale"');
   });
