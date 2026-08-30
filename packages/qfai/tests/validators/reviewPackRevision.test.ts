@@ -7,13 +7,14 @@
  * a present-but-malformed value is an error like any other.
  */
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 import { afterEach, describe, expect, it } from "vitest";
 
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const tempDirs: string[] = [];
 
@@ -79,7 +80,7 @@ async function withPacks(
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
+    if (dir) await removeTempTree(dir);
   }
 });
 
