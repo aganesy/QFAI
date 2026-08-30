@@ -84,6 +84,33 @@ async function withFixture(
   }
 }
 
+async function readRootScripts(): Promise<object> {
+  const pkg: unknown = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8"));
+  if (typeof pkg !== "object" || pkg === null || !("scripts" in pkg)) {
+    throw new Error("root package.json has no scripts block");
+  }
+  const scripts: unknown = pkg.scripts;
+  if (typeof scripts !== "object" || scripts === null) {
+    throw new Error("root package.json scripts is not an object");
+  }
+  return scripts;
+}
+
+/** The pathspecs of the `git diff --exit-code` step inside a `&&` chain. */
+function diffPaths(script: string): string[] {
+  const step = script
+    .split("&&")
+    .map((part) => part.trim())
+    .find((part) => part.startsWith("git diff"));
+  if (step === undefined) {
+    throw new Error(`no "git diff" step in: ${script}`);
+  }
+  return step
+    .split(/\s+/)
+    .slice(2)
+    .filter((token) => !token.startsWith("-"));
+}
+
 const STALE_CATALOG = `schema_version: "1.0"
 agents:
   - id: probe-agent
@@ -227,6 +254,52 @@ describe("gen-agent-catalog", () => {
     });
   });
 
+  it("compares a block whose header carries a trailing comment", async () => {
+    // `developer_instructions: | # canonical copy` is valid YAML — the comment
+    // is not part of the scalar — but the header regex rejected it and the
+    // ANY_BLOCK_KEY_RE guard right behind it turned that into a hard failure,
+    // so a single explanatory comment stopped `pnpm sync:ssot` and `ci:gate`
+    // outright, against this generator's contract of passing comments through.
+    const commented = STALE_CATALOG.replace(
+      "developer_instructions: |",
+      "developer_instructions: | # canonical copy of agents/probe-agent.md",
+    );
+    await withFixture(commented, AGENT_MD, async (root) => {
+      const check = run(["--check", `--root=${root}`]);
+      expect(check.status).toBe(1);
+      expect(check.output).toContain("STALE:");
+
+      expect(run([`--root=${root}`]).status).toBe(0);
+
+      const written = await readFile(fixtureCatalog(root), "utf-8");
+      // The header line, comment and all, is copied through byte-for-byte.
+      expect(written).toContain(
+        "    developer_instructions: | # canonical copy of agents/probe-agent.md",
+      );
+      expect(written).toContain("      - Probe one thing.");
+      expect(written).not.toContain("Probe something else entirely");
+      expect(run(["--check", `--root=${root}`]).status).toBe(0);
+    });
+  });
+
+  it("still fails on header text YAML would not read as a comment", async () => {
+    // The comment has to be a comment: YAML starts one only at whitespace
+    // followed by `#`, so neither of these is a block header it could write,
+    // and accepting them would regenerate the entry under an invalid header.
+    for (const suffix of [" not-a-comment", "#nospace"]) {
+      const bogus = STALE_CATALOG.replace(
+        "developer_instructions: |",
+        `developer_instructions: |${suffix}`,
+      );
+      await withFixture(bogus, AGENT_MD, async (root) => {
+        const { status, output } = run([`--root=${root}`]);
+
+        expect(status, `|${suffix} must not be rewritten`).toBe(1);
+        expect(output).toContain("developer_instructions");
+      });
+    }
+  });
+
   it("accepts the one explicit indentation indicator it can write", async () => {
     // `|2` is exactly BODY_INDENT — two columns past the key — so the
     // regenerated block is valid YAML for the same content.
@@ -329,14 +402,33 @@ describe("gen-agent-catalog", () => {
   it("is wired into sync:ssot so ci:gate sees a stale catalog", async () => {
     // The generator alone changes nothing CI inspects. `sync:ssot` mirrors the
     // assets into the root `.qfai/` tree, and `ci:gate` diffs that tree.
-    const pkg: unknown = JSON.parse(await readFile(path.join(repoRoot, "package.json"), "utf-8"));
-    if (typeof pkg !== "object" || pkg === null || !("scripts" in pkg)) {
-      throw new Error("root package.json has no scripts block");
-    }
-    const scripts: unknown = pkg.scripts;
-    if (typeof scripts !== "object" || scripts === null || !("sync:ssot" in scripts)) {
+    const scripts = await readRootScripts();
+    if (!("sync:ssot" in scripts)) {
       throw new Error("root package.json has no sync:ssot script");
     }
     expect(scripts["sync:ssot"]).toContain("gen-agent-catalog.mjs");
+  });
+
+  it("has the catalog the generator writes inside ci:gate's diff scope", async () => {
+    // `ci:gate` runs the generator in write mode and then diffs. A commit whose
+    // *source* catalog is stale while the root mirror already carries the
+    // regenerated body left that diff empty — the repair landed in the assets
+    // tree, which the scoped diff did not look at — so the gate passed while
+    // the file that actually ships stayed stale in the index.
+    const scripts = await readRootScripts();
+    if (!("ci:gate" in scripts)) {
+      throw new Error("root package.json has no ci:gate script");
+    }
+    const gate: unknown = scripts["ci:gate"];
+    if (typeof gate !== "string") {
+      throw new Error("root package.json ci:gate is not a string");
+    }
+    const paths = diffPaths(gate);
+    const target = path.relative(repoRoot, CATALOG).split(path.sep).join("/");
+
+    expect(
+      paths.some((p) => target === p || target.startsWith(p.endsWith("/") ? p : `${p}/`)),
+      `ci:gate diffs ${JSON.stringify(paths)}, none of which covers ${target}`,
+    ).toBe(true);
   });
 });

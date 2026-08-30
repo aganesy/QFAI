@@ -60,17 +60,20 @@ const BODY_INDENT = "      ";
 const ENTRY_RE = /^ {2}- id:[ \t]+(.*)$/;
 const ANY_ENTRY_RE = /^ {2}- /;
 /**
- * A literal block scalar header, including the chomping indicator (`|-`, `|+`)
- * and the one explicit indentation indicator this generator can write (`|2`,
- * i.e. `BODY_INDENT`, two columns past the `developer_instructions` key). All
- * of those are valid YAML for the same content, and a header this regex does
- * not recognise would be skipped silently — the entry would never be compared
- * and `--check` would call a stale catalog up to date. `ANY_BLOCK_KEY_RE` turns
- * every other spelling of the key — quoted, folded, flow, or an indentation
- * indicator other than 2, which `BODY_INDENT` would contradict — into a hard
- * failure for the same reason.
+ * A literal block scalar header, including the chomping indicator (`|-`, `|+`),
+ * the one explicit indentation indicator this generator can write (`|2`, i.e.
+ * `BODY_INDENT`, two columns past the `developer_instructions` key), and a
+ * comment after the indicators — `| # canonical copy` is valid YAML and none of
+ * it reaches the scalar, so the header line passes through untouched like every
+ * other comment in the file. All of those are valid YAML for the same content,
+ * and a header this regex does not recognise would be skipped silently — the
+ * entry would never be compared and `--check` would call a stale catalog up to
+ * date. `ANY_BLOCK_KEY_RE` turns every other spelling of the key — quoted,
+ * folded, flow, an indentation indicator other than 2, which `BODY_INDENT`
+ * would contradict, or trailing text YAML does not read as a comment — into a
+ * hard failure for the same reason.
  */
-const BLOCK_RE = /^ {4}developer_instructions: \|(?:[-+]?2?|2[-+])[ \t]*$/;
+const BLOCK_RE = /^ {4}developer_instructions: \|(?:[-+]?2?|2[-+])(?:[ \t]*|[ \t]+#.*)$/;
 const ANY_BLOCK_KEY_RE = /^ {4}developer_instructions:/;
 /**
  * A line YAML reads as empty inside a block scalar: nothing but spaces or tabs.
@@ -222,8 +225,9 @@ function regenerate(source) {
         throw new Error(
           `agent-catalog.yml entry "${currentId ?? "?"}" writes developer_instructions as ` +
             `${line.trim()} — only a literal block scalar indented two columns past the key ` +
-            "(|, |-, |+, |2) is generated, and any other form — including a different explicit " +
-            "indentation indicator — would be left uncompared or regenerated at the wrong depth",
+            "(|, |-, |+, |2), optionally followed by a comment, is generated, and any other " +
+            "form — including a different explicit indentation indicator — would be left " +
+            "uncompared or regenerated at the wrong depth",
         );
       }
       continue;
