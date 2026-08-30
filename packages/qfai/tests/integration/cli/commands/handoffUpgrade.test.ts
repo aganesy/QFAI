@@ -8,6 +8,7 @@
  */
 // QFAI:SPEC-0015:TC-0015-0030
 
+import { execFileSync } from "node:child_process";
 import {
   link,
   lstat,
@@ -467,6 +468,58 @@ describe("handoff upgrade overwrite guard (--force / --dry-run)", () => {
     expect((await lstat(backupAbs)).isSymbolicLink()).toBe(true);
     expect(await readlink(backupAbs)).toBe(missingAbs);
   });
+
+  // A directory entry that is neither a regular file nor a symlink
+  // cannot be reproduced by a byte copy, so replacing it would be an
+  // unbacked destruction. It used to be classified as a plain file and
+  // handed to `copyFile`, which surfaced as a raw `EISDIR` from the
+  // backup step rather than as a refusal naming what is in the way.
+  it("with --force, refuses a directory destination instead of replacing it", async () => {
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    await mkdir(destAbs, { recursive: true });
+    await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+    const errs: string[] = [];
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-old.yml",
+      force: true,
+      write: () => undefined,
+      writeErr: (m) => errs.push(m),
+    });
+    expect(code).toBe(1);
+    expect(errs.join("\n")).toMatch(/is a directory; only a regular file or a symlink/);
+    // The entry is untouched and nothing was staged beside it.
+    expect((await lstat(destAbs)).isDirectory()).toBe(true);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  });
+
+  // `copyFile` OPENS its source, and opening a FIFO blocks until some
+  // other process opens the write end. With the canonical path a named
+  // pipe and no writer around, a `--force` run therefore never returned
+  // at all — no error, no exit code, a wedged CLI. Classifying the entry
+  // first means the pipe is never opened.
+  it.skipIf(process.platform === "win32")(
+    "with --force, refuses a FIFO destination instead of opening it",
+    async () => {
+      await mkdir(path.join(root, ".qfai"), { recursive: true });
+      const destAbs = path.join(root, ".qfai", "handoff.yaml");
+      execFileSync("mkfifo", [destAbs]);
+      await writeFile(path.join(root, "legacy-old.yml"), "companyName: Wrong Co\n", "utf-8");
+      const errs: string[] = [];
+      const code = await runHandoffUpgrade({
+        root,
+        legacyFile: "legacy-old.yml",
+        force: true,
+        write: () => undefined,
+        writeErr: (m) => errs.push(m),
+      });
+      expect(code).toBe(1);
+      expect(errs.join("\n")).toMatch(/is a FIFO \(named pipe\)/);
+      expect((await lstat(destAbs)).isFIFO()).toBe(true);
+      expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+    },
+    10000,
+  );
 
   // A run that dies between the exclusive `link` and its cleanup leaves
   // the staging sibling behind as a HARD LINK to the canonical file.

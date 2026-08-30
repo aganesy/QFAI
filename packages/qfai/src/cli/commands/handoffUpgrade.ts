@@ -26,11 +26,15 @@ import {
   readFile,
   readlink,
   rename,
+  rmdir,
   symlink,
   unlink,
   writeFile,
 } from "node:fs/promises";
 import path from "node:path";
+import { setTimeout as delay } from "node:timers/promises";
+
+import type { Stats } from "node:fs";
 
 import { parse as parseYaml, stringify as stringifyYaml } from "yaml";
 
@@ -355,10 +359,27 @@ function isEexist(err: unknown): boolean {
 
 /**
  * What the current canonical entry IS, and therefore what a faithful
- * backup of it has to reproduce. A symlink is preserved as a symlink;
- * anything else is preserved by copying its bytes.
+ * backup of it has to reproduce. A symlink is preserved as a symlink, a
+ * regular file by copying its bytes — and nothing else can be preserved
+ * at all.
  */
-type BackupSource = { kind: "file" } | { kind: "symlink"; target: string };
+type BackupableSource = { kind: "file" } | { kind: "symlink"; target: string };
+
+/** A classified entry, including the kinds this command refuses to touch. */
+type BackupSource = BackupableSource | { kind: "unsupported"; what: string };
+
+/**
+ * Operator-facing name for a directory entry that is neither a regular
+ * file nor a symlink. Used only to explain the refusal.
+ */
+function describeEntryKind(stats: Stats): string {
+  if (stats.isDirectory()) return "a directory";
+  if (stats.isFIFO()) return "a FIFO (named pipe)";
+  if (stats.isSocket()) return "a socket";
+  if (stats.isCharacterDevice()) return "a character device";
+  if (stats.isBlockDevice()) return "a block device";
+  return "not a regular file";
+}
 
 /**
  * Classify the canonical entry with `lstat` (never `stat`) — `null`
@@ -371,12 +392,21 @@ type BackupSource = { kind: "file" } | { kind: "symlink"; target: string };
  * handoff, and a dangling link would fail with `ENOENT` and be dropped
  * with no backup at all. Reading the link here lets the backup recreate
  * the entry itself, dangling or not.
+ *
+ * Everything that is neither is reported as `unsupported` rather than
+ * assumed to be a regular file. `copyFile` opens its source, and on a
+ * FIFO that `open` BLOCKS until some other process opens the write end
+ * — with no writer, a `--force` run simply never returns. A directory,
+ * a socket and a device node cannot be reproduced by a byte copy
+ * either. The caller refuses these outright, which also keeps the
+ * `rename` that would have replaced such an entry from ever running.
  */
 async function classifyDestination(destAbs: string): Promise<BackupSource | null> {
   try {
     const stats = await lstat(destAbs);
-    if (!stats.isSymbolicLink()) return { kind: "file" };
-    return { kind: "symlink", target: await readlink(destAbs) };
+    if (stats.isSymbolicLink()) return { kind: "symlink", target: await readlink(destAbs) };
+    if (stats.isFile()) return { kind: "file" };
+    return { kind: "unsupported", what: describeEntryKind(stats) };
   } catch (err: unknown) {
     if (isEnoent(err)) return null;
     throw err;
@@ -391,7 +421,7 @@ async function classifyDestination(destAbs: string): Promise<BackupSource | null
 async function reproduceAt(
   destAbs: string,
   candidate: string,
-  source: BackupSource,
+  source: BackupableSource,
 ): Promise<void> {
   if (source.kind === "symlink") {
     await symlink(source.target, candidate, "file");
@@ -426,10 +456,21 @@ async function reproduceAt(
  * A vanished entry (`ENOENT`) means there is nothing left to preserve,
  * so the caller proceeds with no backup rather than failing an
  * explicitly forced run.
+ *
+ * An entry that is neither a regular file nor a symlink throws instead:
+ * it cannot be reproduced, so replacing it would be an unbacked
+ * destruction — and reading one can be worse than useless (a `copyFile`
+ * whose source is a FIFO blocks in `open` until a writer appears, so a
+ * `--force` run against one would hang rather than fail).
  */
 async function backupExclusively(destAbs: string): Promise<string | null> {
   const source = await classifyDestination(destAbs);
   if (source === null) return null;
+  if (source.kind === "unsupported") {
+    throw new Error(
+      `${destAbs} is ${source.what}; only a regular file or a symlink can be backed up and replaced`,
+    );
+  }
   const base = `${destAbs}.backup-${new Date().toISOString().replace(/[:.]/g, "-")}`;
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const candidate = attempt === 0 ? base : `${base}-${attempt}`;
@@ -504,14 +545,19 @@ async function stillHolds(destAbs: string, stamp: DestStamp | null): Promise<boo
  * because the reservation carries no content and is removed again if
  * the publish fails.
  *
- * The publishing `rename` replaces its target unconditionally, so the
- * reservation is fingerprinted and re-checked immediately before it: a
- * run that no longer holds its own reservation (another `--force` got
- * in and completed a canonical handoff there) reports `exists` and
- * leaves that file alone rather than replacing a finished handoff whose
- * only backup would be our empty placeholder. The same check gates the
- * failure cleanup, so a rename that dies never deletes someone else's
- * file.
+ * The publishing `rename` replaces its target unconditionally, and no
+ * filesystem offers a compare-and-swap rename, so the reservation is
+ * held for the whole sequence by the caller's canonical-path lock
+ * (`withCanonicalLock`): another run of this command cannot reach its
+ * own backup-and-replace between the check below and the `rename`,
+ * which is the only way a FINISHED canonical handoff could have been
+ * destroyed here with nothing but an empty placeholder in its backup.
+ *
+ * The fingerprint re-check that follows covers what a lock cannot: a
+ * writer that never takes it. A run that no longer holds its own
+ * reservation reports `exists` and leaves that file alone. The same
+ * check gates the failure cleanup, so a rename that dies never deletes
+ * someone else's file.
  *
  * What no filesystem without hard links can offer is an atomic
  * no-replace placement of a FINISHED file, so between the reservation
@@ -614,11 +660,14 @@ async function commitFresh(
  * by another process while this run was copying would be destroyed with
  * only the PRE-copy version in the backup — the very version the
  * operator lost would exist nowhere. A changed fingerprint therefore
- * aborts the replacement and removes the now-misleading backup. (This
- * narrows the window rather than locking it: a writer landing between
- * the re-check and the `rename`, or one that rewrites the file inside a
- * single mtime tick without changing its size or inode, is still
- * indistinguishable from no writer at all.)
+ * aborts the replacement and removes the now-misleading backup. (Another
+ * run of this command cannot land there at all — the caller holds the
+ * canonical-path lock across the whole sequence. The re-check covers
+ * writers that do not take that lock, and for those it narrows the
+ * window rather than closing it: one landing between the re-check and
+ * the `rename`, or rewriting the file inside a single mtime tick
+ * without changing its size or inode, is still indistinguishable from
+ * no writer at all.)
  */
 async function commitOverExisting(
   root: string,
@@ -696,10 +745,102 @@ async function stageExclusively(destAbs: string, body: string): Promise<string> 
 }
 
 /**
- * Stage → back up → place. An operator's hand-curated handoff is always
- * recoverable from disk rather than only from git, and every failure
- * path fails closed: the staged file is removed and the destination is
- * left exactly as it was found.
+ * Retry budget for the canonical-path lock — roughly a second, sampled
+ * every 25ms. A real commit holds the lock for a handful of
+ * milliseconds (one small staged write, one copy, one rename), so a
+ * wait this long means the holder is wedged or gone, not merely slow.
+ */
+const LOCK_ATTEMPTS = 40;
+const LOCK_RETRY_MS = 25;
+
+/**
+ * Take the canonical-path lock. `false` means another run held it for
+ * the whole retry budget.
+ *
+ * `mkdir` is the exclusive-create primitive that survives every
+ * filesystem this command has to run on: hard links are refused by FAT
+ * and by some network mounts, but creating a directory is an atomic
+ * create-or-`EEXIST` everywhere. It is called WITHOUT `recursive` on
+ * purpose — `recursive: true` succeeds on an existing directory and
+ * would hand every caller the same "lock".
+ */
+async function acquireCanonicalLock(lockAbs: string): Promise<boolean> {
+  for (let attempt = 0; attempt < LOCK_ATTEMPTS; attempt += 1) {
+    if (attempt > 0) await delay(LOCK_RETRY_MS);
+    try {
+      await mkdir(lockAbs);
+      return true;
+    } catch (err: unknown) {
+      if (!isEexist(err)) throw err;
+    }
+  }
+  return false;
+}
+
+/** Best-effort lock release; a failure here is never fatal. */
+async function releaseQuietly(lockAbs: string): Promise<void> {
+  try {
+    await rmdir(lockAbs);
+  } catch {
+    // ignore release failure
+  }
+}
+
+/**
+ * Run `body` while holding the canonical-path lock, which serializes
+ * every mutation this command makes to `destAbs` against other runs of
+ * it.
+ *
+ * The lock is what turns the individual exclusive steps into one
+ * exclusive operation. Reserving a name and publishing over it are
+ * necessarily separate syscalls — `link` is unavailable on the
+ * filesystems that need the fallback, and no filesystem offers a
+ * rename that refuses to replace — so between them a second run could
+ * otherwise back up a bare reservation, complete a real canonical
+ * handoff over it, and have that finished handoff destroyed by the
+ * first run's `rename`, its backup holding nothing. Holding the lock
+ * across stage → back up → publish closes that window for participants.
+ *
+ * It is advisory and bounded, not a guarantee against every writer: a
+ * process that writes `.qfai/handoff.yaml` without taking it is still
+ * only covered by the fingerprint re-checks on the commit paths, and a
+ * run killed inside the critical section leaves the lock directory
+ * behind for an operator to remove. Failing to acquire therefore fails
+ * CLOSED — nothing is written, and the message names the directory.
+ */
+async function withCanonicalLock(
+  root: string,
+  destAbs: string,
+  body: () => Promise<CommitResult>,
+): Promise<CommitResult> {
+  const lockAbs = `${destAbs}.lock`;
+  let held: boolean;
+  try {
+    held = await acquireCanonicalLock(lockAbs);
+  } catch (err: unknown) {
+    return { ok: false, message: describeError(err) };
+  }
+  if (!held) {
+    return {
+      ok: false,
+      message:
+        `another \`qfai handoff upgrade\` is writing ${toRelPosix(root, destAbs)}; ` +
+        `nothing was written. Re-run once it finishes, or remove ` +
+        `${toRelPosix(root, lockAbs)} if no upgrade is in progress.`,
+    };
+  }
+  try {
+    return await body();
+  } finally {
+    await releaseQuietly(lockAbs);
+  }
+}
+
+/**
+ * Stage → back up → place, under the canonical-path lock. An operator's
+ * hand-curated handoff is always recoverable from disk rather than only
+ * from git, and every failure path fails closed: the staged file is
+ * removed and the destination is left exactly as it was found.
  */
 async function commitCanonicalWrite(args: {
   root: string;
@@ -707,11 +848,24 @@ async function commitCanonicalWrite(args: {
   destExists: boolean;
   yaml: string;
 }): Promise<CommitResult> {
-  const body = `${args.yaml}\n`;
-  let stagedPath: string;
   try {
     await mkdir(path.dirname(args.destAbs), { recursive: true });
-    stagedPath = await stageExclusively(args.destAbs, body);
+  } catch (err: unknown) {
+    return { ok: false, message: describeError(err) };
+  }
+  return withCanonicalLock(args.root, args.destAbs, () => stageAndPlace(args));
+}
+
+/** The commit proper. Runs with the canonical-path lock held. */
+async function stageAndPlace(args: {
+  root: string;
+  destAbs: string;
+  destExists: boolean;
+  yaml: string;
+}): Promise<CommitResult> {
+  let stagedPath: string;
+  try {
+    stagedPath = await stageExclusively(args.destAbs, `${args.yaml}\n`);
   } catch (err: unknown) {
     return { ok: false, message: describeError(err) };
   }
@@ -743,8 +897,13 @@ async function commitCanonicalWrite(args: {
  * Atomicity is not overwrite protection: an EXISTING canonical
  * destination is refused unless `force` is set (exit 1, naming the path
  * and the `--force` recovery hint), and even under `force` the prior
- * file is preserved as `<dest>.backup-<ISO>`. `dryRun` reports the
- * resolved destination and field mapping and mutates nothing.
+ * file is preserved as `<dest>.backup-<ISO>` — which is possible only
+ * for a regular file or a symlink, so any other entry (a directory, a
+ * FIFO, a socket, a device) is refused rather than replaced unbacked.
+ * The whole stage → back up → publish sequence runs under a
+ * `<dest>.lock` directory so two concurrent runs cannot interleave
+ * their reservations and replacements. `dryRun` reports the resolved
+ * destination and field mapping and mutates nothing.
  */
 export async function runHandoffUpgrade(options: HandoffUpgradeOptions): Promise<number> {
   const write = options.write ?? logInfo;

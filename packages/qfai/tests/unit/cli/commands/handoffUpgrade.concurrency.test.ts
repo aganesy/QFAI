@@ -6,10 +6,12 @@
  * The existence probe and the placement are two syscalls apart, so the
  * cases here need a hook that runs *inside* that window — one process
  * creating `.qfai/handoff.yaml` after the probe, and a reader observing
- * the destination while a forced replacement is in flight. The last two
+ * the destination while a forced replacement is in flight. Several
  * cases additionally force `link` to fail, standing in for a filesystem
  * that rejects hard links: the fallback must stay exclusive rather than
- * degrade to a clobbering `rename`. `vi.mock` is hoisted to module
+ * degrade to a clobbering `rename`, and one of them drives a whole
+ * second RUN from inside that window — which is what the `<dest>.lock`
+ * directory has to keep out. `vi.mock` is hoisted to module
  * scope, so these fs-instrumented cases live apart from the other
  * handoff-upgrade files rather than mocking fs for every case in them.
  */
@@ -335,6 +337,75 @@ describe("handoff upgrade places the canonical file exclusively", () => {
     expect(errs.join("\n")).toMatch(/failed to write canonical handoff/);
     // No orphaned staging sibling, and no canonical file either.
     expect(await readdir(path.join(root, ".qfai"))).toEqual([]);
+  });
+
+  // Reserving the canonical name and publishing over it are separate
+  // syscalls, and no filesystem offers a `rename` that refuses to
+  // replace — so the ownership re-check cannot be fused with the
+  // publish. A second RUN reaching its own backup-and-replace inside
+  // that gap would complete a real canonical handoff over the bare
+  // reservation, and this run's `rename` would then destroy it with
+  // nothing but the zero-byte placeholder in the rival's backup. The
+  // whole sequence therefore runs under a `<dest>.lock` directory.
+  it("locks a rival run out of the reserve-then-publish gap", async () => {
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    await writeFile(path.join(root, "legacy-rival.yml"), "companyName: RivalCo\n", "utf-8");
+    hooks.linkErrno = "EPERM";
+    let rivalCode: number | null = null;
+    const rivalErrs: string[] = [];
+    // Land the rival exactly in the gap: our reservation is on disk,
+    // its ownership has just been re-checked, and the finished staged
+    // file is about to be published over it.
+    hooks.beforeRename = async (from) => {
+      if (!isStagingName(from)) return;
+      hooks.beforeRename = null;
+      rivalCode = await runHandoffUpgrade({
+        root,
+        legacyFile: "legacy-rival.yml",
+        force: true,
+        write: () => undefined,
+        writeErr: (m) => rivalErrs.push(m),
+      });
+    };
+    const code = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect(code).toBe(0);
+    // The rival never entered the critical section, so it never wrote
+    // a handoff for us to destroy and never backed up a placeholder.
+    expect(rivalCode).toBe(1);
+    expect(rivalErrs.join("\n")).toMatch(/another `qfai handoff upgrade` is writing/);
+    await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "FreshCo"/);
+    expect(await readdir(path.join(root, ".qfai"))).toEqual(["handoff.yaml"]);
+  }, 15000);
+
+  // Over-correction pin: the lock is released on every exit path, so
+  // back-to-back runs still work. A lock that outlived its run would
+  // make the second one fail to acquire and leave `<dest>.lock` on disk.
+  it("releases the canonical lock so the next run commits normally", async () => {
+    const destAbs = path.join(root, ".qfai", "handoff.yaml");
+    await writeFile(path.join(root, "legacy.yml"), "companyName: FreshCo\n", "utf-8");
+    await writeFile(path.join(root, "legacy-second.yml"), "companyName: SecondCo\n", "utf-8");
+    const first = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy.yml",
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    const second = await runHandoffUpgrade({
+      root,
+      legacyFile: "legacy-second.yml",
+      force: true,
+      write: () => undefined,
+      writeErr: () => undefined,
+    });
+    expect([first, second]).toEqual([0, 0]);
+    await expect(readFile(destAbs, "utf-8")).resolves.toMatch(/companyName: "SecondCo"/);
+    expect(await readdir(path.join(root, ".qfai"))).not.toContain("handoff.yaml.lock");
   });
 
   // `rename` replaces its target unconditionally. If another process
