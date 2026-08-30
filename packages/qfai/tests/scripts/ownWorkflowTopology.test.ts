@@ -1426,8 +1426,31 @@ describe("TC-0017-0012 (TDD-0012): the lint lane carries no selection condition"
 // does not move; a literal list makes any creation, removal or rename a failing test that
 // names which one, instead of a diff someone has to interpret.
 
-/** The own-CI workflow files. Two, and layer separation may not make it three. */
-const OWN_WORKFLOW_FILES = ["ci.yml", "release.yml"] as const;
+/**
+ * The own-CI workflow files.
+ *
+ * `BR-0017-0035` is what this list serves, and its subject is TEST-LAYER SEPARATION: layer
+ * separation must be jobs and matrix legs inside the existing file, and a new workflow file PER
+ * LAYER must be rejected. It is not a freeze on the repository ever gaining a workflow — the row
+ * below says so in as many words, that it asserts the count layer separation must not change
+ * rather than a count frozen when the spec was written.
+ *
+ * The two release-automation files are outside that subject, and outside the concern behind it.
+ * What `AC-0017-0018` protects against is a new workflow creating a CHECK NAME nobody has
+ * configured — a repository-settings surface no agent can reach. Neither of these runs on
+ * `pull_request`: `prepare-release.yml` is `workflow_dispatch` only, and `tag-release.yml` fires
+ * on a push to `main`. They report no check on any pull request, so the configured set is
+ * unchanged.
+ *
+ * The list stays a literal for the reason it always was: a creation, removal or rename should be
+ * a failing test naming which file, not a diff somebody has to interpret. It named these two.
+ */
+const OWN_WORKFLOW_FILES = [
+  "ci.yml",
+  "prepare-release.yml",
+  "release.yml",
+  "tag-release.yml",
+] as const;
 
 /**
  * Every check name the own-CI workflow reports, as literals.
@@ -2560,6 +2583,114 @@ describe("a permitted rebuild is verified against where the package comes from",
         release.indexOf("verify-rebuild-sources.mjs"),
         "and must check before it rebuilds",
       ).toBeLessThan(release.indexOf("pnpm rebuild"));
+    }
+  });
+});
+
+describe("release automation performs decisions rather than making them", () => {
+  // `prepare-release.yml` and `tag-release.yml` mechanise a release that a human has already
+  // decided twice over: once by typing the version into the dispatch form, once by merging the
+  // pull request that carries it. `.agents/rules/version-discipline.md` puts both of those with
+  // the user, and the rule's own recorded failure is an agent choosing a version number — so
+  // what these rows pin is that neither workflow can.
+
+  const workflow = (name: string): Record<string, unknown> =>
+    parseYaml(readFileSync(path.join(REPO_ROOT, ".github", "workflows", name), "utf-8")) as Record<
+      string,
+      unknown
+    >;
+
+  it("takes the version from a human and never computes one", () => {
+    const prepare = workflow("prepare-release.yml");
+    const on = prepare["on"];
+    expect(isRecord(on), "prepare-release must declare its triggers").toBe(true);
+    const triggers = isRecord(on) ? on : {};
+    expect(
+      Object.keys(triggers).sort(),
+      "dispatch ONLY: a schedule or a push trigger would mean a release nobody asked for, and " +
+        "the version would have to come from somewhere other than a person",
+    ).toEqual(["workflow_dispatch"]);
+
+    const dispatch = triggers["workflow_dispatch"];
+    const inputs = isRecord(dispatch) && isRecord(dispatch["inputs"]) ? dispatch["inputs"] : {};
+    expect(Object.keys(inputs), "the version is the input, and the only one").toEqual(["version"]);
+    expect(
+      isRecord(inputs["version"]) ? inputs["version"]["required"] : undefined,
+      "and it is required: a default would be this workflow choosing",
+    ).toBe(true);
+  });
+
+  it("tags only a release commit, and only one whose three statements agree", () => {
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const tagJob = jobs["tag"];
+    expect(isRecord(tagJob), "tag-release must have a tag job").toBe(true);
+    const job = isRecord(tagJob) ? tagJob : {};
+    expect(
+      String(job["if"] ?? ""),
+      "every other push to main must skip this job rather than start it and decide",
+    ).toContain("chore(release): qfai ");
+
+    const body =
+      (job["steps"] as Array<Record<string, unknown>> | undefined)
+        ?.map((step) => String(step["run"] ?? ""))
+        .join("\n") ?? "";
+    // The READ and the comparison, not a mention of the path. Measured: the first version
+    // asserted the body contained `packages/qfai/package.json`, and the error message beside the
+    // check names that path too — so replacing the read with `manifest="$claimed"` left the row
+    // green. Fourth time in this work that a row matched a sentence about a thing instead of the
+    // thing; every one of them was found by planting.
+    const commands = body
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    expect(commands, "the manifest version must actually be read").toMatch(
+      /manifest=.*packages\/qfai\/package\.json/,
+    );
+    expect(
+      commands,
+      "and compared with what the commit claims: a tag naming a tree that disagrees with it is " +
+        "the one thing a tag must never be",
+    ).toMatch(/"\$manifest" != "\$claimed"/);
+    expect(
+      body,
+      "and the CHANGELOG heading, because the GitHub Release body is extracted from that section",
+    ).toContain("CHANGELOG.md");
+  });
+
+  it("refuses to cut a release nobody described", () => {
+    // The answer to "where does the release text come from": nowhere in here. These workflows
+    // rename a section; the prose is whatever the merged pull requests wrote. So an empty
+    // `## [Unreleased]` has to stop the release rather than produce an empty heading — a release
+    // note nobody wrote reads as "nothing happened".
+    const prepare = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"),
+      "utf-8",
+    );
+    expect(prepare, "an empty Unreleased section must be refused").toMatch(/body\.trim\(\) === ""/);
+    expect(
+      prepare,
+      "and nothing here may compose release prose: the only CHANGELOG write is the rename",
+    ).not.toMatch(/### (Added|Changed|Fixed)/);
+  });
+
+  it("keeps both workflows at the minimal permission scope", () => {
+    // The writes go through a token in a secret, not through the job token, which is what keeps
+    // `BR-0017-0016`'s closed departure set at three. The row above that enforces the set would
+    // catch a regression here too; this one says why it holds, so a later reader does not
+    // "simplify" it by granting `contents: write` and widening the set.
+    for (const name of ["prepare-release.yml", "tag-release.yml"]) {
+      const document = workflow(name);
+      expect(document["permissions"], `${name} must grant exactly the minimal scope`).toEqual({
+        contents: "read",
+      });
+
+      const text = readFileSync(path.join(REPO_ROOT, ".github", "workflows", name), "utf-8");
+      expect(
+        text,
+        `${name} must take its write capability from a secret, not from the job token`,
+      ).toContain("RELEASE_AUTOMATION_TOKEN");
     }
   });
 });

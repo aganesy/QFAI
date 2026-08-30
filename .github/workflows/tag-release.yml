@@ -1,0 +1,121 @@
+name: Tag release commit
+
+# Pushes `vX.Y.Z` when a release commit reaches `main`, and nothing else.
+#
+# The version is not chosen here and cannot be: it is read out of the commit message the release
+# pull request carried, and then checked against `packages/qfai/package.json#version` and against
+# the CHANGELOG heading. Three independent statements of the same number, and the tag is pushed only
+# when all three agree — so a release commit that was edited on the way in produces a failure rather
+# than a tag naming a tree that does not match it.
+#
+# `.agents/rules/version-discipline.md` requires an explicit instruction for a tag. That instruction
+# is a human merging the release pull request; this workflow performs the mechanical half of a
+# decision already taken, and it fires on nothing else. Publishing is still gated separately, by the
+# `release` environment's required reviewer.
+#
+# The push uses `RELEASE_AUTOMATION_TOKEN`, and that is load-bearing rather than incidental: GitHub
+# raises no workflow events for pushes made with `GITHUB_TOKEN`, so a tag pushed with the job token
+# would sit there without starting `release.yml`. It also keeps this workflow's `permissions:` at the
+# minimal `{ contents: read }`, leaving `BR-0017-0016`'s closed departure set untouched.
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tag-release-${{ github.sha }}
+  cancel-in-progress: false
+
+jobs:
+  tag:
+    # Only a release commit. Every other push to `main` skips this job entirely rather than starting
+    # it and deciding it has nothing to do.
+    # Quoted, because the literal it tests for contains `: ` and YAML reads that as a nested
+    # mapping inside a plain scalar.
+    if: "startsWith(github.event.head_commit.message, 'chore(release): qfai ')"
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+          # Shallow, deliberately. `BR-0017-0019` keeps full history job-scoped, and neither
+          # question here needs a walk: the tag is created at HEAD, and whether one already
+          # exists is a ref lookup asked of the API.
+
+      - name: Read the version three ways and require them to agree
+        id: version
+        env:
+          # Through the environment. A commit message is attacker-influenced input on any repository
+          # that takes pull requests, and this job holds a token that can write tags.
+          HEAD_COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          # Reading a ref needs only the job token; the push below uses the PAT.
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          reject() { echo "::error::tag-release: $1"; exit 1; }
+
+          # First line only: a commit body can say anything.
+          subject="$(printf '%s' "$HEAD_COMMIT_MESSAGE" | head -1)"
+          claimed="${subject#chore(release): qfai }"
+          if [ "$claimed" = "$subject" ]; then
+            reject "the head commit is not a release commit, so this job should not have started"
+          fi
+
+          # Exactly X.Y.Z, by the same structural check the rest of this repository uses.
+          case "$claimed" in
+            *[!0-9.]*) reject "'$claimed' is not a version: only digits and dots may appear" ;;
+            *..* | .* | *.) reject "'$claimed' has an empty version component" ;;
+          esac
+          after_major="${claimed#*.}"
+          [ "$after_major" != "$claimed" ] || reject "'$claimed' must carry exactly three numeric components"
+          after_minor="${after_major#*.}"
+          [ "$after_minor" != "$after_major" ] || reject "'$claimed' must carry exactly three numeric components"
+          case "$after_minor" in
+            *.*) reject "'$claimed' must carry exactly three numeric components" ;;
+          esac
+
+          manifest="$(node -p "require('./packages/qfai/package.json').version")"
+          if [ "$manifest" != "$claimed" ]; then
+            reject "the commit says $claimed and packages/qfai/package.json says $manifest. A tag naming a tree that disagrees with it is the one thing a tag must never be."
+          fi
+
+          if ! grep -qE "^## \[${claimed}\]" CHANGELOG.md; then
+            reject "CHANGELOG.md has no '## [${claimed}]' heading. The GitHub Release body is extracted from that section, so a tag without it publishes a release nobody described."
+          fi
+
+          # Asked of the API: this checkout is shallow and carries no tags. Re-running a release
+          # commit is an ordinary thing to do, and finding the tag already there is not an error.
+          if gh api "repos/${GITHUB_REPOSITORY}/git/ref/tags/v${claimed}" > /dev/null 2>&1; then
+            echo "tag-release: v${claimed} already exists; nothing to do"
+            echo "push=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "push=true" >> "$GITHUB_OUTPUT"
+          fi
+          echo "version=${claimed}" >> "$GITHUB_OUTPUT"
+        shell: bash
+
+      - name: Push the tag
+        if: steps.version.outputs.push == 'true'
+        env:
+          # The PAT, and this is the reason it exists: GitHub raises no workflow events for pushes
+          # made with `GITHUB_TOKEN`, so a tag pushed with the job token would never start
+          # `release.yml` and the release would stall with no sign that it had.
+          RELEASE_TOKEN: ${{ secrets.RELEASE_AUTOMATION_TOKEN }}
+          RELEASE_VERSION: ${{ steps.version.outputs.version }}
+        run: |
+          set -euo pipefail
+          if [ -z "${RELEASE_TOKEN}" ]; then
+            echo "::error::tag-release: the RELEASE_AUTOMATION_TOKEN secret is not set. A tag pushed with GITHUB_TOKEN raises no workflow event, so release.yml would never start and the release would stall silently. Add a token with contents:write, or push the tag by hand."
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Annotated, so the tag carries who made it and when — a lightweight tag records neither.
+          git tag -a "v${RELEASE_VERSION}" -m "qfai ${RELEASE_VERSION}"
+          git push "https://x-access-token:${RELEASE_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "refs/tags/v${RELEASE_VERSION}"
+          echo "tag-release: pushed v${RELEASE_VERSION}; release.yml takes it from here, and publishing waits on the release environment's reviewer"
+        shell: bash

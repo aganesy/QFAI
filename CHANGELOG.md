@@ -6,6 +6,20 @@
 
 ### Added
 
+- **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
+  `packages/qfai/package.json#version` を同期し、`CHANGELOG.md` の `## [Unreleased]` を
+  `## [X.Y.Z] - <日付>` に rename して空の `## [Unreleased]` を再挿入し、`release/vX.Y.Z` の PR を作成
+  する。その PR が main に入ると `Tag release commit` が三者（コミットメッセージ・manifest・CHANGELOG
+  見出し）の一致を確認したうえで `vX.Y.Z` を push し、`release.yml` が起動する。publish は従来どおり
+  `release` environment の必須レビュアー承認で止まる。
+- **リリース文面は自動生成しない。** 内容は各変更の作者が `## [Unreleased]` に書き足したものがそのまま
+  使われ、GitHub Release の本文も同じセクションから抽出される。裏返しとして `## [Unreleased]` が空なら
+  `Prepare release` は失敗する — 誰も書いていないリリースノートは「何も起きなかった」と読めるため。
+- **版番号も自動化は選ばない。** `.agents/rules/version-discipline.md` が版番号の決定権をユーザに置いて
+  いるため、入力は必須で既定値を持たない。作成されるブランチ名が pin を運ぶので
+  `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
+  `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
+  `BR-0017-0016` の閉じた逸脱集合は広がらない。
 - **`qfai init` ships a layered CI workflow.** `.github/workflows/qfai-tests.yml` is new in the
   template tree: layer-separated test lanes, a `detect` job that classifies the changed-path list so
   four lanes run only when they need to, and a `ci-pass` verdict derived by iterating
