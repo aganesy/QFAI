@@ -298,7 +298,12 @@ jobs:
           if [ -f pnpm-lock.yaml ]; then
             echo "cache=pnpm" >> "$GITHUB_OUTPUT"
           elif [ -f yarn.lock ]; then
-            if command -v yarn > /dev/null 2>&1; then
+            # The QUERY setup-node will make, not merely whether something called yarn is on
+            # PATH. A self-hosted runner can carry a stale Corepack shim, or a `yarn` that
+            # cannot resolve its own cache — `command -v` succeeds there and `yarn cache dir`
+            # does not, which is the case that still stopped the job. Asking the real question
+            # costs one subprocess and answers exactly what the cache needs.
+            if yarn cache dir > /dev/null 2>&1; then
               echo "cache=yarn" >> "$GITHUB_OUTPUT"
             else
               echo "::warning::qfai validate: yarn is not on PATH yet, so the Yarn download cache is skipped for this run. The install step provisions Corepack and installs normally; preinstall Yarn or Corepack on this runner to get the cache back."

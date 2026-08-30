@@ -397,16 +397,29 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
             continue;
           }
 
-          // Every emission of the yarn cache must sit behind a probe for Yarn itself.
-          const emits = /cache=yarn/.test(deciding);
-          const probes = /command -v yarn/.test(deciding);
+          // Every emission of the yarn cache must sit behind the QUERY setup-node will make.
+          // `command -v yarn` is not that query: a stale shim, or a yarn that cannot resolve
+          // its own cache, satisfies it and still fails where it matters.
+          //
+          // Read from the COMMANDS, with `#` lines dropped first. Measured: the step's own
+          // comment explains why the query is what it is, so a body-wide search found
+          // `yarn cache dir` in the prose and reported a probe that had been removed from the
+          // code. That is the second time in this change a row matched a sentence about a
+          // thing instead of the thing.
+          const commands = deciding
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line !== "" && !line.startsWith("#"))
+            .join("\n");
+          const emits = /cache=yarn/.test(commands);
+          const probes = /yarn cache dir/.test(commands);
           if (emits && !probes) {
             violations.push(`${name}: job ${jobId} emits the yarn cache without probing for yarn`);
             continue;
           }
           if (emits) {
-            const probeAt = deciding.search(/command -v yarn/);
-            const emitAt = deciding.search(/cache=yarn/);
+            const probeAt = commands.search(/yarn cache dir/);
+            const emitAt = commands.search(/cache=yarn/);
             if (probeAt > emitAt) {
               violations.push(
                 `${name}: job ${jobId} probes for yarn only after claiming its cache`,
@@ -417,7 +430,7 @@ describe("TC-0003-0029 (TDD-0029): four lockfile branches plus the no-lockfile b
           // …and the skip has to leave the lane running: an EMPTY cache value, not a failure.
           // `echo "cache=" >> "$GITHUB_OUTPUT"` is what that looks like, and setup-node reads an
           // empty `cache:` as no cache at all.
-          if (emits && !/cache="\s*(>>|$)/m.test(deciding)) {
+          if (emits && !/cache="\s*(>>|$)/m.test(commands)) {
             violations.push(
               `${name}: job ${jobId} has no branch that emits an empty cache, so an unresolvable Yarn has nowhere to go but a failure`,
             );

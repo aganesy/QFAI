@@ -999,11 +999,15 @@ export function invocationsOf(body: string): string[] {
 export const ALLOWED_EXACT_COMMANDS: ReadonlySet<string> = new Set([
   "command -v corepack",
   // Asked BEFORE `setup-node`, to decide whether the Yarn download cache can be claimed at all.
-  // `cache: yarn` sends setup-node to `yarn cache dir`, and on a runner with neither Yarn nor
-  // Corepack preinstalled that stopped the job before the install step could provision either —
+  // `cache: yarn` sends setup-node to exactly this query, and on a runner with neither Yarn nor
+  // Corepack preinstalled it stopped the job before the install step could provision either —
   // the lane failing at the one point it is built to fail open. Skipping the cache costs a warm
   // cache and nothing else.
-  "command -v yarn",
+  //
+  // The QUERY rather than `command -v yarn`: a stale shim, or a yarn that cannot resolve its own
+  // cache, satisfies `command -v` and still fails here. Asking the real question is the whole
+  // point of asking.
+  "yarn cache",
   // The VERSION and the REGISTRY are both part of the exact string, and that is the enumeration
   // working as intended: review finding [55] pinned the version because an unpinned install
   // fetches whatever the registry calls latest at the moment the job runs, and review finding
@@ -1075,6 +1079,14 @@ export const ALLOWED_INVOCATIONS: ReadonlySet<string> = new Set([
   "pnpm install",
   "yarn install",
   "yarn",
+  // Asked BEFORE `setup-node`, to decide whether the Yarn download cache can be claimed at all.
+  // `cache: yarn` sends setup-node to exactly this query, and on a runner carrying neither Yarn
+  // nor Corepack it stopped the job there — before the install step could provision either, so
+  // the lane failed at the one point it is built to fail open.
+  //
+  // The QUERY rather than `command -v yarn`: a stale shim, or a yarn that cannot resolve its own
+  // cache, satisfies `command -v` and still fails here. Asking the real question is the point.
+  "yarn cache",
   "npx qfai",
   // `node` with no bare argument: its only shipped use is `node -e <payload>`, and a payload is opaque
   // to any scan. `node build.mjs` is a different invocation and is refused.
@@ -1198,7 +1210,7 @@ export const ALLOWED_JOB_SHAPE: ReadonlyMap<string, string> = new Map([
  */
 export const ALLOWED_WORKFLOW_FILES: ReadonlyMap<string, string> = new Map([
   ["qfai-tests.yml", "65066af2617ec77f34dd47672854cec1e489847d432c7126b2b23f629e221ecc"],
-  ["qfai-validate.yml", "b81fbaba7eb4cd6825652b852d8b17ca24011f901fef4875c65c3d7426f42009"],
+  ["qfai-validate.yml", "784b7028364bfc7d68955158536bcd1d910ec4e583d61a14aa14694e346fa075"],
 ]);
 
 /** The bytes of a shipped file. Nothing is normalized, and the parameter is a Buffer for that reason. */
@@ -1611,7 +1623,7 @@ export const ALLOWED_STEP_SHAPE: ReadonlyArray<readonly [string, string]> = [
   ],
   [
     "qfai-validate.yml#validate",
-    '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body c51f43347e5e63024ab95b206af0c931c7d3862ea44a4a4df6ec4722749349bd>"}',
+    '{"name":"Choose a package-manager cache setup-node can actually resolve","id":"node-cache","shell":"bash","run":"<body 22b0f415d7f4c3ee86af159d570d3f5fecb8c998233daa240d33dfe9b15bed61>"}',
   ],
   [
     "qfai-validate.yml#validate",
