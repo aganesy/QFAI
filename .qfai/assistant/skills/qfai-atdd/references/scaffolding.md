@@ -27,10 +27,16 @@ and the basename follows the configured convention — `test_<tc_id>.py` or
 (`*.@(test|spec).ts`) are read the way fast-glob reads them. `QFAI-ATDD-112`
 widens to the bare extension, so a file your runner does not collect would
 clear the coverage gate with a test that never runs. The check is made against
-the **whole** destination path, directories included: globs that only cover
-`src/**` do not reach `tests/integration/<spec-id>/`, so the command refuses
-there too rather than writing a file nothing runs. Add a glob that covers the
-scaffold directory, or author those TCs by hand.
+the **whole** destination path, directories included, and it is case-sensitive
+the way fast-glob is: globs that only cover `src/**` do not reach
+`tests/integration/<spec-id>/`, and `TEST_*.py` does not admit the lowercase
+name the command emits, so it refuses in both cases rather than writing a file
+nothing runs. `testFileExcludeGlobs` is applied as well — a destination you
+have excluded is one your own test scan skips. When several languages are
+configured, every one of them is tried and the first whose path your globs
+admit wins, so a repository with `src/**/*.test.ts` and `tests/**/*.py` gets
+the Python skeleton. Add a glob that covers the scaffold directory, or author
+those TCs by hand.
 
 A skeleton an earlier run wrote under a different convention is removed only
 while it is still the untouched skeleton the command emitted. Any file you have

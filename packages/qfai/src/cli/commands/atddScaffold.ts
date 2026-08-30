@@ -98,24 +98,32 @@ function unsupportedStackMessage(testFileGlobs: readonly string[], testsDir: str
 
 /**
  * Operator-facing refusal for a stack whose extension this command knows but
- * whose configured globs cover none of the paths it would write.
+ * whose configured globs admit none of the paths it would write.
  *
  * `QFAI-ATDD-112` widens to the bare extension, so a `test_<tc>.py` written to
  * a project whose globs only allow `*_test.py` — or whose globs cover `src/**`
- * and not the writer's own `<testsDir>/integration/<spec-id>/` — WOULD have
- * cleared the coverage gate while never being collected by the runner.
- * Refusing keeps the gate honest instead of clearing it with a test that never
- * executes.
+ * and not the writer's own `<testsDir>/integration/<spec-id>/`, or whose
+ * `testFileExcludeGlobs` cover exactly that directory — WOULD have cleared the
+ * coverage gate while never being collected by the runner. Refusing keeps the
+ * gate honest instead of clearing it with a test that never executes.
+ *
+ * The exclude globs are named only when the project set some: quoting an empty
+ * list would point the operator at a key that had no part in the refusal.
  */
 function namingMismatchMessage(
   shapes: readonly string[],
   testFileGlobs: readonly string[],
+  excludeGlobs: readonly string[],
   testsDir: string,
 ): string {
+  const excluded =
+    excludeGlobs.length === 0
+      ? ""
+      : ` (or are excluded by validation.traceability.testFileExcludeGlobs: ${excludeGlobs.join(", ")})`;
   return (
     `qfai atdd scaffold: none of the skeleton paths this command would write ` +
     `(${shapes.join(", ")}) match validation.traceability.testFileGlobs ` +
-    `(${testFileGlobs.join(", ")}), so the generated file would clear QFAI-ATDD-112 ` +
+    `(${testFileGlobs.join(", ")})${excluded}, so the generated file would clear QFAI-ATDD-112 ` +
     `— which widens to the bare extension — while your runner never collected it. ` +
     `Add a glob that admits one of those paths, or author these TCs by hand under ` +
     `${testsDir}/${SCAFFOLD_HOME_KIND}/<spec-id>/, keeping their ` +
@@ -409,12 +417,20 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
   // An absolute `paths.testsDir` outside the repo has no repo-relative form to
   // compare against repo-relative globs, so the check falls back to the
   // basename there rather than refusing on a comparison it cannot make.
+  //
+  // The EXCLUDE globs travel with them. `collectScTestReferences` hands those
+  // to fast-glob as `ignore`, so a project that excludes `tests/integration/**`
+  // has told qfai its normal test scan does not read this writer's own
+  // destination — while `QFAI-ATDD-112` widens to the bare extension and counts
+  // the annotation anyway. Resolving on the include side alone therefore
+  // emitted a skeleton into a directory the project itself had opted out of.
   const scaffoldDirRel = path.relative(options.root, scaffoldDir).replace(/\\/g, "/");
   const comparable = !scaffoldDirRel.startsWith("..") && !path.isAbsolute(scaffoldDirRel);
-  const resolution = resolveScaffoldDialect(
-    testFileGlobs,
-    comparable ? { scaffoldDir: scaffoldDirRel } : {},
-  );
+  const testFileExcludeGlobs = config.validation.traceability.testFileExcludeGlobs;
+  const resolution = resolveScaffoldDialect(testFileGlobs, {
+    ...(comparable ? { scaffoldDir: scaffoldDirRel } : {}),
+    excludeGlobs: testFileExcludeGlobs,
+  });
   if (resolution.outcome === "unsupported-stack") {
     // Refuse rather than mislead: a skeleton in a language qfai has no shape
     // for would be uncounted the same way, only silently.
@@ -422,7 +438,9 @@ export async function runAtddScaffold(options: AtddScaffoldOptions): Promise<num
     return 1;
   }
   if (resolution.outcome === "naming-mismatch") {
-    writeErr(namingMismatchMessage(resolution.shapes, testFileGlobs, testsDirRel));
+    writeErr(
+      namingMismatchMessage(resolution.shapes, testFileGlobs, testFileExcludeGlobs, testsDirRel),
+    );
     return 1;
   }
   const dialect = resolution.dialect;

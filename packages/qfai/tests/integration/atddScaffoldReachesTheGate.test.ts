@@ -120,12 +120,18 @@ describe("the scaffold writes where the gate looks", () => {
  */
 const PY_TEST_FILE_GLOBS = ["tests/**/test_*.py", "tests/**/*_test.py"] as const;
 
-const CONFIG_WITH_GLOBS = (globs: readonly string[]): string =>
+const CONFIG_WITH_GLOBS = (
+  globs: readonly string[],
+  excludeGlobs: readonly string[] = [],
+): string =>
   [
     "validation:",
     "  traceability:",
     "    testFileGlobs:",
     ...globs.map((glob) => `      - "${glob}"`),
+    ...(excludeGlobs.length === 0
+      ? []
+      : ["    testFileExcludeGlobs:", ...excludeGlobs.map((glob) => `      - "${glob}"`)]),
     "",
   ].join("\n");
 
@@ -523,6 +529,119 @@ describe("the scaffold writes a name the project's own runner collects", () => {
       },
       COMPOSITE_TC_TABLE,
     );
+  });
+});
+
+/**
+ * Three ways the include-glob comparison could still hand back a destination
+ * the project's own test scan never reads.
+ *
+ * All three end in the same place: `QFAI-ATDD-112` widens to the bare
+ * extension and counts the annotation, so an emitted file the runner does not
+ * collect clears the coverage gate with a test that never runs.
+ */
+const SCAFFOLD_DIR = "tests/integration/spec-0001";
+
+describe("the scaffold admits a destination the project's own scan would read", () => {
+  it("refuses when the destination sits under an exclude glob", () => {
+    // `collectScTestReferences` hands `testFileExcludeGlobs` to fast-glob as
+    // `ignore`, so a project that excludes `tests/integration/**` has said its
+    // normal test scan does not read this writer's own destination. Resolving
+    // on the include side alone emitted a skeleton into exactly that directory.
+    expect(
+      resolveScaffoldDialect(["tests/**/*.py"], {
+        scaffoldDir: SCAFFOLD_DIR,
+        excludeGlobs: ["tests/integration/**"],
+      }).outcome,
+    ).toBe("naming-mismatch");
+  });
+
+  it("still resolves when the excludes cover some other directory", () => {
+    // Over-correction pin: an exclude list that does not reach the scaffold
+    // directory must leave the resolution exactly as it was.
+    expect(
+      resolveScaffoldDialect(["tests/**/*.py"], {
+        scaffoldDir: SCAFFOLD_DIR,
+        excludeGlobs: ["tests/e2e/**", "**/fixtures/**"],
+      }).outcome,
+    ).toBe("resolved");
+    expect(resolveScaffoldDialect(["tests/**/*.py"], { scaffoldDir: SCAFFOLD_DIR }).outcome).toBe(
+      "resolved",
+    );
+  });
+
+  it("refuses end-to-end, and writes nothing, when the destination is excluded", async () => {
+    await withProject(
+      {
+        "qfai.config.yaml": CONFIG_WITH_GLOBS(["tests/**/*.py"], ["tests/integration/**"]),
+      },
+      async (root) => {
+        const errors: string[] = [];
+        const code = await runAtddScaffold({
+          root,
+          specId: "spec-0001",
+          write: () => {},
+          writeErr: (message) => errors.push(message),
+        });
+        expect(code).toBe(1);
+        // The refusal names the key that caused it, not only the include side.
+        expect(errors.join("\n")).toContain("testFileExcludeGlobs");
+        await expect(
+          readFile(
+            path.join(root, "tests", "integration", "spec-0001", "test_tc_0001_0001.py"),
+            "utf-8",
+          ),
+        ).rejects.toThrow();
+      },
+      COMPOSITE_TC_TABLE,
+    );
+  });
+
+  it("matches globs case-sensitively, the way fast-glob does", () => {
+    // `collectFilesByGlobs` never sets `caseSensitiveMatch`, whose fast-glob
+    // default is `true`. An `i` flag on the candidate matcher let
+    // `tests/**/TEST_*.py` accept the lowercase `test_<tc>.py` this writer
+    // emits — a name the project's own scan does not collect on a
+    // case-sensitive filesystem.
+    expect(resolveScaffoldDialect(["tests/**/TEST_*.py"]).outcome).toBe("naming-mismatch");
+    // Over-correction pin: the same glob in the case the writer actually emits
+    // still resolves, so this is a case rule and not a blanket refusal.
+    expect(resolveScaffoldDialect(["tests/**/test_*.py"]).outcome).toBe("resolved");
+    expect(
+      resolveScaffoldDialect(["tests/**/*.test.ts"], { scaffoldDir: SCAFFOLD_DIR }).outcome,
+    ).toBe("resolved");
+  });
+
+  it("tries every configured dialect before refusing a mixed repository", () => {
+    // `src/**/*.test.ts` + `tests/**/*.py`: the JS/TS template leads the table
+    // and its extension IS configured, so locking onto it meant only `.ts`
+    // paths were ever matched — none of which reach
+    // `tests/integration/<spec-id>/` — and the command exited 1 while a Python
+    // skeleton that lands exactly there was never evaluated.
+    const resolution = resolveScaffoldDialect(["src/**/*.test.ts", "tests/**/*.py"], {
+      scaffoldDir: SCAFFOLD_DIR,
+    });
+    if (resolution.outcome !== "resolved") {
+      throw new Error(`expected a Python fallback, got ${resolution.outcome}`);
+    }
+    expect(resolution.dialect.id).toBe("python");
+    expect(resolution.dialect.fileName("TC-0001-0001")).toBe("test_tc_0001_0001.py");
+  });
+
+  it("keeps JS/TS first when both dialects reach the destination", () => {
+    // Over-correction pin: trying every dialect must not reorder them. When
+    // the TypeScript candidate also lands in the scaffold directory it still
+    // wins, which is what preserves the output existing projects have.
+    const resolution = resolveScaffoldDialect(["tests/**/*.test.ts", "tests/**/*.py"], {
+      scaffoldDir: SCAFFOLD_DIR,
+    });
+    if (resolution.outcome !== "resolved") {
+      throw new Error(`expected the JS/TS dialect, got ${resolution.outcome}`);
+    }
+    expect(resolution.dialect.id).toBe("js-ts");
+    // And a stack with no dialect at all is still `unsupported-stack`, not a
+    // mismatch: the two refusals say different things to the operator.
+    expect(resolveScaffoldDialect(["spec/**/*_spec.rb"]).outcome).toBe("unsupported-stack");
   });
 });
 
