@@ -295,8 +295,14 @@ function readCatalogKey(property: ts.ObjectLiteralElementLike, scope: LiteralSco
     }
     if (ts.isComputedPropertyName(name) && ts.isIdentifier(name.expression)) {
       const resolved = [...scope(name.expression.text)];
-      if (resolved.length === 1) {
-        return resolved[0];
+      // Narrowed rather than indexed: `noUncheckedIndexedAccess` types
+      // `resolved[0]` as `string | undefined`, and `length === 1` does not
+      // narrow the element. A Set of strings never yields `undefined`, so the
+      // fall-through below is unreachable at runtime and the throw stays the
+      // single exit for a key this cannot resolve.
+      const [only] = resolved;
+      if (resolved.length === 1 && only !== undefined) {
+        return only;
       }
     }
   }
