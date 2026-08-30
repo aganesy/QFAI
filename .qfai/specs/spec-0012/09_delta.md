@@ -49,6 +49,7 @@
   - rationale: spec-0017 retired the Node Playwright runtime + playwright-mcp residue in favor of a single Playwright CLI surface.
 - **runtime evidence schema**: V1 (`iterations[]`) records remain valid against the validator. Re-running `qfai init --force` only refreshes skill assets and the shipped `.github/workflows/qfai-validate.yml`; no data migration required.
 - **CI workflow**: the shipped `qfai-validate.yml` pins `node-version: "20"` and auto-detects the consumer's lockfile (`pnpm-lock.yaml` → pnpm resolved from the consumer's `package.json#packageManager`, `yarn.lock` → corepack-enabled yarn with Berry-vs-Classic flag detection, `package-lock.json` → `npm ci`, none → `npm install --no-audit --no-fund`). `actions/setup-node@v4` `cache:` and the `pnpm/action-setup@v4` step are both gated by `hashFiles()` expressions so consumers do not need to hand-edit the install step. The install step runs under explicit `shell: bash` so consumers extending `runs-on` to Windows / macOS matrices do not crash on PowerShell default. (Implemented as part of v1.9.0 / PR #209; the v1.8 hand-swap comment in the workflow header was retired.)
+  **Superseded 2026-08-05 by CHG-007** (`_policies/10_delta.md` § CHG-007 triage row for this spec): the shipped workflow set is hardened under spec-0003 / `CLI-WFSET`. The floating-major action references recorded above (`actions/setup-node@v4`, `pnpm/action-setup@v4`) are replaced by bare 40-hex SHA pins, and the Node floor is re-derived per the portability requirement. The paragraph above is retained as the record of the v1.9.0 shape, **not** as a description of the current shipped file; ownership of that file is spec-0003.
 - **deferred** (tracked under PR Open Questions / Follow-ups): full-removal timing for V1 lifecycle paths.
 
 ## 2026-05-06 — CHG-001 — Absorb spec-0017 (CAP-0017 v2.0 / UX-loop) into CAP-0012; purge legacy v1.x AC/BR/EX/TC/DR
@@ -104,6 +105,10 @@
 
 - `QFAI-PROT2-NNN` error prefix references in the absorbed spec-0017 content are **rewritten** during APPEND to use the actually-implemented prefixes `QFAI-PROT-NNN` / `QFAI-DCON-NNN` (per `packages/qfai/src/core/validators/prototypingEvidence.ts` and `designContractReadiness.ts`), since `QFAI-PROT2-` is on the distributed-surface forbidden list.
 - spec-0017 番号は永久 gap として予約。再利用禁止 (`_policies/11_Slice-Policy.md` §ID 安定性ルール 5)。
+  **注 (2026-08-05 追記)**: この恒久予約は `_policies/10_delta.md` § CHG-007 / DR-0275 で撤廃され、
+  `spec-0017` は `CAP-0017 = Repository Toolchain` として再採番された。上記行は 2026-05-06 時点の
+  記録として保持する（現行の制約ではない）。旧 `spec-0017` = Prototyping v2.0 の内容が spec-0012 に
+  吸収された事実は変わらない。
 - New v2.0 / UX-loop content references REQ-0012-0030..0041 added to `01_Spec.md`.
 
 ## 2026-05-18 — CHG-002 — Redefine `/qfai-prototyping` per discussion-20260516144141078 (multi-spec / 10-cycle / reviewer-driven Playwright / qualitative-only / stock-photo license)
@@ -276,9 +281,10 @@ Late-review fixes on PR #208:
 
 ## Triage
 
-| Source                                                     | Subject                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                     |
-| ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------- |
-| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003) | `/qfai-prototyping` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読み、kind 別 write-trigger に従う。 | spec-0012     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。subject-token overlap (`skill`, `prototyping`)。 |
+| Source                                                         | Subject                                                                                                                            | Existing Spec | Operation | Sub-op | Approved By | Rationale                                                                                                                                                                                                                                                                                                                                     |
+| -------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- | ------------- | --------- | ------ | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| REQ-0004, REQ-0005, REQ-0010, REQ-0016, REQ-0017 (CHG-003)     | `/qfai-prototyping` SKILL.md に `project_memory:` 宣言追加。author 前に open work-log entry を読み、kind 別 write-trigger に従う。 | spec-0012     | UPDATE    | APPEND | pin-implied | Implementation-phase skill (REQ-0005 scope)。subject-token overlap (`skill`, `prototyping`)。                                                                                                                                                                                                                                                 |
+| `discussion-20260804173914356#REQ-0014`, `#REQ-0019` (CHG-007) | the recorded shape of the shipped validate workflow becomes stale                                                                  | spec-0012     | UPDATE    | MODIFY | -           | Cascade from CHG-007. This pack's delta records the shipped workflow's Node pin and lockfile-detection behaviour as observed at the time; hardening and the portability requirement change both. Ownership of the shipped workflow set is spec-0003 — this row only marks the recorded description as superseded, it does not move ownership. |
 
 ## CHG-003 (v1.9.0) — Work-log Read Contract + project_memory Declaration
 
