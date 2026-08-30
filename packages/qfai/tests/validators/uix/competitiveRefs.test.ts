@@ -527,4 +527,91 @@ describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {
     const issues = await runCanonicalUixValidators(root, withUiux({ competitive_refs_min: 0 }));
     expect(issues.map((issue) => issue.code)).not.toContain("UIX-VAL-COMPETITIVE-REFS-MIN");
   });
+
+  // CommonMark accepts up to three leading spaces before a heading, and the H2
+  // matcher already did. Anchoring the block split at column 0 left an indented
+  // pack as one unsplit chunk whose first line is not a `### Reference:`, so
+  // every complete reference in it went uncounted.
+  it("parses reference blocks whose headings carry CommonMark indentation", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        "The registry follows.",
+        "",
+        ...["Linear", "Stripe", "Vercel"].map((name) =>
+          referenceBlock(name)
+            .split("\n")
+            .map((line) => (line.length > 0 ? `   ${line}` : line))
+            .join("\n"),
+        ),
+      ]),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  // Discarding the whole table when one mandatory column is absent meant its
+  // registered rows drew no completeness finding — invisibly, wherever the
+  // count gate was already satisfied or switched off.
+  it("still reports the rows of a registry table that renamed a mandatory column", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        "| SRC-ID | Competitor | not_adopted_points | rejected_points | local_translation |",
+        "| --- | --- | --- | --- | --- |",
+        ...TABLE_ROWS,
+        "",
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(TABLE_ROWS.length);
+    for (const issue of incomplete) {
+      expect(issue.message).toContain("adopted_points");
+    }
+    // The renamed column is the only one missing; the other two still resolve.
+    expect(incomplete[0]?.message).not.toContain("rejected_points");
+  });
+
+  // The discriminator is "carries at least one mandatory column". A table with
+  // none of them is documentation, and reading its rows as references was the
+  // regression the whole-header requirement was originally added to stop.
+  it("still ignores a metadata table when a mandatory column is renamed above it", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        "| SRC-ID | Competitor | not_adopted_points | rejected_points | local_translation |",
+        "| --- | --- | --- | --- | --- |",
+        ...TABLE_ROWS,
+        "",
+        "### Field Definitions",
+        "",
+        "| Field | Meaning |",
+        "| --- | --- |",
+        "| adopted_points | What is adopted from the reference. |",
+        "",
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(TABLE_ROWS.length);
+    for (const issue of incomplete) {
+      expect(issue.message).not.toContain("What is adopted");
+    }
+  });
 });

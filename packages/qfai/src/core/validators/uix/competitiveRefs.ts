@@ -42,13 +42,29 @@ const REGISTRY_HEADING_RE = new RegExp(`${H2_PREFIX}\\s+competitive reference re
 const H2_BOUNDARY_RE = new RegExp(`${H2_PREFIX}(?:\\s|$)`);
 
 /**
+ * The H3 shape CommonMark accepts, mirroring {@link H2_PREFIX}. The block
+ * split, the block matcher and the label strip are all derived from it, so an
+ * indented `### Reference:` is recognised by all three or by none. Anchoring
+ * only at column 0 while the H2 matcher tolerated the same indent meant a pack
+ * whose blocks were indented parsed as a single unsplit chunk — and the
+ * complete references in it were never counted.
+ */
+const H3_PREFIX = String.raw`^ {0,3}###(?!#)`;
+
+/**
  * Heading that opens a reference block.
  *
- * Restricted to `### Reference:` so metadata headings that legitimately sit
- * beside a registry table (`### Field Definitions`, `### Validation Rules`) are
- * not collected as empty references — which would also suppress table parsing.
+ * Restricted to `Reference:` so metadata headings that legitimately sit beside
+ * a registry table (`### Field Definitions`, `### Validation Rules`) are not
+ * collected as empty references — which would also suppress table parsing.
  */
-const REFERENCE_BLOCK_RE = /^###\s+reference\s*:/i;
+const REFERENCE_BLOCK_RE = new RegExp(`${H3_PREFIX}\\s+reference\\s*:`, "i");
+
+/** Split point: immediately before any H3, indented or not. */
+const H3_SPLIT_RE = new RegExp(`(?=${H3_PREFIX}\\s)`, "m");
+
+/** The heading marker itself, for recovering the block's label. */
+const H3_MARKER_RE = new RegExp(`${H3_PREFIX}\\s+`);
 
 const MANDATORY_FIELDS = ["adopted_points", "rejected_points", "local_translation"] as const;
 
@@ -175,11 +191,10 @@ function extractField(entry: string, field: string): string | undefined {
 /** References written as `### Reference: <name>` blocks (the pack template shape). */
 function parseBlockReferences(section: string): CompetitiveReference[] {
   return section
-    .split(/(?=^###\s+)/m)
-    .map((block) => block.trim())
+    .split(H3_SPLIT_RE)
     .filter((block) => REFERENCE_BLOCK_RE.test(block))
     .map((block) => ({
-      label: (block.split("\n")[0] ?? "").replace(/^###\s+/, "").trim(),
+      label: (block.split("\n")[0] ?? "").replace(H3_MARKER_RE, "").trim(),
       missingFields: MANDATORY_FIELDS.filter((field) => !isPopulated(extractField(block, field))),
     }));
 }
@@ -190,22 +205,22 @@ function normalizeHeaderCell(cell: string): string {
 }
 
 /**
- * Map each mandatory field to its column.
+ * Map each mandatory field to its column; a field the header does not carry is
+ * simply absent from the map.
  *
  * The match is **exact** after normalisation: a substring match would accept
  * `not_adopted_points` or `adopted_points_notes` as the `adopted_points`
  * column, so a registry that never carries the mandatory column would still
  * clear the count gate on the values of a differently-named neighbour.
  */
-function columnIndexes(header: string[]): Map<string, number> | null {
+function columnIndexes(header: string[]): Map<string, number> {
   const normalized = header.map(normalizeHeaderCell);
   const indexes = new Map<string, number>();
   for (const field of MANDATORY_FIELDS) {
     const index = normalized.indexOf(field);
-    if (index === -1) {
-      return null;
+    if (index !== -1) {
+      indexes.set(field, index);
     }
-    indexes.set(field, index);
   }
   return indexes;
 }
@@ -217,14 +232,22 @@ function columnIndexes(header: string[]): Map<string, number> | null {
  * "every `|` line in the section". A registry table is routinely followed by a
  * `### Field Definitions` or `### Validation Rules` table, and flattening the
  * section into one table turned that second table's header and rows into
- * competitive references missing every mandatory field. Only the body rows of
- * tables that actually carry the mandatory columns are read.
+ * competitive references missing every mandatory field.
+ *
+ * A table is the registry when it carries **at least one** mandatory column,
+ * and its rows are then read whether or not it carries all three: a column the
+ * header is missing is reported as a missing field on every row. Requiring all
+ * three to read any row meant a registry that renamed one column was discarded
+ * whole, so its registered references drew no completeness finding at all
+ * — silently, wherever the count gate was satisfied elsewhere or turned off
+ * with `competitive_refs_min: 0`. A table carrying none of them is a metadata
+ * table and is skipped.
  */
 function parseTableReferences(section: string): CompetitiveReference[] {
   const references: CompetitiveReference[] = [];
   for (const table of parseAllMarkdownTables(section)) {
     const indexes = columnIndexes(table.headers);
-    if (!indexes) {
+    if (indexes.size === 0) {
       continue;
     }
     table.rows.forEach((cells, position) => {
