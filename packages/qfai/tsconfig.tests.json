@@ -52,6 +52,7 @@
     "tests/helpers/tempTree.ts",
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
+    "tests/integration/cli/commands/validate.strictFailOnPrecedence.test.ts",
     "tests/integration/cliStartupCost.test.ts",
     "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",
