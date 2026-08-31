@@ -712,7 +712,12 @@ function resolveJsonPath(root: string, jsonPath: string): string {
 
 const GITHUB_ANNOTATION_LIMIT = 100;
 
-const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
+/**
+ * Human-readable "expected state" per issue code. Exported so a test can assert
+ * that every code an emitter can raise at error severity is either catalogued
+ * here or explicitly recorded as pending, instead of shipping without one.
+ */
+export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   "QFAI-SCOPE-001": "Every `--spec` value resolves to a 1-4 digit spec number.",
   "QFAI-SCOPE-002": "Every `--spec` value names a spec directory that exists.",
   E_SPEC_MISSING_FILESET: "Spec Pack required files (01..18) are complete.",
@@ -963,7 +968,137 @@ const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "Contract index references must match declared contract IDs in .qfai/contracts/**.",
   "QFAI-CONTRACT-040":
     "Every state/status value an API contract mandates must have a representable counterpart in the domain declared by the DB contract(s) bounding the same normalized field name (CHECK ... IN, CREATE TYPE ... AS ENUM, or inline ENUM). Pairing is by normalized field name, not by an explicit pair declaration.",
+  // `paths.contractsDir` is configurable, so the expected state names the file
+  // by role rather than pinning the default location: a project that moved its
+  // contracts must not be told to repair a directory it does not use. The
+  // offending path is already on the finding's `target:` line.
+  "QFAI-BPAP-001": "Every BP/AP rule file in the contracts `design/` directory is readable.",
+  "QFAI-BPAP-002": "Every BP/AP rule file parses as YAML.",
+  "QFAI-BPAP-003": "Every BP/AP rule file holds a top-level YAML array of rule entries.",
+  "QFAI-BPAP-004": "Every BP entry has an `id` of the form `BP-XXXX`.",
+  "QFAI-BPAP-005": "BP IDs are unique across every BP rule file.",
+  // The check is `toSafeString(value).trim() === ""`, so a required key that is
+  // present but holds `[]`, `{}`, or `null` fails it exactly like an absent
+  // one. The expected state says "non-empty scalar", not "present", so the
+  // report does not read as if the key were missing when it is not.
+  "QFAI-BPAP-006": "Every BP entry gives each of its required fields a non-empty scalar value.",
+  "QFAI-BPAP-007": "Every AP entry has an `id` of the form `AP-XXXX`.",
+  "QFAI-BPAP-008": "AP IDs are unique across every AP rule file.",
+  "QFAI-BPAP-009": "Every AP entry gives each of its required fields a non-empty scalar value.",
+  "QFAI-BPAP-010": "Every AP entry declares a `detection_method` from the supported set.",
+  "QFAI-BPAP-011": "Every BP/AP entry declares a `severity` from the supported set.",
+  "QFAI-BPAP-012": "Every BP/AP entry declares a `platform` from the supported set.",
+  // The layered spec ladder: US->CAP, AC->US, BR->AC, EX->AC|BR, TC->EX. Each
+  // rung raises an even code when the `Parent` is absent and the odd one above
+  // it when the `Parent` is there but names nothing the level above defines —
+  // the same two states at five different heights.
+  "QFAI-ORPHAN-100": "Every US declares a `Parent` naming the capability it delivers.",
+  "QFAI-ORPHAN-101": "Every US `Parent` names a `CAP-XXXX` the shared capability policy defines.",
+  "QFAI-ORPHAN-102": "Every AC declares a `Parent` naming the user story it refines.",
+  "QFAI-ORPHAN-103": "Every AC `Parent` names a `US-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-104": "Every BR declares a `Parent` naming the acceptance criterion it constrains.",
+  "QFAI-ORPHAN-105": "Every BR `Parent` names an `AC-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-106":
+    "Every EX scenario carries a `Parent` comment naming the criterion or rule it illustrates.",
+  "QFAI-ORPHAN-107": "Every EX `Parent` names an `AC-XXXX` or `BR-XXXX` the same spec defines.",
+  "QFAI-ORPHAN-108": "Every TC declares a `Parent` naming the example it executes.",
+  "QFAI-ORPHAN-109": "Every TC `Parent` names an `EX-XXXX` the same spec defines.",
+  // `paths.skillsDir` is configurable and the diff is taken against whatever it
+  // resolves to, so the expected state names the tree by role. The directory
+  // actually compared is on the finding's `target:` line.
+  "QFAI-SKILLS-001":
+    "The project's assistant skills directory matches the skill assets shipped by the installed QFAI version.",
+  "D-SAAS-PACKAGE-ATTESTATION-MISSING":
+    "The saas-package profile finds a design-system attestation at its configured path.",
+  "D-SAAS-PACKAGE-HANDOFF-SCHEMA":
+    "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
+  "QFAI-DRIFT-001":
+    "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
 };
+
+/**
+ * Human-readable remediation per issue code, for codes whose emitters cannot
+ * say more at the call site than the message already does. An emitter that
+ * passes `suggested_action` always wins over this catalog: it knows the concrete
+ * values that failed the check.
+ */
+export const ISSUE_FIX_BY_CODE: Record<string, string> = {
+  "QFAI-BPAP-001":
+    "Restore read access to the file, or delete it if it is no longer part of the rule set.",
+  "QFAI-BPAP-002": "Correct the YAML syntax the parse error points at, then rerun validate.",
+  // QFAI-BPAP-001/002/003 fire on both `best-practices*.yaml` and
+  // `anti-patterns*.yaml`, so the example ID has to stay neutral: spelling
+  // `BP-0001` here would walk an anti-pattern author straight into
+  // QFAI-BPAP-007, which demands the `AP-XXXX` form.
+  "QFAI-BPAP-003":
+    "Rewrite the file as a top-level YAML sequence of entries (`- id: BP-0001` in a best-practices file, `- id: AP-0001` in an anti-patterns file); a mapping at the root is not a rule set.",
+  "QFAI-BPAP-004": "Rename the entry's `id` to `BP-` followed by four digits, e.g. `BP-0001`.",
+  "QFAI-BPAP-005":
+    "Give one of the colliding entries a fresh BP ID, or merge them if they state the same practice.",
+  // Both codes fire on a present-but-empty value as well as on an absent key:
+  // the check reads `toSafeString(value).trim()`, and a `description: []` or a
+  // `detection_method: {}` reduces to the empty string. "Add the missing field"
+  // is unusable on that path — the key is already there, and adding a second
+  // one of the same name is a YAML duplicate rather than a repair.
+  "QFAI-BPAP-006":
+    "Give the BP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the practice is no longer needed.",
+  "QFAI-BPAP-007": "Rename the entry's `id` to `AP-` followed by four digits, e.g. `AP-0001`.",
+  "QFAI-BPAP-008":
+    "Give one of the colliding entries a fresh AP ID, or merge them if they state the same anti-pattern.",
+  "QFAI-BPAP-009":
+    "Give the AP entry a non-empty scalar for the field the message names: add the key when it is absent, and overwrite the value in place when the key is present but empty or written as a list or mapping. Drop the entry instead if the anti-pattern is no longer needed.",
+  "QFAI-BPAP-010": "Set `detection_method` to one of the values the message lists.",
+  "QFAI-BPAP-011": "Set `severity` to one of the values the message lists.",
+  "QFAI-BPAP-012": "Set `platform` to one of the values the message lists.",
+  // The orphan-prohibition emitter passes no `suggested_action` on any path, so
+  // every rung of the ladder depends on this catalog for its `fix:` line. The
+  // even codes are repaired by writing a `Parent`, the odd ones by pointing an
+  // existing `Parent` at something the level above actually defines.
+  "QFAI-ORPHAN-100":
+    "Add a `Parent: CAP-XXXX` line to the user story, naming the capability it delivers; register that capability in the shared capability policy first if it is not there yet.",
+  "QFAI-ORPHAN-101":
+    "Point the user story's `Parent` at a capability the shared policy defines — correct the reference, or add the capability there.",
+  "QFAI-ORPHAN-102":
+    "Add a `Parent: US-XXXX` line to the acceptance criterion, naming the user story it refines.",
+  "QFAI-ORPHAN-103":
+    "Point the criterion's `Parent` at a user story the same spec defines — correct the reference, or add the story.",
+  "QFAI-ORPHAN-104":
+    "Add a `Parent: AC-XXXX` line to the business rule, naming the criterion it constrains.",
+  "QFAI-ORPHAN-105":
+    "Point the rule's `Parent` at a criterion the same spec defines — correct the reference, or add the criterion.",
+  "QFAI-ORPHAN-106":
+    "Add a `Parent:` comment to the scenario, naming the criterion (`AC-XXXX`) or rule (`BR-XXXX`) it illustrates.",
+  "QFAI-ORPHAN-107":
+    "Point the scenario's `Parent` at a criterion or rule the same spec defines — correct the reference, or add the criterion or rule.",
+  "QFAI-ORPHAN-108":
+    "Add a `Parent: EX-XXXX` line to the test case, naming the example it executes.",
+  "QFAI-ORPHAN-109":
+    "Point the test case's `Parent` at an example the same spec defines — correct the reference, or add the example.",
+  // Only the mirror-only rejection paths pass a `suggested_action`. The rest —
+  // a missing `visual.*` block or key, a legacy `checklist.*` key, missing
+  // component guidance, a mirror value that diverges from DESIGN.md, and a
+  // mirror key DESIGN.md never authored — all fall through to this entry, so it
+  // has to name every repair, not just the additive one.
+  "QFAI-DCON-005":
+    "design-system.yaml is a verbatim copy of DESIGN.md, so repair the entry the message names in whichever direction it is off: add it when it is missing (the `visual.*` block or key, the legacy `checklist.*` key, or the component-guidance block), copy DESIGN.md's value over it when the two diverge, and delete it when DESIGN.md does not author it. Then refreeze the lock and rerun validate.",
+  // The browser-QA bundle checks are schema assertions raised by a local
+  // `makeIssue` helper that has no `suggested_action` parameter, so every one of
+  // their call sites depends on this catalog for its `fix:` line.
+  "QFAI-PROT-273":
+    "Add the `browserQa` block the message names to the browser-QA bundle, with `executed` a boolean and `status` one of completed|skipped|failed.",
+  "QFAI-PROT-274":
+    "Make `browserQa.executed` and `browserQa.status` agree: `executed=true` pairs with `status=completed`, and any other status pairs with `executed=false`.",
+  "QFAI-PROT-275":
+    "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
+  "QFAI-PROT-276":
+    "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
+};
+
+/** Printed as `expected` when a code has no catalog entry. */
+export const UNCATALOGUED_EXPECTED = "Rule compliance";
+
+/** Printed as `fix` when a code has neither a `suggested_action` nor a catalog entry. */
+export const UNCATALOGUED_FIX = "Follow the expected rule and rerun validate.";
 
 function resolveIssueTarget(issue: Issue): string {
   if (issue.file && issue.refs && issue.refs.length > 0) {
@@ -982,13 +1117,18 @@ function resolveIssueTarget(issue: Issue): string {
  * Human-readable "expected state" a report prints for an issue code. Exported so
  * the catalog entry for a code can be asserted against the single definition the
  * emitting validator uses, instead of drifting from it silently.
+ *
+ * `issue.rule` is deliberately not a fallback: it holds an internal rule token
+ * (`bpApDb.duplicateId`), and printing it in the `expected` field made a missing
+ * catalog entry look like a value rather than an omission.
  */
 export function resolveIssueExpected(issue: Issue): string {
-  return ISSUE_EXPECTED_BY_CODE[issue.code] ?? issue.rule ?? "Rule compliance";
+  return ISSUE_EXPECTED_BY_CODE[issue.code] ?? UNCATALOGUED_EXPECTED;
 }
 
-function resolveIssueFix(issue: Issue): string {
-  return issue.suggested_action ?? "Follow the expected rule and rerun validate.";
+/** Remediation a report prints for an issue: emitter first, then catalog. */
+export function resolveIssueFix(issue: Issue): string {
+  return issue.suggested_action ?? ISSUE_FIX_BY_CODE[issue.code] ?? UNCATALOGUED_FIX;
 }
 
 function emitTextField(label: string, value: string): void {
