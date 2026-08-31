@@ -4,8 +4,44 @@
 
 ## [Unreleased]
 
+### Fixed
+
+- **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
+  The managed `.gitignore` block now re-includes
+  `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
+  required by gate item 10 are committed instead of existing only on the
+  machine that ran the test. `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` (error) also
+  rejects an `evidence at` pointer when it names the wrong layer-owned file or
+  TDD item, or when the referenced file or Markdown heading is absent.
+
+## [1.10.1] - 2026-08-31
+
 ### Added
 
+- **`qfai init` ships a layered CI workflow.** `.github/workflows/qfai-tests.yml` is new in the
+  template tree: layer-separated test lanes, a `detect` job that classifies the changed-path list so
+  four lanes run only when they need to, and a `ci-pass` verdict derived by iterating
+  `${{ toJSON(needs) }}` rather than by a hand-written condition over job names — so adding a lane
+  cannot leave the verdict silently agreeing. The diff runs with `--no-renames`, because rename
+  detection reports only a move's destination and `git mv src/x.ts docs/x.md` otherwise skipped every
+  test lane. `qfai-validate.yml` is reworked alongside it; the two are the only workflows the template
+  root ships, and both are pinned by content in this repository's own tests.
+- **`qfai doctor` gains a `workflows.integrity` check.** It compares each shipped workflow present in
+  an adopter's `.github/workflows/` against the copy in the installed package and reports `ok`,
+  `modified`, or `skipped_unresolved` when the packaged copy cannot be located. `modified` names the
+  files. The check distinguishes "every recorded shipped workflow was removed by this repository, so
+  there is nothing to compare" from "nothing was ever installed", because the two want different
+  advice.
+- **`qfai init` records what it installed, in `.qfai/install-provenance.json`.** Per shipped workflow:
+  the sha256 of exactly the bytes written, the package version that wrote them, and when. That record
+  is what lets a later `init` tell an adopter's own file from one QFAI installed — the states are
+  `absent`, `adopter-owned`, `installed`, `modified` and `declined` — so an edited file is left alone
+  and a retired one is pruned only when the record says QFAI wrote it and the digest still matches.
+  A file QFAI never installed is never deleted.
+- **A reference on credential reuse across parallel workers**, shipped under the `qfai-atdd` skill:
+  acceptance tests that need an authenticated actor pay for the sign-in once per worker rather than
+  once per test. It is prose guidance and adds no validator, finding code, test layer or annotation
+  token.
 - **`QFAI-LINK-001` (error) — the assistant integration surface is checked.**
   `qfai init` builds `.claude/skills`, `.agents/skills`, `.codex/skills`,
   `.github/skills`, `.claude/agents` and `.github/agents` entirely out of
@@ -46,6 +82,36 @@
 
 ### Changed
 
+- **A validation issue can now carry the CI job its producer reported (`job`).** The
+  reviewer-justification gate ingests the workflow-set lint lanes' findings, and those lanes
+  report a site as `file` + `job` + `rule`. The gate previously overwrote `file` with the path
+  of the artifact the finding arrived in and `rule` with a constant naming its own branch, and
+  the job had no field to survive in at all — so a JSON consumer of `qfai validate` was told
+  which report file to open and nothing about the workflow that was wrong. The lane's `file`,
+  `job` and `rule` now pass through verbatim, the producer's own `detail` is reproduced in the
+  message, and the artifact moves to `relatedFiles`, where evidence for a finding belongs.
+  `job` is optional and set only when a producer reported one, so no existing issue changes
+  shape.
+- **`TDDLIST_STALE_STATUS` stops firing on a selector that only shares its last word.** The
+  rule reads a ledger row whose `Status` is `todo` and warns when the named test appears to exist
+  anyway. It resolved the selector through a helper that falls back to the selector last
+  identifier — right for that helper other caller, where a match is evidence FOR a test presence and
+  leniency costs a warning rather than swallowing one, and wrong here, where the direction inverts:
+  `header` appears in almost any test file, so rows whose test does not exist were reported as
+  stale. The stale check now requires the selector itself, segment by segment for a `::`-style
+  selector so a pytest row still resolves. Adopters will see fewer of these warnings; a row whose test
+  exists under a slightly reworded title is no longer reported, which is a false negative replacing a
+  false positive on a `warning` with no error-level consequence.
+- **A review round that produced no responses can now be written down.** `summary.json`'s
+  `reviewers` array may be empty, and `QFAI-REVIEW-005` ('no `Rxx_*.md`') stands down when it
+  is. Previously a round whose reviewers died before writing anything had no accurate
+  representation: the schema rejected the empty array, so the true record was indistinguishable
+  from a pack somebody forgot to seal. The summary must still be present and schema-valid — that
+  is what makes the empty array a statement rather than an absence — and the check runs both
+  ways: a summary declaring `reviewers: []` with report files beside it is now an error too, and a
+  malformed summary does not excuse a missing report set. Adopters upgrading will see one fewer
+  blocking finding on abandoned packs, and one new one on packs whose summary contradicts their
+  contents.
 - **`qfai report` counts the test cases `qfai validate` gates.** The gate reads
   every `TC-ID` table plus the heading form (`## TC-0001` + `- Level: L1`); the
   report built its own set from the first table alone and skipped the spec
@@ -523,13 +589,6 @@ report` as well, which was computing `done: 1 / open: 0` from the same
 
 ### Fixed
 
-- **Per-item TDD evidence survives `qfai init` and is checked on a fresh clone.**
-  The managed `.gitignore` block now re-includes
-  `.qfai/evidence/implement-*.md` and `.qfai/evidence/atdd-*.md`, so the files
-  required by gate item 10 are committed instead of existing only on the
-  machine that ran the test. `TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED` (error) also
-  rejects an `evidence at` pointer when it names the wrong layer-owned file or
-  TDD item, or when the referenced file or Markdown heading is absent.
 - **The short-circuit is decided per tree, because the readers differ.** The
   skills tree is `readdir`ed, so a regular file where the directory belongs
   raises `ENOTDIR` and takes the run with it; the agents tree is not — each
