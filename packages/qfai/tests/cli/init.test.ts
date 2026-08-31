@@ -1,10 +1,15 @@
 import {
   access,
+  chmod,
+  chown,
   lstat,
   mkdtemp,
   mkdir,
   readFile,
   readlink,
+  rename,
+  rm,
+  stat,
   writeFile,
   symlink,
 } from "node:fs/promises";
@@ -15,6 +20,7 @@ import { promisify } from "node:util";
 
 import fg from "fast-glob";
 import { describe, expect, it } from "vitest";
+import { isMap, isSeq, parseDocument } from "yaml";
 
 import { getInitAssetsDir } from "../../src/shared/assets.js";
 import { runInit } from "../../src/cli/commands/init.js";
@@ -39,6 +45,34 @@ const REQUIRED_SKILLS = [
 
 const execFile = promisify(execFileCb);
 
+/**
+ * A wrapper body shaped like the ones qfai used to ship: the delegation line
+ * pointing at the canonical doc of the same stem is what marks the file as
+ * init's own, so prune keys on it rather than on the basename.
+ */
+function legacyWrapperBody(stem: string): string {
+  return [
+    "---",
+    `description: "QFAI: ${stem}"`,
+    "---",
+    "Follow the canonical QFAI prompt exactly:",
+    `@.qfai/assistant/prompts/${stem}.md`,
+    "",
+  ].join("\n");
+}
+
+/** The bullet form `.github/prompts/*.prompt.md` shipped with, not the `@` one. */
+function legacyPromptWrapperBody(stem: string): string {
+  return [
+    "---",
+    `description: "QFAI: ${stem}"`,
+    "---",
+    "1) Open and follow the canonical QFAI prompt:",
+    `- .qfai/assistant/prompts/${stem}.md`,
+    "",
+  ].join("\n");
+}
+
 async function expectSymlink(linkPath: string): Promise<void> {
   const stat = await lstat(linkPath);
   expect(stat.isSymbolicLink()).toBe(true);
@@ -56,6 +90,34 @@ async function expectSymlinkTarget(linkPath: string, expectedFragment: string): 
   const target = await readlink(linkPath);
   const normalized = target.replace(/\\/g, "/");
   expect(normalized).toContain(expectedFragment);
+}
+
+/** The `qfai-atdd` phases sequence of an `agent-routing.yml` document. */
+function atddPhases(doc: ReturnType<typeof parseDocument>) {
+  const routing = doc.get("routing");
+  if (!isSeq(routing)) throw new Error("agent-routing.yml has no routing sequence");
+  const atdd = routing.items.find((item) => isMap(item) && item.get("skill") === "qfai-atdd");
+  if (!isMap(atdd)) throw new Error("agent-routing.yml has no qfai-atdd entry");
+  const phases = atdd.get("phases");
+  if (!isSeq(phases)) throw new Error("qfai-atdd has no phases");
+  return phases;
+}
+
+/** Roll a routing table back to a package that had no ATDD `red` gate. */
+function withoutAtddRedPhase(source: string): string {
+  const doc = parseDocument(source);
+  const phases = atddPhases(doc);
+  phases.items = phases.items.filter((item) => !(isMap(item) && item.get("id") === "red"));
+  return doc.toString({ lineWidth: 0 });
+}
+
+function atddPhaseIds(source: string): string[] {
+  const ids: string[] = [];
+  for (const item of atddPhases(parseDocument(source)).items) {
+    const id = isMap(item) ? item.get("id") : null;
+    if (typeof id === "string") ids.push(id);
+  }
+  return ids;
 }
 
 // This suite exercises end-to-end init flows with extensive filesystem I/O
@@ -424,6 +486,40 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps every existing root asset across --force, not just DESIGN.md", async () => {
+    // The root assets are create-only in full: a `force: false` literal is
+    // what saves every one of them, so DESIGN.md is not singled out. The
+    // shipped workflow reaches disk through its own create-only copy rather
+    // than the root-tree one, but by the same literal and the same rule —
+    // the ownership contract that calls it load-bearing is stating, for the
+    // workflow, what holds for the whole root surface. Lock all three
+    // shipped root files so a future widening of --force cannot quietly
+    // overwrite a project's authored DESIGN.md, its `qfai-configure`-tuned
+    // qfai.config.yaml, or its CI workflow.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const rootAssets = [
+        "DESIGN.md",
+        "qfai.config.yaml",
+        path.join(".github", "workflows", "qfai-validate.yml"),
+      ];
+      for (const relative of rootAssets) {
+        await writeFile(path.join(root, relative), `authored ${relative}\n`, "utf-8");
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      for (const relative of rootAssets) {
+        const after = await readFile(path.join(root, relative), "utf-8");
+        expect(after).toBe(`authored ${relative}\n`);
+      }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("overwrites skills only when --force is provided", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
@@ -507,18 +603,528 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       await mkdir(path.dirname(deprecatedClaude), { recursive: true });
       await mkdir(path.dirname(deprecatedGithub), { recursive: true });
-      await writeFile(deprecatedClaude, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedGithub, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedCanonicalClaude, "legacy wrapper\n", "utf-8");
-      await writeFile(deprecatedCanonicalGithub, "legacy wrapper\n", "utf-8");
+      await writeFile(deprecatedClaude, legacyWrapperBody("qfai-spec"), "utf-8");
+      await writeFile(deprecatedGithub, legacyPromptWrapperBody("qfai-spec"), "utf-8");
+      await writeFile(deprecatedCanonicalClaude, legacyWrapperBody("qfai-configure"), "utf-8");
+      await writeFile(
+        deprecatedCanonicalGithub,
+        legacyPromptWrapperBody("qfai-configure"),
+        "utf-8",
+      );
 
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
 
-      // ALL commands/prompts qfai-*.md files should be removed
+      // Every wrapper basename qfai itself once shipped there should be removed
       await expect(access(deprecatedClaude)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedGithub)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedCanonicalClaude)).rejects.toMatchObject({ code: "ENOENT" });
       await expect(access(deprecatedCanonicalGithub)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps project-authored qfai-* commands, prompts and skills on --force", async () => {
+    // Ownership is what init wrote, not the `qfai-` prefix: nothing reserves
+    // that prefix (the shipped roster itself carries `web-research`), and init
+    // has not written to `.claude/commands/` or `.github/prompts/` since the
+    // symlink recut. `qfai-release.md` is the obvious name for a project slash
+    // command that drives qfai, and `--force` deleted it — silently, under the
+    // label "removed legacy files".
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-release.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-release.prompt.md");
+      const skillDoc = path.join(root, ".claude", "skills", "qfai-deploy", "SKILL.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await mkdir(path.dirname(skillDoc), { recursive: true });
+      await writeFile(command, "project command\n", "utf-8");
+      await writeFile(prompt, "project prompt\n", "utf-8");
+      await writeFile(skillDoc, "project skill\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe("project command\n");
+      expect(await readFile(prompt, "utf-8")).toBe("project prompt\n");
+      expect(await readFile(skillDoc, "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project's own command at a basename qfai once shipped", async () => {
+    // A stem qfai used in the past says nothing about who owns the file today:
+    // the project may have written its own `qfai-spec.md`, or replaced the old
+    // wrapper with content of its own. Only the delegation line to the
+    // canonical doc of the same stem proves init wrote it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-spec.prompt.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await writeFile(command, "our own spec workflow\n", "utf-8");
+      await writeFile(prompt, "our own spec prompt\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe("our own spec workflow\n");
+      expect(await readFile(prompt, "utf-8")).toBe("our own spec prompt\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project's own skill symlink into its own canonical skill", async () => {
+    // A project may author `.qfai/assistant/skills/my-skill/` and publish it by
+    // hand — `integrationSurface.ts` allows exactly that. The link target is in
+    // the canonical tree, so target alone cannot be the ownership test.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
+      const link = path.join(root, ".claude", "skills", "my-skill");
+      await symlink(path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"), link, "dir");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expectSymlink(link);
+      expect(await readFile(path.join(link, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("still removes a skill symlink pointing at a skill that is no longer shipped", async () => {
+    // `qfai-spec` was a shipped skill and is not one now, so a link init left
+    // behind for it is still pruned — the cleanup the prefix test provided.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".claude", "skills", "qfai-spec");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-spec"),
+        stale,
+        "dir",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project's files beside a retired directory wrapper it prunes", async () => {
+    // Ownership was proved for `SKILL.md` and nothing else. A project that
+    // added notes or scripts to the same directory keeps them, and the
+    // directory survives with them — only an emptied shell is folded away.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".codex", "skills", "qfai-spec");
+      await mkdir(stale, { recursive: true });
+      await writeFile(
+        path.join(stale, "SKILL.md"),
+        "- .qfai/assistant/skills/qfai-spec/SKILL.md\n",
+        "utf-8",
+      );
+      await writeFile(path.join(stale, "our-notes.md"), "our notes\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(path.join(stale, "SKILL.md"))).rejects.toMatchObject({ code: "ENOENT" });
+      expect(await readFile(path.join(stale, "our-notes.md"), "utf-8")).toBe("our notes\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project alias symlink that borrows a retired skill name", async () => {
+    // init always links `<id> -> .qfai/assistant/skills/<id>`. A link at a
+    // retired name pointing at some other canonical entry is an alias the
+    // project made, and "the target is somewhere in the tree" deleted it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const canonical = path.join(root, ".qfai", "assistant", "skills", "my-skill");
+      await mkdir(canonical, { recursive: true });
+      await writeFile(path.join(canonical, "SKILL.md"), "project skill\n", "utf-8");
+      const alias = path.join(root, ".claude", "skills", "qfai-spec");
+      await symlink(
+        path.join("..", "..", ".qfai", "assistant", "skills", "my-skill"),
+        alias,
+        "dir",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expectSymlink(alias);
+      expect(await readFile(path.join(alias, "SKILL.md"), "utf-8")).toBe("project skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command whose fence nests a shorter one", async () => {
+    // CommonMark closes a fence only on the same character, at least as long.
+    // Flipping on any fence line read the inner ``` as the close, and the
+    // quoted delegation after it counted as the real thing.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "How the retired wrapper was documented:",
+        "",
+        "````md",
+        "```",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "````",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command whose fence holds a line carrying an info string", async () => {
+    // CommonMark closes a fence only on a line whose marker run is followed by
+    // whitespace alone; a run with text after it is content, not a close.
+    // Closing on the character and the length alone ended the block at the
+    // inner "```js", and the quoted delegation below it counted as ownership.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper was written like this:",
+        "",
+        "```md",
+        "```js",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes a wrapper whose fence is closed by a marker run with trailing spaces", async () => {
+    // The other half of the same rule: whitespace after the run is allowed, so
+    // the block really does end there and the delegation that follows is at
+    // top level. Demanding a bare marker run would keep stale wrappers.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await writeFile(
+        command,
+        [
+          "```text",
+          "an example the project pasted above the wrapper body",
+          "```  ",
+          "",
+          "@.qfai/assistant/prompts/qfai-spec.md",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(command)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command carrying a delegation in the prompt wrapper's form", async () => {
+    // `.claude/commands/` only ever got the `@<path>` form; the `- <path>`
+    // bullet is what the prompt and skill wrappers use. Sharing one set of
+    // forms across surfaces accepted a shape qfai never wrote there, so a
+    // project's own reference list was evidence against it.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = "Reading list:\n\n- .qfai/assistant/skills/qfai-spec/SKILL.md\n";
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command that quotes the delegation line inside a code fence", async () => {
+    // A fence is a quotation whether or not it is indented. qfai never puts
+    // the delegation inside one, so a doc that reproduces the retired
+    // wrapper's body is not the wrapper.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper used to say:",
+        "",
+        "```md",
+        "@.qfai/assistant/prompts/qfai-spec.md",
+        "```",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the pre-symlink directory wrapper of a retired skill", async () => {
+    // Releases before the symlink recut copied `<integration>/<id>/SKILL.md`
+    // as a real directory. Pruning only symlinks left those behind on an
+    // upgrade straight from one of those releases: the name is not in the
+    // roster, so `ensureSymlink --force` never reaches it either, and the
+    // assistant went on loading a retired instruction after `--force`.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".codex", "skills", "qfai-spec");
+      await mkdir(stale, { recursive: true });
+      await writeFile(
+        path.join(stale, "SKILL.md"),
+        [
+          "---",
+          'name: "qfai-spec"',
+          "---",
+          "",
+          "This skill is a thin wrapper that forwards to the canonical QFAI skill in this repository:",
+          "",
+          "- .qfai/assistant/skills/qfai-spec/SKILL.md",
+          "",
+        ].join("\n"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project's own skill directory at a retired basename", async () => {
+    // The retired name alone does not say who wrote the directory. Only the
+    // delegation line to the canonical doc of the same id does, and a
+    // directory a project authored for itself carries none.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const own = path.join(root, ".claude", "skills", "qfai-spec");
+      await mkdir(own, { recursive: true });
+      await writeFile(path.join(own, "SKILL.md"), "our own spec skill\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(path.join(own, "SKILL.md"), "utf-8")).toBe("our own spec skill\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the flattened form of a retired skill symlink", async () => {
+    // A `core.symlinks = false` checkout leaves the link as a regular file
+    // holding the target string. Treating every regular file as not-ours left
+    // the retired wrapper in place on exactly those checkouts, where the id is
+    // out of the roster so `createSkillSymlinks` never reaches it either.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const stale = path.join(root, ".claude", "skills", "qfai-spec");
+      await writeFile(
+        stale,
+        path.join("..", "..", ".qfai", "assistant", "skills", "qfai-spec"),
+        "utf-8",
+      );
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(stale)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a hand-written file at a retired basename that spells the target its own way", async () => {
+    // The flattened form is byte-for-byte what git expands, and nothing else.
+    // A file somebody wrote by hand — a trailing newline from `echo`, a `./`
+    // git never emits — is not that, and resolving the content instead of
+    // comparing it would delete both.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const echoed = path.join(root, ".claude", "skills", "qfai-spec");
+      const echoedBody = "../../.qfai/assistant/skills/qfai-spec\n";
+      await writeFile(echoed, echoedBody, "utf-8");
+
+      const respelt = path.join(root, ".agents", "skills", "qfai-spec");
+      const respeltBody = "../.././.qfai/assistant/skills/qfai-spec";
+      await mkdir(path.dirname(respelt), { recursive: true });
+      await writeFile(respelt, respeltBody, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(echoed, "utf-8")).toBe(echoedBody);
+      expect(await readFile(respelt, "utf-8")).toBe(respeltBody);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("removes the command and prompt wrappers of the retired split SDD skills", async () => {
+    // `qfai-sdd-planning` / `qfai-sdd-refinement` were in the roster while the
+    // generator still wrote `.claude/commands/` and `.github/prompts/`, so
+    // their wrappers exist in the wild — and were left behind by a stem set
+    // recovered only from the assets still in the tree.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-sdd-planning.md");
+      const prompt = path.join(root, ".github", "prompts", "qfai-sdd-refinement.prompt.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      await mkdir(path.dirname(prompt), { recursive: true });
+      await writeFile(command, "@.qfai/assistant/prompts/qfai-sdd-planning.md\n", "utf-8");
+      await writeFile(prompt, "- .qfai/assistant/prompts/qfai-sdd-refinement.md\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      await expect(lstat(command)).rejects.toMatchObject({ code: "ENOENT" });
+      await expect(lstat(prompt)).rejects.toMatchObject({ code: "ENOENT" });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command that only mentions the canonical path in prose", async () => {
+    // Ownership is the delegation line, which is the whole line in every
+    // generation qfai shipped. Accepting the path anywhere in the body let a
+    // project's own `qfai-spec.md` be deleted for explaining — or forbidding —
+    // the canonical document.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body =
+        "Our spec flow. Do NOT read .qfai/assistant/prompts/qfai-spec.md — it is gone.\n";
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps a project command that quotes the delegation line in an indented code block", async () => {
+    // In every generation qfai shipped, the delegation starts at column 0.
+    // Comparing trimmed lines made an indented markdown code sample — the
+    // natural way for a project to document what the old wrapper contained —
+    // read as the wrapper itself.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      const body = [
+        "Our spec flow. The retired QFAI wrapper used to say:",
+        "",
+        "    @.qfai/assistant/prompts/qfai-spec.md",
+        "",
+        "We do not delegate there any more.",
+        "",
+      ].join("\n");
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("keeps an oversized file at a legacy wrapper basename instead of reading it whole", async () => {
+    // Deciding whether to delete is not a reason to pull an arbitrary file
+    // into memory: a large log left at `qfai-spec.md` used to be read whole as
+    // one UTF-8 string, and init died before it wrote anything. Past the
+    // ceiling the ownership question is simply unanswered, so the file stays.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const command = path.join(root, ".claude", "commands", "qfai-spec.md");
+      await mkdir(path.dirname(command), { recursive: true });
+      // Genuine delegation line, but far past the ceiling the evidence read
+      // uses — the size is what decides, not the presence of the marker.
+      const body = `@.qfai/assistant/prompts/qfai-spec.md\n${"x".repeat(8192)}\n`;
+      await writeFile(command, body, "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(command, "utf-8")).toBe(body);
     } finally {
       await removeTempTree(root);
     }
@@ -646,6 +1252,335 @@ describe("qfai init", { timeout: 60000 }, () => {
       await runInit({ dir: root, force: true, dryRun: false, yes: true });
       expect(await readFile(specPath, "utf-8")).toBe(customizedSpec);
       expect(await readFile(uiContractPath, "utf-8")).toBe(customizedContract);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // A project that installed an older package keeps its own agent-routing.yml
+  // (manifest/ is user configuration and --force never overwrites it), so a
+  // phase added to the shipped routing used to reach new projects only: the
+  // regenerated skills routed to a phase the project's table did not have.
+  it("--force merges a missing routing phase in without rewriting the project's taxonomy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Roll this project back to a table without the ATDD `red` phase, and
+      // give it a taxonomy of its own: an extra agent in `coverage`, and one
+      // shipped-required agent deliberately dropped from it.
+      const doc = parseDocument(withoutAtddRedPhase(await readFile(routingPath, "utf-8")));
+      const coverage = atddPhases(doc).items.find(
+        (item) => isMap(item) && item.get("id") === "coverage",
+      );
+      if (!isMap(coverage)) throw new Error("qfai-atdd has no coverage phase");
+      coverage.set("mandatory_agents", ["house-engineer"]);
+      await writeFile(routingPath, doc.toString({ lineWidth: 0 }), "utf-8");
+      // The merge replaces the file through a temp file and a rename, which
+      // makes a new inode: the mode has to be carried over, or a manifest kept
+      // at 0600 comes back readable by everyone.
+      if (process.platform !== "win32") await chmod(routingPath, 0o600);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      const merged = await readFile(routingPath, "utf-8");
+      const atddSection = merged.slice(merged.indexOf("- skill: qfai-atdd"));
+      // The phase is back, ahead of `implementation` as shipped.
+      expect(atddSection.indexOf("- id: red")).toBeGreaterThan(-1);
+      expect(atddSection.indexOf("- id: red")).toBeLessThan(
+        atddSection.indexOf("- id: implementation"),
+      );
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      // The project's own edit is untouched, and its dropped required agent is
+      // reported rather than restored.
+      expect(merged).toContain("house-engineer");
+      expect(captured).toContain("W-ROUTING-AGENT-DIVERGED");
+      expect(captured).toContain("test-design-analyst");
+      if (process.platform !== "win32") {
+        expect((await stat(routingPath)).mode & 0o777).toBe(0o600);
+      }
+      // No half-written temp file is left behind in the manifest layer.
+      const manifestEntries = await fg("*", {
+        cwd: path.dirname(routingPath),
+        dot: true,
+        onlyFiles: true,
+      });
+      expect(manifestEntries.filter((entry) => entry.endsWith(".tmp"))).toEqual([]);
+
+      // Idempotent: a second --force has nothing left to add.
+      const second = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+      expect(second).not.toContain("I-ROUTING-PHASE-MERGED");
+      expect(await readFile(routingPath, "utf-8")).toBe(merged);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // `writeFile` resolves a symlink and writes through it, so a project whose
+  // `agent-routing.yml` is a link into another tree would have had that other
+  // file rewritten by `qfai init`. `copyTemplateTree` already `lstat`s its
+  // destinations for this; the merge's direct write has to as well.
+  it("--force refuses to merge through a symlinked agent-routing.yml", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-link-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // A valid, writable routing table that lives outside the project and is
+      // missing the ATDD `red` phase — exactly what the merge wants to add.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const escapee = path.join(outside, "agent-routing.yml");
+      await writeFile(escapee, stale, "utf-8");
+      await rm(routingPath, { force: true });
+      try {
+        await symlink(escapee, routingPath, "file");
+      } catch {
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written through the link.
+      expect(await readFile(escapee, "utf-8")).toBe(stale);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // `Buffer.toString("utf-8")` does not fail on bytes that are not UTF-8: it
+  // substitutes U+FFFD for each of them. The YAML still parses, so without a
+  // strict decode the merge would rename the substituted text over the user's
+  // manifest and those bytes would be gone for good.
+  it("--force skips a routing manifest that is not valid UTF-8", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-utf8-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+
+      // Missing the ATDD `red` phase — so there is something to add — with a
+      // comment carrying a byte sequence no UTF-8 decoder can accept.
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      const bytes = Buffer.concat([
+        Buffer.from("# owner: ", "utf-8"),
+        Buffer.from([0xff, 0xfe]),
+        Buffer.from(`\n${stale}`, "utf-8"),
+      ]);
+      await writeFile(routingPath, bytes);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Byte for byte what the project had: nothing was substituted and
+      // written back.
+      expect(await readFile(routingPath)).toEqual(bytes);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // A manifest `init` cannot open is the same class of problem as one it cannot
+  // parse: the contract is a note and a skipped merge. Letting the read error
+  // out of the merge aborted the whole `--force` run over an optional step.
+  it("--force reports an unreadable routing manifest instead of failing init", async () => {
+    // Needs an unreadable file, which POSIX modes give and root ignores.
+    if (process.platform === "win32" || process.getuid?.() === 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-eacces-"));
+    const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const stale = withoutAtddRedPhase(await readFile(routingPath, "utf-8"));
+      await writeFile(routingPath, stale, "utf-8");
+      await chmod(routingPath, 0o000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // The rest of the run still happened rather than being thrown away.
+      await access(path.join(root, ".qfai", "assistant", "skills", "qfai-atdd", "SKILL.md"));
+      await chmod(routingPath, 0o600);
+      expect(await readFile(routingPath, "utf-8")).toBe(stale);
+    } finally {
+      await chmod(routingPath, 0o600).catch(() => undefined);
+      await removeTempTree(root);
+    }
+  });
+
+  // The replacement is a new inode created by whoever runs `init`, so under
+  // `sudo qfai init --force` — or in any shared tree where the manifest belongs
+  // to somebody else — a silent rename hands the user's own file to root and
+  // leaves them unable to edit it through `qfai-configure`.
+  it("--force keeps the routing manifest's owner across the merge", async () => {
+    // Needs a process that may hand a file to another owner.
+    if (process.platform === "win32" || process.getuid?.() !== 0) return;
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-owner-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const routingPath = path.join(root, ".qfai", "assistant", "manifest", "agent-routing.yml");
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      await chown(routingPath, 1000, 1000);
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("I-ROUTING-PHASE-MERGED");
+      const after = await lstat(routingPath);
+      expect(after.uid).toBe(1000);
+      expect(after.gid).toBe(1000);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // `--force` regenerates `assistant/agents/**` but never the project's
+  // `agent-catalog.yml`, so a phase spliced in ahead of an agent the project
+  // removed would leave `qfai validate` failing (QFAI-AGENT-008) on a table
+  // that validated a moment earlier.
+  it("--force skips a routing phase the project's agent catalog cannot satisfy", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-catalog-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const catalogPath = path.join(manifestDir, "agent-catalog.yml");
+
+      await writeFile(
+        routingPath,
+        withoutAtddRedPhase(await readFile(routingPath, "utf-8")),
+        "utf-8",
+      );
+      // The supported removal path: the agent is gone from the catalog.
+      const catalog = parseDocument(await readFile(catalogPath, "utf-8"));
+      const agents = catalog.get("agents");
+      if (!isSeq(agents)) throw new Error("agent-catalog.yml has no agents sequence");
+      agents.items = agents.items.filter(
+        (item) => !(isMap(item) && item.get("id") === "qa-gatekeeper"),
+      );
+      await writeFile(catalogPath, catalog.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-AGENT-UNKNOWN");
+      expect(captured).toContain("qa-gatekeeper");
+      expect(atddPhaseIds(await readFile(routingPath, "utf-8"))).not.toContain("red");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // The merge runs after the create-only copy, but `--dry-run` copies nothing,
+  // so the manifest layer is legitimately absent there. An absent path is not
+  // an unsafe one: it is simply nothing to merge into, and warning about it
+  // would put a write-safety diagnostic on every `--force --dry-run`.
+  it("--force --dry-run reports no routing warning when there is no manifest yet", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dry-"));
+    try {
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: true, yes: true });
+      });
+
+      expect(captured).not.toContain("W-ROUTING");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // An `lstat` on the manifest — like `O_NOFOLLOW` — answers for the last path
+  // component only. A project whose whole `manifest/` directory is a link out
+  // of the tree has a perfectly ordinary file at the end of it, so both checks
+  // passed while every byte written still landed outside the project.
+  it("--force refuses to merge through a symlinked manifest directory", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-dirlink-"));
+    const outside = await mkdtemp(path.join(os.tmpdir(), "qfai-outside-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const escapee = path.join(outside, "manifest");
+
+      // Move the real manifest layer out of the project and link to it.
+      await rename(manifestDir, escapee);
+      try {
+        await symlink(escapee, manifestDir, "dir");
+      } catch {
+        await rename(escapee, manifestDir);
+        return; // No symlinks here (Windows without Developer Mode).
+      }
+      const escapedRouting = path.join(escapee, "agent-routing.yml");
+      const stale = withoutAtddRedPhase(await readFile(escapedRouting, "utf-8"));
+      await writeFile(escapedRouting, stale, "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-MANIFEST-UNREADABLE");
+      expect(captured).not.toContain("I-ROUTING-PHASE-MERGED");
+      // Nothing was written to the file outside the project.
+      expect(await readFile(escapedRouting, "utf-8")).toBe(stale);
+    } finally {
+      await removeTempTree(root);
+      await removeTempTree(outside);
+    }
+  });
+
+  // `review-profiles.yml` is excluded from `--force` exactly as the catalog is,
+  // so a skill entry shipped alongside a new profile would be appended whole
+  // into a project that has neither — leaving `review_profile:` naming a
+  // profile nothing declares when the reviewers for that skill are selected.
+  it("--force skips a routing entry whose review profile the project lacks", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-routing-profile-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      const routingPath = path.join(manifestDir, "agent-routing.yml");
+      const profilesPath = path.join(manifestDir, "review-profiles.yml");
+
+      // A project on an older package: no `qfai-prototyping` routing entry, and
+      // no `ui-bearing` profile for it to name either.
+      const routing = parseDocument(await readFile(routingPath, "utf-8"));
+      const entries = routing.get("routing");
+      if (!isSeq(entries)) throw new Error("agent-routing.yml has no routing sequence");
+      entries.items = entries.items.filter(
+        (item) => !(isMap(item) && item.get("skill") === "qfai-prototyping"),
+      );
+      await writeFile(routingPath, routing.toString({ lineWidth: 0 }), "utf-8");
+      const profiles = parseDocument(await readFile(profilesPath, "utf-8"));
+      const declared = profiles.get("profiles");
+      if (!isMap(declared)) throw new Error("review-profiles.yml has no profiles map");
+      declared.delete("ui-bearing");
+      await writeFile(profilesPath, profiles.toString({ lineWidth: 0 }), "utf-8");
+
+      const captured = await captureStdout(async () => {
+        await runInit({ dir: root, force: true, dryRun: false, yes: true });
+      });
+
+      expect(captured).toContain("W-ROUTING-PROFILE-UNKNOWN");
+      expect(captured).toContain("ui-bearing");
+      expect(await readFile(routingPath, "utf-8")).not.toContain("- skill: qfai-prototyping");
     } finally {
       await removeTempTree(root);
     }
@@ -1308,6 +2243,26 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // 出力先の開示。`--dir` の既定値は cwd なので、宛先を名指ししない出力では
+  // 誤ったディレクトリへの実行が正しい実行とバイト単位で同一になる。
+  it("names the destination directory before the work starts and in the report header", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-dest-"));
+    try {
+      const output = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      });
+      const dest = path.resolve(root);
+      const opening = `qfai init: dest=${dest}`;
+      const header = `qfai init: dry-run (dest=${dest})`;
+      expect(output).toContain(opening);
+      expect(output).toContain(header);
+      // 開示は処理開始前に出す — 中断・失敗した実行でも対象が残る。
+      expect(output.indexOf(opening)).toBeLessThan(output.indexOf(header));
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // TC-1.4.5 — init reports DESIGN.md as created on first run, skipped on second run
   it("reports DESIGN.md as created on first run and skipped on second run (TC-1.4.5)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));
@@ -1390,6 +2345,10 @@ describe("qfai init", { timeout: 60000 }, () => {
         expect(stat.isFile()).toBe(true);
         const body = await readFile(gitkeep, "utf-8");
         expect(body).toContain(`.qfai/assistant/${layer}/`);
+        // The seeded body lands in every consuming repo, so it must carry no
+        // QFAI-internal cross-spec change ID (`CHG-NNN`) — that ID resolves
+        // to nothing outside this repository's own `_policies/10_delta.md`.
+        expect(body).not.toMatch(/\bCHG-[0-9]+\b/);
       }
     } finally {
       await removeTempTree(root);
@@ -1435,6 +2394,102 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): re-init reports a stale steering seed
+  it("TC-0003-0022 (TDD-0022): re-init reports .qfai/steering/ seed drift instead of skipping silently", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022c-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // An untouched tree is already current: the seed files appear in the
+      // skipped list and must not draw a drift notice.
+      const cleanRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+      expect(cleanRun).not.toContain("differs from the seed this qfai release generates");
+
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      await writeFile(readmePath, "# my custom worklog notes\n", "utf-8");
+      await writeFile(templatePath, "---\nid: stale\n---\n", "utf-8");
+
+      const staleRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(staleRun).toContain(
+        ".qfai/steering/README.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toContain(
+        ".qfai/steering/_templates/entry.md differs from the seed this qfai release generates",
+      );
+      expect(staleRun).toMatch(
+        /first differing line \d+; on disk \d+ lines, latest seed \d+ lines/,
+      );
+      expect(staleRun).toContain("create-only");
+      // The notice never implies a rewrite happened.
+      expect(await readFile(readmePath, "utf-8")).toBe("# my custom worklog notes\n");
+      expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): CRLF is not drift
+  it("TC-0003-0022 (TDD-0022): re-init does not report drift for a CRLF copy of an unedited seed", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022d-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      const templatePath = path.join(root, ".qfai", "steering", "_templates", "entry.md");
+      // What core.autocrlf=true (or a Windows editor) leaves behind: the same
+      // body, every LF rewritten as CRLF.
+      for (const target of [readmePath, templatePath]) {
+        const body = await readFile(target, "utf-8");
+        await writeFile(target, body.replace(/\n/g, "\r\n"), "utf-8");
+      }
+
+      const crlfRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
+      expect(crlfRun).not.toContain("could not be compared");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  // QFAI:SPEC-0003:TC-0003-0022 (TDD-0022): an uncomparable seed path is reported
+  it("TC-0003-0022 (TDD-0022): re-init reports a steering seed path it cannot compare", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0022e-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      // A directory where the seed file belongs: occupied, so create-only skips
+      // it, but there is no body to compare — that must not read as "current".
+      const readmePath = path.join(root, ".qfai", "steering", "README.md");
+      // `removeTempTree` rather than a bare `rm`: this file routes every removal
+      // through the helper, and its `force` / retry contract is what is wanted
+      // here too — the seed is a regular file, so the recursive flag is inert.
+      await removeTempTree(readmePath);
+      await mkdir(readmePath, { recursive: true });
+
+      const blockedRun = await captureStdout(async () => {
+        await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      });
+
+      expect(blockedRun).toContain(
+        ".qfai/steering/README.md could not be compared against the seed this qfai release generates",
+      );
+      expect(blockedRun).toContain("whether it is current is unknown");
+      // The unaffected sibling stays silent, and the run still succeeds.
+      expect(blockedRun).not.toContain(".qfai/steering/_templates/entry.md could not be compared");
+      const dirStat = await lstat(readmePath);
+      expect(dirStat.isDirectory()).toBe(true);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade-assistant-tree migration
   it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree copies legacy steering/ files into the 4-layer tree", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-"));
@@ -1468,9 +2523,10 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
-  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ AND manifest/ in addition to steering/
-  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from all 3 pre-recut surfaces (instructions/, steering/, manifest/)", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-3s-"));
+  // QFAI:SPEC-0003:TC-0003-0023 (TDD-0023): --upgrade walks instructions/ in
+  // addition to steering/, and leaves the canonical manifest/ layer untouched
+  it("TC-0003-0023 (TDD-0023): --upgrade-assistant-tree relocates files from both probed pre-recut surfaces (instructions/, steering/) and keeps manifest/ in place", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-tdd0023-2s-"));
     try {
       // legacy instructions/drift-protocol.md → constitution/drift-protocol.md
       const legacyInstructions = path.join(root, ".qfai", "assistant", "instructions");
@@ -1484,8 +2540,9 @@ describe("qfai init", { timeout: 60000 }, () => {
       const legacyStg = path.join(root, ".qfai", "assistant", "steering");
       await mkdir(legacyStg, { recursive: true });
       await writeFile(path.join(legacyStg, "test-layers.md"), "# legacy layers\n", "utf-8");
-      // pre-existing manifest/spec_required_files.json (already at canonical
-      // location after upgrade — same-layer self-copy is a no-op).
+      // pre-existing manifest/spec_required_files.json — manifest/ is never
+      // probed by the helper because the recut leaves its path unchanged, so
+      // the file must simply stay where it is.
       const legacyManifest = path.join(root, ".qfai", "assistant", "manifest");
       await mkdir(legacyManifest, { recursive: true });
       await writeFile(
@@ -1512,7 +2569,8 @@ describe("qfai init", { timeout: 60000 }, () => {
         "utf-8",
       );
       expect(layers).toContain("legacy layers");
-      // manifest/spec_required_files.json was already at canonical location.
+      // manifest/spec_required_files.json is left exactly as seeded: the
+      // helper does not walk manifest/, so nothing relocates or rewrites it.
       const manifestFile = await readFile(
         path.join(root, ".qfai", "assistant", "manifest", "spec_required_files.json"),
         "utf-8",
@@ -1734,6 +2792,50 @@ describe("qfai init", { timeout: 60000 }, () => {
       });
       const secondBody = await readFile(memoPath, "utf-8");
       expect(secondBody).toBe(firstBody);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("names only the pre-recut surfaces it probed when reporting that none were found", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-upgrade-manifest-"));
+    try {
+      // Populate the canonical manifest/ layer and leave the two pre-recut
+      // surfaces (steering/, instructions/) absent. The helper deliberately
+      // never stats manifest/ — its path is unchanged by the recut — so
+      // neither the note nor the memo may claim it was examined.
+      const manifestDir = path.join(root, ".qfai", "assistant", "manifest");
+      await mkdir(manifestDir, { recursive: true });
+      await writeFile(path.join(manifestDir, "my-routing.yml"), "phases: []\n", "utf-8");
+
+      const stdout = await captureStdout(async () => {
+        await runInit({
+          dir: root,
+          force: false,
+          dryRun: false,
+          yes: true,
+          upgradeAssistantTree: true,
+        });
+      });
+
+      expect(stdout).toContain(
+        "W-USER-EDIT-PRESERVED: no pre-recut surfaces (.qfai/assistant/{steering,instructions}/) found",
+      );
+      expect(stdout).not.toContain("{steering,instructions,manifest}");
+
+      const memoMatches = await fg(
+        ".qfai/assistant/process/migrations/v*-assistant-layer-recut.md",
+        { cwd: root, dot: true },
+      );
+      expect(memoMatches.length).toBe(1);
+      const memoBody = await readFile(path.join(root, memoMatches[0] ?? ""), "utf-8");
+      expect(memoBody).toContain(
+        "No pre-recut surfaces (`.qfai/assistant/{steering,instructions}/`) found",
+      );
+      expect(memoBody).not.toContain("{steering,instructions,manifest}");
+      expect(memoBody).not.toContain(
+        "Source layout: .qfai/assistant/{steering, instructions, manifest}/",
+      );
     } finally {
       await removeTempTree(root);
     }
