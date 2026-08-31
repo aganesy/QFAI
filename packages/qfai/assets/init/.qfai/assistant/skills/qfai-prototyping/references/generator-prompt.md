@@ -210,25 +210,36 @@ navigates to `new URL(<contract route>, <target url>)` and treats any
 HTTP status >= 400 as a failed screen, writing no evidence. What the
 target server does with that URL therefore decides the routing shape:
 
-- `--auto-serve` starts the built-in static file server. It resolves
-  every non-root URL to a real file under the served directory and
-  returns 404 when there is none — it has no SPA fallback. With it,
-  declare **hash routes** (`/#/settings`): the browser never sends the
-  fragment, so the server always serves `index.html` and the shell
-  routes client-side.
-- **Path routes** (`/settings`) and any `history.pushState` shell need
-  a server that rewrites unknown paths to `index.html`. Run one
-  yourself and pass `--target-url`; they will 404 under `--auto-serve`.
-- Per-screen files (`--emit-skeletons`, below) are a third option, but
-  only if the contract `route` names the file: `--emit-skeletons` writes
-  `<screenId>.html`, and the static server resolves a URL to a literal
-  path — it does not append `.html`, so a `/settings` route 404s while
-  `/settings.html` serves. `htmlSourceCopy` does not help here: it runs
-  after the capture has already navigated successfully, so it cannot
-  rescue a route the server could not resolve.
+- `--auto-serve` starts the built-in static file server, and its
+  routing is SPA-style: a document request (GET/HEAD whose `Accept`
+  includes `text/html`) that matches no file under the served directory
+  is served that directory's `index.html` instead of 404 — when the
+  directory holds one, which the single-file envelope below guarantees
+  and a skeleton-only tree does not. So **path routes**
+  (`/settings`), a `history.pushState` shell and parameterized contract
+  routes (`/pairs/:instrument`, `/reports/:reportId`) all resolve —
+  declare the contract `route` values the product needs and let the
+  shell route client-side.
+- **Hash routes** (`/#/settings`) still work, since the browser never
+  sends the fragment, but they are no longer needed to reach a screen
+  under `--auto-serve`. Do not reshape a contract `route` into one.
+- The fallback covers documents only. Sub-resource requests (`.css`,
+  `.png`, `fetch()`) carry no `text/html` in `Accept`, so a genuinely
+  missing asset still 404s instead of receiving an HTML body, and the
+  path-traversal 403 guard runs ahead of the fallback.
+- The fallback needs an `index.html` to fall back _to_. Per-screen files
+  (`--emit-skeletons`, below) write `<screenId>.html` and no
+  `index.html`, and the static server resolves a URL to a literal path
+  before it falls back — it does not append `.html`. So in a
+  skeleton-only cycle-0 tree `/settings.html` serves that screen's
+  skeleton while `/settings` still **404s** and loses that screen's
+  evidence; `/settings` only reaches the fallback once you author an
+  `index.html` alongside the skeletons. `htmlSourceCopy` changes nothing
+  here: it runs after the capture has already navigated successfully.
 
-Pick the routing shape to match the server you will capture against,
-and keep the contract `route` values consistent with it.
+Keep the contract `route` values as the product needs them. Against a
+server other than `--auto-serve`, match the routing shape to what that
+server does with an unknown path.
 
 Opt-in **seed aid**, not an alternative output shape:
 `npx qfai prototyping iterate --emit-skeletons` (cycle 0 only) writes one

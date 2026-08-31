@@ -108,6 +108,23 @@ describe("--profile tdd can observe the ATDD routing gates", () => {
     });
   });
 
+  it("carries the atdd profile's own findings all the way into validate.json", async () => {
+    // Being *called* is not the user-visible contract. `runAtddValidators`
+    // could await every validator and still drop the results before the
+    // report is written, leaving `QFAI-ATDD-*` as absent from validate.json as
+    // the retired QFAI-ATDD-001 was — which is what the reachability meta-test
+    // in tests/unit/validators-are-wired.test.ts cannot see. Pin one finding
+    // per ATDD validator reached from `--profile atdd` in the emitted report.
+    await withCiEnv(false, async () => {
+      await withProject(async (root) => {
+        await runValidate({ root, strict: false, profile: "atdd" });
+        const codes = (await findings(root)).map((entry) => entry.code);
+        expect(codes).toContain("QFAI-ATDD-111");
+        expect(codes).toContain("QFAI-ATDD-112");
+      });
+    });
+  });
+
   it("does not double-report the ATDD gates under the full profile", async () => {
     await withProject(async (root) => {
       await runValidate({ root, strict: false });
