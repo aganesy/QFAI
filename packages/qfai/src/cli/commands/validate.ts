@@ -14,10 +14,14 @@ import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
 } from "../../core/validators/layerCoverage.js";
+import {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  unevaluatedPackageSelfGovernanceFamilies,
+} from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail, strictSupersededBy } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
@@ -166,7 +170,10 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
       }
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
-  const partialProfileNotice = buildPartialProfileNotice(normalized.profile);
+  const partialProfileNotice = buildPartialProfileNotice(
+    normalized.profile,
+    await unevaluatedPackageSelfGovernanceFamilies(root),
+  );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
     normalized.counts = recountIssues(normalized.counts, partialProfileNotice);
@@ -174,11 +181,8 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
 
   warnIfTruncated(normalized.traceability.testFiles, "validate");
 
-  const { failOn, strictSuperseded } = resolveFailOn(
-    options,
-    configResult.config.validation.failOn,
-  );
-  if (strictSuperseded) {
+  const failOn = resolveFailOn(options, configResult.config.validation.failOn);
+  if (strictSupersededBy(options)) {
     emitStrictSupersededNotice(failOn);
   }
   const willFail = shouldFail(normalized, failOn);
@@ -411,8 +415,13 @@ function buildDeprecationIssue(args: {
  * families and therefore claimed, for example, that `--profile tdd` had
  * evaluated repository hygiene (`QFAI-HYG-*`) when `runTddValidators` never
  * calls it.
+ *
+ * Entries are prefix globs, never bare codes: a gate that gains a second code
+ * would otherwise drop out of the notice unannounced. Exported so
+ * `tests/core/findingCodeGrammar.test.ts` can prove that for the gates whose
+ * emitted codes it scans.
  */
-const GATE_GROUP_FAMILIES = {
+export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
@@ -434,12 +443,16 @@ const GATE_GROUP_FAMILIES = {
     "E_*",
     "R-*",
   ],
+  // Split out of `sdd`: the group runs inside that profile, but its two
+  // detectors read qfai's own package sources, so in a consuming repo they
+  // are structurally unevaluated while the rest of `R-*` still fires.
+  "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: ["QFAI-PROT-*", "QFAI-CRIT-*", "QFAI-FID-*", "QFAI-UIE-*", "QFAI-DCON-*"],
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -456,9 +469,10 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   verify: ALL_GATE_GROUPS,
   // Both stages mandate the review pack in their RCP footer and both now run
   // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
-  // family the run did not evaluate.
+  // family the run did not evaluate. `runSddValidators` additionally calls
+  // `runPackageSelfGovernanceValidators`, so sdd evaluates that group too.
   discussion: ["discussion", "review-artifacts"],
-  sdd: ["sdd", "review-artifacts"],
+  sdd: ["sdd", "package-self-governance", "review-artifacts"],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
@@ -471,8 +485,20 @@ function isKnownProfile(profile: string): profile is ValidationProfile {
   return Object.prototype.hasOwnProperty.call(PROFILE_GATE_GROUPS, profile);
 }
 
-/** Deduped, order-preserving families for the groups a profile does not run. */
-function unevaluatedFamilies(profile: string): string[] {
+/**
+ * Deduped, order-preserving families for the groups a profile does not run.
+ *
+ * `unevaluatedSelfGovernance` carries the self-governance codes whose own
+ * inputs are absent, so those detectors cannot fire whatever the project does
+ * and their codes join the list even though the profile wires them in. It is
+ * per code, not per group: the two detectors read different files, and a tree
+ * carrying one detector's inputs but not the other's would otherwise drop both
+ * from the notice while one of them had structurally not run.
+ */
+function unevaluatedFamilies(
+  profile: string,
+  unevaluatedSelfGovernance: readonly string[],
+): string[] {
   if (!isKnownProfile(profile)) {
     return [];
   }
@@ -484,6 +510,15 @@ function unevaluatedFamilies(profile: string): string[] {
   for (const group of Object.keys(GATE_GROUP_FAMILIES) as GateGroup[]) {
     if (evaluated.has(group)) continue;
     for (const family of GATE_GROUP_FAMILIES[group]) push(family);
+  }
+  if (families.length === 0) {
+    // A profile that runs every group is not partial, and this notice is the
+    // partial-profile notice. Reporting a precondition-gated group there would
+    // put "full is a partial profile" into the artifact.
+    return families;
+  }
+  if (evaluated.has("package-self-governance")) {
+    for (const family of unevaluatedSelfGovernance) push(family);
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -505,13 +540,16 @@ function unevaluatedFamilies(profile: string): string[] {
  * the normal per-profile wording would then imply the requested profile's own
  * gates had been observed, so that case gets its own message.
  */
-function buildPartialProfileNotice(profile: string | undefined): Issue | null {
+function buildPartialProfileNotice(
+  profile: string | undefined,
+  unevaluatedSelfGovernance: readonly string[],
+): Issue | null {
   if (!profile) {
     return null;
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const unevaluated = unevaluatedFamilies(profile);
+  const unevaluated = unevaluatedFamilies(profile, unevaluatedSelfGovernance);
   if (unevaluated.length === 0) {
     return null;
   }
@@ -537,32 +575,6 @@ function recountIssues(
     warning: counts.warning + (added.severity === "warning" ? 1 : 0),
     error: counts.error + (added.severity === "error" ? 1 : 0),
   };
-}
-
-/**
- * 明示された `--fail-on` は `--strict` より優先される。だが `--strict` は
- * ヘルプ上「方針」として書かれているため、既存の `--strict` レーンに後から
- * `--fail-on error` を足すと warning ゲートが黙って外れる。どちらが勝ったかを
- * 呼び出し側が名指しできるよう、解決値と「`--strict` が上書きされたか」を
- * 併せて返す。閾値が一致する `--strict --fail-on warning` は矛盾ではないので
- * 上書きとは扱わない。
- */
-type ResolvedFailOn = {
-  failOn: FailOn;
-  strictSuperseded: boolean;
-};
-
-function resolveFailOn(options: ValidateOptions, fallback: FailOn): ResolvedFailOn {
-  if (options.failOn) {
-    return {
-      failOn: options.failOn,
-      strictSuperseded: options.strict && options.failOn !== "warning",
-    };
-  }
-  if (options.strict) {
-    return { failOn: "warning", strictSuperseded: false };
-  }
-  return { failOn: fallback, strictSuperseded: false };
 }
 
 function emitStrictSupersededNotice(failOn: FailOn): void {
@@ -771,10 +783,16 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-PLATFORM-003":
+    "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  "QFAI-TEST-001":
+    "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
+  "QFAI-TEST-003":
+    "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -805,6 +823,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
+  "QFAI-ATDD-131":
+    "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
+  "QFAI-ATDD-132":
+    "The Coverage Depth Matrix is tracked or unignored; the matrix and its justifications are committed.",
+  "QFAI-ATDD-133":
+    "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":
