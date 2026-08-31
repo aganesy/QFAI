@@ -8,11 +8,6 @@ unfinishable, and an unfinishable process is abandoned wholesale — taking the
 RED/GREEN evidence and the drift discipline with it. Scaling the ceremony is
 what keeps those intact; dropping a gate is not on the table.
 
-The per-item ceremony below is written for a ledger of tens of rows. At the
-volume `/qfai-sdd` and `/qfai-atdd` routinely produce it is arithmetically
-unfinishable, and an unfinishable process is abandoned wholesale — taking the
-RED/GREEN evidence and drift discipline with it. Scale the ceremony instead.
-
 ## Risk tier (derive per row)
 
 Derive the tier from the ledger row's `Layer`, what the item touches, and what
@@ -71,13 +66,11 @@ changes the submitted unit from one row to one coherent group. Every row is
 still covered by a live turn from each of those agents, and a group that has
 not been confirmed leaves all of its members short of the 11-point gate.
 
-Note the asymmetry, because "all routed blocking reviewers pass" alone is not
-the item gate: `blocking_agents` lists only `qa-gatekeeper` and
-`completion-reviewer`. `implementation-reviewer` is mandatory but not in that
-list, and a `REVISE` from it still blocks `done` — item 8 of the 11-point gate
-requires its PASS independently of the routing list. Read the 11-point gate as
-the authority for an item transition; `blocking_agents` governs phase
-progression, not the ledger write.
+`blocking_agents` lists all three, so a `REVISE` from any of them blocks
+`done`; item 8 of the 11-point gate requires the `implementation-reviewer` PASS
+on the same terms. The two lists agree on **who** blocks — they differ in
+**what** they authorise. Read the 11-point gate as the authority for an item
+transition; `blocking_agents` governs phase progression, not the ledger write.
 
 ## Batched review
 
