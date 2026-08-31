@@ -748,6 +748,56 @@ describe("TDDLIST_EVIDENCE_EMPTY promotion window", () => {
   });
 });
 
+// The two anchor rules read a ledger cell nothing read before them, so on the
+// release that introduces them every ledger written under the old shape meets
+// them at once — this repository's own `qfai validate` went to 29 errors, all
+// on rows already at `done`. That is the latched-gate shape P7 exists to stop,
+// so both ship behind a window, and these are the tests that keep them there.
+describe.each([
+  {
+    code: "TDDLIST_EVIDENCE_ANCHOR_MISSING" as const,
+    promotion: RULE_PROMOTIONS.tddListEvidenceAnchorMissing.promoteAt,
+    // A completed row whose Evidence states an outcome in prose: no pointer.
+    evidence: "RED: `npx vitest run tests/unit/sample.test.ts` -> 1 failed. GREEN: 1 passed",
+  },
+  {
+    code: "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED" as const,
+    promotion: RULE_PROMOTIONS.tddListEvidenceAnchorUnresolved.promoteAt,
+    // A pointer that is not the canonical evidence anchor shape.
+    evidence: "evidence at ./notes/run.md",
+  },
+])("$code promotion window", ({ code, promotion, evidence }) => {
+  async function severityAt(version: string): Promise<{ severity: string; message: string }> {
+    toolVersion.override = version;
+    let found: { severity: string; message: string } = { severity: "", message: "" };
+    await withProject(async (root) => {
+      await runOn(root, ledger([{ status: "done", evidence }]));
+      const issues = await validateTddList(root, defaultConfig);
+      const issue = issues.find((i) => i.code === code);
+      if (issue) found = { severity: issue.severity, message: issue.message };
+    });
+    return found;
+  }
+
+  it("reports a warning before the promotion release, naming the release", async () => {
+    const found = await severityAt("1.9.9");
+    expect(found.severity).toBe("warning");
+    expect(found.message).toContain(promotion);
+  });
+
+  it("reports an error from the promotion release onwards", async () => {
+    const found = await severityAt("99.0.0");
+    expect(found.severity).toBe("error");
+    // No window left to advertise once the window has closed.
+    expect(found.message).not.toContain("until the");
+  });
+
+  it("stays inside the window when the version cannot be read", async () => {
+    const found = await severityAt("unknown");
+    expect(found.severity).toBe("warning");
+  });
+});
+
 describe("TDDLIST_EVIDENCE_STATUS_ONLY", () => {
   // `SKILL.md` names this shape verbatim. Reported at `warning`: see the rule
   // comment — ledgers written before the check exist in the wild, and this

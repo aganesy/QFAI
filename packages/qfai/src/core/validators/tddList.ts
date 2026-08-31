@@ -3062,12 +3062,28 @@ async function validateSpecTddList(
   // `resolveToolVersion` resolves rather than rejects — its own read failures
   // return `"unknown"`, which the comparator reads as inside the window, so an
   // unreadable version can never be what escalates this into a build failure.
-  const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
-  const evidenceEmptySeverity = newRuleSeverity(await resolveToolVersion(), evidenceEmptyPromotion);
-  const evidenceEmptyWindowNote =
-    evidenceEmptySeverity === "warning"
-      ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
+  //
+  // The two anchor rules below run their own windows for the same reason. They
+  // read a cell nothing read before, so on the release that introduces them
+  // every ledger written under the old shape meets them at once — 29 rows in
+  // this repository alone, all of them already at `done`.
+  const resolvedToolVersion = await resolveToolVersion();
+  const windowNoteFor = (severity: "warning" | "error", promoteAt: string): string =>
+    severity === "warning"
+      ? ` Reported as a warning until the ${promoteAt} release, then an error`
       : "";
+  const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
+  const evidenceEmptySeverity = newRuleSeverity(resolvedToolVersion, evidenceEmptyPromotion);
+  const evidenceEmptyWindowNote = windowNoteFor(evidenceEmptySeverity, evidenceEmptyPromotion);
+  const anchorMissingPromotion = RULE_PROMOTIONS.tddListEvidenceAnchorMissing.promoteAt;
+  const anchorMissingSeverity = newRuleSeverity(resolvedToolVersion, anchorMissingPromotion);
+  const anchorMissingWindowNote = windowNoteFor(anchorMissingSeverity, anchorMissingPromotion);
+  const anchorUnresolvedPromotion = RULE_PROMOTIONS.tddListEvidenceAnchorUnresolved.promoteAt;
+  const anchorUnresolvedSeverity = newRuleSeverity(resolvedToolVersion, anchorUnresolvedPromotion);
+  const anchorUnresolvedWindowNote = windowNoteFor(
+    anchorUnresolvedSeverity,
+    anchorUnresolvedPromotion,
+  );
   // A single per-spec evidence file can serve hundreds of ledger rows. Cache
   // its parsed sections (and a missing-file sentinel) so each path is read once.
   const evidenceIndexCache = new Map<string, MarkdownEvidenceIndex | null>();
@@ -3116,8 +3132,8 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_ANCHOR_MISSING",
-          `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}`,
-          "warning",
+          `Evidence for spec-${specNumber} ${rowLabel} carries no evidence anchor (Status=done): "${evidence}". A completed row's Evidence cell is a pointer into ${expectedFile}.${anchorMissingWindowNote}`,
+          anchorMissingSeverity,
           relPath,
           EVIDENCE_ANCHOR_MISSING_RULE_ID,
           undefined,
@@ -3199,8 +3215,8 @@ async function validateSpecTddList(
       issues.push(
         issue(
           "TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED",
-          `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}`,
-          "error",
+          `Evidence anchor does not resolve for spec-${specNumber} ${rowLabel}, Status=${status}: ${anchorFailure}.${anchorUnresolvedWindowNote}`,
+          anchorUnresolvedSeverity,
           relPath,
           "tddList.evidenceAnchorResolves",
           relatedFile ? [relatedFile] : undefined,
