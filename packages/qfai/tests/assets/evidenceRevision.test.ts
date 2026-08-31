@@ -9,6 +9,18 @@
  * revision cannot be re-checked, cannot be invalidated by a later commit, and
  * cannot be told apart from a stale one, so the rule had nothing to compare
  * against.
+ *
+ * The reference later gained a second rule, and it is the first one's corollary:
+ * a blob hash is DERIVED from the revision (`git rev-parse <rev>:<path>`), so
+ * writing blobs into prose beside the revision duplicates what the revision
+ * already fixes — and the duplicate goes stale for reasons belonging to whichever
+ * sibling item last touched the shared file. One exception, because no revision
+ * determines it: a MUTANT blob, which is written to the working tree and never
+ * committed.
+ *
+ * The pins below anchor on HEADINGS, on the literal derivation form, and on short
+ * distinctive clauses, deliberately not on whole paragraphs: the rule is the
+ * subject, and a reword of the surrounding prose must not redden this file.
  */
 import { readFile } from "node:fs/promises";
 import path from "node:path";
@@ -114,6 +126,67 @@ describe("evidence and verdicts carry a revision", () => {
       expect(reference).toContain("## Why an address, not a timestamp");
       expect(reference).toContain(
         "A timestamp orders observations; it does not identify what was observed.",
+      );
+    });
+
+    it(`${tree}: a blob is derived state, so the record cites the revision instead`, async () => {
+      const raw = await read(tree, REFERENCE);
+      const reference = flat(raw);
+
+      // Pinned as a HEADING, not as prose that happens to contain the words.
+      // `\r?` so a future EOL normalisation is not a false RED.
+      expect(raw).toMatch(/^## Blobs are derived — cite the revision, not the hash\r?$/m);
+
+      // The derivation form is the whole mechanism: it is what makes the blob
+      // redundant with the revision rather than additional to it.
+      expect(reference).toContain("A blob hash is **derived state**: `git rev-parse <rev>:<path>`");
+      expect(reference).toContain("the reader runs `git rev-parse <rev>:<path>`");
+      // Twice: once defining the derivation, once telling the reader to run it.
+      // A rule stated only in the abstract leaves the reader without the command.
+      expect(raw.split("`git rev-parse <rev>:<path>`").length - 1).toBeGreaterThanOrEqual(2);
+
+      expect(reference).toContain("**Do not enumerate blob hashes in per-item prose.**");
+      expect(reference).toContain("a duplicate can diverge from its source");
+    });
+
+    it(`${tree}: the mutant blob is the one exception, and the reference says why`, async () => {
+      const reference = flat(await read(tree, REFERENCE));
+
+      // The exception is licensed by the REASON, not by convenience: a mutation
+      // is never committed, so `git rev-parse <rev>:<path>` has nothing to name.
+      // Without the reason the exception reads as a loophole.
+      expect(reference).toContain(
+        "**The one exception, because no revision determines it: a _mutant_ blob.**",
+      );
+      expect(reference).toContain("never committed, so there is no object to derive");
+
+      // What replaces the hash as the join key. The hash is optional and the
+      // needle/replacement pair is not, which is the reproducibility claim.
+      expect(reference).toContain(
+        "**base revision + literal needle text + literal replacement text**",
+      );
+      expect(reference).toContain("keep its `git hash-object` value if you took one");
+
+      // The exception is scoped to the mutant half only.
+      expect(reference).toContain("name the revision, not the base blob");
+    });
+
+    it(`${tree}: a record-only commit stales nothing, so anchors may land with the transition`, async () => {
+      const reference = flat(await read(tree, REFERENCE));
+
+      // The staleness rule reads "any file the observation COVERED". A commit
+      // touching only the record covers none, so it cannot stale the record it
+      // is writing — otherwise no item could ever close, and no two items
+      // sharing a file could be current at the same time.
+      expect(reference).toContain("_any file the observation covered_");
+      expect(reference).toContain(
+        "covers no file any observation ran against, so it does not stale one",
+      );
+      expect(reference).toContain(
+        "allows an item's anchors to be written in the same commit that closes it",
+      );
+      expect(reference).toContain(
+        "Measure at the tip, then commit the record and the `done` transition together.",
       );
     });
 
