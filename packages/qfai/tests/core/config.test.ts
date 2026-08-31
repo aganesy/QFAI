@@ -285,3 +285,43 @@ describe("spec-0004 testStrategy.forbidTestTodoStubs", () => {
     }
   });
 });
+
+describe("uiux.competitive_refs_min", () => {
+  async function loadWith(value: string): Promise<Awaited<ReturnType<typeof loadConfig>>> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-config-competitive-"));
+    try {
+      await writeFile(
+        path.join(root, "qfai.config.yaml"),
+        `uiux:\n  competitive_refs_min: ${value}\n`,
+        "utf-8",
+      );
+      return await loadConfig(root);
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  }
+
+  it("accepts a non-negative integer", async () => {
+    for (const value of ["0", "3", "10"]) {
+      const { config, issues } = await loadWith(value);
+      expect(issues).toEqual([]);
+      expect(config.uiux?.competitive_refs_min).toBe(Number(value));
+    }
+  });
+
+  it("rejects a fractional bound instead of silently rounding it up", async () => {
+    // A count of references is discrete. `2.5` reached the comparison, which
+    // effectively demanded three while the finding still said "at least 2.5".
+    const { config, issues } = await loadWith("2.5");
+    expect(issues.map((issue) => issue.message)).toEqual([
+      expect.stringContaining("uiux.competitive_refs_min は0以上の整数である必要があります。"),
+    ]);
+    expect(config.uiux?.competitive_refs_min).toBeUndefined();
+  });
+
+  it("still rejects a negative bound", async () => {
+    const { config, issues } = await loadWith("-1");
+    expect(issues).toHaveLength(1);
+    expect(config.uiux?.competitive_refs_min).toBeUndefined();
+  });
+});

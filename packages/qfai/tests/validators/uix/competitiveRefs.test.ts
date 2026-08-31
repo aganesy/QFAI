@@ -499,6 +499,130 @@ describe("validateCompetitiveReferences", () => {
 
     await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
   });
+
+  // Round: the four registry-parsing / config findings raised after the merge.
+
+  it("picks the registry itself, not an explanatory section named after it", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    // Authoring guidance routinely sits ahead of the registry. The prefix match
+    // selected `## Competitive Reference Registry Expectations`, ended the
+    // section at the next H2, and reported `found 0` over a complete registry.
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Competitive Reference Registry Expectations",
+        "",
+        "Register at least three references, each with all three mandatory fields.",
+        "",
+        "## Competitive Reference Registry (UI-bearing packs)",
+        "",
+        referenceBlock("Linear"),
+        referenceBlock("Stripe"),
+        referenceBlock("Vercel"),
+        "## Traceability",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("rejects a placeholder that carries punctuation or a note", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        referenceBlock("Linear", {
+          adopted_points: "TBD.",
+          rejected_points: "TODO: fill this",
+          local_translation: "N/A (pending)",
+        }),
+        referenceBlock("Stripe"),
+        referenceBlock("Vercel"),
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, defaultConfig);
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(1);
+    expect(incomplete[0]?.message).toContain("adopted_points");
+    expect(incomplete[0]?.message).toContain("rejected_points");
+    expect(incomplete[0]?.message).toContain("local_translation");
+    expect(issues.map((issue) => issue.code)).toContain("UIX-VAL-COMPETITIVE-REFS-MIN");
+  });
+
+  // The over-correction pin: a populated value may legitimately OPEN with a
+  // placeholder word. Only a punctuation-introduced suffix makes it one.
+  it("keeps prose that merely opens with a placeholder word populated", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        referenceBlock("Linear", {
+          adopted_points: "None of the competitors ship this, so the split hero is ours.",
+        }),
+        referenceBlock("Stripe"),
+        referenceBlock("Vercel"),
+      ]),
+      "utf-8",
+    );
+
+    await expect(validateCompetitiveReferences(root, defaultConfig)).resolves.toEqual([]);
+  });
+
+  it("does not read a mandatory field nested under another field as the reference's own", async () => {
+    const root = await newTempDir();
+    await createPack(root, true);
+    // Two malformed shapes at once: all three keys buried under `- notes:`, and
+    // the three chained so each empty parent could be "populated" by its
+    // child's label. Both used to count as complete references.
+    await writeFile(
+      path.join(root, "04_Sources.md"),
+      sourcesWithRegistry([
+        [
+          "### Reference: Linear",
+          "",
+          "- reference: https://example.com/linear",
+          "- notes:",
+          "  - adopted_points: Editorial split hero.",
+          "  - rejected_points: Dark-mode-first default.",
+          "  - local_translation: Amber pill CTA in nav-right.",
+          "",
+        ].join("\n"),
+        [
+          "### Reference: Stripe",
+          "",
+          "- reference: https://example.com/stripe",
+          "- adopted_points:",
+          "  - rejected_points:",
+          "    - local_translation:",
+          "",
+        ].join("\n"),
+        referenceBlock("Vercel"),
+      ]),
+      "utf-8",
+    );
+
+    const issues = await validateCompetitiveReferences(root, withUiux({ competitive_refs_min: 0 }));
+    const incomplete = issues.filter(
+      (issue) => issue.code === "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
+    );
+    expect(incomplete).toHaveLength(2);
+    for (const issue of incomplete) {
+      for (const field of ["adopted_points", "rejected_points", "local_translation"]) {
+        expect(issue.message).toContain(field);
+      }
+    }
+  });
 });
 
 describe("uiux.competitive_refs_min reaches the canonical UIX run", () => {

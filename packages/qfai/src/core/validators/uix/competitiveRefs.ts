@@ -33,10 +33,23 @@ const H2_PREFIX = String.raw`^ {0,3}##(?!#)`;
  * Registry heading matcher.
  *
  * Published packs decorate the heading (`## Competitive Reference Registry
- * (UI-bearing packs)`), so the trailing qualifier must be tolerated instead of
- * demanding an exact string match.
+ * (UI-bearing packs)`), so a trailing qualifier must be tolerated instead of
+ * demanding an exact string match — but the tolerance has to stop short of
+ * accepting a DIFFERENTLY NAMED section. A bare `\b` after the phrase matched
+ * `## Competitive Reference Registry Expectations` and
+ * `## Competitive Reference Registry Format`, which authoring guidance
+ * routinely places ahead of the registry itself: the first match won, the
+ * section ended at the next H2, and every complete reference in the real
+ * registry below went uncounted (`found 0`).
+ *
+ * So a qualifier must be introduced by punctuation — `(UI-bearing packs)`,
+ * `: UI-bearing packs`, `— UI-bearing packs`, or an ATX closing `##`. Another
+ * WORD directly after the phrase names a different section, not this one.
  */
-const REGISTRY_HEADING_RE = new RegExp(`${H2_PREFIX}\\s+competitive reference registry\\b`, "i");
+const REGISTRY_HEADING_RE = new RegExp(
+  `${H2_PREFIX}\\s+competitive reference registry(?![\\w-])\\s*(?:[^\\w\\s].*)?$`,
+  "i",
+);
 
 /** Any H2 — the line at which the registry section ends. */
 const H2_BOUNDARY_RE = new RegExp(`${H2_PREFIX}(?:\\s|$)`);
@@ -68,7 +81,35 @@ const H3_MARKER_RE = new RegExp(`${H3_PREFIX}\\s+`);
 
 const MANDATORY_FIELDS = ["adopted_points", "rejected_points", "local_translation"] as const;
 
-const PLACEHOLDER_RE = /^(?:tbd|todo|example|lorem|placeholder|n\/a|none|-{1,3})$/i;
+/** The bare tokens an author writes when a field has no content yet. */
+const PLACEHOLDER_TOKEN = String.raw`tbd|tba|todo|example|lorem|placeholder|n\/a|none|-{1,3}`;
+
+/**
+ * A value that is a placeholder token, alone or carrying punctuation and the
+ * note that follows it.
+ *
+ * An exact-match test read `TBD.`, `TODO: fill this` and `N/A (pending)` as
+ * populated, so a registry with no real content in any field cleared the count
+ * gate. The suffix must be introduced by PUNCTUATION, though: a token followed
+ * by a space and another word is prose that happens to open with the token
+ * (`None of the competitors ship this`), and rejecting that would fail a
+ * populated field.
+ */
+const PLACEHOLDER_RE = new RegExp(String.raw`^(?:${PLACEHOLDER_TOKEN})\s*(?:[^\w\s].*)?$`, "i");
+
+/**
+ * A continuation line that declares one of the mandatory fields.
+ *
+ * `collectBlockValue` treats the indented lines under a bare `- adopted_points:`
+ * as its value, and a mandatory field NESTED under another one is such a line —
+ * so an entry that nested `rejected_points` under `adopted_points` made the
+ * empty parent read as populated on the strength of its child's label alone.
+ * A field declaration is structure, never the content of the field above it.
+ */
+const NESTED_FIELD_DECLARATION_RE = new RegExp(
+  String.raw`^-?\s*(?:${MANDATORY_FIELDS.join("|")})\s*:`,
+  "i",
+);
 
 /**
  * Unedited authoring-template values are bracketed prose
@@ -82,10 +123,27 @@ type CompetitiveReference = {
   missingFields: string[];
 };
 
-function competitiveIssue(code: string, message: string, suggestedAction: string): Issue {
+/**
+ * Both findings, built from parameters the caller passes.
+ *
+ * `severity` is a PARAMETER rather than a literal fixed inside the body, and
+ * that is load-bearing beyond style: `tests/helpers/prototypingGateSurface.ts`
+ * recognises an `Issue` factory by a body that binds an object literal's `code`
+ * and `severity` to its own params, and its object-literal scanner only sees
+ * `code: "…"` written out. A helper taking `code` alone and fixing the severity
+ * internally is invisible to both, so these two error codes vanished from the
+ * `EXPLORATION_HARD_ERROR_CODES` set-equality audit and from the rule-code
+ * ownership audit — the checks that exist to notice a gate being relaxed.
+ */
+function competitiveIssue(
+  code: string,
+  message: string,
+  severity: Issue["severity"],
+  suggestedAction: string,
+): Issue {
   return {
     code,
-    severity: "error",
+    severity,
     category: "canonical",
     message,
     file: "04_Sources.md",
@@ -143,7 +201,9 @@ function extractRegistrySection(content: string): string | null {
  *
  * Only the items that are themselves populated are kept, so a block of
  * bracketed template placeholders stays unpopulated rather than becoming a
- * long — and therefore "non-empty" — joined string.
+ * long — and therefore "non-empty" — joined string. A nested declaration of
+ * another mandatory field is dropped for the same reason: it is the structure
+ * of the entry, not content the author wrote for the field above it.
  */
 function collectBlockValue(lines: string[], start: number, indent: number): string | undefined {
   const items: string[] = [];
@@ -156,11 +216,33 @@ function collectBlockValue(lines: string[], start: number, indent: number): stri
       break;
     }
     const item = line.trim().replace(/^[-*+]\s*/, "");
+    if (NESTED_FIELD_DECLARATION_RE.test(line.trim())) {
+      continue;
+    }
     if (isPopulated(item)) {
       items.push(item);
     }
   }
   return items.length > 0 ? items.join("; ") : undefined;
+}
+
+/**
+ * The indentation a reference block's own fields sit at: the first list item
+ * after its `### Reference:` heading.
+ *
+ * A mandatory field is a DIRECT child of the reference, and reading one at any
+ * depth let a malformed entry that buried all three under a `- notes:` parent
+ * count as complete — the three keys existed somewhere in the block, so the
+ * only thing distinguishing a well-formed entry from that one was the
+ * indentation nothing looked at.
+ */
+function fieldIndentOf(lines: string[]): number | undefined {
+  for (const line of lines) {
+    if (/^\s*[-*+]\s/.test(line)) {
+      return line.length - line.trimStart().length;
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -170,20 +252,30 @@ function collectBlockValue(lines: string[], start: number, indent: number): stri
  * YAML block shape the same template already uses for `rule_refs`, on the
  * indented lines beneath a bare `- adopted_points:`. Reading only the field
  * line would report a populated block value as empty.
+ *
+ * Only a field at the block's own {@link fieldIndentOf} indentation counts, so
+ * a key nested under another field is not read as one of the reference's.
  */
 function extractField(entry: string, field: string): string | undefined {
   const lines = entry.split("\n");
+  const fieldIndent = fieldIndentOf(lines);
+  if (fieldIndent === undefined) {
+    return undefined;
+  }
   const fieldRe = new RegExp(`^(\\s*)-\\s*${field}\\s*:\\s*(.*)$`, "i");
   for (let index = 0; index < lines.length; index += 1) {
     const match = fieldRe.exec(lines[index] ?? "");
     if (!match) {
       continue;
     }
+    if ((match[1] ?? "").length !== fieldIndent) {
+      continue;
+    }
     const inline = (match[2] ?? "").trim();
     if (inline.length > 0) {
       return inline;
     }
-    return collectBlockValue(lines, index + 1, (match[1] ?? "").length);
+    return collectBlockValue(lines, index + 1, fieldIndent);
   }
   return undefined;
 }
@@ -317,6 +409,7 @@ export async function validateCompetitiveReferences(
       competitiveIssue(
         "UIX-VAL-COMPETITIVE-REF-INCOMPLETE",
         `Competitive reference '${reference.label}' is missing or placeholders '${reference.missingFields.join(", ")}'.`,
+        "error",
         `Populate ${reference.missingFields.join(", ")} for '${reference.label}' in the Competitive Reference Registry of 04_Sources.md.`,
       ),
     );
@@ -328,6 +421,7 @@ export async function validateCompetitiveReferences(
       competitiveIssue(
         "UIX-VAL-COMPETITIVE-REFS-MIN",
         `UI-bearing packs need at least ${minimum} complete competitive references in 04_Sources.md; found ${complete}.`,
+        "error",
         `Add competitive references with ${MANDATORY_FIELDS.join(", ")} under '## Competitive Reference Registry', or lower uiux.competitive_refs_min.`,
       ),
     );
