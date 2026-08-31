@@ -35,6 +35,7 @@ const QFAI_TREES = ["packages/qfai/assets/init/.qfai", ".qfai"];
 const DELEGATION = "assistant/constitution/shared-skill-delegation-baseline.md";
 const SKILL = "assistant/skills/qfai-implement/SKILL.md";
 const REFERENCE = "assistant/skills/qfai-implement/references/evidence-revision.md";
+const RECORD = "assistant/skills/qfai-implement/references/record-contract.md";
 
 const read = (tree: string, rel: string): Promise<string> =>
   readFile(path.join(repoRoot, tree, rel), "utf-8");
@@ -89,9 +90,14 @@ describe("evidence and verdicts carry a revision", () => {
 
     it(`${tree}: gate item 10 requires the four observations to agree`, async () => {
       const skill = flat(await read(tree, SKILL));
+      const record = flat(await read(tree, RECORD));
 
-      expect(skill).toContain(
-        // Article-free: the clause now opens a sentence of its own, after the
+      // The gate line points at the record contract; the rule itself lives
+      // there, where it is read by whoever audits a record rather than by
+      // every agent building a row.
+      expect(skill).toContain("`references/record-contract.md`");
+      expect(record).toContain(
+        // Article-free: the clause opens a sentence of its own, after the
         // `Audited evidence hash` rule that addresses what the revision leaves out.
         "item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
       );
