@@ -1394,19 +1394,25 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * offset". It reached an adopter with every pin green.
  *
  * The property that separates it from everything legitimately here is not its name and not its
- * content: **it is that the init source ships DATA, and data has a data extension.** All 175 entries
- * are `.md`, `.yml`, `.yaml`, `.json`, `.sql` or `.sample`, 158 of them markdown, and none has ever
- * been extensionless. So the rule is an enumeration of what may ship rather than a list of what may
- * not — the same inversion the rest of this file is built on, arrived at three rounds late because
- * the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ * content: **it is that the init source ships DATA, and data has a data extension.** All 185 entries
+ * are `.md`, `.yml`, `.yaml`, `.json`, `.toml`, `.sql` or `.sample`, 159 of them markdown, and none
+ * has ever been extensionless. So the rule is an enumeration of what may ship rather than a list of
+ * what may not — the same inversion the rest of this file is built on, arrived at three rounds late
+ * because the earlier attempts kept enumerating the dangerous side, which cannot be finished.
  *
- * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost.
+ * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost,
+ * and `.toml` is the first entry to pay it: the `web-research` skill's MCP server templates moved into
+ * the init payload so the paths its SKILL.md cites resolve in a consumer root, and a TOML config table
+ * is read by an MCP host, not executed. Adding one here also means adding it to the leakage smoke
+ * test's `TEXT_EXTENSIONS` — a shipped text format nothing scans is a distributed surface with no
+ * internal-ID guard over it.
  */
 export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
   ".md",
   ".yml",
   ".yaml",
   ".json",
+  ".toml",
   ".sql",
   ".sample",
 ]);
