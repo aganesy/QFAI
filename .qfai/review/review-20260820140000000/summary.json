@@ -1,0 +1,30 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-20T14:00:00.000Z",
+  "target": {
+    "kind": "spec",
+    "path": ".qfai/specs/spec-0017"
+  },
+  "routing_profile": "implementation-heavy",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "90a33ee5",
+  "reviewers": [
+    {
+      "reviewer": "implementation-reviewer",
+      "status": "FAIL",
+      "feedback_count": 16
+    },
+    {
+      "reviewer": "completion-reviewer",
+      "status": "FAIL",
+      "feedback_count": 26
+    },
+    {
+      "reviewer": "qa-gatekeeper",
+      "status": "FAIL",
+      "feedback_count": 7
+    }
+  ],
+  "feedback_count_rule": "distinct finding identifiers matching (F|BL|B|M|L|N|A)-?NN, or the count of heading-level-3 sections where a report uses no identifiers"
+}
