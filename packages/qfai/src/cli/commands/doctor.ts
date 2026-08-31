@@ -221,9 +221,16 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   }
 
   if (options.outPath) {
+    // Relative `--out` is anchored to the operating root, not the process
+    // cwd, so `qfai doctor --root <proj> --out <rel>` and
+    // `qfai report --root <proj> --out <rel>` land in the same tree.
+    // The cwd-based resolution used to scatter a CI job's evidence: the
+    // report went into the project while the doctor artifact went to the
+    // runner's working directory, silently, because the "wrote <abs>" line
+    // still looks like success. `prototyping preflight` shares this slot.
     const outAbs = path.isAbsolute(options.outPath)
       ? options.outPath
-      : path.resolve(process.cwd(), options.outPath);
+      : path.resolve(resolvedRoot, options.outPath);
     await mkdir(path.dirname(outAbs), { recursive: true });
     await writeFile(outAbs, `${sideEffectPrefix}${output}\n`, "utf-8");
     info(`doctor: wrote ${outAbs}`);

@@ -321,7 +321,7 @@ Options:
   --fail-on <error|warning|never>  validate: 失敗条件
   --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
-  --out <path>                  report/doctor/prototyping preflight: 出力先
+  --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
   --in <path>                   report: validate.json の入力先（configより優先）
   --run-validate                report: validate を実行してから report を生成
   --base-url <url>              report: 基準URL
