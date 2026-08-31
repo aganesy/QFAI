@@ -20,9 +20,11 @@ import { promisify } from "node:util";
 import { describe, expect, it } from "vitest";
 
 import {
+  ARTICLE_XI_TMP_ENTRY,
   QFAI_GITIGNORE_BLOCK,
   QFAI_GITIGNORE_MARKER,
   QFAI_GITIGNORE_RECOMMENDED_ENTRIES,
+  missingRecommendedGitignoreEntries,
 } from "../../src/core/gitignore.js";
 import { validateReviewArtifacts } from "../../src/core/validators/reviewArtifacts.js";
 import { removeTempTree } from "../helpers/tempTree.js";
@@ -69,11 +71,17 @@ describe("the managed block ships the ignore Article XI mandates", () => {
   });
 
   it("recommends the unanchored spelling, so either form satisfies the check", () => {
-    // `reviewArtifacts` matches with `content.includes(entry)` over the whole
-    // file: `tmp/` is a substring of the block's `/tmp/` and of a project's own
-    // `tmp/` line, so neither spelling is reported as missing.
-    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).toContain("tmp/");
-    expect(QFAI_GITIGNORE_BLOCK).toContain("tmp/");
+    // The entry names the recommendation rather than a line to search for:
+    // `missingRecommendedGitignoreEntries` decides it by asking whether the file
+    // leaves the root staging area ignored, so the block's anchored `/tmp/` and a
+    // project's own unanchored `tmp/` both satisfy it.
+    expect(QFAI_GITIGNORE_RECOMMENDED_ENTRIES).toContain(ARTICLE_XI_TMP_ENTRY);
+    expect(missingRecommendedGitignoreEntries(QFAI_GITIGNORE_BLOCK)).not.toContain(
+      ARTICLE_XI_TMP_ENTRY,
+    );
+    expect(missingRecommendedGitignoreEntries(`${QFAI_GITIGNORE_MARKER}\ntmp/\n`)).not.toContain(
+      ARTICLE_XI_TMP_ENTRY,
+    );
   });
 });
 
@@ -139,4 +147,31 @@ describe("QFAI-REVIEW-008 nudges a project whose block predates the entry", () =
       expect(issues.some((entry) => entry.code === "QFAI-REVIEW-008")).toBe(false);
     });
   });
+
+  /**
+   * The entry is spelled unanchored, so the characters `tmp/` also sit inside
+   * lines that leave the root staging area tracked. Each of these is a file
+   * where `git check-ignore tmp/scratch.txt` says "not ignored" while the
+   * substring is present — so the notice that exists to say so must still fire.
+   */
+  const stillTracked: ReadonlyArray<readonly [string, string]> = [
+    // A source directory that merely shares the name. Article XI claims the
+    // repository root and nothing else, and the block's own anchoring says so.
+    ["a nested `src/tmp/` the project tracks the root's scratch beside", "src/tmp/"],
+    // Prose. A comment is not a pattern; git never reads one as an ignore.
+    ["a comment that only mentions the directory", "# scratch work belongs in tmp/"],
+    // Git applies the LAST matching pattern, so this cancels the block's ignore
+    // outright — the one case where the substring is present *because* the
+    // ignore was undone.
+    ["a later `!/tmp/` that cancels the block's ignore", "/tmp/\n!/tmp/"],
+  ];
+
+  for (const [what, lines] of stillTracked) {
+    it(`still names \`tmp/\` beside ${what}`, async () => {
+      await withGitignore(`${preTmpBlock}\n${lines}\n`, (issues) => {
+        const notice = issues.find((entry) => entry.code === "QFAI-REVIEW-008");
+        expect(notice?.refs).toContain(ARTICLE_XI_TMP_ENTRY);
+      });
+    });
+  }
 });
