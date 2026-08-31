@@ -92,6 +92,7 @@
     "tests/core/findingCodeBaseline.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
+    "tests/core/specSplitScopeAttribution.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.guttedPackage.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.retiredCount.test.ts",
     "tests/unit/cli/initWorkflowOwnership.test.ts",
