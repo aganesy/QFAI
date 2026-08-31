@@ -117,6 +117,14 @@ export const RULE_PROMOTIONS = {
    */
   contractIndexFileDeclaresId: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * `QFAI-PLATFORM-003` — a `--platform` the requested profile never reads.
+   * The flag has parsed on every profile for as long as it has existed, so
+   * every CI matrix that passes it uniformly across profiles meets the finding
+   * on its `discussion` / `sdd` / `atdd` / `tdd` legs at once, for invocations
+   * that were legal when they were written.
+   */
+  platformOptionUnusedByProfile: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-RESEARCH-012` — a discussion pack with no Research Summary section.
    * A pack is written once and rarely revisited, so the rule necessarily lands
    * on packs that were complete under the schema of their day.

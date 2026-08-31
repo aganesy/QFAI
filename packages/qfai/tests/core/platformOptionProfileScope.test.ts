@@ -7,8 +7,8 @@
  */
 
 import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
-import os from "node:os";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { describe, expect, it } from "vitest";
 
@@ -18,8 +18,22 @@ import type { ValidationProfile } from "../../src/core/types.js";
 const UNUSED = "QFAI-PLATFORM-003";
 const UNKNOWN = "QFAI-PLATFORM-001";
 
+// tests/core/<this file> -> packages/qfai -> repo root
+const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+
+/**
+ * Scratch trees go under the repository-root `tmp/`, not `os.tmpdir()`:
+ * `tmp/` is the sole sanctioned staging area in this repository
+ * (`.agents/rules/temporary-files.md`), and removing the tree in `finally`
+ * does not license writing it somewhere the rule forbids in the first place —
+ * a killed process skips the `finally` and leaves the residue outside the
+ * git-ignored area. The directory is absent from a fresh clone, so create it
+ * first.
+ */
 async function withProject(task: (root: string) => Promise<void>): Promise<void> {
-  const root = await mkdtemp(path.join(os.tmpdir(), "qfai-platform-scope-"));
+  const scratchRoot = path.join(repoRoot, "tmp");
+  await mkdir(scratchRoot, { recursive: true });
+  const root = await mkdtemp(path.join(scratchRoot, "qfai-platform-scope-"));
   try {
     // Enough of a surface that init counts as having run here; the findings the
     // profiles raise about the rest of the tree are irrelevant to this test.
