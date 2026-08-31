@@ -8,6 +8,7 @@ import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import type {
+  Issue,
   ValidationCounts,
   ValidationProfile,
   ValidationResult,
@@ -27,10 +28,21 @@ async function writeValidationFixture(
   profile: ValidationProfile,
   counts: ValidationCounts,
 ): Promise<void> {
+  // counts はどのファイルを読んだかの識別子として使う。report は counts を
+  // issues から数え直して gate するようになったので、fixture 側も両者を
+  // 一致させておく — さもないと識別子が 0 に潰れる。
+  const issues: Issue[] = (["info", "warning", "error"] as const).flatMap((severity) =>
+    Array.from({ length: counts[severity] }, (_unused, index) => ({
+      code: `QFAI-FIXTURE-${severity.toUpperCase()}-${index}`,
+      severity,
+      category: "canonical" as const,
+      message: `fixture ${severity} ${index}`,
+    })),
+  );
   const result: ValidationResult = {
     toolVersion: "0.0.0-test",
     profile,
-    issues: [],
+    issues,
     counts,
     traceability: {
       sc: { total: 0, covered: 0, missing: 0, missingIds: [], refs: {} },
@@ -82,16 +94,10 @@ describe("report", { timeout: 15000 }, () => {
 
     const reportPath = path.join(root, ".qfai", "report", "report.md");
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runReport({ root, format: "md" });
+    const exitCode = await runReport({ root, format: "md" });
 
-      expect(process.exitCode).toBe(2);
-      await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
-    } finally {
-      process.exitCode = previousExitCode;
-    }
+    expect(exitCode).toBe(2);
+    await expect(readFile(reportPath, "utf-8")).rejects.toThrow();
   });
 
   it("runs report with --run-validate", async () => {
@@ -176,25 +182,38 @@ describe("report", { timeout: 15000 }, () => {
       // `discussion` is a representative narrow profile rejected in CI.
       // (`sdd` joined the CI allow-list with PR #206 review LW-G; see
       // packages/qfai/src/core/phasePolicy.ts for the rationale.)
-      await runReport({
+      const exitCode = await runReport({
         root,
         format: "md",
         outPath: reportPath,
         runValidate: true,
         profile: "discussion",
+        // `never` isolates the narrow-profile contract from the fixture's own
+        // findings: a bare `qfai init` tree has no discussion pack, so this
+        // run also carries an unrelated QFAI-DPACK-001 error. Under `never`
+        // the only way to come back non-zero is a hard-coded narrow-profile
+        // failure — exactly the #397 regression.
+        failOn: "never",
       });
 
       const validationRaw = await readFile(validatePath, "utf-8");
       const validation = JSON.parse(validationRaw) as {
-        issues?: Array<{ code?: string }>;
+        issues?: Array<{ code?: string; severity?: string }>;
       };
       // The finding is appended to a real run. Exiting non-zero here made
       // every stage gate that names a narrow profile unreachable in CI, and
       // `qfai-discussion` names exactly this one as its only gate.
-      expect(process.exitCode).not.toBe(1);
-      expect((validation.issues ?? []).some((item) => item.code === "QFAI-VALIDATE-017")).toBe(
-        true,
+      // Asserted on the RETURN VALUE: `runReport` no longer touches
+      // `process.exitCode`, so the old `process.exitCode` assertion passed
+      // even if this contract regressed.
+      expect(exitCode).toBe(0);
+      const narrowProfileIssue = (validation.issues ?? []).find(
+        (item) => item.code === "QFAI-VALIDATE-017",
       );
+      expect(narrowProfileIssue).toBeDefined();
+      // Severity is the other half of the contract: a warning can never fail
+      // an `--fail-on error` run, so the stage gate stays reachable in CI.
+      expect(narrowProfileIssue?.severity).toBe("warning");
     } finally {
       process.exitCode = previousExitCode;
       if (previousCi === undefined) {
@@ -288,9 +307,11 @@ describe("report", { timeout: 15000 }, () => {
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
-      await runReport({ root, format: "json", profile: "sdd" });
+      // runReport returns its exit code now; main.ts is what assigns it to
+      // process.exitCode, so a direct call has to read the return value.
+      const exitCode = await runReport({ root, format: "json", profile: "sdd" });
 
-      expect(process.exitCode).toBe(2);
+      expect(exitCode).toBe(2);
       const written = stderr.mock.calls.map(([chunk]) => String(chunk)).join("");
       expect(written).toContain("validate-sdd.json");
       expect(written).toContain("qfai validate --profile sdd");
@@ -585,13 +606,15 @@ describe("report", { timeout: 15000 }, () => {
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
-      await runReport({
+      // Asserted on the RETURN VALUE: `runReport` reports its outcome through
+      // the return value now, and `main.ts` is what assigns `process.exitCode`.
+      const exitCode = await runReport({
         root,
         format: "md",
         specIds: ["0004"],
         inputPath: path.join(".qfai", "report", "validate.json"),
       });
-      expect(process.exitCode).toBe(2);
+      expect(exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
       stderrSpy.mockRestore();
@@ -658,8 +681,8 @@ describe("report", { timeout: 15000 }, () => {
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
-      await runReport({ root, format: "md", specIds: ["0004"] });
-      expect(process.exitCode).toBe(2);
+      const exitCode = await runReport({ root, format: "md", specIds: ["0004"] });
+      expect(exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
       stderrSpy.mockRestore();
@@ -681,28 +704,35 @@ describe("report", { timeout: 15000 }, () => {
       "utf-8",
     );
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runReport({
-        root,
-        format: "md",
-        runValidate: true,
-        specIds: ["0004"],
-        toolVersionOverride: "1.10.0",
-      });
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
-    }
+    // The refusal is routed through the shared migration gate rather than a
+    // pre-run early return, so the run completes and reports the defect: the
+    // scoped report IS written and carries `D-DEPRECATED-PATH` at `error`,
+    // which is what makes the exit code non-zero. The invariant this case
+    // exists for is unchanged — nothing new is created under the sunset
+    // directory, the scoped `validate.spec-0004.json` least of all.
+    const exitCode = await runReport({
+      root,
+      format: "md",
+      runValidate: true,
+      specIds: ["0004"],
+      failOn: "error",
+      toolVersionOverride: "1.10.0",
+    });
+    expect(exitCode).toBe(1);
 
     // No new artifact was created under the sunset directory.
     await expect(
       readFile(path.join(root, ".qfai", "output", "validate.spec-0004.json"), "utf-8"),
     ).rejects.toThrow();
     await expect(
-      readFile(path.join(root, ".qfai", "report", "report.spec-0004.md"), "utf-8"),
+      readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
     ).rejects.toThrow();
+
+    const report = await readFile(
+      path.join(root, ".qfai", "report", "report.spec-0004.md"),
+      "utf-8",
+    );
+    expect(report).toContain("D-DEPRECATED-PATH");
   });
 
   it("still writes --run-validate output while the legacy config is pre-sunset", async () => {
@@ -734,8 +764,8 @@ describe("report", { timeout: 15000 }, () => {
     const previousExitCode = process.exitCode;
     process.exitCode = undefined;
     try {
-      await runReport({ root, format: "md", specIds: ["../outside"] });
-      expect(process.exitCode).toBe(2);
+      const exitCode = await runReport({ root, format: "md", specIds: ["../outside"] });
+      expect(exitCode).toBe(2);
     } finally {
       process.exitCode = previousExitCode;
     }
@@ -914,5 +944,249 @@ describe("report", { timeout: 15000 }, () => {
     expect(report.prototyping?.evidence?.specsCoverage?.expectedSpecIds).toEqual(["0001"]);
     expect(report.prototyping?.evidence?.specsCoverage?.missingSpecIds).toEqual([]);
     expect(report.prototyping?.evidence?.specsCoverageStatus).toBe("complete");
+  });
+});
+
+describe("report exit code", { timeout: 15000 }, () => {
+  type SeedCounts = { info: number; warning: number; error: number };
+
+  /** Build the `issues[]` a given `counts` claims, so the two never disagree. */
+  function issuesFor(counts: SeedCounts): Array<Record<string, string>> {
+    const severities: Array<keyof SeedCounts> = ["info", "warning", "error"];
+    return severities.flatMap((severity) =>
+      Array.from({ length: counts[severity] }, (_unused, index) => ({
+        code: `QFAI-SEED-${severity.toUpperCase()}`,
+        severity,
+        category: "canonical",
+        message: `seeded ${severity} #${index}`,
+      })),
+    );
+  }
+
+  /**
+   * Seed a `--in` file whose `issues` really carry the requested severities.
+   * Replacing `counts` alone would leave the fixture's own bare-init findings
+   * in `issues`, and the gate now recounts from `issues` — so a counts-only
+   * fixture would assert against a number nothing in the report agrees with.
+   */
+  async function seedValidation(
+    counts: SeedCounts,
+    overrides: { keepIssues?: boolean } = {},
+  ): Promise<{ root: string; inputPath: string }> {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-gate-"));
+    await runInit({ dir: root, force: false, dryRun: false, yes: true });
+    await runValidate({ root, strict: false, failOn: "never", format: "github" });
+
+    const validatePath = path.join(root, ".qfai", "report", "validate.json");
+    const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+    const inputPath = path.join(root, ".qfai", "report", "validate.seeded.json");
+    const seeded = overrides.keepIssues
+      ? { ...parsed, counts }
+      : { ...parsed, issues: issuesFor(counts), counts };
+    await writeFile(inputPath, `${JSON.stringify(seeded, null, 2)}\n`, "utf-8");
+    return { root, inputPath };
+  }
+
+  it("exits 1 when the report carries an error and failOn defaults to error", async () => {
+    const { root, inputPath } = await seedValidation({ info: 4, warning: 5, error: 1 });
+
+    const exitCode = await runReport({ root, format: "md", inputPath });
+
+    expect(exitCode).toBe(1);
+  });
+
+  it("honours --fail-on never on a report that carries an error", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 1 });
+
+    const exitCode = await runReport({ root, format: "md", inputPath, failOn: "never" });
+
+    expect(exitCode).toBe(0);
+  });
+
+  it("honours --strict on a report that carries only warnings", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 2, error: 0 });
+
+    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
+    expect(await runReport({ root, format: "md", inputPath, strict: true })).toBe(1);
+  });
+
+  it("still writes the report artifact when the gate fails", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 3 });
+    const reportPath = path.join(root, ".qfai", "report", "gated.md");
+
+    const exitCode = await runReport({ root, format: "md", inputPath, outPath: reportPath });
+
+    expect(exitCode).toBe(1);
+    await expect(readFile(reportPath, "utf-8")).resolves.toContain("# QFAI Report");
+  });
+
+  it("recounts from issues when the input's counts are stale", async () => {
+    // `--in` reads a file the gate does not own: a stale or hand-edited
+    // `counts` block that zeroes out errors the `issues[]` still lists would
+    // otherwise print those errors in the report and exit 0 anyway.
+    const { root, inputPath } = await seedValidation(
+      { info: 0, warning: 0, error: 0 },
+      { keepIssues: true },
+    );
+    const seeded = JSON.parse(await readFile(inputPath, "utf-8")) as {
+      issues: Array<{ severity: string; suppressed?: boolean }>;
+    };
+    expect(
+      seeded.issues.some((issue) => issue.severity === "error" && issue.suppressed !== true),
+    ).toBe(true);
+
+    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
+    expect(await runReport({ root, format: "md", inputPath, failOn: "never" })).toBe(0);
+  });
+
+  it("rejects an input whose issues carry an unknown severity", async () => {
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    await writeFile(
+      inputPath,
+      `${JSON.stringify(
+        {
+          ...parsed,
+          issues: [
+            { code: "QFAI-SEED-BOGUS", severity: "fatal", category: "canonical", message: "x" },
+          ],
+        },
+        null,
+        2,
+      )}\n`,
+      "utf-8",
+    );
+
+    // Counting an unrecognised severity would quietly drop it from the gate.
+    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
+      /validate\.json の形式が不正です/,
+    );
+  });
+
+  it("rejects an input whose suppressed flag is not a boolean", async () => {
+    // `countIssues` tests `suppressed` for truthiness, so the string "false"
+    // suppresses. An error carrying one drops out of the recount and takes the
+    // gate's only reason to fail with it — a bypass spelled in the very field
+    // that is supposed to be an explicit, auditable decision.
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    const bogus = {
+      code: "QFAI-SEED-ERROR",
+      severity: "error",
+      category: "canonical",
+      message: "should gate",
+      suppressed: "false",
+    };
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [bogus] }, null, 2)}\n`,
+      "utf-8",
+    );
+
+    await expect(runReport({ root, format: "md", inputPath })).rejects.toThrow(
+      /validate\.json の形式が不正です/,
+    );
+  });
+
+  it("keeps an honest boolean suppression working", async () => {
+    // The rejection above must not cost the field its actual purpose: a real
+    // `suppressed: true` still keeps its issue out of the gate.
+    const { root, inputPath } = await seedValidation({ info: 0, warning: 0, error: 0 });
+    const parsed = JSON.parse(await readFile(inputPath, "utf-8")) as Record<string, unknown>;
+    const issue = (suppressed: boolean): Record<string, unknown> => ({
+      code: "QFAI-SEED-ERROR",
+      severity: "error",
+      category: "canonical",
+      message: "waived",
+      suppressed,
+    });
+
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [issue(true)] }, null, 2)}\n`,
+      "utf-8",
+    );
+    expect(await runReport({ root, format: "md", inputPath })).toBe(0);
+
+    await writeFile(
+      inputPath,
+      `${JSON.stringify({ ...parsed, issues: [issue(false)] }, null, 2)}\n`,
+      "utf-8",
+    );
+    expect(await runReport({ root, format: "md", inputPath })).toBe(1);
+  });
+});
+
+describe("report --run-validate shares the validate migration gate", { timeout: 30000 }, () => {
+  /**
+   * `report --run-validate` is the documented single-step CI usage, so it owes
+   * the operator the same legacy-path migration gate `qfai validate` applies.
+   * Before the gate was shared it ran `validateProject` alone: the
+   * `D-DEPRECATED-PATH` finding never reached the report, and the writer
+   * re-created the deprecated `.qfai/output/validate.json` that validate
+   * refuses post-sunset.
+   */
+  async function seedLegacyConfig(root: string): Promise<void> {
+    const yaml = ["output:", "  validateJsonPath: .qfai/output/validate.json", ""].join("\n");
+    await writeFile(path.join(root, "qfai.config.yaml"), yaml, "utf-8");
+  }
+
+  it("AT sunset: refuses the legacy write and carries D-DEPRECATED-PATH as an error", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedLegacyConfig(root);
+      const outPath = path.join(root, ".qfai", "report", "report.json");
+
+      const exitCode = await runReport({
+        root,
+        format: "json",
+        outPath,
+        runValidate: true,
+        failOn: "error",
+        toolVersionOverride: "1.10.0",
+      });
+
+      expect(exitCode).toBe(1);
+      // The writer refused: the deprecated path must not be re-created.
+      await expect(
+        readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
+      ).rejects.toThrow();
+      const report = JSON.parse(await readFile(outPath, "utf-8")) as {
+        issues: Array<{ code: string; severity: string; message: string }>;
+      };
+      const deprecation = report.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
+      expect(deprecation?.severity).toBe("error");
+      expect(deprecation?.message).toContain("REFUSED");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("PRE sunset: writes the configured legacy path and warns instead of erroring", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-report-legacycfg-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+      await seedLegacyConfig(root);
+
+      const exitCode = await runReport({
+        root,
+        format: "md",
+        runValidate: true,
+        // `never` isolates the gate from the fixture's unrelated
+        // QFAI-DPACK-001 error; the deprecation severity is asserted below.
+        failOn: "never",
+        toolVersionOverride: "1.9.1",
+      });
+
+      expect(exitCode).toBe(0);
+      const written = JSON.parse(
+        await readFile(path.join(root, ".qfai", "output", "validate.json"), "utf-8"),
+      ) as { issues: Array<{ code: string; severity: string }> };
+      const deprecation = written.issues.find((issue) => issue.code === "D-DEPRECATED-PATH");
+      expect(deprecation?.severity).toBe("warning");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
   });
 });

@@ -745,7 +745,13 @@ async function validatePrototypingSkill(
     : [];
 }
 
-function countIssues(issues: Issue[]): ValidationCounts {
+/**
+ * Count findings by severity, skipping suppressed ones. `counts` is the SSOT
+ * every gate reads, so anything that rebuilds a `ValidationResult` from an
+ * `issues[]` array — including `report --in`, whose input file is untrusted —
+ * must recount through here instead of trusting a carried-over number.
+ */
+export function countIssues(issues: Issue[]): ValidationCounts {
   return issues.reduce<ValidationCounts>(
     (acc, issue) => {
       if (issue.suppressed) {

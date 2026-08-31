@@ -422,9 +422,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         break;
       case "--strict":
-        // usage(): validate 専用。report / doctor では runReport /
-        // runDoctor が strict を読まないため、黙って捨てずに拒否する。
-        if (command === "validate") {
+        // usage(): validate と report が読む。runReport は findings を
+        // gate するようになったので strict を尊重する。doctor では
+        // runDoctor が読まないため、黙って捨てずに拒否する。
+        if (command === "validate" || command === "report") {
           options.strict = true;
         } else {
           markInvalid();
@@ -474,9 +475,15 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
           markInvalid();
           break;
         }
-        // usage(): validate / doctor / prototyping preflight のみが
-        // failOn を読む。report 等に付けても runReport は無視するため拒否。
-        if (command !== "validate" && command !== "doctor" && !ownedByPrototyping("preflight")) {
+        // usage(): validate / report / doctor / prototyping preflight が
+        // failOn を読む。report は findings を gate するようになったため
+        // 所有側に含める。それ以外に付けても読まれないので拒否する。
+        if (
+          command !== "validate" &&
+          command !== "report" &&
+          command !== "doctor" &&
+          !ownedByPrototyping("preflight")
+        ) {
           markInvalid();
           break;
         }
@@ -485,7 +492,10 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         } else {
           // An unknown threshold must not fall through to the config
           // default: the gate would then silently differ from the flag
-          // the caller wrote, in either direction.
+          // the caller wrote, in either direction. A typo (`--fail-on warn`)
+          // used to be dropped silently, so a CI step that meant to gate on
+          // warnings exited 0 on a warning-only run. Unknown values are a
+          // usage error.
           markInvalid();
         }
         break;

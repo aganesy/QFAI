@@ -97,6 +97,90 @@ export function configTargetsLegacyValidateJsonPath(configuredPath: string): boo
   return normalizeForLegacyMatch(configuredPath) === LEGACY_VALIDATE_JSON_REL;
 }
 
+/**
+ * Outcome of the legacy `validate.json` migration gate: the
+ * `D-DEPRECATED-PATH` finding a run must carry (if any) plus the writer
+ * decisions derived from the same signals.
+ */
+export type LegacyValidateJsonGate = {
+  /** Finding to append to the run's result, or `null` when none is due. */
+  issue: Issue | null;
+  /** True while the deprecation window is open (legacy path still written). */
+  legacyWriteEnabled: boolean;
+  /** True when `output.validateJsonPath` still names the legacy SSOT. */
+  configTargetsLegacyPath: boolean;
+  /** True when the writer must refuse the configured (legacy) target. */
+  refuseConfiguredLegacyWrite: boolean;
+};
+
+/**
+ * Evaluate the legacy `.qfai/output/validate.json` migration gate.
+ *
+ * Shared by `qfai validate` and `qfai report --run-validate`: both run
+ * `validateProject` and then write `output.validateJsonPath`, so both owe the
+ * operator the same finding and the same post-sunset write refusal. When only
+ * `validate` applied it, `report --run-validate` — the documented single-step
+ * CI usage — re-created the legacy path and exited 0 on a project `validate`
+ * rejects with exit 1.
+ */
+export async function evaluateLegacyValidateJsonGate(args: {
+  root: string;
+  configuredValidateJsonPath: string;
+  /** Override the observed tool version; production reads package.json. */
+  toolVersionOverride?: string;
+  /** Spec ids of a `--spec`-scoped run; empty for an unscoped run. */
+  scopedSpecIds?: readonly string[];
+}): Promise<LegacyValidateJsonGate> {
+  const effectiveToolVersion = args.toolVersionOverride ?? (await resolveToolVersion());
+  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
+  const legacyWriteEnabled = legacySeverity === "warning";
+  // Detect whether the operator's project config still aims the writer
+  // at the legacy SSOT. This is a stronger signal than "the legacy file
+  // exists on disk" — even a clean filesystem will trigger the gate if
+  // the config points there, because the writer is about to recreate
+  // the stale path on this very run.
+  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(
+    args.configuredValidateJsonPath,
+  );
+  const scopedSpecIds = args.scopedSpecIds ?? [];
+  // Post-sunset, only emit the deprecation finding when there is
+  // observable evidence (config or on-disk file) that a consumer still
+  // depends on the legacy path. Otherwise every clean validate run on
+  // tool >= sunset would carry an unactionable error finding for a path
+  // the user never used. Pre-sunset the finding is always emitted as a
+  // warning because the tool itself is still writing the path.
+  const legacyOnDisk = !legacyWriteEnabled
+    ? await pathExists(path.join(args.root, LEGACY_VALIDATE_JSON_REL))
+    : false;
+  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
+  // notice would describe a deprecated write that never happens — and fail an
+  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
+  // the only part a scope may suppress. Post-sunset the finding is evidence of
+  // a legacy path this project still depends on (config or stale file), and
+  // suppressing it would let `--spec` alone walk past the migration gate with
+  // exit 0.
+  const emitDeprecationIssue = legacyWriteEnabled
+    ? scopedSpecIds.length === 0
+    : legacyOnDisk || configTargetsLegacyPath;
+  // Post-sunset, refuse to write to the configured legacy path. This is
+  // the migration gate: the legacy SSOT is dead, the config must be
+  // updated. Pre-sunset writes proceed normally (writer-side warning).
+  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
+  return {
+    issue: emitDeprecationIssue
+      ? buildDeprecationIssue({
+          severity: legacySeverity,
+          legacyWriteEnabled,
+          configTargetsLegacyPath,
+          refuseConfiguredLegacyWrite,
+        })
+      : null,
+    legacyWriteEnabled,
+    configTargetsLegacyPath,
+    refuseConfiguredLegacyWrite,
+  };
+}
+
 export async function runValidate(options: ValidateOptions): Promise<number> {
   const startedAt = new Date();
   const root = path.resolve(options.root);
@@ -117,57 +201,21 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
         counts: { ...validated.counts, warning: validated.counts.warning + 1 },
       }
     : validated;
-  // Resolve effective tool version for the legacy-path sunset gate.
-  // Test callers override; production reads the same package.json#version
-  // the rest of the toolchain uses (so the source-of-truth is single).
-  const effectiveToolVersion = options.toolVersionOverride ?? (await resolveToolVersion());
-  const legacySeverity = legacyValidateJsonSeverity(effectiveToolVersion);
-  const legacyWriteEnabled = legacySeverity === "warning";
-  // Detect whether the operator's project config still aims the writer
-  // at the legacy SSOT. This is a stronger signal than "the legacy file
-  // exists on disk" — even a clean filesystem will trigger the gate if
-  // the config points there, because the writer is about to recreate
-  // the stale path on this very run.
   const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
-  const configTargetsLegacyPath = configTargetsLegacyValidateJsonPath(configuredValidateJsonPath);
   const scopedSpecIds = options.specIds ?? [];
-  // Post-sunset, only emit the deprecation finding when there is
-  // observable evidence (config or on-disk file) that a consumer still
-  // depends on the legacy path. Otherwise every clean validate run on
-  // tool >= sunset would carry an unactionable error finding for a path
-  // the user never used. Pre-sunset the finding is always emitted as a
-  // warning because the tool itself is still writing the path.
-  const legacyOnDisk = !legacyWriteEnabled
-    ? await pathExists(path.join(root, LEGACY_VALIDATE_JSON_REL))
-    : false;
-  // A scoped run writes no shared report at all, so the PRE-sunset writer-side
-  // notice would describe a deprecated write that never happens — and fail an
-  // otherwise-clean slice gate under `--strict` / `--fail-on warning`. That is
-  // the only part a scope may suppress. Post-sunset the finding is evidence of
-  // a legacy path this project still depends on (config or stale file), and
-  // suppressing it would let `--spec` alone walk past the migration gate with
-  // exit 0.
-  const emitDeprecationIssue = legacyWriteEnabled
-    ? scopedSpecIds.length === 0
-    : legacyOnDisk || configTargetsLegacyPath;
-  // Post-sunset, refuse to write to the configured legacy path. This is
-  // the migration gate: the legacy SSOT is dead, the config must be
-  // updated. Pre-sunset writes proceed normally (writer-side warning).
-  const refuseConfiguredLegacyWrite = configTargetsLegacyPath && !legacyWriteEnabled;
-  const deprecationIssue: Issue | null = emitDeprecationIssue
-    ? buildDeprecationIssue({
-        severity: legacySeverity,
-        legacyWriteEnabled,
-        configTargetsLegacyPath,
-        refuseConfiguredLegacyWrite,
-      })
-    : null;
-  const result: ValidationResult = deprecationIssue
-    ? {
-        ...rawResult,
-        issues: [...rawResult.issues, deprecationIssue],
-        counts: recountIssues(rawResult.counts, deprecationIssue),
-      }
+  const legacyGate = await evaluateLegacyValidateJsonGate({
+    root,
+    configuredValidateJsonPath,
+    // Test callers override; production reads the same package.json#version
+    // the rest of the toolchain uses (so the source-of-truth is single).
+    ...(options.toolVersionOverride !== undefined
+      ? { toolVersionOverride: options.toolVersionOverride }
+      : {}),
+    scopedSpecIds,
+  });
+  const { legacyWriteEnabled, configTargetsLegacyPath, refuseConfiguredLegacyWrite } = legacyGate;
+  const result: ValidationResult = legacyGate.issue
+    ? appendIssue(rawResult, legacyGate.issue)
     : rawResult;
   const normalized = normalizeValidationResult(root, result);
   const partialProfileNotice = buildPartialProfileNotice(
@@ -558,6 +606,22 @@ function buildPartialProfileNotice(
       `${unevaluated.join(", ")}. A PASS here is not full-scan coverage — run ` +
       "`qfai validate --fail-on error` (full profile) before declaring completion.",
     rule: "validate.partialProfileCoverage",
+  };
+}
+
+/**
+ * Append one finding to a result and keep `counts` in step.
+ *
+ * Exported so `report --run-validate` folds the shared migration-gate finding
+ * into its result exactly the way `validate` does — a hand-rolled copy there
+ * would be free to forget the recount and hand the gate a stale severity
+ * tally.
+ */
+export function appendIssue(result: ValidationResult, added: Issue): ValidationResult {
+  return {
+    ...result,
+    issues: [...result.issues, added],
+    counts: recountIssues(result.counts, added),
   };
 }
 

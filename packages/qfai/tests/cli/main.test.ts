@@ -31,6 +31,36 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     }
   });
 
+  it("sets exitCode from report so --fail-on gates the run", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-cli-report-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(["report", "--root", root, "--run-validate", "--fail-on", "never"], root);
+        expect(process.exitCode).toBe(0);
+
+        const validatePath = path.join(root, ".qfai", "report", "validate.json");
+        const parsed = JSON.parse(await readFile(validatePath, "utf-8")) as { counts: unknown };
+        const seededPath = path.join(root, ".qfai", "report", "validate.seeded.json");
+        await writeFile(
+          seededPath,
+          `${JSON.stringify({ ...parsed, counts: { info: 0, warning: 0, error: 1 } }, null, 2)}\n`,
+          "utf-8",
+        );
+
+        await run(["report", "--root", root, "--in", seededPath, "--fail-on", "error"], root);
+        expect(process.exitCode).toBe(1);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
   it("sets exitCode=1 when help is shown due to invalid args", async () => {
     const cwd = process.cwd();
 
@@ -42,6 +72,30 @@ describe("cli root discovery", { timeout: 15000 }, () => {
     } finally {
       process.exitCode = previousExitCode;
     }
+  });
+
+  it("documents --strict and --fail-on as report gates in the help text", async () => {
+    // The gate flags are only discoverable to an operator reading `--help`;
+    // while `usage()` scoped both to `validate` alone they looked unsupported
+    // on `report` even though main.ts forwards them.
+    const chunks: string[] = [];
+    const previousWrite = process.stdout.write.bind(process.stdout);
+    const previousExitCode = process.exitCode;
+    process.exitCode = undefined;
+    try {
+      process.stdout.write = (chunk: string | Uint8Array): boolean => {
+        chunks.push(typeof chunk === "string" ? chunk : Buffer.from(chunk).toString("utf-8"));
+        return true;
+      };
+      await run(["--help"], process.cwd());
+    } finally {
+      process.stdout.write = previousWrite;
+      process.exitCode = previousExitCode;
+    }
+
+    const help = chunks.join("");
+    expect(help).toContain("--strict                     validate/report:");
+    expect(help).toContain("--fail-on <error|warning|never>  validate/report:");
   });
 
   it("keeps guardrails --format json stdout parseable when no config is found", async () => {

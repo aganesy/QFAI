@@ -64,9 +64,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
     case "report":
       {
         const resolvedRoot = await resolveRoot(options);
-        await runReport({
+        process.exitCode = await runReport({
           root: resolvedRoot,
           format: options.reportFormat,
+          strict: options.strict,
+          ...(options.failOn !== undefined ? { failOn: options.failOn } : {}),
           ...(options.reportOut !== undefined ? { outPath: options.reportOut } : {}),
           ...(options.reportIn !== undefined ? { inputPath: options.reportIn } : {}),
           ...(options.reportBaseUrl !== undefined ? { baseUrl: options.reportBaseUrl } : {}),
@@ -339,10 +341,10 @@ Options:
   --format <md|json>           report の出力形式
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
   --active                     discussion list: active session pointer を表示
-  --strict                     validate: warning 以上で exit 1
+  --strict                     validate/report: warning 以上で exit 1
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
-  --fail-on <error|warning|never>  validate: 失敗条件
+  --fail-on <error|warning|never>  validate/report: 失敗条件
   --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）

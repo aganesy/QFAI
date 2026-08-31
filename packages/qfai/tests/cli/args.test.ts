@@ -595,14 +595,26 @@ describe("parseArgs", () => {
     it("rejects --strict / --fail-on on commands that never read them", () => {
       const cwd = process.cwd();
 
+      // `report` moved into the owning set: runReport now gates on the
+      // findings it prints, so it reads both flags rather than dropping
+      // them. The rejection this case pins is for the commands that still
+      // do not read them.
       const reportStrict = parseArgs(["report", "--strict"], cwd);
-      expect(reportStrict.invalid).toBe(true);
-      expect(reportStrict.options.strict).toBe(false);
+      expect(reportStrict.invalid).toBe(false);
+      expect(reportStrict.options.strict).toBe(true);
 
       const reportFailOn = parseArgs(["report", "--fail-on", "warning", "--format", "json"], cwd);
-      expect(reportFailOn.invalid).toBe(true);
-      expect(reportFailOn.options.failOn).toBeUndefined();
+      expect(reportFailOn.invalid).toBe(false);
+      expect(reportFailOn.options.failOn).toBe("warning");
       expect(reportFailOn.options.reportFormat).toBe("json");
+
+      const initStrict = parseArgs(["init", "--strict"], cwd);
+      expect(initStrict.invalid).toBe(true);
+      expect(initStrict.options.strict).toBe(false);
+
+      const auditFailOn = parseArgs(["audit", "log", "--fail-on", "warning"], cwd);
+      expect(auditFailOn.invalid).toBe(true);
+      expect(auditFailOn.options.failOn).toBeUndefined();
 
       const validateStrict = parseArgs(["validate", "--strict", "--fail-on", "warning"], cwd);
       expect(validateStrict.invalid).toBe(false);
@@ -804,5 +816,30 @@ describe("parseArgs", () => {
         expect(sibling.invalid).toBe(true);
       }
     });
+  });
+});
+
+describe("parseArgs --fail-on", () => {
+  it.each(["never", "warning", "error"] as const)("accepts %s", (value) => {
+    const parsed = parseArgs(["report", "--fail-on", value], process.cwd());
+    expect(parsed.invalid).toBe(false);
+    expect(parsed.options.failOn).toBe(value);
+  });
+
+  it("rejects an unknown value instead of silently falling back to the config default", () => {
+    // `--fail-on warn` used to leave `failOn` unset, so the run fell back to
+    // the configured default (`error`) and a CI step that meant to gate on
+    // warnings exited 0 on a warning-only run.
+    const parsed = parseArgs(["report", "--fail-on", "warn"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.help).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
+  });
+
+  it("does not consume the next option when --fail-on has no value", () => {
+    const parsed = parseArgs(["validate", "--fail-on", "--strict"], process.cwd());
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.strict).toBe(true);
+    expect(parsed.options.failOn).toBeUndefined();
   });
 });
