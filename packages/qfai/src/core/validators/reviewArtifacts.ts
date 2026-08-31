@@ -4,6 +4,7 @@ import path from "node:path";
 
 import { REVISION_FORM } from "../evidenceRevision.js";
 import { isEnoent } from "../fs/errno.js";
+import { owningSpecNumber, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
 import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } from "../gitignore.js";
@@ -19,7 +20,88 @@ const ALLOWED_OVERALL_STATUS = new Set(["PASS", "FAIL"]);
 // the `REV:` token of the ledger `Evidence` grammar (`tddList.ts`), because the
 // two values are compared against each other — see `evidenceRevision.ts`.
 
-export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
+/**
+ * What a `--spec` run is allowed to judge here.
+ *
+ * `specScope` is `undefined` for a repo-wide run, which is the whole review
+ * tree. `specsRoot` is the configured absolute `specsDir`, needed to read a
+ * pack's `target.path` as a spec.
+ */
+export type ReviewArtifactsScope = {
+  specScope: SpecScope | undefined;
+  specsRoot: string | undefined;
+  /**
+   * Absolute `discussionDir`, used to attribute a pack whose `summary.json`
+   * cannot be read. Optional: a caller that omits it simply loses that half of
+   * the fallback.
+   */
+  discussionRoot?: string | undefined;
+  /**
+   * The pack producers the calling profile owns. `undefined` judges every pack,
+   * which is what the full-scan profiles want.
+   */
+  producers?: ReadonlySet<string> | undefined;
+};
+
+/**
+ * Which stage wrote a pack, declared by the pack itself in `summary.json`.
+ *
+ * `target.kind` cannot answer this: `qfai-implement` mandates a review pack of
+ * its own and its layout reference tells it to write `target.kind: "spec"` with
+ * `target.path` on the spec directory — the same two values an SDD pack
+ * carries. Selecting the SDD gate's packs by kind therefore also caught every
+ * implementation pack, so an implementation worker that had written
+ * `review_request.md` and not yet its reviewer files failed
+ * `--profile sdd --fail-on error` with `QFAI-REVIEW-004/005` on a downstream
+ * pack the SDD cycle has no business gating. The producer is the stable
+ * attribute: one value per stage, written once when the pack is created, and
+ * unrelated to what the pack points at.
+ */
+const ALLOWED_PRODUCERS = new Set(["discussion", "sdd", "implement"]);
+
+/** The producers each stage-scoped profile is the gate for. */
+export const SDD_PACK_PRODUCERS: ReadonlySet<string> = new Set(["sdd"]);
+export const DISCUSSION_PACK_PRODUCERS: ReadonlySet<string> = new Set(["discussion"]);
+
+/**
+ * The `target.kind` a producer implies, used to check the two against the tree
+ * the pack names — and, in reverse, to place a pack that declares no producer.
+ */
+function producerKind(producer: string): string | null {
+  switch (producer) {
+    case "discussion":
+      return "discussion";
+    case "sdd":
+    case "implement":
+      return "spec";
+    default:
+      return null;
+  }
+}
+
+/**
+ * The producer a pack that declares none is treated as, from its `target.kind`.
+ *
+ * `spec` maps to `sdd` rather than to nothing: a pack written before the
+ * producer field existed keeps the gate it had, and an implementation pack that
+ * wants out of the SDD gate says so by declaring itself. Guessing the other way
+ * would drop every legacy SDD pack out of the gate that mandates it.
+ */
+function kindProducer(kind: string): string | null {
+  switch (kind) {
+    case "discussion":
+      return "discussion";
+    case "spec":
+      return "sdd";
+    default:
+      return null;
+  }
+}
+
+export async function validateReviewArtifacts(
+  root: string,
+  scope?: ReviewArtifactsScope,
+): Promise<Issue[]> {
   const reviewRoot = path.join(root, ".qfai", "review");
   const issues: Issue[] = [];
 
@@ -92,7 +174,46 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
     );
   }
 
-  const reviewPackDirs = await listReviewPackDirs(reviewRoot);
+  const { packs, unrecognized } = await listReviewPackDirs(reviewRoot);
+  const specScope = scope?.specScope;
+  const specsRoot = scope?.specsRoot;
+  const isScopedRun = specScope !== undefined && specsRoot !== undefined;
+  const selection: PackSelection = {
+    root,
+    specsRoot,
+    discussionRoot: scope?.discussionRoot,
+    specScope: isScopedRun ? specScope : undefined,
+    producers: scope?.producers,
+  };
+  const reviewPackDirs = await selectPacks(packs, selection);
+
+  // Both of the findings below describe `.qfai/review/` as a whole rather than
+  // any one pack, so a `--spec` run — one worker's view of one slice — does not
+  // raise them: "no pack" would only mean "no pack for this spec", and a
+  // mis-named directory is a fact about the tree the unscoped gate owns.
+  //
+  // Reported before the presence check, so a tree whose only packs are
+  // mis-named still says why nothing was inspected. Silence here was the worse
+  // half of the same defect: a directory the pattern skips is never opened, so
+  // a pack with no `review_request.md` and no `summary.json` produced no
+  // finding in ANY profile — indistinguishable from a pack that is complete.
+  if (!isScopedRun && unrecognized.length > 0) {
+    issues.push(
+      issue(
+        "QFAI-REVIEW-010",
+        `\`.qfai/review/\` に review pack として認識されないディレクトリがあります: ${unrecognized.join(", ")}`,
+        "info",
+        reviewRoot,
+        "reviewArtifacts.packDirName",
+        [...unrecognized],
+        "canonical",
+        "review pack のディレクトリ名は `review-YYYYMMDDhhmmssSSS`（17桁）のみです。一致しないディレクトリは `review_request.md` / `summary.json` / `Rxx_*.md` の検査対象外となり、欠落があっても検出されません。`review-<timestamp>/` にリネームするか、`.qfai/review/` の外へ移動してください。",
+      ),
+    );
+  }
+  if (reviewPackDirs.length === 0 && isScopedRun) {
+    return issues;
+  }
   if (reviewPackDirs.length === 0) {
     issues.push(
       issue(
@@ -112,7 +233,7 @@ export async function validateReviewArtifacts(root: string): Promise<Issue[]> {
   const legacyPacks = await readLegacyManifest(reviewRoot);
   const revisions = makeRevisionProbe(root);
   for (const packDir of reviewPackDirs) {
-    issues.push(...(await validateReviewPack(packDir, legacyPacks, revisions)));
+    issues.push(...(await validateReviewPack(packDir, legacyPacks, revisions, selection)));
   }
 
   return issues;
@@ -227,6 +348,7 @@ async function validateReviewPack(
   reviewPackDir: string,
   legacyPacks: ReadonlySet<string>,
   revisions: RevisionProbe,
+  selection: PackSelection,
 ): Promise<Issue[]> {
   const issues: Issue[] = [];
   const reviewRequestPath = path.join(reviewPackDir, "review_request.md");
@@ -296,10 +418,67 @@ async function validateReviewPack(
   }
 
   if (await isFile(summaryPath)) {
-    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks, revisions)));
+    issues.push(...(await validateSummarySchema(summaryPath, legacyPacks, revisions, selection)));
   }
 
   return issues;
+}
+
+/**
+ * `target` and `producer`, each checked on its own **and against each other**.
+ *
+ * The enum check on `target.kind` and the non-empty check on `target.path` were
+ * independent, so a pack could say `kind: "discussion"` while pointing `path` at
+ * a spec directory and no profile said a word: the SDD gate skipped it as
+ * another stage's business, and a pack holding all three mandated files was
+ * otherwise schema-clean. That made the wrong `kind` a way *out* of the gate the
+ * pack's own path puts it in. A declaration the tree contradicts is not a
+ * target, so it is reported here and refused as an attribution in
+ * {@link attributionFromSummary}.
+ *
+ * Only a path that resolves inside the run's configured `specsDir` or
+ * `discussionDir` proves anything. An implementation pack naming a source file,
+ * or any run that passed no roots, has nothing to contradict and is left alone.
+ */
+function targetViolations(parsed: Record<string, unknown>, selection: PackSelection): string[] {
+  const violations: string[] = [];
+  const target = asRecord(parsed.target);
+  // Case-sensitive on purpose, as before: attribution reads `Spec` as `spec` so
+  // the pack still faces the right gate, and the schema still says the spelling
+  // is wrong rather than quietly accepting two of them.
+  const declaredKind = readString(target?.kind);
+  const targetPath = readString(target?.path);
+  if (declaredKind === null || !ALLOWED_TARGET_KINDS.has(declaredKind)) {
+    violations.push("`target.kind` は spec|discussion のいずれかが必須です");
+  }
+  if (targetPath === null) {
+    violations.push("`target.path` は非空文字列が必須です");
+  }
+
+  const producer = readString(parsed.producer)?.toLowerCase() ?? null;
+  if (producer !== null && !ALLOWED_PRODUCERS.has(producer)) {
+    violations.push(
+      `\`producer\` は ${[...ALLOWED_PRODUCERS].join("|")} のいずれかが必須です（省略時は \`target.kind\` から推定します）`,
+    );
+  }
+
+  const proven = targetPath === null ? null : kindFromPath(targetPath, selection);
+  if (proven === null) {
+    return violations;
+  }
+  const targetKind = declaredKind?.toLowerCase() ?? null;
+  if (targetKind !== null && ALLOWED_TARGET_KINDS.has(targetKind) && targetKind !== proven) {
+    violations.push(
+      `\`target.kind\` (${targetKind}) が \`target.path\` (${targetPath}) と矛盾しています。このパスは ${proven} を指しています`,
+    );
+  }
+  const declared = producer === null ? null : producerKind(producer);
+  if (declared !== null && declared !== proven) {
+    violations.push(
+      `\`producer\` (${producer}) が \`target.path\` (${targetPath}) と矛盾しています。このパスは ${proven} を指しています`,
+    );
+  }
+  return violations;
 }
 
 /**
@@ -363,6 +542,7 @@ async function validateSummarySchema(
   summaryPath: string,
   legacyPacks: ReadonlySet<string>,
   revisions: RevisionProbe,
+  selection: PackSelection,
 ): Promise<Issue[]> {
   let parsed: unknown;
   try {
@@ -402,15 +582,7 @@ async function validateSummarySchema(
     violations.push("`created_at` は日時文字列が必須です");
   }
 
-  const target = asRecord(parsed.target);
-  const targetKind = readString(target?.kind);
-  const targetPath = readString(target?.path);
-  if (!targetKind || !ALLOWED_TARGET_KINDS.has(targetKind)) {
-    violations.push("`target.kind` は spec|discussion のいずれかが必須です");
-  }
-  if (!targetPath) {
-    violations.push("`target.path` は非空文字列が必須です");
-  }
+  violations.push(...targetViolations(parsed, selection));
 
   const overallStatus = readString(parsed.overall_status);
   if (!overallStatus || !ALLOWED_OVERALL_STATUS.has(overallStatus)) {
@@ -562,18 +734,332 @@ async function validateSummarySchema(
   ];
 }
 
-async function listReviewPackDirs(reviewRoot: string): Promise<string[]> {
-  let entries: string[] = [];
+/**
+ * The pack directories, plus the names that were skipped.
+ *
+ * `unrecognized` is what `QFAI-REVIEW-010` reports. Dot-prefixed names are not
+ * in it: `.legacy-packs` and friends are metadata the review tooling keeps
+ * beside the packs, never a mis-named pack.
+ */
+async function listReviewPackDirs(
+  reviewRoot: string,
+): Promise<{ packs: string[]; unrecognized: string[] }> {
+  let dirEntries;
   try {
-    const dirEntries = await readdir(reviewRoot, { withFileTypes: true });
-    entries = dirEntries
-      .filter((entry) => entry.isDirectory() && REVIEW_PACK_DIR_RE.test(entry.name))
-      .map((entry) => entry.name)
-      .sort((left, right) => right.localeCompare(left));
+    dirEntries = await readdir(reviewRoot, { withFileTypes: true });
   } catch {
-    return [];
+    return { packs: [], unrecognized: [] };
   }
-  return entries.map((name) => path.join(reviewRoot, name));
+  const directories = dirEntries.filter((entry) => entry.isDirectory()).map((entry) => entry.name);
+  const packs = directories
+    .filter((name) => REVIEW_PACK_DIR_RE.test(name))
+    .sort((left, right) => right.localeCompare(left));
+  const unrecognized = directories
+    .filter((name) => !REVIEW_PACK_DIR_RE.test(name) && !name.startsWith("."))
+    .sort((left, right) => left.localeCompare(right));
+  return { packs: packs.map((name) => path.join(reviewRoot, name)), unrecognized };
+}
+
+/** What a pack says it is about: its producer, its kind, and the spec that owns it. */
+type PackAttribution = {
+  producer: string | null;
+  kind: string | null;
+  specNumber: string | null;
+};
+
+const UNATTRIBUTED: PackAttribution = { producer: null, kind: null, specNumber: null };
+
+type PackSelection = {
+  root: string;
+  specsRoot: string | undefined;
+  discussionRoot: string | undefined;
+  /** Present only for a `--spec` run. */
+  specScope: SpecScope | undefined;
+  producers: ReadonlySet<string> | undefined;
+};
+
+/**
+ * The packs this run is entitled to judge.
+ *
+ * Two independent narrowings, and both exist so that one stage's gate does not
+ * fail on a pack another owner is still writing:
+ *
+ * - **`--spec`** — "a parallel worker gates on its own spec only and does not
+ *   import a sibling agent's in-flight failures" (`qfai-sdd/SKILL.md`). A
+ *   review-pack finding is repo-level (its path names no spec), so
+ *   `isFindingInSpecScope` keeps it in every scope; the narrowing has to happen
+ *   here instead. It applies only to packs a spec could own: a discussion
+ *   pack's target belongs to no spec, so scoping it out would drop a repo-level
+ *   hard error from a scoped full run — the opposite of the scope contract,
+ *   which keeps repo-level findings in every slice.
+ * - **`producers`** — `--profile sdd` and `--profile discussion` are each the
+ *   hard gate for their own review cycle. A half-written spec pack must not
+ *   fail a discussion cycle's gate with `QFAI-REVIEW-004`, nor the reverse, and
+ *   an implementation pack — which declares the same `target.kind: "spec"` —
+ *   must fail neither.
+ *
+ * A pack that names no owner at all is judged by **every** profile rather than
+ * dropped: it belongs to no other owner who would catch it, and letting it opt
+ * out of the producer filter is exactly how a pack with no `summary.json` would
+ * hide from the gate that mandates one. The `--spec` narrowing keeps the
+ * opposite default — an unattributable pack there is the sibling in-flight
+ * case, and the unscoped run still reports it.
+ */
+async function selectPacks(
+  packDirs: readonly string[],
+  selection: PackSelection,
+): Promise<string[]> {
+  if (selection.specScope === undefined && selection.producers === undefined) {
+    return [...packDirs];
+  }
+  const selected: string[] = [];
+  for (const packDir of packDirs) {
+    const attribution = await attributePack(packDir, selection);
+    if (!profileOwnsPack(selection.producers, attribution)) {
+      continue;
+    }
+    if (
+      selection.specScope !== undefined &&
+      !isRepoLevelPack(attribution) &&
+      (attribution.specNumber === null || !selection.specScope.has(attribution.specNumber))
+    ) {
+      continue;
+    }
+    selected.push(packDir);
+  }
+  return selected;
+}
+
+/**
+ * See {@link selectPacks}: only a pack that names a *different* stage is
+ * filtered out.
+ *
+ * The producer wins when the pack declares one. A pack that declares none is
+ * placed by its `target.kind` through {@link kindProducer}, so packs written
+ * before the field existed keep the gate they had; one that names neither is
+ * judged by every profile.
+ */
+function profileOwnsPack(
+  producers: ReadonlySet<string> | undefined,
+  attribution: PackAttribution,
+): boolean {
+  if (producers === undefined) {
+    return true;
+  }
+  const declared = attribution.producer;
+  if (declared !== null && ALLOWED_PRODUCERS.has(declared)) {
+    return producers.has(declared);
+  }
+  const implied = attribution.kind === null ? null : kindProducer(attribution.kind);
+  return implied === null ? true : producers.has(implied);
+}
+
+/**
+ * A pack no spec can own — a discussion cycle's.
+ *
+ * `SpecScope` promises that findings no single spec owns survive every `--spec`
+ * run. Narrowing by `specNumber` alone broke that for the full profile: a
+ * scoped full scan dropped every discussion pack, hard errors included, because
+ * a discussion target yields no spec number by construction.
+ */
+function isRepoLevelPack(attribution: PackAttribution): boolean {
+  return attribution.producer === "discussion" || attribution.kind === "discussion";
+}
+
+/**
+ * What a pack is about, read from the pack itself.
+ *
+ * `summary.json#target` is the canonical answer — the field
+ * `review-artifact-layout.md` requires for exactly this reason, since the
+ * directory name carries only a timestamp. But it is also one of the files the
+ * gate exists to require, so attributing *only* by it made a pack that forgot
+ * it, or wrote broken JSON, unattributable — and therefore invisible to the
+ * very `--spec` gate that should have raised `QFAI-REVIEW-004` against it.
+ * `review_request.md` — mandated by the same RCP footer and written first in
+ * the cycle — is consulted for whatever `summary.json` could not supply, so a
+ * pack is only unattributable when it names its target nowhere at all.
+ */
+async function attributePack(packDir: string, selection: PackSelection): Promise<PackAttribution> {
+  const fromSummary = await attributionFromSummary(packDir, selection);
+  // The producer, not merely *some* owner: a summary that names a `target.kind`
+  // and no producer places the pack by kind, which cannot tell an SDD pack from
+  // an implementation one. `review_request.md` — written first in the cycle, so
+  // it exists throughout the in-flight window a stage gate must not trip over —
+  // is asked whenever the summary did not settle it.
+  const ownerSettled = selection.producers === undefined || fromSummary.producer !== null;
+  const specSettled = selection.specScope === undefined || fromSummary.specNumber !== null;
+  if (ownerSettled && specSettled) {
+    return fromSummary;
+  }
+  const fromRequest = await attributionFromRequest(packDir, selection);
+  return {
+    producer: fromSummary.producer ?? fromRequest.producer,
+    kind: fromSummary.kind ?? fromRequest.kind,
+    specNumber: fromSummary.specNumber ?? fromRequest.specNumber,
+  };
+}
+
+async function attributionFromSummary(
+  packDir: string,
+  selection: PackSelection,
+): Promise<PackAttribution> {
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(await readFile(path.join(packDir, "summary.json"), "utf-8"));
+  } catch {
+    // Missing, half-written or malformed: `review_request.md` gets the question.
+    return UNATTRIBUTED;
+  }
+  const record = asRecord(parsed);
+  const target = asRecord(record?.target);
+  const targetPath = readString(target?.path);
+  const specNumber =
+    targetPath !== null && selection.specsRoot !== undefined
+      ? owningSpecNumber(targetPath, { root: selection.root, specsRoot: selection.specsRoot })
+      : null;
+  // What the tree the pack names proves about it, which outranks what the pack
+  // says about itself. A `kind` or `producer` that contradicts its own
+  // `target.path` is discarded rather than honoured: honouring it is how a pack
+  // whose path is a spec directory bought its way out of `--profile sdd --spec`
+  // by calling itself a discussion. `targetViolations` reports the same
+  // contradiction so the pack is not merely re-filed in silence.
+  const proven = targetPath === null ? null : kindFromPath(targetPath, selection);
+  const declaredKind = readString(target?.kind)?.toLowerCase() ?? null;
+  const kind =
+    declaredKind !== null && proven !== null && declaredKind !== proven ? null : declaredKind;
+  const declaredProducer = readString(record?.producer)?.toLowerCase() ?? null;
+  return {
+    producer: agreeingProducer(declaredProducer, proven),
+    kind: kind ?? proven,
+    specNumber,
+  };
+}
+
+/**
+ * The kind a `target.path` proves, or `null` when it names neither configured
+ * root — an implementation pack pointing at a source file, say, or any caller
+ * that passed no roots at all.
+ */
+function kindFromPath(targetPath: string, selection: PackSelection): string | null {
+  if (
+    selection.specsRoot !== undefined &&
+    owningSpecNumber(targetPath, { root: selection.root, specsRoot: selection.specsRoot }) !== null
+  ) {
+    return "spec";
+  }
+  return isUnderDiscussionRoot(targetPath, selection) ? "discussion" : null;
+}
+
+/**
+ * The fallback attribution: the `Producer:` line and the paths
+ * `review_request.md` names.
+ *
+ * The rest of the file is prose — every stage writes its own — so the only
+ * other stable signal in it is the target paths it quotes, which is what every
+ * template puts there. A path under a `spec-NNNN` directory names a spec pack;
+ * one under `discussionDir` names a discussion pack. Two different specs, or
+ * both kinds at once, is not an attribution: the pack stays unattributed and
+ * the unscoped/full run keeps it.
+ *
+ * The `Producer:` line matters most while the pack is in flight. `summary.json`
+ * is written last, so between the first reviewer file and the verdict a pack has
+ * only this file to say which stage owns it — and until it did, an
+ * implementation pack mid-cycle was indistinguishable from an SDD one and
+ * failed `--profile sdd --fail-on error` on `QFAI-REVIEW-004/005`.
+ */
+async function attributionFromRequest(
+  packDir: string,
+  selection: PackSelection,
+): Promise<PackAttribution> {
+  let content: string;
+  try {
+    content = await readFile(path.join(packDir, "review_request.md"), "utf-8");
+  } catch {
+    return UNATTRIBUTED;
+  }
+  const owners = new Set<string>();
+  let namesDiscussion = false;
+  for (const token of pathTokens(content)) {
+    if (selection.specsRoot !== undefined) {
+      const owner = owningSpecNumber(token, {
+        root: selection.root,
+        specsRoot: selection.specsRoot,
+      });
+      if (owner !== null) {
+        owners.add(owner);
+        continue;
+      }
+    }
+    if (isUnderDiscussionRoot(token, selection)) {
+      namesDiscussion = true;
+    }
+  }
+  const kind =
+    owners.size > 0 ? (namesDiscussion ? null : "spec") : namesDiscussion ? "discussion" : null;
+  return {
+    // Discarded on the same terms as the summary's: a declaration the paths in
+    // the very same file contradict is not an attribution.
+    producer: agreeingProducer(requestProducer(content), kind),
+    kind,
+    specNumber: owners.size === 1 ? ([...owners][0] ?? null) : null,
+  };
+}
+
+/**
+ * The stage a `review_request.md` declares, from a `Producer: <stage>` line.
+ *
+ * Tolerant of the markdown every template wraps it in — a list bullet, bold, a
+ * backticked value — because the line is prose in a prose file. An unrecognized
+ * value is no declaration: the pack falls back to its kind rather than being
+ * filed under a stage that does not exist.
+ */
+const REQUEST_PRODUCER_RE =
+  /^[ \t]*(?:[-*+][ \t]*)?(?:\*\*|__|`)?producer(?:\*\*|__|`)?[ \t]*[:：][ \t]*(?:\*\*|__|`)?([A-Za-z][\w-]*)/im;
+
+function requestProducer(content: string): string | null {
+  const declared = REQUEST_PRODUCER_RE.exec(content)?.[1]?.toLowerCase() ?? null;
+  return declared !== null && ALLOWED_PRODUCERS.has(declared) ? declared : null;
+}
+
+/** A declared producer, unless the kind its own pack proves contradicts it. */
+function agreeingProducer(producer: string | null, provenKind: string | null): string | null {
+  if (producer === null) {
+    return null;
+  }
+  const declaredKind = producerKind(producer);
+  return declaredKind !== null && provenKind !== null && declaredKind !== provenKind
+    ? null
+    : producer;
+}
+
+/** True when `token` resolves inside the run's `discussionDir`. */
+function isUnderDiscussionRoot(token: string, selection: PackSelection): boolean {
+  const discussionRoot = selection.discussionRoot;
+  if (discussionRoot === undefined) {
+    return false;
+  }
+  const absolute = path.isAbsolute(token) ? token : path.resolve(selection.root, token);
+  const relative = path.relative(discussionRoot, absolute);
+  return relative !== "" && !relative.startsWith("..") && !path.isAbsolute(relative);
+}
+
+/**
+ * Every path-shaped token in a markdown file: backticked spans, plus bare words
+ * that carry a separator. Both templates quote their targets in backticks; the
+ * bare form is there for producers that do not.
+ */
+function pathTokens(markdown: string): string[] {
+  const tokens = new Set<string>();
+  for (const match of markdown.matchAll(/`([^`\r\n]+)`/g)) {
+    const value = match[1]?.trim();
+    if (value !== undefined && value.length > 0) {
+      tokens.add(value);
+    }
+  }
+  for (const match of markdown.matchAll(/[\w.@~-]*(?:[\\/][\w.@~-]+)+/g)) {
+    tokens.add(match[0]);
+  }
+  return [...tokens];
 }
 
 async function listReviewerFiles(reviewPackDir: string): Promise<string[]> {

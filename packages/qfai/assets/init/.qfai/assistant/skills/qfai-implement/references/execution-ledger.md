@@ -93,72 +93,9 @@ verdicts. The ledger cell records the outcome and says where to read the proof.
 
 ### The grammar (MUST)
 
-There is **one** legal shape, and it is capped at **240 characters**:
-
-```
-RED:<fail|falsifiability|n-a> GREEN:pass ORACLE:<proved|equivalent-mutant> [TIER:<T1|T2|T3>] REV:<revision> -> <anchor>
-```
-
-```
-RED:fail GREEN:pass ORACLE:proved REV:a1b2c3d -> `.qfai/evidence/implement-spec-0001.md#tdd-0027`
-```
-
-- `RED:` — how the failing observation was obtained. `falsifiability` is the
-  argument recorded for a row whose RED cannot be observed directly
-  (`red-not-observable.md`); `n-a` is a row that owes no RED at all — a
-  documentation row, and nothing else. **`n-a` is not available on an
-  ATDD-owned row**: "ATDD-owned rows" below says of `E2E` / `API` /
-  `Integration` that "There is no waiver here", and routes the case that looks
-  like one — a journey whose surface the same cycle just built — to
-  `falsifiability`. The validator rejects it there per `Layer`.
-- `GREEN:` — `pass` is the only legal value. A row that is not green does not
-  carry evidence yet, and its `Status` says so.
-- `ORACLE:` — whether the oracle was **proved** or established by an
-  **equivalent-mutant** argument. This is the obligation the free-prose cell
-  made invisible: under no fixed name, no gate could count its coverage.
-- `TIER:` — **optional**, and reserved. Write it only when the project has
-  adopted a tier vocabulary.
-- `REV:` — the revision the run was taken at, in the two spellings
-  `evidence-revision.md` defines and no others: a git rev (7-64 hex), or
-  `working-tree+<sha256>` for an observation taken against an uncommitted
-  tree. The reviewer-response gate reads the same two, so one value serves
-  both.
-- `-> <anchor>` — `.qfai/evidence/<implement|atdd>-<spec-id>.md#<tdd-nnnn>`:
-  the evidence file this row's `Layer` owns, and **this row's own**
-  `### TDD-NNNN` section in it. All three halves are checked **against the
-  row**, not merely for shape: the stage is the one the `Layer` assigns
-  (`implement` for the rows this skill runs itself, `atdd` for `E2E` / `API` /
-  `Integration`), `<spec-id>` is **this** spec's, and the fragment is this
-  row's `TDD-ID` lowercased — the slug of the section both skills require per
-  row. An anchor into another spec's file, into the file of the stage that did
-  not author the test, or at another row's section, is
-  `TDDLIST_EVIDENCE_CELL_MALFORMED` — it names proof that was never taken for
-  this row. The fragment is required — a pointer to the file alone does not
-  say which item's proof to read. A row whose `TDD-ID` is missing or malformed
-  has no fragment to bind to, so only the file is checked there;
-  `TDDLIST_MISSING` / `TDDLIST_INVALID_ID` name that defect. Backticks around
-  the anchor are allowed.
-
-Nothing follows the anchor, with **one** exception: an `E2E` / `API` row that
-completed before the ATDD evidence split carries the compatibility marker
-`Pre-split-evidence: implement` after it, which `qfai-implement/SKILL.md`
-completion item 10 requires and reads. It is legal in the grammar for that
-reason — a `done` row cannot re-observe a RED, so it can neither drop the
-marker nor earn a new anchor. The marker is what **licenses** the `implement-`
-anchor there: item 10 judges an unmarked row by the current rule whatever its
-status, so an `E2E` / `API` row naming the implement file **without** the
-marker is the row that never produced its ATDD handoff, and is malformed.
-
-The marker is legal in **exactly one** place: after an `implement-` anchor on
-an `E2E` / `API` row. Item 10 scopes the marker pass to those two layers, so it
-licenses nothing on an `Integration` row — that layer has no pre-split form to
-grandfather — and it licenses nothing on a row already pointing at the file it
-owns. Anywhere else it is `TDDLIST_EVIDENCE_CELL_MALFORMED`: item 10 reads the
-marker to tell a legacy row from a current one, so a row that may carry it for
-no reason is a row that may claim to be legacy.
-
-Everything else the cell used to carry belongs in the evidence file the anchor
-names. This is a move, not a deletion.
+There is **one** legal shape, capped at **240 characters**, and every half of
+its anchor is bound to the row: `evidence-cell-grammar.md`. The findings that
+police it are in "Evidence cell rules (enforced)" below.
 
 ### Why it cannot hold the payload
 
@@ -202,13 +139,13 @@ column count valid — a corruption no validator can see.
 `Status` is `green`, `refactor`, `review-fix` or `done` — the statuses that
 assert a cycle has run:
 
-| Finding                           | Fires when                                                          | Severity |
-| --------------------------------- | ------------------------------------------------------------------- | -------- |
-| `TDDLIST_EVIDENCE_EMPTY`          | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | error    |
-| `TDDLIST_EVIDENCE_STATUS_ONLY`    | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning  |
-| `TDDLIST_EVIDENCE_CELL_MALFORMED` | the cell does not match the grammar above                           | warning  |
-| `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning  |
-| `TDDLIST_EVIDENCE_RED_PROVENANCE` | `RED:n-a` on an `E2E` / `API` / `Integration` row                   | error    |
+| Finding                           | Fires when                                                          | Severity            |
+| --------------------------------- | ------------------------------------------------------------------- | ------------------- |
+| `TDDLIST_EVIDENCE_EMPTY`          | the cell is empty or holds only dash placeholders (`-`, `–`, `—`)   | warning, then error |
+| `TDDLIST_EVIDENCE_STATUS_ONLY`    | the cell claims a verdict (`PASS`, `looks good`, …) with no command | warning             |
+| `TDDLIST_EVIDENCE_CELL_MALFORMED` | the cell does not match the grammar above                           | warning             |
+| `TDDLIST_EVIDENCE_CELL_OVERSIZE`  | the cell is longer than 240 characters                              | warning             |
+| `TDDLIST_EVIDENCE_RED_PROVENANCE` | `RED:n-a` on an `E2E` / `API` / `Integration` row                   | error               |
 
 One more rule reads the row rather than a cell:
 
@@ -223,8 +160,26 @@ are accepted directly.
 
 `TDDLIST_EVIDENCE_STATUS_ONLY` is a warning, waivable under `TDDLIST-004`: a
 ledger written before the check exists carries prose verdicts, and failing a
-build on them is a migration rather than a gate. An empty cell is unambiguous,
-so `TDDLIST_EVIDENCE_EMPTY` stays at `error`.
+build on them is a migration rather than a gate.
+
+`TDDLIST_EVIDENCE_EMPTY` is inside a **promotion window**: it is reported as a
+warning until the release the finding itself names, and as an error from that
+release onwards. An empty cell is unambiguous and the rule is not in doubt — but
+it also fires on cells written before the check existed, so an upgrade that
+started erroring on them would latch a gate that was passing. The finding text
+states which release ends the window, so `--fail-on error` keeps working while
+the ledger shows the debt it will owe.
+
+**A row already at a terminal status satisfies this by backfilling the cell in
+place.** Writing the outcome and its evidence pointer into `Evidence` is not a
+status transition, needs no transition, and is not drift: it records a cycle
+that already ran. Do not move a `done` row backwards to satisfy it — `done` has
+no outgoing edge, and the backward move would be the actual violation. Where the
+run is genuinely gone, the loss is itself the thing to record: add a backfill
+entry to the evidence file stating what was run and that its output was not
+retained, then point the cell at that entry. The cell stays a pointer — prose
+about a missing run is a payload, and the section above says why a payload in
+the cell corrupts the ledger.
 
 The two grammar findings are warnings for the same reason, waivable under
 `TDDLIST-007` (malformed) and `TDDLIST-008` (oversize). An oversize cell whose
