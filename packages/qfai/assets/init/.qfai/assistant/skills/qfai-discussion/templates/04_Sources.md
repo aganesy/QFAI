@@ -14,7 +14,7 @@
 
 ## Research Summary
 
-Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Research-First Protocol output. Schema: `.qfai/assistant/constitution/research-first-protocol.md`.
 Replace every `[...]` placeholder with real research: validation rejects
 bracketed `title` / `url` / `reason` values and requires `published` to be a
 real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
