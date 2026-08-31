@@ -1360,7 +1360,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(skippedBullets).toContain(".qfai/assistant/skills/qfai-atdd/SKILL.md");
       expect(removedBullets).toContain(".qfai/assistant/skills/qfai-discussion/10_workflow.md");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
