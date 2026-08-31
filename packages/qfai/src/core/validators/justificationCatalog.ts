@@ -18,6 +18,29 @@
  * spec-governance change (extends the closed REQ contract) and MUST
  * be done in lockstep with the owning spec and reviewer SSOTs.
  *
+ * IMPORTANT — emitter scope: the catalog compiles into the published
+ * bundle, but shipping the catalog does not mean every code can fire
+ * in a consuming project. Three scopes exist, and the two limited ones
+ * MUST disclose themselves in the entry's `description` — otherwise
+ * the catalog advertises a rule the consumer never gets:
+ *   - consumer — the detector ships in `dist` and reads consumer-owned
+ *     paths, so the owning command really can raise it there.
+ *   - repo-source — the detector ships, but it resolves
+ *     `packages/qfai/**` paths under the validated root, so it returns
+ *     an empty result in a consumer install that has no package source
+ *     (`R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`,
+ *     `R-SKILL-MANIFEST-DRIFT`, `R-MOCK-HREF-DRIFT`).
+ *   - repo-script — no detector ships at all; only QFAI's own lint
+ *     lane (`pnpm ci:lint`, backed by an unpublished `scripts/` entry)
+ *     raises it (`R-PACK-LOCATION-DRIFT`).
+ * The scope note is about AUTOMATIC detection only. Every catalog
+ * code, limited-scope included, still reaches a consuming project's
+ * `qfai validate` output through the reviewer-justification ingestion
+ * path (`reviewerJustification.ts`) when a Reviewer subagent
+ * hand-reports it with an empty `justification:`. Both directions —
+ * an undisclosed limited-scope code, and a disclosed code that later
+ * gains consumer reach — are guarded by a test.
+ *
  * Notes:
  *   - `R-DESIGN-MD-PATCH-OUT-OF-ZONE` is documented warning per the
  *     active spec governance; it stays in the catalog so the
@@ -47,13 +70,13 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-HANDOFF-SCHEMA-DRIFT",
     severity: "error",
     description:
-      "Handoff writer is asymmetric with the canonical CLI-HANDOFF schema (Pair IV). Schema-side adds the canonical field set but a registered writer does not reference it (or vice versa).",
+      "Handoff writer is asymmetric with the canonical CLI-HANDOFF schema (Pair IV). Schema-side adds the canonical field set but a registered writer does not reference it (or vice versa). Scope: repo-source — the detector ships in the published package but resolves `packages/qfai/**` paths under the validated root, so it returns an empty result in a consuming project's install (no package source there) and effectively fires only inside the QFAI repository. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract applies in full to a Reviewer subagent that reports it by hand.",
   },
   {
     code: "R-EVIDENCE-MUTATION-UNLOGGED",
     severity: "error",
     description:
-      "An iter-NN evidence mutation call-site (rename / unlink / overwrite) is not paired with a mutation-log writer call (logEvidenceMove / logEvidenceDelete / logEvidenceOverwrite).",
+      "An iter-NN evidence mutation call-site (rename / unlink / overwrite) is not paired with a mutation-log writer call (logEvidenceMove / logEvidenceDelete / logEvidenceOverwrite). Scope: repo-source — the detector ships in the published package but resolves `packages/qfai/**` paths under the validated root, so it returns an empty result in a consuming project's install (no package source there) and effectively fires only inside the QFAI repository. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract applies in full to a Reviewer subagent that reports it by hand.",
   },
   {
     code: "R-DESIGN-MD-PATCH-OUT-OF-ZONE",
@@ -65,13 +88,13 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-PACK-LOCATION-DRIFT",
     severity: "error",
     description:
-      "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged.",
+      "A `review-*/` or `discussion-*/` pack directory was introduced outside its allowed roots (`.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`, or `tmp/`). The lint lane inspects only changed paths; legacy packs that pre-date the rule are not re-flagged. Scope: repo-script — no detector for this code ships in the published package; it is raised only by QFAI's own repository lint lane (`pnpm ci:lint`), so `qfai validate` does not auto-detect pack-location drift in a consuming project. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract below applies in full to a Reviewer subagent that reports it by hand.",
   },
   {
     code: "R-SKILL-MANIFEST-DRIFT",
     severity: "error",
     description:
-      "A skill's per-skill `manifest.json#runtimeDependencies` declaration is out of sync with the canonical `qfai doctor` runtime-dependency probe SSOT. Asymmetric edit across the probe-implementation ↔ manifest-schema pair (one side references the canonical token, the other does not).",
+      "A skill's per-skill `manifest.json#runtimeDependencies` declaration is out of sync with the canonical `qfai doctor` runtime-dependency probe SSOT. Asymmetric edit across the probe-implementation ↔ manifest-schema pair (one side references the canonical token, the other does not). Scope: repo-source — the detector ships in the published package but resolves `packages/qfai/**` paths under the validated root, so it returns an empty result in a consuming project's install (no package source there) and effectively fires only inside the QFAI repository. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract applies in full to a Reviewer subagent that reports it by hand.",
   },
   {
     code: "R-EXPLORATION-CERTIFY-ATTEMPT",
@@ -83,7 +106,7 @@ export const JUSTIFICATION_CATALOG: readonly JustificationCatalogEntry[] = [
     code: "R-MOCK-HREF-DRIFT",
     severity: "error",
     description:
-      "Mock template ↔ QFAI-MOCK-010 validator SSOT-sync pair (Pair V) is asymmetric. One side adopted the same-origin absolute `/path/` form without the matching change on the other side.",
+      "Mock template ↔ QFAI-MOCK-010 validator SSOT-sync pair (Pair V) is asymmetric. One side adopted the same-origin absolute `/path/` form without the matching change on the other side. Scope: repo-source — the detector ships in the published package but resolves `packages/qfai/**` paths under the validated root, so it returns an empty result in a consuming project's install (no package source there) and effectively fires only inside the QFAI repository. The code can still appear in that project's validate output via the reviewer-justification ingestion path, and the justification contract applies in full to a Reviewer subagent that reports it by hand.",
   },
 ];
 
