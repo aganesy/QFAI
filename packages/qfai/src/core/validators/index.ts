@@ -22,7 +22,6 @@ export { validateCompletionCertificateIssues } from "./prototyping/completionCer
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
 export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
-export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
@@ -53,9 +52,7 @@ export {
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
 } from "./uix/threeLayer.js";
-export { validateTasteInterview } from "./uix/taste.js";
-export { validateTrendScan } from "./uix/trend.js";
-export { validateStrategyStrong } from "./uix/strategy.js";
+export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
