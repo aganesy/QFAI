@@ -156,8 +156,12 @@ describe("the spelled-out shapes are the ones the validator accepts", () => {
     );
     const declaration = /const DR_ID_FORMAT = \/(.+?)\/;/.exec(source);
     expect(declaration, "DR_ID_FORMAT declaration moved or was renamed").not.toBeNull();
-    if (declaration === null) return;
-    const format = new RegExp(declaration[1]);
+    // Narrowed rather than defaulted: `new RegExp("")` matches everything, so a
+    // missing capture would make the three assertions below pass vacuously.
+    const pattern = declaration?.[1];
+    expect(pattern, "DR_ID_FORMAT declaration captured no pattern").toBeDefined();
+    if (pattern === undefined) return;
+    const format = new RegExp(pattern);
 
     expect(format.test(SPEC_SCOPED.replace("NNNN", "0004").replace("MMMM", "0011"))).toBe(true);
     expect(format.test(POLICY_LEVEL.replace("NNNN", "0004"))).toBe(true);
