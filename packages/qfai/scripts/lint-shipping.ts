@@ -218,6 +218,17 @@ const PATTERNS: ReadonlyArray<PatternRule> = [
     appliesTo: ["src-comment"],
   },
   {
+    // Cross-spec change IDs (`CHG-NNN`) come from `_policies/10_delta.md`
+    // and only resolve inside this repository. They belong to the same
+    // authoring-traceability surface as DEC / DR / OQ, so they get the
+    // same pre-build treatment.
+    name: "internal-chg-id-jsdoc-leak",
+    re: /\bCHG-\d+\b/,
+    suggestion:
+      "Internal cross-spec change IDs (CHG-NNN) MUST NOT appear in src/ comments — tsup keeps them in dist/. Describe the change instead (e.g. 'the 4-layer assistant-tree recut') and keep ID-level traceability in `.qfai/specs/`.",
+    appliesTo: ["src-comment"],
+  },
+  {
     name: "internal-schema-version-jsdoc-leak",
     re: /"schemaVersion"|schemaVersion\s*:/,
     suggestion:

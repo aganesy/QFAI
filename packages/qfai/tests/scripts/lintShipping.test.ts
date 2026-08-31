@@ -384,6 +384,11 @@ describe("lint-shipping fixture — detection rules", () => {
       "/**\n * Trace QFAI-PROT2-001.\n */\nexport function bar(): void {}\n",
     ],
     [
+      "internal-chg-id-jsdoc-leak",
+      "CHG-003",
+      "/**\n * Per CHG-003 the assistant tree is recut into four layers.\n */\nexport function bar(): void {}\n",
+    ],
+    [
       "internal-schema-version-jsdoc-leak",
       '"schemaVersion"',
       '/**\n * Documents the "schemaVersion" field.\n */\nexport function bar(): void {}\n',

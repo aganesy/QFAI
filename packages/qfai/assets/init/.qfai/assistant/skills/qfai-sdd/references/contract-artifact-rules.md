@@ -25,7 +25,9 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
   table necessarily becomes N cross-referencing files. State the resulting
   composition rather than leaving every consumer to reconstruct it from the DDL:
   - `db/`: a comment line `-- Depends on: CON-DB-0002, CON-DB-0003` (or `-`)
-  - `api/` / `ui/`: `x-qfai-depends-on: [CON-API-0002]`, flow or block form
+  - `api/` / `ui/`: a top-level `x-qfai-depends-on: [CON-API-0002]`, YAML flow
+    or block form. An `api/` contract may also be `.json`, with the same key as
+    a JSON array; `ui/` collects `.yaml` / `.yml` only.
   - Mirror the same list in `_policies/05_Contracts.md`'s `Depends On` column.
   - **Apply order only.** A reference resolved at run time — a deferred foreign
     key, an endpoint another calls during a request — is not an apply-order
@@ -36,6 +38,32 @@ Discussion UI/UX files are upstream discovery artifacts. `/qfai-sdd` normalizes 
     that does not exist. Getting the set wrong is otherwise silent: the wrong
     subset still applies cleanly and the tests still pass, against a schema
     missing the tables under test.
+  - `QFAI-CONTRACT-015` (warning) reports a contract that states no apply order
+    at all. Write `-` when nothing must be applied first: "no dependencies" and
+    "never stated" are different claims, and only the first is checkable. The
+    key on its own (`-- Depends on:` with nothing after it) is still silence,
+    and so is a list holding anything but `CON-*` ids: in `CON-DB-0001, TBD`
+    the resolvable half would otherwise make an undetermined order look
+    settled, leaving `TBD` unreported by every check.
+  - `QFAI-CONTRACT-032` (warning) reports a contract index table that dropped
+    the `Depends On` column, and `QFAI-CONTRACT-033` (warning) reports a row
+    whose cell disagrees with the declaration in the file that row names — a
+    blank cell included, for the same reason: it records no claim at all.
+  - `QFAI-CONTRACT-034` (warning) reports a contract that appears in no index
+    table. Deleting the row hides the contract and its apply order from every
+    reader of the index, and the row-level checks need a row to compare.
+  - `QFAI-CONTRACT-035` (warning) reports a row whose `File` is not a file
+    declaring that row's id. The mirror is checked by id, so a row pointing at
+    another contract's file otherwise passes every check while sending the
+    reader to the wrong contract. A glob or a `<slug>` placeholder names no one
+    file and is left alone.
+  - Only tables whose `Declared ID` column holds `CON-*` ids are held to these
+    rules; a table indexing another artifact kind by slug is left alone, and an
+    empty one qualifies only under a `DB` / `API` / `UI` contract heading.
+    Coverage is read from a `Declared ID` cell that **is** a full `CON-*` id: a
+    `Short ID` — in its own column or written into this one — cannot stand in
+    for a blank or mistyped one. An example table inside a code fence is
+    documentation, not index data, and is not read either.
 - **Target schema is the applier's, not the contract's.** A `db/` contract
   declares unqualified object names and is applied into whatever schema the
   runner selects (`SET search_path`, `USE`, the connection's default). Do not

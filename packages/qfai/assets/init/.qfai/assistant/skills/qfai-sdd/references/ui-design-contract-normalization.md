@@ -16,6 +16,11 @@ Required UI-bearing outputs in the new SSOT model:
   freeze; see `templates/contracts/design-md-lock.sample.yaml`)
 - `.qfai/contracts/ui/*.yaml` (screen contracts)
 
+The first two are **visual-prototyping surfaces only**. A cli-only target
+(`primary_surface: cli` with no visual `secondary_surfaces` entry) has no root
+`DESIGN.md` and therefore no lock yaml; it still normalizes
+`.qfai/contracts/ui/*.yaml`. See `SKILL.md#phase-0-designmd-freeze-visual-prototyping-surfaces-only`.
+
 Freeze procedure:
 
 1. Read `DESIGN.md`.
