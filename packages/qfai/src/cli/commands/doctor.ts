@@ -118,11 +118,14 @@ export async function runDoctor(options: DoctorCommandOptions): Promise<number> 
   // post-cleanup tree is what `createDoctorData` reports on.
   const sideEffectLines: string[] = [];
   if (options.autoremediate) {
-    // Route through the framework's single CI predicate rather than an
-    // inline `process.env["CI"] === "true"`. The inline form missed the
-    // `GITHUB_ACTIONS` arm and read `CI=1` as "local", so the mutating
-    // path below (root `.gitignore` rewrite, config-fill, review-pack
-    // archival) ran on CI checkouts that AC-0006-0018 puts off limits.
+    // The owning business rule suppresses autoremediation on "standard CI
+    // env vars", not on the single `CI` variable. An inline
+    // `process.env["CI"] === "true"` missed the `GITHUB_ACTIONS` arm and read
+    // `CI=1` as "local", so a lane that exports only `GITHUB_ACTIONS=true`
+    // kept remediating: `npm install`, root `.gitignore` rewrite, review-pack
+    // archival and config-fill all ran on CI checkouts that AC-0006-0018 puts
+    // off limits. `isCiEnvironment` is the repo's SSOT for that detection
+    // (`core/phasePolicy.ts`); reuse it so the two CI gates cannot drift apart.
     const isCi = isCiEnvironment();
     // Thread the resolved skill profile into the autoremediate orchestrator
     // so the install phase actually reaches the runtimeDependencies probe.
