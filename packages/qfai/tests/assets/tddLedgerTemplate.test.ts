@@ -93,7 +93,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
         "assistant/skills/qfai-sdd/references/sdd-phase-checklists.md",
       );
       expect(checklists).toContain(
-        "- Add one `Layer = Integration` row per integration-level TC as well, `Status = todo`. Integration-level means **every `Level` whose ATDD annotation routes to `tests/integration/**`**",
+        "- Add one `Layer = Integration` row per integration-level TC as well, `Status = todo`. Integration-level means **every** `Level` whose ATDD annotation routes to `tests/integration/**`:",
       );
 
       // The consumer of those rows names the same producer, so an agent
@@ -140,7 +140,7 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       );
       expect(preconditions).toContain("**Read each TC's `Level` once and route it to exactly one");
       expect(preconditions).toContain(
-        "**every `Level`\n  whose ATDD annotation routes to `tests/integration/**`**",
+        "**every** `Level`\n  whose ATDD annotation routes to `tests/integration/**`:",
       );
       expect(preconditions).toContain(
         "**A blank _or unrecognised_ `Level` belongs to the second group**",
@@ -188,7 +188,9 @@ describe("tdd/test-list.md has a shipped template and a named producer", () => {
       expect(template).toContain("A TC whose\n`Level` is blank **or unrecognised**");
 
       const skill = await read(tree, "assistant/skills/qfai-sdd/SKILL.md");
-      expect(skill).toContain("every Level whose ATDD annotation routes to tests/integration/**");
+      expect(skill).toContain(
+        "every Level whose ATDD annotation routes to the tests/integration tree",
+      );
 
       const checklists = await read(
         tree,

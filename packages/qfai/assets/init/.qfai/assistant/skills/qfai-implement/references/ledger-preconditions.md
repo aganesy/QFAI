@@ -15,8 +15,8 @@ are exclusive, and a TC in both is a TC whose test two skills write.
   recognises** — `L1` / `L2` and their word forms `unit` / `component`, the
   spellings **What counts as a coverage target** below reads as unit or
   component work. These are the rows this skill drives end to end;
-- **one `Layer = Integration` row per integration-level TC** — **every `Level`
-  whose ATDD annotation routes to `tests/integration/**`**: `L3`, the word
+- **one `Layer = Integration` row per integration-level TC** — **every** `Level`
+  whose ATDD annotation routes to `tests/integration/**`: `L3`, the word
   `integration`, a blank cell, a spelling that names no layer (`smoke`, a typo),
   **and `system` / `acceptance`**. These are ATDD-owned
   rows (`execution-ledger.md#atdd-owned-rows`): their tests are authored by
@@ -26,7 +26,7 @@ are exclusive, and a TC in both is a TC whose test two skills write.
 
 **Route by where the annotation goes, not by whether you recognise the word.**
 The second group is defined by `QFAI-ATDD-112`'s routing, and asking instead
-"is this spelling unknown?" leaves a gap: `system` and `acceptance` are *in* the
+"is this spelling unknown?" leaves a gap: `system` and `acceptance` are _in_ the
 layer vocabulary — so they are not unrecognised — and are not unit or component
 either, so a spelling test puts them in **no group at all**, while ATDD routes
 both to `tests/integration/**` and its P4 writes their tests. The result is a TC

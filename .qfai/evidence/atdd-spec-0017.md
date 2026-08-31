@@ -2191,7 +2191,18 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 936
+**And again, from outside this stage a third time.** The `Integration`-row producer work on
+`fix/issue-523-integration-row-producer` added three `it` blocks to
+`tests/assets/tddLedgerTemplate.test.ts` — regression cover for the boundary reconciliation no
+longer keying on the mutable `Selector`, for `system` / `acceptance` routing to the Integration
+group, and for a cross-spec entry on an `Integration` row going to the ATDD evidence file. That
+file sits under the e2e project's second include glob, so the count moved 936 -> 939 with nothing
+about `spec-0017` changed. The number below is re-derived from the tree by walking both include
+globs, not copied out of the failure message, and it reconciles: 936 was the value this branch
+carried while green, and the only e2e-project file the branch has touched since gained exactly
+three callsites (22 -> 25). Both suite totals above stay known-invalid for the current tree.
+
+e2e callsites at this tree: 939
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
