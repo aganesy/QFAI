@@ -2,11 +2,30 @@
 
 ## 前提
 
+前提は経路ごとに異なります。**自動化された経路は、手動経路が「更新済み」を要求している
+ものを更新するための経路です。** 先に版を上げてから Prepare release を実行すると、入力
+した版が現在の版と一致するため必ず拒否されます。
+
+### 共通
+
 - main に対象コミットが揃っている
+- 各変更が `CHANGELOG.md` の `## [Unreleased]` に説明を書いている（空、または
+  `### Added` のような見出しだけの状態では Prepare release は失敗します）
+- Supported: Node.js >= 20.0.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
+
+### 自動化された経路を使う場合
+
+- `packages/qfai/package.json#version` と `CHANGELOG.md` の版見出しは **まだ更新して
+  いない**こと。更新するのがこの経路の仕事です
+- リポジトリに `RELEASE_AUTOMATION_TOKEN` secret が設定されている（下記「必要な secret」）
+- npm publish 権限は不要です。publish は `release` environment の必須レビュアーが承認
+  したうえで CI が trusted publishing (OIDC) で実行します
+
+### 手動の経路を使う場合
+
 - `packages/qfai/package.json` の version と `CHANGELOG.md` が更新済み
 - npm publish 権限があり、`npm whoami` が成功する
 - 次メジャーへ進む前提として、パッチで整合を取り、段階的に進める
-- Supported: Node.js >= 20.0.0 / Tested: Node.js 20 / Recommended: Node.js 20 LTS 以上
 
 ## 権限と責務
 
