@@ -51,12 +51,13 @@ QFAI 自体は外部公開 API を持たない。
 
 ### CLI Contracts
 
-| Short ID | Entity                 | File                                          | Purpose                                                                                                                                                                                           |
-| -------- | ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| CLI-PROT | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`     | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                 |
-| CLI-INIT | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`            | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)                                            |
-| CLI-VAL  | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`        | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003) |
-| CLI-WLOG | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                                                 |
+| Short ID  | Entity                 | File                                          | Purpose                                                                                                                                                                                                                                                                                                                         |
+| --------- | ---------------------- | --------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-PROT  | qfai prototyping (CLI) | `.qfai/contracts/cli/qfai-prototyping.md`     | spec-0012 の CLI surface (`iterate` / `certify` / `show-spec`) — cycle-0 freeze, license-verify exit 66, multi-spec resolveAll、Reviewer-driven Playwright を記述                                                                                                                                                               |
+| CLI-INIT  | qfai init (CLI)        | `.qfai/contracts/cli/qfai-init.md`            | spec-0003 の CLI surface — assistant-tree seed, `--upgrade-assistant-tree`, work-log surface seed, deprecation window, path SSOT enforcement (CHG-003)                                                                                                                                                                          |
+| CLI-VAL   | qfai validate (CLI)    | `.qfai/contracts/cli/qfai-validate.md`        | spec-0004 の CLI surface delta — new finding codes (`W-WORKLOG-SCHEMA`, `R-WORKLOG-DRIFT`, `R-REJECTED-READOPT`, `W-PENDING-PROMOTION`, etc.), Reviewer-Gate input bundle, promote-gate (CHG-003)                                                                                                                               |
+| CLI-WLOG  | worklog entry schema   | `.qfai/contracts/cli/worklog-entry.schema.md` | `.qfai/steering/*.md` frontmatter + body schema; `kind` enum SSOT; handoff-brief sections; parser unit-test obligations (CHG-003)                                                                                                                                                                                               |
+| CLI-WFSET | shipped workflow set   | `.qfai/contracts/cli/shipped-workflows.md`    | spec-0003 の distributed `.github/workflows/**` surface — `qfai-` prefix reservation (**notice, not selector**), in-binary write/prune name lists, `.qfai/install-provenance.json`, closed 5-state file enum, 宣言的 structural shape の dimension 集合, gate は `pnpm ci:lint` (CHG-007。本行が Contract Index 上の唯一の登録) |
 
 ## Mapping Rules
 
@@ -141,3 +142,116 @@ QFAI 自体は外部公開 API を持たない。
 - `assets/init/.qfai/assistant/skills/<skill>/manifest.json` (CLI-MANIFEST) IS distributed — its content MUST be generic (no internal IDs / version markers) per `.agents/rules/distributed-surface.md`; only npm package names + semver ranges appear.
 - Pack-location lint (REQ-0167): the new CI lane `packages/qfai/scripts/check-pack-locations.mjs` is wired into `pnpm ci:lint` (no contract file — it is a lint script; recorded under `_policies/07_Constraints.md` OC-65 and `10_delta.md` CHG-006). It emits `R-PACK-LOCATION-DRIFT` for `review-*/` / `discussion-*/` dirs outside `tmp/`, `.qfai/review/<ts>/`, `.qfai/discussion/<ts>/`.
 - The one-minor deprecation window (REQ-0169) makes every new `D-*` finding emit as `warning` during qfai 1.9.x and re-classify to `error` at the sunset version qfai 1.10.0 (see `_policies/07_Constraints.md` OC-63).
+
+## CHG-007 — Layered CI Test Scaffold Adoption (2026-08-05)
+
+Discussion pack: `.qfai/discussion/discussion-20260804173914356/`
+(`pack#REQ-0014..0022` are the contract-bearing requirements; `10_delta.md`
+§CHG-007 carries the triage and DR-0275 / DR-0276).
+
+### Requirement-ID provenance for this section
+
+Two independent numberings are in play in CHG-007 and they collide, so every
+requirement reference in this section is disambiguated as follows:
+
+- A bare `REQ-NNNN` is the **spec-local** ID of the owning spec named in the
+  same sentence or table row.
+- A `pack#REQ-NNNN` is the **upstream discussion-pack** ID from
+  `discussion-20260804173914356`, whose sequence is independent of every
+  spec-local sequence.
+
+The collision is not hypothetical on the CLI-WFSET side. `pack#REQ-0020`
+(ownership contract) is `spec-0003` REQ-0030 and `pack#REQ-0021` (declared
+structural shape gate) is `spec-0003` REQ-0031, while `spec-0003`'s own
+REQ-0020 / REQ-0021 are the unrelated CHG-003 assistant-tree migration
+requirements. An auditor reading a bare `REQ-0021` here would land on the wrong
+requirement. The full pack-to-spec mapping is annotated per requirement in
+`spec-0003/01_Spec.md`; this file does not restate it.
+
+### Contract Index additions
+
+CHG-007 adds exactly one contract, **CLI-WFSET**
+(`.qfai/contracts/cli/shipped-workflows.md`; owning spec `spec-0003`; upstream
+`pack#REQ-0020` / `pack#REQ-0021`). It is registered **once**, in the canonical
+`### CLI Contracts` table above, and that row is its Contract Index SSOT.
+
+This section deliberately carries **no second row** for it. A second
+registration is what produced the divergent-text defect this change was
+otherwise written to prevent, and it contradicts the principle stated in the
+Notes below for the hygiene lane — that a second home creates the SSOT-drift
+class this change exists to close. Everything beyond the index row — the
+prefix-is-a-reservation-notice-not-a-selector rule, the provenance record, the
+closed 5-state file enum, the 9 dimensions the declared shape must pin, and the
+`pnpm ci:lint`-not-`pnpm ci:gate` gate placement — lives in the contract file,
+which is the SSOT for the contract itself.
+
+### Contract Index updates (existing rows)
+
+| Short ID | Updates                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-INIT | (UPDATE — `.qfai/contracts/cli/qfai-init.md`) 新セクション `## Shipped GitHub Actions workflows`。create-only の `force: false` literal が ownership contract の load-bearing 要素であることを明示（`--force` は `assistant/skills/**` と生成 wrapper のみに届く）。`declined` name は copy set から **copy 実行前に** 除外する（create-only では不足 — file が absent なので書いてしまう）。removal は `pruneMatchingEntries` + retired-name 集合 membership predicate のみ（`startsWith("qfai-")` は禁止）。drift 報告は init の責務ではなく `qfai doctor` 側であることを非目標として明記。                                                                                                                                                                                |
+| CLI-DOC  | (UPDATE — `.qfai/contracts/cli/qfai-doctor.md`) 新 check `workflows.integrity` (owning spec = `spec-0006`、その spec-local REQ-0022。CHG-007 の要件のうちこの 1 件だけは `pack#REQ-0022` と番号が偶然一致する。detection half only)。severity は **`info`** — `warning` は `--fail-on warning` 下で `shouldFailDoctor` により exit 1 を生むため「exit code unchanged」を満たせない。text renderer は `warning` と `info` の双方を advisory bucket に入れるので grouping は正しい。message は stale file と **manual repair のみ**（installed package 内の copy で置き換える）を名指しし、存在しない refresh command を名指ししてはならない（`13_Deferred.md` OQ-0021 Mitigation）。state vocabulary は CLI-WFSET §3 の enum をそのまま使い、doctor 独自 state を導入しない。 |
+
+### Cross-contract reconciliation (performed)
+
+Per `qfai-sdd/references/contract-artifact-rules.md` §Cross-contract
+Reconciliation, the pairings reconciled in this change are declared here rather
+than left to be guessed:
+
+| Pairing                                       | Result                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| --------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CLI-WFSET ↔ CLI-DOC                           | Reconciled. All 5 states in CLI-WFSET §3 have an explicit disposition in CLI-DOC's per-state emission table (`installed`→`ok`, `modified`→`info`, `declined`/`adopter-owned`/`absent`→not emitted). No state is unrepresentable and no state is silently collapsed into another. `declined` additionally appears in the finding's `details` payload, so "known and deliberately left alone" is observable.                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| CLI-WFSET ↔ CLI-INIT                          | Reconciled. Each state has a write-path disposition (`absent`→write+record, `adopter-owned`/`installed`/`modified`→skip, `declined`→excluded from the copy set). The `declined` exclusion is the one case create-only does not cover, and CLI-INIT states it explicitly.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                |
+| CLI-WFSET ↔ DB / API contracts                | **Vacuous — no paired contract exists.** `_policies/05_Contracts.md` records 0 DB and 0 API contracts (QFAI uses no database and exposes no public API). There is no enum domain, `CHECK (... IN (...))` or `CREATE TYPE ... AS ENUM` for the 5-state enum to be representable in, so `QFAI-CONTRACT-040` has no operand here. The record is the file-state table itself, and its persistence layer is the JSON provenance record defined in the same contract, whose shape is stated inline.                                                                                                                                                                                                                                                                                                                                           |
+| `R-*` finding codes ↔ `JUSTIFICATION_CATALOG` | Reconciled by **deferral, not exclusion**. Catalog membership (`src/core/validators/justificationCatalog.ts`) is decided by **severity class**, not emitter identity: a script-emitted error-class code is a member (`R-PACK-LOCATION-DRIFT`, emitted only by `check-pack-locations.mjs`), and `R-AUTOPILOT-POLICY-WIDENED` sits outside because it is advisory-only, not because a script emits it. `R-WORKFLOW-HYGIENE-DRIFT` and `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` are error-class and therefore **belong in** the catalog. Registering them extends a closed set and must move in lockstep with the catalog SSOT, the reviewer SSOT and the owning spec's closed-set criterion, so it is deferred (`OQ-0015-0001`). Their present absence is a temporary divergence, **not a principle** — no artifact may assert permanent absence. |
+
+### Notes
+
+- The workflow-hygiene lint lane (`spec-0017` REQ-0012 / REQ-0013, which happen
+  to carry the same numbers as `pack#REQ-0012` / `pack#REQ-0013`) gets **no
+  contract file**, following the `check-pack-locations.mjs` precedent
+  (`spec-0004` REQ-0167, recorded in the CHG-006 Notes above). It is a repository
+  lint script producing no downstream-consumable artifact and no cross-skill
+  schema. Its one cross-boundary surface — the shipped-tree-only rules — is
+  pinned by CLI-WFSET §6, so a second home would create the SSOT-drift class this
+  change exists to close. `spec-0017` REQ-0012's obligation that the script
+  **name its rule set in its output** is what keeps the coverage boundary visible
+  while OQ-0017 (external workflow-linter adoption) stays deferred; it is
+  recorded in CLI-WFSET §6 and belongs in `spec-0017` as a business rule.
+- New lint finding codes: `R-WORKFLOW-HYGIENE-DRIFT` (hygiene lane, both trees)
+  and `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` (structural gate, shipped tree only).
+  Both use the existing bare-`R-` lint namespace, not the `QFAI-XXX-NNN`
+  grammar, so the three-digit waiver-alias rule does not apply. Registration in
+  the emitting scripts is `spec-0017` surface; reviewer-gate ingestion is
+  `spec-0015` surface per the CHG-007 triage table.
+- `workflows.integrity` is a dotted-lowercase diagnostic check id, a distinct
+  namespace from both `R-*` and `QFAI-XXX-NNN`. Verified free against the 21
+  existing doctor check ids.
+- Distributed-surface split: `packages/qfai/assets/init/root/.github/workflows/**`
+  **is** in `package.json#files` and carries the full four-layer leakage
+  obligation (no `spec-NNNN` N ≥ 10, no `CAP-0010+`, no `DR-NNNN`, no
+  `DEC-NNNN-NNNN`, no `OQ-NNNN-NNNN`, no `v<major>.<minor>[.<patch>]`, no
+  `schemaVersion`). `.qfai/contracts/**` and the generated
+  `.qfai/install-provenance.json` are not distributed.
+- The action-pin resolution is a **spelling** property, not a location property:
+  what clears the guard is **dropping the leading `v`**. Moving the version out
+  of a comment and into a step `name:` is not sufficient on its own.
+  `check-no-internal-version-leakage.sh` matches
+  `INTERNAL_VERSION_RE='\bv[0-9]+\.[0-9]+(\.[0-9]+)?\b'` with `grep -rnE` over
+  the **whole file**, so a step name reading `Setup pnpm v10.15.0` fails exactly
+  as a trailer comment `# v10.15.0` does. Adopted form: carry the human-readable
+  version in the step `name:` with the leading `v` dropped
+  (`Setup pnpm 10.15.0`), and keep the `uses:` reference a bare 40-hex SHA with
+  no version-bearing trailer. Dropping the `v` is the load-bearing half; the
+  step `name:` is what keeps it legible to a human. SSOT for this rule is
+  CLI-WFSET §6 — this note is an index pointer and must not diverge from it.
+- The guard is comment-blind and honours no pragma, so no allow-list or
+  suppression is available. The enforcing pre-build rule must nonetheless
+  inspect shipped-YAML comment lines deliberately, because `lint-shipping.ts`
+  skips them before its shipped-runtime rules apply.
+- Composite-action templates stay rejected: `scripts/verify-pack.mjs` allow-lists
+  only `workflows` under the shipped `.github/` and throws on any other child, so
+  a shipped `actions/` directory is a hard pack failure. Recorded as a non-goal in
+  CLI-WFSET §8 so reintroduction requires an explicit RE-OPEN.
+- No new `design/`, `ui/`, `api/` or `db/` contract is introduced by CHG-007.
+  DB and API stay at 0 items.

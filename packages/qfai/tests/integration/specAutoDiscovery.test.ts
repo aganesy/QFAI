@@ -9,7 +9,7 @@
 // QFAI:SPEC-0012:TC-0012-0021
 // QFAI:SPEC-0012:TC-0012-0022
 import { execFileSync } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, utimes, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, utimes, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -28,6 +28,7 @@ import {
 import type { QfaiConfig } from "../../src/core/config.js";
 import { loadConfig } from "../../src/core/config.js";
 import { validateTraceabilityIntegrity } from "../../src/core/validators/traceabilityIntegrity.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 // ---------------------------------------------------------------------------
 // Shared stub config (matches defaultConfig shape + baseBranch)
@@ -125,7 +126,7 @@ describe("TC-0013-0003: Source C — stale detection via mtime comparison", () =
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("marks spec as stale when spec file is newer than evidence", async () => {
@@ -182,7 +183,7 @@ describe("TC-0013-0004: Source D — delta.md parse", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("extracts spec IDs from Adopted section of 09_delta.md", async () => {
@@ -239,7 +240,7 @@ describe("TC-0013-0005: Union integration — combine multiple sources, no dupli
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("detectSpecChanges merges all sources into unique entries", async () => {
@@ -295,7 +296,7 @@ describe("TC-0013-0006: detectSpecChanges with fullScan: true", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("returns all specs when full option is true", async () => {
@@ -329,7 +330,7 @@ describe("TC-0013-0007: git unavailable — Source A and B empty, C/D still work
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("falls back to Source C/D when git throws", async () => {
@@ -369,7 +370,7 @@ describe("TC-0013-0008: full pipeline — all options, verify result structure",
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("returns well-structured SpecDiffResult with all required fields", async () => {
@@ -419,7 +420,7 @@ describe("TC-0013-0009: full pipeline — custom baseBranch via options", () => 
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("uses custom baseBranch from options instead of config default", async () => {
@@ -463,7 +464,7 @@ describe("TC-0013-0010: spec BR changed + impl unchanged → QFAI-TRACE-001", ()
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits QFAI-TRACE-001 error when BR changed but linked impl not changed", async () => {
@@ -501,7 +502,7 @@ describe("TC-0013-0011: spec BR changed + impl changed → PASS", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits no QFAI-TRACE-001 when both BR and impl are changed", async () => {
@@ -539,7 +540,7 @@ describe("TC-0013-0012: missing traceability ledger → QFAI-TRACE-002 warning",
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("emits QFAI-TRACE-002 warning when ledger file is missing", async () => {
@@ -572,7 +573,7 @@ describe("TC-0013-0013: --full flag bypasses diff detection", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("full option skips diff and includes all specs", async () => {
@@ -602,7 +603,7 @@ describe("TC-0013-0014: SpecDiffResult includes all required fields", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("result contains entries, allSpecs, and fullScan with correct types", async () => {
@@ -639,7 +640,7 @@ describe("TC-0013-0015: policy change detection", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("detectPolicyChanges returns true when _policies/ files are modified", () => {
@@ -672,7 +673,7 @@ describe("TC-0013-0016: config baseBranch — loadConfig reads baseBranch from y
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("loadConfig reads baseBranch from qfai.config.yaml", async () => {
@@ -705,7 +706,7 @@ describe("TC-0013-0017: old evidence without Diff Context remains parseable", ()
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("detectSpecChanges works when evidence files lack Diff Context section", async () => {
@@ -752,7 +753,7 @@ describe("TC-0012-0019: explicit flag routing determinism", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("--full flag always triggers full scan", async () => {
@@ -779,7 +780,7 @@ describe("TC-0012-0020: routing idempotency", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("repeated calls with same input produce identical results", async () => {
@@ -810,7 +811,7 @@ describe("TC-0012-0021: precedence chain doc-impl match", () => {
   });
 
   afterEach(async () => {
-    await rm(tmpRoot, { recursive: true, force: true });
+    await removeTempTree(tmpRoot);
   });
 
   it("source C (mtime) detects stale specs when evidence is older", async () => {
@@ -904,7 +905,7 @@ describe("TC-0014-0024: contradiction detection", () => {
         expect(entry.status).toMatch(/^(changed|stale|unchanged)$/);
       }
     } finally {
-      await rm(tmpRoot, { recursive: true, force: true });
+      await removeTempTree(tmpRoot);
     }
   });
 });
