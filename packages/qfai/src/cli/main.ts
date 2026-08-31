@@ -2,7 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runGuardrails } from "./commands/guardrails.js";
+import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
@@ -32,11 +32,26 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
+    // Name the offending token before anything else prints, so a typo is
+    // legible whichever stream the usage text ends up on below.
     if (invalid && options.unknownFlags.length > 0) {
       const label = options.unknownFlags.length > 1 ? "unknown options" : "unknown option";
       error(`qfai: ${label}: ${options.unknownFlags.join(", ")}`);
     }
-    info(usage());
+    // A parser rejection never reaches runGuardrails(), so the `--format json`
+    // promise ("stdout stays parseable for every outcome") has to be honoured
+    // here too: usage goes to stderr and stdout carries the refusal envelope.
+    if (invalid && command === "guardrails" && options.guardrailsFormat === "json") {
+      error(usage());
+      info(
+        formatGuardrailsErrorJson(
+          "invalid-arguments",
+          "guardrails: invalid arguments (see usage on stderr)",
+        ),
+      );
+    } else {
+      info(usage());
+    }
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -97,7 +112,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-          ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+          // `never` はここで捨てない: 捨てると「未指定」と区別できず、
+          // config の `validation.failOn` を下向きに上書きできなくなる。
+          ...(options.failOn ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
           ...(options.doctorSkillProfile !== undefined
             ? { skillProfile: options.doctorSkillProfile }
@@ -115,7 +132,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "guardrails":
       {
-        const resolvedRoot = await resolveRoot(options);
+        const resolvedRoot = await resolveRoot(options, options.guardrailsFormat === "json");
         const exitCode = await runGuardrails({
           root: resolvedRoot,
           ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
@@ -124,6 +141,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.guardrailsKeyword !== undefined
             ? { keyword: options.guardrailsKeyword }
             : {}),
+          ...(options.guardrailsFormat !== undefined ? { format: options.guardrailsFormat } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -188,6 +206,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = await runHandoffUpgrade({
           root: resolvedRoot,
           legacyFile: options.handoffLegacyFile,
+          // The canonical `.qfai/handoff.yaml` is a consumed SSOT:
+          // `--force` is required to overwrite an existing one, and
+          // `--dry-run` must preview instead of writing.
+          force: options.force,
+          dryRun: options.dryRun,
         });
       }
       return;
@@ -242,7 +265,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             rootExplicit: true,
             format: options.doctorFormat,
             ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+            // `never` は doctor 側の明示的なオプトアウトとして渡す。
+            ...(options.failOn ? { failOn: options.failOn } : {}),
             profile: "prototyping",
             ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           });
@@ -319,17 +343,19 @@ Commands:
 Options:
   --root <path>   対象ディレクトリ
   --dir <path>    init の出力先
-  --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents を上書き（assistant/manifest/** を含むそれ以外は既存があればスキップ）
+  --force         init: .qfai/assistant/{skills,agents}/** と publish 先 skills/agents、および symlink assets（.agents/.claude/.github/.codex）の生成物を上書き
+                  （生成物には各ツリーの README.md と .github/copilot-instructions.md を含む。specs/contracts/steering と assistant/manifest/** は上書きしない）
                   上書きだけでなく削除も行う: 過去の qfai が .claude/commands/ と .github/prompts/ に置いた
                   wrapper と、出荷されなくなった skill 用に qfai が置いた wrapper（symlink 化以前の
                   実ディレクトリを含む）を削除します。所有権は名前ではなくファイルの中身で判定するため
                   自作の command / prompt / skill は残りますが、symlink には中身がないので、引退済みの
                   QFAI skill 名で公開した自作 symlink は削除されます（リンク先の
                   .qfai/assistant/skills/<id>/ 本体は残るので張り直せます）
+  --force         handoff upgrade: 既存の .qfai/handoff.yaml を上書き（上書き前に .backup-<ISO> へ退避）
   --yes           init: 予約フラグ（現状は非対話のため挙動差なし。将来の対話導入時に自動Yes）
   --upgrade-assistant-tree   init: 既存プロジェクトを 4-layer assistant-tree に migrate
                               (legacy .qfai/assistant/{instructions,steering}/ → constitution/manifest/catalog/process/)
-  --dry-run       変更を行わず表示のみ
+  --dry-run       init / doctor / handoff upgrade: 変更を行わず表示のみ
   --format <text|github>       validate の出力形式
   --format <md|json>           report の出力形式
   --format <text|json>         doctor / prototyping preflight / discussion list --active の出力形式
@@ -338,7 +364,7 @@ Options:
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: 検証profileを指定
   --profile <prototyping|<skill>>  doctor: prototyping 固有の preflight 診断、または skill manifest の runtimeDependencies 探索
   --fail-on <error|warning|never>  validate: 失敗条件
-  --fail-on <error|warning>        doctor / prototyping preflight: 失敗条件
+  --fail-on <error|warning|never>  doctor / prototyping preflight: 失敗条件（既定は validation.failOn、同梱既定値は error）
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UXプラットフォーム指定
   --out <path>                  report/doctor/prototyping preflight: 出力先（相対パスは --root 基準）
   --in <path>                   report: validate.json の入力先（configより優先）
@@ -347,6 +373,7 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --format <text|json>          guardrails list/extract/check: 出力形式（既定 text）
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
@@ -372,16 +399,27 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+/**
+ * `machineReadable` keeps stdout reserved for the payload when the command is
+ * about to print JSON: the missing-config notice then goes to stderr so
+ * `qfai <cmd> --format json` stays parseable.
+ */
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  machineReadable = false,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(
-      `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
-    );
+    const notice = `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`;
+    if (machineReadable) {
+      error(notice);
+    } else {
+      warn(notice);
+    }
   }
   return search.root;
 }
