@@ -9,7 +9,7 @@
 // QFAI:SPEC-0004:US-0004-0036
 
 import { execFile } from "node:child_process";
-import { mkdir, mkdtemp, readFile, rm, writeFile, access } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile, access } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -19,6 +19,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { runValidate } from "../../src/cli/commands/validate.js";
 import { loadConfig } from "../../src/core/config.js";
 import { validateReviewerJustification } from "../../src/core/validators/reviewerJustification.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const execFileP = promisify(execFile);
 
@@ -72,7 +73,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await removeTempTree(root);
 });
 
 describe("US-0004-0034: profile-suffixed validate output + always-latest validate.json", () => {
