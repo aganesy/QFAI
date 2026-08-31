@@ -277,7 +277,7 @@ Before producing any deliverable, thoroughly analyze the current project (backgr
 
 - [ ] Read key repo docs: README / CHANGELOG / RELEASE (if present)
 - [ ] Inspect `.qfai/` layout and existing SDD/ATDD/TDD artifacts (if present)
-- [ ] Inspect `packages/qfai` structure (CLI entrypoints, core modules, validators, assets/init)
+- [ ] Inspect the project's own source tree (entrypoints, core modules, validators, packaged assets)
 - [ ] Identify standard gate commands (format/lint/type/test/verify-pack) and where they are defined
 - [ ] Note constraints: Node versions, CI matrix, packaging rules, verify-pack expectations
 
