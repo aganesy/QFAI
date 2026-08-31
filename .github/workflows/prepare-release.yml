@@ -210,7 +210,30 @@ jobs:
 
           # The remote is re-pointed at the token, because the checkout above deliberately kept no
           # credentials in the work tree.
-          git push "https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "HEAD:refs/heads/${RELEASE_BRANCH}"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+
+          # RESUMABLE, because the push and the pull request are two failures and only the
+          # first leaves nothing behind. A run that pushed the branch and then lost
+          # `gh pr create` to a transient API error left the branch on the remote — and the
+          # obvious retry builds a sibling commit from `main`, which this non-forced push
+          # refuses as a non-fast-forward. Force is ruled out by
+          # `.agents/rules/version-discipline.md`, so the recommended flow could not be
+          # restarted by any means the rules allow: the only way out was a human deleting the
+          # branch, which nothing told them.
+          #
+          # Adopted only when it really is this release's branch. A branch of the same name
+          # declaring some other version is a collision, not a resume, and is refused by name.
+          if git ls-remote --exit-code --heads "$remote" "refs/heads/${RELEASE_BRANCH}" > /dev/null 2>&1; then
+            git fetch --depth=1 "$remote" "refs/heads/${RELEASE_BRANCH}"
+            existing_version="$(git show FETCH_HEAD:packages/qfai/package.json | node -pe "JSON.parse(require('node:fs').readFileSync(0, 'utf8')).version")"
+            if [ "$existing_version" != "${RELEASE_VERSION}" ]; then
+              echo "::error::prepare-release: ${RELEASE_BRANCH} already exists on the remote and declares ${existing_version}, not ${RELEASE_VERSION}. That is a collision rather than a re-run of this release. Delete the branch, or release the version it already carries."
+              exit 1
+            fi
+            echo "prepare-release: ${RELEASE_BRANCH} is already pushed and declares ${RELEASE_VERSION}; reusing it rather than pushing a sibling commit. Its CHANGELOG is whatever that earlier run captured — delete the branch and re-run if the Unreleased section has grown since."
+          else
+            git push "$remote" "HEAD:refs/heads/${RELEASE_BRANCH}"
+          fi
 
           # The body is written to a file rather than passed inline: its lines begin at column
           # zero, and inside a YAML block scalar that ends the block. A quoted heredoc keeps
@@ -237,9 +260,17 @@ jobs:
             echo "Merging this pushes the \`v${RELEASE_VERSION}\` tag automatically, which starts \`release.yml\`. Publishing still waits on the \`release\` environment's required reviewer."
           } > "${body_file}"
 
-          gh pr create \
-            --base main \
-            --head "${RELEASE_BRANCH}" \
-            --title "chore(release): qfai ${RELEASE_VERSION}" \
-            --body-file "${body_file}"
+          # The other half of the resume. A second run against an adopted branch must not try
+          # to open a pull request that is already open — `gh pr create` fails on that, and the
+          # failure would be indistinguishable from the one this whole branch exists to survive.
+          existing_pr="$(gh pr list --head "${RELEASE_BRANCH}" --base main --state open --json number --jq '.[0].number // ""')"
+          if [ -n "${existing_pr}" ]; then
+            echo "prepare-release: pull request #${existing_pr} is already open for ${RELEASE_BRANCH}; nothing to create"
+          else
+            gh pr create \
+              --base main \
+              --head "${RELEASE_BRANCH}" \
+              --title "chore(release): qfai ${RELEASE_VERSION}" \
+              --body-file "${body_file}"
+          fi
         shell: bash

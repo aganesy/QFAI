@@ -2680,6 +2680,47 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("can be re-run after the pull request failed to open, without forcing anything", () => {
+    // The push and the pull request are two failures, and only the first leaves nothing
+    // behind. A run that pushed `release/vX.Y.Z` and then lost `gh pr create` to a transient
+    // API error left the branch on the remote; the obvious retry builds a sibling commit from
+    // `main`, and the non-forced push refuses it as a non-fast-forward. Force is ruled out by
+    // `.agents/rules/version-discipline.md` — so the recommended flow could not be restarted
+    // by any means the rules allow, and nothing said the way out was deleting the branch.
+    const prepare = workflow("prepare-release.yml");
+    const jobs = isRecord(prepare["jobs"]) ? prepare["jobs"] : {};
+    const commands = Object.values(jobs)
+      .flatMap((job) => (isRecord(job) && Array.isArray(job["steps"]) ? job["steps"] : []))
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+
+    expect(
+      commands,
+      "an already-pushed branch must be detected before the push, not discovered by its failure",
+    ).toMatch(/ls-remote[^\n]*RELEASE_BRANCH/);
+    expect(
+      commands,
+      "and an already-open pull request must be detected before `gh pr create`, whose failure " +
+        "would be indistinguishable from the one this branch exists to survive",
+    ).toMatch(/gh pr list[^\n]*RELEASE_BRANCH/);
+    expect(
+      commands,
+      "and adoption must be conditional on the branch declaring THIS version: same name, other " +
+        "version is a collision, not a re-run",
+    ).toMatch(/\[[^\n]*existing_version[^\n]*RELEASE_VERSION[^\n]*\]/);
+
+    // …and none of it may be bought with force. The rule forbids it, and a forced push here
+    // would overwrite a release branch somebody may already be reviewing.
+    expect(
+      commands,
+      "nothing here may force-push: `.agents/rules/version-discipline.md` forbids it outright",
+    ).not.toMatch(/push[^\n]*(--force|-f \b)/);
+  });
+
   it("keeps scratch inside the one directory this repository sanctions", () => {
     // `.agents/rules/temporary-files.md` makes `tmp/` at the repository root the sole scratch
     // area. Bare `mktemp` implies `--tmpdir` and lands in `/tmp` when `TMPDIR` is unset, which
