@@ -2193,12 +2193,13 @@ exactly what the mechanism below says the line's movement means.
 
 **And a third time, from a merge rather than from a commit.** Merging `main` into the branch that
 cites constitution documents by one project-root path form brought
-`packages/qfai/tests/assets/constitutionCitationPaths.test.ts` — three callsites under the e2e
-project's own includes — taking the count from 925 to 928. Again nothing about `spec-0017` changed,
-and again both suite totals above are known-invalid for this tree rather than assumed current: the
-line below is what says so.
+`packages/qfai/tests/assets/constitutionCitationPaths.test.ts` — now five callsites under the e2e
+project's own includes, and the one e2e-project file this tree does not share with `main` — taking
+the count from `main`'s 927 to 932. Again nothing about `spec-0017` changed, and again both suite
+totals above are known-invalid for this tree rather than assumed current: the line below is what
+says so.
 
-e2e callsites at this tree: 930
+e2e callsites at this tree: 932
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

@@ -26,8 +26,19 @@ It is not where the detail lives.
   the file (and anchor, when the file covers more than one topic) so the reader
   is never left guessing where the rule went.
 
-A hard line ceiling backs this up in the asset tests, but it is a backstop, not
-the rule. A skill approaching it is a signal to move a section out.
+A hard line ceiling backs this up: **500 lines per assistant asset file**, for
+every `.qfai/assistant/**/*.{md,yml,yaml}` file, counted as
+`content.split(/\r?\n/).length` — blank lines included. `npx qfai doctor`
+measures it and reports every file over the ceiling as `assets.lineBudget`. The
+ceiling is a backstop, not the rule: a file approaching it is a signal to move a
+section out, not to raise the number.
+
+One shipped file is exempt, and only because it is a roster rather than prose:
+`assistant/manifest/agent-catalog.yml` holds one entry per agent, mirroring
+`assistant/agents/<id>.md`, so its length tracks the number of agents — whether
+shipped or adjusted through `qfai-configure` — and splitting it would mean
+splitting the roster itself. `npx qfai doctor` names it under `exempt` with that
+reason. No prose asset has an exemption.
 
 ## Citation Path Form (Mandatory)
 
