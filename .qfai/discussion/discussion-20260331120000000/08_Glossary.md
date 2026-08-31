@@ -12,7 +12,7 @@ The 3-layer evaluation model (invariant / trend-derived / product-specific) that
 
 ### 3-layer evaluation
 
-Evaluation approach consisting of three layers: invariant axes (stable quality attributes), trend-derived axes (axes informed by current design trends with freshness tracking), and product-specific axes (axes tailored to the individual project). Replaces the former fixed 4-axis model.
+Evaluation approach consisting of three layers: invariant axes (stable quality attributes), trend-derived axes (axes informed by current design trends with freshness tracking), and product-specific axes (axes specific to the individual project). Replaces the former fixed 4-axis model.
 
 ### 4-axis model (legacy)
 

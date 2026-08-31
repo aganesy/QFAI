@@ -22,12 +22,13 @@
  * falls through to `ROOT="."`.
  */
 import { spawnSync } from "node:child_process";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 import { afterEach, describe, expect, it } from "vitest";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PKG_ROOT = path.resolve(__dirname, "../..");
@@ -44,7 +45,7 @@ async function newTempDir(): Promise<string> {
 afterEach(async () => {
   while (tempDirs.length > 0) {
     const dir = tempDirs.pop();
-    if (dir) await rm(dir, { recursive: true, force: true });
+    if (dir) await removeTempTree(dir);
   }
 });
 
