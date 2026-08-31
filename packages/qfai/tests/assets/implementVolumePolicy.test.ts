@@ -92,15 +92,15 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).not.toContain("no live gatekeeper turn");
       expect(section).toContain("### Routing is unchanged");
       expect(section).toContain("scales **how often** a gate runs, never **whether** it runs");
-      // `blocking_agents` lists only qa-gatekeeper + completion-reviewer, so
-      // claiming all three are "blocking" contradicted the central manifest.
-      expect(section).not.toContain("mandatory and blocking for `qfai-implement`");
+      // `blocking_agents` now carries all three reviewers, so the prose must
+      // not keep describing `implementation-reviewer` as absent from it.
+      expect(section).not.toContain("Note the asymmetry");
+      expect(section).not.toContain("`implementation-reviewer` is mandatory but not in that list");
       expect(section).toContain(
-        "`implementation-reviewer` is mandatory but not in that list, and a `REVISE` from it still blocks `done`",
+        "`blocking_agents` lists all three, so a `REVISE` from any of them blocks `done`",
       );
-      expect(skill).toContain(
-        "only the first two are in `blocking_agents`, but item 8 of the 11-point gate makes an `implementation-reviewer` REVISE block `done` anyway",
-      );
+      expect(skill).not.toContain("only the first two are in `blocking_agents`");
+      expect(skill).toContain("`implementation-reviewer` all mandatory and all blocking");
       expect(section).toContain(
         "`qa-gatekeeper` confirms RED/GREEN once per coherent group instead of once per row",
       );

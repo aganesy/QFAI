@@ -49,13 +49,11 @@ changes the submitted unit from one row to one coherent group. Every row is
 still covered by a live turn from each of those agents, and a group that has
 not been confirmed leaves all of its members short of the 11-point gate.
 
-Note the asymmetry, because "all routed blocking reviewers pass" alone is not
-the item gate: `blocking_agents` lists only `qa-gatekeeper` and
-`completion-reviewer`. `implementation-reviewer` is mandatory but not in that
-list, and a `REVISE` from it still blocks `done` — item 8 of the 11-point gate
-requires its PASS independently of the routing list. Read the 11-point gate as
-the authority for an item transition; `blocking_agents` governs phase
-progression, not the ledger write.
+`blocking_agents` lists all three, so a `REVISE` from any of them blocks
+`done`; item 8 of the 11-point gate requires the `implementation-reviewer` PASS
+on the same terms. The two lists agree on **who** blocks — they differ in
+**what** they authorise. Read the 11-point gate as the authority for an item
+transition; `blocking_agents` governs phase progression, not the ledger write.
 
 ## Batched review
 
