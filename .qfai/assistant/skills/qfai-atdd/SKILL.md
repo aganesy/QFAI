@@ -53,7 +53,7 @@ When unsure, read inputs in this order:
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md` (AC)
   - `.qfai/specs/<spec-id>/05_Examples.md` (EX)
   - `.qfai/specs/<spec-id>/06_Test-Cases.md` (TC)
-  - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`)
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` (the execution ledger — enumerate the `Layer = E2E` / `Layer = API` / `Layer = Integration` rows this run owes evidence for, with their `TDD-ID`, obligation column and `Selector`; an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs is outside the ATDD-owned set and is not enumerated — `## Execution Ledger: the rows this skill feeds`)
   - `.qfai/contracts/api/**` (CON-API)
   - `.qfai/contracts/db/**` (CON-DB)
   - `.qfai/contracts/ui/**` and `.qfai/contracts/design/**` when the target spec is UI-bearing
@@ -71,7 +71,7 @@ Do not read discussion-pack UI/UX sidecars. UI-bearing acceptance tests consume 
   - `.qfai/specs/<spec-id>/03_Acceptance-Criteria.md`
   - `.qfai/specs/<spec-id>/05_Examples.md`
   - `.qfai/specs/<spec-id>/06_Test-Cases.md`
-  - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff.
+  - `.qfai/specs/<spec-id>/tdd/test-list.md` — read, never written. A run that does not enumerate its `Layer = E2E` / `Layer = API` / `Layer = Integration` rows produces no `## Ledger rows advanced` entry for them, and `/qfai-implement` Phase Red step 3b then stops on a missing handoff. The carved-out `Integration` row — `TC-Refs` naming only `L1` / `L2` TCs — is the exception at both ends: it is not enumerated here and step 3b never receives it, because `/qfai-implement` writes its test itself (`## Execution Ledger: the rows this skill feeds`).
 - Escalation Mode:
   - allowed only when `01_Spec.md` Escalation Hook signals ambiguity / conflict / missing constraint / trade-off
   - read only `.qfai/specs/_policies/01_Objective.md` and `.qfai/specs/_policies/08_Decisions.md`
@@ -207,7 +207,7 @@ ledger, and `qfai-implement/SKILL.md` states the split: **`Layer = E2E`,
 are authored here.** Integration is there because this skill's scope puts it
 there: `QFAI-ATDD-112` covers every `L3` TC, and every TC with no declared
 `Level`, from `tests/integration/**`, and P4 writes those tests. Self-owned,
-they had `/qfai-implement` demand a fresh RED for a test already green here.
+they had `/qfai-implement` demand a fresh RED for a test already green here. **One `Integration` row is outside the set: one whose `TC-Refs` name only TCs that declare `Level` `L1` / `L2`.** `QFAI-ATDD-112` excludes those levels — CRITICAL CONSTRAINTS above says `L1`/`Unit` and `L2`/`Component` owe nothing here — so this stage authors no test for that row and requires no annotation for it, while the validator reports the `Layer` / `Level` contradiction as a **warning** only (`TDDLIST_COVERAGE_LAYER_MISMATCH`), so such a ledger passes `--fail-on error` and the row exists today. `qfai-implement/SKILL.md` Non-goals states the same carve-out from the other side and keeps the row owned there: that skill writes its test in its own Phase Red and keeps its evidence, anchor, checkpoint and cross-spec entries in `implement-<spec-id>.md`. **Every rule in this file and its references that names the ATDD-owned set excludes it** — this stage enumerates no such row, chooses no branch for it, writes no `## Ledger rows advanced` entry for it and hands it over to nobody. Demanding a branch and a handoff for a test this skill is forbidden to write is what left the row refused by both stages and stranded at `todo`; correcting the row's `Layer`, or the TC's `Level`, upstream is the durable fix.
 
 - **This skill does not write the ledger.** `/qfai-implement` owns the `Status` / `DR-ID` / `Evidence` cells of every row — one writer, as `constitution/drift-protocol.md` grants. This stage owes the **evidence those cells point at**, in `.qfai/evidence/atdd-<spec-id>.md`.
 - **The lifecycle is `../qfai-implement/references/execution-ledger.md#allowed-transitions`**: forward-only from `todo`, and `todo -> red` requires an **admissible RED** observed before the code that makes it pass exists.
@@ -383,7 +383,7 @@ See `.qfai/evidence/coverage-depth-<spec-id>.md` (committed). Totals: ✅ N / �
 - P0: Plan and obligations checklist prepared. A project whose routing has no
   `red` phase predates it: `references/red-provenance.md#a-project-without-the-red-phase`.
 - P1: Layer assignment validated against `.qfai/assistant/catalog/test-layers.md#layer-derivation-procedure-normative`.
-- P1b: **A branch is chosen for every row**, provisional until its handoff.
+- P1b: **A branch is chosen for every row this stage owns**, provisional until its handoff. The ATDD-owned set is the one `## Execution Ledger: the rows this skill feeds` defines, so an `Integration` row whose `TC-Refs` name only `L1` / `L2` TCs gets no branch and no handoff here: this stage may not write its test, and requiring either of a row `/qfai-implement` owns left this gate unpassable.
 - P1c: **A branch 1 row is discharged in that loop** — write the test, take the
   RED, `qa-gatekeeper` PASS, hand it to `/qfai-implement`, GREEN, checkpoint —
   before the next branch-1 row's failing test is written, and before P2-P4 build

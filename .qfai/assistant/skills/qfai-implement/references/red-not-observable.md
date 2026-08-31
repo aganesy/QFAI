@@ -9,12 +9,13 @@ run.
   test exercises a predicate that row already made pass. The usual case when a
   BR binds several ACs to one common validator. **Not an anomaly** and does
   **not** go to `exception`. Follow the procedure below.
-- **Or, on a `Layer = E2E` / `Layer = API` row handed over by `/qfai-atdd`,
-  satisfied by production code no ledger row owns** — a pre-existing route, or
-  one built outside the ledger. Same procedure, and `Satisfied-by` takes the
-  path rather than a row id (step 1). Specific to those rows: their surfaces
-  come from work orders that never appear in the ledger, which is not true of
-  a `Unit` / `Component` / `Integration` row.
+- **Or, on a `Layer = E2E` / `Layer = API` / `Layer = Integration` row handed
+  over by `/qfai-atdd`, satisfied by production code no ledger row owns** — a
+  pre-existing route, or one built outside the ledger. Same procedure, and
+  `Satisfied-by` takes the path rather than a row id (step 1). Specific to the
+  ATDD-owned layers (`qfai-implement/SKILL.md` Non-goals): their surfaces come
+  from work orders that never appear in the ledger, which is not true of a
+  `Unit` / `Component` row.
 - **Or satisfied by pre-existing production state that no row and no work
   order created** — a regression guard over a property the system already had
   before this spec existed. **Not an anomaly** either: nothing built the
@@ -41,19 +42,37 @@ for the natural RED and let the row proceed to `green` and `done`:
    property was established by a decision rather than by code.
 
    **The production path and symbol** (`src/api/routes/evaluations.py::register`)
-   **is accepted only on a `Layer = E2E` / `Layer = API` row handed over by
-   `/qfai-atdd`** — path _and_ symbol, never a commit id on its own. A commit
-   that touched several routes and a helper names no single predicate, so the
-   Oracle Strength Check has no boundary to apply and would take a mutation
-   anywhere inside it; `qa-gatekeeper` REVISEs that form for exactly this
-   reason. A commit recorded alongside the symbol is provenance and is fine. Those surfaces routinely
-   have no ledger row — a pre-existing route, or one built outside the ledger —
-   so requiring a row id sent every one of them to `exception`, the terminal
-   state this procedure exists to avoid. On a `Unit` / `Component` /
-   `Integration` row it is **not** accepted: production code no ledger row owns
-   is the "anything else" case above, and `qfai-implement/SKILL.md` Phase Red
-   step 5 sends it to `exception`. Widening the field for every row would let
-   an ordinary TDD row reach `done` with no production change and no sibling.
+   **is accepted only on a `Layer = E2E` / `Layer = API` / `Layer = Integration`
+   row handed over by `/qfai-atdd`** — path _and_ symbol, never a commit id on
+   its own. A commit that touched several routes and a helper names no single
+   predicate, so the Oracle Strength Check has no boundary to apply and would
+   take a mutation anywhere inside it; `qa-gatekeeper` REVISEs that form for
+   exactly this reason. A commit recorded alongside the symbol is provenance and
+   is fine. Those surfaces routinely have no ledger row — a pre-existing route,
+   or one built outside the ledger — so requiring a row id sent every one of
+   them to `exception`, the terminal state this procedure exists to avoid. On a
+   `Unit` / `Component` row it is **not** accepted: production code no ledger
+   row owns is the "anything else" case above, and `qfai-implement/SKILL.md`
+   Phase Red step 5 sends it to `exception`. `Integration` sits on the accepting
+   side because that skill's Non-goals put it in the ATDD-owned set: its test is
+   authored by `/qfai-atdd` and its surface arrives from the same work orders,
+   so excluding it sent every correct Integration falsifiability trio to
+   `exception`. Widening the field for every row would let an ordinary TDD row
+   reach `done` with no production change and no sibling.
+
+   **Two `Integration` rows are outside that set, and the sibling is required
+   on both.** "Handed over by `/qfai-atdd`" is the condition, and the `Layer` is
+   only its usual proxy — so where the two part, follow the handover. A row
+   carrying `Pre-split-evidence: implement` (gate item 10) predates the split
+   and was never handed over; a row whose `TC-Refs` name only TCs that declare
+   `Level` `L1` / `L2` is one `/qfai-atdd` authors no test for, so
+   `/qfai-implement` writes it in its own Phase Red. Both are ordinary
+   implement-owned TDD rows: their surface is code this ledger does own, the
+   reason the field was widened does not hold, and accepting a bare path and
+   symbol on them is precisely the "ordinary TDD row reaching `done` with no
+   production change and no sibling" the sentence above refuses. Both
+   exceptions are defined once, in `qfai-implement/SKILL.md`; `qa-gatekeeper`
+   applies this rule and restates neither.
 
 2. Break the shared predicate deliberately (inject a mutation), run this row's
    test, and confirm it **fails**. Record the command and its output as

@@ -40,7 +40,7 @@ Editing it does not require permission — it requires a record and a re-review.
 
 ## The evidence entry
 
-Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` row):
+Per affected spec, in the evidence file the row's `Layer` owns (`.qfai/evidence/implement-<spec-id>.md`, or `.qfai/evidence/atdd-<spec-id>.md` for an `E2E` / `API` / `Integration` row — the ATDD-owned set `qfai-implement/SKILL.md` Non-goals defines). **A row carrying `Pre-split-evidence: implement` keeps `implement-<spec-id>.md`** (`qfai-implement/SKILL.md` gate item 10): the marker is what makes a legacy row's implement anchor the one item 10 accepts, so that is where its effective evidence is. Recording such a row's entry on the ATDD side puts the open obligation in a file neither item 10 nor the completion prohibition reads for it, and a Refactor that changes another spec's file could then be declared complete with that spec's re-review still open — the same separation this paragraph exists to prevent, mirrored. The whole `## Cross-spec obligations` entry goes in that one file: item 10 and the completion prohibition read the layer-owned file, so recording an ATDD-owned row's entry in `implement-<spec-id>.md` separates the blocking record from the file the gate reads and lets completion be declared with the other spec's re-review still open.
 
 | Field                | Meaning                                                       |
 | -------------------- | ------------------------------------------------------------- |

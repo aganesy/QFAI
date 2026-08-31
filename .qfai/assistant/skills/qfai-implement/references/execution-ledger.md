@@ -86,10 +86,10 @@ non-TC obligation IDs are inert to it by design.
 The `Evidence` cell is a **pointer**, not the payload.
 
 `.qfai/evidence/implement-<spec-id>.md` is the home — for every row this skill
-runs itself; the E2E/API rows use `atdd-<spec-id>.md`, see "ATDD-owned rows"
-below — of the per-item
-evidence contract — the RED/GREEN commands, their output, and the reviewer
-verdicts. The ledger cell records the outcome and says where to read the proof:
+runs itself; the E2E/API/Integration rows use `atdd-<spec-id>.md`, see
+"ATDD-owned rows" below — of the per-item evidence contract — the RED/GREEN
+commands, their output, and the reviewer verdicts. The ledger cell records
+the outcome and says where to read the proof:
 
 ```
 RED fail / GREEN pass — evidence at `.qfai/evidence/implement-spec-0001.md#tdd-0027`
@@ -326,14 +326,14 @@ after its surface passes on the first run. So:
   ordinary RED. Its stage gate P1b is where that happens.
 - **The evidence file follows the stage that produced it.**
   `implement-<spec-id>.md` holds the rows this skill runs itself;
-  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the E2E/API rows,
-  because that is the stage that ran the commands. The `Evidence` cell is a
+  `atdd-<spec-id>.md` holds `## Ledger rows advanced` for the
+  E2E/API/Integration rows, because that is the stage that ran the commands. The `Evidence` cell is a
   pointer either way and its anchor names which file. Calling
   `implement-<spec-id>.md` the single home was true while one stage produced
   every pair; it stopped being true the moment another stage did.
   `qfai-implement/SKILL.md`'s completion item 10 reads the same split, so an
-  E2E/API row whose anchor names the ATDD file reaches `done`; items 11 and the
-  matching prohibition condition append the two reviewer verdicts to **that**
+  E2E/API/Integration row whose anchor names the ATDD file reaches `done`;
+  items 11 and the matching prohibition condition append the two reviewer verdicts to **that**
   file. This skill still runs `completion-reviewer` and
   `implementation-reviewer` for every row it advances — only the RED provenance
   came from elsewhere.

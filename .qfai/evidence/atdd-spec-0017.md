@@ -2191,7 +2191,40 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 927
+**And a third time, from a merge rather than a commit.** Bringing `main` into
+`fix/issue-530-atdd-owned-layer-set` (issue #530, "Integration belongs to the ATDD-owned layer set")
+carried that branch's `+17` `it` callsites in `tests/assets/atddRedProvenance.test.ts` into the e2e
+project's globs, taking the count from 925 to 942 — re-derived with the guard's own `CALLSITE` rule at
+each endpoint: 915 at the merge base, 925 at `main`, 932 on the branch, 942 at the merge, and
+`925 + (932 - 915) = 942`. Nothing about `spec-0017` changed here either. The merge is a commit that
+changes a callsite under the two globs, so it owes this line exactly as a direct commit would, and the
+two suite totals above are known-invalid for this tree — not re-run here, because a merge that resolves
+documentation conflicts cannot certify a suite run it did not take.
+
+**And a fourth time, from the same branch's next commit.** Three review threads on that branch's PR
+were answered with three new `it` callsites in `tests/assets/atddRedProvenance.test.ts` — the
+skipped-version upgrade route, the sibling requirement on an `Integration` row the ATDD stage never
+handed over, and the marker-first destination for a `review-fix` round — taking that file from 229 to
+232 and the count from 942 to 945. Every endpoint of the paragraph above was **re-measured** with the
+guard's own `CALLSITE` rule rather than carried forward, because a chain whose earlier terms are
+assumed is the defect this section is a record of: 915 at the merge base (`e420a44f`), 925 at `main`
+(`2643bc3a`), 932 at the branch tip before the merge (`b9e91e12`), 942 at the merge (`02f43e655`) —
+all four unchanged — and `942 + 3 = 945` here. Nothing about `spec-0017` changed in this commit
+either; the two suite totals above stay known-invalid for this tree, and are not re-run here for the
+same reason the merge did not re-run them.
+
+**And a fifth time, from a second merge of `main` into the same branch.** `main` moved from 925 to 927
+while this branch sat — two `it` callsites added to `tests/assets/assets.test.ts`, which is inside the
+e2e project's globs and has nothing to do with `spec-0017` — so bringing `35f74b14d` in takes the count
+to 947. The two deltas are disjoint: `main`'s two are in `assets.test.ts` (72 to 74) and this branch's
+twenty are in `atddRedProvenance.test.ts` (212 to 232), so neither is counted twice. Every endpoint was
+**re-measured** with the guard's own `CALLSITE` rule rather than carried forward, for the reason the
+paragraph above gives: 925 at the previous `main` (`2643bc3a`), 927 at `main` (`35f74b14d`), 945 at the
+branch tip before this merge (`7784f78e`), 947 at this merge — and `945 + (927 - 925) = 947`. Nothing
+about `spec-0017` changed here either; the two suite totals above stay known-invalid for this tree, and
+are not re-run here for the same reason the earlier merge did not re-run them.
+
+e2e callsites at this tree: 947
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
