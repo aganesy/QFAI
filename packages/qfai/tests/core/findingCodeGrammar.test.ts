@@ -416,14 +416,17 @@ describe("finding code grammar", () => {
   it("covers every code a gate emits with a family entry, not a bare code", async () => {
     // Both family tables listed `QFAI-TEST-001` alone while the gate also
     // emits `QFAI-TEST-002`, so the partial-profile notice under-stated what
-    // `--profile saas-package` and `--profile tdd` had skipped.
+    // `--profile saas-package` and the profiles that skip the stub gate had
+    // skipped. The gate group asked here is the one that *owns* the stub gate:
+    // `runAtddValidators` and `runTddValidators` both call it, so it sits in
+    // its own `test-stubs` group rather than inside `tdd`.
     const stubCodes = await codesInFile(TEST_STUB_VALIDATOR);
     expect(stubCodes).toContain("QFAI-TEST-002");
 
     const tables = {
       "skippedGates.validateTestTodoStubs":
         SAAS_PACKAGE_SKIPPED_GATE_FAMILIES.validateTestTodoStubs,
-      "GATE_GROUP_FAMILIES.tdd": GATE_GROUP_FAMILIES.tdd,
+      "GATE_GROUP_FAMILIES.test-stubs": GATE_GROUP_FAMILIES["test-stubs"],
     };
     const uncovered: string[] = [];
     for (const [table, families] of Object.entries(tables)) {

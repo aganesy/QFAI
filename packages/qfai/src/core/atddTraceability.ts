@@ -1211,6 +1211,24 @@ function buildAtddTestGlobs(root: string, testsRoot: string, filePattern: string
   ];
 }
 
+/**
+ * The acceptance-test globs this stage owns, for a scanner that brings its own
+ * file pattern.
+ *
+ * `/qfai-atdd` owns `tests/{e2e,api,integration}/**` and nothing else, so a
+ * validator wired into `--profile atdd` must select files the same way the
+ * ATDD scan does — following `paths.testsDir` — rather than reusing
+ * `validation.traceability.testFileGlobs`, which describes the whole
+ * repository's tests.
+ */
+export function atddAcceptanceTestGlobs(
+  root: string,
+  config: QfaiConfig,
+  filePattern: string,
+): string[] {
+  return buildAtddTestGlobs(root, resolvePath(root, config, "testsDir"), filePattern);
+}
+
 async function collectTestFiles(root: string, globs: string[]): Promise<CollectFilesByGlobsResult> {
   return collectFilesByGlobs(root, {
     globs,

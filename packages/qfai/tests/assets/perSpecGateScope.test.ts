@@ -101,15 +101,19 @@ describe.each(TREES)("%s", (tree) => {
     expect(checkpoint).toContain("None of the three has a spec owner");
   });
 
-  it("does not name a rule the atdd profile never runs", async () => {
-    // `runAtddValidators` runs `validateAtddCodeTraceability` and
-    // `validateScaffoldPlaceholder` only — `validateTestTodoStubs` is wired
-    // into the tdd profile. Listing `QFAI-TEST-001` among the rules that fail
-    // this skill's gate told a completion reviewer that
-    // `--profile atdd` catches an `it.todo` acceptance test. It does not, so
-    // the reviewer would trust a green gate over an unimplemented test.
+  it("names the stub gate this profile runs, and that scope does not narrow it", async () => {
+    // `runAtddValidators` runs `validateTestTodoStubs` too, so an acceptance
+    // test written as a silent stub fails this skill's own gate. The finding
+    // names a test file, which no spec owns, so it survives `--spec` like the
+    // contract rules do — a completion reviewer has to read both halves, or a
+    // sibling's stub reads as an unexplained failure of this spec's gate.
     const atdd = flat(await read(tree, ATDD));
-    expect(atdd).not.toContain("QFAI-TEST-001");
+    expect(atdd).toContain("`QFAI-TEST-001`");
+    expect(atdd).toContain("which no spec owns either");
+    // And only what it runs. `QFAI-TEST-001` matches the `*.todo` forms, not
+    // `it.skip` / `describe.skip`; promising those told a completion reviewer
+    // a green gate proved a skipped acceptance test did not exist.
+    expect(atdd).toContain("`it.skip` / `describe.skip` are **not** that rule");
   });
 
   it("does not call a nonexistent-spec reference repo-wide wherever it sits", async () => {

@@ -93,7 +93,9 @@ import {
   runPackageSelfGovernanceValidators,
   validateStaleReferences,
   validateImportLiteEvidencePresence,
+  STUB_SOURCE_FILE_PATTERN,
 } from "./validators/index.js";
+import { atddAcceptanceTestGlobs } from "./atddTraceability.js";
 import { readSafe } from "./validators/utils.js";
 
 const UIUX_VALIDATION_BUDGET_MS = 2000;
@@ -620,6 +622,24 @@ async function runAtddValidators(
     // Scoped: this validator writes `.qfai/state.json` escalation counters, so
     // an unscoped scan under `--spec` mutated sibling specs' state.
     ...(await validateScaffoldPlaceholder(root, config, specScope ? { specScope } : {})),
+    // QFAI-TEST-001. `qfai-atdd` names `--profile atdd` as its completion gate
+    // and owns `tests/e2e/**`, `tests/api/**` and `tests/integration/**`. An
+    // acceptance test written as a silent stub still satisfies QFAI-ATDD-111 /
+    // -112 / -113 — those count the annotation, not the assertion — and carries
+    // no scaffold marker, so D-SCAFFOLD-PLACEHOLDER does not see it either.
+    // Without this the stage's own gate went green on a suite whose tests do
+    // not run, and the repo-wide profiles that do catch it are not what the
+    // skill instructs the operator to run. Unscoped like the contract rules:
+    // the finding names a test file, which no spec owns.
+    //
+    // Selection is the stage's own three directories, not
+    // `validation.traceability.testFileGlobs`: that list is repo-wide, so a
+    // `tests/**/*.test.ts` project would have had a `tests/unit/**` stub block
+    // a gate that owns none of it, and the shipped `qfai.config.yaml` leaves
+    // it empty, which made the validator return before reading anything.
+    ...(await validateTestTodoStubs(root, config, {
+      globs: atddAcceptanceTestGlobs(root, config, STUB_SOURCE_FILE_PATTERN),
+    })),
   ];
 }
 
@@ -675,13 +695,38 @@ async function runTddValidators(
   ];
 }
 
+/**
+ * Collapses the stub findings the ATDD and TDD scans both produced.
+ *
+ * `full` runs both, and they select files differently — the acceptance
+ * directories versus `validation.traceability.testFileGlobs` — so neither is a
+ * subset of the other and dropping either one would lose real findings. The
+ * overlap is exact (same rule, file, line and construct), so it dedupes
+ * cleanly instead.
+ */
+function dedupeStubFindings(issues: Issue[]): Issue[] {
+  const seen = new Set<string>();
+  return issues.filter((entry) => {
+    if (entry.code !== "QFAI-TEST-001" && entry.code !== "QFAI-TEST-002") return true;
+    const key = [
+      entry.code,
+      entry.file ?? "",
+      entry.loc?.line ?? "",
+      (entry.refs ?? []).join(","),
+    ].join("\0");
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 async function runFullValidators(
   root: string,
   config: ConfigLoadResult["config"],
   platformOption?: string,
   specScope?: SpecScope,
 ): Promise<Issue[]> {
-  return [
+  return dedupeStubFindings([
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
@@ -695,7 +740,7 @@ async function runFullValidators(
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false, false)),
     ...(await validatePrototypingSkill(root, config)),
-  ];
+  ]);
 }
 
 async function runUiuxValidators(

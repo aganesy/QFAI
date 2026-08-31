@@ -253,3 +253,84 @@ describe("spec-0004 validateTestTodoStubs", () => {
     expect(issues.map((issue) => issue.loc?.line)).toEqual([6, 9]);
   });
 });
+
+describe("a stub token that is not executing code", () => {
+  // The detector is a line regex, so prose about a stub and a fixture string
+  // holding one both read as an executing stub. That is a false `error` on the
+  // one gate qfai has against unimplemented tests — and now that
+  // `--profile atdd` runs it, an acceptance test that merely *describes* the
+  // construct blocks a completion gate it has nothing to do with.
+  it("is ignored in a line comment, a block comment and a string literal", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/prose.test.ts",
+      [
+        "// it" + TODO + '("described, not executed");',
+        "/*",
+        " * describe" + TODO + '("still not executed");',
+        " */",
+        'const sample = "it' + TODO + '(\\"quoted\\")";',
+        "const template = `test" + TODO + '("interpolated")`;',
+        'it("real", () => expect(sample).toBeTruthy());',
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toEqual([]);
+  });
+
+  it("does not hide a real stub sharing a line with a comment", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/mixed.test.ts",
+      ["  it" + TODO + '("real stub"); // it' + TODO + '("only mentioned")', ""].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc?.line).toBe(1);
+    expect(issues[0]?.refs).toEqual(["it.todo"]);
+  });
+
+  it("is ignored in a Python docstring and comment, but not in the body", async () => {
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/test_prose.py",
+      [
+        '"""',
+        "pytest.skip('documented, not executed')",
+        '"""',
+        "",
+        "# pytest.skip('commented out')",
+        "def test_a():",
+        "    assert True",
+        "",
+      ].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(
+      root,
+      configWith({}, { testFileGlobs: ["tests/**/*"] }),
+    );
+    expect(issues.map((issue) => issue.code)).toEqual([]);
+  });
+
+  it("does not let an unterminated quote swallow a later stub", async () => {
+    // A single-line span must end at the line break: a stray apostrophe in a
+    // test title would otherwise blank the rest of the file.
+    const root = await newTempDir();
+    await writeTestFile(
+      root,
+      "tests/apostrophe.test.ts",
+      ["const re = /don't/;", "it" + TODO + '("real stub");', ""].join("\n"),
+    );
+
+    const issues = await validateTestTodoStubs(root, configWith());
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.loc?.line).toBe(2);
+  });
+});
