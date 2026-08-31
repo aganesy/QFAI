@@ -22,9 +22,17 @@ export const DELEGATION_CATEGORIES = Object.keys(PROTOTYPING_DELEGATION_SCOPE) a
  * check on it. This is the production entry point wired into
  * `runPrototypingValidators`.
  *
+ * It exists because `validateDelegationMapIssues` takes the map, not the
+ * project, so nothing in `validate.ts` could call it — extracting the map was
+ * `stateGate.ts`'s job, and that module returned `[]` and has been deleted.
+ * The result was a validator the barrel re-exported, the wiring guard counted
+ * as reachable, and no run ever executed: an invalid `delegationMap` raised no
+ * `QFAI-PROT-311` at all.
+ *
  * Silent no-op when prototyping.json is missing / unparseable / carries no
- * `executionPlan.delegationMap`: a project without an execution plan is
- * unaffected. A `delegationMap` that IS present but is not an object
+ * `executionPlan.delegationMap`: the prototyping profile runs on projects that
+ * have not started a cycle, and the `executionPlan`-absent case belongs to a
+ * different rule. A `delegationMap` that IS present but is not an object
  * (string / array / null) is a violation reported here — no other
  * validator owns the executionPlan block, so it would otherwise pass
  * every profile silently.
