@@ -211,6 +211,95 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
   return new Map(Array.from(all).filter(([name]) => name.startsWith("validate")));
 }
 
+/** What a mask pass blanks out, on top of the comments it always blanks. */
+interface MaskOptions {
+  /** String, template and regular-expression literal text. */
+  readonly literals: boolean;
+  /** `import … from "…"` and `export … from "…"` declarations. */
+  readonly moduleBindings: boolean;
+}
+
+interface TextSpan {
+  readonly pos: number;
+  readonly end: number;
+}
+
+/** True for the tokens whose text is literal payload rather than code. */
+function isLiteralToken(node: ts.Node): boolean {
+  return (
+    ts.isStringLiteralLike(node) ||
+    ts.isRegularExpressionLiteral(node) ||
+    node.kind === ts.SyntaxKind.TemplateHead ||
+    node.kind === ts.SyntaxKind.TemplateMiddle ||
+    node.kind === ts.SyntaxKind.TemplateTail
+  );
+}
+
+/**
+ * The spans of `source` that the requested mask should blank, taken from the
+ * TypeScript parser rather than from independent regexes.
+ *
+ * A regex pass cannot decide this. A block-comment opener that falls inside a
+ * line comment does not open a block comment, but a standalone block-comment
+ * pattern pairs it with the next closer anyway and blanks every line between
+ * them. Two `//` comments in `validate.ts` quote path globs — one under
+ * `references/`, one under `tests/` — whose asterisks and slashes form exactly
+ * that pair, so the regex pass erased ninety lines of dispatch and this guard
+ * reported twenty wired validators as unwired. The parser knows where a
+ * comment ends, so no such pairing exists.
+ *
+ * Only `TemplateHead` / `Middle` / `Tail` are blanked inside a template, never
+ * the whole literal: a `${…}` substitution is executable code and a call there
+ * is a call site.
+ */
+function nonCodeSpans(source: string, options: MaskOptions): TextSpan[] {
+  const file = parse("mask.ts", source);
+  const spans: TextSpan[] = [];
+  const commentsTakenAt = new Set<number>();
+
+  const takeComments = (fullStart: number): void => {
+    if (commentsTakenAt.has(fullStart)) return;
+    commentsTakenAt.add(fullStart);
+    for (const range of ts.getLeadingCommentRanges(source, fullStart) ?? []) {
+      spans.push({ pos: range.pos, end: range.end });
+    }
+  };
+
+  const walk = (node: ts.Node): void => {
+    takeComments(node.getFullStart());
+    const bindsModule =
+      ts.isImportDeclaration(node) ||
+      (ts.isExportDeclaration(node) && node.moduleSpecifier !== undefined);
+    if ((options.moduleBindings && bindsModule) || (options.literals && isLiteralToken(node))) {
+      spans.push({ pos: node.getStart(file), end: node.getEnd() });
+      return; // nothing inside carries a call site
+    }
+    for (const child of node.getChildren(file)) walk(child);
+  };
+
+  walk(file);
+  return spans;
+}
+
+/**
+ * `source` with the requested spans replaced by spaces. Offsets and newlines
+ * survive, so identifier boundaries and line-anchored patterns still read the
+ * text the way they read the original.
+ */
+function maskSource(source: string, options: MaskOptions): string {
+  const out = source.split("");
+  for (const span of nonCodeSpans(source, options)) {
+    for (let i = span.pos; i < span.end && i < out.length; i += 1) {
+      if (out[i] !== "\n" && out[i] !== "\r") out[i] = " ";
+    }
+  }
+  return out.join("");
+}
+
+/** Parsing every module once per validator name would dominate the run. */
+const CODE_ONLY_CACHE = new Map<string, string>();
+const COMMENTS_STRIPPED_CACHE = new Map<string, string>();
+
 /**
  * Reduce a module to the text that can actually execute: block and line
  * comments, string / template literals, and `import … from "…"` /
@@ -223,18 +312,11 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
  * a call site either: it only moves the name one module further along.
  */
 function codeOnly(source: string): string {
-  return (
-    source
-      .replace(/\/\*[\s\S]*?\*\//g, " ")
-      // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a
-      // string or an escaped regex atom, not to a comment.
-      .replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1")
-      .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
-      .replace(/`(?:\\.|[^`\\])*`/g, '""')
-      .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""')
-  );
+  const cached = CODE_ONLY_CACHE.get(source);
+  if (cached !== undefined) return cached;
+  const masked = maskSource(source, { literals: true, moduleBindings: true });
+  CODE_ONLY_CACHE.set(source, masked);
+  return masked;
 }
 
 /**
@@ -253,7 +335,11 @@ function referencesName(source: string, name: string): boolean {
 
 /** Comments out; everything else — imports included — kept verbatim. */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1");
+  const cached = COMMENTS_STRIPPED_CACHE.get(source);
+  if (cached !== undefined) return cached;
+  const masked = maskSource(source, { literals: false, moduleBindings: false });
+  COMMENTS_STRIPPED_CACHE.set(source, masked);
+  return masked;
 }
 
 /** `import … from "./x.js"` / `export … from "./x.js"` targets. */
@@ -389,6 +475,35 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
     expect(referencesName("issues.push(...(await validateFoo(root)));", "validateFoo")).toBe(true);
     expect(referencesName("const gates = [validateFoo];", "validateFoo")).toBe(true);
     expect(referencesName("const gates = { tdd: validateFoo };", "validateFoo")).toBe(true);
+    // A `${…}` substitution is code even though the quotes around it are not.
+    expect(referencesName("const label = `ran ${validateFoo(root)}`;", "validateFoo")).toBe(true);
+  });
+
+  it("does not let a glob in one comment close over the code after it", () => {
+    // Two line comments quoting path globs. Their asterisks and slashes read
+    // as a block-comment opener and closer to a pattern that pairs them
+    // independently, which blanks the dispatch sitting between them. The two
+    // globs below are the pair `validate.ts` actually carries.
+    const source = [
+      "// `references/*.md` + SKILL.md as warning during the deprecation",
+      "issues.push(...(await validateFoo(root)));",
+      "// a `tests/**/*.test.ts` project would have had a stub block",
+      "issues.push(...(await validateBar(root)));",
+    ].join("\n");
+
+    expect(referencesName(source, "validateFoo")).toBe(true);
+    expect(referencesName(source, "validateBar")).toBe(true);
+  });
+
+  it("does not let a glob in one comment hide the import edges after it", () => {
+    const source = [
+      "// `references/*.md` + SKILL.md as warning during the deprecation",
+      'import { validateFoo } from "./foo.js";',
+      "// a `tests/**/*.test.ts` project would have had a stub block",
+    ].join("\n");
+
+    const edges = Array.from(stripComments(source).matchAll(/from\s*["'](\.\.?\/[\w./-]+)["']/g));
+    expect(edges.map((match) => match[1])).toEqual(["./foo.js"]);
   });
 
   it("counts call sites only from modules the validate.ts graph reaches", async () => {
