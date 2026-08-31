@@ -2,22 +2,48 @@ import { readFile } from "node:fs/promises";
 import path from "node:path";
 
 import { collectFiles } from "../fs.js";
-import { findLatestDiscussionPackDir } from "../discussionPack.js";
 import { escapeRegExp } from "../regex.js";
 import type { Issue } from "../types.js";
 import { exists, issue } from "./utils.js";
 
-const SPEC_TARGET = { segments: [".qfai", "specs"] as const, extensions: [".md", ".feature"] };
+/**
+ * Mermaid fence の走査対象。specs だけでなく evidence と discussion
+ * 配下も対象に含める（レビュアーが rendered Markdown として読む
+ * 成果物であり、最新以外の discussion pack も GitHub 上では同じく
+ * ソースのまま表示されるため）。
+ */
+const TARGET_DIRS = [
+  [".qfai", "specs"],
+  [".qfai", "discussion"],
+  [".qfai", "evidence"],
+] as const;
+const TARGET_EXTENSIONS = [".md", ".feature"] as const;
 
 const BUSINESS_FLOW_RELATIVE_CANDIDATES = [
   path.join(".qfai", "specs", "_policies", "04_Business-Flow.md"),
   path.join(".qfai", "specs", "_policies", "04_Business-flow.md"),
 ] as const;
-const MERMAID_DIRECTIVE_RE =
-  /^\s*(?:sequenceDiagram|flowchart|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|graph\s+(?:TB|BT|RL|LR|TD))\b/i;
+/**
+ * A Mermaid diagram declaration line, used for **both** the fence-external scan
+ * and the contents of a non-mermaid fence.
+ *
+ * Two readings were wrong in opposite directions. A prefix match called
+ * `Journey mapping was run ...` a diagram — and a `text` fence holds prose as
+ * readily as a `.md` body does, so keeping the loose form there left the same
+ * false positive on the evidence tree this validator newly scans. An exact
+ * match then missed `graph TD;` and `flowchart LR; A --> B`, which are valid
+ * Mermaid and were caught before.
+ *
+ * What separates the two is what may follow the declaration: nothing, a `;`
+ * (with or without the diagram body after it), or a `%%` comment. Prose
+ * continues with a word, and that is the whole distinction — so one matcher
+ * serves both scans, and neither can drift from the other.
+ */
+const MERMAID_DECLARATION_RE =
+  /^\s*(?:sequenceDiagram|erDiagram|classDiagram|stateDiagram(?:-v2)?|journey|gantt|mindmap|flowchart(?:\s+(?:TB|BT|RL|LR|TD))?|graph\s+(?:TB|BT|RL|LR|TD))\s*(?:;.*|%%.*)?$/i;
 // 行頭アンカー必須: 判定したいのは「この図が flowchart / sequenceDiagram である」
 // ことなので、mermaid fence 内の `%%` コメントなど単に語を含むだけの行で
-// 満たしてはならない。`MERMAID_DIRECTIVE_RE` と同じ行頭形に揃える。
+// 満たしてはならない。`MERMAID_DECLARATION_RE` と同じ行頭形に揃える。
 const FLOW_OR_SEQUENCE_RE = /^\s*(?:sequenceDiagram|flowchart)\b/i;
 
 type ScanResult = {
@@ -97,18 +123,11 @@ export async function validateMermaidEnforcement(root: string): Promise<Issue[]>
 }
 
 async function collectTargetFiles(root: string): Promise<string[]> {
-  const files = [
-    ...(await collectFiles(path.join(root, ...SPEC_TARGET.segments), {
-      extensions: [...SPEC_TARGET.extensions],
-    })),
-  ];
-  const latestDiscussionPackDir = await findLatestDiscussionPackDir(
-    path.join(root, ".qfai", "discussion"),
-  );
-  if (latestDiscussionPackDir) {
+  const files: string[] = [];
+  for (const segments of TARGET_DIRS) {
     files.push(
-      ...(await collectFiles(latestDiscussionPackDir, {
-        extensions: [".md"],
+      ...(await collectFiles(path.join(root, ...segments), {
+        extensions: [...TARGET_EXTENSIONS],
       })),
     );
   }
@@ -140,7 +159,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
         continue;
       }
 
-      if (MERMAID_DIRECTIVE_RE.test(line)) {
+      if (MERMAID_DECLARATION_RE.test(line)) {
         issues.push(
           issue(
             "QFAI-MMD-001",
@@ -173,7 +192,7 @@ function scanMermaidUsage(filePath: string, text: string): ScanResult {
       continue;
     }
 
-    if (MERMAID_DIRECTIVE_RE.test(line)) {
+    if (MERMAID_DECLARATION_RE.test(line)) {
       issues.push(
         issue(
           "QFAI-MMD-002",
