@@ -5,6 +5,7 @@ import path from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { runValidate } from "../../../../src/cli/commands/validate.js";
+import type { ValidationProfile } from "../../../../src/core/types.js";
 
 const CANONICAL_REL = ".qfai/report/validate.json";
 
@@ -151,7 +152,7 @@ function familyMatches(family: string, code: string): boolean {
   return family.endsWith("*") ? code.startsWith(family.slice(0, -1)) : code === family;
 }
 
-async function noticeFor(root: string, profile: string): Promise<Finding | undefined> {
+async function noticeFor(root: string, profile: ValidationProfile): Promise<Finding | undefined> {
   await runValidate({ root, strict: false, profile });
   return (await findings(root)).find((entry) => entry.code === "QFAI-PROFILE-001");
 }
