@@ -128,6 +128,13 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-TEST-003` — a vitest/jest test parked with a `.skip` modifier. The
+   * construct is silent in the runner, so a repository accumulates them
+   * without ever being told; every one written before the check existed
+   * arrives in the first run after the upgrade.
+   */
+  testSkippedSuite: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

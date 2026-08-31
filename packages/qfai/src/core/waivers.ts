@@ -998,6 +998,16 @@ const STATIC_RULE_SEVERITY: ReadonlyArray<{
   // waiver without QFAI-WAIVER-004 calling the rule unknown on the runs where
   // every Level is recognized.
   { keys: [UNKNOWN_LEVEL_CODE, UNKNOWN_LEVEL_RULE_ID], severity: "warning" },
+  // The waivable half of the test-stub gate. `validateTestTodoStubs` only runs
+  // under the profiles that include it (`--profile sdd` does not), so on every
+  // other profile the rule never reaches `buildRuleSeverityIndex` from a
+  // finding — and a global `.qfai/waivers.yml` entry parking a deliberately
+  // skipped suite would be rejected as an unknown rule (QFAI-WAIVER-004) on
+  // those runs, failing `--fail-on warning` in profiles that have nothing to do
+  // with it. `warning` matches the emitter in
+  // `validators/testTodoStubs.ts` (SKIPPED_TEST_WARNING), so the waiver stays
+  // accepted rather than being refused as an error-severity target.
+  { keys: ["QFAI-TEST-003", "TEST-003"], severity: "warning" },
   // This module's own findings, emitted on every run that parses a waiver file.
   { keys: ["QFAI-WAIVER-001", "WAIVER-001"], severity: "error" },
   { keys: ["QFAI-WAIVER-002", "WAIVER-002"], severity: "error" },

@@ -536,6 +536,47 @@ describe("applyWaivers", () => {
     }
   });
 
+  // `validateTestTodoStubs` does not run under every profile (`--profile sdd`
+  // skips it), so on those runs QFAI-TEST-003 reaches the severity index from
+  // no finding. Without a static entry a legitimate global waiver for a
+  // deliberately parked suite was rejected as an unknown rule on every such
+  // run, failing `--fail-on warning` in profiles unrelated to the gate.
+  it.each([["QFAI-TEST-003"], ["TEST-003"]])(
+    "accepts a waiver naming %s even when the stub validator did not run",
+    async (rule) => {
+      const root = await createRoot();
+      try {
+        await writeWaivers(
+          root,
+          [
+            "version: 1",
+            "waivers:",
+            "  - id: WVR-20260222-01",
+            `    rule: ${rule}`,
+            "    scope:",
+            '      paths: ["tests/**"]',
+            '    reason: "suite parked deliberately"',
+            '    expires: "2099-01-01"',
+            '    evidence: "delta.md#DL-20260222-01"',
+            "",
+          ].join("\n"),
+        );
+
+        // A run of a profile that never invokes the stub validator: no
+        // QFAI-TEST-003 finding is in hand.
+        const result = await applyWaivers(root, [buildIssue({ rule: "COMPAT-003" })]);
+
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-004")).toBe(false);
+        // Registered as `warning`, so it is not refused as an error-severity
+        // target either.
+        expect(result.issues.some((item) => item.code === "QFAI-WAIVER-002")).toBe(false);
+        expect(result.waivers.active).toHaveLength(1);
+      } finally {
+        await rm(root, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("reports a well-formed but unemitted rule as WAIVER-004, not WAIVER-001", async () => {
     const root = await createRoot();
     try {

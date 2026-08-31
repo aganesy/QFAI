@@ -432,7 +432,7 @@ const GATE_GROUP_FAMILIES = {
   "prototyping-skill": ["UIX-VAL-SKILL-*"],
   "atdd-traceability": ["QFAI-ATDD-*"],
   "atdd-scaffold": ["D-SCAFFOLD-PLACEHOLDER"],
-  tdd: ["TDDLIST_*", "QFAI-TEST-001", "QFAI-TRACE-*"],
+  tdd: ["TDDLIST_*", "QFAI-TEST-*", "QFAI-TRACE-*"],
 } as const satisfies Record<string, readonly string[]>;
 
 type GateGroup = keyof typeof GATE_GROUP_FAMILIES;
@@ -743,6 +743,10 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  "QFAI-TEST-001":
+    "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
+  "QFAI-TEST-003":
+    "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
