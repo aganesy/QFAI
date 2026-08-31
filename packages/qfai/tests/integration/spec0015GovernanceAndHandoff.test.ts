@@ -293,13 +293,16 @@ describe("spec-0015 audit log CLI CHG-006", () => {
 
   it("QFAI:SPEC-0015:TC-0015-0029 — boundary: default --format is table; empty store → empty result, exit 0", async () => {
     const written: string[] = [];
+    const errs: string[] = [];
     const exit = await runAuditLog({
       root,
       write: (m) => written.push(m),
-      writeErr: () => undefined,
+      writeErr: (m) => errs.push(m),
     });
     expect(exit).toBe(0);
-    expect(written.join("\n")).toMatch(/no decision records/i);
+    // stdout stays TSV: header row, zero data rows.
+    expect(written.join("\n")).toBe("timestamp\tscope\toperator\tclause");
+    expect(errs.join("\n")).toMatch(/no decision records/i);
   });
 });
 
