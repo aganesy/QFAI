@@ -18,6 +18,7 @@ import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../../src/core/config.js";
 import { hashDesignMd } from "../../../src/core/design/designMd.js";
+import { writeDiscussionCurrentId } from "../../../src/core/state.js";
 import {
   validatePrototypingDesignContractReadiness,
   validateSddDesignContractReadiness,
@@ -1367,5 +1368,314 @@ describe("validateSddDesignContractReadiness — unreplaced sample (QFAI-DCON-03
     await writeFile(path.join(root, "DESIGN.md"), await readShippedSample(), "utf-8");
     const issues = await validatePrototypingDesignContractReadiness(root, defaultConfig);
     expect(issues.map((i) => i.code)).toContain("QFAI-DCON-034");
+  });
+});
+
+/**
+ * `cli` is discussion UI-bearing, so a cli project reaches every gate in this
+ * validator — but it is not a visual-prototyping surface. `/qfai-discussion`
+ * authors no root DESIGN.md for a cli-only pack and `/qfai-prototyping`
+ * rejects `cli`, so the `visual.*` token tree has no reader. Without the
+ * carve-out below the requirement the discussion skill dropped would simply
+ * reappear here as a blocking `qfai validate --profile sdd` error.
+ */
+describe("cli-only surface carve-out (root DESIGN.md gates)", () => {
+  async function seedClassification(
+    root: string,
+    primarySurface: string,
+    secondarySurfaces: string[],
+    packId = "discussion-20260101000000000",
+  ): Promise<void> {
+    const packDir = path.join(root, ".qfai/discussion", packId);
+    await mkdir(packDir, { recursive: true });
+    const secondaryBlock =
+      secondarySurfaces.length === 0
+        ? "- secondary_surfaces: []"
+        : ["- secondary_surfaces:", ...secondarySurfaces.map((s) => `  - ${s}`)].join("\n");
+    await writeFile(
+      path.join(packDir, "01_Context.md"),
+      [
+        "# 01 Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        `- primary_surface: ${primarySurface}`,
+        secondaryBlock,
+        "- classification_rationale: fixture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+
+  it("cli-only pack: no DCON-030 / DCON-031 for a missing DESIGN.md + lock", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", []);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-031");
+  });
+
+  // Not "degraded to a warning": root DESIGN.md is outside a cli-only
+  // project's contract entirely, so the seeded sample is not the wrong
+  // version of anything. A warning would still fail `--fail-on warning` and
+  // its remediation would demand a brand SSOT nothing in the project reads.
+  it("cli-only pack: the unreplaced `qfai init` sample gate is skipped", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", []);
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-034");
+  });
+
+  it("web pack keeps the unreplaced-sample gate as an error", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", []);
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.find((i) => i.code === "QFAI-DCON-034")?.severity).toBe("error");
+  });
+
+  it("cli primary with a visual secondary surface still requires the brand SSOT", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", ["web"]);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  it("web pack keeps DCON-030 / DCON-031", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", []);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  it("no discussion pack at all keeps DCON-030 (absence is not evidence of cli)", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+  });
+
+  // `/qfai-sdd` Phase 0 reads the ACTIVE pack, so this validator must agree
+  // with the `.qfai/state.json#discussion.currentId` pointer rather than with
+  // filesystem timestamps.
+  it("active cli pack wins over a newer web pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await seedClassification(root, "web", [], "discussion-20260202000000000");
+    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-031");
+  });
+
+  it("active web pack wins over a newer cli pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "web", [], "discussion-20260101000000000");
+    await seedClassification(root, "cli", [], "discussion-20260202000000000");
+    await writeDiscussionCurrentId(root, "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  // An unset pointer is the ordinary state of a project that never ran
+  // `qfai discussion use`; latest-pack selection is what it already relies on.
+  it("no active pointer falls back to the newest pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).not.toContain("QFAI-DCON-030");
+  });
+
+  // A dangling pointer is NOT an unset one: the project pinned a pack and the
+  // pin no longer resolves, so there is no active classification to read.
+  // Falling back to the newest pack here would drop DCON-030/031 on the
+  // strength of a pack nothing selected.
+  it("a dangling active pointer keeps the strict gates, even over a cli pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await writeDiscussionCurrentId(root, "discussion-19990101000000000");
+    const issues = await validateSddDesignContractReadiness(root, defaultConfig);
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-030");
+    expect(issues.map((i) => i.code)).toContain("QFAI-DCON-031");
+  });
+
+  // `readDiscussionCurrentId` used to fold "no pointer written" and "state.json
+  // exists but cannot be read" into the same `null`, so a corrupt state file
+  // arrived here as reason `"unset"` and took the newest-pack fallback — over a
+  // cli pack that dropped DCON-030/031/034 although no active classification is
+  // selectable at all.
+  it.each([
+    ["invalid JSON", "{ not json"],
+    ["a non-object document", '["discussion-20260101000000000"]'],
+    ["a non-object discussion block", '{ "discussion": "discussion-20260101000000000" }'],
+    ["a non-string currentId", '{ "discussion": { "currentId": 42 } }'],
+    ["a blank currentId", '{ "discussion": { "currentId": "   " } }'],
+  ])("a state.json with %s keeps the strict gates over a cli pack", async (_label, body) => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "state.json"), body, "utf-8");
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+      (i) => i.code,
+    );
+    expect(codes).toContain("QFAI-DCON-031");
+    expect(codes).toContain("QFAI-DCON-034");
+  });
+
+  // Over-correction pin: a state.json that simply has no `discussion` key (or
+  // no `currentId` inside it) is still an UNSET pointer, not a corrupt one, so
+  // the ordinary newest-pack fallback must survive.
+  it.each([
+    ["no discussion key", '{ "other": 1 }'],
+    ["no currentId key", '{ "discussion": { "other": 1 } }'],
+  ])("a state.json with %s still falls back to the newest pack", async (_label, body) => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedClassification(root, "cli", [], "discussion-20260101000000000");
+    await mkdir(path.join(root, ".qfai"), { recursive: true });
+    await writeFile(path.join(root, ".qfai", "state.json"), body, "utf-8");
+    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+      (i) => i.code,
+    );
+    expect(codes).not.toContain("QFAI-DCON-030");
+    expect(codes).not.toContain("QFAI-DCON-031");
+  });
+});
+
+/**
+ * DCON-030/031/034 are keyed on the repo-wide `uiBearing` signal, so the
+ * carve-out that suppresses them has to be repo-wide too. Reading the active
+ * pack alone let a pointer parked on someone else's cli pack strip the brand
+ * SSOT gates off a web spec sitting in the same repository.
+ */
+describe("cli-only carve-out is scoped to every UI-bearing spec", () => {
+  async function seedPack(root: string, packId: string, primarySurface: string): Promise<void> {
+    const packDir = path.join(root, ".qfai/discussion", packId);
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "01_Context.md"),
+      [
+        "# 01 Context",
+        "",
+        "## UI-bearing Classification",
+        "",
+        "- ui_bearing: true",
+        `- primary_surface: ${primarySurface}`,
+        "- secondary_surfaces: []",
+        "- classification_rationale: fixture",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+
+  /** A UI-bearing spec whose provenance names `packId` (or none when null). */
+  async function seedSpec(root: string, specId: string, packId: string | null): Promise<void> {
+    const specDir = path.join(root, ".qfai/specs", `spec-${specId}`);
+    await mkdir(specDir, { recursive: true });
+    await writeFile(
+      path.join(specDir, "01_Spec.md"),
+      ["---", "surface_type: ui-bearing", "---", "", "# 01 Spec", ""].join("\n"),
+      "utf-8",
+    );
+    await writeFile(
+      path.join(specDir, "02_User-stories.md"),
+      [
+        "# 02 User stories",
+        "",
+        "## US-001",
+        "",
+        packId === null ? "- Source: -" : `- Source: ${packId}#DUS-001`,
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+  }
+
+  const CLI_PACK = "discussion-20260101000000000";
+  const WEB_PACK = "discussion-20260202000000000";
+
+  it("a web spec in the repo keeps the gates even while the pointer sits on a cli pack", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedPack(root, CLI_PACK, "cli");
+    await seedPack(root, WEB_PACK, "web");
+    await seedSpec(root, "0001", CLI_PACK);
+    await seedSpec(root, "0002", WEB_PACK);
+    await writeDiscussionCurrentId(root, CLI_PACK);
+    const shippedSample = await readFile(
+      path.join(getInitAssetsDir(), "root", "DESIGN.md"),
+      "utf-8",
+    );
+    await writeFile(path.join(root, "DESIGN.md"), shippedSample, "utf-8");
+
+    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+      (i) => i.code,
+    );
+    expect(codes).toContain("QFAI-DCON-031");
+    expect(codes).toContain("QFAI-DCON-034");
+  });
+
+  // Over-correction pin: an all-cli repo must still get the carve-out, both
+  // for specs that name their pack and for specs that carry no provenance and
+  // therefore fall back to the active pointer.
+  it("an all-cli repo still drops the brand SSOT gates", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedPack(root, CLI_PACK, "cli");
+    await seedSpec(root, "0001", CLI_PACK);
+    await seedSpec(root, "0002", null);
+    await writeDiscussionCurrentId(root, CLI_PACK);
+
+    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+      (i) => i.code,
+    );
+    expect(codes).not.toContain("QFAI-DCON-030");
+    expect(codes).not.toContain("QFAI-DCON-031");
+  });
+
+  // A spec that names a pack no longer on disk cannot be confirmed cli-only,
+  // so the carve-out is withdrawn rather than granted on an unverifiable claim.
+  it("a spec whose provenance pack is missing keeps the gates", async () => {
+    const root = await newTempDir();
+    await seedUiBearingProject(root);
+    await seedPack(root, CLI_PACK, "cli");
+    await seedSpec(root, "0001", "discussion-19990101000000000");
+    await writeDiscussionCurrentId(root, CLI_PACK);
+
+    const codes = (await validateSddDesignContractReadiness(root, defaultConfig)).map(
+      (i) => i.code,
+    );
+    expect(codes).toContain("QFAI-DCON-030");
+    expect(codes).toContain("QFAI-DCON-031");
   });
 });
