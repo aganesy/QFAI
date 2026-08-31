@@ -1253,13 +1253,20 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
  * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
  * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
  * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ *
+ * The `.gitignore` digest moved once, deliberately: the atomic `.qfai/state.json` write leaves a
+ * staging directory behind when a run is killed mid-write, and `QFAI_STATE_SCRATCH_IGNORE`
+ * (`src/core/gitignore.ts`) joined the managed block so that leftover is ignored rather than swept
+ * into an adopter's `git add .`. The added line is the whole delta — `*.qfai-state.tmp`, one entry
+ * after `.qfai/state.json` — and re-pinning it here is what makes that one line reviewed content
+ * rather than drift.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
     ".github/copilot-instructions.md",
     "df81d579915a041345ceb9fc93963ded95ea85888b141a90604e34a76573fb7d",
   ],
-  [".gitignore", "96abd2e4e217be604efcd026d13f488cea549e15536c504207b19297dbad4b4b"],
+  [".gitignore", "5d0f225be438a63ef8acb8b27dbd6959dc55cae404900a4344f053c3a9b6e334"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
 ]);
