@@ -4,8 +4,6 @@
 
 ## [Unreleased]
 
-## [1.10.1] - 2026-08-31
-
 ### Added
 
 - **リリースの版更新と tag 付けをワークフロー化した。** `Prepare release` に `X.Y.Z` を入力すると
@@ -22,6 +20,11 @@
   `check-branch-version-pin.sh` が manifest との一致を検証できる。書き込みは
   `RELEASE_AUTOMATION_TOKEN` 経由で行うため、ワークフローの `permissions:` は `contents: read` のままで、
   `BR-0017-0016` の閉じた逸脱集合は広がらない。
+
+## [1.10.1] - 2026-08-31
+
+### Added
+
 - **`qfai init` ships a layered CI workflow.** `.github/workflows/qfai-tests.yml` is new in the
   template tree: layer-separated test lanes, a `detect` job that classifies the changed-path list so
   four lanes run only when they need to, and a `ci-pass` verdict derived by iterating

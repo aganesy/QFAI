@@ -2689,6 +2689,127 @@ describe("release automation performs decisions rather than making them", () => 
     ).not.toMatch(/### (Added|Changed|Fixed)/);
   });
 
+  // ── the Release body, capped rather than fatal ─────────────────────────────────────────
+  //
+  // v1.10.1 is why these two rows exist. Its CHANGELOG section runs to 160,679 characters
+  // against the 125,000-character limit on a GitHub Release body; `gh release create`
+  // answered 422 and no Release was created, while the npm publish beside it succeeded —
+  // the two jobs are siblings, so nothing surfaced until somebody read the run. A release
+  // that is too well described is not a reason to stop shipping it.
+  //
+  // EXECUTED, not grepped. The cap is arithmetic over a body, and a row that matched
+  // `slice(` would pass on a cap that kept nothing, on one that kept everything, and on one
+  // that reordered the entries. Same reason `extractVerdictProgram` exists at the top of
+  // this file, and the same quoted-heredoc guarantee: `<<'CAP'` means the bytes the runner
+  // executes and the bytes run here are the same bytes.
+
+  const NOTES_LIMIT = 125_000;
+
+  const extractNotesCapProgram = (): string => {
+    const steps = (workflow("release.yml")["jobs"] as Record<string, unknown>)["github-release"];
+    const run = (isRecord(steps) ? ((steps["steps"] as Array<Record<string, unknown>>) ?? []) : [])
+      .map((step) => String(step["run"] ?? ""))
+      .join("\n");
+    const lines = run.split("\n");
+    const openers = lines.flatMap((line, index) => (line.includes("<<'CAP'") ? [index] : []));
+    const terminators = lines.flatMap((line, index) => (line.trimEnd() === "CAP" ? [index] : []));
+    const [opener] = openers;
+    const [terminator] = terminators;
+    // Refused rather than defaulted, for the reason the header gives: a silent zero-match
+    // extractor hands every row an empty program, and `node ""` exits 0 on all of them.
+    if (opener === undefined || terminator === undefined || terminator <= opener) {
+      throw new Error(
+        `expected one well-ordered CAP heredoc, found openers ${JSON.stringify(openers)} and terminators ${JSON.stringify(terminators)}`,
+      );
+    }
+    if (openers.length !== 1 || terminators.length !== 1) {
+      throw new Error(
+        `expected exactly one CAP heredoc, found ${openers.length} openers and ${terminators.length} terminators`,
+      );
+    }
+    const body = lines.slice(opener + 1, terminator).join("\n");
+    if (body.trim().length === 0) {
+      throw new Error("the extracted cap program is empty");
+    }
+    return body;
+  };
+
+  /** Runs the shipped cap over a supplied section and returns what it left on disk. */
+  const capNotes = (section: string, version: string): { notes: string; output: string } => {
+    const dir = mkdtempSync(path.join(tmpdir(), "qfai-notes-cap-"));
+    try {
+      mkdirSync(path.join(dir, "tmp"));
+      writeFileSync(path.join(dir, "tmp", "release-notes.md"), section, "utf-8");
+      // `.cjs`, because the shipped block is fed to `node -` on stdin — which is CommonJS —
+      // and its `require` would throw under the `.mjs` an ESM extension would imply.
+      const scriptPath = path.join(dir, "cap.cjs");
+      writeFileSync(scriptPath, `${extractNotesCapProgram()}\n`, "utf-8");
+      const output = execFileSync(process.execPath, [scriptPath], {
+        cwd: dir,
+        encoding: "utf-8",
+        env: { ...process.env, RELEASE_VERSION: version, GITHUB_REPOSITORY: "aganesy/QFAI" },
+      });
+      return {
+        notes: readFileSync(path.join(dir, "tmp", "release-notes.md"), "utf-8"),
+        output,
+      };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  };
+
+  it("caps a section past the body limit instead of failing the release", () => {
+    // Shaped like the real thing: top-level entries, because that is the boundary the cap
+    // cuts on and a body of undifferentiated text would exercise only the fallback.
+    const section = Array.from(
+      { length: 600 },
+      (_unused, index) => `- **Entry ${index}.** ${"detail ".repeat(40)}`,
+    ).join("\n");
+    expect(section.length, "the fixture has to actually exceed the limit").toBeGreaterThan(
+      NOTES_LIMIT,
+    );
+
+    const { notes, output } = capNotes(section, "9.9.9");
+    expect(notes.length, "the body it leaves must fit").toBeLessThanOrEqual(NOTES_LIMIT);
+    // …and must still be a release note. A cap that satisfies the line above by writing one
+    // character passes every limit and describes nothing.
+    expect(notes.length, "and must still carry most of the section").toBeGreaterThan(
+      NOTES_LIMIT * 0.7,
+    );
+
+    // Document order, unedited. This is the property that matters: the cap must not choose
+    // which entries matter — that judgement belongs to whoever wrote the CHANGELOG, and it is
+    // the same thing every other row in this describe refuses to let the machinery do.
+    const [kept] = notes.split("\n\n---\n\n");
+    expect(
+      section.startsWith(kept),
+      "what it keeps must be a PREFIX of the section: no reordering, no selection, no summary",
+    ).toBe(true);
+    // Cut at an entry boundary, so the notes never stop mid-sentence.
+    // Cut ON a boundary, stated as the boundary rather than as the fixture's last characters:
+    // what follows the kept prefix must be the start of the next entry, so the notes can never
+    // stop mid-entry.
+    expect(
+      section.slice(kept.length).startsWith(`
+- **`),
+      "the cut must land on an entry boundary, never inside one",
+    ).toBe(true);
+
+    expect(notes, "and must say where the rest is").toContain(
+      "https://github.com/aganesy/QFAI/blob/v9.9.9/CHANGELOG.md",
+    );
+    expect(output, "and must say on the run that it did so").toMatch(/capped/);
+  });
+
+  it("leaves a section that already fits exactly as it is", () => {
+    // The other direction. Without it the row above is satisfied by a cap that truncates
+    // unconditionally, which would put a "not the whole section" footer on every release.
+    const section = `### Added\n\n- **A small release.** One entry.`;
+    const { notes, output } = capNotes(section, "9.9.9");
+    expect(notes, "an ordinary section must pass through untouched").toBe(section);
+    expect(output, "and must not claim it was capped").not.toMatch(/capped/);
+  });
+
   it("keeps both workflows at the minimal permission scope", () => {
     // The writes go through a token in a secret, not through the job token, which is what keeps
     // `BR-0017-0016`'s closed departure set at three. The row above that enforces the set would
