@@ -226,7 +226,16 @@ interface EvidenceOptions {
     | "row-pack"
     | "revise"
     | "no-audited-hash"
-    | "reviewer-revise";
+    | "reviewer-revise"
+    | "second-response-revise";
+  /**
+   * Write a SECOND response for this role into each item review pack
+   * (`R02_<role>.md`), answering `REVISE`. The layout numbers responses per
+   * reviewer, so this is a legal pack — and one whose round is not resolved.
+   */
+  secondResponseRole?: string;
+  /** Where the spec pack lives, when the project moved `paths.specsDir`. */
+  specsDir?: string;
 }
 
 const STAGE_PACK_PATH = ".qfai/review/review-20260811000000005";
@@ -268,6 +277,13 @@ async function writeStagePack(root: string, options: EvidenceOptions): Promise<v
     `Result: ${options.stagePackDefect === "revise" ? "REVISE" : "PASS"}\nReviewed revision: ${revision}\n${auditedHash}`,
     "utf-8",
   );
+  if (options.stagePackDefect === "second-response-revise") {
+    await writeFile(
+      path.join(packDir, `R02_completion-reviewer.md`),
+      `Result: REVISE\nReviewed revision: ${revision}\n${auditedHash}`,
+      "utf-8",
+    );
+  }
   await writeFile(
     path.join(packDir, "summary.json"),
     `${JSON.stringify(
@@ -357,6 +373,13 @@ async function materializeEvidence(
       responseBody(role, passRecord, options),
       "utf8",
     );
+    if (options.secondResponseRole === role) {
+      await writeFile(
+        path.join(packDir, `R02_${role}.md`),
+        `Result: REVISE\nReviewed revision: ${revision}\nAudited evidence hash: ${auditHash}\n`,
+        "utf8",
+      );
+    }
     await writeFile(
       path.join(packDir, "summary.json"),
       `${JSON.stringify(
@@ -444,9 +467,10 @@ async function seedProject(
   evidenceFiles: Readonly<Record<string, string>> = {},
   options: EvidenceOptions = {},
 ): Promise<void> {
-  const specDir = path.join(root, ".qfai", "specs", "spec-0001");
+  const specsDir = options.specsDir ?? ".qfai/specs";
+  const specDir = path.join(root, ...specsDir.split("/"), "spec-0001");
   await mkdir(path.join(specDir, "tdd"), { recursive: true });
-  await mkdir(path.join(root, ".qfai", "specs", "_policies"), { recursive: true });
+  await mkdir(path.join(root, ...specsDir.split("/"), "_policies"), { recursive: true });
   for (const [name, body] of [
     ["01_Spec.md", "# Spec\n"],
     ["02_User-stories.md", "# US\n"],
@@ -971,6 +995,131 @@ describe("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED", () => {
         ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit"),
       });
       expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // A command record and a result record each say two things at once — what ran
+  // and what happened, what happened and what it ran over — and reading either
+  // half as the other is the whole of this group.
+  describe("a command or result is read for its outcome, not its words", () => {
+    // The negation used to have to lead. `npm test` matched the runner, the
+    // sentence said the run never happened, and the row closed on it.
+    for (const negated of [
+      "npm test was not run",
+      "we did not run npm test",
+      "npm test — never run",
+      "npm test wasn't run",
+    ]) {
+      it(`rejects a GREEN command that says it was not run: "${negated}"`, async () => {
+        await withProject(async (root) => {
+          const codes = await runOn(
+            root,
+            ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+            {
+              ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+                "Round 1: GREEN command: npm test",
+                `Round 1: GREEN command: ${negated}`,
+              ),
+            },
+          );
+          expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+        });
+      });
+    }
+
+    // The other direction: a real command whose path merely contains a word the
+    // negation list uses must still count as executed.
+    it("accepts a GREEN command whose test path is named after a skip", async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+            "Round 1: GREEN command: npm test",
+            "Round 1: GREEN command: npx vitest run tests/skipped-cases.test.ts",
+          ),
+        });
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+
+    // RED has to have been observed failing. A passing run over a file whose
+    // NAME contains `error` matched the failure scan and was accepted as one.
+    it("rejects a RED result that passed over a file named after errors", async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+            "Round 1: RED result: 1 failed",
+            "Round 1: RED result: PASS tests/error-handler.test.ts (1 passed)",
+          ),
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+
+    // And the same word, the same file, on the side that really did pass.
+    it("accepts a GREEN result that passed over a file named after errors", async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+            "Round 1: GREEN result: 1 passed",
+            "Round 1: GREEN result: PASS tests/error-handler.test.ts (1 passed)",
+          ),
+        });
+        expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+
+    // The over-removal this must not become: a slash inside a count is not a
+    // path, and the failure it reports has to survive.
+    it("still reads a failure reported beside a slash-separated count", async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(root, ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]), {
+          ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit").replace(
+            "Round 1: GREEN result: 1 passed",
+            "Round 1: GREEN result: 1 failed/2 passed",
+          ),
+        });
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  });
+
+  // One reviewer, one verdict. `R02_<role>.md` is a legal file name in the pack
+  // layout, so a second answer from the same reviewer is a verdict the round
+  // has not settled — and `summary.json` records one PASS line per reviewer
+  // whatever the responses say.
+  it("rejects an item pack whose second response from one reviewer is REVISE", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        { secondResponseRole: "completion-reviewer" },
+      );
+      expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
+
+  // The pack target is the spec directory the ledger was actually found in.
+  // Spelling `.qfai/specs` here contradicted the walk that produced the row, so
+  // a project that moved `paths.specsDir` could not resolve any completed row.
+  it("resolves a pack whose target names the configured specs directory", async () => {
+    await withProject(async (root) => {
+      const options = {
+        specsDir: "workspace/specs",
+        summaryTargetPath: "workspace/specs/spec-0001",
+      } as const;
+      await seedProject(
+        root,
+        ledger([{ status: "done", evidence: IMPLEMENT_POINTER }]),
+        [],
+        { ".qfai/evidence/implement-spec-0001.md": completeEntry("Unit") },
+        options,
+      );
+      const issues = await validateTddList(root, {
+        ...defaultConfig,
+        paths: { ...defaultConfig.paths, specsDir: options.specsDir },
+      });
+      expect(issues.map((i) => i.code)).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
     });
   });
 
@@ -1645,6 +1794,11 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
     ["a stage reviewer who answered REVISE", "revise"],
     ["a response carrying no Audited evidence hash", "no-audited-hash"],
     ["a summary recording the stage reviewer as FAIL", "reviewer-revise"],
+    // `R02_completion-reviewer.md` is a legal name in this layout, so a second
+    // answer from the same reviewer is a verdict the round has not settled.
+    // Reading the first response alone closed the stage on a pack that says
+    // REVISE, and the seal recomputes over both files either way.
+    ["a second response from the same reviewer answering REVISE", "second-response-revise"],
   ] as const) {
     it(`rejects a stage re-verify sealed against ${label}`, async () => {
       await withProject(async (root) => {
@@ -1661,6 +1815,56 @@ ${REVERIFY_FIELDS.replace("{{PROOF_RESULT}}", "1 failed")}
       });
     });
   }
+
+  // The section is the stage's own verdict. Reading only the pack path and the
+  // seal out of it let the stage say `REVISE` in the same breath as it named a
+  // PASS pack from an earlier round: the half that recomputes agreed, and the
+  // half a human wrote was compared with nothing.
+  for (const [field, verdict] of [
+    ["Final status", "REVISE"],
+    ["Final status", "FAIL"],
+    ["Outcome", "REVISE"],
+    ["Status", "FAIL"],
+  ] as const) {
+    it(`rejects a stage whose Final status says ${field}: ${verdict}`, async () => {
+      await withProject(async (root) => {
+        const codes = await runOn(
+          root,
+          ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+          {
+            [COVERAGE_DEPTH_PATH]: stageEvidence().replace(
+              "## Final status\n",
+              `## Final status\n\n- ${field}: ${verdict}\n`,
+            ),
+            ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+          },
+          { stagePack: "present" },
+        );
+        expect(codes).toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+      });
+    });
+  }
+
+  // The over-correction pin: a section that states its PASS is still a PASS,
+  // and one that states no outcome at all is left as it was — the shipped
+  // stage-evidence shape does not require the field.
+  it("accepts a stage whose Final status states the PASS its pack carries", async () => {
+    await withProject(async (root) => {
+      const codes = await runOn(
+        root,
+        ledger([{ status: "done", evidence: ATDD_POINTER, layer: "Integration" }]),
+        {
+          [COVERAGE_DEPTH_PATH]: stageEvidence().replace(
+            "## Final status\n",
+            "## Final status\n\n- Final status: PASS\n",
+          ),
+          ".qfai/evidence/atdd-spec-0001.md": staleConsumerEntry(),
+        },
+        { stagePack: "present" },
+      );
+      expect(codes).not.toContain("TDDLIST_EVIDENCE_ANCHOR_UNRESOLVED");
+    });
+  });
 
   const MATRIX = `# Coverage Depth Matrix
 

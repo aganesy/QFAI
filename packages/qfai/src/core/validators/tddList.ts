@@ -448,31 +448,71 @@ function evidenceRoundNumbers(section: string): number[] {
   return [...rounds].sort((left, right) => left - right);
 }
 
+/**
+ * A cell that says the run did not happen, wherever it says it.
+ *
+ * The lead-anchored form alone read only `not run: npm test`. A record is just
+ * as likely to put the negation after the command it negates — `npm test was
+ * not run`, `we did not run npm test` — and there the runner token matched, the
+ * lead anchor did not, and a `done` row claimed a command it states it never
+ * executed. So the phrase is looked for anywhere in the cell.
+ *
+ * The unanchored form requires an explicit negator (`not`, `never`, `no`,
+ * `n't`) governing a run verb. A bare `skipped` / `n/a` stays lead-anchored on
+ * purpose: mid-cell it is as likely to be part of a path or a test name
+ * (`tests/skipped-cases.test.ts`) as a verdict, and rejecting a real command
+ * over its filename is the failure the two result predicates below are being
+ * fixed for.
+ */
+const EVIDENCE_COMMAND_NOT_RUN = [
+  /^\s*(?:skipped|not[ -]?run|never[ -]?run|did\s+not\s+run|was\s+not\s+run|n\/a|none)(?:\s*$|\s*[:—-])/i,
+  /\b(?:not|never|no|n['’]t)\s+(?:been\s+|yet\s+)*(?:run|ran|executed|invoked)\b/i,
+  /\b(?:wasn|weren|isn|aren|hasn|haven|didn|don|doesn|couldn)['’]t\s+(?:been\s+)?(?:run|ran|executed|invoked)\b/i,
+];
+
 function isExecutedEvidenceCommand(value: string): boolean {
-  return (
-    hasCommandShape(value) &&
-    !/^\s*(?:skipped|not[ -]?run|never[ -]?run|did\s+not\s+run|was\s+not\s+run|n\/a|none)(?:\s*$|\s*[:—-])/i.test(
-      value,
-    )
-  );
+  return hasCommandShape(value) && !EVIDENCE_COMMAND_NOT_RUN.some((form) => form.test(value));
+}
+
+/**
+ * A result line with the file names it ran taken out of it.
+ *
+ * A result says two different things at once: the outcome, and which file
+ * produced it. Scanning the whole line for failure words reads the second as if
+ * it were the first, and `PASS tests/error-handler.test.ts (1 passed)` then
+ * answers "failing" to one predicate and "not passing" to the other — the same
+ * defect in both directions, from one shared cause, which is why one function
+ * removes it for both.
+ *
+ * Only tokens that are unambiguously *file names* are removed: a token
+ * carrying a path separator and ending in an extension, or a bare
+ * `<name>.test.<ext>` / `<name>.spec.<ext>`. A bare `/` (as in `6 failed / 13
+ * passed`) and a counted form like `1 failed/2 passed` keep their words,
+ * because neither ends in an extension — over-removal would silence a real
+ * failure, which is the worse of the two errors here.
+ */
+function evidenceResultOutcomeText(value: string): string {
+  return value.replace(/\S*[/\\]\S*\.\w+/g, " ").replace(/\S+\.(?:test|spec)\.\w+/gi, " ");
 }
 
 function isPassingEvidenceResult(value: string): boolean {
-  const withoutZeroFailures = value.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
-  if (/\b(?:not|never|did\s+not)\s+(?:pass(?:ed|ing)?|succeed(?:ed)?)\b/i.test(value)) {
+  const outcome = evidenceResultOutcomeText(value);
+  const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  if (/\b(?:not|never|did\s+not)\s+(?:pass(?:ed|ing)?|succeed(?:ed)?)\b/i.test(outcome)) {
     return false;
   }
   if (/\b(?:fail(?:ed|ure|ures)?|error|not[ -]?run|skipped)\b/i.test(withoutZeroFailures)) {
     return false;
   }
   return /\b(?:pass(?:ed|ing)?|success(?:ful|fully)?|succeeded|ok)\b|\bexit(?:ed)?\s+0\b/i.test(
-    value,
+    outcome,
   );
 }
 
 function isFailingEvidenceResult(value: string): boolean {
-  const withoutZeroFailures = value.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
-  if (/\b(?:not|never|did\s+not)\s+(?:fail(?:ed)?|error)\b/i.test(value)) return false;
+  const outcome = evidenceResultOutcomeText(value);
+  const withoutZeroFailures = outcome.replace(/\b0\s+(?:failed|failures?|errors?)\b/gi, "");
+  if (/\b(?:not|never|did\s+not)\s+(?:fail(?:ed)?|error)\b/i.test(outcome)) return false;
   return /\b(?:fail(?:ed|ure|ures)?|error|expected[ -]?error)\b|\bexit(?:ed)?\s+[1-9]\d*\b/i.test(
     withoutZeroFailures,
   );
@@ -744,12 +784,25 @@ function completedEvidenceAuditHash(
 interface CompletedEvidenceContext {
   root: string;
   specsRoot: string;
+  /** `specsRoot` as a review pack writes it: repo-relative, posix separators. */
+  specsRelative: string;
   matrices: Map<string, string | null>;
   ledgers: Map<string, LedgerTable[]>;
 }
 
+/** `specsRoot` written the way a review pack's `target.path` states it. */
+function repoRelativeSpecsDir(root: string, specsRoot: string): string {
+  return path.relative(root, specsRoot).split(path.sep).join("/");
+}
+
 function completedEvidenceContext(root: string, specsRoot: string): CompletedEvidenceContext {
-  return { root, specsRoot, matrices: new Map(), ledgers: new Map() };
+  return {
+    root,
+    specsRoot,
+    specsRelative: repoRelativeSpecsDir(root, specsRoot),
+    matrices: new Map(),
+    ledgers: new Map(),
+  };
 }
 
 async function coverageDepthMatrix(
@@ -952,16 +1005,33 @@ function reviewPackArtifact(
 }
 
 /**
- * The response `role` wrote into a review pack, or `null` when that reviewer
- * answered nowhere in it.
+ * Every response `role` wrote into a review pack, in file order.
  *
  * The layout numbers responses per reviewer (`R01_`, `R02_`, ...), so the role
- * is what identifies the answer, not the position.
+ * is what identifies the answer, not the position — and the numbering is
+ * exactly what lets one role answer more than once. Taking the first match
+ * alone read `R01_completion-reviewer.md` and never opened
+ * `R02_completion-reviewer.md`, so a pack whose second response is `REVISE`
+ * closed a row on its first: `summary.json` carries one PASS entry per
+ * reviewer, and the seal recomputes over every file whatever they say. The
+ * cardinality is the finding, so the caller is handed all of them.
  */
-function reviewPackResponse(files: ReadonlyArray<ReviewPackFile>, role: string): string | null {
+function reviewPackResponses(files: ReadonlyArray<ReviewPackFile>, role: string): string[] {
   const named = new RegExp(`^R\\d{2}_${role.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\.md$`);
+  return files
+    .filter(({ relativePath }) => named.test(path.posix.basename(relativePath)))
+    .map(({ content }) => content);
+}
+
+/**
+ * True when every response `role` wrote states `Result: PASS`, and there is at
+ * least one. A second, blocking response from the same reviewer is a verdict
+ * the pack has not resolved, not a verdict the first one overrides.
+ */
+function everyResponsePasses(responses: ReadonlyArray<string>): boolean {
   return (
-    files.find(({ relativePath }) => named.test(path.posix.basename(relativePath)))?.content ?? null
+    responses.length > 0 &&
+    responses.every((response) => exactLineField(response, "Result", "PASS"))
   );
 }
 
@@ -982,12 +1052,20 @@ function jsonRecord(value: unknown): Record<string, unknown> | null {
  * the layout keeps the scope inside the artifacts, never in the directory name,
  * so without it any canonical `review-<timestamp>/` in the repository was
  * interchangeable with any other.
+ *
+ * `specsRelative` is where the ledgers were actually found — `paths.specsDir`,
+ * repo-relative and posix-separated. Spelling `.qfai/specs` here instead
+ * contradicted the very walk that produced the row: a project that configures
+ * `specsDir: workspace/specs` writes packs targeting `workspace/specs/spec-NNNN`,
+ * this test rejected each one, and every completed row on that project became
+ * unresolvable with no local edit that could fix it.
  */
 function summaryRecordsReviewerPass(
   content: string,
   role: string,
   specNumber: string,
   revision: string,
+  specsRelative: string,
 ): boolean {
   let parsed: unknown;
   try {
@@ -1004,7 +1082,7 @@ function summaryRecordsReviewerPass(
     record["overall_status"] === "PASS" &&
     record["revision"] === revision &&
     target["kind"] === "spec" &&
-    target["path"] === `.qfai/specs/spec-${specNumber}` &&
+    target["path"] === `${specsRelative}/spec-${specNumber}` &&
     Array.isArray(reviewers) &&
     reviewers.some((reviewer: unknown) => {
       const entry = jsonRecord(reviewer);
@@ -1211,12 +1289,21 @@ async function isAuditedCompletedEntry(
  * same spec, which target and role alone cannot.
  */
 async function hasSealedStageStatus(
-  root: string,
+  context: CompletedEvidenceContext,
   specNumber: string,
   content: string,
 ): Promise<boolean> {
+  const root = context.root;
   const section = markdownEvidenceIndex(content).sections.get("final-status");
   if (section === undefined) return false;
+  // The section is the stage's own verdict, so a verdict it states has to be
+  // the one the pack carries. Reading only `Review pack` and its seal out of it
+  // let `Final status: REVISE` stand beside a PASS pack from an earlier round
+  // and still close the stage — the pack half recomputed, and the half a human
+  // wrote was never compared with it. A section that states no outcome is left
+  // as it was: the shipped stage-evidence shape does not require the field, and
+  // demanding one here would reject every conforming record.
+  if (statesBlockingStageOutcome(section)) return false;
   const pack = rowEvidenceFieldValue(section, "Review pack");
   const seal = rowEvidenceFieldValue(section, "Review pack seal");
   if (
@@ -1236,7 +1323,23 @@ async function hasSealedStageStatus(
   }
   const files = await collectReviewPackFiles(root, pack);
   if (files === null || reviewPackSeal(files) !== bareSha256(seal)) return false;
-  return stagePackRecordsPass(files, pack, specNumber);
+  return stagePackRecordsPass(files, pack, specNumber, context.specsRelative);
+}
+
+/**
+ * True when a stage's `## Final status` states an outcome that is not a PASS.
+ *
+ * Read from the fields the shipped templates use for a verdict, at whatever
+ * casing they were written in. `PASS` is the only value that agrees with a
+ * pack that passed; `REVISE`, `FAIL` and anything else are the stage saying so
+ * itself, and are taken at their word.
+ */
+function statesBlockingStageOutcome(section: string): boolean {
+  return ["Final status", "Status", "Outcome", "Result"].some((field) =>
+    evidenceFieldOccurrences(section, field).some(
+      ({ value }) => value.trim().length > 0 && !/^pass(?:ed)?\b/i.test(value.trim()),
+    ),
+  );
 }
 
 /** The reviewer whose PASS closes a stage rather than a row. */
@@ -1252,12 +1355,19 @@ function stagePackRecordsPass(
   files: ReadonlyArray<ReviewPackFile>,
   packPath: string,
   specNumber: string,
+  specsRelative: string,
 ): boolean {
   const request = reviewPackArtifact(files, packPath, "review_request.md");
   const summary = reviewPackArtifact(files, packPath, "summary.json");
-  const response = reviewPackResponse(files, STAGE_REVIEWER_ROLE);
-  if (request === null || summary === null || response === null) return false;
+  const responses = reviewPackResponses(files, STAGE_REVIEWER_ROLE);
+  const response = responses[0];
+  if (request === null || summary === null || response === undefined) return false;
   if (visibleLineFieldValues(request, "TDD-ID").length > 0) return false;
+  // One reviewer, one verdict. A second `R\d\d_completion-reviewer.md` is
+  // another answer to the same request, and the round is not resolved while two
+  // of them stand — so both the count and every verdict are read, not the first
+  // file the listing happened to return.
+  if (responses.length !== 1 || !everyResponsePasses(responses)) return false;
   const revisions = visibleLineFieldValues(response, "Reviewed revision");
   const auditedHashes = visibleLineFieldValues(response, "Audited evidence hash");
   const revision = revisions[0];
@@ -1269,8 +1379,7 @@ function stagePackRecordsPass(
     auditedHash !== undefined &&
     EVIDENCE_REVISION_FORM.test(revision) &&
     SHA256_VALUE.test(auditedHash) &&
-    exactLineField(response, "Result", "PASS") &&
-    summaryRecordsReviewerPass(summary, STAGE_REVIEWER_ROLE, specNumber, revision)
+    summaryRecordsReviewerPass(summary, STAGE_REVIEWER_ROLE, specNumber, revision, specsRelative)
   );
 }
 
@@ -1376,7 +1485,7 @@ async function hasCurrentSharedArtifactReverify(
       // scoped to the spec that opened it.
       const stageSpecNumber = /-spec-(\d{4})\.md$/i.exec(entry.name)?.[1];
       if (stageSpecNumber === undefined) continue;
-      if (!(await hasSealedStageStatus(root, stageSpecNumber, content))) continue;
+      if (!(await hasSealedStageStatus(context, stageSpecNumber, content))) continue;
       for (const section of sharedArtifactReverifySections(content, target)) {
         if (await isCurrentReverifyRecord(root, evidenceFile, expected, section)) return true;
       }
@@ -1865,15 +1974,27 @@ async function invalidCompletedEvidenceArtifacts(
     const recordedRevision = rowEvidenceFieldValue(section, `${prefix} reviewed revision`);
     const request = reviewPackArtifact(packFiles, packPath, "review_request.md");
     const summary = reviewPackArtifact(packFiles, packPath, "summary.json");
-    const response = reviewPackResponse(packFiles, expectedRole);
+    // Every response this reviewer wrote, not the first: a second
+    // `R\d\d_<role>.md` answering `REVISE` is an open verdict on the same
+    // request, and `summary.json` records one line per reviewer whatever the
+    // responses say.
+    const responses = reviewPackResponses(packFiles, expectedRole);
+    const response = responses[0];
     if (
       request === null ||
       !exactLineField(request, "TDD-ID", expected.tddId) ||
-      response === null ||
+      response === undefined ||
+      responses.length !== 1 ||
+      !everyResponsePasses(responses) ||
       summary === null ||
       recordedRevision === null ||
-      !summaryRecordsReviewerPass(summary, expectedRole, expected.specNumber, recordedRevision) ||
-      !exactLineField(response, "Result", "PASS") ||
+      !summaryRecordsReviewerPass(
+        summary,
+        expectedRole,
+        expected.specNumber,
+        recordedRevision,
+        context.specsRelative,
+      ) ||
       !exactLineField(response, "Reviewed revision", recordedRevision) ||
       auditedHash === null ||
       !exactLineField(response, "Audited evidence hash", auditedHash)
