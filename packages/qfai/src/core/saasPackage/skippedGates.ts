@@ -33,12 +33,22 @@ export type SaasPackageSkippedGate = (typeof SAAS_PACKAGE_SKIPPED_GATES)[number]
  * compile error, and a family entry for a gate not in the skip-set is an
  * excess-key one. Typed as `Record<string, …>` neither held, and the guarantee
  * rested entirely on a runtime test.
+ *
+ * An entry must cover exactly what its gate emits — no more, no less, since
+ * the notice is read as the list of checks that did not run. Both failure
+ * directions have been observed here. `validateTestTodoStubs` was listed as
+ * the bare `QFAI-TEST-001` while the gate also emits `QFAI-TEST-002`, so the
+ * notice under-stated the skip until the entry was widened to a prefix glob.
+ * `validateTraceabilityIntegrity` had the opposite defect: `QFAI-TRACE-*` also
+ * claims the `QFAI-TRACE-1xx` block, which `validateTraceability` owns and
+ * this skip-set does not name, so the glob over-stated it. Prefer a glob where
+ * the gate owns its whole prefix; enumerate codes where it owns only part.
  */
 export const SAAS_PACKAGE_SKIPPED_GATE_FAMILIES: Record<SaasPackageSkippedGate, readonly string[]> =
   {
     validateAtddCodeTraceability: ["QFAI-ATDD-*"],
     validateTddList: ["TDDLIST_*"],
-    validateTestTodoStubs: ["QFAI-TEST-001"],
+    validateTestTodoStubs: ["QFAI-TEST-*"],
     // Only the integrity gate's own two codes. `QFAI-TRACE-*` would also claim
     // the `QFAI-TRACE-1xx` block, which belongs to `validateTraceability` — a
     // different validator, and not one this skip-set names.

@@ -15,10 +15,14 @@ import {
   THIN_COVERAGE_SIGNAL_CODE,
   THIN_COVERAGE_SIGNAL_EXPECTATION,
 } from "../../core/validators/layerCoverage.js";
+import {
+  PACKAGE_SELF_GOVERNANCE_FAMILIES,
+  unevaluatedPackageSelfGovernanceFamilies,
+} from "../../core/validators/packageSelfGovernance.js";
 import { writeValidateRunLog } from "../../core/runLog.js";
 import { validateProject } from "../../core/validate.js";
 import { resolveToolVersion } from "../../core/version.js";
-import { shouldFail } from "../lib/failOn.js";
+import { resolveFailOn, shouldFail } from "../lib/failOn.js";
 import { warnIfTruncated } from "../lib/warnings.js";
 
 export type ValidateOptions = {
@@ -172,6 +176,7 @@ export async function runValidate(options: ValidateOptions): Promise<number> {
   const partialProfileNotice = buildPartialProfileNotice(
     normalized.profile,
     normalized.profileValidatorsRan !== false,
+    await unevaluatedPackageSelfGovernanceFamilies(root),
   );
   if (partialProfileNotice) {
     normalized.issues.push(partialProfileNotice);
@@ -450,8 +455,17 @@ function buildDeprecationIssue(args: {
  *
  * Shared work therefore gets its own group, listed by every profile that runs
  * it, and code-level entries are used wherever a family spans profiles.
+ *
+ * Whichever form an entry takes, it must cover **every** code its gate emits:
+ * a gate that gains a second code would otherwise drop out of the notice
+ * unannounced, which is how `QFAI-TEST-001` alone came to under-state what
+ * `--profile tdd` had skipped once `QFAI-TEST-002` / `QFAI-TEST-003` existed.
+ * So: a prefix glob where the gate owns its whole prefix, enumerated codes
+ * where it owns only part of one. Exported so
+ * `tests/core/findingCodeGrammar.test.ts` can prove the coverage half of that
+ * for the gates whose emitted codes it scans.
  */
-const GATE_GROUP_FAMILIES = {
+export const GATE_GROUP_FAMILIES = {
   hygiene: ["QFAI-HYG-*"],
   "skills-integrity": ["QFAI-SKILLS-*"],
   "assistant-assets": ["QFAI-ASSETS-*"],
@@ -505,9 +519,7 @@ const GATE_GROUP_FAMILIES = {
     "R-CERTIFY-VERIFY-CIRCULAR",
     "R-PROMPT-SCANNER-DRIFT",
     "R-AUTOPILOT-POLICY-*",
-    "R-HANDOFF-SCHEMA-DRIFT",
     "R-HANDOFF-INCOMPLETE",
-    "R-SKILL-MANIFEST-DRIFT",
     "R-WORKLOG-DRIFT",
     "R-REJECTED-READOPT",
   ],
@@ -589,6 +601,15 @@ const GATE_GROUP_FAMILIES = {
     "QFAI-DCON-012",
     "QFAI-DCON-013",
   ],
+  // `R-HANDOFF-SCHEMA-DRIFT` / `R-SKILL-MANIFEST-DRIFT`, split out of `sdd` —
+  // specifically, out of `reviewer-gate-sdd`, where the emitter-based table
+  // above would otherwise file them. The group runs inside that profile, but
+  // its two detectors read qfai's own package sources, so in a consuming repo
+  // they are structurally unevaluated while the rest of the sdd reviewer gates
+  // still fire. Their own group is what lets `unevaluatedGates` name them per
+  // code when their inputs are absent; `sdd` lists it alongside
+  // `reviewer-gate-sdd`, so neither code loses its profile attribution.
+  "package-self-governance": PACKAGE_SELF_GOVERNANCE_FAMILIES,
   "review-artifacts": ["QFAI-REVIEW-*"],
   prototyping: [
     "QFAI-PROT-*",
@@ -629,7 +650,12 @@ const GATE_GROUP_FAMILIES = {
   // `TDDLIST-001`..`TDDLIST-006` are deliberately absent: they are the waiver
   // rule ids for the `TDDLIST_*` findings (`core/ruleIds.ts`,
   // `validators/tddList.ts`), not codes any finding is ever emitted under.
-  tdd: ["TDDLIST_*", "QFAI-TEST-001"],
+  // `validateTestTodoStubs` owns the whole `QFAI-TEST-` prefix — it is the sole
+  // emitter of `QFAI-TEST-001`, `-002` and `-003` — so the glob is the entry
+  // that cannot fall behind it. `QFAI-TRACE-*` is gone from here: the trace
+  // codes now live in the `traceability*` groups this profile lists below,
+  // which is what stops a wildcard from claiming the sdd-shared block.
+  tdd: ["TDDLIST_*", "QFAI-TEST-*"],
   // `validateUpstreamSsotGuard` — `runTddValidators` only. `full` opts out
   // (`core/validate.ts#runFullValidators` passes `includeUpstreamGuard =
   // false`) because it also runs the SDD profile, the legitimate owner of the
@@ -708,6 +734,9 @@ const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   sdd: [
     "sdd",
     "reviewer-gate-sdd",
+    // `runSddValidators` calls `runPackageSelfGovernanceValidators`, so sdd
+    // evaluates this group too — subject to the per-code precondition check.
+    "package-self-governance",
     // `validateReviewerJustification` re-issues these codes from an sdd run.
     "reviewer-gate-shared",
     "reviewer-justification-only",
@@ -753,7 +782,22 @@ type UnevaluatedGates = {
   readonly stageOnly: readonly { readonly family: string; readonly profile: ValidationProfile }[];
 };
 
-function unevaluatedGates(profile: string): UnevaluatedGates {
+/**
+ * The groups a profile does not run, split by where the reader must go.
+ *
+ * `unevaluatedSelfGovernance` carries the self-governance codes whose own
+ * inputs are absent, so those detectors cannot fire whatever the project does
+ * and their codes join the list even though the profile wires them in. It is
+ * per code, not per group: the two detectors read different files, and a tree
+ * carrying one detector's inputs but not the other's would otherwise drop both
+ * from the notice while one of them had structurally not run. They join
+ * `fullCovered` rather than `stageOnly`: no profile owns them the way a
+ * stage-only group is owned, so there is no `--profile` to send the reader to.
+ */
+function unevaluatedGates(
+  profile: string,
+  unevaluatedSelfGovernance: readonly string[],
+): UnevaluatedGates {
   if (!isKnownProfile(profile)) {
     return { fullCovered: [], stageOnly: [] };
   }
@@ -775,6 +819,16 @@ function unevaluatedGates(profile: string): UnevaluatedGates {
         stageOnly.push({ family, profile: owner });
       }
     }
+  }
+  if (fullCovered.length === 0) {
+    // A profile that runs every group a full scan covers is not partial, and
+    // this is the partial-profile list. Appending a precondition-gated group
+    // here would put "full is a partial profile" into the artifact. Stage-only
+    // families are a separate axis and are reported either way.
+    return { fullCovered, stageOnly };
+  }
+  if (evaluated.has("package-self-governance")) {
+    for (const family of unevaluatedSelfGovernance) pushFullCovered(family);
   }
   if (profile === "saas-package") {
     // Keep the skip-set SSOT wired in: a gate added to
@@ -813,6 +867,7 @@ function unevaluatedGates(profile: string): UnevaluatedGates {
 function buildPartialProfileNotice(
   profile: string | undefined,
   profileValidatorsRan: boolean,
+  unevaluatedSelfGovernance: readonly string[],
 ): Issue | null {
   if (!profile) {
     return null;
@@ -828,7 +883,7 @@ function buildPartialProfileNotice(
   }
   // There is no "blocked" branch any more: a narrow profile in CI runs its own
   // validators, so the ordinary partial-profile wording is accurate.
-  const { fullCovered, stageOnly } = unevaluatedGates(profile);
+  const { fullCovered, stageOnly } = unevaluatedGates(profile, unevaluatedSelfGovernance);
   if (fullCovered.length === 0 && stageOnly.length === 0) {
     return null;
   }
@@ -871,16 +926,6 @@ function recountIssues(
     warning: counts.warning + (added.severity === "warning" ? 1 : 0),
     error: counts.error + (added.severity === "error" ? 1 : 0),
   };
-}
-
-function resolveFailOn(options: ValidateOptions, fallback: FailOn): FailOn {
-  if (options.failOn) {
-    return options.failOn;
-  }
-  if (options.strict) {
-    return "warning";
-  }
-  return fallback;
 }
 
 function emitText(result: ValidationResult, failOn: FailOn): void {
@@ -1080,10 +1125,16 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "18_delta.md includes all required sections and Rejected has DO NOT/Temptation.",
   "QFAI-PROFILE-001":
     "A partial profile does not evaluate every hard gate; a PASS on it is not full-scan coverage.",
+  "QFAI-PLATFORM-003":
+    "Every `--platform` given is read by the profile it is given to; the discussion / sdd / atdd / tdd profiles never reach platform detection, so a value passed there changes nothing about the run.",
   "QFAI-TRIAGE-007":
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  "QFAI-TEST-001":
+    "No test file holds a silent placeholder — `it.todo` / `pytest.skip` / `t.Skip` / `@Disabled` / `#[ignore]` and the other dialects' stub forms.",
+  "QFAI-TEST-003":
+    "No vitest/jest test is parked with a `.skip` modifier; a parked suite is waived per path in `.qfai/waivers.yml` instead.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
@@ -1114,6 +1165,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "tests/integration/** must not include TC annotations for a TC whose declared Level is not Integration.",
   "QFAI-ATDD-117":
     "TCs declared Unit/Component are excluded from the ATDD annotation obligation; /qfai-implement's ledger gates them.",
+  "QFAI-ATDD-131":
+    "Every spec with an ATDD-owned test has a Coverage Depth Matrix at `.qfai/evidence/coverage-depth-<spec-id>.md`.",
+  "QFAI-ATDD-132":
+    "The Coverage Depth Matrix is tracked or unignored; the matrix and its justifications are committed.",
+  "QFAI-ATDD-133":
+    "`## Coverage Depth Matrix` in `.qfai/evidence/atdd-<spec-id>.md` exists and is a link plus counted totals.",
   "QFAI-ATDD-901":
     "ATDD traceability report output failures are warning-only, but report generation should be repaired.",
   "QFAI-LINK-001":
