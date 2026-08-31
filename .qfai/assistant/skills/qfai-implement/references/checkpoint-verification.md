@@ -91,9 +91,29 @@ the full suite.
 
 Checkpoint verification PASSES only when **every** command in the applicable set exits 0, and step 4
 reports zero `QFAI-TEST-001` findings — the JS/TS `.skip` family is the separate warning rule
-`QFAI-TEST-003` and is not counted here. Any non-zero exit is a FAIL: for a per-item checkpoint the
-item stays at `refactor`, the failure is fixed, and the whole set is re-run. A partial run is not a
-pass.
+`QFAI-TEST-003` and is not counted here. Any non-zero exit is a FAIL.
+**FAIL handling is defined here and nowhere else**, in one branch per boundary:
+
+- **Per item** — the item stays at `refactor`, the failure is fixed, and the whole set is re-run. It
+  does **not** go to `exception`: that status parks the row as an anomaly whose completion then
+  needs a user-approved accepted-risk waiver, and a regression this run can fix is not one.
+  **`refactor` is not terminal, and Phase Red does not select it**, so a run that ends before the
+  re-run passes would strand the row. Preflight step 3 (`../SKILL.md`, Phase: Stage 0 + Preflight)
+  is what resumes it: the next invocation re-enters Phase: Refactor at step 4 for that row — routed
+  blocking reviewers, then the whole set again — before it selects any `todo` row, after any
+  named handoff, and as one reopened group when the row is a T1 member of one
+  (`volume-policy.md`).
+- **Per spec** — the boundary owns no row, so no status moves. Fix the failure and re-run the whole
+  set. **Do not add a row here.** When the repair needs its own Red/Green cycle it needs an
+  obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
+  is the `Status` / `DR-ID` / `Evidence` cells only, and adding, removing or re-scoping a row takes
+  the drift path (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
+  per `constitution/drift-protocol.md#when-drift-is-detected` — STOP, Change Request, owner rerun — and resume on the approved
+  reset (`change-request-reset.md`), then work the ledger back to terminal.
+  Spec-level completion is not declared until it passes, and the stale-PASS rule below binds
+  this repair too.
+
+A partial run is not a pass.
 
 ### The one substitution: a measured delta for step 4
 
@@ -149,6 +169,37 @@ scope it touches — and obtain a fresh PASS **before** re-running the command s
 commands alone would let an item reach `done` carrying code no reviewer ever saw, which the
 skill's own stale-evidence rule forbids. A fix that changes nothing a reviewer judged — re-running
 after a flaky external service, say — needs no re-review; record which case applied.
+
+**The spec-level boundary is bound by that rule too.** Every row is terminal by the time it runs,
+so each carries a `completion-reviewer` / `implementation-reviewer` PASS and an `Evidence`
+revision taken against the pre-fix tree. A spec-level repair that edits test or production code
+makes both stale for **every item whose `Test file` or production scope it touched** — name those
+items, re-submit each to the routed blocking reviewers it affects, refresh its evidence revision
+(`evidence-revision.md`), and only then re-run the per-spec command set. Skipping that declares
+spec-level completion over code no reviewer judged: the same defect the per-item rule forbids, one
+boundary later.
+
+**A fresh reviewer PASS is not always enough, and a revision is never the repair.** Gate items 3
+and 5 want observations, not addresses: a RED that failed and a GREEN that passed, on this code.
+Re-submitting reviewers and refreshing `Evidence` leaves both untouched, and where the repair
+edited a **test**, the item's RED and its `RED test hash` describe a test that no longer exists.
+So decide by what the repair changed, per affected item:
+
+- **Production code only, tests untouched** — the GREEN is the stale one. Re-run the item's
+  `Selector` on the repaired tree, record that result as the GREEN with its revision, re-submit to
+  the routed blocking reviewers, and carry on. The RED still describes the test it was observed on,
+  which the repair did not move.
+- **The item's test changed** — its RED is unrecoverable in place. The row is `done` and Phase Red
+  does not re-select it, so there is no route that re-observes a RED without moving the row, and
+  writing one from memory is the fabrication the RED exists to prevent. Take the drift path:
+  STOP, raise a Change Request naming those rows, and on approval reset each per
+  `change-request-reset.md` and run its micro-cycle again. That is the only way item 3 gets an
+  observation of the test as it now stands.
+
+Declaring spec-level completion without one of those two is declaring it on evidence for a tree
+that no longer exists — which is what the freshness rules are for. A repair large enough to change
+several items' tests is a signal in itself: it is a change to the deliverable, and the Change
+Request is where a change to the deliverable belongs.
 
 ## Spec-level boundary on an already-complete ledger
 

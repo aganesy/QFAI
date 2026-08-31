@@ -106,6 +106,7 @@ The eight required columns, the allowed transitions and the exception rules are 
 
 1. Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`, `.qfai/assistant/constitution/shared-skill-operating-baseline.md#format-ssot-mandatory` and `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-rejected-guard-mandatory`, then read `catalog/tech.md` + `catalog/structure.md` and take every Test / Lint / Typecheck / Build command below from `tech.md#standard-commands-copy-paste` rather than inventing one. Refresh both files when the repository contradicts them; do not continue on stale steering. This stage was bound by neither inheritance route while being the one that creates production source trees.
 2. Enumerate the in-scope `.qfai/decisions/CR-*.md` and apply every approved reset per `references/change-request-reset.md` **before** any other ledger judgement — including the all-`done` "nothing to do" exit, which an approved reset invalidates.
+3. **Resume every row left at `refactor` — after any named handoff, before any `todo` row.** **A named handoff is processed first.** When the invocation names `TDD-ID`s, or an unconsumed `/qfai-atdd` handover leaves a deliberate RED in the tree, run Phase Red step 1 on those rows and come back here only once they are terminal: a `refactor` row's checkpoint runs the full suite, so resuming it against that RED FAILs on an obligation the row does not own — which either sends this step off to repair an unrelated row or forces the named row's production code before its ledger and evidence are written. With no named row outstanding, a `refactor` row is the residue of a run that ended after Phase: Refactor step 3 and before `done` — an interrupted checkpoint repair (`references/checkpoint-verification.md#pass-criteria`), or a T1 group left open, whose members park in `refactor` legally and by design (`references/volume-policy.md`, Group formation). `refactor` is not terminal, and Phase Red step 1 selects only a named row, a `review-fix` row or a `todo` row, so nothing downstream picks it up: the row would sit there for every later invocation and the spec could never complete. **Resume by review unit, not row by row**: `refactor` rows that are T1 and share a BR or an AC are one reopened group — reviewed once, checkpointed once, and every member transitioning in the same ledger write; a T2 / T3 row, or a T1 row alone in its BR/AC, resumes on its own. **A reopened unit owes its whole reviewer set, not a subset.** Take it from the rules that close the unit, never from a list written here: a T1 group close requires a `qa-gatekeeper` turn over the members' recorded RED/GREEN evidence alongside the two review passes (`references/volume-policy.md`, Review on close), and item 9 of the completion gate requires a `product-surface-reviewer` PASS on any UI-affecting row (`references/ui-affecting.md`). Naming two reviewers here sent a resumed row to the gate missing a verdict it could no longer obtain — the row is `done`-bound and Phase Red does not re-select it — so the run either stopped at the 12-point gate or declared completion on a unit nobody had gatekept. Re-enter Phase: Refactor at step 4 per unit — routed blocking reviewers first, since an interrupted repair may have changed code their PASS was given against, then checkpoint verification while the rows are still `refactor` — and transition per `references/checkpoint-verification.md#pass-criteria`. This is the only entry that re-selects `refactor`; Phase Red still does not.
 
 ### Phase: Red (Write Failing Test)
 
@@ -157,9 +158,9 @@ The eight required columns, the allowed transitions and the exception rules are 
    **while the item is still `refactor`** (see `#checkpoint-verification`). On a
    checkpoint boundary that means the full suite. Off a boundary it is already
    satisfied by step 2's narrow suite — nothing is re-run. Transition to `done`
-   only on PASS; on failure transition to `exception` with a DR-ID (legal from
-   `refactor`, whereas re-opening a `done` row is not). For a T1 group every member
-   transitions in the same ledger write.
+   only on PASS; a FAIL keeps the row at `refactor` and is handled only as
+   `references/checkpoint-verification.md#pass-criteria` states — it is not an
+   `exception`. For a T1 group every member transitions in the same ledger write.
 
 ### Completion
 
@@ -442,9 +443,8 @@ is what item 12 of the 12-point gate refers to and the only thing it refers to. 
 reached **per item** (after all routed blocking reviewers return PASS, before `refactor` -> `done`)
 and **per spec** (after the last ledger row is terminal). There is no "every N items" rule.
 
-It PASSES only when **every** command in the verification command set exits 0; a partial run is not
-a pass. The boundary definition, command set, pass criteria and evidence fields are in
-`references/checkpoint-verification.md`.
+It PASSES only when **every** command in the verification command set exits 0; a partial run is not a
+pass. The boundary definition, command set, pass criteria, FAIL handling and evidence fields are in `references/checkpoint-verification.md`.
 
 ## FINAL CHECKLIST (Check Last)
 

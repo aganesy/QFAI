@@ -166,6 +166,156 @@ describe("qfai-implement checkpoint verification contract", () => {
     }
   });
 
+  // A failed checkpoint had two remedies: the pass criteria kept the row at
+  // `refactor`, while `relevant-test-suite.md` sent it to `exception` + a DR,
+  // a status that then needs a user-approved waiver to satisfy completion.
+  it("states FAIL handling once, in the pass criteria, for both boundaries", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(headingSlugs(reference)).toContain("pass-criteria");
+      expect(reference).toMatch(/\*\*FAIL handling is defined here\s+and nowhere else\*\*/);
+      expect(reference).toContain("the item stays at `refactor`, the failure is fixed");
+      expect(reference).toContain("does **not** go to `exception`");
+      // The per-spec boundary owns no row, so it needs its own branch here
+      // rather than being left undefined by the deletion.
+      expect(reference).toContain("**Per spec** — the boundary owns no row");
+      expect(reference).toContain("Spec-level completion is not declared until it passes");
+      // A ledger row is upstream SSOT: the carve-out this skill holds is the
+      // Status / DR-ID / Evidence cells, so the per-spec repair may not append
+      // a `todo` row itself — it takes the drift path and the owner's rerun.
+      expect(reference).toContain("**Do not add a row here.**");
+      expect(reference).toContain(
+        "`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`",
+      );
+      expect(reference).toContain("#when-drift-is-detected");
+
+      // No second remedy anywhere else on the shipped surface.
+      const suite = await readFile(path.join(dir, "references", "relevant-test-suite.md"), "utf-8");
+      expect(suite).toContain("`checkpoint-verification.md#pass-criteria`");
+      expect(suite).not.toContain("`refactor -> exception`");
+
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).not.toContain("on failure transition to `exception` with a DR-ID");
+      expect(skill).toContain("a FAIL keeps the row at `refactor`");
+
+      // A FAIL now keeps the row at `refactor`, which is neither terminal nor
+      // selectable by Phase Red step 1 (named row / `review-fix` / `todo`). An
+      // interrupted repair would strand it for every later invocation, so
+      // preflight has to be the entry that re-selects it.
+      expect(skill).toContain(
+        "**Resume every row left at `refactor` — after any named handoff, before any `todo` row.**",
+      );
+      expect(skill).toContain("This is the only entry that re-selects `refactor`");
+      expect(reference).toContain("Preflight step 3");
+    }
+  });
+
+  // Resuming an unrelated `refactor` row ahead of a named handoff runs that
+  // row's full-suite checkpoint against the handoff's deliberate RED, so it
+  // FAILs on an obligation the resumed row does not own.
+  it("keeps a named handoff ahead of the refactor resume", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**A named handoff is processed first.**");
+      expect(skill).toContain(
+        "run Phase Red step 1 on those rows and come back here only once they are terminal",
+      );
+      expect(skill).toContain("FAILs on an obligation the row does not own");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("after any\n  named handoff");
+    }
+  });
+
+  // A T1 coherent group parks every member in `refactor` by design, so an
+  // interrupted run leaves several. Resuming them one by one would review each
+  // separately and break the one-ledger-write group transition.
+  it("resumes interrupted refactor rows by review unit, not row by row", async () => {
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      // The old premise — "a fresh invocation holds no open T1 group" — is false.
+      expect(skill).not.toContain("no in-flight reviewer round and no open T1 group");
+      expect(skill).toContain(
+        "a T1 group left open, whose members park in `refactor` legally and by design",
+      );
+      expect(skill).toContain("**Resume by review unit, not row by row**");
+      expect(skill).toContain("every member transitioning in the same ledger write");
+
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("as one reopened group when the row is a T1 member of one");
+    }
+  });
+
+  // The stale-PASS rule was scoped to the per-item boundary, so a spec-level
+  // repair could edit reviewed code and still declare completion on the PASSes
+  // that preceded it.
+  it("invalidates reviewer PASSes after a spec-level repair too", async () => {
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain("the stale-PASS rule below binds");
+      expect(reference).toContain("**The spec-level boundary is bound by that rule too.**");
+      expect(reference).toContain(
+        "**every item whose `Test file` or production scope it touched**",
+      );
+      expect(reference).toContain("only then re-run the per-spec command set");
+    }
+  });
+
+  it("names the observation a spec-level repair owes, not just a fresh revision", async () => {
+    // Gate items 3 and 5 want observations, not addresses. Re-submitting
+    // reviewers and bumping `Evidence` leaves the RED and the GREEN untouched,
+    // and where the repair edited a test, the RED and its `RED test hash`
+    // describe a test that no longer exists — on a row that is already `done`
+    // and that Phase Red does not re-select.
+    for (const dir of SKILL_DIRS) {
+      const reference = await readFile(
+        path.join(dir, "references", "checkpoint-verification.md"),
+        "utf-8",
+      );
+      expect(reference).toContain(
+        "**A fresh reviewer PASS is not always enough, and a revision is never the repair.**",
+      );
+      // Production-only repair: re-observe the GREEN; the RED still stands.
+      expect(reference).toContain("**Production code only, tests untouched**");
+      expect(reference).toContain("record that result as the GREEN with its revision");
+      // A changed test has no in-place route — say so, and name the one it has.
+      expect(reference).toContain("**The item's test changed**");
+      expect(reference).toContain("its RED is unrecoverable in place");
+      expect(reference).toContain("`change-request-reset.md`");
+      expect(reference).toContain("run its micro-cycle again");
+    }
+  });
+
+  it("resumes a review unit with the whole reviewer set it owes", async () => {
+    // A T1 group close takes a `qa-gatekeeper` turn as well as the two review
+    // passes, and item 9 takes a `product-surface-reviewer` PASS on a
+    // UI-affecting row. Naming two reviewers in the resume step sent a resumed
+    // row to the gate missing a verdict it could no longer obtain.
+    for (const dir of SKILL_DIRS) {
+      const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
+      expect(skill).toContain("**A reopened unit owes its whole reviewer set, not a subset.**");
+      expect(skill).toContain("never from a list written here");
+      expect(skill).toContain("`qa-gatekeeper` turn over the members' recorded RED/GREEN evidence");
+      expect(skill).toContain("`references/ui-affecting.md`");
+      // …and the enumeration that caused it is gone.
+      expect(skill).not.toContain(
+        "one `completion-reviewer` pass, one `implementation-reviewer` pass, one checkpoint run",
+      );
+    }
+  });
+
   it("keeps the skill body inside its progressive-disclosure budget", async () => {
     for (const dir of SKILL_DIRS) {
       const skill = await readFile(path.join(dir, "SKILL.md"), "utf-8");
