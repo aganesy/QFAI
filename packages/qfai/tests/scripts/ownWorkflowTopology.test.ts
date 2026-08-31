@@ -2800,11 +2800,33 @@ describe("release automation performs decisions rather than making them", () => 
       path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"),
       "utf-8",
     );
-    expect(prepare, "an empty Unreleased section must be refused").toMatch(/body\.trim\(\) === ""/);
     expect(
       prepare,
-      "and nothing here may compose release prose: the only CHANGELOG write is the rename",
-    ).not.toMatch(/### (Added|Changed|Fixed)/);
+      "a section that describes nothing must be refused — and `trim()` alone cannot tell, " +
+        "because `### Added` with nothing under it is non-empty and describes nothing",
+    ).toMatch(/substantive\.length === 0/);
+    expect(
+      prepare,
+      "and what makes a line substantive is that it is neither blank nor a heading",
+    ).toMatch(/\!line\.startsWith\(/);
+    // The WRITE, and exactly what it inserts — not the absence of `### Added` anywhere in the
+    // file. The first version asserted the latter and broke the moment the refusal message
+    // beside the check named `### Added` as an example of a section that describes nothing: a
+    // negative match over the whole document cannot tell a warning ABOUT category headings
+    // from a workflow that writes one.
+    const changelogWrites = prepare.match(/writeFileSync\(changelogPath/g) ?? [];
+    expect(
+      changelogWrites,
+      "there must be exactly one CHANGELOG write: a second is somewhere else to compose prose",
+    ).toHaveLength(1);
+    expect(
+      prepare,
+      "and it must insert a release heading and nothing else — the release text is whatever the " +
+        "merged pull requests wrote, and this workflow only moves the boundary",
+      // Both backticks. Measured: without the closing one this is a prefix test, and appending
+      // `\n\n### Added\n\n- Released.` inside the same template left the row GREEN — a workflow
+      // composing release prose, passing the row that exists to forbid exactly that.
+    ).toContain("`\\n\\n## [${version}] - ${date}`");
   });
 
   // ── the Release body, capped rather than fatal ─────────────────────────────────────────

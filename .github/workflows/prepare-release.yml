@@ -122,9 +122,19 @@ jobs:
           const after = text.slice(at + "## [Unreleased]".length);
           const next = after.search(/^## /m);
           const body = next < 0 ? after : after.slice(0, next);
-          if (body.trim() === "") {
+          // Empty is not only "no characters". A section holding `### Added` with nothing under
+          // it has a non-empty `trim()` and describes nothing at all — and this workflow would
+          // move that bare heading into the release section, producing exactly the release note
+          // nobody wrote that the check exists to refuse. So: at least one line that is neither
+          // blank nor a heading.
+          const substantive = body
+            .split(/\r?\n/)
+            .map((line) => line.trim())
+            .filter((line) => line !== "" && !line.startsWith("#"));
+          if (substantive.length === 0) {
             console.log(
-              "::error::prepare-release: the `## [Unreleased]` section is empty. This workflow " +
+              "::error::prepare-release: the `## [Unreleased]` section describes nothing — it is " +
+                "empty, or carries only category headings such as `### Added`. This workflow " +
                 "renames sections; it does not write release notes. Describe the changes in " +
                 "CHANGELOG.md first — that is what the release ships and what the GitHub Release " +
                 "body is extracted from.",
