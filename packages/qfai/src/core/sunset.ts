@@ -128,6 +128,14 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT` — a `qfai-*` SKILL.md whose
+   * hard-required bucket names something outside the pinned set, or omits a
+   * pinned entry. Installed skills are only refreshed by an explicit
+   * `qfai init --force`, so every project that installed before the set was
+   * pinned still lists the retired entry and would meet this at once.
+   */
+  autopilotHardRequiredDrift: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {

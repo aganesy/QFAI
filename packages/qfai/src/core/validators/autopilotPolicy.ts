@@ -24,7 +24,9 @@ import path from "node:path";
 
 import { resolvePath, type QfaiConfig } from "../config.js";
 import { isEnoent } from "../fs/errno.js";
+import { newRuleSeverity, RULE_PROMOTIONS } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { exists, issue } from "./utils.js";
 
 const SKILL_DIR_REL = path.join(".qfai", "assistant", "skills");
@@ -49,11 +51,98 @@ export const AUTO_DECIDE_ALLOWED_TOKENS: readonly string[] = [
   "equivalent-option pick",
 ];
 
+/**
+ * The exact hard-required set: `brand intent`, which reaches root
+ * `DESIGN.md` front-matter via qfai-discussion, and `primarySpecId`, which
+ * selects the spec every skill operates on. Both have a consumer in the
+ * shipped tree; the retired `companyName` had none, so it bought a
+ * guaranteed prompt out of a 0-1 budget and read nothing back.
+ *
+ * Unlike auto-decide this set may be neither widened NOR narrowed, so it is
+ * matched in both directions: no entry outside it, and no entry of it
+ * missing. Stored already normalized (see {@link normalizeHardRequiredEntry}).
+ */
+export const HARD_REQUIRED_ENTRIES: readonly string[] = ["brand intent", "primaryspecid"];
+
 const BUCKET_HEADERS = {
   autoDecide: /^\s*[-*]\s*auto-decide\s*:/im,
   askUser: /^\s*[-*]\s*ask-user\s*:/im,
   hardRequired: /^\s*[-*]\s*hard-required\s*:/im,
 } as const;
+
+/**
+ * Reduce one hard-required bullet to the identifier it names, so the
+ * comparison against {@link HARD_REQUIRED_ENTRIES} can be an EQUALITY rather
+ * than a substring test.
+ *
+ * Substring matching was the hole: a bullet reading
+ * `- brand intent / companyName` contains `brand intent`, so it was neither an
+ * unknown entry nor a missing one, and the retired identifier could be
+ * reintroduced by writing it beside a permitted one. Equality on a normalized
+ * bullet rejects that while leaving the bullets free to carry the decoration
+ * the shipped tree actually uses — backticks and a trailing qualifier such as
+ * `` `primarySpecId` (when absent from inputs) ``.
+ *
+ * Normalization is deliberately narrow: a trailing parenthetical or dash
+ * clause is a qualifier on ONE entry, whereas anything else joining two names
+ * (`/`, `+`, a comma) survives into the result and fails the equality, which
+ * is the direction this guard must fail in.
+ */
+export function normalizeHardRequiredEntry(bullet: string): string {
+  return bullet
+    .replace(/[`*_]/g, "")
+    .replace(/\s*[—–-]\s+.*$/, "")
+    .replace(/\s*\([^)]*\)\s*$/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+/**
+ * Collect the bullets nested under the `- hard-required:` line, stopping at
+ * the first line that is not a nested bullet. Reads a whole SKILL.md as
+ * readily as an already-extracted policy block, because the bucket header is
+ * what anchors it.
+ */
+export function collectHardRequiredEntries(content: string): string[] {
+  const entries: string[] = [];
+  let inBucket = false;
+  for (const line of content.split(/\r?\n/)) {
+    if (BUCKET_HEADERS.hardRequired.test(line)) {
+      inBucket = true;
+      continue;
+    }
+    if (!inBucket) continue;
+    const nested = /^\s+[-*]\s+(.+)$/.exec(line);
+    const text = nested?.[1]?.trim();
+    if (text === undefined || text.length === 0) break;
+    entries.push(text);
+  }
+  return entries;
+}
+
+/**
+ * Compare a hard-required bucket against {@link HARD_REQUIRED_ENTRIES} in both
+ * directions. `unknown` holds bullets naming something outside the set (as
+ * written, for the operator to find); `missing` holds set members no bullet
+ * names.
+ *
+ * Exported so the validator and the shipped-asset guard in
+ * `tests/assets/assets.test.ts` decide membership with ONE matcher: two copies
+ * of this rule is how the substring hole reached both of them at once.
+ */
+export function classifyHardRequiredEntries(entries: readonly string[]): {
+  unknown: string[];
+  missing: string[];
+} {
+  const normalized = entries.map((entry) => normalizeHardRequiredEntry(entry));
+  return {
+    unknown: entries.filter(
+      (entry) => !HARD_REQUIRED_ENTRIES.includes(normalizeHardRequiredEntry(entry)),
+    ),
+    missing: HARD_REQUIRED_ENTRIES.filter((required) => !normalized.includes(required)),
+  };
+}
 
 export type AutopilotPolicyParseResult = {
   /** True when `## Default Autopilot Policy` heading is present. */
@@ -66,6 +155,10 @@ export type AutopilotPolicyParseResult = {
   };
   /** Auto-decide entries that DON'T match an allowed token (widening). */
   widenedTokens: string[];
+  /** Hard-required bullets naming something outside the pinned set. */
+  hardRequiredUnknown: string[];
+  /** Pinned hard-required entries no bullet names. */
+  hardRequiredMissing: string[];
 };
 
 /**
@@ -82,6 +175,8 @@ export function parseAutopilotPolicy(content: string): AutopilotPolicyParseResul
       hasSection: false,
       buckets: { autoDecide: false, askUser: false, hardRequired: false },
       widenedTokens: [],
+      hardRequiredUnknown: [],
+      hardRequiredMissing: [],
     };
   }
   const startIdx = headingMatch.index + headingMatch[0].length;
@@ -97,11 +192,18 @@ export function parseAutopilotPolicy(content: string): AutopilotPolicyParseResul
   const hardRequired = BUCKET_HEADERS.hardRequired.test(block);
 
   const widenedTokens = autoDecide ? findWidenedAutoDecideTokens(block) : [];
+  // Only meaningful once the bucket header exists; without it the emitter
+  // already reports the missing bucket and reporting every pinned entry as
+  // "missing" on top of that would be the same defect twice.
+  const hardRequiredEntries = hardRequired ? collectHardRequiredEntries(block) : [];
+  const { unknown, missing } = classifyHardRequiredEntries(hardRequiredEntries);
 
   return {
     hasSection: true,
     buckets: { autoDecide, askUser, hardRequired },
     widenedTokens,
+    hardRequiredUnknown: hardRequired ? unknown : [],
+    hardRequiredMissing: hardRequired ? missing : [],
   };
 }
 
@@ -176,6 +278,21 @@ export async function validateAutopilotPolicy(
     ? resolvePath(root, options.config, "skillsDir")
     : path.join(root, SKILL_DIR_REL);
   if (!(await exists(skillsDir))) return issues;
+
+  // `R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT` runs a promotion window
+  // (`RULE_PROMOTIONS`, P7): the rule is right, but it necessarily fires on
+  // every SKILL.md installed before the set was pinned, and those are only
+  // refreshed by an explicit `qfai init --force`. Shipping it straight at
+  // `error` would turn an upgrade into a latched gate. `resolveToolVersion`
+  // resolves rather than rejects — a read failure returns `"unknown"`, which
+  // the comparator reads as inside the window, so an unreadable version can
+  // never be what escalates this into a build failure.
+  const hardRequiredPromotion = RULE_PROMOTIONS.autopilotHardRequiredDrift.promoteAt;
+  const hardRequiredSeverity = newRuleSeverity(await resolveToolVersion(), hardRequiredPromotion);
+  const hardRequiredWindowNote =
+    hardRequiredSeverity === "warning"
+      ? ` Reported as a warning until the ${hardRequiredPromotion} release, then an error.`
+      : "";
 
   let entries: Dirent[];
   try {
@@ -267,6 +384,37 @@ export async function validateAutopilotPolicy(
           "warning",
           relPath,
           "reviewerGate.autopilotPolicyWidened",
+        ),
+      );
+    }
+    // The bucket's CONTENT, not just its header. Checking only the header let
+    // a project whose installed SKILL.md still lists a retired entry pass
+    // `qfai validate` indefinitely: installed skills are refreshed only by an
+    // explicit `qfai init --force`, so nothing else would ever surface it.
+    if (result.hardRequiredUnknown.length > 0 || result.hardRequiredMissing.length > 0) {
+      const parts: string[] = [];
+      if (result.hardRequiredUnknown.length > 0) {
+        parts.push(`outside the pinned set ([${result.hardRequiredUnknown.join(" | ")}])`);
+      }
+      if (result.hardRequiredMissing.length > 0) {
+        parts.push(`missing ([${result.hardRequiredMissing.join(" | ")}])`);
+      }
+      const message =
+        `R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT: ${relPath} hard-required bucket ` +
+        `lists entries ${parts.join(" and ")}. Unlike auto-decide this bucket may be ` +
+        `neither widened nor narrowed: every entry costs a guaranteed prompt, and ` +
+        `every pinned entry has a consumer in the shipped tree. Restore the bucket to ` +
+        `exactly [${HARD_REQUIRED_ENTRIES.join(", ")}] — ` +
+        `\`qfai init --force\` regenerates the shipped wording.${hardRequiredWindowNote} ` +
+        `Justification: file=${relPath}, unknown=[${result.hardRequiredUnknown.join(", ")}], ` +
+        `missing=[${result.hardRequiredMissing.join(", ")}].`;
+      issues.push(
+        issue(
+          "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT",
+          message,
+          hardRequiredSeverity,
+          relPath,
+          "reviewerGate.autopilotPolicyHardRequiredDrift",
         ),
       );
     }

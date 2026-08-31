@@ -9,6 +9,11 @@ import { describe, expect, it } from "vitest";
 import { runInit } from "../../src/cli/commands/init.js";
 import { runReport } from "../../src/cli/commands/report.js";
 import { runValidate } from "../../src/cli/commands/validate.js";
+import {
+  classifyHardRequiredEntries,
+  collectHardRequiredEntries,
+  HARD_REQUIRED_ENTRIES,
+} from "../../src/core/validators/autopilotPolicy.js";
 import { countLines, LINE_BUDGET_EXEMPT, SKILL_MD_MAX_LINES } from "../helpers/skillBudget.js";
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
@@ -1932,6 +1937,13 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     // Unlike auto-decide, AC-0015-0015 / BR-0015-0010 let a skill neither
     // widen NOR narrow this bucket, so the assertion runs both ways: no entry
     // outside the pinned set, and no pinned entry missing.
+    //
+    // Membership is decided by `classifyHardRequiredEntries`, the SAME matcher
+    // `validateAutopilotPolicy` emits from, rather than by a substring test
+    // written out again here. The substring version passed
+    // `- brand intent / companyName` on both directions at once — it contains
+    // an allowed name, so it was neither unknown nor missing — which is exactly
+    // the reintroduction this guard exists to stop.
     const skillDocs = await fg(["assistant/skills/qfai-*/SKILL.md"], {
       cwd: templateQfaiDir,
       absolute: false,
@@ -1942,56 +1954,42 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     const missing: string[] = [];
     for (const relativePath of skillDocs.sort()) {
       const content = await readFile(path.join(templateQfaiDir, relativePath), "utf-8");
-      const entries = extractHardRequiredEntries(content);
+      const entries = collectHardRequiredEntries(content);
       expect(entries.length, `${relativePath} has no hard-required bucket`).toBeGreaterThan(0);
-      const normalized = entries.map((entry) => entry.toLowerCase());
-      for (const entry of entries) {
-        const lowered = entry.toLowerCase();
-        if (!HARD_REQUIRED_ENTRIES.some((required) => lowered.includes(required))) {
-          offenders.push(`${relativePath}: ${entry}`);
-        }
-      }
-      for (const required of HARD_REQUIRED_ENTRIES) {
-        if (!normalized.some((entry) => entry.includes(required))) {
-          missing.push(`${relativePath}: ${required}`);
-        }
-      }
+      const classified = classifyHardRequiredEntries(entries);
+      offenders.push(...classified.unknown.map((entry) => `${relativePath}: ${entry}`));
+      missing.push(...classified.missing.map((entry) => `${relativePath}: ${entry}`));
     }
 
     expect(offenders, "hard-required entry with no consumer in the shipped tree").toEqual([]);
     expect(missing, "hard-required bucket dropped an entry the AC/BR still require").toEqual([]);
   });
-});
 
-/**
- * The exact hard-required set the shipped tree consumes: `brand intent`
- * reaches root DESIGN.md front-matter via qfai-discussion, and
- * `primarySpecId` selects the spec every skill operates on. Matched as a
- * lowercase substring so the bullets stay free to carry backticks and
- * qualifiers. Every shipped SKILL.md must list both and nothing else.
- */
-const HARD_REQUIRED_ENTRIES: readonly string[] = ["brand intent", "primaryspecid"];
-
-/**
- * Collect the bullets nested under the `- hard-required:` line of a
- * `## Default Autopilot Policy` section, stopping at the first line that is
- * not a nested bullet.
- */
-function extractHardRequiredEntries(content: string): string[] {
-  const entries: string[] = [];
-  let inBucket = false;
-  for (const line of content.split(/\r?\n/)) {
-    if (/^\s*[-*]\s*hard-required\s*:/i.test(line)) {
-      inBucket = true;
-      continue;
+  it("rejects a retired entry smuggled in beside a pinned one", () => {
+    // The hole the shared matcher closes. Each of these bullets carries an
+    // allowed name, so a substring test read them as compliant; equality on
+    // the normalized bullet does not.
+    for (const smuggled of [
+      "brand intent / companyName",
+      "brand intent, companyName",
+      "`primarySpecId` + companyName",
+    ]) {
+      expect(
+        classifyHardRequiredEntries([smuggled, "brand intent", "`primarySpecId`"]).unknown,
+        `a bullet naming two entries must be reported: ${smuggled}`,
+      ).toContain(smuggled);
     }
-    if (!inBucket) continue;
-    const nested = /^\s+[-*]\s+(.+)$/.exec(line);
-    if (!nested?.[1]) break;
-    entries.push(nested[1].trim());
-  }
-  return entries;
-}
+
+    // And the decoration the shipped tree really uses still normalizes clean,
+    // so the equality does not cost the bullets their backticks or qualifier.
+    expect(
+      classifyHardRequiredEntries(["brand intent", "`primarySpecId` (when absent from inputs)"]),
+    ).toEqual({ unknown: [], missing: [] });
+
+    expect(classifyHardRequiredEntries(["brand intent"]).missing).toEqual(["primaryspecid"]);
+    expect(HARD_REQUIRED_ENTRIES).toEqual(["brand intent", "primaryspecid"]);
+  });
+});
 
 /** Every `options.<key>` the given slice of CLI source touches. */
 function collectOptionKeys(source: string): Set<string> {
