@@ -404,6 +404,17 @@ describe("runSddPreflight import-lite entrypoint", () => {
     const summary = await readFile(result.preflightSummaryPath, "utf-8");
     expect(summary).toContain("status: ready");
     expect(summary).toContain("source: import-lite");
+
+    // The import-lite route returns early, before the discussion-pack path
+    // reaches the writer, so it is the one branch that could have kept writing
+    // a single overwritten summary. It gets the same run scoping as the pack
+    // route: an immutable `preflight/run-*` copy plus the latest-run pointer.
+    expect(result.runId).toMatch(/^run-\d{17}$/);
+    expect(result.preflightSummaryPath).toContain(
+      path.join("preflight", result.runId, "preflight_summary.md"),
+    );
+    expect(summary).toContain(`run id: ${result.runId}`);
+    expect(await readFile(result.latestPreflightSummaryPath, "utf-8")).toBe(summary);
   });
 
   // Evidence is an entrypoint, not an override: a pack that exists but is
