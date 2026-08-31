@@ -148,8 +148,8 @@ describe.each(["packages/qfai/assets/init/.qfai", ".qfai"])(
       );
       expect(catalog).toContain("| `L1`/`Unit` | no ATDD obligation |");
       expect(catalog).toContain("| `L2`/`Component` | no ATDD obligation |");
-      expect(catalog).toContain("| `L3`/`Integration` | `tests/integration/**` |");
-      expect(catalog).toContain("| none declared | `tests/integration/**` |");
+      expect(catalog).toContain("| `L3`/`Integration` | `<testsDir>/integration/**` |");
+      expect(catalog).toContain("| none declared | `<testsDir>/integration/**` |");
       expect(catalog).not.toContain("It does **not** move the traceability annotation.");
       expect(catalog).not.toContain(
         "a `TC-*` reference inside `tests/api/**` or `tests/e2e/**` is rejected outright",
