@@ -138,70 +138,63 @@ misdescribing one stays an upstream change.
 
 ### Why the Decision Record is on this list
 
-A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red
-orders an anomalous row to `exception` as an inline step, and that status is
-invalid without a `DR-*` in the `DR-ID` column — enforced at `error` by
-`TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision Record
-(`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither
-of the first two whitelist entries covers minting one: a Decision Record is not
-an `.qfai/evidence/**` write and not a ledger-cell update.
+A downstream stage cannot always avoid needing one. `qfai-implement` Phase Red orders an anomalous
+row to `exception` as an inline step, and that status is invalid without a `DR-*` in the `DR-ID`
+column — enforced at `error` by `TDDLIST_EXCEPTION_MISSING_DR`. Every upstream home for a Decision
+Record (`07_Decisions.md`, `09_delta.md`) is on the `#core-rule` list above, and neither of the
+first two whitelist entries covers minting one: a Decision Record is not an `.qfai/evidence/**`
+write and not a ledger-cell update.
 
-Without this entry the only compliant route to executing an inline Phase Red
-step was STOP -> Change Request -> user approval -> owner-skill rerun. That made
-the framework's single escape hatch for a blocked item reachable only through
-the approval loop the block is waiting on, so the first anomaly in any project
-either halted the stage or produced a rule-violating ledger row.
+Without this entry the only compliant route to executing an inline Phase Red step was STOP -> Change
+Request -> user approval -> owner-skill rerun. That made the framework's single escape hatch for a
+blocked item reachable only through the approval loop the block is waiting on, so the first anomaly
+in any project either halted the stage or produced a rule-violating ledger row.
 
 The carve-out is exactly as narrow as that need:
 
-- **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase
-  writes it, so creating a file there patches nothing. Editing an already-
-  approved record is not covered.
-- **the record only, never the reference.** The `07_Decisions.md` /
-  `09_delta.md` entry that cites the DR stays an owner-skill write, exactly as
-  step 2 already says for a Change Request. A compliant `exception` row needs
-  the record and the `DR-ID` cell, not the upstream cross-reference.
-- **not an approval.** Creating the record does not decide the anomaly. A parked
-  row still carries `TDDLIST_EXCEPTION_PARKED` until the risk is accepted
-  through the `TDDLIST-001` waiver, which is a separate, user-owned artifact.
+- **create only.** `.qfai/decisions/` is not upstream SSOT and no owner phase writes it, so creating
+  a file there patches nothing. Editing an already- approved record is not covered.
+- **the record only, never the reference.** The `07_Decisions.md` / `09_delta.md` entry that cites
+  the DR stays an owner-skill write, exactly as step 2 already says for a Change Request. A
+  compliant `exception` row needs the record and the `DR-ID` cell, not the upstream cross-reference.
+- **not an approval.** Creating the record does not decide the anomaly. A parked row still carries
+  `TDDLIST_EXCEPTION_PARKED` until the risk is accepted through the `TDDLIST-001` waiver, which is a
+  separate, user-owned artifact.
 
 ## Drift classes
 
-Drift is one of two things, and the class decides what the Change Request must
-carry. It does **not** decide whether a Change Request is needed: both classes
-STOP, both raise a CR, both wait for approval, both are applied by the owner
-skill. The ownership boundary in `#core-rule` is identical for both.
+Drift is one of two things, and the class decides what the Change Request must carry. It does
+**not** decide whether a Change Request is needed: both classes STOP, both raise a CR, both wait for
+approval, both are applied by the owner skill. The ownership boundary in `#core-rule` is identical
+for both.
 
-- **Intent drift** — the upstream artifact states something downstream
-  disagrees with. There is a real decision to make, the upstream artifact is
-  internally consistent, and reasonable alternatives exist.
-- **Defect drift** — the upstream artifact is internally inconsistent,
-  unreachable, or contradicts its own declared behaviour, **demonstrated by a
-  reproduction**. A `.sql` contract that raises `AmbiguousColumnError` on its
-  own declared code path conflicts with nothing: it contradicts only itself.
+- **Intent drift** — the upstream artifact states something downstream disagrees with. There is a
+  real decision to make, the upstream artifact is internally consistent, and reasonable alternatives
+  exist.
+- **Defect drift** — the upstream artifact is internally inconsistent, unreachable, or contradicts
+  its own declared behaviour, **demonstrated by a reproduction**. A `.sql` contract that raises
+  `AmbiguousColumnError` on its own declared code path conflicts with nothing: it contradicts only
+  itself.
 
-Defect drift is claimed by evidence, not by assertion. A CR that declares
-`Class: defect` without a reproduction — a command plus its verbatim output, or
-the two artifact excerpts that contradict each other — is an intent-drift CR
-that skipped its options, and must be treated as incomplete. "This is obviously
-wrong" is not a reproduction; neither is "the fix is trivial". Cost is not a
-classifier: a large intent change stays intent drift, and a one-token defect
-stays defect drift.
+Defect drift is claimed by evidence, not by assertion. A CR that declares `Class: defect` without a
+reproduction — a command plus its verbatim output, or the two artifact excerpts that contradict each
+other — is an intent-drift CR that skipped its options, and must be treated as incomplete. "This is
+obviously wrong" is not a reproduction; neither is "the fix is trivial". Cost is not a classifier: a
+large intent change stays intent drift, and a one-token defect stays defect drift.
 
-Where exactly one correct fix exists, inventing a second and a third option to
-satisfy a template produces a worse record, not a safer one — the operator then
-ratifies a comparison the author knew was fabricated.
+Where exactly one correct fix exists, inventing a second and a third option to satisfy a template
+produces a worse record, not a safer one — the operator then ratifies a comparison the author knew
+was fabricated.
 
 ## When drift is detected
 
-1. STOP downstream editing **of the affected upstream artifact and of every
-   downstream item that depends on it**. Unaffected items continue. A dependent
-   item is one whose `TC-Refs` / `US-Refs` / `CON-API-Refs` names an obligation
-   the CR would change, or whose implementation reads the artifact under
-   dispute; when the dependency is arguable, it is dependent. The halt is not
-   repository-wide: one defective contract does not stop specs that never
-   reference it. What it does stop is `done` — a dependent item may not be
-   completed against an obligation known to be under revision.
+1. STOP downstream editing **of the affected upstream artifact and of every downstream item that
+   depends on it**. Unaffected items continue. A dependent item is one whose `TC-Refs` / `US-Refs` /
+   `CON-API-Refs` names an obligation the CR would change, or whose implementation reads the
+   artifact under dispute; when the dependency is arguable, it is dependent. The halt is not
+   repository-wide: one defective contract does not stop specs that never reference it. What it does
+   stop is `done` — a dependent item may not be completed against an obligation known to be under
+   revision.
 2. Create a Change Request as a file at
    `.qfai/decisions/CR-YYYYMMDD-NNNN-<slug>.md`, from
    `.qfai/assistant/skills/qfai-sdd/templates/change-request.md`. The ID
@@ -213,18 +206,17 @@ ratifies a comparison the author knew was fabricated.
    written there by the owner skill in step 4, never before approval.
    Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
-   - context — for intent drift, what conflicts; for defect drift, what the
-     artifact declares and how it breaks that declaration
-   - reproduction (command + verbatim output, or the two contradicting
-     excerpts) — **required for defect drift**, omit for intent drift
+   - context — for intent drift, what conflicts; for defect drift, what the artifact declares and
+     how it breaks that declaration
+   - reproduction (command + verbatim output, or the two contradicting excerpts) — **required for
+     defect drift**, omit for intent drift
    - proposed change
-   - options (at least 3) and recommendation — **intent drift only**; for
-     defect drift record the single correct fix instead. Do not manufacture
-     alternatives for a change that has one correct answer
-   - blocked downstream items — the enumerated set the halt in step 1 covers
-     (spec IDs, `TDD-ID` ledger rows, contract paths). This is what makes the
-     halt checkable: a reviewer can ask whether an item that kept moving is on
-     the list, and an item not on the list is not blocked by this CR
+   - options (at least 3) and recommendation — **intent drift only**; for defect drift record the
+     single correct fix instead. Do not manufacture alternatives for a change that has one correct
+     answer
+   - blocked downstream items — the enumerated set the halt in step 1 covers (spec IDs, `TDD-ID`
+     ledger rows, contract paths). This is what makes the halt checkable: a reviewer can ask whether
+     an item that kept moving is on the list, and an item not on the list is not blocked by this CR
    - impact scope (spec/plan/tests/contracts/schema)
    - decision needed from user
    - approved actions (owner skill rerun plan)
@@ -233,9 +225,8 @@ ratifies a comparison the author knew was fabricated.
    approved is the single correct fix under `## Proposed change`. The wait
    itself is not waived — the operator is ratifying the classification as much
    as the fix.
-4. Rerun the owner skill for the upstream artifact, **naming the invocation and
-   the mode** the CR approved. That rerun is what records the CR reference in
-   `09_delta.md` / `07_Decisions.md`.
+4. Rerun the owner skill for the upstream artifact, **naming the invocation and the mode** the CR
+   approved. That rerun is what records the CR reference in `09_delta.md` / `07_Decisions.md`.
 
    Invocation by artifact class:
 
@@ -246,16 +237,14 @@ ratifies a comparison the author knew was fabricated.
    | `.qfai/contracts/**` | `/qfai-sdd --contract <CON-ID>` |
 
    Mode — the CR's "approved actions" field MUST name one:
-   - **`confirm-only`** — re-read the artifact and confirm it already satisfies
-     the approved change. Writes nothing but the CR reference. Use when the
-     change was already applied by hand under approval, or when the CR only
-     re-scopes something the artifact already says.
-   - **`re-derive`** — regenerate the artifact from its inputs. May rewrite any
-     part of it, and sweeps the downstream ledgers in step 5.
+   - **`confirm-only`** — re-read the artifact and confirm it already satisfies the approved change.
+     Writes nothing but the CR reference. Use when the change was already applied by hand under
+     approval, or when the CR only re-scopes something the artifact already says.
+   - **`re-derive`** — regenerate the artifact from its inputs. May rewrite any part of it, and
+     sweeps the downstream ledgers in step 5.
 
-   Without a named mode neither the author nor the approver can state what the
-   rerun executes or what it costs, and "rerun the owner skill" is the whole
-   plan.
+   Without a named mode neither the author nor the approver can state what the rerun executes or
+   what it costs, and "rerun the owner skill" is the whole plan.
 
 5. **Sweep the downstream ledgers.** Identify every `tdd/test-list.md` row the
    rerun invalidated — its `TC-Refs` / `US-Refs` / `CON-API-Refs` obligation
@@ -265,39 +254,35 @@ ratifies a comparison the author knew was fabricated.
    sweep covers in-flight rows too: a `red` row whose obligation changed, and
    an `exception` row whose anomaly the rerun resolved or superseded, reset the
    same way. A row whose obligation was deleted outright is removed, not reset.
-6. Resume the **blocked set of this CR** only after upstream artifacts are
-   updated **and** the sweep has run. Resuming with a stale `done` row is
-   resuming on a ledger that asserts something known to be false. Resume is
-   per-CR: an item on two blocked sets resumes when both release, and an item
-   on neither never stopped.
-7. Record the outcome in the CR: fill `Resolution` and set `Applied at`.
-   Approval alone does not release the downstream gate — `qfai-implement`
-   treats an `approved` CR without `Applied at` as unresolved.
+6. Resume the **blocked set of this CR** only after upstream artifacts are updated **and** the sweep
+   has run. Resuming with a stale `done` row is resuming on a ledger that asserts something known to
+   be false. Resume is per-CR: an item on two blocked sets resumes when both release, and an item on
+   neither never stopped.
+7. Record the outcome in the CR: fill `Resolution` and set `Applied at`. Approval alone does not
+   release the downstream gate — `qfai-implement` treats an `approved` CR without `Applied at` as
+   unresolved.
 
 ### Multiple open Change Requests
 
-More than one Change Request may be open at once. They are **independent**
-unless they name the same upstream artifact.
+More than one Change Request may be open at once. They are **independent** unless they name the same
+upstream artifact.
 
-- A defect found while a CR is open is raised as **its own CR**, not folded
-  into the open one. Folding it in would silently widen an approval the
-  operator already gave, and the blocked set the operator approved would no
-  longer be the blocked set in force.
-- Two CRs naming the same upstream artifact are **ordered**: the second states
-  which one it assumes has landed, because the owner-skill rerun for the first
-  changes the text the second is written against. If the first is rejected, the
-  second is restated or superseded, never applied as written.
-- The effective halt is the **union** of the open CRs' blocked sets. Nothing
-  else is halted, however many CRs are open.
-- Open CRs accumulating is itself a project risk: report the count and their
-  ages alongside the blockers, rather than letting a queue of unanswered
-  decisions read as normal.
+- A defect found while a CR is open is raised as **its own CR**, not folded into the open one.
+  Folding it in would silently widen an approval the operator already gave, and the blocked set the
+  operator approved would no longer be the blocked set in force.
+- Two CRs naming the same upstream artifact are **ordered**: the second states which one it assumes
+  has landed, because the owner-skill rerun for the first changes the text the second is written
+  against. If the first is rejected, the second is restated or superseded, never applied as written.
+- The effective halt is the **union** of the open CRs' blocked sets. Nothing else is halted, however
+  many CRs are open.
+- Open CRs accumulating is itself a project risk: report the count and their ages alongside the
+  blockers, rather than letting a queue of unanswered decisions read as normal.
 
 ## Reviewer-originated obligations
 
-The rules above govern a downstream phase **editing** upstream SSOT. This section governs the
-mirror case: a downstream reviewer **originating** a requirement that upstream SSOT does not
-contain. Both are drift.
+The rules above govern a downstream phase **editing** upstream SSOT. This section governs the mirror
+case: a downstream reviewer **originating** a requirement that upstream SSOT does not contain. Both
+are drift.
 
 ### Defect or new scope: decide this first
 
@@ -309,23 +294,21 @@ A finding is a **defect in the deliverable under review** — not new scope — 
 demonstrable from the changed artifacts themselves: the reviewer can point at the code or evidence
 and show it is wrong on its own terms. Typical shapes:
 
-- **correctness** — the code does not do what the artifact it implements says it does: an
-  unhandled rejection, an unreachable or inverted branch, a contract the code itself declares and
-  then breaks;
-- **security / data integrity** — missing validation on an input the code already treats as
-  trusted, credential or personal-data exposure, an injection or traversal path opened by the
-  change;
-- **code quality** — a regression against a gate the repository already runs (lint, types, tests)
-  or against a named constitution / catalog rule.
+- **correctness** — the code does not do what the artifact it implements says it does: an unhandled
+  rejection, an unreachable or inverted branch, a contract the code itself declares and then breaks;
+- **security / data integrity** — missing validation on an input the code already treats as trusted,
+  credential or personal-data exposure, an injection or traversal path opened by the change;
+- **code quality** — a regression against a gate the repository already runs (lint, types, tests) or
+  against a named constitution / catalog rule.
 
-These findings are **blocking**. Their provenance is the deliverable plus the defect class, never
-an `AC-*`: requiring an acceptance criterion for them would oblige a reviewer who has just
-demonstrated a bug to pass it.
+These findings are **blocking**. Their provenance is the deliverable plus the defect class, never an
+`AC-*`: requiring an acceptance criterion for them would oblige a reviewer who has just demonstrated
+a bug to pass it.
 
-A finding is **reviewer-originated scope** only when satisfying it would add product behaviour or
-a quality bar that upstream SSOT does not contain and the changed artifacts do not already imply.
-"It would be better if the feature also did X" is scope. "The feature does not do what it says"
-is a defect.
+A finding is **reviewer-originated scope** only when satisfying it would add product behaviour or a
+quality bar that upstream SSOT does not contain and the changed artifacts do not already imply. "It
+would be better if the feature also did X" is scope. "The feature does not do what it says" is a
+defect.
 
 ### Provenance and routing
 
@@ -350,12 +333,12 @@ is a defect.
   false `Authored/edited under review` attestation do not merely mis-state the work — they claim
   work that was not done, or independence the reviewer did not have. `agents/qa-gatekeeper.md`
   rejects the first two outright and
-  `shared-skill-delegation-baseline.md#reviewer-response-template` forbids a `PASS` on the third,
-  so classifying them `record:*` would let an advisory-only review return `PASS` and release
-  `done` over the very evidence the gate exists to reject. They stay **blocking** as
-  `defect:code-quality` and MUST NOT be filed as `record:*`. `record:*` covers a record that is
-  honestly produced and merely wrong — a tier missing from an Evidence cell, a `Satisfied-by`
-  naming the wrong sibling row, an unlabelled round block.
+  `shared-skill-delegation-baseline.md#reviewer-response-template` forbids a `PASS` on the third, so
+  classifying them `record:*` would let an advisory-only review return `PASS` and release `done`
+  over the very evidence the gate exists to reject. They stay **blocking** as `defect:code-quality`
+  and MUST NOT be filed as `record:*`. `record:*` covers a record that is honestly produced and
+  merely wrong — a tier missing from an Evidence cell, a `Satisfied-by` naming the wrong sibling
+  row, an unlabelled round block.
 - `Traces to: none` is reviewer-originated scope. It is **drift**, and it is **not satisfiable
   downstream**: encoding it as production code plus a hard test assertion is the same violation as
   patching upstream SSOT, inverted. It MUST be recorded as `advisory`, MUST NOT be `blocking`, and
@@ -384,9 +367,9 @@ is a defect.
 
 ### The record-defect queue
 
-Making `record:*` advisory removes the round it used to force. It does not remove the defect, so
-the class is only honest if the defect lands somewhere with an owner and is consumed. That place is
-one queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
+Making `record:*` advisory removes the round it used to force. It does not remove the defect, so the
+class is only honest if the defect lands somewhere with an owner and is consumed. That place is one
+queue per spec, and it is defined by a destination, an owner, an entry shape and a drain.
 
 - **Where.** A `## Record defects` section in the evidence file the reviewing stage's **own
   completion contract** names. For a `/qfai-implement` review that is
@@ -430,10 +413,10 @@ one queue per spec, and it is defined by a destination, an owner, an entry shape
   individual row out of `done`, which is the whole point of the class.
 - **When the record cannot be repaired honestly.** Repair means writing what the run actually did,
   which needs the round's artifacts to still say what that was. Where they do not — nothing
-  reconciles the entry with any run — the finding was never a record defect: what is missing is
-  not a correct record of the work but any evidence the work happened, which is the integrity case
-  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path.
-  There is no third exit: an entry closes on a corrected record or on a blocking finding.
+  reconciles the entry with any run — the finding was never a record defect: what is missing is not
+  a correct record of the work but any evidence the work happened, which is the integrity case
+  above. Reclassify it as `defect:code-quality`, blocking, and take the ordinary REVISE path. There
+  is no third exit: an entry closes on a corrected record or on a blocking finding.
 - **Re-attest a repair in a pack of its own; never re-run it, and never edit a sealed one.** A
   defect inside a `Satisfied-by`, a round block or any other phase-authored field sits inside the
   exact bytes a reviewer's `Audited evidence hash` covers, and the completion gate recomputes that
@@ -444,79 +427,71 @@ one queue per spec, and it is defined by a destination, an owner, an entry shape
   and the queue entry's `<CODE>`.
 - **The re-attestation is a new review pack, and the pack it supersedes is left untouched.** A
   verdict lives in a `review-<timestamp>/` pack fixed by a `Review pack seal` the completion gate
-  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks
-  the seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
+  recomputes, so replacing that verdict's `Audited evidence hash` line where it is stored breaks the
+  seal by construction, and replacing only the evidence file's copy leaves the sealed reviewer
   response carrying a hash nothing agrees with. Write the re-attestation as its own
-  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash
-  it recorded — it was correct over the bytes it read — and its pack keeps recomputing. The
-  evidence entry records `Record re-attestation` beside the verdict it supersedes, with its own
-  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate
-  recomputes the superseding hash and both seals, which is what makes the re-attestation an
-  artifact a validator can see rather than an untraceable edit. No code runs, no row changes
-  status, and it spends no round — it opens none, so it is not a `Round N:` pack. The revision a
-  verdict names excludes `.qfai/evidence/**`, so by construction nothing outside the record moved.
-  **A repair that would move the revision is not a record repair**: it is a change to the
-  deliverable and takes the ordinary path. A repaired entry whose verdict carries no
-  re-attestation is still an open entry.
+  `review-<timestamp>/` pack, sealed by the same procedure. The superseded verdict keeps the hash it
+  recorded — it was correct over the bytes it read — and its pack keeps recomputing. The evidence
+  entry records `Record re-attestation` beside the verdict it supersedes, with its own
+  `Record re-attestation pack` and `Record re-attestation pack seal`; the completion gate recomputes
+  the superseding hash and both seals, which is what makes the re-attestation an artifact a
+  validator can see rather than an untraceable edit. No code runs, no row changes status, and it
+  spends no round — it opens none, so it is not a `Round N:` pack. The revision a verdict names
+  excludes `.qfai/evidence/**`, so by construction nothing outside the record moved. **A repair that
+  would move the revision is not a record repair**: it is a change to the deliverable and takes the
+  ordinary path. A repaired entry whose verdict carries no re-attestation is still an open entry.
 
 An unconsumed queue would make the class worse than what it replaced: the round is gone and the
 defect is gone with it. The drain is what pays for dropping the round.
 
 ### Which evidence is committed
 
-- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`),
-  run logs, reports. Reproducible by rerunning the owner skill; not committed.
-- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and
-  durable decision records (`.qfai/evidence/decisions/*.json`). They carry
-  user approval and cannot be regenerated, so they are committed. The managed
-  `.gitignore` block written by `npx qfai init` negates them after the ignore
-  lines for exactly this reason.
+- **Regenerable** — stage evidence (`.qfai/evidence/<stage>-<spec-id>.md`), run logs, reports.
+  Reproducible by rerunning the owner skill; not committed.
+- **Governance record** — Change Requests (`.qfai/decisions/CR-*.md`) and durable decision records
+  (`.qfai/evidence/decisions/*.json`). They carry user approval and cannot be regenerated, so they
+  are committed. The managed `.gitignore` block written by `npx qfai init` negates them after the
+  ignore lines for exactly this reason.
 
 ### Line endings in the artifacts under review
 
-Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and
-`npx qfai init` seeds a `.gitattributes` at the project root that keeps the
-paths QFAI owns — `.qfai/**`, `qfai.config.yaml`, `DESIGN.md` — that way. It
-sets no repository-wide rule on purpose: the rest of the tree keeps whatever
-line-ending policy the project already chose, so seeding the file never
+Every artifact `#core-rule` lists is shipped and maintained LF-normalised, and `npx qfai init` seeds
+a `.gitattributes` at the project root that keeps the paths QFAI owns — `.qfai/**`,
+`qfai.config.yaml`, `DESIGN.md` — that way. It sets no repository-wide rule on purpose: the rest of
+the tree keeps whatever line-ending policy the project already chose, so seeding the file never
 rewrites product code the framework does not own.
 
-Attributes do not reach backwards. A blob already committed as CRLF stays CRLF
-in the index no matter what the new file declares, so a repository that adopts
-QFAI after the fact migrates the protected paths once — `git add --renormalize
-.qfai` (and `qfai.config.yaml` / `DESIGN.md` if those were committed CRLF),
-recorded as its own commit. Skipping that step only defers the all-lines-changed
-diff to the day someone re-saves one of those files with LF endings.
+Attributes do not reach backwards. A blob already committed as CRLF stays CRLF in the index no
+matter what the new file declares, so a repository that adopts QFAI after the fact migrates the
+protected paths once — `git add --renormalize .qfai` (and `qfai.config.yaml` / `DESIGN.md` if those
+were committed CRLF), recorded as its own commit. Skipping that step only defers the
+all-lines-changed diff to the day someone re-saves one of those files with LF endings.
 
-That seed is create-only, so a project that already had a `.gitattributes`
-keeps its own and a whole-file rewrite on Windows can still flip a protected
-blob from LF to CRLF. Such a diff reads as "all lines changed" and is not
-evidence of drift on its own — re-read it with the revision range the detector
-itself uses, `git diff --ignore-cr-at-eol <baseBranch>..HEAD -- <path>`; a bare
-`git diff` compares the working tree against the index and will show nothing
-for a change that is already committed. An empty patch there means the change
-is EOL-only. `QFAI-DRIFT-001` reads the branch diff with `--ignore-cr-at-eol`
-too, so it does not report those paths and no Change Request is owed for them.
+That seed is create-only, so a project that already had a `.gitattributes` keeps its own and a
+whole-file rewrite on Windows can still flip a protected blob from LF to CRLF. Such a diff reads as
+"all lines changed" and is not evidence of drift on its own — re-read it with the revision range the
+detector itself uses, `git diff --ignore-cr-at-eol <baseBranch>..HEAD -- <path>`; a bare `git diff`
+compares the working tree against the index and will show nothing for a change that is already
+committed. An empty patch there means the change is EOL-only. `QFAI-DRIFT-001` reads the branch diff
+with `--ignore-cr-at-eol` too, so it does not report those paths and no Change Request is owed for
+them.
 
-Line endings that git hides are still real bytes on disk. A working-tree file
-saved as CRLF stages back to LF and shows no diff, but content hashes read the
-file as it lies, so a frozen `DESIGN.md` can fail its lock check while git
-calls it unchanged. Re-save that file with LF endings — do not re-freeze the
-lock to match the CRLF bytes.
+Line endings that git hides are still real bytes on disk. A working-tree file saved as CRLF stages
+back to LF and shows no diff, but content hashes read the file as it lies, so a frozen `DESIGN.md`
+can fail its lock check while git calls it unchanged. Re-save that file with LF endings — do not
+re-freeze the lock to match the CRLF bytes.
 
 ## Non-negotiable constraints
 
 - Downstream skills must not patch upstream SSOT directly. **This is detected.**
-  `npx qfai validate --profile tdd` — the completion gate `qfai-implement` names
-  — diffs the branch against `baseBranch` and emits `QFAI-DRIFT-001` (`error`)
-  for every changed file under `paths.contractsDir`, under `_policies/`, or
-  matching a protected spec-pack filename. A Change Request at `Status:
-approved` that **names the changed path** silences it; an `open` CR does not,
-  because an open CR authorises nothing. The check does not run in the `sdd`
-  profile: `/qfai-sdd` owns these files.
+  `npx qfai validate --profile tdd` — the completion gate `qfai-implement` names — diffs the branch
+  against `baseBranch` and emits `QFAI-DRIFT-001` (`error`) for every changed file under
+  `paths.contractsDir`, under `_policies/`, or matching a protected spec-pack filename. A Change
+  Request at `Status: approved` that **names the changed path** silences it; an `open` CR does not,
+  because an open CR authorises nothing. The check does not run in the `sdd` profile: `/qfai-sdd`
+  owns these files.
 - Downstream reviewers must not originate binding obligations that upstream SSOT does not contain.
-- If approval is not available, stay in STOP state **for that CR's blocked set**
-  and report blockers. Work outside every open CR's blocked set proceeds; an
-  unanswered decision is not a reason to stop what it does not touch. Report
-  each open CR with its age and its blocked set, so an unanswered CR surfaces as
-  a standing blocker rather than aging out of view.
+- If approval is not available, stay in STOP state **for that CR's blocked set** and report
+  blockers. Work outside every open CR's blocked set proceeds; an unanswered decision is not a
+  reason to stop what it does not touch. Report each open CR with its age and its blocked set, so an
+  unanswered CR surfaces as a standing blocker rather than aging out of view.
