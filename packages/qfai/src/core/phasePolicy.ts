@@ -1,7 +1,19 @@
 import type { Issue, ValidationProfile } from "./types.js";
 
+// `CI` is truthy-by-presence by convention, not equal to the literal
+// `"true"`: Vercel exports `CI=1`, `ci-info` (the de-facto npm convention)
+// treats any non-empty non-`"false"` value as CI, and a Makefile or a
+// devcontainer running `CI=1 npm run gate` produces the same string. An
+// exact `=== "true"` comparison reads those as "local" and lets CI-off
+// kill-switches fire the mutating path they exist to forbid.
+const CI_FALSY_VALUES = new Set(["", "false", "0"]);
+
 export function isCiEnvironment(env: NodeJS.ProcessEnv = process.env): boolean {
-  return env.CI === "true" || env.GITHUB_ACTIONS === "true";
+  const ci = env.CI;
+  if (ci !== undefined && !CI_FALSY_VALUES.has(ci.trim().toLowerCase())) {
+    return true;
+  }
+  return env.GITHUB_ACTIONS === "true";
 }
 
 // Profiles permitted to run inside CI. `full` and `verify` cover the standard
