@@ -56,6 +56,26 @@ const IMPL_AGENTS = CATALOG_AGENTS.filter((agent) => agent.kind === "worker").ma
 const ALL_AGENTS = CATALOG_AGENTS.map((agent) => agent.id);
 const EXPECTED_AGENT_COUNT = ALL_AGENTS.length;
 
+/**
+ * The canonical agent body: the `## Mission` heading *line* onward, searched
+ * past the frontmatter — the same rule `canonicalAgentBody`
+ * (src/core/validators/agentDefinition.ts) and `scripts/gen-agent-catalog.mjs`
+ * use. A plain `indexOf` matches the string anywhere, so a frontmatter
+ * description that merely mentions `## Mission` would drag the frontmatter into
+ * the expected body and fail these SSOT comparisons against a block the
+ * generator produced correctly. Returns undefined when no such heading exists.
+ */
+function canonicalMissionBody(markdown: string): string | undefined {
+  const content = markdown.replace(/\r\n/g, "\n");
+  let offset = 0;
+  if (content.startsWith("---\n")) {
+    const close = content.indexOf("\n---", "---\n".length - 1);
+    if (close >= 0) offset = close + 1;
+  }
+  const match = /^## Mission[ \t]*$/m.exec(content.slice(offset));
+  return match === null ? undefined : content.slice(offset + match.index);
+}
+
 function loadTomlFile(filePath: string): Record<string, unknown> {
   const parsed = parseTOML(readFileSync(filePath, "utf-8"));
   if (typeof parsed !== "object" || parsed === null || Array.isArray(parsed)) {
@@ -254,10 +274,11 @@ describe("TC-0003-0003: developer_instructions 必須セクション含有", () 
       const canonicalPath = join(CANONICAL_DIR, `${name}.md`);
       expect(existsSync(canonicalPath), `${name}: canonical MD not found`).toBe(true);
       const canonicalContent = readFileSync(canonicalPath, "utf-8");
-      // Extract content from ## Mission onward (skip H1 title)
-      const missionIdx = canonicalContent.indexOf("## Mission");
-      expect(missionIdx, `${name}: canonical MD has no ## Mission`).toBeGreaterThanOrEqual(0);
-      const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      // Extract content from the ## Mission heading line onward (skip
+      // frontmatter and H1 title)
+      const missionBody = canonicalMissionBody(canonicalContent);
+      expect(missionBody, `${name}: canonical MD has no ## Mission`).toBeDefined();
+      const canonicalBody = normalize(missionBody ?? "");
       expect(
         typeof data["developer_instructions"],
         `${name}: developer_instructions is not a string`,
@@ -300,9 +321,9 @@ describe("TC-0004-0026: agent-catalog.yml developer_instructions matches canonic
         true,
       );
       const canonicalContent = readFileSync(canonicalPath, "utf-8");
-      const missionIdx = canonicalContent.indexOf("## Mission");
-      expect(missionIdx, `${id}: canonical MD has no ## Mission section`).toBeGreaterThanOrEqual(0);
-      const canonicalBody = normalize(canonicalContent.slice(missionIdx));
+      const missionBody = canonicalMissionBody(canonicalContent);
+      expect(missionBody, `${id}: canonical MD has no ## Mission section`).toBeDefined();
+      const canonicalBody = normalize(missionBody ?? "");
       // Same pattern as `id`: expect throws on mismatch; the if-narrow
       // satisfies TS without adding reachable branches.
       expect(typeof di, `${id}: agent-catalog.yml developer_instructions is not a string`).toBe(
