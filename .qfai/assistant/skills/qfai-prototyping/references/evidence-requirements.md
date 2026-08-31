@@ -17,9 +17,8 @@ these `taskFidelity` keys with concrete values:
   four reachable states (default / hover / focused / disabled), with a
   pass/fail observation per state?
 
-The SSOT for this list lives at
-`packages/qfai/src/core/validators/taskFidelityKeywords.ts`
-(`TASK_FIDELITY_REQUIRED_KEYWORDS`). The validator (`QFAI-CRIT-009`),
+The SSOT for this list is the `TASK_FIDELITY_REQUIRED_KEYWORDS`
+constant shipped inside the QFAI package. The validator (`QFAI-CRIT-009`),
 the `--capture` template emitter, and this document all read from
 that constant so the keyword set cannot silently drift between the
 three surfaces.
