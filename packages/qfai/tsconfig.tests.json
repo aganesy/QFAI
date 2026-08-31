@@ -88,6 +88,7 @@
     "tests/scripts/eslintSuppressionCensus.test.ts",
     "tests/scripts/boundedRead.test.ts",
     "tests/unit/buildCommand.test.ts",
+    "tests/cli/doctorContractSurface.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",

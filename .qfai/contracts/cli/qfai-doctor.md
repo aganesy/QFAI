@@ -8,11 +8,13 @@
 - SSOT modules:
   - `packages/qfai/src/cli/commands/doctor.ts`
   - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration)
-  - `packages/qfai/src/core/doctor/` (the side-effecting remediations
-    reached only through `--clean` / `--autoremediate`:
-    `autoremediate.ts`, `cleanReviewPacks.ts`,
+  - `packages/qfai/src/core/doctor/` — the side-effecting remediations
+    reached only through `--clean` / `--autoremediate`
+    (`autoremediate.ts`, `cleanReviewPacks.ts`,
     `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
-    `staleTtl.ts`)
+    `staleTtl.ts`) plus the read-only comparison
+    `workflowsIntegrity.ts`, which backs the `workflows.integrity`
+    check documented below and writes nothing
   - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
     (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
     and the `getProbeOrder` candidate list)
@@ -354,10 +356,10 @@ deliberately leaving it that way — while contributing nothing to the severity.
 
 ### Non-goals for this check
 
-- It does not overwrite, recreate or delete anything. `qfai doctor` is
-  read-only, including under `--autoremediate`: refreshing a shipped workflow is
-  not an autoremediation, because the conflict policy for a hand-edited file is
-  undecided (`OQ-0021`).
+- It does not overwrite, recreate or delete anything. This check stays read-only
+  even under `--autoremediate`: refreshing a shipped workflow is not one of the
+  remediations enumerated under "Side effects (written)", because the conflict
+  policy for a hand-edited file is undecided (`OQ-0021`).
 - It does not distinguish "QFAI shipped a newer template" from "the adopter
   hand-edited it" **in its severity**. The provenance record makes the two
   distinguishable and `details` may carry the distinction, but both are reported
