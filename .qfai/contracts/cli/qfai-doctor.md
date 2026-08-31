@@ -7,8 +7,16 @@
 - Used-by: `/qfai-prototyping` (precondition check), CI lanes that gate on environment readiness
 - SSOT modules:
   - `packages/qfai/src/cli/commands/doctor.ts`
-  - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration;
-    single-file module — there is no `core/doctor/` directory)
+  - `packages/qfai/src/core/doctor.ts` (doctor probe orchestration)
+  - `packages/qfai/src/core/doctor/` — the side-effecting remediations
+    reached only through `--clean` / `--autoremediate`
+    (`autoremediate.ts`, `cleanReviewPacks.ts`,
+    `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
+    `staleTtl.ts`) plus two read-only checks that write nothing:
+    `workflowsIntegrity.ts`, which backs the `workflows.integrity`
+    check documented below, and `assetLineBudget.ts`, which owns the
+    per-file assistant asset line ceiling at runtime so a project
+    holding only the published package can still check it
   - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
     (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
     and the `getProbeOrder` candidate list)
@@ -20,23 +28,202 @@
 
 ## Public sub-commands
 
-### `qfai doctor [--profile <name>]`
+### `qfai doctor [--profile <name>] [--format <text|json>] [--out <path>] [--fail-on <error|warning|never>] [--clean] [--autoremediate] [--dry-run] [--yes]`
 
 Probes the active profile's required runtime preconditions and the
 skill / asset integrity surface. Returns a structured summary grouping
 findings into two buckets: "errors blocking the active profile" and
 "warnings advisory of drift" (per REQ-0122).
 
-Required inputs (read; never written):
+The probe itself is read-only. `--clean` and `--autoremediate` are the
+only paths that mutate the repository, and they run as pre-steps
+BEFORE the diagnostic build so the summary reports the
+post-remediation tree. Every path they write is enumerated under "Side
+effects (written)" below, alongside the one operator-named write
+`--out <path>` performs on any invocation.
+
+Inputs (read; the repository is never written from them — `--out`
+names a destination file, see its bullet):
 
 - `--profile <name>` — when passed, doctor scopes the probe to the
   named profile's required runtime preconditions (e.g.
   `prototyping` requires the Playwright launcher to be probeable).
+  A skill name (e.g. `qfai-prototyping`) instead scopes the probe to
+  that skill manifest's `runtimeDependencies`.
   When omitted, doctor runs the profile-agnostic checks only.
+- `--format <text|json>` — output shape. Defaults to `text`. Under
+  `json` and WITHOUT `--out`, stdout carries the JSON document alone
+  and every side-effect line is routed to stderr, so the stdout
+  channel stays parseable. With `--out`, the document leaves stdout
+  entirely — see the next bullet.
+- `--out <path>` — writes the rendered summary to `<path>` INSTEAD of
+  stdout, not in addition to it. The summary appears in the file
+  only; stdout carries the single plain-text status line
+  `doctor: wrote <absolute path>` under every `--format`. So
+  `qfai doctor --format json --out report.json | jq` reads a status
+  line rather than JSON — a consumer that wants the document reads
+  the file. This is an operator-named report destination, not a
+  repository mutation — but it IS a write, on every invocation and
+  under no flag: see "`--out <path>`" under "Side effects (written)".
+- `--fail-on <error|warning|never>` — selects the finding severity
+  that turns the exit code non-zero; see "Exit codes". `never` is
+  accepted and means "report, always exit 0" — the same outcome as
+  omitting the flag, spelled explicitly for a lane that wants the
+  intent recorded in the command line.
 - `qfai.config.yaml#prototyping.execution.browserTool` — accepted
   values during the deprecation window: `"playwright"` (canonical)
   OR `"playwright-cli"` (legacy, emits `D-DEPRECATED-PROBE`
   warning). After sunset, only `"playwright"` is accepted (REQ-0108).
+- `qfai.config.yaml#review.staleTtlDays` — the calendar-day TTL the
+  `--clean` archive decision uses. Defaults to 14 when unset.
+
+## Side effects (written)
+
+Doctor does not touch the repository unless `--clean` or
+`--autoremediate` is passed; the one write available without either
+is the report destination the operator names with `--out`.
+`--autoremediate` supersedes `--clean`: when both are present, only
+the autoremediate path runs (it archives review packs itself as one
+of its phases).
+
+### `--out <path>`
+
+| Path              | Write                 | Condition         |
+| ----------------- | --------------------- | ----------------- |
+| `<path>`          | created / overwritten | `--out` is passed |
+| `dirname(<path>)` | created recursively   | it does not exist |
+
+Passed alone — no `--clean`, no `--autoremediate` — `--out` still
+writes: doctor resolves the path against the process CWD, creates the
+parent directories it needs, and writes the rendered summary there.
+`--dry-run` does not suppress it; it governs the remediations, not the
+report. This is the operator's own destination rather than a
+repository mutation, which is why it is not part of the remediation
+tables below, but a caller reasoning about what a doctor run touches
+counts it.
+
+### `--clean`
+
+Archives TTL-expired review packs — moves, never deletes.
+
+| Path                        | Write              | Condition                                   |
+| --------------------------- | ------------------ | ------------------------------------------- |
+| `.qfai/review/review-<ts>/` | renamed (moved)    | pack mtime older than `review.staleTtlDays` |
+| `.qfai/review/_archive/`    | created if missing | at least one pack is archive-eligible       |
+
+`.qfai/review/_archive/` is itself skipped while enumerating packs, so
+a re-run is a no-op. Under `--dry-run` the plan is reported (`would
+move -> _archive/<pack>`) and no rename is issued.
+
+### `--autoremediate`
+
+Runs install + clean + config-fill as one orchestrated pass.
+
+| Path                                    | Write                              | Condition                                                                                                        |
+| --------------------------------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| `<root>/.gitignore`                     | managed block rewritten            | the managed block is missing or stale (see below); never in a detected CI environment                            |
+| `qfai.config.yaml`                      | appended                           | a default-keyed field (`review:`) is absent from the PARSED document; user-authored values are never overwritten |
+| `.qfai/review/review-<ts>/`             | renamed (moved)                    | same TTL rule as `--clean`                                                                                       |
+| `.qfai/review/.legacy-packs`            | written (first run only)           | packs predating `revision_form` exist and no record has been taken yet                                           |
+| `.qfai/review/review-<ts>/summary.json` | `revision_form: "legacy"` added    | the pack is named by `.legacy-packs` and declares no form of its own                                             |
+| `node_modules/`                         | `npm install <name>`               | `--profile <skill>` names a manifest with unmet `runtimeDependencies`                                            |
+| `package.json` + `package-lock.json`    | updated by that same `npm install` | same condition as the row above                                                                                  |
+
+The `.gitignore` rewrite is checked, not unconditional. It is
+attempted before the orchestrator on every non-CI `--autoremediate`
+run, but the helper returns early — writing nothing — when the
+existing managed block already carries the marker, every required
+governance negation, those negations outranking any later matching
+ignore line, and no retired legacy line. So a second
+`--autoremediate` on an already-migrated repository leaves
+`.gitignore` byte-identical.
+
+Three of these rows land on version-controlled files, so an
+`--autoremediate` run that has something to do leaves a diff. A
+repeat run on a repository whose block is already current, whose
+dependencies are installed, whose config carries every default key
+and whose packs are all inside the TTL writes nothing at all and
+leaves no diff — the whole pass is idempotent:
+
+- The install runs `npm install <name>` WITHOUT `--no-save`, so under
+  the default npm settings (`save=true`, `package-lock=true`) it
+  records the dependency in `package.json` and rewrites
+  `package-lock.json` — not `node_modules/` alone.
+- The legacy-pack migration writes both halves of one fact: the
+  `.legacy-packs` record AND a `revision_form: "legacy"` field in
+  each named pack's `summary.json`. A pack that already declares a
+  form is never reclassified.
+
+#### Install scripts are an UNBOUNDED side effect
+
+The install runs `npm install <name>` without `--ignore-scripts`, so
+npm executes the target package's (and its dependencies')
+`preinstall` / `install` / `postinstall` / `prepare` lifecycle
+scripts. Those scripts are arbitrary code running with the operator's
+own privileges: they can write anywhere the operator can, and nothing
+in this contract bounds them to the table above. The declared
+boundary covers the paths DOCTOR writes; it does not and cannot cover
+what a third-party package's install hooks do.
+
+This is deliberate rather than an oversight — a runtimeDependency
+like `playwright` is unusable without its `postinstall` — but it is
+the reason `--autoremediate --profile <skill>` is an
+operator-confirmed action and not something to schedule unattended.
+An operator who needs the enumerated set to be the whole story
+installs the dependency themselves with `npm install <name>
+--ignore-scripts` and re-runs doctor without `--autoremediate`.
+Restricting doctor's own install to `--ignore-scripts` would be a
+contract change in the other direction (it silently produces
+half-installed packages), so it is not done implicitly.
+
+Presence of the `review:` config key is decided by PARSING the YAML
+document, not by matching raw text, so a quoted or spaced spelling
+(`"review":`, `review :`) counts as present and is left untouched. A
+`qfai.config.yaml` that does not parse as a YAML mapping is not
+appended to at all; doctor reports the skip.
+
+Without `--profile <skill>` there is no manifest to probe, so the
+install phase is structurally skipped and doctor says so explicitly.
+
+### `--dry-run` / `--yes` interaction
+
+- `--dry-run` applies to both `--clean` and `--autoremediate`: the
+  plan is reported in the future tense (`would run` / `would fill` /
+  `would archive` / `would move -> _archive/<pack>`) and no
+  filesystem write is issued. The archive count a dry-run prints is
+  the count a live run WOULD move; it never reads as already moved.
+- The plan is DECIDED, not assumed. A dry-run runs every read-only
+  check the live pass runs and reports only the changes that pass
+  would actually make. For the config-fill that means parsing
+  `qfai.config.yaml` and naming the missing fields
+  (`would fill default-keyed config fields: review`); a config that
+  already declares the key previews as
+  `config-fill not needed, default-keyed fields present`, and one
+  that is not a parseable mapping previews with the same
+  `skipped config-fill` line the live run emits. A `would` line is
+  therefore a commitment: if the preview names no change, the live
+  run makes none.
+- `--yes` skips the interactive confirmation that `--autoremediate`
+  REQUIRES by default. That confirmation is a mandatory safety gate
+  of this contract (spec-0006 REQ-0156 / BR-0006-0014): without
+  `--yes`, `--autoremediate` must not install dependencies or write
+  tracked files until the operator confirms.
+  **Known implementation deviation:** the shipped binary is
+  non-interactive and never prompts, so today an `--autoremediate`
+  run proceeds as though `--yes` had been passed. This contract does
+  NOT ratify that; the gate stands as required and the binary is in
+  breach of it. Until the prompt lands, treat every
+  `--autoremediate` invocation as unattended and preview it with
+  `--dry-run` first.
+- A standard CI environment disables `--autoremediate` entirely
+  (AC-0006-0018): doctor emits `autoremediate disabled in CI`, skips
+  the `.gitignore` rewrite and every remediation, and returns 0
+  without building the diagnostic. `--clean` is not CI-suppressed.
+  Detection is the repo-wide `isCiEnvironment` predicate — any `CI`
+  value that is not `""`, `false` or `0` (trimmed, case-insensitively)
+  OR `GITHUB_ACTIONS=true`. The truthy-by-presence spellings (`CI=1`,
+  `CI=yes`) are therefore INSIDE the guarantee, not outside it;
+  `CI=false` and `CI=0` read as local and do remediate.
 
 ## Playwright probe order (`--profile prototyping`)
 
@@ -172,10 +359,10 @@ deliberately leaving it that way — while contributing nothing to the severity.
 
 ### Non-goals for this check
 
-- It does not overwrite, recreate or delete anything. `qfai doctor` is
-  read-only, including under `--autoremediate`: refreshing a shipped workflow is
-  not an autoremediation, because the conflict policy for a hand-edited file is
-  undecided (`OQ-0021`).
+- It does not overwrite, recreate or delete anything. This check stays read-only
+  even under `--autoremediate`: refreshing a shipped workflow is not one of the
+  remediations enumerated under "Side effects (written)", because the conflict
+  policy for a hand-edited file is undecided (`OQ-0021`).
 - It does not distinguish "QFAI shipped a newer template" from "the adopter
   hand-edited it" **in its severity**. The provenance record makes the two
   distinguishable and `details` may carry the distinction, but both are reported
@@ -225,12 +412,39 @@ Findings that surface drift without blocking the profile. Examples:
 | 0    | All probes for the active profile passed; warnings (if any) are advisory only.                                                                              |
 | 1    | At least one finding in the "errors blocking the active profile" bucket. The doctor summary names every blocking finding and the recovery hint per finding. |
 
+The non-zero row is gated on `--fail-on`: with `--fail-on error` the
+"errors" bucket being non-empty returns 1, and with `--fail-on
+warning` a non-empty "warnings" bucket does too. `--fail-on never` is
+the third accepted value; it is dropped before reaching the doctor
+run, so it behaves exactly like omitting the flag. Without
+`--fail-on` — or with `never` — doctor reports its findings and
+returns 0; the summary is the signal, not the exit code.
+
 ## Non-goals
 
-- `qfai doctor` does NOT attempt repairs. It is read-only.
-- `qfai doctor` does NOT trigger `playwright install` or any other
-  install command. Install hints are emitted as text; the operator
-  decides whether to act.
+- `qfai doctor` is read-only BY DEFAULT and does NOT attempt repairs
+  on its own. Repairs happen only when the operator opts in with
+  `--clean` or `--autoremediate`, and the paths DOCTOR ITSELF writes
+  are bounded by those enumerated under "Side effects (written)"
+  (plus the operator-named `--out` destination). Widening that set is
+  a contract change. The bound stops at doctor's own writes: the
+  `npm install <name>` the autoremediate install phase shells out to
+  runs the target package's lifecycle scripts, whose writes are
+  unbounded — see "Install scripts are an UNBOUNDED side effect".
+- `qfai doctor` does NOT delete anything. `--clean` renames stale
+  review packs into `_archive/`; no path is removed on any flag.
+- `qfai doctor` does NOT remediate in a detected CI environment
+  (any truthy `CI` value, or `GITHUB_ACTIONS=true`): that disables
+  `--autoremediate` (AC-0006-0018).
+- `qfai doctor` does NOT trigger `playwright install` on any path,
+  and does NOT run any install command on the probe path. Install
+  hints are emitted as text; the operator decides whether to act. The
+  one exception is `--autoremediate --profile <skill>`, which runs
+  `npm install <name>` for that skill manifest's unmet
+  `runtimeDependencies` — and that install, having no `--no-save`,
+  updates `package.json` / `package-lock.json` as well. The install
+  list comes from that manifest, never from the Playwright launcher
+  probe's failed candidates.
 - `qfai doctor` does NOT probe network reachability of any target
   URL. Network probes are out of scope; they belong to the
   profile-specific gate (e.g. iterate's cycle-0 target-url
