@@ -185,6 +185,15 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // keeps its size. This is the row that reddens if the prose deliverable
     // quietly became a validator.
     //
+    // `QFAI-ATDD-001` is absent by retirement, not by accident. It was the
+    // ATDD coverage-ledger validator, which fired on the *absence* of
+    // `<spec-dir>/atdd/coverage-ledger.md` — a file nothing produced — and was
+    // removed with `src/core/validators/atddLedger.ts`. This baseline is what
+    // the retirement has to move: it reads the codes out of `src/**`, so
+    // leaving the code listed here would assert a declaration the tree no
+    // longer holds. `validators-are-wired.test.ts` holds the row that keeps it
+    // retired.
+    //
     // `QFAI-ATDD-118` is in the baseline because a separate change added it
     // deliberately, with its own tests: it is the `info` finding that reports a
     // `US-*` deferred out of the current slice by `- x-qfai-status: planned`
@@ -192,7 +201,6 @@ describe("TC-0008-0017 (TDD-0017): the guidance grows no vocabulary", () => {
     // correct response to a code someone meant to add; the row still reddens
     // for one nobody declared.
     expect(await atddFindingCodes()).toEqual([
-      "QFAI-ATDD-001",
       "QFAI-ATDD-101",
       "QFAI-ATDD-102",
       "QFAI-ATDD-103",
