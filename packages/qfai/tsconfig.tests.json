@@ -53,6 +53,7 @@
     "tests/helpers/workflowsIntegrityFixtures.ts",
     "tests/integration/atddCredentialReuseGuidance.test.ts",
     "tests/integration/cliStartupCost.test.ts",
+    "tests/integration/contractDeferralNotes.test.ts",
     "tests/integration/scripts/checkAtddAnnotationLedger.test.ts",
     "tests/integration/scripts/checkPublishDryRun.test.ts",
     "tests/integration/shippedWorkflowDetection.test.ts",
