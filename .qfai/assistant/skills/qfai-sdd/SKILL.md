@@ -372,7 +372,7 @@ place of the `<pack-id>#<discussion-id>` one; the form is defined in
 The specs and discussion paths above are defaults: when `qfai.config.yaml` overrides
 `paths.specsDir` or `paths.discussionDir`, the check resolves those first. The evidence path is not
 one of them — `.qfai/evidence/` is canonical and stays put even under a `paths.discussionDir`
-override, because every writer (`qfai init`, prototyping, audit log) uses it. Writing the evidence
+override, because every writer (`npx qfai init`, prototyping, audit log) uses it. Writing the evidence
 beside a relocated discussion directory puts it where nothing looks, leaving `QFAI-IMPLITE-001`
 unclearable.
 
