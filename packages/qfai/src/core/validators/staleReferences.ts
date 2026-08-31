@@ -2,7 +2,7 @@
  * Stale-reference validator for `qfai validate --report`
  * (AC-0015-0021, REQ-0173).
  *
- * After CHG-006 implementation lands, the shipped reference docs
+ * After the second-wave implementation lands, the shipped reference docs
  * (`references/iteration-loop.md`, `references/generator-prompt.md`,
  * `references/handoff.md`, `references/evidence-requirements.md`) and
  * each affected `SKILL.md` MUST be rewritten to match the chosen
@@ -57,7 +57,7 @@ export type StaleReferenceEntry = {
 export const STALE_REFERENCES: readonly StaleReferenceEntry[] = [
   {
     // Pre-implementation prose pinned `session-handoff.yaml` as the
-    // canonical cross-skill handoff name. After CHG-006 the canonical
+    // canonical cross-skill handoff name. After the second wave the canonical
     // file is `.qfai/handoff.yaml`; `session-handoff.yaml` is accepted
     // only via `qfai handoff upgrade` during the deprecation window.
     // The before-token is precise (the legacy file name) and would not
