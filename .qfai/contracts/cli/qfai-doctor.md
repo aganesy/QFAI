@@ -12,9 +12,11 @@
     reached only through `--clean` / `--autoremediate`
     (`autoremediate.ts`, `cleanReviewPacks.ts`,
     `migrateLegacyReviewPacks.ts`, `skillManifestProbe.ts`,
-    `staleTtl.ts`) plus the read-only comparison
+    `staleTtl.ts`) plus two read-only checks that write nothing:
     `workflowsIntegrity.ts`, which backs the `workflows.integrity`
-    check documented below and writes nothing
+    check documented below, and `assetLineBudget.ts`, which owns the
+    per-file assistant asset line ceiling at runtime so a project
+    holding only the published package can still check it
   - `packages/qfai/src/core/prototyping/playwrightLauncher.ts`
     (Playwright launcher candidate probe via `resolvePlaywrightLauncher`
     and the `getProbeOrder` candidate list)
