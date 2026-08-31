@@ -110,3 +110,13 @@ Given the first required delegation fails, when the orchestrator handles the fai
 - Given the OQ-0152..0157 outcomes are implemented,
 - When the implementing PR lands,
 - Then `references/iteration-loop.md`, `references/generator-prompt.md`, `references/handoff.md`, `references/evidence-requirements.md`, and each affected SKILL.md MUST be rewritten in the same atomic PR to match the chosen implementations, and `qfai validate --report` MUST verify zero remaining stale references at HEAD after sunset (warnings during the deprecation window). spec-0015 owns this cross-skill documentation-governance obligation.
+
+## AC-0015-0022: Reviewer-Gate ingests `R-WORKFLOW-HYGIENE-DRIFT` and `R-SHIPPED-WORKFLOW-SHAPE-DRIFT`
+
+- US-Refs: US-0015-0016
+- Given the workflow-hygiene lane (owned by spec-0017) reports a rule violation on a pull request, in either QFAI's own workflows or the shipped template tree,
+- When the Reviewer Gate processes that signal,
+- Then it surfaces `R-WORKFLOW-HYGIENE-DRIFT` (own or shipped workflow rule violation) or `R-SHIPPED-WORKFLOW-SHAPE-DRIFT` (declared shape divergence) naming the offending file, job and rule name as the lane reported them.
+- And membership of the closed `JUSTIFICATION_CATALOG` set is decided by **severity class**, never by which component emits the code: the catalog is the closed error-class mandatory-justification set and already holds script- and probe-driven members (`R-PACK-LOCATION-DRIFT`, emitted only by a repository lint script; `R-SKILL-MANIFEST-DRIFT`), while what sits outside it is warning-class advisory-only auxiliary signal such as `R-AUTOPILOT-POLICY-WIDENED` — whose own sibling `R-AUTOPILOT-POLICY-MISSING`, same emitter, is a member.
+- And both new codes are declared lint-failure codes, i.e. error class, so by that test they **belong in** the catalog on the `R-PACK-LOCATION-DRIFT` precedent. Registering them extends a closed set and MUST move in lockstep with the reviewer SSOTs, so registration is deliberately deferred rather than denied (DR-0015-0006 / OQ-0015-0001).
+- And until that lockstep change lands, the gate MUST ingest both codes without demanding a `justification:`. That handling is a recorded **temporary divergence** from the membership test, scoped to exactly these two codes; it is NOT a principle, and no further code may be exempted by appealing to it.
