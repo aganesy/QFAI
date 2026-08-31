@@ -79,12 +79,20 @@ type StubDialect = {
    */
   label?: (match: RegExpMatchArray) => string;
   /**
-   * Rule code + severity of one match. Defaults to {@link STUB_ERROR}, which is
-   * what every skip-shaped dialect carries. Only the JS dialect overrides it,
-   * to route its `.skip` form to the waivable warning rule — see the module
-   * docstring.
+   * Whether one match is the `.skip` form rather than the stub proper.
+   * Defaults to `false`, which is what every skip-shaped dialect wants: their
+   * construct is the stub. Only the JS dialect overrides it, because only it
+   * matches both tokens — see the module docstring for why the `.skip` half is
+   * a separate rule.
+   *
+   * The predicate answers *which construct this is*; the rule code and the
+   * severity it carries are chosen at the emission below. Returning the pair
+   * from here instead put the code behind a value no static reader could
+   * follow, and `tests/core/issueCodeUniqueness.test.ts` — which asks that
+   * every error-capable code have a stated expected state — stopped seeing
+   * `QFAI-TEST-001` at all.
    */
-  grade?: (match: RegExpMatchArray, skippedTestSeverity: IssueSeverity) => StubGrade;
+  isSkip?: (match: RegExpMatchArray) => boolean;
   /**
    * Whether one construct of this dialect may be written across a line break.
    * Defaults to `false`, and {@link collectStubIssues} enforces it by dropping
@@ -118,36 +126,20 @@ type StubDialect = {
   mask?: (content: string) => string;
 };
 
-/** The rule a matched construct is filed under, with its severity. */
-type StubGrade = {
-  code: "QFAI-TEST-001" | "QFAI-TEST-003";
-  severity: IssueSeverity;
-};
-
-const STUB_ERROR: StubGrade = { code: "QFAI-TEST-001", severity: "error" };
-
 /** The release `QFAI-TEST-003` stops being a warning at. */
 const SKIPPED_TEST_PROMOTION = RULE_PROMOTIONS.testSkippedSuite.promoteAt;
 
 /**
- * The `.skip` grade, with the severity the promotion window decides.
+ * The sentence a `QFAI-TEST-003` finding carries while its window is open.
  *
- * The severity was the literal `"warning"` the module docstring argues for,
- * which is the right severity *today* and never becomes anything else. P7 wants
- * the same soft landing said once, in a place a release can move: a repository
- * that has been parking suites since before this code existed meets its whole
- * backlog on upgrade, so the finding is a warning until the pinned release and
- * an error from there — and it says so, because `--fail-on error` passing is
- * the only reason an operator would not look.
+ * The severity behind it was the literal `"warning"` the module docstring
+ * argues for, which is the right severity *today* and never becomes anything
+ * else. P7 wants the same soft landing said once, in a place a release can
+ * move: a repository that has been parking suites since before this code
+ * existed meets its whole backlog on upgrade, so the finding is a warning until
+ * the pinned release and an error from there — and it says so, because
+ * `--fail-on error` passing is the only reason an operator would not look.
  */
-function skippedTestGrade(skippedTestSeverity: IssueSeverity): StubGrade {
-  return {
-    code: "QFAI-TEST-003",
-    severity: skippedTestSeverity,
-  };
-}
-
-/** The sentence a `QFAI-TEST-003` finding carries while its window is open. */
 function skippedTestWindowNote(severity: IssueSeverity): string {
   return severity === "warning"
     ? ` Reported as a warning until the ${SKIPPED_TEST_PROMOTION} release, then an error.`
@@ -203,8 +195,7 @@ const STUB_DIALECTS: readonly StubDialect[] = [
     // grouping key on, so the vocabulary stays the six root×token spellings
     // instead of fragmenting once per modifier combination.
     label: (match) => `${match[1]}.${match[2]}`,
-    grade: (match, skippedTestSeverity) =>
-      match[2] === "skip" ? skippedTestGrade(skippedTestSeverity) : STUB_ERROR,
+    isSkip: (match) => match[2] === "skip",
     // The member chain is the one construct here a formatter may break, and a
     // comment or literal is the one place the construct's text appears without
     // a test being parked. Both opt-ins are the JS dialect's alone.
@@ -226,51 +217,69 @@ const STUB_DIALECTS: readonly StubDialect[] = [
   { extensions: [".cs"], pattern: /\[Ignore\b|\bSkip\s*=\s*"/g, runner: ".NET test" },
 ];
 
-/** The finding for one matched construct, worded for the rule it is filed under. */
+/**
+ * The finding for one matched construct, worded for the rule it is filed under.
+ *
+ * Two `issue(...)` calls rather than one over a computed code and severity.
+ * Both are read statically: `tests/core/issueCodeUniqueness.test.ts` asks that
+ * every error-capable code state what a clean run asserts, and
+ * `tests/core/sunsetLedger.test.ts` asks that a code with a promotion window
+ * take its severity from that pin rather than from a literal beside the call.
+ * Neither can follow a code carried in a value, and a rule that is invisible to
+ * the ratchet is one nothing holds to either contract.
+ */
 function stubIssue(
   relFile: string,
   dialect: StubDialect,
   matchedKind: string,
-  grade: StubGrade,
   lineNumber: number,
+  isSkip: boolean,
+  skippedTestSeverity: IssueSeverity,
 ): Issue {
-  const isSkip = grade.code === "QFAI-TEST-003";
+  const where = `${matchedKind} at ${relFile}:${lineNumber}`;
   // Code follows the QFAI-<RULE-###> convention so waivers.ts:resolveRuleKeys
   // (^QFAI-([A-Z]+-\d{3})$) can match it; project-scoped waivers depend on
   // this. file is kept as the bare repo path so emitGitHub / waiver path
   // matchers (matchFindingPath in waivers.ts) work correctly; the line
   // number is carried in `loc.line`.
-  const found = issue(
-    grade.code,
-    isSkip
-      ? `Skipped test found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
+  const found = isSkip
+    ? issue(
+        "QFAI-TEST-003",
+        `Skipped test found: ${where}. ` +
           `A skipped test is silent in ${dialect.runner} and rots as missed work. ` +
           `Drop the skip modifier to put it back in the run.` +
-          skippedTestWindowNote(grade.severity)
-      : `Test stub found: ${matchedKind} at ${relFile}:${lineNumber}. ` +
-          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
-          `Implement the body or delete the stub.`,
-    grade.severity,
-    relFile,
-    "validation.testStrategy.forbidTestTodoStubs",
-    [matchedKind],
-    "canonical",
-    // A `.skip` keeps its body, so "delete the stub" is the wrong first
-    // move here: followed literally it throws away a working test. The
-    // normal fix is to remove the modifier; the waiver is for the case
-    // where the suite is parked on purpose.
-    isSkip
-      ? "Remove the skip modifier so the test runs again — restore " +
+          skippedTestWindowNote(skippedTestSeverity),
+        skippedTestSeverity,
+        relFile,
+        "validation.testStrategy.forbidTestTodoStubs",
+        [matchedKind],
+        "canonical",
+        // A `.skip` keeps its body, so "delete the stub" is the wrong first
+        // move here: followed literally it throws away a working test. The
+        // normal fix is to remove the modifier; the waiver is for the case
+        // where the suite is parked on purpose.
+        "Remove the skip modifier so the test runs again — restore " +
           "`it` / `test` / `describe`, implementing the body first if it is " +
           "still empty. Do not delete a test that already has one. If the " +
           "suite is parked deliberately, waive `QFAI-TEST-003` per path in " +
           ".qfai/waivers.yml; setting " +
           "`validation.testStrategy.forbidTestTodoStubs: false` in " +
-          "qfai.config.yaml turns the whole check off instead."
-      : "Implement the test body, or delete the stub entirely. " +
+          "qfai.config.yaml turns the whole check off instead.",
+      )
+    : issue(
+        "QFAI-TEST-001",
+        `Test stub found: ${where}. ` +
+          `Stubs are silent in ${dialect.runner} and rot as missed work. ` +
+          `Implement the body or delete the stub.`,
+        "error",
+        relFile,
+        "validation.testStrategy.forbidTestTodoStubs",
+        [matchedKind],
+        "canonical",
+        "Implement the test body, or delete the stub entirely. " +
           "If you need to temporarily opt out of this check, set " +
           "`validation.testStrategy.forbidTestTodoStubs: false` in qfai.config.yaml.",
-  );
+      );
   found.loc = { line: lineNumber };
   return found;
 }
@@ -322,8 +331,8 @@ function collectStubIssues(
     // The whitespace a fallback label carries can now include the newline the
     // match spanned, and `refs` / the message are single-line surfaces.
     const matchedKind = dialect.label ? dialect.label(match) : match[0].trim().replace(/\s+/g, " ");
-    const grade = dialect.grade ? dialect.grade(match, skippedTestSeverity) : STUB_ERROR;
-    issues.push(stubIssue(relFile, dialect, matchedKind, grade, lineNumber));
+    const isSkip = dialect.isSkip?.(match) === true;
+    issues.push(stubIssue(relFile, dialect, matchedKind, lineNumber, isSkip, skippedTestSeverity));
   }
   return issues;
 }
