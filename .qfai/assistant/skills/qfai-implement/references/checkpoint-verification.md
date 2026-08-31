@@ -107,7 +107,7 @@ and nowhere else**, in one branch per boundary:
   obligation the ledger does not carry, and rows are upstream SSOT: the carve-out this skill holds
   is the `Status` / `DR-ID` / `Evidence` cells only, and adding, removing or re-scoping a row takes
   the drift path (`constitution/drift-protocol.md#allowed-exceptions-minimal-whitelist`). Raise it
-  per `#when-drift-is-detected` — STOP, Change Request, owner rerun — and resume on the approved
+  per `constitution/drift-protocol.md#when-drift-is-detected` — STOP, Change Request, owner rerun — and resume on the approved
   reset (`change-request-reset.md`), then work the ledger back to terminal.
   Spec-level completion is not declared until it passes, and the stale-PASS rule below binds
   this repair too.
