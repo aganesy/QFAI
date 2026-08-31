@@ -85,6 +85,15 @@ entry's phase-authored fields: the revision excludes `.qfai/evidence/**`, so
 this is the only thing that tells a verdict passed on the evidence as read from
 one passed on evidence edited afterwards.
 
+A verdict carrying a `Record re-attestation` is compared against **that** hash
+and not the superseded original — a record repair moved the bytes the original
+read, by design — and the re-attestation's `Record re-attestation pack seal` is
+recomputed here beside the round's `Review pack seal`, each from the pack it
+names. The re-attestation is written as a pack of its own for exactly this
+reason: neither seal is ever edited, so a repaired record stays checkable
+rather than becoming an untraceable rewrite of a sealed pack
+(`../../../constitution/drift-protocol.md#the-record-defect-queue`).
+
 ## The item 10 checks written elsewhere
 
 These are item 10's as much as the rules above, and they are normative where

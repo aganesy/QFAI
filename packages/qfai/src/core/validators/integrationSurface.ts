@@ -5,8 +5,9 @@ import { access, lstat, open, readdir, readlink, realpath, stat } from "node:fs/
 import path from "node:path";
 
 import { getInitAssetsDir } from "../../shared/assets.js";
+import { ASSISTANT_README_SEGMENTS, hasInitMarkerSignature } from "../paths/assistantPaths.js";
 import type { Issue } from "../types.js";
-import { issue } from "./utils.js";
+import { isInside, issue } from "./utils.js";
 
 /**
  * Skill wrapper directories `qfai init` fills with symlinks, and the agent
@@ -64,37 +65,6 @@ function isMissing(error: unknown): boolean {
 }
 
 /**
- * Files `qfai init` writes and never removes, used as proof it ran.
- *
- * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
- * is enough: a project with any of the integration surfaces has run init.
- *
- * **Known gap.** These are create-only, so a project that already had a file at
- * one of those paths keeps it and init writes no marker there. If it later has
- * every wrapper deleted as well, this rule reads it as never initialised. A
- * marker init always owns would close it, which is a change to what init
- * writes rather than to what this reads.
- */
-/**
- * The line every one of those READMEs carries.
- *
- * `.agents/` and `.github/agents/` are conventional directories a project can
- * have for its own reasons, and a `README.md` in one of them is not evidence of
- * anything. Requiring the sentence `qfai init` writes makes the marker QFAI's:
- * a project that never ran it is not told that all six surfaces are missing.
- */
-const INIT_MARKER_SIGNATURE = ".qfai/assistant/";
-
-/**
- * The rest of the signature: a title `qfai init` writes and the section every
- * one of these READMEs has.
- *
- * One mention of `.qfai/assistant/` is not a signature — a project documenting
- * where it keeps its own QFAI tree writes that sentence, and one of those made a
- * checkout that never ran init read as initialised, with all six surfaces then
- * reported missing. All three parts together are init's.
- */
-/**
  * Ceiling on a file this rule will read looking for the init signature.
  *
  * Generous against what init writes — a few hundred bytes — and small enough
@@ -113,9 +83,12 @@ const OPEN_READ_FLAGS =
     ? constants.O_RDONLY | constants.O_NONBLOCK
     : constants.O_RDONLY;
 
-const INIT_MARKER_TITLE = /^# QFAI /;
-const INIT_MARKER_SECTION = "## Canonical entrypoint";
-
+/**
+ * Files `qfai init` writes and never removes, used as proof it ran.
+ *
+ * Kept in step with the README set in `cli/commands/init.ts`. Any one of them
+ * is enough: a project with any of the integration surfaces has run init.
+ */
 const INIT_MARKERS: readonly (readonly string[])[] = [
   // The one marker that cannot be pre-empted. The four below sit in
   // conventional directories, and `qfai init` writes a README there only when
@@ -123,10 +96,12 @@ const INIT_MARKERS: readonly (readonly string[])[] = [
   // init and got no marker at all, and deleting every wrapper afterwards left
   // the surface reading as never initialised: nothing checked, every profile
   // passing, and the assistant loading nothing. This one is inside `.qfai/`,
-  // which init owns outright and creates, so there is nothing there to preserve
-  // and no project file to collide with. It also outlives every integration
+  // which init owns outright and creates, and init rewrites it whenever it does
+  // not carry the signature — so a project initialised before this README
+  // carried one gets the marker on its next run, instead of keeping an older
+  // README that answers nothing forever. It also outlives every integration
   // directory, which is the state the evidence is needed for.
-  [".qfai", "assistant", "README.md"],
+  [...ASSISTANT_README_SEGMENTS],
   [".agents", "README.md"],
   [".codex", "README.md"],
   [".claude", "agents", "README.md"],
@@ -484,9 +459,14 @@ async function canonicalLinkProblem(
  * The roster is the **current** one, so a wrapper left by a shipped document
  * since removed or renamed is enumerated by nobody: it still resolves, and the
  * assistant goes on loading retired instructions while every profile reports a
- * clean surface. `pruneStaleQfaiWrappers` does not reach it either — it matches
- * a `qfai-` prefix, and `web-research` is the standing proof that a shipped
- * name need not have one.
+ * clean surface. `pruneStaleQfaiWrappers` reaches only part of it: the agent
+ * dirs are pruned under `--force` by resolved target, and only when that target
+ * is a **direct child** of `.qfai/assistant/agents/`, while the skill dirs are
+ * still matched by a `qfai-` prefix — and `web-research` is the standing proof
+ * that a shipped name need not have one. This rule reports a target landing
+ * anywhere under `.qfai/assistant/`, so a nested or cross-kind agent target is
+ * reported and never pruned; the remedy names that gap rather than promising a
+ * repair that will not happen.
  *
  * Identified by what init writes rather than by the name: an entry inside an
  * integration directory whose target lands under `.qfai/assistant/`. A wrapper
@@ -721,12 +701,6 @@ async function canonicalDamage(
   return null;
 }
 
-/** Whether `candidate` is `base` itself or sits under it. */
-function isInside(base: string, candidate: string): boolean {
-  const relative = path.relative(base, candidate);
-  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
-}
-
 /** The message for a path that is damaged rather than absent or usable. */
 function describeDamage(state: PathState, subject: string): string {
   switch (state.kind) {
@@ -849,12 +823,7 @@ async function hasInitSignature(filePath: string): Promise<boolean> {
   // profile in proportion to somebody else's document — or ended it on a large
   // enough one.
   const body = await readPinnedFile(filePath, MARKER_MAX_BYTES);
-  return (
-    body !== null &&
-    INIT_MARKER_TITLE.test(body) &&
-    body.includes(INIT_MARKER_SECTION) &&
-    body.includes(INIT_MARKER_SIGNATURE)
-  );
+  return body !== null && hasInitMarkerSignature(body);
 }
 
 /**
@@ -1521,7 +1490,7 @@ export async function inspectIntegrationSurface(root: string): Promise<Integrati
         "**wrapper が symlink 以外（`directory, not a symlink` / `FIFO` / `socket` / `device`）の場合も init では直りません。** `ensureSymlink` はそれらを `skipped` として温存します。中身を確認できるもの（ディレクトリ）は退避してから `qfai init` を、特殊ファイルは削除してから `qfai init` を実行してください。`--force` は確認なしで削除するので、中身が要るかどうか分からないうちは使わないでください。",
         "**`unreadable` は権限の問題であり、init では直りません。** wrapper の target 文字列は正しいので `ensureSymlink` は skip し、canonical asset は create-only なので上書きもしません。該当ファイルの読み取り権限を戻してください（POSIX: `chmod u+r <path>`、Windows: `icacls <path> /grant <user>:R`）。CI で出た場合は、そのファイルを作成した job の umask / ACL 設定を確認してください。",
         "**canonical 側が壊れている場合（`resolves to a …, but …` / `its SKILL.md is …` / `symlink cycle`）は init では直りません。** canonical asset は create-only なので既存パスを skip し、`--force` でも `copyFile` / `mkdir` が型衝突で失敗します。該当する `.qfai/assistant/**` のパスを退避（または削除）してから `qfai init` を実行してください — 中身は失われるので、先に確認してください。",
-        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init` は現行 roster の wrapper しか作らないので再実行では消えません。該当パスを削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください。",
+        "**`which this version does not ship` は退役した wrapper です。** アップグレードで削除・改名された skill / agent の wrapper が残っており、解決できてしまうため assistant は今も旧命令を読み込みます。`qfai init --force` が削除するのは **解決先が `.qfai/assistant/agents/` の直下にある agent wrapper（`.claude/agents/` / `.github/agents/`）と `qfai-` で始まる skill wrapper** だけです（`--force` なしの再実行では消えません）。`web-research` のような prefix を持たない skill の wrapper、および `.qfai/assistant/agents/<sub>/…` のような下位ディレクトリや `.qfai/assistant/skills/…` を指す agent wrapper は prune 対象外なので、報告されたパスを手で削除してください。**canonical 側（`.qfai/assistant/skills/…` / `.qfai/assistant/agents/…`）は init が削除しません。** プロジェクトが独自の skill / agent をそこへ追加している場合と区別できないためで、退役した canonical を消したいときは手で削除してください。プロジェクト独自の canonical に対して手で貼った wrapper も同じ形になります — その場合も qfai の管理外なので、意図的に残すかどうかを決めてください（agent wrapper は解決先が `.qfai/assistant/agents/` 直下かつ現行 roster に無い場合にのみ `--force` で削除されます）。",
         "根本原因が clone 時の平坦化である場合は、先に `git config --global core.symlinks true` を設定してください。repo-local 設定は clone に引き継がれないため、これを直さないと次の clone で同じ状態に戻ります。",
         "Windows では Developer Mode の有効化が必要な場合があります。",
       ].join("\n"),
