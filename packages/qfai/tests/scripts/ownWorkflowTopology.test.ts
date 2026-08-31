@@ -2780,7 +2780,10 @@ describe("release automation performs decisions rather than making them", () => 
     // Document order, unedited. This is the property that matters: the cap must not choose
     // which entries matter — that judgement belongs to whoever wrote the CHANGELOG, and it is
     // the same thing every other row in this describe refuses to let the machinery do.
-    const [kept] = notes.split("\n\n---\n\n");
+    // `split` always yields at least one element, but the index signature is
+    // `string | undefined` under this tree's settings and the two rows below
+    // pass it where a `string` is required.
+    const kept = notes.split("\n\n---\n\n")[0] ?? "";
     expect(
       section.startsWith(kept),
       "what it keeps must be a PREFIX of the section: no reordering, no selection, no summary",
