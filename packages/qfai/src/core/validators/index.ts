@@ -14,13 +14,15 @@ export { validateAtddCodeTraceability } from "./atddCodeTraceability.js";
 export { validateScaffoldPlaceholder } from "./scaffoldPlaceholder.js";
 export { validateOrphanProhibition } from "./orphanProhibition.js";
 export { validatePrototypingEvidence, validateScreenIdCasing } from "./prototypingEvidence.js";
-export { validateDelegationMapIssues } from "./prototyping/delegationMap.js";
+export {
+  validateDelegationMapIssues,
+  validatePrototypingDelegationMap,
+} from "./prototyping/delegationMap.js";
 export { validateStateGate } from "./prototyping/stateGate.js";
 export { validateCompletionCertificateIssues } from "./prototyping/completionCertificate.js";
 export { validateConfigReferenceIntegrity } from "./configReferenceIntegrity.js";
 export { validatePrototypingArtifactRefIntegrity } from "./prototyping/refIntegrity.js";
 export { validateSpecIdLinkage } from "./prototyping/specIdLinkage.js";
-export { validateRequireIndexShape } from "./requireIndex.js";
 export { validateRepositoryHygiene } from "./repositoryHygiene.js";
 export { validateReviewArtifacts } from "./reviewArtifacts.js";
 export { validateSpecSplitByCapability } from "./specSplitByCapability.js";
@@ -52,9 +54,7 @@ export {
   validateForbiddenLegacyFiles,
   validateThreeLayerFamilyCompleteness,
 } from "./uix/threeLayer.js";
-export { validateTasteInterview } from "./uix/taste.js";
-export { validateTrendScan } from "./uix/trend.js";
-export { validateStrategyStrong } from "./uix/strategy.js";
+export { validateTrendScan } from "./uix/trendScan.js";
 export { validateScreenContractSchema } from "./uix/screenContract.js";
 export { runCanonicalUixValidators } from "./uix/canonical.js";
 export { validateSpecRequiredFilesCatalog } from "./specRequiredFilesCatalog.js";
