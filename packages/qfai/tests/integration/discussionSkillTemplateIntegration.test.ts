@@ -21,6 +21,17 @@ const templateBase = path.join(
   "skills",
   "qfai-discussion",
 );
+const assistantBase = path.join(
+  repoRoot,
+  "packages",
+  "qfai",
+  "assets",
+  "init",
+  ".qfai",
+  "assistant",
+);
+const agentsDir = path.join(assistantBase, "agents");
+const agentCatalogPath = path.join(assistantBase, "manifest", "agent-catalog.yml");
 const skillPath = path.join(templateBase, "SKILL.md");
 const uiuxTemplateDir = path.join(templateBase, "templates", "uiux");
 const completionMatrixPath = path.join(
@@ -90,6 +101,19 @@ const FORBIDDEN_SIDECAR_NAMES = [
 // Not a filename, so it is deliberately outside the coverage check.
 const FORBIDDEN_RANGE_MENTIONS = ["uiux/20-24"];
 
+// The retired concepts themselves, matched by phrase. `FORBIDDEN_SIDECAR_NAMES`
+// only sees a filename, so an instruction that reasons against a retired
+// artifact without naming its file — "Include only when it materially clarifies
+// the selected anchor" — passes the name sweep untouched while still sending the
+// author after a pack the skill is forbidden to contain. A retired concept is a
+// live trap wherever it appears, so these run over the same tree.
+const RETIRED_CONCEPT_PATTERNS = [
+  /taste[ _-]interview/i,
+  /3-layer evaluation/i,
+  /option[ _-]comparison/i,
+  /selected[ _-]anchor/i,
+];
+
 describe("discussion skill template integration", () => {
   it("uiux template directory が screen-level sidecars を持つ", async () => {
     const files = await readdir(uiuxTemplateDir);
@@ -156,23 +180,49 @@ describe("discussion skill template integration", () => {
   // sweep therefore covers references/ and templates/, not just SKILL.md.
   it("配布 skill が forbidden legacy sidecar の生成を指示していない", async () => {
     const forbiddenMentions = [...FORBIDDEN_SIDECAR_NAMES, ...FORBIDDEN_RANGE_MENTIONS];
-    // Three files name them on purpose: `00_index.md` is the
+    // Four files name them on purpose: `00_index.md` is the
     // forbidden-legacy manifest, `ui_ux_best_practices.md` carries the
-    // explicit "do NOT create" warning, and `ui-bearing-playbook.md`
-    // records the removal. Everywhere else a mention is an instruction
-    // to generate.
+    // explicit "do NOT create" warning, `discussion-completion-matrix.md`
+    // declares the sidecars neither required nor permitted, and
+    // `ui-bearing-playbook.md` records the removal. Everywhere else a
+    // mention is an instruction to generate.
     const allowNamingFiles = new Set([
       "00_index.md",
       "ui_ux_best_practices.md",
       "ui-bearing-playbook.md",
+      "discussion-completion-matrix.md",
     ]);
     const offenders: string[] = [];
     for (const file of await collectMarkdownFiles(templateBase)) {
       if (allowNamingFiles.has(path.basename(file))) continue;
       const content = await readFile(file, "utf-8");
+      const label = path.relative(templateBase, file).replace(/\\/g, "/");
       for (const mention of forbiddenMentions) {
         if (content.includes(mention)) {
-          offenders.push(`${path.relative(templateBase, file).replace(/\\/g, "/")} → ${mention}`);
+          offenders.push(`${label} → ${mention}`);
+        }
+      }
+      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
+        if (pattern.test(content)) {
+          offenders.push(`${label} → ${pattern.source}`);
+        }
+      }
+    }
+    expect(offenders).toEqual([]);
+  });
+
+  // The same residue on a different shipped surface: an agent definition that
+  // tells a reviewer to reconcile a `selected anchor` sidecar sends it after an
+  // artifact `ui_ux_best_practices.md` forbids the pack from containing.
+  it("配布 agent 定義が retired discussion concept を参照していない", async () => {
+    const files = [...(await collectMarkdownFiles(agentsDir)), agentCatalogPath];
+    const offenders: string[] = [];
+    for (const file of files) {
+      const content = await readFile(file, "utf-8");
+      const label = path.relative(assistantBase, file).replace(/\\/g, "/");
+      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
+        if (pattern.test(content)) {
+          offenders.push(`${label} → ${pattern.source}`);
         }
       }
     }
@@ -462,12 +512,6 @@ describe("discussion skill template integration", () => {
   // completed at all.
   it("review テンプレートが completion matrix と同じ UI ファミリーを要求している", async () => {
     const reviewDir = path.join(templateBase, "templates", "review");
-    const retiredChecks = [
-      /taste interview/i,
-      /3-layer evaluation/i,
-      /option comparison/i,
-      /selected anchor clarity/i,
-    ];
 
     // Half one: the matrix itself must still carry the current UI family and
     // must not have regrown any retired completion condition.
@@ -492,7 +536,7 @@ describe("discussion skill template integration", () => {
     // same words, so neither half can send back a pack the other accepts.
     for (const fileName of ["review_request.md", "Rxx_reviewer.md"]) {
       const content = await readFile(path.join(reviewDir, fileName), "utf-8");
-      for (const pattern of retiredChecks) {
+      for (const pattern of RETIRED_CONCEPT_PATTERNS) {
         expect(content).not.toMatch(pattern);
       }
       expect(content).toMatch(/DESIGN\.md/);
