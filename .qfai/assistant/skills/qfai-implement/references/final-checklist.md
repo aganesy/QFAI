@@ -65,7 +65,11 @@ releases completion.
       audited a selector it no longer names. **Except** an `E2E` / `API` row carrying the
       `Pre-split-evidence: implement` marker, whose `implement-<spec-id>.md` anchor is the accepted
       legacy location; requiring the ATDD file there would leave an already-complete row permanently
-      ungateable (gate item 10).
+      ungateable. A verdict carrying a `Record re-attestation` is compared against **that** hash and
+      not the superseded original — a record repair moved the bytes the original verdict read — and
+      the `Record re-attestation pack seal` recomputes here beside the round's `Review pack seal`,
+      each from the pack it names, so a repaired record stays checkable rather than becoming an
+      unsealed rewrite of a closed pack (gate item 10).
 - [ ] Each row's remaining observations **agree on the revision the row finally landed at** — the
       GREEN's `Revision`, the `Reviewed revision` of **every** reviewer response the row required
       (`completion-reviewer` and `implementation-reviewer`, **plus `product-surface-reviewer` on a

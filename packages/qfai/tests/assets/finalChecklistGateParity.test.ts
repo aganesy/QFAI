@@ -278,6 +278,12 @@ const GATE_ITEM_PARITY: readonly {
   {
     item: 10,
     condition:
+      "A verdict carrying a `Record re-attestation` is compared against **that** hash and not the superseded original",
+    box: "the `Record re-attestation pack seal` recomputes here beside the round's `Review pack seal`",
+  },
+  {
+    item: 10,
+    condition:
       "The item's four sub-agent observations (items 3, 5, 7, 8) all name the **same** revision",
     box: "**agree on the revision the row finally landed at**",
   },
@@ -334,7 +340,7 @@ const GATE_ITEM_CONTRACT_DIGESTS: Readonly<Record<number, string>> = {
   7: "fee818c19155095affcd06e2d17aa640d31b23b0dcecd87acaf7414205c04fed",
   8: "afe34136da80789a108e0eb6960a0a7bf21565dc21bffd1dc8863e37bad6c2a3",
   9: "13d73c84383d0ec0c4eb6339eafaa5040ebda31bb56b5adb840ed976bcbc85e8",
-  10: "e35884f66fd75d7c91d73e33658880ec7f8c6551ab09ef5a804564bdeeacd15c",
+  10: "8edf8d74903ab1ecd506e9237bc3a9a92c1ad4f7acca31a9efb3b76388be5b4f",
   11: "e4c7de62d79995caf9578da4383a0281b120867d5ffb54246ea541ccbe8d1dba",
   12: "0a4e91b6525964607ac950366ffcd1e2638d34d1c0f4d98ff4b3242cf91d21ee",
 };
