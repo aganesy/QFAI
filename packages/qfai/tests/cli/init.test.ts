@@ -14,7 +14,7 @@ import {
   writeFile,
   symlink,
 } from "node:fs/promises";
-import { execFile as execFileCb } from "node:child_process";
+import { execFile as execFileCb, spawnSync } from "node:child_process";
 import os from "node:os";
 import path from "node:path";
 import { promisify } from "node:util";
@@ -1874,6 +1874,84 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
         "YAGNI",
       );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force does not replace a FIFO standing where an instructions file goes", async () => {
+    // The refusal was written as "not a directory", and `lstat` calls a FIFO,
+    // a socket and a device node none of those — so `rename` replaced the
+    // entry outright. Create-only kept every one of them; the allowlist keeps
+    // that true without having to enumerate the file types to refuse.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const fifo = path.join(instrDir, "code-review.instructions.md");
+      const made = spawnSync("mkfifo", [fifo]);
+      if (made.status !== 0) return; // no mkfifo on this platform — nothing to assert
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      // The FIFO is still a FIFO, not a template file…
+      expect((await lstat(fifo)).isFIFO()).toBe(true);
+      // …nothing was staged beside it…
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual(
+        [],
+      );
+      // …and a sibling with no collision is still refreshed, so the refusal is
+      // scoped to the entry rather than aborting the whole step.
+      expect(await readFile(path.join(instrDir, "principles.instructions.md"), "utf-8")).toContain(
+        "YAGNI",
+      );
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--force sweeps a staging file a killed run left in the tracked directory", async () => {
+    // `replaceWithRegularFile` cleans up its own staging file, but `finally` is
+    // a JavaScript construct: SIGKILL, a crash or a power loss ends the run
+    // without one. Every run stages under a fresh pid-timestamp name, so
+    // without a sweep the orphans only accumulate in a tracked directory until
+    // one is committed by accident.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      // The shape a killed run leaves: a destination name, the infix, then the
+      // base-36 pid and timestamp.
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+      // An unrelated dotfile in the same directory must survive: the sweep is
+      // scoped to names this command could have written.
+      const bystander = path.join(instrDir, "notes.qfai-init-notes.md");
+      await writeFile(bystander, "keep\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect((await readdir(instrDir)).filter((entry) => entry.includes(".qfai-init-"))).toEqual([
+        "notes.qfai-init-notes.md",
+      ]);
+      expect(await readFile(bystander, "utf-8")).toBe("keep\n");
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("--dry-run sweeps nothing", async () => {
+    // `--dry-run` promises to change nothing, and an orphan is still a change.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      const instrDir = path.join(root, ".github", "instructions");
+      await mkdir(instrDir, { recursive: true });
+      const orphan = path.join(instrDir, "code-review.instructions.md.qfai-init-1a2b-3c4d");
+      await writeFile(orphan, "half-written\n", "utf-8");
+
+      await runInit({ dir: root, force: true, dryRun: true, yes: true });
+
+      expect(await readFile(orphan, "utf-8")).toBe("half-written\n");
     } finally {
       await removeTempTree(root);
     }

@@ -2057,8 +2057,17 @@ async function syncIntegrationWrappers(
   // command that would update an installed repository and no signal that it was
   // running stale guidance. `--force` is the supported refresh path.
   const instructionsFiles = ["code-review.instructions.md", "principles.instructions.md"];
+  // Reclaim staging files an abnormally-terminated earlier run left here. A
+  // crash skips `replaceWithRegularFile`'s `finally`, and every run stages under
+  // a fresh name, so without this the orphans only accumulate in a tracked
+  // directory. Not under `--dry-run`, which promises to change nothing.
+  const instructionsDir = path.join(destRoot, ".github", "instructions");
+  if (!options.dryRun) {
+    await sweepStagedFiles(destRoot, instructionsDir);
+  }
+
   for (const fileName of instructionsFiles) {
-    const dest = path.join(destRoot, ".github", "instructions", fileName);
+    const dest = path.join(instructionsDir, fileName);
     const alreadyExists = await pathExists(dest);
     // An overwrite is only ours to perform when the entry it lands on lives
     // inside the project. `pathExists` is lstat-based, so a leaf symlink is
@@ -2071,25 +2080,38 @@ async function syncIntegrationWrappers(
     // it would stop init from provisioning a deliberately shared directory.
     const escapesProject =
       alreadyExists && options.force && (await resolvesOutsideProject(destRoot, dest));
-    // A directory sitting where the file belongs is not something `--force`
-    // may clear. `lstat` calls an entry a directory only when it is a real
-    // one — a symlink to a directory reports as a link — so this is user data
-    // with files under it, and removing it to install a template is an
-    // irreversible deletion far outside "refresh the shipped instructions".
-    // Declining leaves the operator to resolve the collision themselves.
-    const isRealDirectory =
-      alreadyExists && options.force && (await safeLstat(dest))?.isDirectory() === true;
-    const refuseOverwrite = escapesProject || isRealDirectory;
+    // What `--force` may replace is stated as an ALLOWLIST, not as a list of
+    // things to refuse. The contract is "update an existing instructions file
+    // or the symlink entry standing in for one", and only a regular file and a
+    // symlink are that. Everything else `lstat` can report is user data this
+    // command was never asked to destroy: a real directory holds actual files
+    // (a symlink to one reports as a link, not a directory), and a FIFO, a
+    // socket or a device node is replaced outright by the `rename` below —
+    // each of them was preserved as pre-existing before this loop honoured
+    // `--force`, and a refusal list would have had to name every one of them
+    // to keep it that way. Declining leaves the operator to resolve it.
+    // `undefined` covers both "not looked at" (no `--force`, or nothing there)
+    // and an `lstat` that failed after `pathExists` saw the entry — a vanished
+    // entry makes this a creation, which destroys nothing.
+    const existingKind = alreadyExists && options.force ? await safeLstat(dest) : undefined;
+    const isReplaceableEntry =
+      existingKind === undefined || existingKind.isFile() || existingKind.isSymbolicLink();
+    const refuseOverwrite = escapesProject || !isReplaceableEntry;
     if (alreadyExists && (!options.force || refuseOverwrite)) {
       if (escapesProject) {
         info(
           `  skipped: ${dest} はプロジェクト外へ解決します (--force でも上書きしません)。` +
             `更新するにはリンク先で直接編集してください。`,
         );
-      } else if (isRealDirectory) {
+      } else if (existingKind?.isDirectory() === true) {
         info(
           `  skipped: ${dest} はディレクトリです (--force でも削除しません)。` +
             `配下の内容を退避してディレクトリを削除してから再実行してください。`,
+        );
+      } else if (!isReplaceableEntry) {
+        info(
+          `  skipped: ${dest} は通常ファイルでも symlink でもありません ` +
+            `(--force でも置き換えません)。該当エントリを退避してから再実行してください。`,
         );
       }
       skipped.push(dest);
@@ -2816,6 +2838,70 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
   return escapes || path.isAbsolute(relative);
 }
 
+/** Marks a {@link replaceWithRegularFile} staging file. */
+const STAGING_INFIX = ".qfai-init-";
+
+/** The sibling path {@link replaceWithRegularFile} stages `dest` at. */
+function stagingPathFor(dest: string): string {
+  return `${dest}${STAGING_INFIX}${process.pid.toString(36)}-${Date.now().toString(36)}`;
+}
+
+/**
+ * True for a basename {@link stagingPathFor} could have produced: a destination
+ * name, the infix, then the base-36 pid and timestamp.
+ *
+ * Read back through the same constant the writer uses, so the sweep cannot end
+ * up looking for a shape nothing writes — which would leave it passing while
+ * reclaiming nothing.
+ */
+function isStagingName(name: string): boolean {
+  const at = name.lastIndexOf(STAGING_INFIX);
+  if (at <= 0) return false;
+  return /^[0-9a-z]+-[0-9a-z]+$/.test(name.slice(at + STAGING_INFIX.length));
+}
+
+/**
+ * Remove staging files an earlier run left behind in `dir`.
+ *
+ * {@link replaceWithRegularFile} deletes its own staging file on every path
+ * that does not consume it — but `finally` is a JavaScript construct, and
+ * SIGINT, SIGKILL, a crashed process or a power loss ends the run without
+ * running one. The partial `.qfai-init-*` then stays in `.github/instructions/`,
+ * which is tracked, and because each run stages under a fresh `pid`-timestamp
+ * name nothing would ever reclaim it: repeated failures accumulate orphans
+ * until one is committed by accident.
+ *
+ * Sweeping at the start of the run is what makes those names reclaimable, and
+ * it is why staging can stay a **sibling** of its destination. `rename` is
+ * atomic only within one filesystem, so staging under a project-root `tmp/`
+ * would raise `EXDEV` wherever the two sit on different mounts — and the
+ * symlink retry in `replaceWithRegularFile` removes `dest` before its second
+ * `rename`, so that failure would destroy the very file the staging order
+ * exists to protect. A same-directory stage plus a sweep keeps the atomic
+ * replace and still leaves nothing behind.
+ *
+ * Only regular files whose name has the staging shape are removed, and only
+ * where the entry resolves inside the project: an orphan of ours is ours to
+ * reclaim, anything else in that directory is not.
+ */
+async function sweepStagedFiles(destRoot: string, dir: string): Promise<void> {
+  let entries: Dirent[];
+  try {
+    entries = await readdir(dir, { withFileTypes: true });
+  } catch {
+    return; // absent or unreadable — no orphan of ours is reachable there
+  }
+  for (const entry of entries) {
+    if (!isStagingName(entry.name)) continue;
+    const full = path.join(dir, entry.name);
+    if ((await safeLstat(full))?.isFile() !== true) continue;
+    if (await resolvesOutsideProject(destRoot, full)) continue;
+    // A leftover we cannot delete is not a reason to fail the whole init; the
+    // next run tries again, and nothing downstream depends on it being gone.
+    await rm(full, { force: true }).catch(() => undefined);
+  }
+}
+
 /**
  * Write `content` at `dest` as a regular file, replacing whatever entry is
  * already there.
@@ -2834,15 +2920,15 @@ async function resolvesOutsideProject(destRoot: string, target: string): Promise
  * still leaves a partial `.qfai-init-*` in a tracked directory, and one more
  * on every retry.
  *
- * **A real directory at `dest` is never removed.** `rename` cannot replace
- * one, and the recovery below is for a *symlink* — including a symlink to a
- * directory, which `lstat` reports as a link, not as a directory. An entry
- * `lstat` calls a directory is therefore an actual one holding actual files,
- * and deleting it is far outside "refresh an instructions file". The caller
- * declines that entry before staging anything; this stays a second line.
+ * **Only a regular file or a symlink is replaced.** The caller allowlists those
+ * two before staging anything; this stays a second line. `rename` cannot
+ * replace a real directory anyway, and the recovery below is for a *symlink* —
+ * including a symlink to a directory, which `lstat` reports as a link. What
+ * `rename` *would* silently take is a FIFO, a socket or a device node, so the
+ * allowlist is what keeps those entries intact.
  */
 async function replaceWithRegularFile(dest: string, content: string): Promise<void> {
-  const tempPath = `${dest}.qfai-init-${process.pid.toString(36)}-${Date.now().toString(36)}`;
+  const tempPath = stagingPathFor(dest);
   let consumed = false;
   try {
     await writeFile(tempPath, content, "utf-8");
