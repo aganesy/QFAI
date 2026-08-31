@@ -33,6 +33,7 @@
     "vitest.knobs.ts",
     "vitest.workspace.ts",
     "tests/assets/actionPinBumpOwner.test.ts",
+    "tests/assets/bareAnchorCitations.test.ts",
     "tests/assets/coverageDepthMatrix.test.ts",
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
