@@ -1,4 +1,4 @@
-import { mkdtemp, mkdir, readFile, rm, unlink, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rename, rm, unlink, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -258,6 +258,42 @@ describe("validateSkillsIntegrity", { timeout: 15000 }, () => {
       expect(issues[0]?.category).toBe("change");
       expect(issues[0]?.suggested_action).toContain("qfai init --force");
       expect(issues[0]?.suggested_action).not.toContain("skills.local");
+      // The over-correction pin: on a default install the finding still names
+      // the default directory, and now says so on `target:` as well.
+      expect(issues[0]?.file).toBe(".qfai/assistant/skills");
+      expect(issues[0]?.message).toContain(".qfai/assistant/skills/**");
+    } finally {
+      await rm(root, { recursive: true, force: true });
+    }
+  });
+
+  it("names the configured skills directory rather than the default one", async () => {
+    const root = await makeTempRoot();
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      // `paths.skillsDir` is settable, and the diff is taken against whatever
+      // it resolves to. A finding that spelled the default path would send the
+      // reader to a directory this project does not have — the issue carries no
+      // `loc`, so the message and `file` are the only places the real one can
+      // appear.
+      const moved = path.join(root, "tools", "skills");
+      await mkdir(path.dirname(moved), { recursive: true });
+      await rename(path.join(root, ".qfai", "assistant", "skills"), moved);
+
+      const { validateSkillsIntegrity } =
+        await import("../../src/core/validators/skillsIntegrity.js");
+      const { config } = await loadConfig(root);
+      const issues = await validateSkillsIntegrity(root, {
+        ...config,
+        paths: { ...config.paths, skillsDir: "tools/skills" },
+      });
+
+      expect(issues).toHaveLength(1);
+      expect(issues[0]?.code).toBe("QFAI-SKILLS-001");
+      expect(issues[0]?.file).toBe("tools/skills");
+      expect(issues[0]?.message).toContain("tools/skills/**");
+      expect(issues[0]?.message).not.toContain(".qfai/assistant/skills");
     } finally {
       await rm(root, { recursive: true, force: true });
     }
