@@ -447,6 +447,11 @@ export function parseArgs(argv: string[], cwd: string): ParsedArgs {
         }
         if (next === "never" || next === "warning" || next === "error") {
           options.failOn = next;
+        } else {
+          // An unknown threshold must not fall through to the config
+          // default: the gate would then silently differ from the flag
+          // the caller wrote, in either direction.
+          markInvalid();
         }
         i += 1;
         break;
