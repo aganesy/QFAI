@@ -49,6 +49,7 @@ Stage 0 Preflight  -> Stage 1 Triage  -> Phase 0 Contracts-first
 
 Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#stage-0---steering-completion-refresh-mandatory`.
 Stop if the latest discussion-pack is missing, incomplete, or has blocking OQ.
+When there is no discussion pack at all and specs already exist (import-lite entrypoint), record the input source instead: write `.qfai/evidence/import-lite-<17-digit timestamp>.md` from `templates/evidence/import-lite.md` before editing any spec, filling `generated_at` with an ISO8601 datetime and at least one real `Sources` entry or user excerpt (a file left on its `<...>` placeholders is not accepted). Validator: `QFAI-IMPLITE-001`.
 On validate / doctor / quality-gate failures, follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#gate-failure-autorepair-protocol`.
 
 ## Stage 1: Triage (Mandatory)
@@ -95,7 +96,7 @@ Approval-required ops in Stage 1 above MUST go through AskUserQuestion.
 
 ## Inputs Priority
 
-1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0.
+1. Latest `.qfai/discussion/discussion-*/` pack (lexicographically largest), validated by Stage 0. When no pack exists at all and specs already do, the Stage 0 import-lite entrypoint puts the selected `.qfai/evidence/import-lite-*.md` in this slot instead.
 2. P1: `.qfai/assistant/constitution/*` (post-recut: normative invariants — formerly `.qfai/assistant/constitution/*`)
 3. P2: `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*` (post-recut routing manifests + reference catalogs — formerly `.qfai/assistant/manifest/*` + `.qfai/assistant/catalog/*`)
 4. P3: existing `.qfai/specs/_policies/03_Capabilities.md` + active spec summaries (Stage 1 input)
@@ -202,7 +203,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
    - Named cross-skill exception: `.qfai/assistant/skills/qfai-prototyping/templates/DESIGN.md.sample` (Phase 0 DESIGN.md Freeze). It is an exception, not a licence to read other skills' templates.
    - Never invent a layout for an artifact a template already covers.
 2. Always write `.qfai/report/preflight_summary.md` before generating shared/spec artifacts.
-3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below).
+3. Contracts-first is mandatory; UI-bearing targets must be normalized into `.qfai/contracts/design/**` and `.qfai/contracts/ui/**` per `references/ui-design-contract-normalization.md`. UI-bearing targets on a **visual-prototyping surface** MUST also validate the consuming-project root `DESIGN.md` and freeze its sha256 into `.qfai/contracts/design/DESIGN.md.lock.yaml` (see Phase 0 DESIGN.md Freeze below). A **cli-only** target has no root `DESIGN.md` to freeze — see the same section.
 4. `_policies/05_Contracts.md` must include a Contract Index aligned with `.qfai/contracts/**`.
    - Phase 0 must also reconcile paired contracts against each other, not only validate each file: every terminal state, status enum value, and error code an API contract mandates must be representable in the paired DB contract. See `references/contract-artifact-rules.md#cross-contract-reconciliation-must`. The reviewer gate checks the pairing before sign-off.
 5. `_policies/04_Business-Flow.md` must be Markdown with Mermaid `flowchart` or `sequenceDiagram`.
@@ -220,7 +221,7 @@ Follow `.qfai/assistant/constitution/shared-skill-operating-baseline.md#delta-re
 1. Stage 0: Preflight (stop on blockers).
 2. Stage 1: Triage (classify + approve + persist Triage table).
 3. Write `.qfai/report/preflight_summary.md`.
-4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
+4. Phase 0: Contracts-first (UI-bearing targets normalize in this phase, and freeze root `DESIGN.md` per the Phase 0 DESIGN.md Freeze step below unless the target is cli-only). Close Phase 0 with the cross-contract reconciliation step in `references/contract-artifact-rules.md#cross-contract-reconciliation-must`.
 5. Phase 1: Outline (`_policies/01..11`).
 6. Phase 2: Slice (per spec, gate each with `npx qfai validate --profile sdd --fail-on error --spec <spec-id>` so a parallel worker gates on its own spec only and does not import a sibling agent's in-flight failures). A `--spec` run writes `<report>/validate.spec-<id>.json` and never the shared `validate.json` / `validate-<profile>.json`, so parallel workers cannot race on one file; an unknown or unparseable `--spec` value fails the run (`QFAI-SCOPE-001` / `QFAI-SCOPE-002`) instead of silently widening to the whole repo.
 7. Phase 2b: Seed each target spec's `tdd/test-list.md` from `06_Test-Cases.md`
@@ -279,9 +280,21 @@ Write a `.qfai/steering/<id>.md` entry when this stage hits one of the condition
 
 The canonical file set is defined by skill templates under `.qfai/assistant/skills/qfai-sdd/templates/`.
 
-## Phase 0 DESIGN.md Freeze (UI-bearing only)
+## Phase 0 DESIGN.md Freeze (visual-prototyping surfaces only)
 
-When the target spec is UI-bearing, Phase 0 MUST freeze the brand SSOT:
+When the target spec is UI-bearing **and the discussion classification
+names a visual-prototyping surface** (`web`, `mobile`, `desktop` or
+`mixed`, as `primary_surface` or in `secondary_surfaces`), Phase 0 MUST
+freeze the brand SSOT.
+
+**Skip this whole section for a cli-only target** (`primary_surface: cli`
+with no visual secondary surface). `/qfai-discussion` authors no root
+`DESIGN.md` for such a pack, `/qfai-prototyping` rejects `cli`, and
+`validators/designContractReadiness.ts` skips `QFAI-DCON-030` / `-031` on
+the same condition — so demanding a freeze here would only re-block the
+pack on a token tree nothing reads. Read the classification from the
+active discussion pack `01_Context.md`; when there is no pack, treat the
+target as visual and run the freeze.
 
 1. Read root `DESIGN.md` at `<consuming-project-root>/DESIGN.md`. If
    missing, stop and ask the user to run `/qfai-discussion` (which
@@ -383,4 +396,4 @@ project_memory:
 - Phase 2c reconciles contracts against the BR/AC written after them: Contracts-first freezes the contract before its obligations exist, and Phase 2c is the only step that checks they are realizable.
 - Phase 2b seeds each target spec's tdd/test-list.md from 06_Test-Cases.md (one row per coverage-target TC, Status = todo) and is a delta: existing rows keep their TDD-ID, Status, Test file, Selector, DR-ID and Evidence.
 - Append-first is the Stage 1 default: UPDATE on an active spec whose subject tokens overlap; CREATE only when there is zero overlap AND the REQ adds a new CAP-NNNN, registered before the CREATE row.
-- Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets; .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.
+- Phase 0 DESIGN.md Freeze is mandatory for UI-bearing targets on a visual-prototyping surface (skipped for cli-only); .qfai/contracts/design/DESIGN.md.lock.yaml is the brand-lock SSOT.
