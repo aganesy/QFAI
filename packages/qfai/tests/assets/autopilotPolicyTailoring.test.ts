@@ -114,10 +114,24 @@ describe.each(TREES)("%s — Default Autopilot Policy tailoring contract", (tree
     // so no bullet may make routing a row into that status a user decision.
     expect(askUser).not.toMatch(/^routing an item to/im);
     expect(askUser).toMatch(/Change[- ]Request/);
+    // The Parallelization Policy gates item-level parallelism on explicit user
+    // approval on top of the `delivery-planner` technical gate. This section
+    // claims to classify EVERY decision into one of the three buckets, so a
+    // user-gated decision missing from it is the section contradicting the body
+    // it summarizes.
+    expect(askUser).toMatch(/parallel/i);
     // `/qfai-sdd` owns triage; writing spec artifacts is a non-goal here.
     expect(askUser).not.toMatch(/SUPERSEDE/);
     expect(askUser).not.toMatch(/UPDATE:REMOVE/);
     // Branding inputs belong to init / prototyping, not to an implement run.
-    expect(hardRequired).toEqual(["`primarySpecId` (when absent from inputs)"]);
+    expect(hardRequired.length).toBe(1);
+    // `hard-required` means "cannot proceed until supplied", so the condition
+    // has to be the one that actually blocks: Spec Auto-Discovery resolving
+    // nothing. Conditioning it on "absent from inputs" instead made every
+    // ordinary single-spec run wait for an input the protocol at
+    // `## Spec Auto-Discovery Protocol` announces and proceeds on.
+    expect(hardRequired[0]).toMatch(/`primarySpecId`/);
+    expect(hardRequired[0]).toMatch(/Auto-Discovery/i);
+    expect(hardRequired[0]).not.toMatch(/when absent from inputs/);
   });
 });
