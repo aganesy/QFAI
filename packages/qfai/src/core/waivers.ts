@@ -68,8 +68,23 @@ const STRIPPED_CODE_RE = /^QFAI-([A-Z]+-\d{3})$/;
  */
 const ROW_SCOPED_RULES = new Set<string>([EXCEPTION_PARKED_CODE, EXCEPTION_PARKED_RULE_ID]);
 
+/**
+ * `scope.paths` spellings that scope a waiver to the whole repository.
+ *
+ * A finding with no `file` is repo-level by construction, so no glob can name
+ * it. Only these repo-wide spellings reach it: a narrow scope such as
+ * `.qfai/contracts/ui/a.yaml` must not suppress a file-less finding, because
+ * validators aggregate several files into one such finding (for example
+ * `uiDefinitionConsistency` raises one `QFAI-CONSISTENCY-002` per screen id
+ * over every UI Contract), and a one-file waiver would sweep up the screens
+ * that came from the other files too.
+ */
+const REPO_WIDE_PATH_GLOBS = new Set<string>(["**", "**/*", "**/**"]);
+
 type ParsedWaiver = ValidationWaiverEntry & {
   pathMatchers: RegExp[];
+  /** True when at least one `scope.paths` entry is a repo-wide glob. */
+  repoWideScope: boolean;
 };
 
 export async function applyWaivers(
@@ -518,6 +533,7 @@ async function loadWaivers(
     applicableWaivers.push({
       ...activeWaiver,
       pathMatchers: activeWaiver.scope.paths.map(globToRegExp),
+      repoWideScope: activeWaiver.scope.paths.some(isRepoWidePathGlob),
     });
   });
 
@@ -550,9 +566,7 @@ function applyWaiversToFindings(
     }
 
     const waiver = waivers.find(
-      (candidate) =>
-        ruleKeys.includes(candidate.rule) &&
-        matchesWaiver(root, finding, candidate.match, candidate.pathMatchers, candidate.severity),
+      (candidate) => ruleKeys.includes(candidate.rule) && matchesWaiver(root, finding, candidate),
     );
     if (!waiver) {
       out.push(finding);
@@ -588,13 +602,9 @@ function applyWaiversToFindings(
   };
 }
 
-function matchesWaiver(
-  root: string,
-  finding: Issue,
-  match: ValidationWaiverMatch | undefined,
-  pathMatchers: RegExp[],
-  severity: ValidationWaiverSeverity | undefined,
-): boolean {
+function matchesWaiver(root: string, finding: Issue, waiver: ParsedWaiver): boolean {
+  const { match, pathMatchers, severity, repoWideScope } = waiver;
+
   if (severity && finding.severity !== severity) {
     return false;
   }
@@ -608,7 +618,9 @@ function matchesWaiver(
 
   const dlMatched =
     hasDlIds && match.dl_ids ? match.dl_ids.includes(finding.dl_id ?? "") : !hasDlIds;
-  const pathMatched = hasPaths ? matchFindingPath(root, finding.file, pathMatchers) : true;
+  const pathMatched = hasPaths
+    ? matchFindingPath(root, finding.file, pathMatchers, repoWideScope)
+    : true;
 
   return dlMatched && pathMatched;
 }
@@ -617,12 +629,24 @@ function matchFindingPath(
   root: string,
   findingFile: string | undefined,
   pathMatchers: RegExp[],
+  repoWideScope: boolean,
 ): boolean {
   if (!findingFile) {
-    return false;
+    // A finding with no `file` is repo-level: no path names it, so `scope.paths`
+    // has nothing to compare it against. Treating it as unmatched made every such
+    // finding unwaivable at any glob — `**` included — with no diagnostic saying
+    // so; treating it as matched at *any* glob would let a one-file waiver
+    // suppress a repo-level finding raised over other files. Only an explicitly
+    // repo-wide scope reaches it. The waiver's other predicates (rule, severity,
+    // match.dl_ids) still gate it.
+    return repoWideScope;
   }
   const relative = normalizePath(toRelativePath(root, findingFile));
   return pathMatchers.some((matcher) => matcher.test(relative));
+}
+
+function isRepoWidePathGlob(pattern: string): boolean {
+  return REPO_WIDE_PATH_GLOBS.has(normalizePath(pattern.trim()));
 }
 
 function hasMatchScope(match: ValidationWaiverMatch | undefined): boolean {
