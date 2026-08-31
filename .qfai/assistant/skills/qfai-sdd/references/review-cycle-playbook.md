@@ -25,12 +25,29 @@ Use this file when you need the detailed review-cycle mechanics for `/qfai-sdd`.
 
 ## summary.json
 
-- `target.kind` must be `"spec"` for SDD review packs.
+- `target.kind` must be `"spec"` for SDD review packs, and `target.path` must be the spec directory
+  it names — a `kind` the path contradicts raises `QFAI-REVIEW-007` and is ignored when deciding
+  which gate the pack faces.
+- `producer` must be `"sdd"`, and `review_request.md` carries a matching `Producer: sdd` line so the
+  pack is placed before `summary.json` exists. This is what makes the gate below yours:
+  `qfai-implement` writes `target.kind: "spec"` for its own packs too, so kind alone put a
+  downstream worker's in-flight pack in your gate.
 - Accepted serialized reviewer statuses are `PASS`, `FAIL`, and `NA`.
 - `revision_form: "content-hash"` and `revision` are written like every other pack producer does:
   the state these verdicts describe, as a git rev or `working-tree+<content hash>`
-  (`../../qfai-implement/references/evidence-revision.md`). A pack written without them fails the
-  repo-wide `/qfai-verify --fail-on error` even where the per-item profile passed.
+  (`../../qfai-implement/references/evidence-revision.md`). A pack written without them raises
+  `QFAI-REVIEW-007` in this stage's own hard gate
+  (`npx qfai validate --profile sdd --fail-on error`, `rcp_footer.md`) as well as in the repo-wide
+  `/qfai-verify --fail-on error`.
+- That gate judges `producer: "sdd"` packs only — a discussion cycle's pack is
+  `--profile discussion`'s business and an implementation pack is the full scan's — and a pack that
+  declares no owner at all is judged by both stage gates, since no other gate would see it. A pack
+  that names no producer falls back to its `target.kind`, so a legacy `"spec"` pack stays in this
+  gate.
+- Adding `--spec <id>` narrows the check to the packs attributed to that spec: by
+  `summary.json#target.path`, or by the paths `review_request.md` names when `summary.json` is
+  missing or unparseable. A parallel worker therefore never gates on a sibling's in-flight pack,
+  while its own pack that forgot `summary.json` is still caught.
 
 ## Guardrails
 
