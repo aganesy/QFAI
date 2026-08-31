@@ -227,18 +227,45 @@ ratifies a comparison the author knew was fabricated.
    ledger**, and it applies only to a raiser that already owns those cells —
    `/qfai-implement` under `#allowed-exceptions-minimal-whitelist`. Once the
    file exists, that raiser writes `todo -> blocked` with this CR's ID in
-   `Blocked-By` on each `tdd/test-list.md` row the blocked set below names, and
+   `Blocked-By` on **each row of the blocked set that is at `todo`**, and
    writes nothing else: no other cell, no other file, and no row added, removed
-   or re-scoped. The parking belongs to this step rather than to step 4 for two
-   reasons. Step 3's wait for approval spans sessions, and a dependent row left
-   at `todo` across it is re-selected and its determination re-derived on every
-   pass — the loop `blocked` exists to stop; and after the owner rerun the write
-   has no correct target, because that rerun may have re-scoped the very row it
-   was aimed at. A row whose ledger has no `Blocked-By` column cannot be parked
-   — adding the column is a table-shape write only `/qfai-sdd` Phase 2b may make
-   — so that ledger stops with a handoff note asking for the column migration
-   and leaves its rows at `todo`; blocking a row whose blocker cannot be written
-   is `TDDLIST_BLOCKED_MISSING_REF`. Contents:
+   or re-scoped.
+
+   **Only a `todo` row is parked, because only a `todo` row can be.**
+   `todo -> blocked` is the ledger's one inbound edge to `blocked`
+   (`../skills/qfai-implement/references/execution-ledger.md#allowed-transitions`),
+   and a blocked set routinely names rows past it — a post-RED scope gap is
+   raised from a row at `red` or later, a checkpoint regression from one at
+   `done`. Writing the transition on those would be an illegal move, and the
+   two remaining shapes have their own answers:
+   - **A row another open `CR-*` already parked** keeps its `blocked` status
+     and takes this CR's ID **appended** to `Blocked-By`, which holds the set
+     of blockers rather than one. Re-writing the transition would report a
+     move the row did not make, and replacing the cell would drop the other
+     CR's claim on it.
+   - **A row past `todo`, and a `done` row**, are named in this CR's blocked
+     set and **left exactly as they are** — no status write, no `Blocked-By`
+     write. The raiser stops on that row and returns a handoff note naming the
+     CR rather than continuing its cycle, so the work in flight is neither
+     overwritten nor advanced past the conflict. What keeps the row out of the
+     next run's selection is the mandatory Change-Request preflight, which
+     reads the open CRs before the ledger
+     (`../skills/qfai-implement/references/change-request-reset.md`): a row an
+     open in-scope CR's blocked set names is not selected. That is the same
+     protection `blocked` gives a `todo` row, taken from the CR file — which is
+     already the record — instead of from a status the row cannot legally
+     hold. On approval the row leaves by the reset that step 4 authorises
+     (`any status` -> `todo`), which every one of these statuses admits; on
+     `rejected` or `superseded` it resumes from where it stopped. The parking belongs to this step rather than to step 4 for two
+     reasons. Step 3's wait for approval spans sessions, and a dependent row left
+     at `todo` across it is re-selected and its determination re-derived on every
+     pass — the loop `blocked` exists to stop; and after the owner rerun the write
+     has no correct target, because that rerun may have re-scoped the very row it
+     was aimed at. A row whose ledger has no `Blocked-By` column cannot be parked
+     — adding the column is a table-shape write only `/qfai-sdd` Phase 2b may make
+     — so that ledger stops with a handoff note asking for the column migration
+     and leaves its rows at `todo`; blocking a row whose blocker cannot be written
+     is `TDDLIST_BLOCKED_MISSING_REF`. Contents:
    - class (`intent` / `defect`) — see `#drift-classes`
    - context — for intent drift, what conflicts; for defect drift, what the
      artifact declares and how it breaks that declaration

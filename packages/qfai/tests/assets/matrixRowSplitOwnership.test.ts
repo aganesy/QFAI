@@ -489,3 +489,78 @@ describe.each(TREES)("%s", (tree) => {
     expect(await read(tree, LEDGER)).toContain("by `/qfai-sdd` Phase 2b, which owns the rows");
   });
 });
+
+describe.each(TREES)(
+  "%s (the parking and the split are reachable from the states they meet)",
+  (tree) => {
+    const RESET = "assistant/skills/qfai-implement/references/change-request-reset.md";
+
+    it("parks only the rows the ledger lets it park", async () => {
+      // A blocked set routinely names rows past `todo` — a post-RED scope gap is
+      // raised from `red` or later, a checkpoint regression from `done` — and
+      // `todo -> blocked` is the only inbound edge, so "write it on each row"
+      // asked for an illegal move on exactly the rows this PR routes here.
+      const drift = flat(await read(tree, DRIFT));
+      expect(drift).toContain("on **each row of the blocked set that is at `todo`**");
+      expect(drift).toContain("**Only a `todo` row is parked, because only a `todo` row can be.**");
+      // The two shapes it cannot park have answers rather than silence.
+      expect(drift).toContain("**A row another open `CR-*` already parked**");
+      expect(drift).toContain("takes this CR's ID **appended** to `Blocked-By`");
+      expect(drift).toContain("**A row past `todo`, and a `done` row**");
+      expect(drift).toContain("**left exactly as they are**");
+    });
+
+    it("keeps an unparkable row out of selection while its CR is open", async () => {
+      // Without this the row stays selectable across an approval that spans
+      // sessions — and a `review-fix` row is re-selected ahead of every `todo`
+      // row, so it would be picked up on every run until the CR resolves.
+      const reset = flat(await read(tree, RESET));
+      expect(reset).toContain("**Both the approved and the still-open ones**");
+      expect(reset).toContain(
+        "**A row named in an open in-scope CR's blocked set is not selected**, whatever its status",
+      );
+      expect(reset).toContain("a `review-fix` row is re-selected ahead of every `todo` row");
+    });
+
+    it("re-evaluates every open blocked set before releasing a row", async () => {
+      // The preflight returned every row the approved CR enumerated, so a row
+      // also held by a second, unresolved CR went back into selection and could
+      // run and complete over that unresolved change.
+      const reset = flat(await read(tree, RESET));
+      expect(reset).toContain("Recompute the **union** of the blocked sets of every CR still open");
+      expect(reset).toContain("**A row still in the union stays where it is.**");
+      expect(reset).toContain("Remove only this CR's ID from `Blocked-By`");
+      expect(reset).toContain("**A row no longer in the union** takes the reset below in full");
+    });
+
+    it("raises a Change Request for a legacy progressed row before splitting it", async () => {
+      // The split rule reads the driving `CR-*` twice — for the boundary order
+      // and for the approved actions the reset is enumerated under — and a row
+      // first noticed during an ordinary reseed has neither. Phase Red never
+      // re-selects a `done` row, so nothing downstream would ever raise one.
+      const checklists = flat(await read(tree, CHECKLISTS));
+      expect(checklists).toContain(
+        "**A progressed matrix row this phase finds on its own has no driving `CR-*` yet, and needs one before it is touched.**",
+      );
+      expect(checklists).toContain("**wait for approval** and leave the row untouched meanwhile");
+      expect(checklists).toContain(
+        "Narrowing its `Selector` first would be an un-approved re-scope of recorded work",
+      );
+    });
+
+    it("breaks the tie when a multi-entry selector observed several REDs", async () => {
+      // Phase Red runs each `Selector` entry separately and records each failure,
+      // so "the boundary its recorded RED observed" names a set. It is neither
+      // the `blocked` case nor the `falsifiability` one: the observations are
+      // real, there are simply several.
+      const checklists = flat(await read(tree, CHECKLISTS));
+      expect(checklists).toContain(
+        "**A `Selector` holding several entries observed more than one**",
+      );
+      expect(checklists).toContain("Break the tie by the same order those cases use");
+      expect(checklists).toContain(
+        "two runs of this phase would keep the `TDD-ID` on different rows",
+      );
+    });
+  },
+);

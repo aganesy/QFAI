@@ -2197,7 +2197,7 @@ matrix-row split an owning phase added `packages/qfai/tests/assets/matrixRowSpli
 Nothing about `spec-0017` changed again, and neither suite total above was re-run for this tree — the
 line below is what records that, exactly as the mechanism after it describes.
 
-e2e callsites at this tree: 951
+e2e callsites at this tree: 956
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived
