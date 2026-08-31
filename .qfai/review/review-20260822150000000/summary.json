@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T15:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "0f61ad2f",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 11 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 12 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 11 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B5+M1+m4+A1 = 11, B5+M3+m3+A1 = 12 and B2+M4+m3+A2 = 11",
+  "notes": "The subject did not move under any reviewer this round. `implementation-reviewer` executed roughly 1600 cases under bash with a fake bundler as the oracle; 50 ran a real build with `refusals()` empty, reducing to five independent root causes including the file's third quote walk having no backslash model and a helper (`lastCode`) that was nearly the question its three callers were asking. `qa-gatekeeper` beat the one-commit-old init surface again by shipping a shebang script with no extension into an excluded instruction tree, and found a claim in the mandatory rejected-options confirmation that the ledger has never supported. `completion-reviewer` broke all four record guards for the third consecutive round and named the shared cause in round 17's words: each read a wider region than the claim it makes. Two of the three reviewers independently reported that the fourth guard's regex escape, checked by extracting it from the file's own bytes, is genuinely correct — the method is now standing practice."
+}
