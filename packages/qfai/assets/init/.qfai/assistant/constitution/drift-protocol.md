@@ -25,8 +25,9 @@ Upstream artifacts include, at minimum:
 
 One file inside `.qfai/specs/**` is carved out of that last line:
 `<spec-id>/tdd/test-list.md`, and only its `Status` / `DR-ID` / `Evidence`
-cells. See `#allowed-exceptions-minimal-whitelist`. Its **rows** — which obligations exist and
-what each covers — remain upstream.
+cells unconditionally, plus its `Test file` and `Selector` cells under the two
+machine-checkable conditions in `#allowed-exceptions-minimal-whitelist`. Its
+**rows** — which obligations exist and what each covers — remain upstream.
 
 **Every artifact in this list requires an owner rerun by definition.** There is
 no downstream test for "is an owner rerun required here?" — being on this list
@@ -40,10 +41,24 @@ case required reading the agent roster and reasoning backwards from it.
 
 - `.qfai/evidence/**` append/update
 - `.qfai/specs/<spec-id>/tdd/test-list.md` — the `Status`, `DR-ID` and
-  `Evidence` cells only, append/update by `/qfai-implement`. Every other column
-  of that file, and every other file under `.qfai/specs/**`, stays upstream
-  SSOT: adding, removing or re-scoping a row is an upstream change and takes the
+  `Evidence` cells unconditionally, append/update by `/qfai-implement`, plus two
+  cells that are writable **only** while a stated condition holds:
+  - the `Test file` cell, only while the seeded value is empty or a dash
+    placeholder;
+  - the `Selector` cell, only while the seeded value does not resolve against
+    the row's named test file — the validator's own `selectorResolves`
+    predicate is false.
+
+  Both conditions are machine-checkable, so a reviewer verifies the precondition
+  instead of taking the writing stage's word for it, and both are one-way: once
+  the condition that authorised the write has ceased to hold — a `Test file` that
+  names a path, a `Selector` that resolves — rewriting it is no longer covered.
+  Every other
+  column of that file — `TC-Refs`, `Layer`, `US-Refs`, `CON-API-Refs` — and
+  every other file under `.qfai/specs/**`, stays upstream SSOT: adding, removing
+  or re-scoping a row is an upstream change and takes the
   `#when-drift-is-detected` path.
+
 - **creating** a governance record under `.qfai/decisions/` — a Change Request
   (`CR-YYYYMMDD-NNNN-<slug>.md`, per `#when-drift-is-detected` step 2) or an
   anomaly Decision Record (`DR-NNNN-MMMM-<slug>.md` spec-scoped, or
@@ -83,6 +98,46 @@ reasons:
 So an agent obeying the protocol could not satisfy gate item 10, and an agent
 satisfying it was in drift. The entry above names the file and the three cells
 unconditionally, which is what removes the choice.
+
+### Why `Test file` and `Selector` are conditional
+
+The deadlock that put the ledger on this list recurs one and two columns over,
+and two shipped validator rules are what create it:
+
+- `TDDLIST_TEST_FILE_MISSING` fires at **error** severity for a row whose
+  `Test file` cell is empty or a dash placeholder, once its `Status` is `green`,
+  `refactor`, `review-fix` or `done`.
+- `TDDLIST_SELECTOR_UNRESOLVED` fires when the `Selector` cell's text is not
+  found in the named test file, and its own remediation text says to update the
+  selector. The per-row checkpoint command is `<runner> <Test file> -t
+'<Selector>'`, so an unresolved selector also produces a run that selects
+  nothing while exiting 0.
+
+A row is seeded with a descriptive selector and, commonly, no test file: the
+path is a downstream decision, and the test's title does not exist until the
+micro-cycle authors it. So the writing stage cannot hold the status the first
+three cells **do** authorise without also writing a cell they do **not** — and
+the earlier status it would otherwise have to keep is false, because the row has
+already passed that phase. Seeding both cells upstream does not resolve it
+either: it would require inventing titles that implementers then match exactly,
+inverting the direction of authority between the spec and the test.
+
+The conditions are what keep this narrow. They authorise **filling a placeholder
+and repairing an unresolvable selector**, never rewriting a cell that already
+resolves, and never touching the columns that carry the row's obligation
+identity. Decomposing an existing obligation across rows stays in remit for the
+executing stage; minting a new obligation id does not, and that line is
+unchanged.
+
+One limit is worth stating, because the `Selector` condition is narrower than it
+reads. `selectorResolves` is deliberately lenient: it accepts verbatim
+containment, then containment of the selector's last identifier-shaped token. So
+a `Selector` that is materially wrong — one that misdescribes which obligations
+its row covers — but happens to share a trailing token with its test file still
+**resolves**, the condition is false, and this carve-out does **not** authorise
+repairing it. That is the conservative direction and it is intended: only a
+selector the runner's own file could not match is repairable here, and a merely
+misdescribing one stays an upstream change.
 
 ### Why the Decision Record is on this list
 
