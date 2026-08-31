@@ -94,15 +94,23 @@ describe("cli root discovery", { timeout: 15000 }, () => {
   });
 
   it("sets exitCode=2 for an unknown top-level command", async () => {
+    // `bogus` is here because main arrived at the same defect from the other
+    // side, wiring the dispatch switch's `default:` to a non-zero code and
+    // pinning 1. This PR's exit-code table — the one `usage()` now prints —
+    // files "未知のコマンド" under 2 with the rest of the usage errors, so the
+    // case survives with the code the table states rather than with two rules
+    // for one invocation.
     const cwd = process.cwd();
 
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await run(["typo"], cwd);
-      expect(process.exitCode).toBe(2);
-    } finally {
-      process.exitCode = previousExitCode;
+    for (const argv of [["typo"], ["bogus"]]) {
+      const previousExitCode = process.exitCode;
+      process.exitCode = undefined;
+      try {
+        await run(argv, cwd);
+        expect(process.exitCode, `argv: ${argv.join(" ")}`).toBe(2);
+      } finally {
+        process.exitCode = previousExitCode;
+      }
     }
   });
 
