@@ -27,10 +27,13 @@ import {
   ALLOWED_ACTION_INPUTS,
   ALLOWED_ACTIONS,
   ALLOWED_INVOCATIONS,
+  ALLOWED_INIT_SOURCE_BASENAMES,
+  ALLOWED_INIT_SOURCE_EXTENSIONS,
   bodyDigest,
   commandsOf,
   HARMLESS_PROGRAMS,
   initMustNotShip,
+  initSourceShipsAsData,
   BUILD_DECORATION,
   LIVE_DECORATIONS,
   INERT_DECORATIONS,
@@ -761,6 +764,44 @@ describe("the shipped-lane allowlist", () => {
     expect(
       carriesBuildInput,
       "`arguments`, `args` and `run` are the channels a `uses:` build arrives by, on any action",
+    ).toEqual([]);
+  });
+
+  it("reads a seeded dotfile as data without reopening the extensionless hole", () => {
+    // `path.extname(".gitattributes")` is `""`, so the extension set alone called the seeded
+    // `.gitattributes` the same thing it called round 20's payload: an extensionless file. The fix
+    // must accept it by WHOLE NAME, because the other way to accept it — putting `""` in the
+    // extension set — accepts every extensionless file and is the guard deleted.
+    expect(
+      ALLOWED_INIT_SOURCE_EXTENSIONS.has(""),
+      '`""` in the extension set admits every extensionless file, which is what the rule exists to refuse',
+    ).toBe(false);
+    expect(initSourceShipsAsData("root/.gitattributes"), "the seeded dotfile ships as data").toBe(
+      true,
+    );
+
+    // And the set stays CLOSED. Round 20's payload was extensionless, mode 0644, no shebang and no
+    // name any tool knows — it is refused because it has neither a data extension nor an enumerated
+    // name, and so is any dotfile nobody put in the set.
+    for (const refused of [
+      ".qfai/assistant/bootstrap",
+      "root/bootstrap",
+      "root/.npmrc",
+      "root/.bashrc",
+      "root/.gitattributes.bak",
+    ]) {
+      expect(initSourceShipsAsData(refused), `${refused}: nothing enumerates it`).toBe(false);
+    }
+
+    // A basename match is the whole name, not a suffix of one: `evil.gitattributes` is a different
+    // file, and `path.basename` is what keeps the two apart.
+    expect(
+      initSourceShipsAsData("root/evil.gitattributes"),
+      "a name that merely ends with an enumerated one is not that name",
+    ).toBe(false);
+    expect(
+      [...ALLOWED_INIT_SOURCE_BASENAMES].filter((name) => !name.startsWith(".")),
+      "this set exists for names `path.extname` cannot see, which is what a leading dot makes",
     ).toEqual([]);
   });
 });
