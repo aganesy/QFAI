@@ -3,7 +3,10 @@
 - Contract scope: frontmatter and body schema for `.qfai/steering/*.md` entries
 - Owners: the validate stage (schema enforcement), the implement stage (primary writer) and the Reviewer-Gate stage (consumer)
 - Used-by: All implementation/review-phase skills, `npx qfai validate`, Reviewer subagents
-- Enforced by: `npx qfai validate` — it parses every entry against the frontmatter shape below and checks its link integrity. The field checks, enums and required headings are compiled into the CLI, not read from this file: this document is their reference, so editing it does not change what `validate` accepts. Report a divergence as a QFAI bug instead of customizing the schema here.
+- SSOT modules (shipped inside the QFAI package, run by `npx qfai validate`):
+  - the work-log entry parser (`string → Result<Entry, SchemaError>`)
+  - the work-log link-integrity check
+- The field checks, enums and required headings are compiled into the CLI, not read from this file: this document is their reference, so editing it does not change what `validate` accepts. Report a divergence as a QFAI bug instead of customizing the schema here.
 
 ## Storage model
 

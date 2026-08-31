@@ -2,8 +2,8 @@
 
 Items 7-9 of the 11-point reviewer gate in `SKILL.md` are evidence-bearing: the reviewer verdicts
 must be written to a review pack, not left in conversation. There is exactly **one**
-`.qfai/review/**` layout — the one `npx qfai validate` enforces and `npx qfai doctor`
-archives:
+`.qfai/review/**` layout — the one the review-artifact validator shipped inside the
+QFAI package enforces under `npx qfai validate`, and `npx qfai doctor` archives:
 
 ```text
 .qfai/review/review-<YYYYMMDDhhmmssSSS>/     # 17-digit timestamp; no other directory shape is recognized
@@ -45,6 +45,14 @@ archives:
   check runs both ways: a pack declaring `reviewers: []` with report files beside it fails too.
 - Each additional review round creates a **new** `review-<timestamp>/` pack. Do not append
   ad-hoc per-round filenames inside an existing pack.
+- A **record re-attestation** takes a new pack of this same shape, even though it is not a round
+  (`../../../constitution/drift-protocol.md#the-record-defect-queue`). It carries the same
+  `Reviewed revision` and `Result` as the verdict it supersedes and a recomputed
+  `Audited evidence hash`; `summary.json` names the same `revision`. It is a separate pack because
+  the superseded verdict's pack is fixed by a `Review pack seal` the completion gate recomputes —
+  editing that pack to restamp a hash would break the seal, and editing only the evidence file's
+  copy would leave the sealed response disagreeing with it. Both packs are sealed and both seals
+  are recomputed at the gate.
 - `QFAI-REVIEW-*` is reported by `--profile sdd` and `--profile discussion` — the profiles whose
   RCP footer mandates the pack — and by the full-scan profiles. `--profile tdd` does not report it,
   so a malformed or missing `summary.json` still passes the implementation gate on its own. Run
