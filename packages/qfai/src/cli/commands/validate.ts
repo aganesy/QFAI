@@ -1081,6 +1081,16 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "A cross-skill handoff, when present, parses as an object and conforms to the handoff schema.",
   "QFAI-DRIFT-001":
     "Upstream SSOT files are unchanged relative to the base branch, or the change carries an approved Change Request.",
+  // The CAP catalogue's row order is the CAP -> spec-NNNN mapping, so these
+  // four state what has to hold of the table itself before that order can be
+  // trusted. `QFAI-SPLIT-100..105` read the mapping's result and stay generic.
+  "QFAI-SPLIT-106":
+    "Each CAP row's `Spec` cell names the spec its own row position derives, so the declared mapping and the positional one agree.",
+  "QFAI-SPLIT-107": "Each CAP ID appears on exactly one CAP Catalog row, tombstones included.",
+  "QFAI-SPLIT-108":
+    "Each CAP Catalog row names exactly one CAP ID in its `CAP ID` cell, so every capability holds its own row position.",
+  "QFAI-SPLIT-109":
+    "Each canonical CAP Catalog column name (`CAP ID`, `Spec`) is spelled on exactly one column of the table.",
 };
 
 /**
@@ -1164,6 +1174,17 @@ export const ISSUE_FIX_BY_CODE: Record<string, string> = {
     "Give `browserQa.summary` an object per phase (smoke, interaction, visual, accessibility) carrying `status`, `findingsCount`, and `checksCount`, with `passed`/`failed` numeric when present.",
   "QFAI-PROT-276":
     "Make `findings` an array whose every entry carries a non-empty summary and detail, a severity from the supported set, at least one `evidence_refs` entry, and `repair_suggestions`.",
+  // The CAP catalogue checks pass no `suggested_action` at any call site, so
+  // all four depend on this catalog for their `fix:` line. Each repair is an
+  // edit to `_policies/03_Capabilities.md` itself, never to a spec directory.
+  "QFAI-SPLIT-106":
+    "In `_policies/03_Capabilities.md`, correct the `Spec` cell of the CAP row the message names to the spec its row position derives — or move the row to the position the cell declares, if the row order is what drifted. A capability retired by an approved DELETE keeps its row, marked `(deleted)` in the `CAP ID` cell.",
+  "QFAI-SPLIT-107":
+    "Give one of the duplicated CAP rows in `_policies/03_Capabilities.md` a fresh CAP ID, or delete the repeat if the two rows state the same capability. A retired ID is never handed to a new capability.",
+  "QFAI-SPLIT-108":
+    "Split the CAP Catalog row the message names into one row per CAP ID, so each capability holds its own row position. Move a CAP that is only being cross-referenced into the `Notes` cell instead.",
+  "QFAI-SPLIT-109":
+    "Rename or remove the duplicate column in the CAP Catalog table so each canonical name (`CAP ID`, `Spec`) heads exactly one column; a history column is spelled `Previous Spec` rather than `Spec`.",
 };
 
 /** Printed as `expected` when a code has no catalog entry. */

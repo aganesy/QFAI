@@ -170,5 +170,9 @@ Every spec's `01_Spec.md` declares `Status: active | superseded | deprecated | r
 ## Gap policy
 
 - Leave gaps after deletions unless an approved migration explicitly renumbers them.
+  Record the gap in `_policies/03_Capabilities.md` by keeping the DELETEd capability's
+  row with its CAP cell marked `(deleted)`. Row position is the mapping there, so a
+  tombstone row is what holds the unused number: remove the row and every capability
+  below it silently moves up one spec, which is the renumber this rule forbids.
 - Append new specs at the end of the relevant category block.
 - Do not merge or split categories implicitly; update this file first, then apply the approved structural change.

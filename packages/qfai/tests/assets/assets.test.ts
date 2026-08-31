@@ -1890,6 +1890,65 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ships the CAP catalogue template with the Spec column that carries the mapping", async () => {
+    const capabilitiesPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "03_Capabilities.md",
+    );
+    const content = await readFile(capabilitiesPath, "utf-8");
+
+    const rows = content
+      .split(/\r?\n/)
+      .filter((line) => /^\|\s*CAP-\d{4}\s*\|/.test(line))
+      .map((line) => line.split("|").map((cell) => cell.trim()));
+    expect(rows.length).toBeGreaterThan(0);
+    rows.forEach((cells, index) => {
+      expect(cells[1]).toBe(`CAP-${String(index + 1).padStart(4, "0")}`);
+      expect(cells.at(-2)).toBe(`spec-${String(index + 1).padStart(4, "0")}`);
+    });
+
+    expect(content).toMatch(/\|\s*Spec\s*\|/);
+    expect(content).toContain("QFAI-SPLIT-106");
+    expect(content).toMatch(/inserting or reordering a row/i);
+    // A renumber has to travel to every inbound reference, or the old ID keeps
+    // resolving — to the spec that took over the position.
+    expect(content).toMatch(/Superseded-by:/);
+    // Renaming an existing spec directory is a SUPERSEDE, not a rename, so the
+    // template routes a late capability to the end of the catalogue — gated on
+    // an observable criterion (the directory exists), not on "published".
+    expect(content).toMatch(/no spec directory exists at or below the row/i);
+    // An approved DELETE leaves the number unused; row position is the mapping,
+    // so the gap needs a row of its own or every capability below it renumbers.
+    expect(content).toMatch(/\(deleted\)/);
+    expect(content).toMatch(/tombstone/i);
+  });
+
+  it("routes the slice policy's deletion gap through a catalogue tombstone row", async () => {
+    const slicePolicyPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "skills",
+      "qfai-sdd",
+      "templates",
+      "specs",
+      "_policies",
+      "11_Slice-Policy.md",
+    );
+    const content = await readFile(slicePolicyPath, "utf-8");
+
+    // "Leave gaps after deletions" had no representation the mapping accepted,
+    // so the two policies pointed operators at incompatible outcomes.
+    expect(content).toMatch(/Leave gaps after deletions/);
+    expect(content).toMatch(/tombstone row/i);
+    expect(content).toContain("_policies/03_Capabilities.md");
+  });
+
   it("ensures solution-architect agent contains required contract constraints", async () => {
     const agentPath = path.join(templateQfaiDir, "assistant", "agents", "solution-architect.md");
     const content = await readFile(agentPath, "utf-8");
