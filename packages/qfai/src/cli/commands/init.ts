@@ -164,7 +164,7 @@ export async function runInit(options: InitOptions): Promise<void> {
   const workflowsDirIsOwn = workflowAncestorsBefore !== undefined;
   if (!workflowsDirIsOwn) {
     error(
-      ".github または .github/workflows がシンボリックリンクのため、shipped workflow の書き込みをスキップしました（リンク先はこのリポジトリの外を指しうるため）。実ディレクトリに置き換えてから再実行してください。",
+      "Skipped writing the shipped workflows: .github or .github/workflows is a symlink, and its target can point outside this repository. Replace it with a real directory and re-run.",
     );
   }
   // The workflows are copied and recorded BEFORE the rest of the root, as one unit.
@@ -251,7 +251,7 @@ export async function runInit(options: InitOptions): Promise<void> {
     settled === undefined;
   if (workflowsSwapped) {
     error(
-      ".github または .github/workflows が書き込み中に別のディレクトリへ差し替えられました。書き込まれた shipped workflow はリポジトリ外に作成された可能性があるため provenance に記録しません（差し替え先を辿って削除することは、リンクを辿らないという方針そのものに反するため行いません）。`.github/workflows` が実ディレクトリであることを確認し、想定外のファイルがないか確認してから再実行してください。",
+      ".github or .github/workflows was swapped for another directory while the copy was running. The shipped workflows that were written may have landed outside this repository, so they are not recorded in provenance (following the swapped-in target to delete them would break the very policy of not following links). Check that `.github/workflows` is a real directory and that no unexpected files were created, then re-run.",
     );
     workflowResult.copied = [];
   }

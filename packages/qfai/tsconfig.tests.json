@@ -96,6 +96,9 @@
     "tests/unit/cli/initWorkflowOwnership.test.ts",
     "tests/unit/shared/provenanceHostileTree.test.ts",
     "tests/unit/shared/text.test.ts",
-    "tests/unit/shippedLaneCommands.test.ts"
+    "tests/unit/shippedLaneCommands.test.ts",
+    "tests/helpers/japaneseMessageScan.ts",
+    "tests/unit/cliMessageLanguage.allowlist.ts",
+    "tests/unit/cliMessageLanguage.test.ts"
   ]
 }
