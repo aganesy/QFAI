@@ -28,6 +28,17 @@
  * place is therefore scanned here like any captured snapshot, so its
  * placeholder CSS must stay inside the DESIGN.md token set.
  *
+ * Because the input is the capture fan-out, the routing shape the generator
+ * declares decides which screens this scanner ever sees. Under `--auto-serve`
+ * that shape is SPA-style: `defaultServerRunner.ts#resolveServablePath` serves
+ * `index.html` to a document request (GET/HEAD carrying `text/html` in
+ * `Accept`) that matches no file, so path routes, `history.pushState` shells
+ * and parameterized contract routes render and their CSS reaches these
+ * scanners. Only sub-resource requests — no `text/html` in `Accept` — still
+ * 404, behind the path-traversal 403 guard. The routing-shapes list in
+ * `generator-prompt.md` states the same contract for the generator; as the
+ * paired halves of that SSOT, the two move together.
+ *
  * Both trees are written by the CLI the prompt prescribes: the capture fan-out
  * by `npx qfai prototyping iterate --capture`, and this scanner runs under
  * `npx qfai prototyping certify`. `npx` is not cosmetic — qfai is a project
