@@ -1,7 +1,7 @@
 # QFAI Constitution (Non‑Negotiable)
 
 This document defines **non‑negotiable operating rules** for QFAI agents and subagents.
-It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but tailored to QFAI’s minimal workflow.
+It is inspired by proven “constitution / articles / guardrails” patterns in existing SDD toolchains, but adapted to QFAI’s minimal workflow.
 
 ---
 
