@@ -213,12 +213,11 @@ answer to a cell qfai cannot read, never a supported spelling: fix the cell
 (see [Obligation spanning more than one layer](#obligation-spanning-more-than-one-layer)).
 `TDDLIST_UNKNOWN_LEVEL` (`warning`) names such a cell on the ledger side.
 
-Exactly one directory, never two: an annotation outside the one its `Level`
-names is both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` /
-`QFAI-ATDD-123`), and
-the rejection is symmetric — an annotation left in `<testsDir>/integration/**` after
-its TC moved to `L4`/`L5` is rejected the same way an early one in
-`<testsDir>/api/**` is. Two consequences bind every `TC-*` row:
+Exactly one directory, never two: an annotation outside the one its `Level` names is
+both uncovered and rejected (`QFAI-ATDD-121` / `QFAI-ATDD-122` / `QFAI-ATDD-123`), and
+the rejection is symmetric — an annotation left in `<testsDir>/integration/**` after its
+TC moved to `L4`/`L5` is rejected the same way an early one in `<testsDir>/api/**` is.
+Two consequences bind every `TC-*` row:
 
 - **A `TC-*` row's `Level` stays within L1–L3.** L4's goal is `CON-API-*` and
   L5's goal is `US-*` (see the layer definitions above), so an oracle that
@@ -249,9 +248,8 @@ its TC moved to `L4`/`L5` is rejected the same way an early one in
 
 ## Directory → AtddTestKind (code-side, derived from the crosswalk)
 
-Derived from `## Layer vocabulary crosswalk (normative)`, which is the
-authority for this mapping. This list only restates the three kinds the ATDD
-scan can resolve:
+Derived from `## Layer vocabulary crosswalk (normative)`, which is the authority for
+this mapping. This list only restates the three kinds the ATDD scan can resolve:
 
 - `<testsDir>/integration/**` -> Integration
 - `<testsDir>/api/**` -> API
@@ -429,10 +427,9 @@ spec's own Open Questions file on a later run: `08_Open-questions.md` in a
 layered spec, `15_Open-questions.md` in a spec pack.
 (`09_Open-questions.md` is the shared `_policies` file, not a per-spec one.)
 
-A Change Request is reserved for `constitution/drift-protocol.md`-class events
-— an actual conflict with an upstream SSOT decision. A volume observation is not
-one, and it stays non-blocking either way. What differs is how much of it is
-measurable:
+A Change Request is reserved for `constitution/drift-protocol.md`-class events — an
+actual conflict with an upstream SSOT decision. A volume observation is not one, and it
+stays non-blocking either way. What differs is how much of it is measurable:
 
 - **No configured guardrail.** qfai ships no default floor, ratio or threshold,
   and no validator emits a volume rule, so "unmet" is a judgement call with no
@@ -455,9 +452,8 @@ measurable:
   the observation is the judgement call above, and the evidence entry must say
   how the distribution was counted so it is not read as a tool measurement.
 
-Either way completion is not blocked and no Change Request is raised: a
-user-blocking Change Request against a project's own tuning knob cannot conclude
-anything actionable.
+Either way completion is not blocked and no Change Request is raised: a user-blocking
+Change Request against a project's own tuning knob cannot conclude anything actionable.
 
 ## Anti-patterns
 
