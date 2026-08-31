@@ -257,6 +257,8 @@ jobs:
             echo ""
             echo "The release notes are whatever the merged pull requests wrote into \`## [Unreleased]\`; the GitHub Release body is extracted from that same section."
             echo ""
+            echo "**The date above is the date this was PREPARED, not the date it ships.** The tag is cut when this pull request merges, so if that is a later day, correct the date in \`CHANGELOG.md\` here — this is the last point at which it can be changed without a second commit to \`main\`."
+            echo ""
             echo "Merging this pushes the \`v${RELEASE_VERSION}\` tag automatically, which starts \`release.yml\`. Publishing still waits on the \`release\` environment's required reviewer."
           } > "${body_file}"
 

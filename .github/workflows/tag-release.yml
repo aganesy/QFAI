@@ -133,6 +133,18 @@ jobs:
             exit 0
           fi
 
+          # The date in the heading is the date the release was PREPARED — Prepare release wrote
+          # it — and the tag is cut whenever the pull request merges, which is typically a later
+          # day. Nothing here can fix that: correcting it now would mean a second commit to
+          # `main` outside any pull request. So it is RECORDED, on the run that cut the tag, and
+          # the release pull request says where it could still have been changed.
+          heading="$(awk -v h="## [${claimed}]" 'index($0, h) == 1 { print; exit }' CHANGELOG.md)"
+          recorded_date="${heading##*- }"
+          today="$(date -u +%Y-%m-%d)"
+          if [ "$recorded_date" != "$today" ]; then
+            echo "::notice::tag-release: CHANGELOG.md dates ${claimed} as ${recorded_date} and this tag is being cut on ${today}. That date is written when the release is prepared, not when it ships."
+          fi
+
           # Asked of the API: this checkout is shallow and carries no tags. Re-running a release
           # commit is an ordinary thing to do, and finding the tag already there is not an error
           # — PROVIDED it names this commit. A tag of the same name created against a different

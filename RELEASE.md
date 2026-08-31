@@ -58,6 +58,9 @@ Prepare release がするのは次の3点だけで、散文は一切生成しま
 
 - `packages/qfai/package.json#version` の同期
 - `## [Unreleased]` を `## [X.Y.Z] - <日付>` に rename
+  （日付は **Prepare release を実行した日** です。tag が切られるのは PR がマージされた
+  ときなので、翌日以降にマージする場合はその PR の中で日付を直してください。マージ後に
+  直すには `main` への別コミットが必要になります）
 - 空の `## [Unreleased]` を再挿入
 
 GitHub Release の本文も `release.yml` が同じセクションを抽出して使います。つまり公開される

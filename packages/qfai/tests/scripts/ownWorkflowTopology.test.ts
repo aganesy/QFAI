@@ -2680,6 +2680,46 @@ describe("release automation performs decisions rather than making them", () => 
     ).toContain("CHANGELOG.md");
   });
 
+  it("says what the recorded release date means, while it can still be changed", () => {
+    // The date written into `## [X.Y.Z] - <date>` is the day Prepare release RAN. The tag is
+    // cut when the release pull request merges — review and CI in between, so typically a
+    // later day — and the published CHANGELOG then dates the release before it happened,
+    // permanently.
+    //
+    // Nothing in this machinery can fix that at tag time: correcting it then would mean a
+    // second commit to `main` outside any pull request. What it can do is say so at the one
+    // moment the file is still editable — in the release pull request — and record the drift
+    // on the run that cut the tag. Both halves are pinned, because either alone leaves the
+    // wrong date unremarked somewhere.
+    const prepareText = readFileSync(
+      path.join(REPO_ROOT, ".github", "workflows", "prepare-release.yml"),
+      "utf-8",
+    );
+    expect(
+      prepareText,
+      "the release pull request must say the date is the preparation date: whoever merges it " +
+        "is the last person who can change it without a second commit to main",
+    ).toContain("PREPARED, not the date it ships");
+
+    const tagWorkflow = workflow("tag-release.yml");
+    const jobs = isRecord(tagWorkflow["jobs"]) ? tagWorkflow["jobs"] : {};
+    const job = isRecord(jobs["tag"]) ? jobs["tag"] : {};
+    const steps = job["steps"];
+    const commands = (Array.isArray(steps) ? steps : [])
+      .map((step) => (isRecord(step) ? String(step["run"] ?? "") : ""))
+      .join("\n")
+      .split(/\r?\n/)
+      .map((line) => line.trim())
+      .filter((line) => line !== "" && !line.startsWith("#"))
+      .join("\n");
+    // The COMPARISON, inside its brackets — the notice beside it names both dates, and a row
+    // matching that would survive the check being deleted.
+    expect(
+      commands,
+      "and the tag run must compare the recorded date with the day the tag is actually cut",
+    ).toMatch(/\[[^\n]*recorded_date[^\n]*today[^\n]*\]/);
+  });
+
   it("can be re-run after the pull request failed to open, without forcing anything", () => {
     // The push and the pull request are two failures, and only the first leaves nothing
     // behind. A run that pushed `release/vX.Y.Z` and then lost `gh pr create` to a transient
