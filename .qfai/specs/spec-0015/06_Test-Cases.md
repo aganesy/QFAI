@@ -182,7 +182,7 @@
 - AC-Refs: AC-0015-0018
 - Type: normal
 - Level: unit
-- Verify that the eight catalog codes (`R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`) are registered at severity error (with `R-DESIGN-MD-PATCH-OUT-OF-ZONE` documented warning per REQ-0151) and each requires a mandatory non-empty `justification:`.
+- Verify that the eight catalog codes (`R-AUTOPILOT-POLICY-MISSING`, `R-HANDOFF-SCHEMA-DRIFT`, `R-EVIDENCE-MUTATION-UNLOGGED`, `R-DESIGN-MD-PATCH-OUT-OF-ZONE`, `R-PACK-LOCATION-DRIFT`, `R-SKILL-MANIFEST-DRIFT`, `R-EXPLORATION-CERTIFY-ATTEMPT`, `R-MOCK-HREF-DRIFT`) are registered in the catalog (membership only — the catalog declares no per-code severity; `R-DESIGN-MD-PATCH-OUT-OF-ZONE` stays warning at its own detector per REQ-0151) and that each requires a mandatory non-empty `justification:` whose empty / whitespace-only value is rejected at severity error for every one of the eight.
 
 ## TC-0015-0027: Catalog finding with empty justification rejected by validate
 
