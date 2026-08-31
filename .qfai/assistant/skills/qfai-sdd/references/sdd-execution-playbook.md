@@ -19,7 +19,13 @@ Use this file for the detailed sequencing rules behind `/qfai-sdd`.
 1. Identify the latest discussion-pack.
 2. Stop if required files are missing.
 3. Stop if blocking OQ remain.
-4. Stop if the latest UI-bearing pack is missing valid `prototyping.yaml`.
+4. Stop if a **visual-prototyping** UI-bearing pack is missing valid
+   `prototyping.yaml`. A pack is visual-prototyping when its `01_Context.md`
+   classification names `web`, `mobile`, `desktop` or `mixed` as
+   `primary_surface` or in `secondary_surfaces`. A cli-only pack
+   (`primary_surface: cli` with no visual `secondary_surfaces`) emits no
+   `prototyping.yaml` — `/qfai-prototyping` rejects `cli` as an execution
+   surface — so its absence is not a blocker there.
 
 ### Import-lite entrypoint (no discussion-pack at all)
 
