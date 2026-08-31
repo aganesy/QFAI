@@ -726,9 +726,11 @@ describe(
       //
       // Two rules answer those. The PATH enumeration covers everything outside the mirrored tree, and
       // it is seven files. The KIND rule covers everything including the mirrored tree: the init
-      // source ships data, and data has a data extension. That is the fourth question about who runs
-      // a file, arrived at after three rounds of enumerating the dangerous side — which cannot be
-      // finished, and which is the mistake this file's own design principle exists to avoid.
+      // source ships data, and data announces itself — by a data extension, or, for a dotfile that
+      // `path.extname` reports as extensionless, by a whole name somebody enumerated. That is the
+      // fourth question about who runs a file, arrived at after three rounds of enumerating the
+      // dangerous side — which cannot be finished, and which is the mistake this file's own design
+      // principle exists to avoid.
       const source = path.resolve(process.cwd(), "..", "..", "packages", "qfai", "assets", "init");
       const found: string[] = [];
       const unenumerated: string[] = [];
