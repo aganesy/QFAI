@@ -56,7 +56,7 @@ describe("qfai-sdd's template whitelist covers what the skill ships", () => {
       // empty string and the enumeration check below would pass vacuously —
       // the test would go green on exactly the drift it exists to catch.
       const start = skill.indexOf("Use only templates under");
-      const end = skill.indexOf("Always write the preflight summary");
+      const end = skill.indexOf("Always write `.qfai/report/preflight_summary.md`");
       expect(start, "Constraint 1's opening wording moved").toBeGreaterThanOrEqual(0);
       expect(end, "the constraint after Constraint 1 moved").toBeGreaterThan(start);
       const constraint = skill.slice(start, end);

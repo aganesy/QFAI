@@ -29,11 +29,9 @@ import { isAtOrPastSunset, RULE_PROMOTIONS, SUNSETS } from "../../src/core/sunse
 import { FINDING_CODES_BEFORE_PROMOTION_POLICY } from "./findingCodeBaseline.js";
 
 /**
- * Baseline codes whose emitters have since been deleted, in sorted order — the
- * assertion below compares against a `.sort()`ed set, so a new entry goes in
- * its collating position rather than at the end. An entry earns its place by
- * the validator that raised it being removed from the tree; it is not a place
- * to silence a code that still exists.
+ * Baseline codes whose emitters have since been deleted, newest retirement last.
+ * An entry earns its place by the validator that raised it being removed from
+ * the tree; it is not a place to silence a code that still exists.
  */
 const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-ATDD-001",
@@ -44,10 +42,6 @@ const RETIRED_SINCE_BASELINE: string[] = [
   "QFAI-DOC-CONVERGENCE-MISSING",
   "QFAI-DOC-VOCABULARY-CONTRADICTION",
   "QFAI-DOC-VOCABULARY-PROHIBITED",
-  // `core/validators/mermaidFence.ts` was its sole emitter. This branch folds
-  // that fence check into `mermaidEnforcement.ts` — which raises
-  // `QFAI-MMD-001` over the same input — and deletes the file.
-  "QFAI-MERMAID-001",
   "QFAI-REQCTX-000",
   "QFAI-REQCTX-001",
   "QFAI-REQCTX-002",

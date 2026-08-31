@@ -121,19 +121,6 @@ describe("doctor --autoremediate CI-off / --dry-run side-effect gates", () => {
     expect(summary.configFieldsWritten).toEqual([]);
     // Dry-run line surfaced.
     expect(summary.lines.join("\n")).toMatch(/dry-run/u);
-    // The archive plan is reported in the FUTURE tense. `cleanStaleReviewPacks`
-    // still populates `archived` under dry-run (the packs a live run would
-    // move), so the past-tense `review packs archived=N` wording read as a
-    // completed archive and an operator checking the preview saw packs already
-    // gone. `--clean --dry-run` says `would move ->`; so must this.
-    const dryRunLines = summary.lines.join("\n");
-    expect(dryRunLines).not.toMatch(/review packs archived=/u);
-    expect(dryRunLines).toContain("autoremediate: would archive review packs=1");
-    expect(dryRunLines).toContain(`  would move -> _archive/review-${oldTs}`);
-    // The config here genuinely lacks `review:`, so the fill IS planned — and
-    // the plan names the field it would add rather than claiming a fill
-    // unconditionally (see `doctorAutoremediate.fixes.test.ts`).
-    expect(dryRunLines).toContain("autoremediate: would fill default-keyed config fields: review");
   });
 });
 

@@ -177,7 +177,7 @@ describe("spec-0015 US-0015-0011 handoff schema (E2E, deterministic temp-fixture
 });
 
 describe("spec-0015 US-0015-0012 finding-code catalog (E2E, deterministic temp-fixture)", () => {
-  it("QFAI:SPEC-0015:US-0015-0012 — normal: all 8 catalog codes are registered", () => {
+  it("QFAI:SPEC-0015:US-0015-0012 — normal: all 8 catalog codes are registered with severity per contract", () => {
     const codes = JUSTIFICATION_CATALOG.map((e) => e.code);
     expect(codes).toContain("R-AUTOPILOT-POLICY-MISSING");
     expect(codes).toContain("R-HANDOFF-SCHEMA-DRIFT");

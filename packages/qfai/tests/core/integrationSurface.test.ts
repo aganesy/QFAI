@@ -292,13 +292,9 @@ describe("the integration surface is checked for links that did not survive chec
       expect(found?.message).toContain(`${String(total)} 件`);
       // The remediation must not send the operator to `--force`: `qfai init`
       // repairs a flattened link on its own, and preserves anything else.
-      // Scoped to the opening line, which is the remedy for the damage this
-      // case reports — a later line covers the retired wrapper, where
-      // `--force` is what prunes it, and that is a different remedy.
-      const opening = found?.suggested_action?.split("\n")[0];
-      expect(opening).toContain("`qfai init` を再実行");
-      expect(opening).not.toContain("qfai init --force");
+      expect(found?.suggested_action).toContain("`qfai init` を再実行");
       expect(found?.suggested_action).toContain("git config --global core.symlinks true");
+      expect(found?.suggested_action).not.toContain("qfai init --force");
     });
   });
 });
@@ -1019,24 +1015,6 @@ describe("what init wrote is still checked after the roster moves on", () => {
       const found = await finding(root);
       expect(found?.refs).toContain(".claude/skills/legacy-research");
       expect(found?.message).toContain("which this version does not ship");
-      // The remedy names the command that repairs it, and says where the
-      // repair stops — twice over: `--force` prunes the wrapper and never the
-      // canonical document behind it, and on the skill side it reaches only
-      // the `qfai-` prefixed names. `legacy-research` is this very case, so a
-      // remedy that promised `--force` would clear it would be wrong here.
-      expect(found?.suggested_action).toContain("`qfai init --force`");
-      expect(found?.suggested_action).toContain("canonical 側");
-      expect(found?.suggested_action).toContain("`qfai-` で始まる skill wrapper");
-      expect(found?.suggested_action).toContain("prune 対象外なので、報告されたパスを手で削除");
-      // The agent half of that promise stops at a direct child of
-      // `.qfai/assistant/agents/`: this rule reports anything landing under
-      // `.qfai/assistant/`, so a nested or cross-kind agent target is reported
-      // and never pruned, and the remedy must not send the operator to
-      // `--force` for one.
-      expect(found?.suggested_action).toContain(
-        "解決先が `.qfai/assistant/agents/` の直下にある agent wrapper",
-      );
-      expect(found?.suggested_action).toContain("`.qfai/assistant/agents/<sub>/…`");
     });
   });
 

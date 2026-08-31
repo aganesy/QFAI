@@ -14,13 +14,8 @@
  *   - R-EXPLORATION-CERTIFY-ATTEMPT
  *   - R-MOCK-HREF-DRIFT
  *
- * Severity is deliberately NOT a catalog column: the catalog governs
- * membership only. Each code's own severity belongs to its detector
- * (`designMdPatchZone.ts` emits R-DESIGN-MD-PATCH-OUT-OF-ZONE at
- * `warning`), while the empty-justification ingestion rejection in
- * `reviewerJustification.ts` is always `error`. A per-entry `severity`
- * field would be read by no production path, so its absence is pinned
- * here as a regression guard.
+ * Severity: every code is `error` (R-DESIGN-MD-PATCH-OUT-OF-ZONE is
+ * documented warning per REQ-0151 but kept in the catalog).
  */
 // QFAI:SPEC-0015:TC-0015-0026
 
@@ -49,21 +44,16 @@ describe("TC-0015-0026: justification catalog SSOT", () => {
     );
   });
 
-  it("every catalog entry carries a non-empty description", () => {
+  it("every catalog entry carries a non-empty description and severity 'error' (R-DESIGN-MD-PATCH-OUT-OF-ZONE documented warning)", () => {
     for (const entry of JUSTIFICATION_CATALOG) {
       expect(entry.code).toMatch(/^R-/);
       expect(typeof entry.description).toBe("string");
       expect(entry.description.length).toBeGreaterThan(0);
-    }
-  });
-
-  // Regression for the decorative-severity defect: the catalog used to
-  // declare a per-code `severity` that no production path read, so a
-  // code documented `warning` was ingested at `error`. Entries MUST
-  // expose code + description only.
-  it("catalog entries declare no severity column (membership-only SSOT)", () => {
-    for (const entry of JUSTIFICATION_CATALOG) {
-      expect(Object.keys(entry).sort()).toEqual(["code", "description"]);
+      if (entry.code === "R-DESIGN-MD-PATCH-OUT-OF-ZONE") {
+        expect(entry.severity).toBe("warning");
+      } else {
+        expect(entry.severity).toBe("error");
+      }
     }
   });
 

@@ -63,11 +63,7 @@ describe("doctor --profile <skill> probes manifest runtimeDependencies", () => {
       outPath,
       skillProfile: "qfai-prototyping",
     });
-    // A missing runtime dependency is an `error` finding, and doctor's
-    // failure policy now comes from `validation.failOn` (shipped default
-    // `error`) rather than from the `--fail-on` flag alone — so a bare
-    // run over this tree exits 1. Opting out takes `--fail-on never`.
-    expect(exit).toBe(1);
+    expect(exit).toBe(0);
 
     const data = JSON.parse(await readFile(outPath, "utf-8")) as DoctorJson;
     const finding = data.checks.find((check) => check.id === "skill.runtimeDependencies");

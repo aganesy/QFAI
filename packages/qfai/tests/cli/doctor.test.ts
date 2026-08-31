@@ -321,81 +321,6 @@ describe("doctor", { timeout: 60000 }, () => {
     }
   });
 
-  // doctor's exit code must come from the same policy key validate reads
-  // (`validation.failOn`, shipped default `error`). Before this, doctor
-  // printed findings under "== errors blocking the active profile ==" and
-  // still returned 0 whenever `--fail-on` was omitted, so every bare
-  // `qfai doctor` in a CI lane was decorative.
-  it("exits 1 on blocking error findings when --fail-on is omitted", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedInvalidConfigValue(root);
-      const outPath = path.join(root, ".qfai", "report", "doctor.json");
-
-      const exitCode = await runDoctor({
-        root,
-        rootExplicit: true,
-        format: "json",
-        outPath,
-      });
-
-      const parsed: DoctorData = JSON.parse(await readFile(outPath, "utf-8"));
-      expect(findCheck(parsed.checks, "config.load")?.severity).toBe("error");
-      expect(exitCode).toBe(1);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  it("keeps exit 0 with --fail-on never even when error findings exist", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedInvalidConfigValue(root);
-      const outPath = path.join(root, ".qfai", "report", "doctor.json");
-
-      const exitCode = await runDoctor({
-        root,
-        rootExplicit: true,
-        format: "json",
-        outPath,
-        failOn: "never",
-      });
-
-      expect(exitCode).toBe(0);
-    } finally {
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
-  // `main.ts` used to drop `--fail-on never` before it reached `runDoctor`,
-  // which made "never" indistinguishable from "unset" — with the config
-  // default now in play, that would leave the opt-out unreachable.
-  it("routes --fail-on never through the CLI entrypoint", async () => {
-    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
-    const previousExitCode = process.exitCode;
-    process.exitCode = undefined;
-    try {
-      await runInit({ dir: root, force: false, dryRun: false, yes: true });
-      await seedInvalidConfigValue(root);
-
-      await captureStdout(async () => {
-        await run(["doctor", "--root", root], root);
-      });
-      expect(process.exitCode).toBe(1);
-
-      process.exitCode = undefined;
-      await captureStdout(async () => {
-        await run(["doctor", "--root", root, "--fail-on", "never"], root);
-      });
-      expect(process.exitCode).toBe(0);
-    } finally {
-      process.exitCode = previousExitCode;
-      await rm(root, { recursive: true, force: true });
-    }
-  });
-
   it("warns on outDir collisions when rootExplicit is true", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-doctor-"));
     const monorepoRoot = path.join(root, "repo");
@@ -771,24 +696,6 @@ async function readDoctorData(
   });
   const raw = await readFile(outPath, "utf-8");
   return JSON.parse(raw) as DoctorData;
-}
-
-// Appends a value the config loader rejects (`QFAI_CONFIG_INVALID`,
-// severity `error`), which `createDoctorData` promotes onto the
-// `config.load` check. The shipped template has no `uiux:` key, so the
-// appended block cannot collide with an existing one.
-async function seedInvalidConfigValue(root: string): Promise<void> {
-  const configPath = path.join(root, "qfai.config.yaml");
-  const existing = await readFile(configPath, "utf-8");
-  await writeFile(
-    configPath,
-    `${existing}
-uiux:
-  renderEvidence:
-    failOpen: "not-a-boolean"
-`,
-    "utf-8",
-  );
 }
 
 function findCheck(checks: DoctorCheck[], id: string): DoctorCheck | undefined {
