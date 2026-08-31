@@ -1737,7 +1737,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         "Source layout: .qfai/assistant/{steering, instructions, manifest}/",
       );
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
