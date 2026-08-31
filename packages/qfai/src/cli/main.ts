@@ -22,9 +22,9 @@ import { findConfigRoot } from "../core/config.js";
  * sets `invalid` for an unrecognized command, so borrowing it here would file a
  * mistyped command under a row the contract wrote for something else. 1 keeps
  * the two distinguishable while still refusing to report success, which is the
- * defect this branch closed: the case used to print `Unknown command` and exit
- * 0. A `--flag`-shaped first token never reaches here — the parser catches it,
- * leaves `command` null, and the invalid-args branch above exits 2.
+ * defect this branch closed: the `default:` arm used to print `Unknown command`
+ * and exit 0. A `--flag`-shaped first token never reaches here — the parser
+ * catches it, leaves `command` null, and the invalid-args branch above exits 2.
  */
 const UNKNOWN_COMMAND_EXIT_CODE = 1;
 
