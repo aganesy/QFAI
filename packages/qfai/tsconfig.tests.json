@@ -89,6 +89,7 @@
     "tests/scripts/boundedRead.test.ts",
     "tests/unit/buildCommand.test.ts",
     "tests/cli/githubAnnotationEscaping.test.ts",
+    "tests/core/findingCodeGrammar.test.ts",
     "tests/core/htmlMockBudgetClock.test.ts",
     "tests/core/htmlMockLazyLoad.test.ts",
     "tests/integration/spec0006WorkflowsIntegrity.guttedPackage.test.ts",
