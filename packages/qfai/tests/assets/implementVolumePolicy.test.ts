@@ -45,6 +45,21 @@ describe("qfai-implement scales its ceremony to ledger volume", () => {
       expect(section).toContain("A row with no recorded tier is treated as **T2**");
     });
 
+    it(`${tree}: states its rationale once and points at the file that holds the ceremony`, async () => {
+      const section = unwrap(await read(tree, REFERENCE));
+      // A merge left two wordings of the same opening paragraph stacked. The
+      // surviving one must be the copy corrected for the move into a reference
+      // file: it names `SKILL.md`, where the per-item ceremony actually lives.
+      const rationale = section.match(/The per-item ceremony/g) ?? [];
+      expect(rationale, "the rationale paragraph is duplicated").toHaveLength(1);
+      expect(section).toContain(
+        "The per-item ceremony in `SKILL.md` is written for a ledger of tens of rows",
+      );
+      // What is below in this file is the risk-tier table, not the ceremony.
+      expect(section).not.toContain("The per-item ceremony below");
+      expect(section).toContain("dropping a gate is not on the table");
+    });
+
     it(`${tree}: permits batched review with a bounded unit`, async () => {
       const section = await read(tree, REFERENCE);
       expect(section).toContain("## Batched review");
