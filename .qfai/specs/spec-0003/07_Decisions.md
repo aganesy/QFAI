@@ -2,7 +2,7 @@
 
 ## Decisions
 
-11 items.
+12 items.
 
 ### DR-0003-0001: symlink ベースの統合方式
 
@@ -21,6 +21,7 @@
 - `.codex/agents/*.toml` は init.ts の自動生成ロジックには含めず、リポジトリに静的配置する
 - Why: Codex TOML は手動管理とし、init.ts の複雑性を抑制する
 - Source: 旧 spec-0018 DR-0030
+- Status: RE-OPENED — DR-0003-0012 が本決定を置き換える。静的配置前提の実装・レビューは DR-0003-0012 を参照すること
 
 ### DR-0003-0004: Agent symlink の自動 prune 非対応
 
@@ -91,3 +92,17 @@
 - Rejected: workflows 用に別の removal helper を書く
   - DO NOT: 並行 filesystem 実装を作らない。Temptation: 既存 helper を export したくない場合の最短経路に見える
 - Source: CLI-WFSET §1 / §4、上流 pack REQ-0020、DTC-6
+
+### DR-0003-0012: Codex サブエージェント TOML を init で自動生成する (RE-OPEN of DR-0003-0003 / \_policies DR-0030)
+
+- Decision: `.codex/agents/<name>.toml` を `qfai init` が canonical agent markdown + `assistant/manifest/agent-catalog.yml#agents[].kind` から生成する。生成規約は `assistant/agents/**` と同一 — plain run は create-only、`--force` で再生成し、roster を外れた生成物は `--force` で prune する
+- Context: DR-0003-0003 / DR-0030 は「静的配置 + 手動管理」を採用したが、その前提は「配布物が `.codex/agents/` を含む」ことだった。実際には `packages/qfai/assets/init/` に `.codex/agents/` は存在せず、`qfai init` を実行したプロジェクトは Claude / Copilot の agent wrapper だけを受け取り Codex は空のままだった。canonical agent の修正は symlink 経由で 2 統合に即時到達し、3 つ目には永久に到達しない
+- Rationale:
+  - TOML は symlink にできない（body を `developer_instructions` 文字列へ escape する必要がある）ため、「静的配置」は「手動同期」と同義であり、リポジトリ外では同期する主体が存在しない
+  - 生成側に寄せることで canonical markdown が唯一の SSOT になり、3 統合の drift が構造的に消える
+  - DR-0030 が挙げた「変換ロジックの複雑度」は `packages/qfai/src/core/codexAgentToml.ts` に閉じ込め、init.ts 側は step 6 の呼び出しのみとする
+- Rejected: 配布 asset に `.codex/agents/*.toml` を静的同梱する（DR-0030 の原案を配布物まで延長する）
+  - DO NOT: canonical markdown と TOML の二重管理を配布物へ持ち込まない。Temptation: 生成ロジックを書かずに済ませたい
+  - Why rejected: 同梱 TOML は canonical markdown の snapshot であり、プロジェクト側で agent を追加・改稿した瞬間に古くなる。`--force` が再生成しない限り Codex だけが取り残される構造は解消しない
+- Scope: 本リポジトリの `.codex/agents/*.toml` も本決定以降は生成物として扱う（`packages/qfai/tests/integration/codexAgentWrappers.test.ts` が generator 出力との byte 一致を検証する）
+- Coverage: AC-0003-0037 / TC-0003-0055 / TDD-0057
