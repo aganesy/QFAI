@@ -38,6 +38,7 @@
     "tests/assets/coverageDepthMatrixHome.test.ts",
     "tests/assets/layerCiLaneMapping.test.ts",
     "tests/assets/retractedClaims.test.ts",
+    "tests/assets/skillEditAuthority.test.ts",
     "tests/assets/stageEvidenceCounts.test.ts",
     "tests/e2e/spec0003ShippedWorkflowSetE2E.test.ts",
     "tests/e2e/spec0006WorkflowsIntegrityE2E.test.ts",
