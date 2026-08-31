@@ -1,0 +1,16 @@
+{
+  "version": "2.0",
+  "created_at": "2026-08-22T06:00:00.000Z",
+  "target": { "kind": "spec", "path": ".qfai/specs/spec-0017" },
+  "routing_profile": "atdd-default-plus-implementation",
+  "overall_status": "FAIL",
+  "revision_form": "content-hash",
+  "revision": "21e2cdc6",
+  "reviewers": [
+    { "reviewer": "implementation-reviewer", "status": "FAIL", "feedback_count": 15 },
+    { "reviewer": "completion-reviewer", "status": "FAIL", "feedback_count": 14 },
+    { "reviewer": "qa-gatekeeper", "status": "FAIL", "feedback_count": 10 }
+  ],
+  "feedback_count_rule": "distinct finding identifiers appearing as a heading at level two to four, optionally backtick-wrapped; every count here was produced by running that rule over the reports rather than typed, and it reproduces as B4+M2+m6+A3 = 15, B5+M3+m4+A2 = 14 and B2+M4+m3+A1 = 10",
+  "notes": "The round was pointed at round 14's repairs rather than at the tree in general, because round 12 established that five of its own findings had been introduced by the two or three commits before it. Eleven blocking findings, of which three were defects in round 14's repairs: a derived count with no floor, a merged matrix class whose predicate accepted anything the other two rejected, and a guard scoped to one directory while the claims it hunts stood in a test file. Two execution channels shipped through the whole suite, both using only keys already enumerated — a `uses:`-only action step and a second `setup-node` — and a third `bodyDigest` collision retired normalizing altogether. The stage did not edit the subject while the round ran; the gatekeeper's plants were visible to both siblings, who reported them and re-took every measurement against pristine content rather than measuring through them."
+}
