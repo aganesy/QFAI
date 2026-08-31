@@ -10,6 +10,7 @@
 - US-0006-0008: stale review-pack TTL archival - `doctor --clean` で古い review pack を `_archive/` へ move
 - US-0006-0009: doctor --autoremediate - 安全な範囲で検出かつ自動修復
 - US-0006-0010: per-skill manifest probe - `doctor --profile <skill>` で runtimeDependencies を probe
+- US-0006-0011: shipped workflow drift detection - install 済み shipped workflow の乖離を advisory finding で通知
 
 ## US-0006-0001: 設定ファイル診断
 
@@ -70,3 +71,9 @@
 - Parent: CAP-0006
 - Goal: `qfai doctor --profile <skill>` が `assets/init/.qfai/assistant/skills/<skill>/manifest.json` (CLI-MANIFEST) を読み、各 `runtimeDependencies` entry について `node_modules/.bin/...` / `node_modules/<name>/` を probe する。missing は install command 付きで report。empty list は probe しない (false positive なし)。manifest 宣言と probe 結果の drift で `R-SKILL-MANIFEST-DRIFT` を emit (SSOT-sync Pair III)。
 - Non-goals: manifest schema 著作 / 配布側 lint (spec-0015 owned)、依存の auto-install (それは `--autoremediate` の責務)
+
+## US-0006-0011: shipped workflow drift detection (detection half)
+
+- Parent: CAP-0006
+- Goal: adopter が「修正済みの template が自分の repository に届いていない」ことを気づける route を持つ。`qfai doctor` は adopter tree の `.github/workflows/` に install 済みの shipped workflow を install 済み package 同梱の copy と比較し (既存 `skills.integrity` と同型の比較)、乖離を dotted-lowercase check id `workflows.integrity` の advisory finding として通知する。finding は stale file の path と、その時点で利用可能な repair — 「install 済み package 内の copy で当該ファイルを置き換える」手動手順 — を名指しする。shipped tree は create-only (force off) で copy されるため `qfai init --force` でも refresh されない、という前提に対する非破壊の通知 channel である。
+- Non-goals: shipped workflow の上書き / refresh / prune (OQ-0021 に blocked; 本 spec の out of scope)、advisory 内での refresh command / CLI verb / flag の名指し、shipped workflow の所有権契約と provenance record の**作成・書き込み・schema 定義** (spec-0003 / REQ-0020 owned — 本 spec は provenance record を**読む**が、書かない・所有しない。読まなければ adopter 自作ファイルと QFAI 由来の stale ファイルを区別できず、所有していないファイルを drift 報告してしまう)、`qfai validate` 側への finding 追加、exit code の変更
