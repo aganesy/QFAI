@@ -146,6 +146,24 @@ describe("parseArgs", () => {
     expect(parsed.options.help).toBe(true);
   });
 
+  it("accepts --format text|json for guardrails", () => {
+    const cwd = process.cwd();
+    const json = parseArgs(["guardrails", "check", "--format", "json"], cwd);
+    expect(json.invalid).toBe(false);
+    expect(json.options.guardrailsFormat).toBe("json");
+
+    const text = parseArgs(["guardrails", "list", "--format", "text"], cwd);
+    expect(text.invalid).toBe(false);
+    expect(text.options.guardrailsFormat).toBe("text");
+  });
+
+  it("rejects unsupported --format values for guardrails", () => {
+    const cwd = process.cwd();
+    const parsed = parseArgs(["guardrails", "check", "--format", "github"], cwd);
+    expect(parsed.invalid).toBe(true);
+    expect(parsed.options.invalidExitCode).toBe(2);
+  });
+
   it("parses sdd profile for validate", () => {
     const cwd = process.cwd();
     const parsed = parseArgs(["validate", "--profile", "sdd"], cwd);

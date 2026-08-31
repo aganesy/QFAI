@@ -43,6 +43,8 @@ export type ParsedArgs = {
     guardrailsPaths: string[];
     guardrailsMax?: number;
     guardrailsKeyword?: string;
+    /** --format <text|json> for `qfai guardrails list|extract|check`. */
+    guardrailsFormat?: "text" | "json";
     platform?: string;
     prototypingAction?: "preflight" | "iterate" | "certify" | "show-spec";
     prototypingTargetUrl?: string;
@@ -922,6 +924,13 @@ function applyFormatOption(
   if (command === "doctor" || command === "prototyping") {
     if (value === "text" || value === "json") {
       options.doctorFormat = value;
+      return true;
+    }
+    return false;
+  }
+  if (command === "guardrails") {
+    if (value === "text" || value === "json") {
+      options.guardrailsFormat = value;
       return true;
     }
     return false;

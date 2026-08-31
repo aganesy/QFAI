@@ -2,7 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runGuardrails } from "./commands/guardrails.js";
+import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
@@ -17,7 +17,20 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
-    info(usage());
+    // A parser rejection never reaches runGuardrails(), so the `--format json`
+    // promise ("stdout stays parseable for every outcome") has to be honoured
+    // here too: usage goes to stderr and stdout carries the refusal envelope.
+    if (invalid && command === "guardrails" && options.guardrailsFormat === "json") {
+      error(usage());
+      info(
+        formatGuardrailsErrorJson(
+          "invalid-arguments",
+          "guardrails: invalid arguments (see usage on stderr)",
+        ),
+      );
+    } else {
+      info(usage());
+    }
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -98,7 +111,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "guardrails":
       {
-        const resolvedRoot = await resolveRoot(options);
+        const resolvedRoot = await resolveRoot(options, options.guardrailsFormat === "json");
         const exitCode = await runGuardrails({
           root: resolvedRoot,
           ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
@@ -107,6 +120,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.guardrailsKeyword !== undefined
             ? { keyword: options.guardrailsKeyword }
             : {}),
+          ...(options.guardrailsFormat !== undefined ? { format: options.guardrailsFormat } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -332,6 +346,7 @@ Options:
   --path <path>                 guardrails: 対象ファイル/ディレクトリ（複数指定可）
   --max <number>                guardrails extract: 最大件数
   --keyword <text>              guardrails list/extract: キーワードフィルタ
+  --format <text|json>          guardrails list/extract/check: 出力形式（既定 text）
   --target-url <url>            prototyping preflight/iterate: 評価対象の URL
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: 収束済みループ状態を再実行なしで覗く (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
@@ -357,16 +372,27 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+/**
+ * `machineReadable` keeps stdout reserved for the payload when the command is
+ * about to print JSON: the missing-config notice then goes to stderr so
+ * `qfai <cmd> --format json` stays parseable.
+ */
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  machineReadable = false,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(
-      `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`,
-    );
+    const notice = `qfai: qfai.config.yaml が見つからないため defaultConfig を使用します (root=${search.root})`;
+    if (machineReadable) {
+      error(notice);
+    } else {
+      warn(notice);
+    }
   }
   return search.root;
 }
