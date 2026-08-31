@@ -301,13 +301,22 @@ export async function runInit(options: InitOptions): Promise<void> {
   // root/ と .qfai/ は create-only（既存は skip）
   // STANDARD_ASSET_PATHS のみ --force で上書きする
   //
+  // その create-only は下の `force: false` literal ひとつが一律に効いている
+  // だけで、個別ファイルを名指しで守る仕組みは存在しない。adopter が著した
+  // DESIGN.md も、`qfai-configure` で調整された qfai.config.yaml も、上の
+  // 同じく create-only な workflow copy が扱う shipped workflow も、残る理由は
+  // すべてこの一つの規則である。だから literal を `options.force` に持ち上げる
+  // ことは、adopter 所有ファイルを --force run が上書きするという意味になる
+  // ——shipped workflow の ownership contract が同じ literal を load-bearing と
+  // 呼び、source-level の oracle で持ち上げを禁じているのはこのためで、
+  // root tree の他のファイルもその一つの規則にただ乗っている。
+  //
   // Every shipped workflow name is excluded here, whatever this run decided about it: the ones
   // it writes were written above, and the ones it declined must not arrive by another route.
   const rootResult = await copyTemplateTree(rootAssets, destRoot, {
     force: false,
     dryRun: options.dryRun,
     conflictPolicy: "skip",
-    protect: ["DESIGN.md"],
     exclude: [...SHIPPED_WORKFLOW_NAMES].map((name) => path.join(".github", "workflows", name)),
   });
   // …and the summary counts them together, as one copy, which is what an operator sees.

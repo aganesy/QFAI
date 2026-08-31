@@ -478,6 +478,40 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("keeps every existing root asset across --force, not just DESIGN.md", async () => {
+    // The root assets are create-only in full: a `force: false` literal is
+    // what saves every one of them, so DESIGN.md is not singled out. The
+    // shipped workflow reaches disk through its own create-only copy rather
+    // than the root-tree one, but by the same literal and the same rule —
+    // the ownership contract that calls it load-bearing is stating, for the
+    // workflow, what holds for the whole root surface. Lock all three
+    // shipped root files so a future widening of --force cannot quietly
+    // overwrite a project's authored DESIGN.md, its `qfai-configure`-tuned
+    // qfai.config.yaml, or its CI workflow.
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const rootAssets = [
+        "DESIGN.md",
+        "qfai.config.yaml",
+        path.join(".github", "workflows", "qfai-validate.yml"),
+      ];
+      for (const relative of rootAssets) {
+        await writeFile(path.join(root, relative), `authored ${relative}\n`, "utf-8");
+      }
+
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      for (const relative of rootAssets) {
+        const after = await readFile(path.join(root, relative), "utf-8");
+        expect(after).toBe(`authored ${relative}\n`);
+      }
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   it("overwrites skills only when --force is provided", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-"));
     try {
