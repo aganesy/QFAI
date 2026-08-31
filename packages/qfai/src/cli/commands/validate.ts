@@ -743,6 +743,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
     "SPLIT / MERGE / SUPERSEDE / DELETE are spec-scoped; item decomposition is UPDATE:MODIFY + UPDATE:APPEND and item removal is UPDATE:REMOVE.",
   "QFAI-TRIAGE-008":
     "Every Triage section is introduced by the canonical `## Triage` H2, so the triage rules read the rows under it.",
+  TDDLIST_BR_REF_INVALID:
+    "A declared `BR-Ref` cell holds one `BR-NNNN-NNNN`, or `-` when no BR reaches the row.",
+  TDDLIST_BR_REF_UNRESOLVED:
+    "Every declared `BR-Ref` names a rule the spec's `04_Business-Rules.md` declares, so the T1 review group is keyed on a rule that exists.",
+  TDDLIST_BR_REF_MISMATCH:
+    "A declared `BR-Ref` is the key the row's own `TC-Refs` derive: `TC` -> `EX-Ref` -> `05_Examples.md`'s `BR-Ref` (`AC-Refs` only for a TC with no `EX-Ref`), lowest of the union.",
   "QFAI-DENSITY-005":
     "A `Rule` cell at least 400 chars AND at least 3x the mean of the other `BR` rows in the same file is a granularity signal (warning). Files with fewer than 3 `BR-ID`/`Rule` rows are not checked.",
   "QFAI-COV-201": "Every AC must be referenced by at least one TC (`AC-Refs`).",
