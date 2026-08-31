@@ -279,7 +279,7 @@ export async function validateAutopilotPolicy(
     : path.join(root, SKILL_DIR_REL);
   if (!(await exists(skillsDir))) return issues;
 
-  // `R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT` runs a promotion window
+  // `QFAI-AUTOPILOT-001` runs a promotion window
   // (`RULE_PROMOTIONS`, P7): the rule is right, but it necessarily fires on
   // every SKILL.md installed before the set was pinned, and those are only
   // refreshed by an explicit `qfai init --force`. Shipping it straight at
@@ -400,7 +400,7 @@ export async function validateAutopilotPolicy(
         parts.push(`missing ([${result.hardRequiredMissing.join(" | ")}])`);
       }
       const message =
-        `R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT: ${relPath} hard-required bucket ` +
+        `QFAI-AUTOPILOT-001: ${relPath} hard-required bucket ` +
         `lists entries ${parts.join(" and ")}. Unlike auto-decide this bucket may be ` +
         `neither widened nor narrowed: every entry costs a guaranteed prompt, and ` +
         `every pinned entry has a consumer in the shipped tree. Restore the bucket to ` +
@@ -410,7 +410,7 @@ export async function validateAutopilotPolicy(
         `missing=[${result.hardRequiredMissing.join(", ")}].`;
       issues.push(
         issue(
-          "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT",
+          "QFAI-AUTOPILOT-001",
           message,
           hardRequiredSeverity,
           relPath,

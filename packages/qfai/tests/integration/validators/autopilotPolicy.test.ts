@@ -168,13 +168,13 @@ ${hardRequired}
   it("stays silent on the bucket the shipped tree ships", async () => {
     await writeSkill(root, "qfai-fixture", policyWith(CANONICAL));
     const issues = await validateAutopilotPolicy(root);
-    expect(issues.filter((i) => i.code === "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT")).toEqual([]);
+    expect(issues.filter((i) => i.code === "QFAI-AUTOPILOT-001")).toEqual([]);
   });
 
   it("reports the retired entry an installed SKILL.md still carries", async () => {
     await writeSkill(root, "qfai-fixture", policyWith(`${CANONICAL}\n  - companyName`));
     const issues = await validateAutopilotPolicy(root);
-    const finding = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT");
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("companyName");
     // Inside its promotion window, so a warning rather than a build failure,
@@ -190,7 +190,7 @@ ${hardRequired}
       policyWith("  - brand intent / companyName\n  - `primarySpecId`"),
     );
     const issues = await validateAutopilotPolicy(root);
-    const finding = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT");
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("brand intent / companyName");
   });
@@ -198,7 +198,7 @@ ${hardRequired}
   it("reports a narrowed bucket too, which this set does not permit", async () => {
     await writeSkill(root, "qfai-fixture", policyWith("  - brand intent"));
     const issues = await validateAutopilotPolicy(root);
-    const finding = issues.find((i) => i.code === "R-AUTOPILOT-POLICY-HARD-REQUIRED-DRIFT");
+    const finding = issues.find((i) => i.code === "QFAI-AUTOPILOT-001");
     expect(finding).toBeDefined();
     expect(finding?.message ?? "").toContain("primaryspecid");
   });
