@@ -25,7 +25,12 @@ import { validateAssistantAssets } from "./validators/assistantAssets.js";
 import { validateSkillsIntegrity } from "./validators/skillsIntegrity.js";
 import { inspectIntegrationSurface } from "./validators/integrationSurface.js";
 import { validateDefinedIds } from "./validators/ids.js";
-import { validateReviewArtifacts } from "./validators/reviewArtifacts.js";
+import {
+  DISCUSSION_PACK_PRODUCERS,
+  SDD_PACK_PRODUCERS,
+  validateReviewArtifacts,
+  type ReviewArtifactsScope,
+} from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
@@ -316,7 +321,7 @@ async function runProfileValidators(
   async function runProfileOwnValidators(): Promise<Issue[]> {
     switch (profile) {
       case "discussion":
-        return runDiscussionValidators(root, config);
+        return runDiscussionValidators(root, config, specScope);
       case "sdd":
         return runSddValidators(root, config, false, true, specScope);
       case "prototyping":
@@ -346,6 +351,11 @@ async function runSaasPackage(
 async function runDiscussionValidators(
   root: string,
   config: ConfigLoadResult["config"],
+  specScope?: SpecScope,
+  // Which review packs this run owns. The discussion profile is the gate for
+  // its own cycle only; `full` composes this runner and passes `"all"` so the
+  // repo-wide scan keeps judging every pack.
+  reviewPackProducers: ReviewPackProducers = DISCUSSION_PACK_PRODUCERS,
 ): Promise<Issue[]> {
   return [
     ...(await validateDiscussionMermaid(root)),
@@ -353,7 +363,44 @@ async function runDiscussionValidators(
     ...(await validateDiscussionVisuals(root)),
     ...(await validateResearchSummary(root, config)),
     ...(await runCanonicalUixValidators(root, config)),
+    // The RCP footer names `--profile discussion` as the review-cycle gate and
+    // mandates `review_request.md` / `Rxx_*.md` / `summary.json` in the same
+    // breath. Without this the command it prescribes could not see the
+    // artifacts it prescribes, so an incomplete pack passed the gate silently.
+    ...(await validateReviewArtifacts(
+      root,
+      reviewArtifactsScope(root, config, specScope, reviewPackProducers),
+    )),
   ];
+}
+
+/** Which review packs a profile is the gate for, or `"all"` for a full scan. */
+type ReviewPackProducers = ReadonlySet<string> | "all";
+
+/**
+ * Scope handed to `validateReviewArtifacts`.
+ *
+ * Two narrowings, both so that one owner's in-flight pack cannot fail another
+ * owner's gate. A review-pack finding names no spec, so `isFindingInSpecScope`
+ * keeps it in every `--spec` run — the validator narrows itself instead, by the
+ * target each pack records (a discussion pack, which no spec owns, stays in:
+ * the scope contract keeps repo-level findings in every slice). And `sdd` /
+ * `discussion` are each the hard gate for their own review cycle, so each
+ * judges only the packs their own stage produced; a pack that names no owner at
+ * all is still judged by both, since no one else would.
+ */
+function reviewArtifactsScope(
+  root: string,
+  config: ConfigLoadResult["config"],
+  specScope: SpecScope | undefined,
+  reviewPackProducers: ReviewPackProducers,
+): ReviewArtifactsScope {
+  return {
+    specScope,
+    specsRoot: resolvePath(root, config, "specsDir"),
+    discussionRoot: resolvePath(root, config, "discussionDir"),
+    producers: reviewPackProducers === "all" ? undefined : reviewPackProducers,
+  };
 }
 
 async function runSddValidators(
@@ -362,6 +409,9 @@ async function runSddValidators(
   includeCodeReferences = false,
   enforceNoPrematurePrototypingContracts = true,
   specScope?: SpecScope,
+  // `full` runs the discussion profile too, which already carries the same
+  // validator, so it opts out here to keep every QFAI-REVIEW-* finding once.
+  includeReviewArtifacts = true,
 ): Promise<Issue[]> {
   return [
     ...(await validateMermaidEnforcement(root)),
@@ -414,6 +464,15 @@ async function runSddValidators(
     // `references/*.md` + SKILL.md as warning during the deprecation
     // window and error at sunset.
     ...(await validateStaleReferences(root, { config })),
+    // `rcp_footer.md` states both halves of the review-cycle contract — the
+    // mandatory pack files and `qfai validate --profile sdd` as the gate — so
+    // the gate has to be able to observe them.
+    ...(includeReviewArtifacts
+      ? await validateReviewArtifacts(
+          root,
+          reviewArtifactsScope(root, config, specScope, SDD_PACK_PRODUCERS),
+        )
+      : []),
   ];
 }
 
@@ -534,9 +593,12 @@ async function runFullValidators(
     ...(await validateRepositoryHygiene(root, config)),
     ...(await validateSkillsIntegrity(root, config)),
     ...(await validateAssistantAssets(root, config)),
-    ...(await runDiscussionValidators(root, config)),
-    ...(await runSddValidators(root, config, true, false, specScope)),
-    ...(await validateReviewArtifacts(root)),
+    // `"all"`: the full scan owns every review pack, not only the discussion
+    // ones this runner gates inside its own profile.
+    ...(await runDiscussionValidators(root, config, specScope, "all")),
+    // Review artifacts come in with the discussion profile above, so the sdd
+    // profile opts out rather than reporting every QFAI-REVIEW-* twice.
+    ...(await runSddValidators(root, config, true, false, specScope, false)),
     ...(await runPrototypingValidators(root, config, platformOption)),
     ...(await runAtddValidators(root, config, specScope)),
     ...(await runTddValidators(root, config, false, false, false, false)),

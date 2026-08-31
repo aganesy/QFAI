@@ -2,6 +2,7 @@
 
 ## Scope
 
+- Producer: `discussion`
 - scope: `discussion-YYYYMMDDhhmmssSSS`
 - layer: `discussion`
 - review-pack: `review-YYYYMMDDhhmmssSSS`

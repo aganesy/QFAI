@@ -443,8 +443,11 @@ const ALL_GATE_GROUPS = Object.keys(GATE_GROUP_FAMILIES) as GateGroup[];
 const PROFILE_GATE_GROUPS: Record<ValidationProfile, readonly GateGroup[]> = {
   full: ALL_GATE_GROUPS,
   verify: ALL_GATE_GROUPS,
-  discussion: ["discussion"],
-  sdd: ["sdd"],
+  // Both stages mandate the review pack in their RCP footer and both now run
+  // `validateReviewArtifacts`, so `QFAI-REVIEW-*` must not be listed as a
+  // family the run did not evaluate.
+  discussion: ["discussion", "review-artifacts"],
+  sdd: ["sdd", "review-artifacts"],
   prototyping: ["prototyping"],
   atdd: ["atdd-traceability", "atdd-scaffold"],
   // `runTddValidators` also calls `validateAtddCodeTraceability`, but not the
