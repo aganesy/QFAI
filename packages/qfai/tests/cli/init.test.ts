@@ -1426,7 +1426,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(await readFile(readmePath, "utf-8")).toBe("# my custom worklog notes\n");
       expect(await readFile(templatePath, "utf-8")).toBe("---\nid: stale\n---\n");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1451,7 +1451,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       expect(crlfRun).not.toContain("differs from the seed this qfai release generates");
       expect(crlfRun).not.toContain("could not be compared");
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1463,7 +1463,10 @@ describe("qfai init", { timeout: 60000 }, () => {
       // A directory where the seed file belongs: occupied, so create-only skips
       // it, but there is no body to compare — that must not read as "current".
       const readmePath = path.join(root, ".qfai", "steering", "README.md");
-      await rm(readmePath, { force: true });
+      // `removeTempTree` rather than a bare `rm`: this file routes every removal
+      // through the helper, and its `force` / retry contract is what is wanted
+      // here too — the seed is a regular file, so the recursive flag is inert.
+      await removeTempTree(readmePath);
       await mkdir(readmePath, { recursive: true });
 
       const blockedRun = await captureStdout(async () => {
@@ -1479,7 +1482,7 @@ describe("qfai init", { timeout: 60000 }, () => {
       const dirStat = await lstat(readmePath);
       expect(dirStat.isDirectory()).toBe(true);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
