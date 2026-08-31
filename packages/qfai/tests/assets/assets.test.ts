@@ -451,6 +451,23 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       expect(generatorRef).toMatch(/\*\*convergence\*\* stop/);
       expect(generatorRef).toMatch(/re-scanned before the stop\s+is honoured/);
       expect(generatorRef).toMatch(/\*\*max-iterations\*\* stop skips that re-scan/);
+      // `allFourAxesExceptional` is not what its name says: it also requires
+      // `layoutAntiPatternsDetected.length === 0` and
+      // `designMdViolations.length === 0`. A prompt that defines the stop as
+      // the four scores alone leaves the generator unable to explain why a
+      // run with four `exceptional` axes did not stop, or what to fix next.
+      expect(generatorRef).toMatch(/\*\*and both finding arrays empty\*\*/);
+      expect(generatorRef).toMatch(/`layoutAntiPatternsDetected` and `designMdViolations`/);
+      expect(generatorRef).toMatch(/one\s+surviving `lap-\*` keeps the loop running/);
+      // And the re-scan is not a proof of inspection.
+      // `recomputeFinalIterDesignMdViolations` returns `[]` for an ENOENT
+      // directory and `continue`s past a file it cannot stat or read, so an
+      // absent or unreadable evidence tree honours the exit-64 stop with
+      // nothing examined. Certify is the half that fails closed: it exits 2
+      // when the accepted iteration has no readable HTML at all.
+      expect(generatorRef).toMatch(/\*\*present and readable\*\*/);
+      expect(generatorRef).toMatch(/yields no findings and therefore does not\s+block the stop/);
+      expect(generatorRef).toMatch(/refuses to seal\s+at all/);
       expect(generatorRef).toMatch(
         /certify` re-scans every captured HTML file of\s+the accepted iteration unconditionally/,
       );
@@ -485,6 +502,10 @@ describe("assets guardrails", { timeout: 30000 }, () => {
       // "certify re-scans unconditionally" here would tell a Reviewer that
       // promoting a scope-limited certificate re-checks HTML it never
       // reads. `--check` is the named recovery on both sides.
+      // The reviewer half carries the same readability scoping, or a Reviewer
+      // reads "the re-scan result wins" as a guarantee the evidence was read.
+      expect(reviewerRef).toMatch(/\*\*present and readable\*\*/);
+      expect(reviewerRef).toMatch(/yields no findings and lets the stop through/);
       expect(reviewerRef).toMatch(/captured HTML before it seals/);
       expect(reviewerRef).toMatch(/never opens the\s+authoring `prototypes\/` tree/);
       expect(reviewerRef).toMatch(/certify --upgrade-scope full` is not\s+an issuing path/);
@@ -557,6 +578,11 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     expect(scannerProse).toContain("stays `[]`");
     expect(scannerProse).toContain("not written back into `prototyping.json`");
     expect(scannerProse).toContain("`certify --upgrade-scope full`");
+    // And the readability scoping the two prompts now carry: the iterate-side
+    // re-scan returns `[]` for an ENOENT directory and skips a file it cannot
+    // stat or read, so an empty result is not evidence of inspection.
+    expect(scannerProse).toContain("PRESENT AND READABLE");
+    expect(scannerProse).toContain("skips a file it cannot stat or read");
   });
 
   it("keeps the generator's --auto-serve routing guidance in step with the server", async () => {

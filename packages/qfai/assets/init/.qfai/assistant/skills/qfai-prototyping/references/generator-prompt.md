@@ -56,12 +56,22 @@ four categories of forbidden literals. The gate is **hard and
 non-waivable**: any finding blocks convergence, and there is no
 Reviewer override. Ordinary cycles carry no scanner output —
 `designMdViolations` stays `[]` in every Reviewer report — because the
-scan runs at the two checkpoints below, not once per cycle. On a
-**convergence** stop (all four axes exceptional) the accepted
+scan runs at the two checkpoints below, not once per cycle. A
+**convergence** stop takes more than the four scores: it needs all
+four axes `exceptional` **and both finding arrays empty** —
+`layoutAntiPatternsDetected` and `designMdViolations` alike — so one
+surviving `lap-*` keeps the loop running on four exceptional scores,
+and clearing it is the next cycle's work. On that stop the accepted
 iteration's HTML is re-scanned before the stop is honoured, so a
 hand-written `[]` in the Reviewer report is discarded and the loop
 keeps iterating (the re-scan drives that decision only; it is not
-written back into the review). A **max-iterations** stop skips that re-scan —
+written back into the review). The re-scan reaches the captured HTML
+that is **present and readable**: a missing `iter-NN/` directory, or a
+file it cannot stat or read, yields no findings and therefore does not
+block the stop — a clean re-scan is not proof the evidence was
+inspected. Certify is the backstop there as well; it refuses to seal
+at all when the accepted iteration has no readable HTML under it. A
+**max-iterations** stop skips that re-scan —
 it reports an exhausted budget, not a clean bill of health — but
 `npx qfai prototyping certify` re-scans every captured HTML file of
 the accepted iteration unconditionally and exits 2 on any finding, so

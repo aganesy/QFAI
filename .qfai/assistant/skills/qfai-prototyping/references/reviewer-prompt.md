@@ -43,7 +43,10 @@ type Review = {
 `designMdViolations` is filled by the static gate. Leave the field as
 `[]` unless the runtime injects pre-computed violations. You cannot
 waive a finding by writing `[]` yourself: on a convergence stop the
-accepted iteration's HTML is re-scanned and the re-scan result wins,
+accepted iteration's HTML is re-scanned and the re-scan result wins —
+over the captured HTML that is **present and readable**, since a
+missing `iter-NN/` directory or a file the re-scan cannot stat or read
+yields no findings and lets the stop through —
 and `npx qfai prototyping certify` re-scans the accepted iteration's
 captured HTML before it seals, so no certificate is **issued** over a
 violation the capture evidence shows (certify reads
