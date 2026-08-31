@@ -97,7 +97,15 @@
       ],
       "dependencyMatrices": {
         "test": {
-          "slice": ["core", "validators", "integration", "e2e", "cli", "unit", "scripts"]
+          "slice": [
+            "core",
+            "validators",
+            "integration",
+            "e2e",
+            "cli",
+            "unit",
+            "scripts"
+          ]
         }
       },
       "dependencyMatricesNote": [
@@ -142,7 +150,10 @@
         "member of `verificationSet` now, and `detect` carries no condition, so it belongs to the",
         "unconditional set rather than to `gatedVerifications`."
       ],
-      "commandFiles": ["GITHUB_ENV", "GITHUB_PATH"],
+      "commandFiles": [
+        "GITHUB_ENV",
+        "GITHUB_PATH"
+      ],
       "commandFilesNote": [
         "The workflow command files, pinned here and READ from `.github/command-files.txt`.",
         "",
@@ -193,6 +204,7 @@
         "scripts/check-not-a-dependency.mjs": "ce41f9a1e9e1b63c581c3896cac3998a22cc578abfcec616abd6ecbcf032e84e",
         "scripts/check-prompt-scanner-pair.mjs": "96d817088b1a648d39bfa34570a32a90659a37ddf7a807fb044fccada3aa49cc",
         "scripts/check-publish-dry-run.mjs": "7c6454a71ce2aacf3a0918b27744c6d85f72e2e0d480f1eecc927e44ba094486",
+        "scripts/check-readme-alignment.mjs": "64468c473a163214148e2233fe86ccf0ec364afd86cf9c84235e2f45e7672fc9",
         "scripts/check-review-profile-consistency.mjs": "2376a2cb3b2e3b990c4d97b36af0fd8b1e4f67513e34f873bd4cd68ae1c14c40",
         "scripts/check-scanner-coverage.mjs": "0f5d0f6d9c7a3db50ead67bbc104cf958883ec74ac523b6def4557a42ec64ed8",
         "scripts/check-toolchain-action.sh": "a617b652e350b987c05c73ffe53e81d4bfe1f97ba542e3142a87f9e308b4d777",
@@ -244,7 +256,9 @@
         "job starts with, and the artifact upload the aggregate uses. Pinned to the SHA, so a bump is a",
         "change read here as well as in the workflow."
       ],
-      "nestedActions": ["actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"],
+      "nestedActions": [
+        "actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020"
+      ],
       "nestedActionsNote": [
         "The EXTERNAL actions a local composite action reached from this context's closure may invoke,",
         "as `owner/repo@<40-hex sha>`, exactly.",
@@ -268,7 +282,9 @@
       "preflight": {
         "job": "lint",
         "step": "Verify the toolchain action before running it",
-        "mayPrecede": ["actions/checkout@11d5960a326750d5838078e36cf38b85af677262"]
+        "mayPrecede": [
+          "actions/checkout@11d5960a326750d5838078e36cf38b85af677262"
+        ]
       },
       "preflightNote": [
         "The step that must run before any local composite action does, and the job it runs in.",
@@ -352,15 +368,15 @@
       ],
       "verificationBodies": {
         "Classify the change against the enumerated directory lists": "ef6e64eb3cba709c",
-        "Verify the toolchain action before running it": "5cdf4e4bf02bec48",
+        "Verify the toolchain action before running it": "237fd4584e99c8fd",
         "Derive the verdict from the serialized needs map": "b700f852a69f52d2",
         "Run build & pack verification": "f661b303e3493978",
-        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "8bf3e6afb8676de7",
+        "Sanity grep — no internal spec IDs or version markers leak (post-build)": "e7dc6e5136c17061",
         "QFAI self-validate this repo (dogfooding — TDD gates)": "77273cc955b604a2",
         "QFAI self-validate this repo (dogfooding — SDD gates)": "4d0ecfd493e0942a",
         "QFAI self-validate this repo (dogfooding — full profile)": "0bcfbd8438ea614d",
         "Run qfai validate gate (fail on error)": "64fb079758255e4c",
-        "Run lint gate": "a46216cbdc246b6c",
+        "Run lint gate": "417a028240449a16",
         "Run type check": "fe6bc2c8db80159c",
         "Run future TypeScript compatibility check": "c58cfcd12f363478",
         "Run the package test suite on the floor": "b1949f2492ab0fbc",
