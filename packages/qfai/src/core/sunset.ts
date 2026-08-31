@@ -128,6 +128,14 @@ export const RULE_PROMOTIONS = {
    * whatever heading they were written with.
    */
   triageHeadingNonCanonical: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-SPLIT-106` — a CAP row the declared catalog cannot resolve to exactly
+   * one spec directory: a blank `Spec` cell, one naming several directories, a
+   * CAP repeated across rows, or two CAPs claiming the same directory. The
+   * `Spec` column is new, so every catalog written before it exists resolves
+   * nothing and draws the finding on every one of its rows at once.
+   */
+  specSplitDeclaredMapping: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
 } as const;
 
 type FullSemver = {
