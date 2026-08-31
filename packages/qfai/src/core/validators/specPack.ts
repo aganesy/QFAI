@@ -58,12 +58,15 @@ import {
 } from "../sddTriage.js";
 import { loadLayerPolicy } from "../layerPolicy.js";
 import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
-import type { Issue } from "../types.js";
+import type { Issue, IssueSeverity } from "../types.js";
 import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
 
 /** The release `QFAI-TRIAGE-008` stops being a warning at. */
 const TRIAGE_HEADING_PROMOTION = RULE_PROMOTIONS.triageHeadingNonCanonical.promoteAt;
+
+/** The release the seven `QFAI-DECISION-*` codes stop being warnings at. */
+const RE_OPEN_PROMOTION = RULE_PROMOTIONS.specPackReOpenDecisionRecord.promoteAt;
 
 const LEDGER_REQUIRED_COLUMNS = [
   "trace_id",
@@ -153,7 +156,7 @@ export async function validateSpecPacks(root: string, config: QfaiConfig): Promi
     // avoid two-place drift when a third layout is introduced.
     issues.push(...(await validateSpecStatusForEntry(entry, knownSpecIds)));
     issues.push(...(await validateTriageSectionForEntry(entry, toolVersion)));
-    issues.push(...(await validateReOpenForEntry(entry, specsRoot)));
+    issues.push(...(await validateReOpenForEntry(entry, specsRoot, toolVersion)));
   }
 
   // Cross-spec / policy-only triage rows live in `_policies/10_delta.md`
@@ -1710,7 +1713,11 @@ const RE_OPENED_BY_LINE = /^\s*[-*]\s*re-opened\s+by\s*[:：]\s*(.*)$/i;
  * actually writes `Status: re-open` or a `Re-opened by:` back-reference, so an
  * existing spec pack that has never re-opened anything is unaffected.
  */
-async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Promise<Issue[]> {
+async function validateReOpenForEntry(
+  entry: SpecEntry,
+  specsRoot: string,
+  toolVersion: string,
+): Promise<Issue[]> {
   const decisionsText = await readSafe(entry.decisionsPath);
   const deltas = await collectDeltaFiles(entry);
   const records = parseDecisionRecordEntries(decisionsText);
@@ -1720,11 +1727,14 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
   );
   const unbound = deltas.flatMap((delta) => delta.rejected.unbound);
   const decisionsName = path.basename(entry.decisionsPath);
+  const window = reOpenWindow(toolVersion);
   // Runs whether or not a re-open exists: a candidate moved from `## Rejected`
   // to `## Adopted` with no record at all is the reintroduction the guard is
   // about, and it is exactly the case the two `Re-opened by:` checks below
   // cannot see, because nothing was written for them to read.
-  const readopted = deltas.flatMap((delta) => validateReadoptedCandidates(delta, decisionsName));
+  const readopted = deltas.flatMap((delta) =>
+    validateReadoptedCandidates(delta, decisionsName, window),
+  );
   if (reOpens.length === 0 && bound.length === 0 && unbound.length === 0) {
     return readopted;
   }
@@ -1737,6 +1747,7 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
     cyclic: collectCyclicReOpenIds(reOpens),
     decisionsPath: entry.decisionsPath,
     decisionsName,
+    ...window,
   };
   const issues: Issue[] = [
     ...readopted,
@@ -1747,9 +1758,33 @@ async function validateReOpenForEntry(entry: SpecEntry, specsRoot: string): Prom
     issues.push(...validateReOpenRecord(record, context));
   }
   issues.push(
-    ...validateReOpenBackReferences(entry, reOpens, bound, unbound, context.decisionsName),
+    ...validateReOpenBackReferences(entry, reOpens, bound, unbound, context.decisionsName, window),
   );
   return issues;
+}
+
+/**
+ * The promotion window the seven `QFAI-DECISION-*` codes report inside.
+ *
+ * The guard is new, and the records it reads are not: a spec that re-opened a
+ * decision before any of these fields were defined is missing every one of
+ * them, and a spec that re-adopted a rejected candidate meets the whole
+ * backlog in a single run. So the severity comes from the pin rather than from
+ * a literal beside each `issue(...)`, and the message says which release ends
+ * the window while `--fail-on error` keeps working.
+ *
+ * Resolved once per validator run and threaded through {@link ReOpenContext}:
+ * the window is a property of the tool, not of the spec being read.
+ */
+function reOpenWindow(toolVersion: string): ReOpenWindow {
+  const reOpenSeverity = newRuleSeverity(toolVersion, RE_OPEN_PROMOTION);
+  return {
+    reOpenSeverity,
+    windowNote:
+      reOpenSeverity === "warning"
+        ? `（${RE_OPEN_PROMOTION} リリースまでは warning、以降は error として報告されます）`
+        : "",
+  };
 }
 
 /** One delta file of a spec, with the two sections these checks read parsed. */
@@ -1853,11 +1888,16 @@ function candidateKey(raw: string): string {
  * of the candidate that was re-adopted, so a delta re-adopting two candidates
  * cannot cover both with one `Re-opened by:`.
  */
-function validateReadoptedCandidates(delta: DeltaFile, decisionsName: string): Issue[] {
+function validateReadoptedCandidates(
+  delta: DeltaFile,
+  decisionsName: string,
+  window: ReOpenWindow,
+): Issue[] {
   if (delta.adopted.size === 0) {
     return [];
   }
 
+  const { reOpenSeverity, windowNote } = window;
   const issues: Issue[] = [];
   for (const candidate of delta.rejected.candidates) {
     const key = candidateKey(candidate.name);
@@ -1870,8 +1910,8 @@ function validateReadoptedCandidates(delta: DeltaFile, decisionsName: string): I
     issues.push(
       issue(
         "QFAI-DECISION-006",
-        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。`,
-        "error",
+        `delta の \`## Rejected\` にある候補「${candidate.name}」が \`## Adopted\` にも現れていますが、この候補の \`Re-opened by:\` が空のままです。${windowNote}`,
+        reOpenSeverity,
         delta.path,
         RE_OPENED_BY_RULE,
         [candidate.name],
@@ -2030,13 +2070,14 @@ function validateUniqueDecisionIds(
   records: DecisionRecordEntry[],
   context: ReOpenContext,
 ): Issue[] {
+  const { reOpenSeverity, windowNote } = context;
   const issues: Issue[] = [];
   for (const [id, count] of duplicateDecisionIds(records)) {
     issues.push(
       issue(
         "QFAI-DECISION-007",
-        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。`,
-        "error",
+        `${context.decisionsName} に \`### ${id}\` の Decision Record が ${count} 件あります。同じ ID の重複宣言は、どの決定を再オープンしたのかを一意に定めません。${windowNote}`,
+        reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
         [id],
@@ -2131,14 +2172,15 @@ function ambiguousOwnerIssue(
   policyPath: string,
   context: ReOpenContext,
 ): Issue {
+  const { reOpenSeverity, windowNote } = context;
   const spread = local > 0;
   const where = spread
     ? `${context.decisionsName} と ${POLICY_DECISIONS_LABEL} の両方に \`### ${id}\` の Decision Record があります`
     : `${POLICY_DECISIONS_LABEL} に \`### ${id}\` の Decision Record が ${policy} 件あります`;
   return issue(
     "QFAI-DECISION-007",
-    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。`,
-    "error",
+    `${where}。この spec の \`Re-opens: ${id}\` がどの決定を再考したのか一意に定まりません。${windowNote}`,
+    reOpenSeverity,
     spread ? context.decisionsPath : policyPath,
     RE_OPEN_RULE,
     [id],
@@ -2149,8 +2191,11 @@ function ambiguousOwnerIssue(
   );
 }
 
+/** The severity every `QFAI-DECISION-*` finding takes, and how it says so. */
+type ReOpenWindow = { reOpenSeverity: IssueSeverity; windowNote: string };
+
 /** What the per-record checks need beyond the record itself. */
-type ReOpenContext = {
+type ReOpenContext = ReOpenWindow & {
   declared: Set<string>;
   cyclic: Set<string>;
   decisionsPath: string;
@@ -2219,11 +2264,12 @@ function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenCont
   if (DR_SPEC_SCOPED_ID_FORMAT.test(record.id)) {
     return [];
   }
+  const { reOpenSeverity, windowNote } = context;
   return [
     issue(
       "QFAI-DECISION-001",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。`,
-      "error",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、ID が spec スコープの DR-NNNN-MMMM 形式ではありません（短い DR-NNNN は _policies/08_Decisions.md 専用です）。${windowNote}`,
+      reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
       [record.id],
@@ -2235,6 +2281,7 @@ function validateReOpenIdScheme(record: DecisionRecordEntry, context: ReOpenCont
 
 /** `Re-opens:` names a well-formed prior `DR-*` that is declared somewhere. */
 function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContext): Issue[] {
+  const { reOpenSeverity, windowNote } = context;
   const issues: Issue[] = [];
   const prior = isPlaceholderValue(record.reOpens) ? "" : (record.reOpens ?? "").trim();
   const cyclic = context.cyclic.has(record.id);
@@ -2246,8 +2293,8 @@ function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContex
     issues.push(
       issue(
         "QFAI-DECISION-001",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
-        "error",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+        reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
         [record.id],
@@ -2259,8 +2306,8 @@ function validateReOpensField(record: DecisionRecordEntry, context: ReOpenContex
     issues.push(
       issue(
         "QFAI-DECISION-002",
-        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。`,
-        "error",
+        `${record.id} の \`Re-opens: ${prior}\` に対応する Decision Record が ${context.decisionsName} にも _policies/08_Decisions.md にもありません。${windowNote}`,
+        reOpenSeverity,
         context.decisionsPath,
         RE_OPEN_RULE,
         [record.id, prior],
@@ -2284,11 +2331,12 @@ function validateReOpenRationale(record: DecisionRecordEntry, context: ReOpenCon
   if (!isPlaceholderValue(record.decision)) {
     return [];
   }
+  const { reOpenSeverity, windowNote } = context;
   return [
     issue(
       "QFAI-DECISION-005",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。`,
-      "error",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、却下時から何が変わったかを述べる \`Decision:\` がありません。${windowNote}`,
+      reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
       [record.id],
@@ -2307,14 +2355,15 @@ function validateReOpenApproval(record: DecisionRecordEntry, context: ReOpenCont
   if (!missingApprover && !badInstant) {
     return [];
   }
+  const { reOpenSeverity, windowNote } = context;
   const reason = missingApprover
     ? "明示的な承認 (`Approved by` / `Approved at`) がありません"
     : `\`Approved at: ${(record.approvedAt ?? "").trim() || "(なし)"}\` が YYYY-MM-DDThh:mm:ssZ 形式の実在する時刻ではありません`;
   return [
     issue(
       "QFAI-DECISION-003",
-      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。`,
-      "error",
+      `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、${reason}。${windowNote}`,
+      reOpenSeverity,
       context.decisionsPath,
       RE_OPEN_RULE,
       [record.id],
@@ -2343,7 +2392,9 @@ function validateReOpenBackReferences(
   bound: string[],
   unbound: string[],
   decisionsName: string,
+  window: ReOpenWindow,
 ): Issue[] {
+  const { reOpenSeverity, windowNote } = window;
   const issues: Issue[] = [];
   const reOpenIds = new Set(reOpens.map((record) => record.id));
   const referenced = new Set(bound.map((ref) => ref.toUpperCase()));
@@ -2353,8 +2404,8 @@ function validateReOpenBackReferences(
     issues.push(
       issue(
         "QFAI-DECISION-004",
-        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。`,
-        "error",
+        `delta の \`## Rejected\` にある \`Re-opened by: ${ref}\` が、この spec の ${decisionsName} にある \`Status: re-open\` の Decision Record に解決しません。${windowNote}`,
+        reOpenSeverity,
         deltaFile,
         RE_OPENED_BY_RULE,
         [ref],
@@ -2368,8 +2419,8 @@ function validateReOpenBackReferences(
     issues.push(
       issue(
         "QFAI-DECISION-004",
-        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。`,
-        "error",
+        `${record.id} は \`Status: ${RE_OPEN_STATUS}\` ですが、delta の \`## Rejected\` に \`Re-opened by: ${record.id}\` の逆参照がありません。${windowNote}`,
+        reOpenSeverity,
         deltaFile,
         RE_OPENED_BY_RULE,
         [record.id],

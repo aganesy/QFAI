@@ -25,6 +25,8 @@ import {
   collectReOpenEntries,
   isPlaceholderValue,
 } from "../../src/core/decisionRecords.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
+import type { Issue } from "../../src/core/types.js";
 import { validateSpecPacks } from "../../src/core/validators/specPack.js";
 
 const DELTA_BASE = [
@@ -923,5 +925,86 @@ describe("the ways past the gate the fourth review found", () => {
         expect(found.filter((code) => code.startsWith("QFAI-DECISION-"))).toEqual([]);
       },
     );
+  });
+});
+
+/**
+ * The guard is new; the records it reads are not.
+ *
+ * Every one of these codes necessarily lands on re-opens written before any of
+ * their fields were defined, so P7 requires them to ship behind a promotion
+ * window rather than as hard errors from day one. The severity has to come from
+ * `RULE_PROMOTIONS.specPackReOpenDecisionRecord`, not from a literal beside each
+ * `issue(...)` — with literals every case below reports `error` and the window
+ * exists only in the registry.
+ */
+describe("QFAI-DECISION-* reports inside its promotion window", () => {
+  const PROMOTE_AT = RULE_PROMOTIONS.specPackReOpenDecisionRecord.promoteAt;
+
+  /** A delta that re-adopts the rejected candidate with no back-reference. */
+  const READOPTED = DELTA_BASE.replace(
+    "## Adopted\n",
+    "## Adopted\n\n- Adopted: in-process cache\n- Why: the size bound landed\n",
+  );
+
+  /** The findings this spec produces, code and severity together. */
+  async function decisionFindings(root: string): Promise<Issue[]> {
+    const found = await validateSpecPacks(root, defaultConfig);
+    return found.filter((entry) => entry.code.startsWith("QFAI-DECISION-"));
+  }
+
+  it("reports every code as a warning while the shipped version is inside", async () => {
+    // One spec that trips all seven at once: a re-open on the short policy-only
+    // id (-001), naming an undeclared prior (-002), with no `Decision:` (-005)
+    // and no approval (-003), no back-reference under the re-adopted candidate
+    // (-004, -006), and a duplicated id (-007).
+    const decisions = [
+      reOpen([APPROVED], { id: "DR-0001-0002" }),
+      "",
+      "### DR-0001-0002: the duplicate",
+      "",
+      "- Status: accepted",
+      "- Decision: keep it",
+      "",
+      "### DR-0001: policy-shaped id",
+      "",
+      "- Status: re-open",
+      "- Re-opens: DR-4242-4242",
+      "- Decision: <what changed>",
+      "",
+    ].join("\n");
+    const delta = READOPTED;
+
+    await withSpec({ decisions, delta }, async (root) => {
+      const found = await decisionFindings(root);
+      expect(
+        [...new Set(found.map((entry) => entry.code))].sort(),
+        "the fixture no longer trips the whole family, so the severities below prove nothing",
+      ).toEqual([
+        "QFAI-DECISION-001",
+        "QFAI-DECISION-002",
+        "QFAI-DECISION-003",
+        "QFAI-DECISION-004",
+        "QFAI-DECISION-005",
+        "QFAI-DECISION-006",
+        "QFAI-DECISION-007",
+      ]);
+      expect(
+        [...new Set(found.map((entry) => entry.severity))],
+        `the shipped version predates ${PROMOTE_AT}, so each code owes a warning`,
+      ).toEqual(["warning"]);
+    });
+  });
+
+  it("names the release that ends the window in the message itself", async () => {
+    // `--fail-on error` keeps passing during the window, so the message is the
+    // only place the operator learns the debt is coming.
+    await withSpec({ delta: READOPTED }, async (root) => {
+      const found = await decisionFindings(root);
+      expect(found).not.toEqual([]);
+      for (const entry of found) {
+        expect(entry.message).toContain(PROMOTE_AT);
+      }
+    });
   });
 });
