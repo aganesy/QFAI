@@ -34,12 +34,11 @@ import {
   isStopReason,
 } from "../prototyping/iteration.js";
 
+import { validateProseCritiqueBand } from "../prototyping/evaluatorReview.js";
 import { PROTOTYPING_JSON_REL } from "../prototyping/paths.js";
 import { SAFE_SCREEN_ID_PATTERN } from "./uiEvidenceArtifacts.js";
 
 const PROTO_JSON_REL = PROTOTYPING_JSON_REL;
-const MIN_PROSE_CRITIQUE_WORDS = 200;
-const MAX_PROSE_CRITIQUE_WORDS = 500;
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
@@ -227,19 +226,19 @@ export async function validatePrototypingEvidence(
       issues.push(
         issue(
           "QFAI-PROT-002",
-          `iterations[${i}].proseCritique must be a non-empty 200-500 word string.`,
+          `iterations[${i}].proseCritique must be a non-empty 200-500 English word (or 600-2500 Japanese/Chinese character) string.`,
           "error",
           PROTO_JSON_REL,
           "prototypingEvidence.proseCritique",
         ),
       );
     } else {
-      const wordCount = countWords(it.proseCritique);
-      if (wordCount < MIN_PROSE_CRITIQUE_WORDS || wordCount > MAX_PROSE_CRITIQUE_WORDS) {
+      const band = validateProseCritiqueBand(it.proseCritique);
+      if (!band.ok) {
         issues.push(
           issue(
             "QFAI-PROT-002",
-            `iterations[${i}].proseCritique must be 200-500 words (got ${wordCount}).`,
+            `iterations[${i}].proseCritique must be 200-500 English words or 600-2500 Japanese/Chinese characters (${band.error}).`,
             "error",
             PROTO_JSON_REL,
             "prototypingEvidence.proseCritique.wordCount",
@@ -407,11 +406,6 @@ export async function validatePrototypingEvidence(
   }
 
   return issues;
-}
-
-function countWords(value: string): number {
-  const trimmed = value.trim();
-  return trimmed.length === 0 ? 0 : trimmed.split(/\s+/u).length;
 }
 
 /**
