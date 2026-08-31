@@ -143,7 +143,7 @@ function formatSaasPackageSkipNote(gate: string): string {
  * upgrades that should succeed.
  *
  * The legacy `.qfai/output/validate-saas-package.json` path remains a
- * hardcoded literal — it is the pre-CHG-005 convention read only during
+ * hardcoded literal — it is the legacy convention read only during
  * the `D-DEPRECATED-PATH` deprecation window and is intentionally not
  * config-derived.
  */
@@ -297,7 +297,7 @@ export async function runPrototypingCertify(
     return 2;
   }
 
-  // CHG-006 prototyping-mode discriminator: certify cannot seal a loop that
+  // Prototyping-mode discriminator: certify cannot seal a loop that
   // produced any exploration-mode iteration. The check runs before
   // the validate.json / verify.json gates so the operator sees the
   // structural "exploration cannot certify" diagnostic without having
@@ -488,7 +488,7 @@ export async function runPrototypingCertify(
   // specifies that only `<screen>.review.json` is a per-cycle Reviewer
   // artifact (no `.html`, no `.png`, no `.interaction.json`). This flat-iter
   // `.html` gate predates that contract and remains in force for
-  // backward compatibility with the pre-CHG-002 layout and the
+  // backward compatibility with the pre-multi-spec layout and the
   // current iterate driver, which still emits flat
   // `iter-NN/<screen>.html`. The cleanup is coupled to the per-spec
   // iter-dir migration in `prototypingIterate.ts`; once iterate
@@ -537,10 +537,20 @@ export async function runPrototypingCertify(
       // existing iter-00 without `--force`. There is no capture-only
       // entry point today, so the two routes below are the ones an
       // operator can actually execute.
+      // Keep this in step with `defaultServerRunner.ts#resolveServablePath`
+      // and the routing-shapes list in `generator-prompt.md`: --auto-serve
+      // has an SPA fallback, so telling the operator to reshape contract
+      // routes into hash routes would contradict the prompt the generator
+      // is given and rewrite the contract for nothing.
       error(
         "  Recovery: first make each missing screen's contract route reachable from the " +
-          "capture target (the built-in --auto-serve server is a static file server and 404s " +
-          "path routes; use hash routes or point --target-url at a server with SPA fallback). " +
+          "capture target. The built-in --auto-serve server serves index.html to any document " +
+          "request that matches no file, so path routes resolve as long as the served " +
+          "directory has an index.html — a skeleton-only tree (--emit-skeletons writes " +
+          "<screenId>.html and no index.html) has nothing to fall back to and still 404s, so " +
+          "author index.html alongside the skeletons. Do not reshape contract routes into hash " +
+          "routes. Against --target-url, the route must be reachable on whatever that server " +
+          "does with an unknown path. " +
           "Then re-run the loop from cycle 0. Re-invoking the accepted cycle with --capture " +
           "will not work: that iteration is already recorded in prototyping.json#iterations, " +
           "so iterate exits first on the expected-next-cycle gate. If a listed screen is no " +
@@ -566,7 +576,7 @@ export async function runPrototypingCertify(
 
   // ─── Per-(spec × screen) review.json presence (AC-0012-0047) ───────────
   //
-  // Under the CHG-002 schema, every spec in the cycle-0 frozen set must
+  // Under the multi-spec schema, every spec in the cycle-0 frozen set must
   // have a `<screen>.review.json` for every declared screen at the
   // accepted iter, namespaced as
   //   `iter-NN/spec-NNNN/<screen>.review.json`.
@@ -1283,7 +1293,7 @@ export async function runPrototypingShowSpec(options: { root: string }): Promise
   // legacy Wave-2 records (only `specsCovered` on disk). Pre-fix the payload
   // emitted the value under the key `frozenSpecsCovered` regardless of
   // source, which masked the signal that cycle 0 was seeded with the
-  // pre-CHG-002 schema.
+  // pre-multi-spec schema.
   const frozenSpecsCoveredSource: "frozenSpecsCovered" | "specsCovered" =
     frozenSpecsCovered !== null ? "frozenSpecsCovered" : "specsCovered";
   const frozenSurfaceUnion = readStringArrayField(protoRecord.frozenSurfaceUnion);
@@ -1381,7 +1391,7 @@ async function runUpgradeScopeFull(
   //
   // Canonical path is checked first; the legacy `.qfai/output/...`
   // path is read only when the canonical signal is absent (back-compat
-  // for pre-CHG-005 consumer state). When the legacy path is used a
+  // for older consumer state). When the legacy path is used a
   // one-line stderr note surfaces the fallback so operators can
   // migrate to the canonical location at their convenience.
   // `path.resolve` (not `path.join`) so that an absolute
@@ -1410,7 +1420,7 @@ async function runUpgradeScopeFull(
     // threat model. Should the canonical-admissible path become a
     // recovery target in a future release, mirror this gate onto
     // canonical with the same mtime invariant. The `legacy` source
-    // is also exempt — `.qfai/output/...` is the pre-CHG-005 layout
+    // is also exempt — `.qfai/output/...` is the superseded layout
     // in a deprecation window; gating it would surface migration
     // noise without closing a real threat.
     //
@@ -1465,7 +1475,7 @@ async function runUpgradeScopeFull(
       //      full-profile signal older than the canonical retry would
       //      still drive the upgrade decision.
       // The check is skipped when canonical is absent (ENOENT) —
-      // pre-CHG-005 layouts and any flow that never wrote canonical
+      // superseded layouts and any flow that never wrote canonical
       // remain unaffected. Same mtime caveats apply as documented above.
       try {
         const canonicalStat = await stat(canonicalAbs);
@@ -1611,7 +1621,7 @@ async function runUpgradeScopeFull(
  * with `source: "legacy"` so the caller can emit a one-line stderr
  * deprecation note. Both-present case: canonical WINS (deterministic;
  * matches how `qfai validate --profile saas-package` writes the
- * canonical path by default under CHG-005).
+ * canonical path by default).
  */
 type SaasPackageGatesSignalRead = {
   payload: unknown;
@@ -1644,7 +1654,7 @@ async function loadSaasPackageGatesSignal(
   //   (2) full-profile (`validate-full.json`) is the writer-default
   //       produced by `qfai validate --profile full`.
   //   (3) legacy (`.qfai/output/validate-saas-package.json`) is the
-  //       pre-CHG-005 path; kept for back-compat with the
+  //       superseded path; kept for back-compat with the
   //       `D-DEPRECATED-PATH` deprecation window.
   //
   // Precedence requirement (closes the INADMISSIBLE recovery loop):
