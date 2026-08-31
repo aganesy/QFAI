@@ -1314,7 +1314,7 @@ describe("qfai init", { timeout: 60000 }, () => {
 
       expect(await readFile(attributesPath, "utf-8")).toBe(userContent);
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
@@ -1326,7 +1326,7 @@ describe("qfai init", { timeout: 60000 }, () => {
         code: "ENOENT",
       });
     } finally {
-      await rm(root, { recursive: true, force: true });
+      await removeTempTree(root);
     }
   });
 
