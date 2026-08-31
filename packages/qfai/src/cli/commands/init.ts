@@ -139,6 +139,12 @@ export async function runInit(options: InitOptions): Promise<void> {
   const destRoot = path.resolve(options.dir);
   const destQfai = path.join(destRoot, ".qfai");
 
+  // 出力先を作業開始前に開示する。`--dir` の既定値は cwd なので素の
+  // `qfai init` では宛先が暗黙になり、誤ったターミナルタブからの実行が
+  // 正しい実行と同じ出力になってしまう。レポートより先に出すことで、
+  // 中断・失敗した実行でも対象がスクロールバックに残る。
+  info(`qfai init: dest=${destRoot}`);
+
   if (options.force) {
     info(
       "NOTE: --force は .qfai/assistant/skills/** と assistant/agents/**、symlink assets（.agents/.claude/.github/.codex）を再生成し、legacy 10_workflow.md と旧ラッパーを削除します（specs/contracts/steering および assistant/manifest/** は上書きしません — manifest は `qfai-configure` が編集するユーザ設定です）。agent-routing.yml だけは追加のみの merge を行い、不足している skill / phase を補います（既存の phase は書き換えません）。",
@@ -1836,7 +1842,9 @@ function report(
   label: string,
   baseDir: string,
 ): void {
-  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"}`);
+  // 宛先を必ず名指しする。相対パスだと素の実行で "." になり何も
+  // 開示しないため、`doctor` の root= とは違い絶対パスを出す。
+  info(`qfai ${label}: ${dryRun ? "dry-run" : "done"} (dest=${baseDir})`);
   if (copied.length > 0) {
     info(`  created: ${copied.length}`);
   }
