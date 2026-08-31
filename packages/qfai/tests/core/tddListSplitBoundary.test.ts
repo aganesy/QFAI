@@ -13,11 +13,47 @@ import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../../src/core/sunset.js";
 import type { Issue } from "../../src/core/types.js";
+import type * as VersionModule from "../../src/core/version.js";
+import { resolveToolVersion } from "../../src/core/version.js";
 import { validateTddList } from "../../src/core/validators/tddList.js";
+
+/**
+ * Both codes are new, so both ship behind a `RULE_PROMOTIONS` window (P7) and
+ * neither severity is a literal at the emission. Pinning `"error"` here would
+ * pass today and go red the day the shipped version crosses the promotion,
+ * without anything being wrong — so the expectation reads the same pin the
+ * emitter reads, and the two ends of the window get their own cases below.
+ *
+ * An empty override means "defer to the real `resolveToolVersion`", so every
+ * other case in this file keeps running against the shipped version.
+ */
+const toolVersion = vi.hoisted(() => ({ override: "" }));
+
+vi.mock("../../src/core/version.js", async (importOriginal) => {
+  const actual = await importOriginal<typeof VersionModule>();
+  return {
+    ...actual,
+    resolveToolVersion: async (): Promise<string> =>
+      toolVersion.override.length > 0 ? toolVersion.override : actual.resolveToolVersion(),
+  };
+});
+
+afterEach(() => {
+  toolVersion.override = "";
+});
+
+const MISSING_PROMOTION = RULE_PROMOTIONS.tddListSplitBoundaryMissing.promoteAt;
+const DUPLICATE_PROMOTION = RULE_PROMOTIONS.tddListSplitBoundaryDuplicate.promoteAt;
+
+/** The severity the shipped version puts each code at right now. */
+async function shippedSeverity(promoteAt: string): Promise<"warning" | "error"> {
+  return newRuleSeverity(await resolveToolVersion(), promoteAt);
+}
 
 const HEADERS =
   "| TDD-ID   | TC-Refs | Layer | Test file       | Selector | Status | DR-ID | Evidence | Boundary |";
@@ -40,7 +76,10 @@ const TEST_CASES = [
   "",
 ].join("\n");
 
-async function withLedger(lines: string[], assertion: (issues: Issue[]) => void): Promise<void> {
+async function withLedger(
+  lines: string[],
+  assertion: (issues: Issue[]) => void | Promise<void>,
+): Promise<void> {
   const root = await mkdtemp(path.join(os.tmpdir(), "qfai-tdd-boundary-"));
   try {
     const specDir = path.join(root, ".qfai", "specs", "spec-0001");
@@ -50,7 +89,7 @@ async function withLedger(lines: string[], assertion: (issues: Issue[]) => void)
     await writeFile(path.join(specDir, "03_Acceptance-Criteria.md"), "# AC\n", "utf-8");
     await writeFile(path.join(specDir, "06_Test-Cases.md"), TEST_CASES, "utf-8");
     await writeFile(path.join(specDir, "tdd", "test-list.md"), lines.join("\n"), "utf-8");
-    assertion(await validateTddList(root, defaultConfig));
+    await assertion(await validateTddList(root, defaultConfig));
   } finally {
     await rm(root, { recursive: true, force: true });
   }
@@ -105,10 +144,10 @@ describe("the split row's Boundary identity", () => {
         "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | below    | todo   | -     | -        |",
         "| TDD-0002 | TC-0001 | Unit  | tests/a.test.ts | above    | todo   | -     | -        |",
       ],
-      (issues) => {
+      async (issues) => {
         const found = missing(issues);
         expect(found).toHaveLength(1);
-        expect(found[0]?.severity).toBe("warning");
+        expect(found[0]?.severity).toBe(await shippedSeverity(MISSING_PROMOTION));
         expect(found[0]?.message).toContain("TC-0001");
         expect(found[0]?.message).toContain("row 1, row 2");
         expect(found[0]?.suggested_action).toContain("CR-*");
@@ -132,7 +171,7 @@ describe("the split row's Boundary identity", () => {
     );
   });
 
-  it("reports two siblings claiming one slug, as an error", async () => {
+  it("reports two siblings claiming one slug", async () => {
     // Only a Phase 2b that already writes `Boundary` can author this, and it
     // leaves the two rows genuinely indistinguishable.
     await withLedger(
@@ -142,10 +181,10 @@ describe("the split row's Boundary identity", () => {
         "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | below    | todo   | -     | -        | rejected |",
         "| TDD-0002 | TC-0001 | Unit  | tests/a.test.ts | above    | todo   | -     | -        | Rejected |",
       ],
-      (issues) => {
+      async (issues) => {
         const found = duplicate(issues);
         expect(found).toHaveLength(1);
-        expect(found[0]?.severity).toBe("error");
+        expect(found[0]?.severity).toBe(await shippedSeverity(DUPLICATE_PROMOTION));
         expect(found[0]?.message).toContain('Boundary "rejected"');
         expect(found[0]?.message).toContain("row 1, row 2");
       },
@@ -170,5 +209,66 @@ describe("the split row's Boundary identity", () => {
         expect(duplicate(issues)).toEqual([]);
       },
     );
+  });
+});
+
+describe("the split-boundary promotion windows", () => {
+  const MISSING_LEDGER = [
+    LEGACY_HEADERS,
+    LEGACY_SEP,
+    "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | below    | todo   | -     | -        |",
+    "| TDD-0002 | TC-0001 | Unit  | tests/a.test.ts | above    | todo   | -     | -        |",
+  ];
+  const DUPLICATE_LEDGER = [
+    HEADERS,
+    SEP,
+    "| TDD-0001 | TC-0001 | Unit  | tests/a.test.ts | below    | todo   | -     | -        | rejected |",
+    "| TDD-0002 | TC-0001 | Unit  | tests/a.test.ts | above    | todo   | -     | -        | Rejected |",
+  ];
+
+  async function at(
+    version: string,
+    ledger: string[],
+    pick: (issues: Issue[]) => Issue[],
+  ): Promise<{ severity: string; message: string }> {
+    toolVersion.override = version;
+    let found = { severity: "", message: "" };
+    await withLedger(ledger, (issues) => {
+      const entry = pick(issues)[0];
+      if (entry) found = { severity: entry.severity, message: entry.message };
+    });
+    return found;
+  }
+
+  it("reports a warning before the promotion release, naming the release", async () => {
+    // The regression P7 exists for: a `--fail-on error` gate that was passing
+    // must not latch on an upgrade, and the operator must be able to read when
+    // it will. Both codes are new, so both owe that.
+    const missingFound = await at("1.9.9", MISSING_LEDGER, missing);
+    expect(missingFound.severity).toBe("warning");
+    expect(missingFound.message).toContain(MISSING_PROMOTION);
+
+    const duplicateFound = await at("1.9.9", DUPLICATE_LEDGER, duplicate);
+    expect(duplicateFound.severity).toBe("warning");
+    expect(duplicateFound.message).toContain(DUPLICATE_PROMOTION);
+  });
+
+  it("reports an error from the promotion release onwards", async () => {
+    const missingFound = await at("99.0.0", MISSING_LEDGER, missing);
+    expect(missingFound.severity).toBe("error");
+    // No window left to advertise once the window has closed.
+    expect(missingFound.message).not.toContain("until the");
+
+    const duplicateFound = await at("99.0.0", DUPLICATE_LEDGER, duplicate);
+    expect(duplicateFound.severity).toBe("error");
+    expect(duplicateFound.message).not.toContain("until the");
+  });
+
+  it("stays inside the window when the version cannot be read", async () => {
+    // `resolveToolVersion` resolves rather than rejects, so an unreadable
+    // version arrives as a token the comparator cannot parse. That must never
+    // be what escalates a finding into a build failure.
+    expect((await at("unknown", MISSING_LEDGER, missing)).severity).toBe("warning");
+    expect((await at("unknown", DUPLICATE_LEDGER, duplicate)).severity).toBe("warning");
   });
 });

@@ -80,6 +80,22 @@ export const RULE_PROMOTIONS = {
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
   /**
+   * `TDDLIST_SPLIT_BOUNDARY_MISSING` — sibling ledger rows of one `TC-*` that
+   * name no `Boundary`. Every ledger seeded before the column existed is in
+   * that shape, and the migration out of it re-scopes rows, so it waits on an
+   * approved `CR-*`. The window is the time to get that approval; a project
+   * that cannot finish inside a full minor has a stalled CR, not a surprise.
+   */
+  tddListSplitBoundaryMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `TDDLIST_SPLIT_BOUNDARY_DUPLICATE` — two sibling rows of one `TC-*` that
+   * claim the same `Boundary` slug. Only a Phase 2b that already writes the
+   * column can produce it, so unlike the missing case it is not a legacy
+   * shape — but P7 gives even a self-inflicted new code its window rather than
+   * failing a gate on the release that first looked.
+   */
+  tddListSplitBoundaryDuplicate: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
    * absent, or disagrees with the markdown file it is derived from. Every
    * repository that customised an agent before the comparison existed carries

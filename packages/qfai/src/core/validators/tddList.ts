@@ -1016,7 +1016,13 @@ async function validateSpecTddList(
   // `Status` and `Evidence` against whichever sibling it happened to land on.
   // A single row owes nothing: one row for a TC is already identified by that
   // TC, and demanding the column there would fail every non-matrix ledger.
-  issues.push(...validateSplitBoundaryIdentity(ledgerRows(), relPath, specNumber));
+  //
+  // Both codes are new, so both ship behind a promotion window (P7): the pin
+  // decides the severity, not a literal beside the call. Resolved once here and
+  // reused by `TDDLIST_EVIDENCE_EMPTY` below, so one run cannot read two
+  // versions and report two different escalation states for the same ledger.
+  const toolVersion = await resolveToolVersion();
+  issues.push(...validateSplitBoundaryIdentity(ledgerRows(), relPath, specNumber, toolVersion));
 
   // ── Phase 2 checks ──
 
@@ -1398,7 +1404,7 @@ async function validateSpecTddList(
   // return `"unknown"`, which the comparator reads as inside the window, so an
   // unreadable version can never be what escalates this into a build failure.
   const evidenceEmptyPromotion = RULE_PROMOTIONS.tddListEvidenceEmpty.promoteAt;
-  const evidenceEmptySeverity = newRuleSeverity(await resolveToolVersion(), evidenceEmptyPromotion);
+  const evidenceEmptySeverity = newRuleSeverity(toolVersion, evidenceEmptyPromotion);
   const evidenceEmptyWindowNote =
     evidenceEmptySeverity === "warning"
       ? ` Reported as a warning until the ${evidenceEmptyPromotion} release, then an error`
@@ -1672,13 +1678,28 @@ function boundarySlug(ref: LedgerRowRef): string {
  * A **duplicate** slug cannot arrive that way. Only a Phase 2b that already
  * writes `Boundary` can produce one, and it leaves two rows of one `TC-*`
  * genuinely indistinguishable — the next reseed has no way to tell which row
- * owns which observation. That is an `error`.
+ * owns which observation. That is the harder finding of the two.
+ *
+ * Neither severity is written here. Both codes are new, so P7 puts each behind
+ * its own `RULE_PROMOTIONS` window and `newRuleSeverity` reads the pin: a
+ * `warning` that names the rows until the pinned release, an `error` from it
+ * onwards. The distinction the two paragraphs above draw survives as the
+ * *reason* each window exists, not as a literal at the call.
  */
 function validateSplitBoundaryIdentity(
   rows: Iterable<LedgerRowRef>,
   relPath: string,
   specNumber: string,
+  toolVersion: string,
 ): Issue[] {
+  const missingPromotion = RULE_PROMOTIONS.tddListSplitBoundaryMissing.promoteAt;
+  const duplicatePromotion = RULE_PROMOTIONS.tddListSplitBoundaryDuplicate.promoteAt;
+  const missingSeverity = newRuleSeverity(toolVersion, missingPromotion);
+  const duplicateSeverity = newRuleSeverity(toolVersion, duplicatePromotion);
+  const windowNote = (severity: string, promoteAt: string): string =>
+    severity === "warning"
+      ? ` Reported as a warning until the ${promoteAt} release, then an error.`
+      : "";
   const byTc = new Map<string, LedgerRowRef[]>();
   for (const ref of rows) {
     for (const token of splitTcRefs(cell(ref, "TC-Refs"))) {
@@ -1705,8 +1726,8 @@ function validateSplitBoundaryIdentity(
       issues.push(
         issue(
           "TDDLIST_SPLIT_BOUNDARY_MISSING",
-          `${tc} is split across ${String(siblings.length)} rows in tdd/test-list.md for spec-${specNumber}, but ${String(unnamed.length)} of them name no Boundary (${unnamed.map((ref) => ref.label).join(", ")}). Sibling rows are told apart by the (TC, Boundary) pair and by nothing else.`,
-          "warning",
+          `${tc} is split across ${String(siblings.length)} rows in tdd/test-list.md for spec-${specNumber}, but ${String(unnamed.length)} of them name no Boundary (${unnamed.map((ref) => ref.label).join(", ")}). Sibling rows are told apart by the (TC, Boundary) pair and by nothing else.${windowNote(missingSeverity, missingPromotion)}`,
+          missingSeverity,
           relPath,
           "tddList.splitBoundaryIdentity",
           [tc],
@@ -1733,8 +1754,8 @@ function validateSplitBoundaryIdentity(
       issues.push(
         issue(
           "TDDLIST_SPLIT_BOUNDARY_DUPLICATE",
-          `Boundary "${slug}" is claimed by ${String(labels.length)} rows of ${tc} in tdd/test-list.md for spec-${specNumber} (${labels.join(", ")}), so those rows carry no distinct identity`,
-          "error",
+          `Boundary "${slug}" is claimed by ${String(labels.length)} rows of ${tc} in tdd/test-list.md for spec-${specNumber} (${labels.join(", ")}), so those rows carry no distinct identity.${windowNote(duplicateSeverity, duplicatePromotion)}`,
+          duplicateSeverity,
           relPath,
           "tddList.splitBoundaryUnique",
           [tc, slug],
