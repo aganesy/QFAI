@@ -296,6 +296,7 @@ export const EMITTED_RULE_CODES: readonly string[] = [
   "QFAI-SPLIT-103",
   "QFAI-SPLIT-104",
   "QFAI-SPLIT-105",
+  "QFAI-SPLIT-106",
   "QFAI-STATUS-001",
   "QFAI-STATUS-002",
   "QFAI-STATUS-003",
