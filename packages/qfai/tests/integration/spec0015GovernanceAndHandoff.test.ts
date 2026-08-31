@@ -27,7 +27,7 @@
 // QFAI:SPEC-0015:TC-0015-0032
 // QFAI:SPEC-0015:TC-0015-0033
 
-import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -50,6 +50,7 @@ import {
 } from "../../src/core/validators/staleReferences.js";
 import { validateHandoff } from "../../src/core/schemas/handoff.js";
 import { loadConfig } from "../../src/core/config.js";
+import { removeTempTree } from "../helpers/tempTree.js";
 
 let root: string;
 
@@ -58,7 +59,7 @@ beforeEach(async () => {
 });
 
 afterEach(async () => {
-  await rm(root, { recursive: true, force: true });
+  await removeTempTree(root);
 });
 
 async function writeSkillMd(skillId: string, body: string): Promise<void> {
