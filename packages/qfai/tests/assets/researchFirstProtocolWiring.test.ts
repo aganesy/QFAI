@@ -232,7 +232,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     // Both fill-me-in signals: the date and every bracketed placeholder.
     expect(codes).toContain("QFAI-RESEARCH-006");
-    expect(codes).toContain("QFAI-RESEARCH-012");
+    expect(codes).toContain("QFAI-RESEARCH-019");
   });
 
   it("still fails when only the date was refreshed", async () => {
@@ -244,7 +244,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
       await seedPack(fillDateOnly(template)),
       defaultConfig,
     );
-    const placeholder = issues.find((item) => item.code === "QFAI-RESEARCH-012");
+    const placeholder = issues.find((item) => item.code === "QFAI-RESEARCH-019");
 
     expect(placeholder, "date-only edit must not pass the Research Summary gate").toBeDefined();
     for (const key of ["title", "url", "category", "description", "finding", "reason"]) {
@@ -308,7 +308,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
 
     await usePack(root, "discussion-20260101000000000");
     const onOlder = await validateResearchSummary(root, defaultConfig);
-    expect(onOlder.map((item) => item.code)).toContain("QFAI-RESEARCH-012");
+    expect(onOlder.map((item) => item.code)).toContain("QFAI-RESEARCH-019");
 
     await usePack(root, "discussion-20260202000000000");
     const onNewer = await validateResearchSummary(root, defaultConfig);
@@ -374,7 +374,7 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
         "$1reason: [Why this applies] # TODO",
       );
     const issues = await validateResearchSummary(await seedPack(filled), defaultConfig);
-    const placeholder = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
+    const placeholder = issues.filter((item) => item.code === "QFAI-RESEARCH-019");
 
     expect(placeholder).toHaveLength(1);
     expect(placeholder[0]?.message).toContain("title");

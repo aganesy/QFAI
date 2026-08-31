@@ -20,6 +20,12 @@ protocol run; `npx qfai validate --profile discussion` reports `QFAI-RESEARCH-*`
 Never delete this heading to silence the gate: the current pack's `04_Sources.md` is required to
 carry it, and its absence is reported as `QFAI-RESEARCH-014`.
 
+Research-First Protocol output. Schema: `constitution/research-first-protocol.md`.
+Replace every `[...]` placeholder with real research: validation rejects
+bracketed `title` / `url` / `reason` values and requires `published` to be a
+real `YYYY-MM-DD` date, so an unfilled block below reports errors rather than
+passing.
+
 ```yaml
 research_summary:
   sources:
@@ -102,7 +108,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What color trend or signal was observed]
 - decision_connection: [How the color signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this color signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the color signal should be evaluated in design review]
 - local_implication: [What color choices should change locally]
 
 ### typography
@@ -113,7 +119,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What typographic trend or signal was observed]
 - decision_connection: [How the typography signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this typography signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the typography signal should be evaluated in design review]
 - local_implication: [What typeface or scale choices should change locally]
 
 ### Visual
@@ -124,7 +130,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What visual motif trend or signal was observed]
 - decision_connection: [How the visual motif translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this visual motif; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the visual motif should be evaluated in design review]
 - local_implication: [What visual motif choices should change locally]
 
 ### spacing
@@ -135,7 +141,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What spacing convention or density trend was observed]
 - decision_connection: [How the spacing signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this spacing signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the spacing signal should be evaluated in design review]
 - local_implication: [What spacing or density choices should change locally]
 
 ### shape
@@ -146,7 +152,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What shape language trend was observed (border-radius, geometric vs organic, etc.)]
 - decision_connection: [How the shape language translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this shape signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the shape signal should be evaluated in design review]
 - local_implication: [What shape-language choices should change locally]
 
 ### imagery
@@ -157,7 +163,7 @@ research_summary:
 - reference: [Source name or URL]
 - observation: [What imagery or illustration style trend was observed]
 - decision_connection: [How the imagery signal translates into this project]
-- evaluation_connection: [Which TRD-XX axis evaluates this imagery signal; leave blank to trigger UIX-VAL-T01]
+- evaluation_connection: [How the imagery signal should be evaluated in design review]
 - local_implication: [What imagery or illustration choices should change locally]
 
 ### design_guideline_research

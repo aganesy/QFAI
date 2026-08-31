@@ -13,8 +13,13 @@ import {
 import type { LocatedPack } from "../packLocator.js";
 import { findPacks } from "../packLocator.js";
 import { readDiscussionCurrentId } from "../state.js";
+import { RULE_PROMOTIONS, newRuleSeverity } from "../sunset.js";
 import type { Issue } from "../types.js";
+import { resolveToolVersion } from "../version.js";
 import { issue } from "./utils.js";
+
+/** The release `QFAI-RESEARCH-012` stops being a warning at. */
+const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
@@ -62,7 +67,26 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   const issues: Issue[] = [];
   const target = await resolveResearchSummaryScanTarget(root, config);
   issues.push(...describeBrokenPointer(root, target));
-  issues.push(...(await checkStorageSlotPresence(root, target)));
+  // `uiux.requireResearchSummary: false` is a project stating the section is
+  // not required here, so reporting its absence contradicts the setting — and
+  // under `--fail-on warning` or `--strict` it fails the run over a rule the
+  // project opted out of. Only the two ABSENCE rules are governed by it: every
+  // rule below judges a section the project chose to write, and declining the
+  // requirement is not a licence to record the protocol wrongly.
+  const requireSection = config.uiux?.requireResearchSummary !== false;
+  if (requireSection) {
+    issues.push(...(await checkStorageSlotPresence(root, target)));
+    // Resolved here rather than inside the builder: the promotion window is a
+    // property of the tool, and the builder runs once per validator run anyway.
+    const missing = await buildMissingSectionIssue(
+      root,
+      target.discussionRoot,
+      await resolveToolVersion(),
+    );
+    if (missing) {
+      issues.push(missing);
+    }
+  }
 
   for (const filePath of target.files) {
     let content: string;
@@ -182,7 +206,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
     if (placeholderKeys.length > 0) {
       issues.push(
         issue(
-          "QFAI-RESEARCH-012",
+          "QFAI-RESEARCH-019",
           `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run`,
           "error",
           rel,
@@ -260,6 +284,69 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   }
 
   return issues;
+}
+
+/**
+ * Every content rule is skipped when a file carries no heading, so omitting the
+ * section entirely used to score zero findings while half-writing it scored
+ * several errors. Make the omission visible with a single warning on the pack
+ * directory when the latest pack has markdown but none of it carries the
+ * section.
+ *
+ * This is broader than QFAI-RESEARCH-014, which asks the narrower question of
+ * whether the slot sits in the file that owns it: a pack that recorded the
+ * protocol in some other file answers this rule and still fails that one.
+ */
+async function buildMissingSectionIssue(
+  root: string,
+  discussionRoot: string,
+  toolVersion: string,
+): Promise<Issue | null> {
+  let latestPackDir: string | null = null;
+  try {
+    latestPackDir = await findLatestDiscussionPackDir(discussionRoot);
+  } catch {
+    latestPackDir = null;
+  }
+  if (!latestPackDir) {
+    return null;
+  }
+
+  const packFiles = await collectMarkdownFiles(latestPackDir);
+  if (packFiles.length === 0) {
+    return null;
+  }
+  for (const filePath of packFiles) {
+    let content: string;
+    try {
+      content = await readFile(filePath, "utf-8");
+    } catch {
+      continue;
+    }
+    if (extractResearchSummarySection(content)) {
+      return null;
+    }
+  }
+
+  const rel = path.relative(root, latestPackDir).replace(/\\/g, "/");
+  const sectionMissingSeverity = newRuleSeverity(toolVersion, SECTION_MISSING_PROMOTION);
+  const windowNote =
+    sectionMissingSeverity === "warning"
+      ? ` Reported as a warning until the ${SECTION_MISSING_PROMOTION} release, then an error`
+      : "";
+  return issue(
+    "QFAI-RESEARCH-012",
+    `Discussion pack has no "Research Summary" section, so the research-first protocol is never checked.${windowNote}`,
+    sectionMissingSeverity,
+    rel,
+    "researchSummary.sectionMissing",
+    undefined,
+    "canonical",
+    [
+      'Add a "## Research Summary" section to a file in the pack (04_Sources.md by default).',
+      "Follow the Output Schema in .qfai/assistant/constitution/research-first-protocol.md.",
+    ].join("\n"),
+  );
 }
 
 /** Per-entry required fields of a `best_practices[]` / `anti_patterns[]` list. */
@@ -516,7 +603,9 @@ async function checkStorageSlotPresence(
       : [];
   }
 
-  const hasHeading = RESEARCH_SUMMARY_HEADING_RE.test(content);
+  // Asked of the masked copy for the same reason extractResearchSummarySection
+  // masks: a heading shown inside a fenced example is not this pack's own.
+  const hasHeading = RESEARCH_SUMMARY_HEADING_RE.test(maskFencedCodeBlocks(content));
   const section = hasHeading ? extractResearchSummarySection(content) : null;
   if (section) {
     return [];
@@ -605,7 +694,7 @@ function collectUnresolvedSourceIds(
   const unresolved = new Set<string>();
   for (const entry of referencingEntries) {
     const value = readScalarField(entry, "source_id") ?? "";
-    // A placeholder value is already reported as QFAI-RESEARCH-012; an absent
+    // A placeholder value is already reported as QFAI-RESEARCH-019; an absent
     // or empty one is reported as a missing required field.
     if (!value || PLACEHOLDER_TEXT_RE.test(value) || known.has(value)) {
       continue;
@@ -615,17 +704,70 @@ function collectUnresolvedSourceIds(
   return [...unresolved];
 }
 
+/**
+ * A fenced code block is quoted text, not document structure: a pack that shows
+ * the schema in a ```markdown example must not read as owning the section.
+ * Blank every fenced line — including the fences — while preserving each
+ * character offset, so indices taken from the mask still address the original.
+ */
+function maskFencedCodeBlocks(content: string): string {
+  const lines = content.split("\n");
+  let openFence: { marker: string; length: number } | null = null;
+
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i] ?? "";
+    const fence = parseFenceLine(line);
+    const open = openFence;
+
+    if (!open) {
+      if (fence) {
+        openFence = { marker: fence.marker, length: fence.length };
+        lines[i] = " ".repeat(line.length);
+      }
+      continue;
+    }
+
+    // A closing fence is the same marker, at least as long as the opener, and
+    // carries no info string.
+    if (
+      fence &&
+      fence.marker === open.marker &&
+      fence.length >= open.length &&
+      !fence.info.trim()
+    ) {
+      openFence = null;
+    }
+    lines[i] = " ".repeat(line.length);
+  }
+
+  return lines.join("\n");
+}
+
+function parseFenceLine(line: string): { marker: string; length: number; info: string } | null {
+  const match = /^ {0,3}(`{3,}|~{3,})(.*)$/.exec(line);
+  const run = match?.[1];
+  if (!run) {
+    return null;
+  }
+  return { marker: run.startsWith("`") ? "`" : "~", length: run.length, info: match[2] ?? "" };
+}
+
 function extractResearchSummarySection(content: string): string | null {
-  const heading = RESEARCH_SUMMARY_HEADING_RE.exec(content);
+  // Locate the heading — and the heading that ends the section — on the masked
+  // copy, so fenced examples neither impersonate the section nor truncate it.
+  // The body itself comes from the original: the shipped template writes its
+  // schema inside a ```yaml fence, and that fence is the section's content
+  // (extractYamlPayload reads it back out).
+  const masked = maskFencedCodeBlocks(content);
+  const heading = RESEARCH_SUMMARY_HEADING_RE.exec(masked);
   if (!heading) {
     return null;
   }
 
   const start = heading.index + heading[0].length;
-  const remainder = content.slice(start);
-  const nextHeadingOffset = remainder.search(/^#{1,3}\s+/m);
-  const section = nextHeadingOffset === -1 ? remainder : remainder.slice(0, nextHeadingOffset);
-  const trimmed = section.trim();
+  const nextHeadingOffset = masked.slice(start).search(/^#{1,3}\s+/m);
+  const end = nextHeadingOffset === -1 ? content.length : start + nextHeadingOffset;
+  const trimmed = content.slice(start, end).trim();
   return trimmed.length > 0 ? trimmed : null;
 }
 
@@ -724,19 +866,28 @@ function normalizeScalar(raw: string): string {
     return "";
   }
   if (typeof parsed === "string") {
-    return parsed.trim();
+    // Quoting a placeholder is ordinary YAML, so `title: "[Source title]"` is
+    // the same unfilled slot as the bare form and has to read as empty here
+    // too — otherwise the required-field rules accept the quoted spelling and
+    // reject only the bare one, for values that are the same shipped text.
+    return isPlaceholderParsed(parsed) ? "" : parsed.trim();
   }
   if (typeof parsed === "number" || typeof parsed === "boolean") {
     return String(parsed);
   }
   // Not a scalar at all — a flow sequence or mapping. Every field read through
-  // here is a string in the Output Schema, so `title: []` and `description: {}`
-  // hold no value: returning their text let them pass as filled in, and made
-  // `id: []` resolve `source_id: []` on top of that. The template's own
-  // unreplaced `[fill me in]` is the one sequence that keeps its text, so
-  // QFAI-RESEARCH-012 names the key instead of the required-field checks
-  // reporting the same placeholder a second time.
-  return isPlaceholderParsed(parsed) ? text : "";
+  // here is a string in the Output Schema, so `title: []`, `description: {}`
+  // and the template's own unreplaced `[fill me in]` hold no value: returning
+  // their text let them pass as filled in, and made `id: []` resolve
+  // `source_id: []` on top of that.
+  //
+  // A placeholder therefore reports twice, and both reports are wanted:
+  // QFAI-RESEARCH-019 names every unfilled key in one finding, and the
+  // required-field rules (-004 / -005 / -010 …) each name their own field on
+  // their own entry. The per-field rules are the ones that say WHICH source
+  // entry is unfilled; -019 is the one that says the pack is still the shipped
+  // scaffold. Suppressing either loses a question the other cannot answer.
+  return "";
 }
 
 /** `parse` the value on its own, or `undefined` when it is not valid YAML. */
