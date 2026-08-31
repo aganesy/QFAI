@@ -282,9 +282,17 @@ describe("prototype parity is recorded, not merely required", () => {
     it(`${tree}: the gate item the recording serves is still there`, async () => {
       // The alternative fix was to drop item 9 / the field entirely. It was not
       // taken, so both must survive — otherwise this change is half-applied.
+      //
+      // What is pinned is that item 9 still demands a `product-surface-reviewer`
+      // PASS on a UI-affecting row, not the sentence that says so: item 9 has
+      // since grown a second branch — a cli-only target substitutes a surface
+      // review of the captured command output for parity, because
+      // `/qfai-prototyping` rejects `cli` and leaves no prototype to compare
+      // against. Pinning the old wording would have made that widening look
+      // like the deletion this row exists to catch.
       const skill = await readSkill(tree);
 
-      expect(skill).toContain("prototype parity PASS from `product-surface-reviewer`");
+      expect(skill).toContain("UI-affecting items have `product-surface-reviewer` PASS");
       expect(skill).toContain("- `Prototype parity` — product-surface-reviewer result");
     });
   }
