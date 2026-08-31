@@ -123,6 +123,28 @@ export const RULE_PROMOTIONS = {
    */
   researchSummarySectionMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
   /**
+   * The Research Summary's schema rules, read per entry rather than as text:
+   * `QFAI-RESEARCH-013` (a `source_id` resolving to no `sources[].id`),
+   * `QFAI-RESEARCH-014` (the storage file holds no summary),
+   * `QFAI-RESEARCH-015` (a source entry with no `id`),
+   * `QFAI-RESEARCH-016` and `QFAI-RESEARCH-017` (a best-practice / anti-pattern
+   * or reflection entry missing a required field), `QFAI-RESEARCH-018` (an
+   * unresolvable current-pack pointer) and `QFAI-RESEARCH-019` (an unreplaced
+   * template placeholder).
+   *
+   * One window, because they are one migration: before them the section was
+   * checked by counting list items, so a pack could satisfy every rule that
+   * existed while leaving whole entries unfilled. Every such pack meets the
+   * whole family at once on upgrade — and the pack is written at the start of a
+   * requirement and rarely revisited, so the row that owes the fix is normally
+   * long past. The section-missing rule directly above shipped behind a window
+   * for exactly that population; leaving these at `error` would have latched
+   * the same gate it was opened to keep unlatched. (Its code is deliberately
+   * not spelled in backticks here — the ledger reads every backticked code in
+   * this block as one this entry governs.)
+   */
+  researchSummarySchemaFields: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-TRIAGE-008` — a Triage heading that is not the canonical `## Triage`,
    * so no triage validator reads the rows under it. Existing delta files carry
    * whatever heading they were written with.

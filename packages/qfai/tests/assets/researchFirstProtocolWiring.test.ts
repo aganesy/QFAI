@@ -17,7 +17,17 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 
 import { defaultConfig } from "../../src/core/config.js";
+import { RULE_PROMOTIONS } from "../../src/core/sunset.js";
 import { validateResearchSummary } from "../../src/core/validators/researchSummary.js";
+
+/**
+ * The per-entry schema rules ride one promotion window, so today they report at
+ * `warning` and say which release ends that. Read from the registry rather than
+ * copied: a pin moved without the message following it is the half-landed state
+ * the window exists to prevent, and a literal here would agree with whichever
+ * side moved.
+ */
+const SCHEMA_PROMOTE_AT = RULE_PROMOTIONS.researchSummarySchemaFields.promoteAt;
 
 const repoRoot = path.resolve(process.cwd(), "..", "..");
 const discussionRoots = [
@@ -294,7 +304,11 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     const issues = await validateResearchSummary(await seedPack(stripped), defaultConfig);
     const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
 
-    expect(slotMissing?.severity).toBe("error");
+    // Windowed, not hard: this fires on every pack written before the storage
+    // slot existed, which is the population the section-missing rule already
+    // has a window for.
+    expect(slotMissing?.severity).toBe("warning");
+    expect(slotMissing?.message).toContain(SCHEMA_PROMOTE_AT);
     expect(slotMissing?.file).toContain("04_Sources.md");
   });
 
@@ -330,7 +344,8 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     const issues = await validateResearchSummary(root, defaultConfig);
     const slotMissing = issues.find((item) => item.code === "QFAI-RESEARCH-014");
 
-    expect(slotMissing?.severity).toBe("error");
+    expect(slotMissing?.severity).toBe("warning");
+    expect(slotMissing?.message).toContain(SCHEMA_PROMOTE_AT);
     expect(slotMissing?.file).toContain("discussion-20260101000000000");
   });
 
@@ -467,7 +482,8 @@ describe("research-first protocol is wired into /qfai-discussion", () => {
     const issues = await validateResearchSummary(root, defaultConfig);
     const broken = issues.find((item) => item.code === "QFAI-RESEARCH-018");
 
-    expect(broken?.severity).toBe("error");
+    expect(broken?.severity).toBe("warning");
+    expect(broken?.message).toContain(SCHEMA_PROMOTE_AT);
     expect(broken?.message).toContain("discussion-20250101000000000");
   });
 

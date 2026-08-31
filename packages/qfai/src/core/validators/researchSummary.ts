@@ -20,6 +20,15 @@ import { issue } from "./utils.js";
 
 /** The release `QFAI-RESEARCH-012` stops being a warning at. */
 const SECTION_MISSING_PROMOTION = RULE_PROMOTIONS.researchSummarySectionMissing.promoteAt;
+/** The release the per-entry schema rules stop being warnings at. */
+const SCHEMA_FIELDS_PROMOTION = RULE_PROMOTIONS.researchSummarySchemaFields.promoteAt;
+
+/** The window note every rule under {@link SCHEMA_FIELDS_PROMOTION} carries. */
+function schemaWindowNote(severity: "warning" | "error"): string {
+  return severity === "warning"
+    ? ` Reported as a warning until the ${SCHEMA_FIELDS_PROMOTION} release, then an error`
+    : "";
+}
 
 const RESEARCH_SUMMARY_HEADING_RE = /^#{1,3}\s+Research\s+Summary/im;
 const FULL_DATE_RE = /^[ \t]*(?:-[ \t]*)?published:[ \t]*["']?(\d{4}-\d{2}-\d{2})["']?/m;
@@ -65,8 +74,15 @@ const REFLECTION_FIELDS = ["source_id", "finding"] as const;
 
 export async function validateResearchSummary(root: string, config: QfaiConfig): Promise<Issue[]> {
   const issues: Issue[] = [];
+  // Resolved once for the whole run: the promotion window is a property of the
+  // tool, not of any one pack, and every rule below reads the same answer.
+  const toolVersion = await resolveToolVersion();
+  // The per-entry schema rules ride one window (`researchSummarySchemaFields`).
+  // A literal `"error"` beside any of these calls would be a registered pin
+  // that never governs anything — the state `sunsetLedger.test.ts` rejects.
+  const schemaSeverity = newRuleSeverity(toolVersion, SCHEMA_FIELDS_PROMOTION);
   const target = await resolveResearchSummaryScanTarget(root, config);
-  issues.push(...describeBrokenPointer(root, target));
+  issues.push(...describeBrokenPointer(root, target, schemaSeverity));
   // `uiux.requireResearchSummary: false` is a project stating the section is
   // not required here, so reporting its absence contradicts the setting — and
   // under `--fail-on warning` or `--strict` it fails the run over a rule the
@@ -75,14 +91,10 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
   // requirement is not a licence to record the protocol wrongly.
   const requireSection = config.uiux?.requireResearchSummary !== false;
   if (requireSection) {
-    issues.push(...(await checkStorageSlotPresence(root, target)));
+    issues.push(...(await checkStorageSlotPresence(root, target, schemaSeverity)));
     // Resolved here rather than inside the builder: the promotion window is a
     // property of the tool, and the builder runs once per validator run anyway.
-    const missing = await buildMissingSectionIssue(
-      root,
-      target.discussionRoot,
-      await resolveToolVersion(),
-    );
+    const missing = await buildMissingSectionIssue(root, target.discussionRoot, toolVersion);
     if (missing) {
       issues.push(missing);
     }
@@ -136,8 +148,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         issues.push(
           issue(
             "QFAI-RESEARCH-015",
-            `Source entry missing required field "id": ${label}`,
-            "error",
+            `Source entry missing required field "id": ${label}${schemaWindowNote(schemaSeverity)}`,
+            schemaSeverity,
             rel,
             "researchSummary.sourceId",
           ),
@@ -207,8 +219,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-019",
-          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run`,
-          "error",
+          `Research Summary still carries unreplaced template placeholders (${placeholderKeys.join(", ")}); record the actual protocol run${schemaWindowNote(schemaSeverity)}`,
+          schemaSeverity,
           rel,
           "researchSummary.placeholder",
         ),
@@ -220,8 +232,8 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       issues.push(
         issue(
           "QFAI-RESEARCH-013",
-          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}`,
-          "error",
+          `"source_id" does not resolve to any sources[].id in the same Research Summary: ${unresolved}${schemaWindowNote(schemaSeverity)}`,
+          schemaSeverity,
           rel,
           "researchSummary.sourceIdReference",
         ),
@@ -239,7 +251,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
-    issues.push(...checkPracticeEntries(rel, "best_practices", bestPractices));
+    issues.push(...checkPracticeEntries(rel, "best_practices", bestPractices, schemaSeverity));
 
     if (antiPatterns.length === 0) {
       issues.push(
@@ -252,7 +264,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
         ),
       );
     }
-    issues.push(...checkPracticeEntries(rel, "anti_patterns", antiPatterns));
+    issues.push(...checkPracticeEntries(rel, "anti_patterns", antiPatterns, schemaSeverity));
 
     // Check reflection.apply presence — inside the reflection list only, and
     // entry by entry: a single complete entry must not satisfy the required
@@ -280,7 +292,7 @@ export async function validateResearchSummary(root: string, config: QfaiConfig):
       );
     }
 
-    issues.push(...checkReflectionEntries(rel, reflectionEntries));
+    issues.push(...checkReflectionEntries(rel, reflectionEntries, schemaSeverity));
   }
 
   return issues;
@@ -350,7 +362,12 @@ async function buildMissingSectionIssue(
 }
 
 /** Per-entry required fields of a `best_practices[]` / `anti_patterns[]` list. */
-function checkPracticeEntries(rel: string, key: string, entries: readonly string[]): Issue[] {
+function checkPracticeEntries(
+  rel: string,
+  key: string,
+  entries: readonly string[],
+  schemaSeverity: "warning" | "error",
+): Issue[] {
   const issues: Issue[] = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i] ?? "";
@@ -359,8 +376,8 @@ function checkPracticeEntries(rel: string, key: string, entries: readonly string
       issues.push(
         issue(
           "QFAI-RESEARCH-016",
-          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}`,
-          "error",
+          `${key} entry missing required field(s) ${missing.join(", ")}: ${describeEntry(key, entry, i)}${schemaWindowNote(schemaSeverity)}`,
+          schemaSeverity,
           rel,
           "researchSummary.practiceFields",
         ),
@@ -371,7 +388,11 @@ function checkPracticeEntries(rel: string, key: string, entries: readonly string
 }
 
 /** Per-entry required fields of the `reflection[]` list. */
-function checkReflectionEntries(rel: string, entries: readonly string[]): Issue[] {
+function checkReflectionEntries(
+  rel: string,
+  entries: readonly string[],
+  schemaSeverity: "warning" | "error",
+): Issue[] {
   const issues: Issue[] = [];
   for (let i = 0; i < entries.length; i++) {
     const entry = entries[i] ?? "";
@@ -382,8 +403,8 @@ function checkReflectionEntries(rel: string, entries: readonly string[]): Issue[
       issues.push(
         issue(
           "QFAI-RESEARCH-017",
-          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}`,
-          "error",
+          `reflection entry missing required field(s) ${missing.join(", ")}: ${label}${schemaWindowNote(schemaSeverity)}`,
+          schemaSeverity,
           rel,
           "researchSummary.reflectionFields",
         ),
@@ -556,15 +577,19 @@ async function collectMarkdownFiles(scanRoot: string): Promise<string[]> {
  * validate. Falling through to the latest pack would let a completed unrelated
  * pack report success for a session whose pointer is broken.
  */
-function describeBrokenPointer(root: string, target: ResearchSummaryScanTarget): Issue[] {
+function describeBrokenPointer(
+  root: string,
+  target: ResearchSummaryScanTarget,
+  schemaSeverity: "warning" | "error",
+): Issue[] {
   if (target.brokenPointer === null) {
     return [];
   }
   return [
     issue(
       "QFAI-RESEARCH-018",
-      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}`,
-      "error",
+      `Cannot resolve the current discussion pack: ${target.brokenPointer.reason}${schemaWindowNote(schemaSeverity)}`,
+      schemaSeverity,
       path.relative(root, target.discussionRoot).replace(/\\/g, "/"),
       "researchSummary.brokenCurrentPointer",
     ),
@@ -587,6 +612,7 @@ function describeBrokenPointer(root: string, target: ResearchSummaryScanTarget):
 async function checkStorageSlotPresence(
   root: string,
   target: ResearchSummaryScanTarget,
+  schemaSeverity: "warning" | "error",
 ): Promise<Issue[]> {
   const { activePackDir } = target;
   if (activePackDir === null) {
@@ -599,7 +625,7 @@ async function checkStorageSlotPresence(
     content = await readFile(storageFile, "utf-8");
   } catch {
     return target.reportMissingStorageFile
-      ? [storageSlotIssue(root, storageFile, "the file is missing or unreadable")]
+      ? [storageSlotIssue(root, storageFile, "the file is missing or unreadable", schemaSeverity)]
       : [];
   }
 
@@ -612,14 +638,19 @@ async function checkStorageSlotPresence(
   }
 
   const detail = hasHeading ? "the section is empty" : 'no "## Research Summary" heading';
-  return [storageSlotIssue(root, storageFile, detail)];
+  return [storageSlotIssue(root, storageFile, detail, schemaSeverity)];
 }
 
-function storageSlotIssue(root: string, storageFile: string, detail: string): Issue {
+function storageSlotIssue(
+  root: string,
+  storageFile: string,
+  detail: string,
+  schemaSeverity: "warning" | "error",
+): Issue {
   return issue(
     "QFAI-RESEARCH-014",
-    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there`,
-    "error",
+    `${RESEARCH_SUMMARY_FILE} does not store a Research Summary (${detail}); record the research-first protocol output there${schemaWindowNote(schemaSeverity)}`,
+    schemaSeverity,
     path.relative(root, storageFile).replace(/\\/g, "/"),
     "researchSummary.storageSlotMissing",
   );
