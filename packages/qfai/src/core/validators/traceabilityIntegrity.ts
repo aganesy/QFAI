@@ -97,7 +97,11 @@ export async function validateTraceabilityIntegrity(
   const issues: Issue[] = [];
   const baseBranch = config.baseBranch ?? "origin/main";
 
-  const changedFiles = getChangedFilesAgainstBase(root, baseBranch);
+  // A rename's source path is gone, so it cannot be the implementation this
+  // ledger row still points at. Counting it as "modified" let a row that was
+  // never updated for the move pass `QFAI-TRACE-001` in silence — the one case
+  // where the ledger is provably stale.
+  const changedFiles = getChangedFilesAgainstBase(root, baseBranch, { dropRenameSources: true });
   if (changedFiles.size === 0) {
     return issues;
   }

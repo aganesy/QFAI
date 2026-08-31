@@ -37,6 +37,10 @@ async function newRepo(seed: Record<string, string>): Promise<string> {
   git(root, "init", "--initial-branch=base");
   git(root, "config", "user.email", "test@example.com");
   git(root, "config", "user.name", "test");
+  // The EOL case below needs the CRLF bytes to reach the blob. Git for Windows
+  // installs `core.autocrlf=true` globally, which would renormalise them away
+  // and turn that test into a tautology.
+  git(root, "config", "core.autocrlf", "false");
   for (const [rel, content] of Object.entries(seed)) {
     await write(root, rel, content);
   }
@@ -110,6 +114,40 @@ describe("validateUpstreamSsotGuard", () => {
     });
 
     await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("ignores a protected file whose only change is its line endings", async () => {
+    // `drift-protocol.md#line-endings-in-the-artifacts-under-review` tells the
+    // reviewer that an all-lines-changed diff is not evidence of drift. If the
+    // detector still reported the path, the operator would owe a Change
+    // Request for a change carrying no content, and nothing but reverting the
+    // line endings could discharge it.
+    const root = await newRepo({ ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\nSELECT 2;\n" });
+    await commitEdits(root, {
+      ".qfai/contracts/db/CON-DB-0007.sql": "SELECT 1;\r\nSELECT 2;\r\n",
+    });
+
+    // Guard the premise: the CRLF really did land in the committed blob.
+    const named = execFileSync("git", ["diff", "--name-only", "base..HEAD"], {
+      cwd: root,
+      encoding: "utf-8",
+    });
+    expect(named).toContain(".qfai/contracts/db/CON-DB-0007.sql");
+
+    await expect(validateUpstreamSsotGuard(root, config)).resolves.toEqual([]);
+  });
+
+  it("still flags a protected file whose diff counts no changed lines", async () => {
+    // An added empty contract counts `0 0` in `--numstat`, exactly like the
+    // EOL-only case above. The detector must separate the two by the patch
+    // itself, not by the line counts, or "add the file, fill it next commit"
+    // would walk straight past the guard.
+    const root = await newRepo({ "src/app.ts": "export const a = 1;\n" });
+    await commitEdits(root, { ".qfai/contracts/db/CON-DB-0009.sql": "" });
+
+    const issues = await validateUpstreamSsotGuard(root, config);
+
+    expect(issues.map((i) => i.file)).toEqual([".qfai/contracts/db/CON-DB-0009.sql"]);
   });
 
   it("ignores ordinary source and test changes", async () => {

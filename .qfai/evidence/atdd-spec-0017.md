@@ -306,11 +306,13 @@ alone has 28. Filed as `CR-20260820-0011`; not this spec's work, recorded as a c
   answer to a question ten versions of the classifier could not settle. It asks what a lane **invokes**
   rather than whether a command **is a build**, which needs no corpus of build spellings and fails
   closed
-- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 14 tests. The falsification: every
+- **new** `packages/qfai/tests/unit/shippedLaneCommands.test.ts` — 15 tests. The falsification: every
   form rounds 8, 9, 10 and 11 planted, all refused, and the shipped tree's own shapes accepted. Round 11
   added three, and what they cover is the class the first five could not: the corpus was 62 BARE commands,
   so wrapping any of them in one shell construct escaped 61 of 62. It is now checked wrapped as well as
-  bare, by root cause as well as by spelling
+  bare, by root cause as well as by spelling. The 15th arrived with the seeded `.gitattributes`: it pins
+  that a dotfile is admitted by whole NAME and that `""` never enters the extension set, because the
+  other way to admit an extensionless dotfile admits every extensionless file
 - **new** `packages/qfai/tests/helpers/buildCommand.ts` — the build classifier, extracted from the
   E2E so its corpora can be tested on their own
 - **new** `packages/qfai/tests/unit/buildCommand.test.ts` — 27 tests over the corpora enumerated
@@ -370,7 +372,7 @@ pnpm -C packages/qfai exec vitest run --project e2e tests/e2e/spec0017LayeredCiS
       while the classifier corpus lived here, before round 4 moved it to
       tests/unit/buildCommand.test.ts where it belongs)
 pnpm -C packages/qfai exec vitest run --project unit tests/unit/shippedLaneCommands.test.ts
-  -> Tests 14 passed (14), exit 0
+  -> Tests 15 passed (15), exit 0
      (the 11th is the sweep's corpus: one assertion over every mechanism it
       confirmed executing, added with the repairs that close them. The 12th is
       the digest collision found by attacking the new gate rather than by a
@@ -2191,7 +2193,7 @@ that is the second time a foreign commit has demonstrated the point this section
 totals above are therefore known-invalid for the current tree rather than assumed current, which is
 exactly what the mechanism below says the line's movement means.
 
-e2e callsites at this tree: 927
+e2e callsites at this tree: 929
 
 **That line is the repair, and it is the sixth attempt at this defect.** Rounds 4, 5, 6, 7, 10 and 11
 each found these totals a round behind, and each repair re-typed the number. Neither total can be derived

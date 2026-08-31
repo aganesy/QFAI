@@ -2870,6 +2870,47 @@ describe("qfai init", { timeout: 60000 }, () => {
     }
   });
 
+  it("seeds .gitattributes at root and never overwrites an existing one", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-attrs-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: false, yes: true });
+
+      const attributesPath = path.join(root, ".gitattributes");
+      const seeded = await readFile(attributesPath, "utf-8");
+      const templateBytes = await readFile(
+        path.join(getInitAssetsDir(), "root", ".gitattributes"),
+        "utf-8",
+      );
+      expect(seeded).toBe(templateBytes);
+      expect(seeded).toContain(".qfai/** text=auto eol=lf");
+      // Scoped, not repository-wide: a `*` rule would renormalise product
+      // files the project committed as CRLF and never handed to QFAI.
+      expect(seeded).not.toMatch(/^\*\s/m);
+
+      // Create-only: the root tree copies with force:false, so a project that
+      // already made its own line-ending decision keeps it — even under --force.
+      const userContent = "*.md text eol=crlf\n";
+      await writeFile(attributesPath, userContent, "utf-8");
+      await runInit({ dir: root, force: true, dryRun: false, yes: true });
+
+      expect(await readFile(attributesPath, "utf-8")).toBe(userContent);
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
+  it("dry-run does not write .gitattributes", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-attrs-"));
+    try {
+      await runInit({ dir: root, force: false, dryRun: true, yes: true });
+      await expect(access(path.join(root, ".gitattributes"))).rejects.toMatchObject({
+        code: "ENOENT",
+      });
+    } finally {
+      await removeTempTree(root);
+    }
+  });
+
   // TC-1.4.4 — dry-run does not write DESIGN.md
   it("dry-run does not write DESIGN.md (TC-1.4.4)", async () => {
     const root = await mkdtemp(path.join(os.tmpdir(), "qfai-init-design-"));

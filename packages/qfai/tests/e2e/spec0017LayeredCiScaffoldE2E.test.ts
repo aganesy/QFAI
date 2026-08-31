@@ -72,7 +72,7 @@ import {
   ALLOWED_INIT_CONTENT,
   ALLOWED_INIT_PATHS,
   ALLOWED_INIT_SOURCE_ASSETS,
-  ALLOWED_INIT_SOURCE_EXTENSIONS,
+  initSourceShipsAsData,
   INIT_SOURCE_MIRRORED_TREE,
   ALLOWED_PROVENANCE_SHAPE,
   BUILD_DECORATION,
@@ -562,7 +562,7 @@ describe(
       // arbitrary code, with all seven projects and `ci:lint` green.
       //
       // Two questions, because the surface has two halves. WHICH files arrive, outside the four
-      // agent-instruction trees, is a six-entry list pinned by path and by content — plus the provenance record
+      // agent-instruction trees, is a seven-entry list pinned by path and by content — plus the provenance record
       // inside one of those trees, pinned by shape because it gates a delete. WHAT KIND of
       // file arrives anywhere,
       // those trees included, is the narrower claim that survives a skill edit: nothing init writes may be
@@ -650,7 +650,7 @@ describe(
 
       // And their CONTENT. The path pin says which files arrive and nothing about what is in them, so
       // an arbitrary line in the shipped `DESIGN.md` was invisible — four of the six were pinned by name
-      // alone. The two workflows are byte-pinned above; these four are byte-pinned here.
+      // alone. The two workflows are byte-pinned above; the other five are byte-pinned here.
       const contentDrift: string[] = [];
       for (const [file, digest] of ALLOWED_INIT_CONTENT) {
         const actual = fileDigest(await readFile(path.join(root, ...file.split("/"))));
@@ -725,10 +725,12 @@ describe(
       // executable bit and no known name, run as `sh <file>`.
       //
       // Two rules answer those. The PATH enumeration covers everything outside the mirrored tree, and
-      // it is six files. The EXTENSION rule covers everything including the mirrored tree: the init
-      // source ships data, and data has a data extension. That is the fourth question about who runs
-      // a file, arrived at after three rounds of enumerating the dangerous side — which cannot be
-      // finished, and which is the mistake this file's own design principle exists to avoid.
+      // it is seven files. The KIND rule covers everything including the mirrored tree: the init
+      // source ships data, and data announces itself — by a data extension, or, for a dotfile that
+      // `path.extname` reports as extensionless, by a whole name somebody enumerated. That is the
+      // fourth question about who runs a file, arrived at after three rounds of enumerating the
+      // dangerous side — which cannot be finished, and which is the mistake this file's own design
+      // principle exists to avoid.
       const source = path.resolve(process.cwd(), "..", "..", "packages", "qfai", "assets", "init");
       const found: string[] = [];
       const unenumerated: string[] = [];
@@ -746,7 +748,7 @@ describe(
           const why = initMustNotShip(rel, await readFile(full), (await lstat(full)).mode);
           if (why !== undefined) runnable.push(`${rel}: ${why}`);
           const extension = path.extname(rel);
-          if (!ALLOWED_INIT_SOURCE_EXTENSIONS.has(extension)) {
+          if (!initSourceShipsAsData(rel)) {
             wrongKind.push(
               `${rel}: ships as ${extension === "" ? "an extensionless file" : extension}`,
             );

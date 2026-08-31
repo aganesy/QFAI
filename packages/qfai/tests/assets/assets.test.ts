@@ -1113,6 +1113,80 @@ describe("assets guardrails", { timeout: 30000 }, () => {
     }
   });
 
+  it("ships a root .gitattributes that pins the SSOT file types to LF", async () => {
+    // The Drift Protocol makes the diff of the shipped SSOT markdown a review
+    // artifact, and every one of those files is LF. Without an attributes file
+    // in the consumer repo, one whole-file rewrite on Windows flips a blob's
+    // line endings and the review degrades to "every line changed".
+    const attributesPath = path.join(templateRootDir, ".gitattributes");
+    expect(existsSync(attributesPath), "root init assets must ship .gitattributes").toBe(true);
+
+    const bytes = await readFile(attributesPath);
+    // The file that declares the repository LF must itself be LF.
+    expect(bytes.includes(0x0d), ".gitattributes must not contain CR").toBe(false);
+
+    const text = bytes.toString("utf-8");
+
+    // Attributes never rewrite a blob that is already in the index, so a
+    // repository that adopts QFAI with protected files already committed as
+    // CRLF stays CRLF until it renormalises once. Seeding the rules without
+    // saying so leaves that project believing it is LF-normalised when it is
+    // not, and the all-lines-changed diff simply waits for the next save.
+    expect(text).toContain("git add --renormalize .qfai");
+
+    const rules = text
+      .split("\n")
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0 && !line.startsWith("#"));
+
+    // Every rule must be scoped to a path QFAI owns. A repository-wide `*`
+    // rule reaches product files the framework never wrote: in a project that
+    // committed them as CRLF, dropping this file in reports untouched sources
+    // as fully rewritten, which is the exact noise the seed exists to prevent.
+    for (const rule of rules) {
+      const pattern = rule.split(/\s+/)[0] ?? "";
+      expect(
+        pattern.startsWith(".qfai/") || pattern.startsWith("/"),
+        `.gitattributes rule '${rule}' must be scoped to a QFAI-owned path`,
+      ).toBe(true);
+    }
+
+    for (const pattern of [".qfai/**", "/qfai.config.yaml", "/DESIGN.md"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=lf")),
+        `.gitattributes must pin ${pattern} to eol=lf`,
+      ).toBe(true);
+    }
+    // Windows-only scripts are the documented exception: forcing LF on them
+    // breaks the interpreter that reads them.
+    for (const pattern of [".qfai/**/*.bat", ".qfai/**/*.cmd"]) {
+      expect(
+        rules.some((rule) => rule.startsWith(`${pattern} `) && rule.endsWith("eol=crlf")),
+        `.gitattributes must keep ${pattern} at eol=crlf`,
+      ).toBe(true);
+    }
+  });
+
+  it("states the LF line-ending policy in the Drift Protocol", async () => {
+    // The attributes file is create-only, so a project that already had one
+    // keeps it and can still produce an EOL-flipped diff. The protocol has to
+    // tell the reviewer adjudicating that diff how to read it.
+    const protocolPath = path.join(
+      templateQfaiDir,
+      "assistant",
+      "constitution",
+      "drift-protocol.md",
+    );
+    const protocol = await readFile(protocolPath, "utf-8");
+
+    expect(protocol).toContain(".gitattributes");
+    expect(protocol).toContain("--ignore-cr-at-eol");
+    // Adopting the seed is not the whole migration for a repository whose
+    // protected blobs are already CRLF; the protocol has to name the one-time
+    // renormalisation too.
+    expect(protocol).toContain("--renormalize");
+  });
+
   it("keeps npm README onboarding consistent", async () => {
     const readmePath = path.join(repoRoot, "packages", "qfai", "README.md");
     const readme = await readFile(readmePath, "utf-8");

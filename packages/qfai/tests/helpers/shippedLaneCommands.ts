@@ -29,6 +29,7 @@
  */
 
 import { createHash } from "node:crypto";
+import path from "node:path";
 
 /**
  * `local` is deliberately not special-cased anywhere: `local x=1` is an assignment, and the
@@ -1241,18 +1242,23 @@ export const ALLOWED_INIT_PATHS: ReadonlySet<string> = new Set([
   ".github/copilot-instructions.md",
   ".github/workflows/qfai-tests.yml",
   ".github/workflows/qfai-validate.yml",
+  ".gitattributes",
   ".gitignore",
   "DESIGN.md",
   "qfai.config.yaml",
 ]);
 
 /**
- * And the CONTENT of the four that are not workflows.
+ * And the CONTENT of the five that are not workflows.
  *
  * The path pin says which files arrive; it says nothing about what is in them, so an arbitrary line
  * planted in the shipped `DESIGN.md` was invisible — four of the six were pinned by name only, which
- * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these four are
+ * round 18's gate measured. The two workflows are byte-pinned by `ALLOWED_WORKFLOW_FILES`; these five are
  * byte-pinned here, and between them every adopter-facing file this tree writes is pinned by content.
+ *
+ * `.gitattributes` joined the list when init began seeding one. It is pinned here for the reason the
+ * others are and for one of its own: it is the file that decides how git rewrites every OTHER file's
+ * bytes on checkout, so an unreviewed line in it moves content this map is pinning one directory over.
  */
 export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
   [
@@ -1263,6 +1269,7 @@ export const ALLOWED_INIT_CONTENT: ReadonlyMap<string, string> = new Map([
     ".github/copilot-instructions.md",
     "d412d4fff2b738430866397ab2abd6e5ec2a58beaf00833a951078c04ee346c5",
   ],
+  [".gitattributes", "492ce2e432fff98fea3b35f89f3f4f44fe7268c54543e2d195c5fb4d0362806c"],
   [".gitignore", "2cfeb0833e219cf1995d1d044cbedcbfc7e80063f1f3d529904dfcbc3382a64f"],
   ["DESIGN.md", "f59eb3d151acfb95d09cd278ef719a2ca28b30134a53097b526464c45d1efaef"],
   ["qfai.config.yaml", "526fc1861b650993b7f31daab1d0b44e67d85d240600ffa987982f5d83846d6e"],
@@ -1377,6 +1384,7 @@ export const INERT_DECORATIONS: ReadonlyArray<string> = [
  * with `sh <file>` — the execution path `initMustNotShip`'s own docstring names. Recorded as gap 11.
  */
 export const ALLOWED_INIT_SOURCE_ASSETS: ReadonlySet<string> = new Set([
+  "root/.gitattributes",
   "root/.github/workflows/qfai-tests.yml",
   "root/.github/workflows/qfai-validate.yml",
   "root/DESIGN.md",
@@ -1398,11 +1406,11 @@ export const INIT_SOURCE_MIRRORED_TREE = ".qfai/";
  * offset". It reached an adopter with every pin green.
  *
  * The property that separates it from everything legitimately here is not its name and not its
- * content: **it is that the init source ships DATA, and data has a data extension.** All 175 entries
- * are `.md`, `.yml`, `.yaml`, `.json`, `.sql` or `.sample`, 158 of them markdown, and none has ever
- * been extensionless. So the rule is an enumeration of what may ship rather than a list of what may
- * not — the same inversion the rest of this file is built on, arrived at three rounds late because
- * the earlier attempts kept enumerating the dangerous side, which cannot be finished.
+ * content: **it is that the init source ships DATA, and data has a data extension.** All but one of
+ * the entries are `.md`, `.yml`, `.yaml`, `.json`, `.sql` or `.sample`, most of them markdown. So the
+ * rule is an enumeration of what may ship rather than a list of what may not — the same inversion the
+ * rest of this file is built on, arrived at three rounds late because the earlier attempts kept
+ * enumerating the dangerous side, which cannot be finished.
  *
  * A legitimate file with a new extension reddens and is a one-line review. That is the intended cost.
  */
@@ -1414,6 +1422,36 @@ export const ALLOWED_INIT_SOURCE_EXTENSIONS: ReadonlySet<string> = new Set([
   ".sql",
   ".sample",
 ]);
+
+/**
+ * The dotfiles the rule above cannot see, enumerated by WHOLE NAME.
+ *
+ * `path.extname(".gitattributes")` is `""` — a leading dot with nothing after it is not an extension
+ * to node — so the extension set alone reads a seeded `.gitattributes` as the same extensionless file
+ * round 20's payload was. Widening the extension set with `""` would answer that by admitting every
+ * extensionless file, which is the guard, deleted.
+ *
+ * A dotfile's whole basename IS its kind: `.gitattributes` names a git data format as exactly as `.md`
+ * names markdown, and it is a closed name rather than an open class. `bootstrap` still has no token and
+ * is still refused; so is any dotfile nobody put here. `distributedSurfaceLeakage.test.ts` reached the
+ * same shape independently for the same `path.extname` reason (`TEXT_BASENAMES` beside
+ * `TEXT_EXTENSIONS`), which is the convention this follows rather than invents.
+ */
+export const ALLOWED_INIT_SOURCE_BASENAMES: ReadonlySet<string> = new Set([".gitattributes"]);
+
+/**
+ * Whether an init-source file ships as data — the two sets above asked as one question.
+ *
+ * It lives here rather than at the call site so the enumerations and the token that is looked up in
+ * them cannot drift: adding a name to one of the sets while the caller derives a different token is
+ * a guard that reads green over a file nobody enumerated, which is this file's recurring class.
+ */
+export function initSourceShipsAsData(relativePath: string): boolean {
+  return (
+    ALLOWED_INIT_SOURCE_EXTENSIONS.has(path.extname(relativePath)) ||
+    ALLOWED_INIT_SOURCE_BASENAMES.has(path.basename(relativePath))
+  );
+}
 
 /**
  * The one file inside an instruction tree that is pinned anyway, by SHAPE.
