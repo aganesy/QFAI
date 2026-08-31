@@ -167,77 +167,6 @@ export const QFAI_GITIGNORE_BLOCK = [
 ].join("\n");
 
 /**
- * Translate one gitignore glob body into a regular-expression source.
- *
- * Scanned character by character rather than assembled from `replace` passes, because a
- * bracket expression cannot be expressed that way: review finding [E2] measured the old
- * translation escaping `[` and `]` into literals, so a project line like
- * `.qfai/install-provenance.[j]son` — a perfectly ordinary character class that git honours —
- * read as five literal characters and matched nothing. The conflict with the managed block's
- * negation therefore went unseen, `ensureRootGitignoreEntries` returned early, and the
- * provenance record stayed ignored. A fresh clone then has no record, so the next `qfai init`
- * reads a declined workflow as never-installed and writes it back.
- *
- * Supported, in gitignore's own terms: `**` between slashes spans directories, `*` and `?` stop
- * at a `/`, and `[...]` is a class — with `!` or `^` at its head meaning negated, as git
- * documents.
- *
- * @param body the pattern with any leading `/` and trailing `/` already removed
- * @returns the regular-expression source, without anchors
- */
-function translateGlob(body: string): string {
-  let source = "";
-  for (let index = 0; index < body.length; index += 1) {
-    const char = body[index] ?? "";
-
-    if (char === "[") {
-      // Git's own rule: a `]` immediately after the opening bracket (or after a leading
-      // negation) is a literal member rather than the terminator.
-      let scan = index + 1;
-      if (body[scan] === "!" || body[scan] === "^") scan += 1;
-      if (body[scan] === "]") scan += 1;
-      while (scan < body.length && body[scan] !== "]") scan += 1;
-      if (scan >= body.length) {
-        // No terminator: an unmatched `[` is a literal `[`, which is what git does too.
-        source += "\\[";
-        continue;
-      }
-      const head = body[index + 1] ?? "";
-      const negated = head === "!" || head === "^";
-      const inner = body.slice(index + (negated ? 2 : 1), scan);
-      // A class never matches `/` in gitignore, and the members are copied through with only
-      // the two characters that would end or escape the class made safe.
-      const members = inner.replace(/\\/g, "\\\\").replace(/\]/g, "\\]");
-      source += `[${negated ? "^" : ""}${members}]`;
-      index = scan;
-      continue;
-    }
-
-    if (char === "*") {
-      if (body[index + 1] === "*") {
-        if (body[index + 2] === "/") {
-          source += "(?:.*/)?";
-          index += 2;
-        } else {
-          source += ".*";
-          index += 1;
-        }
-      } else {
-        source += "[^/]*";
-      }
-      continue;
-    }
-
-    if (char === "?") {
-      source += "[^/]";
-      continue;
-    }
-
-    source += /[.+^${}()|\\]/.test(char) ? `\\${char}` : char;
-  }
-  return source;
-}
-/**
  * True when `pattern` — one ignore line — could match `samplePath`.
  *
  * A presence check is not enough for a negation: git applies the **last**
@@ -254,7 +183,9 @@ function translateGlob(body: string): string {
  * - a trailing `/` names a directory, and a directory pattern also covers
  *   everything beneath it;
  * - the double-star form crosses `/`, a single `*` does not, and `?` matches
- *   one non-`/` character.
+ *   one non-`/` character;
+ * - `[0-9]`, `[!a-z]` and `[[:digit:]]` are character classes, not the literal
+ *   brackets a blanket escape turned them into.
  *
  * Blank lines, comments and negations are not ignore lines and never match.
  */
@@ -272,11 +203,262 @@ export function gitignorePatternMatches(pattern: string, samplePath: string): bo
     return false;
   }
 
-  const source = translateGlob(body);
+  const source = globToRegexSource(body);
+  if (source === null) {
+    return false;
+  }
 
   // The trailing group is what makes a directory pattern cover its contents.
   const prefix = anchored ? "^" : "^(?:.*/)?";
   return new RegExp(`${prefix}${source}(?:/.*)?$`).test(samplePath.replace(/^\//, ""));
+}
+
+/** One literal character, safe to drop into a regular expression. */
+function escapeLiteral(char: string): string {
+  return /[.*+?^${}()|[\]\\]/.test(char) ? `\\${char}` : char;
+}
+
+/** One literal character, safe to drop inside a regular-expression class. */
+function escapeInClass(char: string): string {
+  return /[\]\\^]/.test(char) ? `\\${char}` : char;
+}
+
+/**
+ * POSIX class names git's wildmatch accepts, as regular-expression class bodies.
+ *
+ * Measured, not assumed: `git check-ignore -v` names
+ * `coverage-depth-spec-[[:digit:]]*.md` as the rule that ignores
+ * `coverage-depth-spec-0001.md`.
+ */
+const POSIX_CLASSES: Readonly<Record<string, string>> = {
+  alnum: "A-Za-z0-9",
+  alpha: "A-Za-z",
+  blank: " \\t",
+  cntrl: "\\x00-\\x1f\\x7f",
+  digit: "0-9",
+  graph: "\\x21-\\x7e",
+  lower: "a-z",
+  print: "\\x20-\\x7e",
+  punct: "!-/:-@\\[-`{-~",
+  space: " \\t\\n\\r\\f\\v",
+  upper: "A-Z",
+  xdigit: "0-9A-Fa-f",
+};
+
+/**
+ * One `[...]` bracket expression as a regular-expression class, or `null`.
+ *
+ * git matches these the way fnmatch does — a set, a range, a `!`- or
+ * `^`-negated set, and the POSIX `[:digit:]` names — so escaping `[` and `]`
+ * into literals made `.qfai/evidence/coverage-depth-spec-[0-9]*.md` a line
+ * `git check-ignore -v` reports as the winner and this matcher reported as no
+ * match at all. `null` is an unterminated `[`, which wildmatch aborts on: git
+ * ignores nothing for such a line, and neither does this.
+ *
+ * No wildcard crosses `/` under `FNM_PATHNAME`, and a class such as `[!a]` or
+ * `[.-9]` spans it, so the lookahead holds the separator out of every one.
+ */
+function bracketExpression(glob: string, open: number): { source: string; next: number } | null {
+  let index = open + 1;
+  const negated = glob[index] === "!" || glob[index] === "^";
+  if (negated) {
+    index += 1;
+  }
+  let body = "";
+  while (index < glob.length) {
+    const char = glob[index] ?? "";
+    // A `]` before any content is that character, not the terminator.
+    if (char === "]" && body.length > 0) {
+      return { source: `(?!/)[${negated ? "^" : ""}${body}]`, next: index + 1 };
+    }
+    if (glob.startsWith("[:", index)) {
+      const close = glob.indexOf(":]", index + 2);
+      const named = close === -1 ? undefined : POSIX_CLASSES[glob.slice(index + 2, close)];
+      if (named === undefined) {
+        return null;
+      }
+      body += named;
+      index = close + 2;
+      continue;
+    }
+    if (char === "\\" && index + 1 < glob.length) {
+      body += escapeInClass(glob[index + 1] ?? "");
+      index += 2;
+      continue;
+    }
+    // `-` is left bare: inside a class it is the range operator.
+    body += char === "-" ? "-" : escapeInClass(char);
+    index += 1;
+  }
+  return null;
+}
+
+/**
+ * One gitignore glob as a regular-expression source, or `null` when no path
+ * can match it.
+ *
+ * A scan rather than chained replacements, because a bracket expression is the
+ * one construct whose contents obey a different alphabet from the text around
+ * it — the `*` in `[*a]` is a literal asterisk and the `.` in `[.-9]` is a
+ * range endpoint — and a blanket escape-then-replace pass cannot tell which
+ * half of the pattern it is standing in.
+ */
+function globToRegexSource(glob: string): string | null {
+  let source = "";
+  let index = 0;
+  while (index < glob.length) {
+    const char = glob[index] ?? "";
+    if (glob.startsWith("**/", index)) {
+      source += "(?:.*/)?";
+      index += 3;
+      continue;
+    }
+    if (glob.startsWith("**", index)) {
+      source += ".*";
+      index += 2;
+      continue;
+    }
+    if (char === "*" || char === "?") {
+      source += char === "*" ? "[^/]*" : "[^/]";
+      index += 1;
+      continue;
+    }
+    if (char === "[") {
+      const bracket = bracketExpression(glob, index);
+      if (bracket === null) {
+        return null;
+      }
+      source += bracket.source;
+      index = bracket.next;
+      continue;
+    }
+    // A backslash quotes the next character: git reads `\*` as an asterisk.
+    if (char === "\\" && index + 1 < glob.length) {
+      source += escapeLiteral(glob[index + 1] ?? "");
+      index += 2;
+      continue;
+    }
+    source += escapeLiteral(char);
+    index += 1;
+  }
+  return source;
+}
+
+/**
+ * One `.gitignore` file, with the directory whose subtree it governs.
+ *
+ * `dir` is repo-relative, POSIX-separated, and `""` for the file at the
+ * repository root. Its patterns are written relative to that directory, which
+ * is why the layer has to carry it: a bare `*` inside
+ * `.qfai/evidence/.gitignore` excludes that directory's contents, not the whole
+ * repository.
+ */
+export type GitignoreLayer = {
+  dir: string;
+  lines: readonly string[];
+};
+
+/**
+ * True when `layers` — every `.gitignore` on the way down to `samplePath` —
+ * leave it ignored.
+ *
+ * Two precedence rules, only the second of which a single root-file read got
+ * right:
+ *
+ * - **the deepest file that matches wins.** Per gitignore(5), patterns read
+ *   from a `.gitignore` deeper in the tree override those from a shallower one.
+ *   `qfai init` still maintains a legacy `.qfai/evidence/.gitignore` whose
+ *   first line is `*` (`cli/commands/init.ts#ensureLegacyEvidenceIgnoreNegations`),
+ *   so on an adopting project the root managed block is not the last word on
+ *   the governance records in either direction: the nested
+ *   `!coverage-depth-*.md` re-includes a matrix the root ignored, and a nested
+ *   re-ignore hides one the root re-included.
+ * - **within one file the last matching pattern wins**, negations included.
+ *
+ * Ancestors are decided first because git never descends into an excluded
+ * directory — a negation on a file inside one is unreachable, which is why the
+ * managed block ignores `.qfai/evidence/*` (the contents) rather than the
+ * directory. A layer deeper than the path being judged cannot contain it, so
+ * the same walk also declines to read an ignore file git would never have
+ * reached.
+ *
+ * `samplePath` is repo-relative and POSIX-separated.
+ */
+export function isPathIgnoredByLayers(
+  layers: readonly GitignoreLayer[],
+  samplePath: string,
+): boolean {
+  const normalized = samplePath.replace(/^\//, "");
+  const segments = normalized.split("/").filter((segment) => segment.length > 0);
+  const ordered = [...layers].sort((left, right) => layerDepth(left.dir) - layerDepth(right.dir));
+  for (let depth = 1; depth < segments.length; depth += 1) {
+    // No trailing slash: `.qfai/evidence/*` matches `.qfai/evidence/` — the
+    // directory's own contents-pattern would otherwise read as excluding the
+    // directory it exists to keep walkable.
+    if (layeredVerdict(ordered, segments.slice(0, depth).join("/"))) {
+      return true;
+    }
+  }
+  return layeredVerdict(ordered, normalized);
+}
+
+/**
+ * True when `lines` — one root-level `.gitignore` — leave `samplePath` ignored.
+ *
+ * The single-file case of {@link isPathIgnoredByLayers}. A caller that can meet
+ * a project carrying nested ignore files has to use that one instead.
+ */
+export function isPathIgnored(lines: readonly string[], samplePath: string): boolean {
+  return isPathIgnoredByLayers([{ dir: "", lines }], samplePath);
+}
+
+/** Directory nesting depth; the repository root (`""`) is 0. */
+function layerDepth(dir: string): number {
+  return dir.split("/").filter((segment) => segment.length > 0).length;
+}
+
+/** Deepest-matching-file-wins over one concrete path, each file answering only for its own subtree. */
+function layeredVerdict(layers: readonly GitignoreLayer[], samplePath: string): boolean {
+  let ignored = false;
+  for (const layer of layers) {
+    const dir = layer.dir.replace(/^\/+/, "").replace(/\/+$/, "");
+    const prefix = dir.length === 0 ? "" : `${dir}/`;
+    if (prefix.length > 0 && !samplePath.startsWith(prefix)) {
+      continue;
+    }
+    const verdict = lastMatchVerdict(layer.lines, samplePath.slice(prefix.length));
+    // `undefined` is "this file said nothing", which must not overwrite what a
+    // shallower one decided; only a real match moves the standing verdict.
+    if (verdict !== undefined) {
+      ignored = verdict;
+    }
+  }
+  return ignored;
+}
+
+/**
+ * Last-pattern-wins over one concrete path; negations count as matches.
+ *
+ * `undefined` when no pattern in the file matched at all — distinct from
+ * `false`, which is a negation actively re-including the path and therefore
+ * something that must outrank whatever a shallower file said.
+ */
+function lastMatchVerdict(lines: readonly string[], samplePath: string): boolean | undefined {
+  let verdict: boolean | undefined;
+  for (const line of lines) {
+    const trimmed = line.trim();
+    if (trimmed.length === 0 || trimmed.startsWith("#")) {
+      continue;
+    }
+    const negated = trimmed.startsWith("!");
+    // `gitignorePatternMatches` refuses a `!` line by design, so the negation is
+    // matched on its body and its verdict inverted.
+    if (!gitignorePatternMatches(negated ? trimmed.slice(1) : trimmed, samplePath)) {
+      continue;
+    }
+    verdict = !negated;
+  }
+  return verdict;
 }
 
 /**

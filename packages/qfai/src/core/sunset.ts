@@ -80,6 +80,26 @@ export const RULE_PROMOTIONS = {
    */
   tddListEvidenceEmpty: { introducedIn: "1.10.0", promoteAt: "1.12.0" },
   /**
+   * `QFAI-ATDD-131` — a spec with ATDD-owned tests and no Coverage Depth
+   * Matrix file. Specs annotated before the matrix became a Mandatory Output
+   * own no such file, so the rule meets the whole backlog on the first run
+   * after the upgrade.
+   */
+  atddCoverageDepthMatrixMissing: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ATDD-132` — a Coverage Depth Matrix that `.gitignore` excludes and
+   * git does not track, so the judgement never reaches history. The ignore
+   * line predates the matrix in every repository that has one, and only a
+   * `qfai init` or a hand edit moves it.
+   */
+  atddCoverageDepthMatrixIgnored: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
+   * `QFAI-ATDD-133` — an ATDD stage evidence file whose `## Coverage Depth
+   * Matrix` section is missing, inlines the table, or names no matrix. The
+   * section shape is a template younger than the evidence files it lands on.
+   */
+  atddCoverageDepthInlineMatrix: { introducedIn: "1.10.1", promoteAt: "1.12.0" },
+  /**
    * `QFAI-AGENT-014` — the agent catalog's embedded copy of an agent body is
    * absent, or disagrees with the markdown file it is derived from. Every
    * repository that customised an agent before the comparison existed carries

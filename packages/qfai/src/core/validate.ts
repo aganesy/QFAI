@@ -33,7 +33,9 @@ import {
 } from "./validators/reviewArtifacts.js";
 import { validateSpecPacks } from "./validators/specPack.js";
 import { validateTraceability } from "./validators/traceability.js";
+import { evaluateAtddCodeTraceability } from "./atddTraceability.js";
 import { validateAtddCodeTraceability } from "./validators/atddCodeTraceability.js";
+import { validateAtddCoverageDepth } from "./validators/atddCoverageDepth.js";
 import { validateScaffoldPlaceholder } from "./validators/scaffoldPlaceholder.js";
 import {
   detectPlatform,
@@ -532,8 +534,19 @@ async function runAtddValidators(
   config: ConfigLoadResult["config"],
   specScope?: SpecScope,
 ): Promise<Issue[]> {
+  // Evaluated once and shared: the Coverage Depth Matrix gate needs the same
+  // "which specs have ATDD-owned tests" answer the traceability gate computes,
+  // and walking the test tree twice per run buys nothing.
+  const evaluated = await evaluateAtddCodeTraceability(root, config);
   return [
-    ...(await validateAtddCodeTraceability(root, config, specScope ? { specScope } : {})),
+    ...(await validateAtddCodeTraceability(root, config, {
+      evaluated,
+      ...(specScope ? { specScope } : {}),
+    })),
+    // The Coverage Depth Matrix is a Mandatory Output of this stage that no
+    // rule ever opened; scoping is left to `isFindingInSpecScope`, which reads
+    // the spec directory each finding is attributed to.
+    ...(await validateAtddCoverageDepth(root, evaluated)),
     // D-SCAFFOLD-PLACEHOLDER (BR-0008-0008): surface unfilled
     // `qfai atdd scaffold` skeletons at severity warning until the
     // operator implements a real assertion. Wired into atdd + full
