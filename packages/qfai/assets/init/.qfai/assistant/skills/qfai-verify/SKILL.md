@@ -310,7 +310,7 @@ QFAI expects `assistant/catalog/` to contain **project‑specific facts** so all
 ### Steering refresh checklist
 
 - [ ] product.md: what we build / users / success / non-goals / release posture
-- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints, plus the standard gate commands under `#standard-commands-copy-paste` — the section `/qfai-implement` reads
+- [ ] tech.md: Node / package manager / TS / test / lint / CI constraints, plus the standard gate commands under `tech.md#standard-commands-copy-paste` — the section `/qfai-implement` reads
 - [ ] structure.md: repo layout, key packages, entrypoints, how to run locally (setup + launcher only — gate commands stay in tech.md)
 
 ## Step 1 — Discover project gate commands (DevOps/CI Engineer)
