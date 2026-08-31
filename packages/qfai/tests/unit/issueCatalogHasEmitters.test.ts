@@ -16,8 +16,9 @@
  *
  *   1. issue-emitting call sites — argument 0 of a call to a function that
  *      returns `Issue` and takes `code`/`issueCode` first, plus `code:` /
- *      `issueCode:` properties. Identifiers, `??` defaults and `OBJECT.member`
- *      accesses are resolved back to the string literal they name.
+ *      `issueCode:` properties. Identifiers, `??` defaults, `OBJECT.member`
+ *      accesses and `param.prop` reads of a parameter its callers fill with an
+ *      object literal are resolved back to the string literal they name.
  *   2. rendered report signals — a `*_SIGNAL_CODE` constant interpolated into
  *      report text. `QFAI-COV-207` is written into the coverage report body
  *      rather than emitted as an `Issue`, and `resolveIssueExpected` is pinned
@@ -125,7 +126,94 @@ function resolveLiterals(expr: ts.Expression, scope: LiteralScope, depth = 0): R
   return out;
 }
 
-/** Index `const NAME = "code"` and `const MAP = { key: "code" }` bindings. */
+/**
+ * Parameter names, by position, for every function this file names. Only the
+ * declaration forms the codebase uses are collected; anything else yields no
+ * entry rather than a guess.
+ */
+function collectParameterNames(
+  source: ts.SourceFile,
+): Map<string, ReadonlyArray<string | undefined>> {
+  const byFunction = new Map<string, ReadonlyArray<string | undefined>>();
+  const record = (
+    name: string | undefined,
+    fn: ts.FunctionDeclaration | ts.FunctionExpression | ts.ArrowFunction,
+  ): void => {
+    if (name === undefined) {
+      return;
+    }
+    byFunction.set(
+      name,
+      fn.parameters.map((parameter) =>
+        ts.isIdentifier(parameter.name) ? parameter.name.text : undefined,
+      ),
+    );
+  };
+  const visit = (node: ts.Node): void => {
+    if (ts.isFunctionDeclaration(node)) {
+      record(node.name?.text, node);
+    } else if (
+      ts.isVariableDeclaration(node) &&
+      ts.isIdentifier(node.name) &&
+      node.initializer !== undefined
+    ) {
+      const init = unwrapExpression(node.initializer);
+      if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
+        record(node.name.text, init);
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+  return byFunction;
+}
+
+/**
+ * Index `param.prop` for a parameter its callers fill with an object literal.
+ * `core/validators/orphanProhibition.ts` writes its codes as
+ * `validateParentExists({ missingCode: "…", unknownCode: "…" })` and emits them
+ * as `issue(input.missingCode, …)`, so the literal only reaches the producer
+ * position through the parameter. This widens what an expression standing in a
+ * code position resolves to; it adds no producer position, so a code that only
+ * ever sits in a filter list or a message string is still not counted.
+ */
+function indexParameterObjects(
+  source: ts.SourceFile,
+  scope: LiteralScope,
+  add: (name: string, value: string) => void,
+): void {
+  const parameters = collectParameterNames(source);
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      const callee = calleeName(node.expression);
+      const names = callee === undefined ? undefined : parameters.get(callee);
+      if (names !== undefined) {
+        node.arguments.forEach((argument, index) => {
+          const parameter = names[index];
+          const object = unwrapExpression(argument);
+          if (parameter === undefined || !ts.isObjectLiteralExpression(object)) {
+            return;
+          }
+          for (const prop of object.properties) {
+            if (!ts.isPropertyAssignment(prop)) continue;
+            const key = prop.name;
+            if (!ts.isIdentifier(key) && !ts.isStringLiteral(key)) continue;
+            for (const literal of resolveLiterals(prop.initializer, scope)) {
+              add(`${parameter}.${key.text}`, literal);
+            }
+          }
+        });
+      }
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(source);
+}
+
+/**
+ * Index `const NAME = "code"`, `const MAP = { key: "code" }` and
+ * `param.prop` (see `indexParameterObjects`) bindings.
+ */
 function indexBindings(source: ts.SourceFile, bindings: Bindings): void {
   const scope: LiteralScope = (name) => bindings.get(name) ?? EMPTY;
   const add = (name: string, value: string): void => {
@@ -153,6 +241,7 @@ function indexBindings(source: ts.SourceFile, bindings: Bindings): void {
     ts.forEachChild(node, visit);
   };
   visit(source);
+  indexParameterObjects(source, scope, add);
 }
 
 function issueFactoryName(node: ts.Node): string | undefined {
@@ -399,5 +488,23 @@ describe("ISSUE_EXPECTED_BY_CODE catalog", () => {
       "QFAI-SAMPLE-012",
       "QFAI-SAMPLE-013",
     ]);
+  });
+
+  it("resolves a code the caller passes in through a parameter object", () => {
+    const produced = collectProducedCodes([
+      sample([
+        FACTORY_STUB,
+        "function emit(input: { missingCode: string }): Issue {",
+        '  return issue(input.missingCode, "emitted through the parameter object");',
+        "}",
+        'emit({ missingCode: "QFAI-SAMPLE-020" });',
+        // Over-correction pin: an object literal with the same property name
+        // that no producer position ever reads stays uncounted.
+        'const unread = { missingCode: "QFAI-SAMPLE-021" };',
+      ]),
+    ]);
+
+    expect(produced.has("QFAI-SAMPLE-020")).toBe(true);
+    expect(produced.has("QFAI-SAMPLE-021")).toBe(false);
   });
 });

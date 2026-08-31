@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { defaultConfig } from "../../../src/core/config.js";
 import {
   validateForbiddenLegacyFiles,
+  validateThreeLayerFamilyCompleteness,
   validateThreeLayerModel,
 } from "../../../src/core/validators/uix/threeLayer.js";
 
@@ -164,6 +165,56 @@ describe("3-layer validator", () => {
     const issues = await validateThreeLayerModel(root, defaultConfig);
 
     // All axes reference 3-layer model only — passes
+    expect(issues).toHaveLength(0);
+  });
+});
+
+describe("canonical sidecar family completeness", () => {
+  it("reports a missing 00_index.md like any other family member", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), "# Contracts\n", "utf-8");
+    await writeFile(path.join(root, "uiux", "50_review_input_bundle.md"), "# Bundle\n", "utf-8");
+
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+
+    expect(issues).toHaveLength(1);
+    expect(issues[0]?.code).toBe("UIX-VAL-3LAYER-INCOMPLETE-FAMILY");
+    expect(issues[0]?.severity).toBe("error");
+    expect(issues[0]?.file).toBe("uiux/00_index.md");
+  });
+
+  it("reports every family member when the whole family is absent", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+
+    expect(issues.map((issue) => issue.file)).toEqual([
+      "uiux/00_index.md",
+      "uiux/40_screen_contracts.md",
+      "uiux/50_review_input_bundle.md",
+    ]);
+  });
+
+  it("stays silent when the family is complete", async () => {
+    const root = await newTempDir();
+    await createUiBearingPack(root);
+    await writeFile(path.join(root, "uiux", "00_index.md"), "# Index\n", "utf-8");
+    await writeFile(path.join(root, "uiux", "40_screen_contracts.md"), "# Contracts\n", "utf-8");
+    await writeFile(path.join(root, "uiux", "50_review_input_bundle.md"), "# Bundle\n", "utf-8");
+
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+
+    expect(issues).toHaveLength(0);
+  });
+
+  it("skips non-UI packs", async () => {
+    const root = await newTempDir();
+    await writeFile(path.join(root, "01_Spec.md"), "# Spec\n\n- surface: non-ui\n", "utf-8");
+
+    const issues = await validateThreeLayerFamilyCompleteness(root, defaultConfig);
+
     expect(issues).toHaveLength(0);
   });
 });
