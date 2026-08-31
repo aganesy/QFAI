@@ -2921,7 +2921,7 @@ describe("release automation performs decisions rather than making them", () => 
     expect(
       prepare,
       "and what makes a line substantive is that it is neither blank nor a heading",
-    ).toMatch(/\!line\.startsWith\(/);
+    ).toMatch(/!line\.startsWith\(/);
     // The WRITE, and exactly what it inserts — not the absence of `### Added` anywhere in the
     // file. The first version asserted the latter and broke the moment the refusal message
     // beside the check named `### Added` as an example of a section that describes nothing: a
