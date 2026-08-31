@@ -2,7 +2,7 @@ import { runAtddScaffold } from "./commands/atddScaffold.js";
 import { runAuditLog } from "./commands/auditLog.js";
 import { runDiscussion } from "./commands/discussion.js";
 import { runDoctor } from "./commands/doctor.js";
-import { runGuardrails } from "./commands/guardrails.js";
+import { formatGuardrailsErrorJson, runGuardrails } from "./commands/guardrails.js";
 import { runHandoffUpgrade } from "./commands/handoffUpgrade.js";
 import { runInit } from "./commands/init.js";
 import { runPrototypingIterate } from "./commands/prototypingIterate.js";
@@ -17,7 +17,20 @@ export async function run(argv: string[], cwd: string): Promise<void> {
   const { command, invalid, options } = parseArgs(argv, cwd);
 
   if (!command || options.help) {
-    info(usage());
+    // A parser rejection never reaches runGuardrails(), so the `--format json`
+    // promise ("stdout stays parseable for every outcome") has to be honoured
+    // here too: usage goes to stderr and stdout carries the refusal envelope.
+    if (invalid && command === "guardrails" && options.guardrailsFormat === "json") {
+      error(usage());
+      info(
+        formatGuardrailsErrorJson(
+          "invalid-arguments",
+          "guardrails: invalid arguments (see usage on stderr)",
+        ),
+      );
+    } else {
+      info(usage());
+    }
     if (invalid) {
       process.exitCode = options.invalidExitCode;
     }
@@ -78,7 +91,9 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           rootExplicit: options.rootExplicit,
           format: options.doctorFormat,
           ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-          ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+          // `never` はここで捨てない: 捨てると「未指定」と区別できず、
+          // config の `validation.failOn` を下向きに上書きできなくなる。
+          ...(options.failOn ? { failOn: options.failOn } : {}),
           ...(options.profile === "prototyping" ? { profile: "prototyping" as const } : {}),
           ...(options.doctorSkillProfile !== undefined
             ? { skillProfile: options.doctorSkillProfile }
@@ -96,7 +111,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
       return;
     case "guardrails":
       {
-        const resolvedRoot = await resolveRoot(options);
+        const resolvedRoot = await resolveRoot(options, options.guardrailsFormat === "json");
         const exitCode = await runGuardrails({
           root: resolvedRoot,
           ...(options.guardrailsAction ? { action: options.guardrailsAction } : {}),
@@ -105,6 +120,7 @@ export async function run(argv: string[], cwd: string): Promise<void> {
           ...(options.guardrailsKeyword !== undefined
             ? { keyword: options.guardrailsKeyword }
             : {}),
+          ...(options.guardrailsFormat !== undefined ? { format: options.guardrailsFormat } : {}),
         });
         process.exitCode = exitCode;
       }
@@ -169,6 +185,11 @@ export async function run(argv: string[], cwd: string): Promise<void> {
         process.exitCode = await runHandoffUpgrade({
           root: resolvedRoot,
           legacyFile: options.handoffLegacyFile,
+          // The canonical `.qfai/handoff.yaml` is a consumed SSOT:
+          // `--force` is required to overwrite an existing one, and
+          // `--dry-run` must preview instead of writing.
+          force: options.force,
+          dryRun: options.dryRun,
         });
       }
       return;
@@ -223,7 +244,8 @@ export async function run(argv: string[], cwd: string): Promise<void> {
             rootExplicit: true,
             format: options.doctorFormat,
             ...(options.doctorOut !== undefined ? { outPath: options.doctorOut } : {}),
-            ...(options.failOn && options.failOn !== "never" ? { failOn: options.failOn } : {}),
+            // `never` は doctor 側の明示的なオプトアウトとして渡す。
+            ...(options.failOn ? { failOn: options.failOn } : {}),
             profile: "prototyping",
             ...(options.prototypingTargetUrl ? { targetUrl: options.prototypingTargetUrl } : {}),
           });
@@ -300,7 +322,8 @@ Commands:
 Options:
   --root <path>   Target directory
   --dir <path>    init: output directory
-  --force         init: overwrite .qfai/assistant/{skills,agents}/** and the published skills/agents (everything else, including assistant/manifest/**, is skipped when it already exists)
+  --force         init: overwrite .qfai/assistant/{skills,agents}/**, the published skills/agents, and the symlink-asset output under .agents/.claude/.github/.codex
+                  (that output includes each tree's README.md and .github/copilot-instructions.md; specs/contracts/steering and assistant/manifest/** are never overwritten)
                   It deletes as well as overwrites: the wrappers a past qfai placed in
                   .claude/commands/ and .github/prompts/, and the wrappers qfai placed for skills
                   that are no longer shipped (including the real directories from before they
@@ -308,10 +331,11 @@ Options:
                   so your own command / prompt / skill files survive; a symlink has no content of
                   its own, so one you published under a retired QFAI skill name is deleted (its
                   target .qfai/assistant/skills/<id>/ stays, so you can re-link it).
+  --force         handoff upgrade: overwrite an existing .qfai/handoff.yaml (the previous file is saved to .backup-<ISO> first)
   --yes           init: reserved flag (no behavioural difference today because init is non-interactive; auto-Yes once prompts are introduced)
   --upgrade-assistant-tree   init: migrate an existing project to the 4-layer assistant tree
                               (legacy .qfai/assistant/{instructions,steering}/ -> constitution/manifest/catalog/process/)
-  --dry-run       Show what would change without writing anything
+  --dry-run       init / doctor / handoff upgrade: show what would change without writing anything
   --format <text|github>       validate: output format
   --format <md|json>           report: output format
   --format <text|json>         doctor / prototyping preflight / discussion list --active: output format
@@ -320,7 +344,7 @@ Options:
   --profile <discussion|sdd|prototyping|atdd|tdd|verify|saas-package|full>  validate/report: select the validation profile
   --profile <prototyping|<skill>>  doctor: prototyping-specific preflight diagnosis, or a skill manifest runtimeDependencies probe
   --fail-on <error|warning|never>  validate: failure threshold
-  --fail-on <error|warning>        doctor / prototyping preflight: failure threshold
+  --fail-on <error|warning|never>  doctor / prototyping preflight: failure threshold (defaults to validation.failOn; the shipped default is error)
   --platform <web|windows|mobile-ios|mobile-android|cross-platform>  validate: UI/UX platform
   --out <path>                  report/doctor/prototyping preflight: output path (a relative path is resolved against --root)
   --in <path>                   report: validate.json input path (takes precedence over the config)
@@ -329,6 +353,7 @@ Options:
   --path <path>                 guardrails: target file/directory (repeatable)
   --max <number>                guardrails extract: maximum number of entries
   --keyword <text>              guardrails list/extract: keyword filter
+  --format <text|json>          guardrails list/extract/check: output format (default text)
   --target-url <url>            prototyping preflight/iterate: URL under evaluation
   --cycle <number>              prototyping iterate: cycle index (0..9)
   --check-convergence           prototyping iterate: peek at a converged loop state without re-running it (read-only peek; defaults to cycle 9; exit 0 = converged, exit 2 = not converged / missing state)
@@ -354,14 +379,27 @@ Options:
 `;
 }
 
-async function resolveRoot(options: { root: string; rootExplicit: boolean }): Promise<string> {
+/**
+ * `machineReadable` keeps stdout reserved for the payload when the command is
+ * about to print JSON: the missing-config notice then goes to stderr so
+ * `qfai <cmd> --format json` stays parseable.
+ */
+async function resolveRoot(
+  options: { root: string; rootExplicit: boolean },
+  machineReadable = false,
+): Promise<string> {
   if (options.rootExplicit) {
     return options.root;
   }
 
   const search = await findConfigRoot(options.root);
   if (!search.found) {
-    warn(`qfai: qfai.config.yaml not found; falling back to defaultConfig (root=${search.root})`);
+    const notice = `qfai: qfai.config.yaml not found; falling back to defaultConfig (root=${search.root})`;
+    if (machineReadable) {
+      error(notice);
+    } else {
+      warn(notice);
+    }
   }
   return search.root;
 }
