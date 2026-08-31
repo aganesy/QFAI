@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 describe("TC-0015-0029: runAuditLog default format + empty store", () => {
-  it("returns 0 and writes the table-default no-records marker when the directory is absent", async () => {
+  it("returns 0 and writes a header-only TSV table when the directory is absent", async () => {
     const written: string[] = [];
     const errs: string[] = [];
     const code = await runAuditLog({
@@ -35,24 +35,31 @@ describe("TC-0015-0029: runAuditLog default format + empty store", () => {
       writeErr: (m) => errs.push(m),
     });
     expect(code).toBe(0);
-    expect(errs).toEqual([]);
-    // table format default: prints the no-records marker rather than [].
-    expect(written.length).toBeGreaterThanOrEqual(1);
-    expect(written.join("\n")).toMatch(/no decision records|^\(/i);
+    // table format default: stdout stays a well-formed TSV stream — the
+    // header row and zero data rows — so `cut -f2` yields only `scope`.
+    expect(written.join("\n")).toBe("timestamp\tscope\toperator\tclause");
+    for (const line of written.join("\n").split("\n")) {
+      expect(line.split("\t")).toHaveLength(4);
+    }
+    // the human-facing hint lives on stderr, so pipes never see it.
+    expect(errs.join("\n")).toMatch(/no decision records/i);
   });
 
   it("emits a JSON empty array when --format json is set on empty store", async () => {
     const written: string[] = [];
+    const errs: string[] = [];
     const code = await runAuditLog({
       root,
       format: "json",
       write: (m) => written.push(m),
-      writeErr: () => undefined,
+      writeErr: (m) => errs.push(m),
     });
     expect(code).toBe(0);
     expect(written.length).toBe(1);
     const parsed = JSON.parse(written[0] ?? "null");
     expect(Array.isArray(parsed)).toBe(true);
     expect((parsed as unknown[]).length).toBe(0);
+    // `[]` is already the correct empty value in JSON: no extra hint.
+    expect(errs).toEqual([]);
   });
 });
