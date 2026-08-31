@@ -1,6 +1,25 @@
 import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 
 import type { Issue, IssueCategory, IssueLocation, IssueSeverity } from "../types.js";
+
+/**
+ * Whether `candidate` is `base` itself or sits under it.
+ *
+ * Shared rather than re-derived per validator: every caller asks the same
+ * question of a resolved symlink target — does the thing this points at travel
+ * with the project — and two hand-rolled `path.relative` comparisons drift on
+ * the details (the `..` prefix, an absolute result across Windows drives) in
+ * ways that quietly widen what a validator accepts.
+ *
+ * Both arguments should already be `realpath`-resolved: comparing a resolved
+ * target against an unresolved base reports a link inside a symlinked project
+ * root as outside it.
+ */
+export function isInside(base: string, candidate: string): boolean {
+  const relative = path.relative(base, candidate);
+  return relative === "" || (!relative.startsWith("..") && !path.isAbsolute(relative));
+}
 
 export type MarkdownPrefix = "US" | "AC" | "BR" | "TC";
 
