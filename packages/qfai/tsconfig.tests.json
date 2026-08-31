@@ -79,6 +79,7 @@
     "tests/integration/spec0017OwnWorkflowScope.test.ts",
     "tests/integration/spec0017TuningChangeScope.test.ts",
     "tests/integration/validators/hygieneLaneIngestion.test.ts",
+    "tests/validators/justificationCatalogEmitters.test.ts",
     "tests/scripts/ownWorkflowTopology.test.ts",
     "tests/scripts/sliceSurfaceAlignment.test.ts",
     "tests/scripts/vitestWorkspaceKnobs.test.ts",
