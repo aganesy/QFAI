@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -268,6 +268,389 @@ describe("uiux validators", () => {
     expect(codes).not.toContain("QFAI-RESEARCH-004");
     expect(codes).not.toContain("QFAI-RESEARCH-005");
     expect(codes).not.toContain("QFAI-RESEARCH-006");
+  });
+
+  it("reports the latest discussion pack when no file carries a Research Summary", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+    const missing = issues.filter((item) => item.code === "QFAI-RESEARCH-012");
+
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.severity).toBe("warning");
+    expect(missing[0]?.file).toContain("discussion-20260101000000000");
+  });
+
+  it("respects uiux.requireResearchSummary: false for the absence rule", async () => {
+    // A project that turned the requirement off should not be told the section
+    // is missing — and under `--fail-on warning` or `--strict` that warning
+    // fails the run over a rule it opted out of.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const optedOut = {
+      ...defaultConfig,
+      uiux: { ...(defaultConfig.uiux ?? {}), requireResearchSummary: false },
+    };
+    expect((await validateResearchSummary(root, optedOut)).map((item) => item.code)).not.toContain(
+      "QFAI-RESEARCH-012",
+    );
+
+    // Absent and `true` both keep the rule on: turning it off is an explicit
+    // act, not the default.
+    for (const uiux of [
+      defaultConfig.uiux,
+      { ...(defaultConfig.uiux ?? {}), requireResearchSummary: true },
+    ]) {
+      const config = { ...defaultConfig, ...(uiux ? { uiux } : {}) };
+      expect((await validateResearchSummary(root, config)).map((item) => item.code)).toContain(
+        "QFAI-RESEARCH-012",
+      );
+    }
+  });
+
+  it("keeps a malformed Research Summary reported under requireResearchSummary: false", async () => {
+    // The setting says the section is not required. It does not say a section
+    // the project chose to write may record the protocol wrongly, so the
+    // content rules stay on.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Research Summary", "sources:", "  - id: SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (
+      await validateResearchSummary(root, {
+        ...defaultConfig,
+        uiux: { ...(defaultConfig.uiux ?? {}), requireResearchSummary: false },
+      })
+    ).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).toContain("QFAI-RESEARCH-004");
+  });
+
+  it("does not report a missing Research Summary once the latest pack carries one", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-012");
+  });
+
+  it("ships a 04_Sources.md template that already satisfies the Research Summary presence rule", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    const template = await readFile(
+      path.resolve(
+        process.cwd(),
+        "assets/init/.qfai/assistant/skills/qfai-discussion/templates/04_Sources.md",
+      ),
+      "utf-8",
+    );
+    await writeFile(path.join(packDir, "04_Sources.md"), template, "utf-8");
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).not.toContain("QFAI-RESEARCH-001");
+    expect(codes).not.toContain("QFAI-RESEARCH-007");
+    expect(codes).not.toContain("QFAI-RESEARCH-008");
+    expect(codes).not.toContain("QFAI-RESEARCH-011");
+    // …but an untouched scaffold must not pass as recorded research: every
+    // required value is still a bracketed placeholder.
+    expect(codes).toContain("QFAI-RESEARCH-004");
+    expect(codes).toContain("QFAI-RESEARCH-005");
+    expect(codes).toContain("QFAI-RESEARCH-006");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+  });
+
+  it("rejects template placeholders left in required Research Summary values", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: [Source title]",
+        "    url: [https://example.com/reference]",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - id: BP-0001",
+        "anti_patterns:",
+        "  - id: AP-0001",
+        "reflection:",
+        "  - action: apply",
+        "    reason: [Why this action was chosen]",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-004");
+    expect(codes).toContain("QFAI-RESEARCH-005");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+  });
+
+  it("rejects quoted template placeholders in required Research Summary values", async () => {
+    // Quoting a YAML scalar is ordinary style, so `title: "[Source title]"` is
+    // the same unfilled slot as the bare form and must not pass as research.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        '    title: "[Source title]"',
+        "    url: '[https://example.com/reference]'",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - id: BP-0001",
+        "anti_patterns:",
+        "  - id: AP-0001",
+        "reflection:",
+        "  - action: apply",
+        '    reason: "[Why this action was chosen]"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-004");
+    expect(codes).toContain("QFAI-RESEARCH-005");
+    expect(codes).toContain("QFAI-RESEARCH-010");
+  });
+
+  it("accepts quoted real values in required Research Summary fields", async () => {
+    // Over-correction pin: unquoting must only expose the placeholder check,
+    // never reject a genuine value that happens to be quoted.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        '    title: "Structured logging at scale"',
+        "    url: 'https://example.com/logging'",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - id: BP-0001",
+        "anti_patterns:",
+        "  - id: AP-0001",
+        "reflection:",
+        "  - action: apply",
+        '    reason: "The pack adopts the same log envelope"',
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-004");
+    expect(codes).not.toContain("QFAI-RESEARCH-005");
+    expect(codes).not.toContain("QFAI-RESEARCH-010");
+  });
+
+  it("ignores a Research Summary heading that only appears inside a fenced code block", async () => {
+    // An example schema quoted in a fence documents the section; it is not the
+    // pack's own section, so the pack still has none.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## Source Registry",
+        "",
+        "- SRC-0001",
+        "",
+        "## How To Fill This Pack",
+        "",
+        "```markdown",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "```",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-012");
+  });
+
+  it("validates the real Research Summary that follows a fenced example heading", async () => {
+    // Over-correction pin: skipping fenced headings must not skip the file —
+    // the section written after the example is still the pack's own.
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      [
+        "# 04 Sources",
+        "",
+        "## How To Fill This Pack",
+        "",
+        "```markdown",
+        "## Research Summary",
+        "sources:",
+        "  - id: SRC-EXAMPLE",
+        "    title: Example",
+        "    url: https://example.com",
+        "    published: 2026-01-01",
+        "```",
+        "",
+        "## Research Summary",
+        "",
+        "sources:",
+        "  - id: SRC-0001",
+        "    title: Structured logging at scale",
+        "    url: https://example.com/logging",
+        "    published: 2026-01-01",
+        "best_practices:",
+        "  - practice",
+        "anti_patterns:",
+        "  - anti",
+        "reflection:",
+        "  - action: apply",
+        "    reason: relevant",
+        "",
+      ].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).not.toContain("QFAI-RESEARCH-012");
+    expect(codes).not.toContain("QFAI-RESEARCH-001");
+    expect(codes).not.toContain("QFAI-RESEARCH-007");
+    expect(codes).not.toContain("QFAI-RESEARCH-008");
+    expect(codes).not.toContain("QFAI-RESEARCH-011");
+  });
+
+  it("treats an empty Research Summary section as an unrecorded protocol", async () => {
+    const root = await newTempDir();
+    const packDir = path.join(root, ".qfai", "discussion", "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Research Summary", "", "## Trend Scan", "", "- none", ""].join("\n"),
+      "utf-8",
+    );
+
+    const codes = (await validateResearchSummary(root, defaultConfig)).map((item) => item.code);
+
+    expect(codes).toContain("QFAI-RESEARCH-012");
+  });
+
+  it("finds packs under an absolute discussionDir outside the project root", async () => {
+    const root = await newTempDir();
+    const externalDiscussionRoot = await newTempDir();
+    const packDir = path.join(externalDiscussionRoot, "discussion-20260101000000000");
+    await mkdir(packDir, { recursive: true });
+    await writeFile(
+      path.join(packDir, "04_Sources.md"),
+      ["# 04 Sources", "", "## Source Registry", "", "- SRC-0001", ""].join("\n"),
+      "utf-8",
+    );
+
+    const config = {
+      ...defaultConfig,
+      paths: { ...defaultConfig.paths, discussionDir: externalDiscussionRoot },
+    };
+    const missing = (await validateResearchSummary(root, config)).filter(
+      (item) => item.code === "QFAI-RESEARCH-012",
+    );
+
+    expect(missing).toHaveLength(1);
+    expect(missing[0]?.file).toContain("discussion-20260101000000000");
+  });
+
+  it("does not report a missing Research Summary when there is no discussion pack", async () => {
+    const root = await newTempDir();
+    const discussionDir = path.join(root, ".qfai", "discussion");
+    await mkdir(discussionDir, { recursive: true });
+    await writeFile(path.join(discussionDir, "notes.md"), "# Notes\n\n- loose file\n", "utf-8");
+
+    const issues = await validateResearchSummary(root, defaultConfig);
+
+    expect(issues.map((item) => item.code)).not.toContain("QFAI-RESEARCH-012");
   });
 
   it("normalizes CLI platform input before validation", async () => {
@@ -638,11 +1021,26 @@ async function seedAgentDefinitionFixture(root: string, agentMarkdown: string): 
   await mkdir(steeringDir, { recursive: true });
   await mkdir(agentsDir, { recursive: true });
 
+  // The catalog embeds a verbatim copy of the agent body under
+  // `developer_instructions`; QFAI-AGENT-014 warns when an entry omits it or
+  // lets it drift. Derive the block from this fixture's own markdown so the
+  // fixture stays a clean tree whatever body a caller passes.
+  const body = agentMarkdown.slice(agentMarkdown.indexOf("## Mission")).trimEnd();
+  const block = body
+    .split("\n")
+    .map((line) => (line.length === 0 ? "" : `      ${line}`))
+    .join("\n");
   await writeFile(
     path.join(steeringDir, "agent-catalog.yml"),
-    ['schema_version: "1.0"', "agents:", "  - id: frontend-engineer", "    kind: worker", ""].join(
-      "\n",
-    ),
+    [
+      'schema_version: "1.0"',
+      "agents:",
+      "  - id: frontend-engineer",
+      "    kind: worker",
+      "    developer_instructions: |",
+      block,
+      "",
+    ].join("\n"),
     "utf-8",
   );
   await writeFile(
