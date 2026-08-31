@@ -223,18 +223,12 @@ async function collectBarrelValidators(): Promise<Map<string, string>> {
  * a call site either: it only moves the name one module further along.
  */
 function codeOnly(source: string): string {
-  return (
-    source
-      .replace(/\/\*[\s\S]*?\*\//g, " ")
-      // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a
-      // string or an escaped regex atom, not to a comment.
-      .replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1")
-      .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
-      .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
-      .replace(/`(?:\\.|[^`\\])*`/g, '""')
-      .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""')
-  );
+  return stripComments(source)
+    .replace(/^[ \t]*import\b[^;]*?\bfrom\s*["'][^"']*["'];?/gm, " ")
+    .replace(/^[ \t]*import\s*["'][^"']*["'];?/gm, " ")
+    .replace(/^[ \t]*export\s*(?:type\s+)?\{[^}]*\}\s*from\s*["'][^"']*["'];?/gm, " ")
+    .replace(/`(?:\\.|[^`\\])*`/g, '""')
+    .replace(/(["'])(?:\\.|(?!\1)[^\\\n])*\1/g, '""');
 }
 
 /**
@@ -251,9 +245,25 @@ function referencesName(source: string, name: string): boolean {
   return new RegExp(`(?<![\\w$])${name}(?![\\w$])(?!\\s*:)`).test(codeOnly(source));
 }
 
-/** Comments out; everything else — imports included — kept verbatim. */
+/**
+ * Comments out; everything else — imports included — kept verbatim.
+ *
+ * ONE PASS over both comment forms, so whichever opens first wins. Two passes
+ * with block comments first cannot work: `//` prose routinely contains `/*` —
+ * `src/core/validate.ts` says "`references/*.md` + SKILL.md" in a line comment
+ * — and the block rule reads that as an opener, then runs to the next block
+ * terminator anywhere in the file. While none existed the swallow was invisible;
+ * the day a JSDoc was added below it, 210 lines of `validate.ts` vanished and
+ * 29 validators with live call sites read as unwired. A guard against silent
+ * degradation must not degrade silently itself, so the two forms are matched by
+ * one alternation and the earlier match consumes the later opener.
+ */
 function stripComments(source: string): string {
-  return source.replace(/\/\*[\s\S]*?\*\//g, " ").replace(/(^|[^:\\"'`])\/\/[^\n]*/g, "$1");
+  // A `//` preceded by `:`, a quote or a backslash belongs to a URL, a string
+  // or an escaped regex atom, not to a comment.
+  return source.replace(/\/\*[\s\S]*?\*\/|(^|[^:\\"'`])\/\/[^\n]*/g, (_match, before: unknown) =>
+    typeof before === "string" ? before : " ",
+  );
 }
 
 /** `import … from "./x.js"` / `export … from "./x.js"` targets. */
@@ -402,6 +412,29 @@ describe("meta-test: validators/index.ts lists only wired validators", () => {
       false,
     );
     expect(reachable.has(VALIDATORS_INDEX)).toBe(false);
+  });
+
+  it("does not let a glob inside a line comment open a block comment", () => {
+    // The shape `validate.ts` actually carries: a `//` comment naming
+    // `references/*.md`, and a JSDoc further down whose terminator used to
+    // close the `/*` that glob spells. Everything between the two disappeared.
+    const source = [
+      "// Doc governance — `references/*.md` + SKILL.md as warning.",
+      "...(await validateStaleReferences(root, { config })),",
+      "/** Count findings by severity. */",
+      "export function countIssues(issues: Issue[]): ValidationCounts {",
+    ].join("\n");
+
+    // The call between the two comments has to survive, or every name it
+    // mentions silently reads as unwired.
+    expect(referencesName(source, "validateStaleReferences")).toBe(true);
+    expect(stripComments(source)).toContain("export function countIssues");
+
+    // Still a comment stripper: both forms go, in either order, and a `//`
+    // inside a block comment does not end it early.
+    expect(stripComments("/* a\n b */ kept")).not.toContain("a");
+    expect(stripComments("/* has // inside */ kept").trim()).toBe("kept");
+    expect(stripComments("const u = 'https://x';").trim()).toBe("const u = 'https://x';");
   });
 
   it("the retired /qfai-require validators are gone from the barrel", async () => {
