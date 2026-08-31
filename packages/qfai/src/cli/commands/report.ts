@@ -1,19 +1,20 @@
 import { mkdir, readFile, writeFile } from "node:fs/promises";
 import path from "node:path";
 
-import type { ConfigLoadResult, FailOn } from "../../core/config.js";
+import type { ConfigLoadResult, FailOn, QfaiConfig } from "../../core/config.js";
 import { loadConfig, resolvePath } from "../../core/config.js";
 import { isEnoent } from "../../core/fs/errno.js";
 import { normalizeValidationResult } from "../../core/normalize.js";
 import { buildCiProfileIssue } from "../../core/phasePolicy.js";
 import { createReportData, formatReportJson, formatReportMarkdown } from "../../core/report.js";
 import { writeSpecPackReports } from "../../core/specPackReport.js";
+import { buildSpecScope } from "../../core/specScope.js";
 import type { ValidationProfile, ValidationResult } from "../../core/types.js";
 import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
-import { appendIssue, evaluateLegacyValidateJsonGate } from "./validate.js";
+import { appendIssue, evaluateLegacyValidateJsonGate, scopedReportPath } from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -25,56 +26,183 @@ export type ReportOptions = {
   profile?: ValidationProfile;
   failOn?: FailOn;
   strict?: boolean;
+  /** `--spec <id>` values; empty / absent = the whole repo. */
+  specIds?: readonly string[];
   /**
-   * Override the tool version observed by the legacy-path deprecation gate
-   * under `--run-validate`. Tests use it to pin either side of the sunset;
-   * production reads `packages/qfai/package.json#version`.
+   * Override the tool version observed by the legacy-path migration gate
+   * under `--run-validate`. Tests use this to pin either side of the sunset;
+   * production reads `packages/qfai/package.json#version`, same as `validate`.
    */
   toolVersionOverride?: string;
 };
 
+type ReportPaths = {
+  /** Where the validate result is read from (or written to under `--run-validate`). */
+  validateJsonPath: string;
+  /** Absolute path the rendered report is written to. */
+  outPath: string;
+};
+
+/**
+ * Resolves the validate-result path and the rendered-report path, applying
+ * `--spec` scoping when present.
+ *
+ * A scoped run reads `validate.spec-<ids>.json` — what `validate --spec` wrote
+ * — and writes `report.spec-<ids>.md` / `.json`, so parallel slice workers stop
+ * racing on the shared `report.md`. An explicit `--out` still wins.
+ *
+ * `null` when any `--spec` value carries no resolvable spec number: the same
+ * refusal `scopedReportPath` makes for `validate`, so raw input never reaches a
+ * filename and a failing scope never writes the file a healthy one would.
+ */
+function resolveReportPaths(
+  root: string,
+  config: QfaiConfig,
+  options: ReportOptions,
+): ReportPaths | null {
+  const outRoot = resolvePath(root, config, "outDir");
+  const defaultOut =
+    options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
+  const configuredValidateJson = config.output.validateJsonPath;
+  const specIds = options.specIds ?? [];
+  const scopedValidateJson =
+    specIds.length > 0 ? scopedReportPath(configuredValidateJson, specIds) : configuredValidateJson;
+  const scopedOut = specIds.length > 0 ? scopedReportPath(defaultOut, specIds) : defaultOut;
+  if (scopedValidateJson === null || scopedOut === null) {
+    return null;
+  }
+  const out = options.outPath ?? scopedOut;
+  return {
+    validateJsonPath: scopedValidateJson,
+    outPath: path.isAbsolute(out) ? out : path.resolve(root, out),
+  };
+}
+
+/**
+ * True when an explicit `--in` file carries the scope the run was asked for.
+ *
+ * `--in` hands `runReport` a `ValidationResult` verbatim — `issues`, `counts`,
+ * SC coverage and the waiver aggregates are whatever the producing run
+ * computed. Scoping the output *name* does nothing to that body, so
+ * `report --spec 0004 --in <repo-wide validate.json>` wrote sibling specs'
+ * findings into `report.spec-0004.md`. Re-filtering the input is not a way out
+ * either: `waivers.suppressed.byWaiver` attributes each suppression to a waiver
+ * id the surviving `Issue` no longer names, so that aggregate cannot be
+ * recomputed from the file alone and the report would still be part repo-wide.
+ *
+ * The provenance that does exist is the filename `validate --spec` writes, so
+ * that is what is checked — same basename, any directory, which keeps `--in`
+ * useful for a slice whose validate result lives outside `outDir`.
+ */
+function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: string): boolean {
+  return path.basename(inputPath) === path.basename(scopedValidateJsonPath);
+}
+
+/**
+ * The ENOENT guidance for a missing validate result.
+ *
+ * A scoped run reads `validate.spec-<ids>.json`, so the unscoped text — "run
+ * `qfai validate`, output `.qfai/report/validate.json`" — named a file this
+ * command will never read: following it verbatim left the scoped input missing
+ * and the very same `report --spec` exited 2 again. The scoped branch therefore
+ * repeats the caller's own `--spec` values on both suggested commands.
+ */
+function buildMissingInputGuidance(
+  inputPath: string,
+  specIds: readonly string[],
+  scopedValidateJsonPath: string,
+): string {
+  const header = [`qfai report: 入力ファイルが見つかりません: ${inputPath}`, ""];
+  if (specIds.length === 0) {
+    return [
+      ...header,
+      "まず qfai validate を実行してください。例:",
+      "  qfai validate",
+      "（デフォルトの出力先: .qfai/report/validate.json）",
+      "",
+      "または report に --run-validate を指定してください。",
+      "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
+    ].join("\n");
+  }
+  const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+  return [
+    ...header,
+    `--spec 付きの report は scoped な validate 結果を読みます。まず同じ --spec で validate を実行してください。例:`,
+    `  qfai validate ${specArgs}`,
+    `（出力先: ${scopedValidateJsonPath}）`,
+    "",
+    `または report 自身に --run-validate を指定してください。例:`,
+    `  qfai report ${specArgs} --run-validate`,
+  ].join("\n");
+}
+
 /**
  * レポートを書き出し、`validate` と同じ基準で終了コードを返す。
- * 0=gate 通過 / 1=gate 不通過 / 2=入力 validate.json 欠如。
+ * 0=gate 通過 / 1=gate 不通過 / 2=usage / 入力 validate.json 欠如。
  */
 export async function runReport(options: ReportOptions): Promise<number> {
   const root = path.resolve(options.root);
   const configResult = await loadConfig(root);
+  const specIds = options.specIds ?? [];
+  const paths = resolveReportPaths(root, configResult.config, options);
+  if (paths === null) {
+    error(
+      [
+        `qfai report: --spec の値を spec 番号として解釈できません: ${specIds.join(", ")}`,
+        "例: --spec 0003 / --spec spec-0004",
+      ].join("\n"),
+    );
+    return 2;
+  }
   let validation: ValidationResult;
   let ranNarrowProfileInCi = false;
   if (options.runValidate) {
     if (options.inputPath) {
       warn("report: --run-validate が指定されたため --in は無視します。");
     }
-    const ran = await runValidateForReport(root, configResult, options);
+    const ran = await runValidateForReport(root, configResult, options, paths.validateJsonPath);
     ranNarrowProfileInCi = ran.ranNarrowProfileInCi;
     validation = ran.validation;
   } else {
-    const input = options.inputPath ?? configResult.config.output.validateJsonPath;
+    const input = options.inputPath ?? paths.validateJsonPath;
     const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
+    if (
+      options.inputPath !== undefined &&
+      specIds.length > 0 &&
+      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath)
+    ) {
+      const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
+      error(
+        [
+          `qfai report: --in の validate 結果が --spec の scope と一致しません: ${inputPath}`,
+          `--spec 付きの report は counts / issues / SC coverage / waiver 集計を入力ファイルからそのまま採用するため、repo 全体や別 spec の結果を渡すと scope 外の結果が出力に混ざります。`,
+          `${path.basename(paths.validateJsonPath)} という名前の scoped な validate 結果を指定してください。例:`,
+          `  qfai validate ${specArgs}`,
+          `  qfai report ${specArgs}`,
+        ].join("\n"),
+      );
+      return 2;
+    }
     try {
       validation = await readValidationResult(inputPath);
     } catch (err) {
       if (isEnoent(err)) {
-        error(
-          [
-            `qfai report: 入力ファイルが見つかりません: ${inputPath}`,
-            "",
-            "まず qfai validate を実行してください。例:",
-            "  qfai validate",
-            "（デフォルトの出力先: .qfai/report/validate.json）",
-            "",
-            "または report に --run-validate を指定してください。",
-            "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
-          ].join("\n"),
-        );
+        error(buildMissingInputGuidance(inputPath, specIds, paths.validateJsonPath));
         return 2;
       }
       throw err;
     }
   }
 
-  const data = await createReportData(root, validation, configResult);
+  // The rendered body has to honour the same scope as the filename: a scoped
+  // run that re-walked every spec put sibling specs — including ones another
+  // worker was mid-edit on — inside `report.spec-<ids>.md`.
+  const data = await createReportData(
+    root,
+    validation,
+    configResult,
+    specIds.length > 0 ? { specIds } : {},
+  );
   warnIfTruncated(data.traceability.testFiles, "report");
   const output =
     options.format === "json"
@@ -83,15 +211,13 @@ export async function runReport(options: ReportOptions): Promise<number> {
         ? formatReportMarkdown(data, { baseUrl: options.baseUrl })
         : formatReportMarkdown(data);
 
-  const outRoot = resolvePath(root, configResult.config, "outDir");
-  const defaultOut =
-    options.format === "json" ? path.join(outRoot, "report.json") : path.join(outRoot, "report.md");
-  const out = options.outPath ?? defaultOut;
-  const outPath = path.isAbsolute(out) ? out : path.resolve(root, out);
+  const outPath = paths.outPath;
 
   await mkdir(path.dirname(outPath), { recursive: true });
   await writeFile(outPath, `${output}\n`, "utf-8");
-  await writeSpecPackReports(root, configResult.config);
+  // Scoped: touch only the packs this run owns. An unscoped call rewrites every
+  // spec pack, which is how a slice worker clobbered its siblings' artifacts.
+  await writeSpecPackReports(root, configResult.config, buildSpecScope(specIds));
 
   if (ranNarrowProfileInCi) {
     // Reported, not fatal: the run happened and its findings are real. Exiting
@@ -114,7 +240,7 @@ export async function runReport(options: ReportOptions): Promise<number> {
 
 /**
  * `--run-validate`: run the same validators `qfai validate` runs, apply the
- * same post-processing, and write the same `output.validateJsonPath`.
+ * same post-processing, and write the same (scope-resolved) validate result.
  *
  * The post-processing is shared, not re-implemented: `report --run-validate`
  * is documented as the single-step CI usage, so a finding `validate` raises
@@ -123,31 +249,39 @@ export async function runReport(options: ReportOptions): Promise<number> {
  * Otherwise a project whose `output.validateJsonPath` still names the legacy
  * SSOT sees `qfai validate` exit 1 and refuse the write while `qfai report
  * --run-validate` re-creates the deprecated file and exits 0.
+ *
+ * `writeTo` is the scope-resolved target, so a post-sunset refusal covers the
+ * scoped `validate.spec-<ids>.json` as well: a brand-new file inside the
+ * directory the sunset exists to retire would read as "still fine to write
+ * here". The scope also reaches the gate itself — `scopedSpecIds` is what
+ * keeps the PRE-sunset writer-side notice off a slice that writes no shared
+ * report at all.
  */
 async function runValidateForReport(
   root: string,
   configResult: ConfigLoadResult,
   options: ReportOptions,
+  writeTo: string,
 ): Promise<{ validation: ValidationResult; ranNarrowProfileInCi: boolean }> {
+  const specIds = options.specIds ?? [];
   const ciProfileIssue = buildCiProfileIssue(options.profile);
-  const validated = await validateProject(
-    root,
-    configResult,
-    options.profile ? { profile: options.profile } : {},
-  );
+  const validated = await validateProject(root, configResult, {
+    ...(options.profile ? { profile: options.profile } : {}),
+    ...(specIds.length > 0 ? { specIds } : {}),
+  });
   const withCiIssue = ciProfileIssue ? appendIssue(validated, ciProfileIssue) : validated;
-  const configuredValidateJsonPath = configResult.config.output.validateJsonPath;
   const legacyGate = await evaluateLegacyValidateJsonGate({
     root,
-    configuredValidateJsonPath,
+    configuredValidateJsonPath: configResult.config.output.validateJsonPath,
     ...(options.toolVersionOverride !== undefined
       ? { toolVersionOverride: options.toolVersionOverride }
       : {}),
+    scopedSpecIds: specIds,
   });
   const gated = legacyGate.issue ? appendIssue(withCiIssue, legacyGate.issue) : withCiIssue;
   const normalized = normalizeValidationResult(root, gated);
   if (!legacyGate.refuseConfiguredLegacyWrite) {
-    await writeValidationResult(root, configuredValidateJsonPath, normalized);
+    await writeValidationResult(root, writeTo, normalized);
   }
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
@@ -170,7 +304,6 @@ async function readValidationResult(inputPath: string): Promise<ValidationResult
   }
   return reconcileCounts(parsed, inputPath);
 }
-
 /**
  * `--in` の `counts` は外部ファイル由来で、`issues` と食い違いうる（古い
  * validate.json、手編集、部分的な書き換え）。gate も report 本文のサマリも
