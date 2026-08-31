@@ -3,7 +3,12 @@ import path from "node:path";
 
 import type { QfaiConfig } from "../config.js";
 import { resolvePath } from "../config.js";
-import { isTableSeparator, looksLikeTableRow, splitMarkdownRow } from "../specPackParsers.js";
+import {
+  isTableSeparator,
+  looksLikeTableRow,
+  maskNonSpecRegions,
+  splitMarkdownRow,
+} from "../specPackParsers.js";
 import { collectSpecEntries, type SpecEntry } from "../specLayout.js";
 import { TRIAGE_TABLE_HEADER } from "../sddTriage.js";
 import type { Issue } from "../types.js";
@@ -194,9 +199,10 @@ const SECTION_BOUNDARY_RE = /^#{1,2}[ \t]+\S/;
  *   `11_Slice-Policy.md` or `01_Objective.md` is not the mandated table, so it
  *   earns no exemption.
  * - **Heading** — only the canonical H2 that `validateTriageSection` itself
- *   accepts, and only its first occurrence, because `extractMarkdownSection`
- *   reads the first one. Exempting a heading no Triage validator inspects
- *   would leave the content covered by nothing at all.
+ *   accepts, at every occurrence, because that validator reads every one of
+ *   them. Exempting a heading no Triage validator inspects (`### Triage`,
+ *   `## Triage — 2026-07-26`) would leave the content covered by nothing at
+ *   all; those earn `QFAI-TRIAGE-008` instead.
  * - **Line shape** — only table rows. The carve-out exists for *citations* in
  *   the `Existing Spec` / `Approved By` / `Rationale` cells. A
  *   `### AC-0001-0001` heading or a `- Parent: US-0001-0001` bullet inside the
@@ -212,12 +218,32 @@ function maskTriageSection(fileName: string, text: string): string {
     return text;
   }
   const lines = text.replace(/\r\n/g, "\n").split("\n");
-  const start = lines.findIndex((line) => CANONICAL_TRIAGE_HEADING_RE.test(line));
-  if (start === -1) {
-    return text;
-  }
+  // Headings, section ends and tables are located on a copy whose fenced code
+  // blocks, HTML comments and top-level indented code are blanked — the same
+  // view `validateTriageSection` reads. `maskNonSpecRegions` preserves the line
+  // count, so its indices still address `lines`. Without it a `## Triage` shown
+  // as a format example inside a fence opened a section here that no Triage
+  // validator reads, and the carve-out then blanked the prohibited IDs of the
+  // next seven-column table for `QFAI-LAYER-100` /
+  // `TRACE_SHARED_SCOPE_VIOLATION`.
+  const scanned = maskNonSpecRegions(text).replace(/\r\n/g, "\n").split("\n");
   const masked = [...lines];
-  let index = start + 1;
+  let index = 0;
+  while (index < scanned.length) {
+    if (!CANONICAL_TRIAGE_HEADING_RE.test(scanned[index] ?? "")) {
+      index += 1;
+      continue;
+    }
+    // Every canonical section, not just the first: a re-run that appends a
+    // second `## Triage` is validated as one, so it must be exempted as one.
+    index = maskTriageTables(scanned, index + 1, masked);
+  }
+  return masked.join("\n");
+}
+
+/** Blank the exempt cells of every table from `start` up to the section end. */
+function maskTriageTables(lines: readonly string[], start: number, masked: string[]): number {
+  let index = start;
   while (index < lines.length) {
     if (SECTION_BOUNDARY_RE.test(lines[index] ?? "")) {
       break;
@@ -231,7 +257,7 @@ function maskTriageSection(fileName: string, text: string): string {
     const consumed = maskTableAt(lines, index, masked);
     index = consumed > index ? consumed : index + 1;
   }
-  return masked.join("\n");
+  return index;
 }
 
 /**
