@@ -6,7 +6,7 @@ import { isEnoent } from "../fs/errno.js";
 import { owningSpecNumber, type SpecScope } from "../specScope.js";
 import type { Issue } from "../types.js";
 import { issue } from "./utils.js";
-import { QFAI_GITIGNORE_MARKER, QFAI_GITIGNORE_RECOMMENDED_ENTRIES } from "../gitignore.js";
+import { QFAI_GITIGNORE_MARKER, missingRecommendedGitignoreEntries } from "../gitignore.js";
 
 const REVIEW_PACK_DIR_RE = /^review-(\d{17})$/i;
 const REVIEWER_FILE_RE = /^R\d+_.+\.md$/i;
@@ -122,14 +122,17 @@ export async function validateReviewArtifacts(
     // legitimately want tracked, and failing validation for tracking your own
     // audit trail is the wrong answer.
     hasQfaiGitignore = content.includes(QFAI_GITIGNORE_MARKER);
-    // Searched across the WHOLE file, not just the managed block: an entry the
+    // Read across the WHOLE file, not just the managed block: an entry the
     // project ignores from its own section satisfies the recommendation just as
     // well, and reporting it as missing would push the author to duplicate a
     // rule they already have. The finding text says ".gitignore" rather than
     // "the managed block" for the same reason.
-    missingRecommendedEntries = QFAI_GITIGNORE_RECOMMENDED_ENTRIES.filter(
-      (entry) => !content.includes(entry),
-    );
+    //
+    // Which reading counts as satisfied is `gitignore.ts`'s to state — the
+    // root-`tmp/` recommendation is decided by a real ignore verdict rather than
+    // by containment, and a second copy of that rule here is how the check and
+    // the entry it checks would come apart.
+    missingRecommendedEntries = missingRecommendedGitignoreEntries(content);
   } catch (err: unknown) {
     if (!isEnoent(err)) {
       throw err;
