@@ -181,9 +181,11 @@ export async function validateThreeLayerFamilyCompleteness(
 ): Promise<Issue[]> {
   if (!(await isUiBearingSpec(root))) return [];
 
-  const indexContent = await readSafe(path.join(root, "uiux", "00_index.md"));
-  if (!indexContent) return [];
-
+  // `00_index.md` is the first entry of the required family, so it is reported
+  // by the loop like any other member. Reading it up front and returning clean
+  // on absence made the gate unable to report the very file it triggered on —
+  // and disabled the checks for the other two members along with it.
+  // `isUiBearingSpec` above is what scopes this check.
   const issues: Issue[] = [];
   for (const required of CANONICAL_REQUIRED_SIDECAR_FILES) {
     const content = await readSafe(path.join(root, "uiux", required));
