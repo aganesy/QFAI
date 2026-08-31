@@ -1,0 +1,13 @@
+# Workflow command files: the environment a step can set for the steps after it.
+#
+# One name per line. `scripts/check-toolchain-action.sh` reads this list, and
+# `scripts/check-workflow-hygiene.mjs` refuses a step inside a required verification's closure
+# whose surface reaches any of them.
+#
+# A data file rather than literals in the script, because the script itself is inside that closure:
+# spelling the names in its body would make the lane report the pre-flight check as a writer, and
+# splicing them together to dodge that is the evasion the lane exists to refuse. Both readers are
+# covered by the required verification's body digest, so a name removed from here is a change a
+# reviewer reads.
+GITHUB_ENV
+GITHUB_PATH
