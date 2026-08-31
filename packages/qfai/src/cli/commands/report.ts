@@ -14,7 +14,12 @@ import { countIssues, validateProject } from "../../core/validate.js";
 import { shouldFail } from "../lib/failOn.js";
 import { error, info, warn } from "../lib/logger.js";
 import { warnIfTruncated } from "../lib/warnings.js";
-import { appendIssue, evaluateLegacyValidateJsonGate, scopedReportPath } from "./validate.js";
+import {
+  appendIssue,
+  evaluateLegacyValidateJsonGate,
+  profileSuffixedReportPath,
+  scopedReportPath,
+} from "./validate.js";
 
 export type ReportOptions = {
   root: string;
@@ -93,9 +98,24 @@ function resolveReportPaths(
  * The provenance that does exist is the filename `validate --spec` writes, so
  * that is what is checked — same basename, any directory, which keeps `--in`
  * useful for a slice whose validate result lives outside `outDir`.
+ *
+ * `--profile` adds a second suffix on top of the scope one, so the run's own
+ * `validate.spec-<ids>-<profile>.json` carries the requested scope just as
+ * `validate.spec-<ids>.json` does and is accepted alongside it. A sibling
+ * profile's file is not: within a scoped run the filename is the only scope
+ * provenance there is, and admitting an arbitrary suffix would readmit the
+ * mixed-scope body this check exists to refuse.
  */
-function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: string): boolean {
-  return path.basename(inputPath) === path.basename(scopedValidateJsonPath);
+function inputCarriesRequestedScope(
+  inputPath: string,
+  scopedValidateJsonPath: string,
+  profile: ValidationProfile | undefined,
+): boolean {
+  const accepted = new Set([path.basename(scopedValidateJsonPath)]);
+  if (profile) {
+    accepted.add(path.basename(profileSuffixedReportPath(scopedValidateJsonPath, profile)));
+  }
+  return accepted.has(path.basename(inputPath));
 }
 
 /**
@@ -106,19 +126,26 @@ function inputCarriesRequestedScope(inputPath: string, scopedValidateJsonPath: s
  * command will never read: following it verbatim left the scoped input missing
  * and the very same `report --spec` exited 2 again. The scoped branch therefore
  * repeats the caller's own `--spec` values on both suggested commands.
+ *
+ * `--profile` has the same failure mode for the same reason — the reader falls
+ * through to `validate-<profile>.json` — so the suggested commands repeat it
+ * too, and the quoted destination is the path this run would actually read
+ * rather than a fixed literal.
  */
 function buildMissingInputGuidance(
   inputPath: string,
   specIds: readonly string[],
-  scopedValidateJsonPath: string,
+  profile: ValidationProfile | undefined,
+  expectedValidateJsonPath: string,
 ): string {
   const header = [`qfai report: 入力ファイルが見つかりません: ${inputPath}`, ""];
+  const profileArg = profile ? ` --profile ${profile}` : "";
   if (specIds.length === 0) {
     return [
       ...header,
       "まず qfai validate を実行してください。例:",
-      "  qfai validate",
-      "（デフォルトの出力先: .qfai/report/validate.json）",
+      `  qfai validate${profileArg}`,
+      `（デフォルトの出力先: ${expectedValidateJsonPath}）`,
       "",
       "または report に --run-validate を指定してください。",
       "GitHub Actions テンプレを使っている場合は、workflow の validate ジョブを先に実行してください。",
@@ -128,11 +155,11 @@ function buildMissingInputGuidance(
   return [
     ...header,
     `--spec 付きの report は scoped な validate 結果を読みます。まず同じ --spec で validate を実行してください。例:`,
-    `  qfai validate ${specArgs}`,
-    `（出力先: ${scopedValidateJsonPath}）`,
+    `  qfai validate ${specArgs}${profileArg}`,
+    `（出力先: ${expectedValidateJsonPath}）`,
     "",
     `または report 自身に --run-validate を指定してください。例:`,
-    `  qfai report ${specArgs} --run-validate`,
+    `  qfai report ${specArgs}${profileArg} --run-validate`,
   ].join("\n");
 }
 
@@ -164,12 +191,16 @@ export async function runReport(options: ReportOptions): Promise<number> {
     ranNarrowProfileInCi = ran.ranNarrowProfileInCi;
     validation = ran.validation;
   } else {
-    const input = options.inputPath ?? paths.validateJsonPath;
-    const inputPath = path.isAbsolute(input) ? input : path.resolve(root, input);
+    const inputPath = resolveInputPath(
+      root,
+      paths.validateJsonPath,
+      options.inputPath,
+      options.profile,
+    );
     if (
       options.inputPath !== undefined &&
       specIds.length > 0 &&
-      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath)
+      !inputCarriesRequestedScope(inputPath, paths.validateJsonPath, options.profile)
     ) {
       const specArgs = specIds.map((id) => `--spec ${id}`).join(" ");
       error(
@@ -183,15 +214,26 @@ export async function runReport(options: ReportOptions): Promise<number> {
       );
       return 2;
     }
-    try {
-      validation = await readValidationResult(inputPath);
-    } catch (err) {
-      if (isEnoent(err)) {
-        error(buildMissingInputGuidance(inputPath, specIds, paths.validateJsonPath));
-        return 2;
-      }
-      throw err;
+    const loaded = await loadValidationResult(
+      inputPath,
+      specIds,
+      options.profile,
+      resolveInputPath(root, paths.validateJsonPath, undefined, options.profile),
+    );
+    if (loaded === null) {
+      return 2;
     }
+    warnOnProfileMismatch(inputPath, loaded, options.profile);
+    // --run-validate 側と同じく、CI で narrow profile を使ったことを報告する。
+    // ここでは finding を足さない: 読み込んだ validate 出力には、それを書いた
+    // validate 実行が既に QFAI-VALIDATE-017 を載せている。
+    //
+    // 判定は「指定した profile」ではなく「実際にレポートへ採用した profile」で
+    // 行う。明示 `--in` は不一致でも優先されるので、`--profile sdd --in
+    // validate-prototyping.json` のような組み合わせでは成果物側の profile が
+    // 実態を表す。profile 未記録の旧形式のときだけ指定値へフォールバックする。
+    ranNarrowProfileInCi = buildCiProfileIssue(loaded.profile ?? options.profile) !== null;
+    validation = loaded;
   }
 
   // The rendered body has to honour the same scope as the filename: a scoped
@@ -281,7 +323,7 @@ async function runValidateForReport(
   const gated = legacyGate.issue ? appendIssue(withCiIssue, legacyGate.issue) : withCiIssue;
   const normalized = normalizeValidationResult(root, gated);
   if (!legacyGate.refuseConfiguredLegacyWrite) {
-    await writeValidationResult(root, writeTo, normalized);
+    await writeValidationResults(root, writeTo, normalized, options.profile);
   }
   return { validation: normalized, ranNarrowProfileInCi: ciProfileIssue !== null };
 }
@@ -294,6 +336,70 @@ function resolveFailOn(options: ReportOptions, fallback: FailOn): FailOn {
     return "warning";
   }
   return fallback;
+}
+
+/**
+ * 読み取り側 (`--run-validate` なし) の入力パスを決める。
+ *
+ * `--profile` が指定されたときは、常に最新のポインタ (`validate.json`) では
+ * なく profile 接尾辞付きファイルを読む。`validate.json` は「最後に走った
+ * profile」の出力でしかなく、CLI コントラクトの Consumer rule も profile で
+ * スコープする読み手には接尾辞付きファイルを要求している。明示された `--in`
+ * は運用者の意思なので、常にそちらを優先する。
+ */
+function resolveInputPath(
+  root: string,
+  configuredPath: string,
+  inputPath: string | undefined,
+  profile: ValidationProfile | undefined,
+): string {
+  const input =
+    inputPath ?? (profile ? profileSuffixedReportPath(configuredPath, profile) : configuredPath);
+  return path.isAbsolute(input) ? input : path.resolve(root, input);
+}
+
+/**
+ * 入力の validate 出力を読む。見つからないときは案内を出して `null` を返す
+ * (呼び出し側が exit code を立てる)。それ以外の失敗はそのまま投げる。
+ *
+ * 案内文は `buildMissingInputGuidance` に委ねる: `--spec` と `--profile` は
+ * どちらも読み取り先のファイル名を変えるので、片方だけを知っている文面は
+ * 「その通りに実行してもまた同じ exit 2 になる」案内になる。
+ */
+async function loadValidationResult(
+  inputPath: string,
+  specIds: readonly string[],
+  profile: ValidationProfile | undefined,
+  expectedValidateJsonPath: string,
+): Promise<ValidationResult | null> {
+  try {
+    return await readValidationResult(inputPath);
+  } catch (err) {
+    if (isEnoent(err)) {
+      error(buildMissingInputGuidance(inputPath, specIds, profile, expectedValidateJsonPath));
+      return null;
+    }
+    throw err;
+  }
+}
+
+/**
+ * 読み込んだ validate 出力の profile が `--profile` と食い違うときに警告する。
+ * 接尾辞付きファイルを読む経路では通常起きないが、`--in` で別 profile の
+ * 出力を指した場合はここだけが唯一の検出点になる。
+ */
+function warnOnProfileMismatch(
+  inputPath: string,
+  validation: ValidationResult,
+  profile: ValidationProfile | undefined,
+): void {
+  if (!profile || validation.profile === undefined || validation.profile === profile) {
+    return;
+  }
+  warn(
+    `report: --profile ${profile} を指定しましたが、入力 ${inputPath} は profile "${validation.profile}" の実行結果です。` +
+      `そのままの数値でレポートを生成します。`,
+  );
 }
 
 async function readValidationResult(inputPath: string): Promise<ValidationResult> {
@@ -427,6 +533,31 @@ function isValidationResult(value: unknown): value is ValidationResult {
   }
 
   return true;
+}
+
+/**
+ * `--run-validate` の検証結果を、通常の `qfai validate` と同じ 2 か所に書く:
+ * 常に最新のポインタ (`validate.json`) と profile 接尾辞付きファイル
+ * (`validate-<profile>.json`)。
+ *
+ * 読み取り側 (`resolveInputPath`) は `--profile` 指定時に必ず接尾辞付き
+ * ファイルを見るので、ここで接尾辞付きを更新しないと、後続の
+ * `qfai report --profile X` が「ファイルが無い」で exit 2 になるか、
+ * 古い実行結果からレポートを作ってしまう。
+ */
+async function writeValidationResults(
+  root: string,
+  configuredPath: string,
+  result: ValidationResult,
+  requestedProfile: ValidationProfile | undefined,
+): Promise<void> {
+  await writeValidationResult(root, configuredPath, result);
+  const profileLabel = result.profile ?? requestedProfile ?? "full";
+  await writeValidationResult(
+    root,
+    profileSuffixedReportPath(configuredPath, profileLabel),
+    result,
+  );
 }
 
 async function writeValidationResult(
