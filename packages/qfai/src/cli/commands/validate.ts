@@ -1043,6 +1043,12 @@ export const ISSUE_EXPECTED_BY_CODE: Record<string, string> = {
   // to name both halves or the reader cannot tell which artifact is missing.
   TDDLIST_BLOCKED_NO_WORKLOG:
     "A spec whose `tdd/test-list.md` holds `Status=blocked` rows also has a `.qfai/steering/` work-log entry accounting for the stop, associated with the spec by `scope: spec-NNNN` or by a `scope: global` entry's `links`.",
+  // The companion to the row above, and it earns a catalog entry for the same
+  // reason: once its severity follows a promotion pin rather than a `warning`
+  // literal, the code is error-capable and the reader of an `expected:` line
+  // needs to be told the expectation is about the surface, not about any spec.
+  TDDLIST_WORKLOG_UNREADABLE:
+    "`.qfai/steering/` is walkable and every entry in it is readable, so the check for a work-log entry accounting for a stop has an answer to give.",
 };
 
 /**
